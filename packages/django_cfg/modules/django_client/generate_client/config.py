@@ -75,10 +75,10 @@ class GenerationConfig:
 
     # Behavior flags
     dry_run: bool = False
-    no_build: bool = False
-    copy_cfg_clients: bool = False
-    skip_nextjs_copy: bool = False
     verbose: bool = False
+
+    # Streamlit integration
+    streamlit: bool = False  # Copy Python clients to Streamlit admin app
 
     # Service config reference
     openapi_config: "OpenAPIConfig | None" = None
@@ -90,10 +90,8 @@ class GenerationConfig:
             groups=options.get("groups") or [],
             languages=LanguageOptions.from_options(options),
             dry_run=options.get("dry_run", False),
-            no_build=options.get("no_build", False),
-            copy_cfg_clients=options.get("copy_cfg_clients", False),
-            skip_nextjs_copy=options.get("skip_nextjs_copy", False),
             verbose=options.get("verbose", False),
+            streamlit=options.get("streamlit", False),
             openapi_config=openapi_config,
         )
 

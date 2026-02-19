@@ -113,13 +113,11 @@ class InstalledAppsBuilder:
             "django_cfg.modules.django_tailwind",  # Universal Tailwind layouts
             "django_cfg.modules.django_llm_monitoring",  # LLM balance monitoring
             "django_cfg.modules.django_cleanup",  # Automatic file cleanup
+            "django_cfg.modules.django_codegen",  # Unified client generation
             "django_cfg.apps.api.health",
             "django_cfg.apps.api.commands",
             "django_cfg.apps.api.dashboard",  # Dashboard API
         ]
-
-        if self.config.enable_frontend:
-            apps.append("django_cfg.apps.system.frontend")
 
         # Integrations (enabled via config)
         if self.config.centrifugo and self.config.centrifugo.enabled:
@@ -139,9 +137,9 @@ class InstalledAppsBuilder:
         if self.config.geo and self.config.geo.enabled:
             apps.append("django_cfg.apps.tools.geo")
 
-        # Next.js Admin Integration
-        if self.config.nextjs_admin:
-            apps.append("django_cfg.modules.nextjs_admin")
+        # Streamlit Admin Integration
+        if self.config.streamlit_admin:
+            apps.append("django_cfg.modules.streamlit_admin")
 
         return apps
 

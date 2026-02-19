@@ -1,0 +1,379 @@
+---
+title: Overview
+sidebar_position: 1
+keywords:
+  - streamlit admin
+  - python admin panel
+  - django admin alternative
+  - real-time dashboard
+  - no docker service
+description: Python-only admin panel using Streamlit. Auto-starts with Django, no separate Docker service needed. Full authentication, real-time updates, and custom extensions.
+---
+
+# Streamlit Admin
+
+**Python-only admin panel that runs as a Django child process — no separate Docker service needed.**
+
+The `streamlit_admin` module provides a modern, real-time admin interface built with Streamlit. Unlike traditional admin panels, it auto-starts with Django and dies when Django dies, eliminating the need for separate process management.
+
+## Key Feature: Auto-Start
+
+Streamlit runs as a **Django child process**:
+
+```bash
+# Just start Django — Streamlit starts automatically
+python manage.py runserver
+
+# Console output:
+# Streamlit started on port 8501 (PID: 12345)
+# Streamlit admin available at: http://localhost:8501
+```
+
+**Benefits:**
+- ✅ No separate Docker service
+- ✅ No extra process management
+- ✅ Dies when Django dies (no orphan processes)
+- ✅ Auto-finds free port if default is busy
+- ✅ Works in single Docker container
+
+---
+
+## What It Provides
+
+### Built-in Pages
+
+- **Dashboard** — System health, metrics, quick actions
+- **System Monitoring** — CPU, memory, disk, process info
+- **RQ Jobs** — Queue management, worker status, job history
+- **Centrifugo** — WebSocket connections, channel stats
+- **gRPC** — Service status, method statistics
+- **Users** — User management, access control
+- **Charts** — Visualization with real data
+
+### Architecture
+
+```
+streamlit_admin/
+├── app.py                    # Main entry point
+├── models/
+│   └── config.py             # StreamlitAdminConfig (Pydantic v2)
+├── core/
+│   ├── autostart.py          # Auto-start as Django child process
+│   ├── runner.py             # Manual Streamlit management
+│   ├── registry.py           # Extension page registration
+│   └── theme.py              # Theme presets (vercel-dark, light)
+├── api/
+│   ├── auth.py               # JWT authentication
+│   ├── client.py             # AdminAPI wrapper
+│   └── generated/            # Auto-generated Python clients
+├── services/                 # Business logic layer
+├── views/
+│   ├── layouts/sidebar.py    # Navigation menu
+│   └── pages/                # Page components
+└── scaffold/style.css        # Vercel-style dark theme
+```
+
+---
+
+## Quick Start
+
+### 1. Configure Module
+
+```python
+# api/config.py
+from django_cfg import DjangoConfig
+from django_cfg.modules.streamlit_admin import StreamlitAdminConfig
+
+config = DjangoConfig(
+    streamlit_admin=StreamlitAdminConfig(
+        app_path="streamlit",           # Path to your Streamlit app
+        port=8501,                       # Default port
+        auto_start=True,                 # Start with Django
+        theme="vercel-dark",             # Dark theme
+    ),
+)
+```
+
+### 2. Create Extensions (Optional)
+
+```python
+# streamlit/extensions.py
+from core.registry import page_registry
+import streamlit as st
+
+# Register custom group
+page_registry.register_group("Project", icon="briefcase", order=50)
+
+# Register custom page
+@page_registry.register("Analytics", icon="bar-chart-line", group="Project")
+def render_analytics_page():
+    st.title("Analytics")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Users", "1,234", "+12%")
+    with col2:
+        st.metric("Active Today", "567", "+5%")
+    with col3:
+        st.metric("Revenue", "$12,345", "+8%")
+```
+
+### 3. Start Django
+
+```bash
+python manage.py runserver
+# or
+make dev
+```
+
+Streamlit admin is now available at `http://localhost:8501`
+
+---
+
+## Configuration
+
+### StreamlitAdminConfig
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `app_path` | `str` | Required | Path to Streamlit app directory |
+| `port` | `int` | `8501` | Server port (auto-finds free if busy) |
+| `host` | `str` | `"0.0.0.0"` | Bind address |
+| `theme` | `str` | `"vercel-dark"` | Theme preset |
+| `auto_start` | `bool` | `True` | Auto-start with Django |
+| `api_clients_path` | `str` | `"generated"` | Python client destination |
+| `jwt_secret` | `str \| None` | `None` | JWT secret (defaults to Django SECRET_KEY) |
+
+### Full Example
+
+```python
+config = DjangoConfig(
+    streamlit_admin=StreamlitAdminConfig(
+        app_path="streamlit",
+        port=8501,
+        host="0.0.0.0",
+        theme="vercel-dark",
+        auto_start=True,
+        api_clients_path="api/generated",
+    ),
+)
+```
+
+---
+
+## Auto-Start Conditions
+
+Auto-start happens **only when ALL** conditions are met:
+
+- ✅ `DEBUG = True`
+- ✅ `auto_start = True` in config
+- ✅ Running `runserver` or `runserver_plus`
+- ✅ Not under gunicorn/uwsgi (production)
+- ✅ Not running migrations, shell, or other management commands
+
+---
+
+## Custom Extensions
+
+### Register Custom Group
+
+```python
+from core.registry import page_registry
+
+page_registry.register_group(
+    name="Project",
+    icon="briefcase",
+    order=50  # Higher = lower in menu
+)
+```
+
+### Register Custom Page
+
+```python
+@page_registry.register(
+    name="Reports",
+    icon="file-earmark-text",
+    group="Project",
+    order=20
+)
+def render_reports_page():
+    st.title("Reports")
+
+    report_type = st.selectbox(
+        "Report Type",
+        ["Daily Summary", "Weekly Report", "Monthly Analytics"]
+    )
+
+    if st.button("Generate Report"):
+        with st.spinner("Generating..."):
+            # Your report generation logic
+            st.success(f"Generated {report_type}!")
+```
+
+### Top-Level Page (No Group)
+
+```python
+@page_registry.register("Quick Actions", icon="lightning", order=5)
+def render_quick_actions():
+    st.title("Quick Actions")
+
+    if st.button("Sync Data"):
+        st.toast("Syncing...")
+```
+
+---
+
+## Theme Presets
+
+### vercel-dark (Default)
+
+```
+Background:    #000000 (pure black)
+Accent:        #0070F3 (Vercel blue)
+Text:          #EDEDED
+Sidebar:       #0A0A0A
+Secondary:     #111111
+```
+
+### light
+
+```
+Background:    #FFFFFF
+Accent:        #0070F3
+Text:          #171717
+```
+
+---
+
+## Docker: Single Container
+
+No separate Streamlit service needed:
+
+```yaml
+# docker-compose.yml
+services:
+  django:
+    build: .
+    ports:
+      - "8000:8000"
+      - "8501:8501"  # Streamlit port
+    environment:
+      - DJANGO_ENV=development
+    # Streamlit auto-starts inside this container
+```
+
+---
+
+## Manual Control
+
+### StreamlitAutoStart Class
+
+```python
+from django_cfg.modules.streamlit_admin.core import StreamlitAutoStart
+
+# Get running instance
+autostart = StreamlitAutoStart.get_instance()
+
+# Runtime info
+print(autostart.port)        # Actual port (may differ from config)
+print(autostart.url)         # http://localhost:{port}
+print(autostart.is_running)  # True/False
+
+# Manual control
+autostart.stop()
+autostart.restart()
+```
+
+### Management Commands
+
+```bash
+# Start manually (if auto_start=False)
+python manage.py run_streamlit
+
+# Create new Streamlit app scaffold
+python manage.py create_streamlit_app admin_app --theme vercel-dark --with-pages
+```
+
+---
+
+## Authentication
+
+Streamlit admin uses JWT authentication from Django:
+
+```python
+from api.auth import require_auth, logout
+
+# Require authentication (called in app.py)
+user = require_auth()
+
+# Access user info
+print(user.email)
+print(user.username)
+
+# Logout
+logout()
+```
+
+When embedded in Django admin iframe, JWT token is automatically injected.
+
+---
+
+## API Client Usage
+
+```python
+from api.client import AdminAPI
+
+api = AdminAPI()
+
+# Get user profile
+profile = api.cfg_user_profile.accounts_profile_retrieve()
+
+# List RQ queues
+queues = api.cfg_rq_queues.list()
+
+# With context manager
+with AdminAPI() as api:
+    workers = api.cfg_rq_workers.list()
+```
+
+---
+
+## nginx Proxy (Production)
+
+For production iframe embedding:
+
+```nginx
+location /cfg/streamlit/ {
+    proxy_pass http://localhost:8501/;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_read_timeout 86400;
+}
+```
+
+---
+
+## Template Tags
+
+```django
+{% load streamlit_admin %}
+
+{% has_streamlit_admin as is_enabled %}
+{% streamlit_admin_url %}
+{% streamlit_admin_url 'dashboard' %}
+{% streamlit_admin_tab_title %}
+{% streamlit_admin_iframe_url %}
+{% streamlit_admin_iframe_sandbox %}
+{% streamlit_admin_port %}
+```
+
+---
+
+## Next Steps
+
+- **[Custom Pages](./custom-pages)** — Building custom admin pages
+- **[Authentication](./authentication)** — JWT and session handling
+- **[API Integration](./api-integration)** — Using generated Python clients
+- **[Theming](./theming)** — Customizing appearance

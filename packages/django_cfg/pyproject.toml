@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.7.16"
+version = "1.7.17"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -138,6 +138,33 @@ dependencies = [
     
     # Python 3.13+ compatibility
     "setuptools>=75.0.0; python_version>='3.13'",
+
+    # Streamlit Admin - Core
+    "streamlit>=1.54.0,<2.0",
+    "PyJWT>=2.8.0,<3.0",
+    "pandas>=2.0.0,<3.0",
+
+    # Streamlit Admin - Auth & Storage
+    "extra-streamlit-components>=0.1.81,<1.0",  # Cookie manager, router, tabs
+    "streamlit-cookies-controller>=0.0.4,<1.0",  # Simple cookie get/set/remove
+    "streamlit-local-storage>=0.0.25,<1.0",  # Browser localStorage access
+    "streamlit-authenticator>=0.4.1,<1.0",  # User authentication with JWT cookies
+
+    # Streamlit Admin - UI Components
+    "streamlit-extras>=0.7.8,<1.0",  # Collection of useful extras
+    "streamlit-option-menu>=0.4.0,<1.0",  # Beautiful navigation menus
+    "streamlit-antd-components>=0.3.0,<1.0",  # Ant Design components
+    "streamlit-shadcn-ui>=0.1.19,<1.0",  # Modern shadcn/ui components
+    "streamlit-pydantic>=0.6.0,<1.0",  # Auto-generate UI from Pydantic models
+
+    # Streamlit Admin - Data & Charts
+    "streamlit-aggrid>=1.2.1,<2.0",  # Advanced data grid (AG Grid)
+    "streamlit-folium>=0.26.1,<1.0",  # Interactive maps
+    "plotly>=6.0.0,<7.0",  # Interactive charts
+
+    # Streamlit Admin - UX
+    "streamlit-keyup>=0.3.0,<1.0",  # Real-time text input
+    "streamlit-autorefresh>=1.0.1,<2.0",  # Auto-refresh pages
 ]
 [[project.authors]]
 name = "Django-CFG Team"
@@ -186,6 +213,7 @@ rq = [
     "redis>=5.0",
     "hiredis>=2.0",
 ]
+
 
 tasks = [
     "redis>=5.0",

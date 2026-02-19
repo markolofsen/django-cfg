@@ -99,28 +99,16 @@ class OperationsGenerator:
         # Build request
         request_kwargs = []
 
-        # Query params - build multiline dict if needed
+        # Query params - filter out None values to avoid sending empty strings
         if operation.query_parameters:
-            if len(operation.query_parameters) <= 2:
-                # Inline for few params
-                query_items = []
-                for param in operation.query_parameters:
-                    if param.required:
-                        query_items.append(f'"{param.name}": {param.name}')
-                    else:
-                        query_items.append(f'"{param.name}": {param.name} if {param.name} is not None else None')
-                query_dict = "{" + ", ".join(query_items) + "}"
-                request_kwargs.append(f"params={query_dict}")
-            else:
-                # Multiline for many params
-                body_lines.append("_params = {")
-                for param in operation.query_parameters:
-                    if param.required:
-                        body_lines.append(f'    "{param.name}": {param.name},')
-                    else:
-                        body_lines.append(f'    "{param.name}": {param.name} if {param.name} is not None else None,')
-                body_lines.append("}")
-                request_kwargs.append("params=_params")
+            # Build dict comprehension that filters None values
+            body_lines.append("_params = {")
+            body_lines.append("    k: v for k, v in {")
+            for param in operation.query_parameters:
+                body_lines.append(f'        "{param.name}": {param.name},')
+            body_lines.append("    }.items() if v is not None")
+            body_lines.append("}")
+            request_kwargs.append("params=_params")
 
         # Check if multipart
         is_multipart = self._is_multipart_operation(operation)
@@ -254,28 +242,16 @@ class OperationsGenerator:
         # Build request
         request_kwargs = []
 
-        # Query params - build multiline dict if needed
+        # Query params - filter out None values to avoid sending empty strings
         if operation.query_parameters:
-            if len(operation.query_parameters) <= 2:
-                # Inline for few params
-                query_items = []
-                for param in operation.query_parameters:
-                    if param.required:
-                        query_items.append(f'"{param.name}": {param.name}')
-                    else:
-                        query_items.append(f'"{param.name}": {param.name} if {param.name} is not None else None')
-                query_dict = "{" + ", ".join(query_items) + "}"
-                request_kwargs.append(f"params={query_dict}")
-            else:
-                # Multiline for many params
-                body_lines.append("_params = {")
-                for param in operation.query_parameters:
-                    if param.required:
-                        body_lines.append(f'    "{param.name}": {param.name},')
-                    else:
-                        body_lines.append(f'    "{param.name}": {param.name} if {param.name} is not None else None,')
-                body_lines.append("}")
-                request_kwargs.append("params=_params")
+            # Build dict comprehension that filters None values
+            body_lines.append("_params = {")
+            body_lines.append("    k: v for k, v in {")
+            for param in operation.query_parameters:
+                body_lines.append(f'        "{param.name}": {param.name},')
+            body_lines.append("    }.items() if v is not None")
+            body_lines.append("}")
+            request_kwargs.append("params=_params")
 
         # Check if multipart
         is_multipart = self._is_multipart_operation(operation)

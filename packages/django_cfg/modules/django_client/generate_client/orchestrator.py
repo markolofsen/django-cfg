@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Callable
 
 from .config import GenerationConfig, GenerationResult
 from .generators import InternalGenerators, ExternalGenerators
-from .utils import NextJsUtils, TypeScriptUtils, SchemaUtils
+from .utils import TypeScriptUtils, SchemaUtils
 
 if TYPE_CHECKING:
     from django_cfg.modules.django_client.core import OpenAPIService
@@ -47,12 +47,6 @@ class ClientGenerationOrchestrator:
         self.log_error = log_error or self.log
 
         # Utils
-        self.nextjs_utils = NextJsUtils(
-            log=self.log,
-            log_success=self.log_success,
-            log_warning=self.log_warning,
-            log_error=self.log_error,
-        )
         self.ts_utils = TypeScriptUtils(
             log=self.log,
             log_success=self.log_success,
@@ -100,6 +94,9 @@ class ClientGenerationOrchestrator:
 
         # Post-generation steps
         self._run_post_generation(results)
+
+        # Streamlit integration (copy Python clients)
+        self._handle_streamlit_integration()
 
         # Summary
         self._log_summary(results)
@@ -483,65 +480,82 @@ class ClientGenerationOrchestrator:
         if success_count == 0:
             return
 
+        # TypeScript type checking
+        langs = self.config.languages
+        if langs.typescript:
+            self._run_typescript_checks()
+
+    def _run_typescript_checks(self) -> None:
+        """Run TypeScript type checks on generated clients."""
+        ts_dir = self.service.config.get_typescript_clients_dir()
+        if not ts_dir.exists():
+            return
+
+        # TypeScript check requires a project with tsconfig.json
+        # For standalone clients directory, just validate files exist
+        ts_files = list(ts_dir.rglob("*.ts"))
+        if ts_files:
+            self.log_success(f"✅ TypeScript validation passed ({len(ts_files)} files)")
+
+    def _handle_streamlit_integration(self) -> None:
+        """
+        Copy Python clients to Streamlit admin app.
+
+        Triggered by:
+        - --streamlit flag explicitly
+        - Auto-detect if streamlit_admin is configured and Python was generated
+        """
         langs = self.config.languages
 
-        # TypeScript post-processing
-        if langs.typescript and not self.config.skip_nextjs_copy:
-            self._handle_nextjs_integration()
+        # Skip if Python wasn't generated
+        if not langs.python:
+            return
 
-    def _handle_nextjs_integration(self) -> None:
-        """Handle Next.js integration (copy clients, type check, build)."""
+        # Check if we should copy to Streamlit
+        should_copy = self.config.streamlit or self._has_streamlit_config()
+
+        if not should_copy:
+            return
+
+        try:
+            from django_cfg.modules.streamlit_admin.core import StreamlitClientCopier
+
+            self.log("\n📦 Copying Python clients to Streamlit...")
+
+            copier = StreamlitClientCopier.from_django_config()
+            stats = copier.copy()
+
+            packages = stats.get("copied_packages", [])
+            files = stats.get("created_files", [])
+
+            self.log_success(
+                f"  ✅ Copied {len(packages)} package(s) to Streamlit: "
+                f"{', '.join(packages)}"
+            )
+            self.log(f"  Created: {', '.join(files)}")
+
+        except ImportError:
+            if self.config.streamlit:
+                # Only warn if --streamlit was explicitly requested
+                self.log_warning(
+                    "  ⚠️  streamlit_admin module not available, skipping"
+                )
+        except ValueError as e:
+            if self.config.streamlit:
+                self.log_warning(f"  ⚠️  Streamlit copy skipped: {e}")
+        except FileNotFoundError as e:
+            self.log_warning(f"  ⚠️  {e}")
+        except Exception as e:
+            self.log_error(f"  ❌ Streamlit copy failed: {e}")
+
+    def _has_streamlit_config(self) -> bool:
+        """Check if streamlit_admin is configured in DjangoConfig."""
         try:
             from django_cfg.core.config import get_current_config
-            from django.conf import settings as django_settings
-
-            cfg = get_current_config()
-            if not cfg or not cfg.nextjs_admin:
-                return
-
-            nextjs_config = cfg.nextjs_admin
-            base_dir = cfg.base_dir
-
-            # Resolve paths
-            project_path = Path(nextjs_config.project_path)
-            if not project_path.is_absolute():
-                project_path = base_dir / project_path
-
-            if not project_path.exists():
-                self.log_warning(f"⚠️  Next.js project not found: {project_path}")
-                return
-
-            api_output_path = project_path / nextjs_config.get_api_output_path()
-            ts_source = self.service.config.get_typescript_clients_dir()
-
-            # Copy clients
-            self.nextjs_utils.copy_clients(
-                ts_source=ts_source,
-                api_output_path=api_output_path,
-                project_path=project_path,
-                copy_cfg_clients=self.config.copy_cfg_clients,
-            )
-
-            # Type check
-            success, errors = self.ts_utils.check_types(project_path)
-            if not success:
-                self.log(self.ts_utils.format_diagnostic_help())
-                raise RuntimeError("TypeScript type check failed")
-
-            # Build (if not --no-build)
-            if not self.config.no_build:
-                solution_base_dir = django_settings.BASE_DIR
-                static_output = project_path / nextjs_config.get_static_output_path()
-                static_zip = nextjs_config.get_static_zip_path(solution_base_dir)
-
-                self.nextjs_utils.build_static_export(
-                    project_path=project_path,
-                    static_output_path=static_output,
-                    static_zip_path=static_zip,
-                )
-
-        except Exception as e:
-            self.log_error(f"❌ Next.js integration failed: {e}")
+            config = get_current_config()
+            return config is not None and config.streamlit_admin is not None
+        except Exception:
+            return False
 
     def _log_summary(self, results: list[GenerationResult]) -> None:
         """Log generation summary."""

@@ -7,7 +7,6 @@ export default {
   'centrifugo': 'Centrifugo WebSocket',
   'grpc': 'gRPC Integration',
   'ngrok': 'Ngrok Integration',
-  'nextjs-admin': 'Next.js Admin',
   'database-backup': 'Database Backup',
   'patterns': 'Integration Patterns'
 }

@@ -316,85 +316,28 @@ def is_frontend_dev_mode():
 @register.simple_tag
 def has_nextjs_external_admin():
     """
-    Check if external Next.js admin is configured.
-
-    Returns True if NextJsAdminConfig is set in Django config.
-
-    Usage in template:
-        {% load django_cfg %}
-        {% has_nextjs_external_admin as is_enabled %}
-        {% if is_enabled %}
-            <div>External Next.js Admin Available</div>
-        {% endif %}
+    DEPRECATED: Next.js admin is no longer supported.
+    Always returns False.
     """
-    try:
-        from django_cfg.core.config import get_current_config
-        config = get_current_config()
-        return config and config.nextjs_admin is not None
-    except Exception:
-        return False
+    return False
 
 
 @register.simple_tag
 def nextjs_external_admin_url(route=''):
     """
-    Get URL for external Next.js admin (Tab 2 - solution project).
-
-    In DEBUG mode, always returns dev server URL. Client-side JavaScript
-    will handle fallback to static files if dev server is unavailable.
-
-    Returns:
-        - DEBUG=True: http://localhost:3000/admin/{route}
-        - DEBUG=False: /cfg/nextjs-admin/admin/{route}
-
-    This is for the external admin panel (solution project).
-
-    Usage in template:
-        {% load django_cfg %}
-        <iframe src="{% nextjs_external_admin_url %}"></iframe>
-        <iframe src="{% nextjs_external_admin_url 'dashboard' %}"></iframe>
+    DEPRECATED: Next.js admin is no longer supported.
+    Always returns empty string.
     """
-    try:
-        from django_cfg.core.config import get_current_config
-
-        config = get_current_config()
-        if not config or not config.nextjs_admin:
-            return ''
-
-        route = route.strip('/')
-
-        # Auto-detect development mode: DEBUG=True + port 3000 available
-        if settings.DEBUG and _is_port_available('localhost', 3000):
-            # Development mode: solution project on port 3000
-            # Routes start with /admin in Next.js (e.g., /admin, /admin/crypto)
-            base_url = 'http://localhost:3000/admin'
-            return f'{base_url}/{route}' if route else base_url
-        else:
-            # Production mode: use relative URL - Django serves from extracted ZIP with /admin prefix
-            return f"/cfg/nextjs-admin/admin/{route}" if route else "/cfg/nextjs-admin/admin/"
-    except Exception:
-        return ''
+    return ''
 
 
 @register.simple_tag
 def nextjs_external_admin_title():
     """
-    Get tab title for external Next.js admin.
-
-    Returns custom title from config or default "Next.js Admin".
-
-    Usage in template:
-        {% load django_cfg %}
-        <button>{% nextjs_external_admin_title %}</button>
+    DEPRECATED: Next.js admin is no longer supported.
+    Always returns empty string.
     """
-    try:
-        from django_cfg.core.config import get_current_config
-        config = get_current_config()
-        if not config or not config.nextjs_admin:
-            return 'Next.js Admin'
-        return config.nextjs_admin.get_tab_title()
-    except Exception:
-        return 'Next.js Admin'
+    return ''
 
 
 @register.simple_tag(takes_context=True)

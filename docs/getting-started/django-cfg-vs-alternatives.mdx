@@ -26,8 +26,8 @@ schema:
 **Bottom Line**: Choose based on your needs:
 - **Simple projects** (< 10 config values): django-environ or python-decouple
 - **Production applications** (type safety critical): Django-CFG or pydantic-settings
-- **Django-specific features** (built-in apps, Next.js admin, AI agents): Django-CFG (only option)
-- **Modern admin interfaces** (React-based dashboards): Django-CFG (built-in Next.js integration)
+- **Django-specific features** (built-in apps, Streamlit admin, AI agents): Django-CFG (only option)
+- **Modern admin interfaces** (real-time dashboards): Django-CFG (built-in Streamlit integration)
 
 TAGS: comparison, alternatives, decision-guide, django-environ, pydantic-settings, python-decouple
 DEPENDS_ON: [django, pydantic, configuration-management]
@@ -45,7 +45,7 @@ USED_BY: [developers, tech-leads, architects]
 | **Django Integration** | ✅ Native | ⚠️ Partial | ❌ Generic | ❌ Generic | ✅ Native |
 | **Nested Config** | ✅ Models | ❌ Flat | ❌ Flat | ✅ Models | ⚠️ Dicts |
 | **Built-in Apps** | ✅ 9 apps | ❌ None | ❌ None | ❌ None | ❌ None |
-| **Next.js Admin** | ✅ Built-in | ❌ None | ❌ None | ❌ None | ❌ None |
+| **Streamlit Admin** | ✅ Built-in | ❌ None | ❌ None | ❌ None | ❌ None |
 | **AI Agents** | ✅ Built-in | ❌ None | ❌ None | ❌ None | ❌ None |
 | **Multi-DB Routing** | ✅ Automatic | ❌ Manual | ❌ Manual | ❌ Manual | ⚠️ Manual |
 | **Lines of Code** | ✅ 30-50 | ⚠️ 150-200 | ⚠️ 150-200 | ⚠️ 100-150 | ❌ 200-500+ |
@@ -242,21 +242,20 @@ class MyConfig(DjangoConfig):
 
 ---
 
-## Built-in Next.js Admin Integration
+## Built-in Streamlit Admin
 
 ### The Django-CFG Advantage: Modern Admin Out of the Box
 
-One of Django-CFG's **unique features** that no other configuration library provides: **built-in Next.js admin integration** with zero configuration.
+One of Django-CFG's **unique features** that no other configuration library provides: **built-in Streamlit admin** that runs as a Django child process.
 
 **What you get**:
-- 🌐 **Three-in-One Architecture** - Public website + User dashboard + Admin panel in ONE Next.js project
-- ⚙️ **Dual Admin Strategy** - Django Unfold for quick CRUD (90%) + Next.js for complex features (10%)
-- ✨ **Zero Configuration** - One line of config, everything auto-detected
-- 🔐 **Auto JWT Authentication** - Token injection into Next.js iframe automatically
-- 🎨 **Theme Synchronization** - Dark/light mode synced across all interfaces
-- 📦 **Auto TypeScript Generation** - API clients from Django models
-- 🚀 **ZIP Deployment** - ~7MB vs ~20MB uncompressed (60% smaller Docker images)
-- ⚡ **Hot Reload Dev Mode** - Auto-detection of dev servers on ports 3000/3001
+- ⚡ **Auto-Start** - Starts with Django, dies when Django dies
+- 🐳 **No Separate Service** - No extra Docker container or process management
+- 🔐 **JWT Authentication** - Automatic token injection from Django
+- 🎨 **Vercel-Style Dark Theme** - Modern UI out of the box
+- 📊 **Real-Time Updates** - Built-in with Streamlit
+- 🐍 **Python-Only** - No Node.js/npm required
+- 🔌 **Custom Extensions** - Add pages with Python decorators
 
 ---
 
@@ -267,19 +266,10 @@ One of Django-CFG's **unique features** that no other configuration library prov
 # settings.py - Traditional approach
 INSTALLED_APPS = [
     'django.contrib.admin',
-    'corsheaders',  # Need to install
     'rest_framework',  # Need to install
     'rest_framework_simplejwt',  # Need to install
     # ... manual configuration
 ]
-
-# Manual CORS setup
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://yourdomain.com"
-]
-CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
 # Manual JWT setup
 REST_FRAMEWORK = {
@@ -288,188 +278,113 @@ REST_FRAMEWORK = {
     ],
 }
 
-# Manual static files for Next.js build
-STATICFILES_DIRS = [
-    BASE_DIR / 'nextjs_build/out',
-]
-
 # Then manually:
-# 1. Set up Next.js project structure
-# 2. Configure API routes
-# 3. Write TypeScript interfaces manually
+# 1. Set up Streamlit project structure
+# 2. Configure subprocess management
+# 3. Handle process lifecycle
 # 4. Set up authentication flow
-# 5. Handle theme synchronization
-# 6. Configure build pipeline
-# 7. Set up deployment
+# 5. Configure port discovery
+# 6. Handle hot reload
 
-# Total: 200+ lines + multiple hours of setup
+# Total: Complex subprocess management
 ```
 
 **With Django-CFG** (One Line):
 ```python
 # config.py
-from django_cfg import DjangoConfig, NextJsAdminConfig
+from django_cfg import DjangoConfig
+from django_cfg.modules.streamlit_admin import StreamlitAdminConfig
 
-class MyConfig(DjangoConfig):
-    project_name = "My Project"
+config = DjangoConfig(
+    project_name="My Project",
 
-    # That's it! One line for full Next.js admin:
-    nextjs_admin = NextJsAdminConfig(
-        project_path="../django_admin",
-    )
+    # That's it! Streamlit auto-starts with Django:
+    streamlit_admin=StreamlitAdminConfig(
+        app_path="streamlit",
+        port=8501,
+        auto_start=True,
+    ),
+)
 
 # Everything else is automatic:
+# ✅ Starts as Django child process
+# ✅ Auto-finds free port if busy
 # ✅ JWT authentication configured
-# ✅ CORS settings auto-generated
-# ✅ Theme sync enabled
-# ✅ Static files configured
-# ✅ TypeScript generation ready
-# ✅ Dev mode auto-detection
-# ✅ Production ZIP deployment
+# ✅ Dies when Django dies
+# ✅ Works in single Docker container
 
-# Total: 1 line + zero manual setup
+# Total: 1 config block + zero manual setup
 ```
 
 ---
 
-### Three-in-One Architecture
-
-**Traditional approach** requires 3 separate projects:
-
-```
-my-project/
-├── django-backend/        # Django API
-├── public-website/        # Landing pages (separate Next.js)
-├── user-dashboard/        # User features (separate Next.js)
-└── admin-panel/           # Admin UI (separate Next.js or Django admin)
-
-Problems:
-❌ 4 separate codebases to maintain
-❌ Duplicate components and logic
-❌ Multiple deployment pipelines
-❌ Inconsistent styling and UX
-❌ Complex authentication across projects
-```
-
-**Django-CFG approach** - ONE Next.js project:
-
-```
-my-project/
-├── django/                # Django backend + config
-└── admin/                 # ONE Next.js project for everything
-    ├── app/
-    │   ├── (public)/      # Public website (/)
-    │   ├── private/       # User dashboard (/private)
-    │   └── admin/         # Admin panel (/admin)
-    ├── components/        # Shared components
-    ├── lib/              # Shared utilities
-    └── api/              # Auto-generated TypeScript clients
-
-Benefits:
-✅ Single codebase, shared components
-✅ Consistent design system
-✅ One deployment pipeline
-✅ Unified authentication
-✅ Easy code reuse
-```
-
----
-
-### Dual Admin Strategy: 90/10 Rule
-
-**The Problem**: Django admin is great for CRUD but limited for complex features. Full React admin is powerful but overkill for simple tasks.
-
-**Django-CFG Solution**: Best of both worlds with **dual admin tabs**:
+### Auto-Start Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Django Admin (Unfold)                     │
+│                    Django Process                            │
 │                                                               │
-│  [Tab 1: Built-in]           [Tab 2: Next.js Admin]         │
-│  ┌──────────────────┐        ┌────────────────────┐         │
-│  │ Quick CRUD       │        │ Complex Features    │         │
-│  │ • Users          │        │ • Analytics         │         │
-│  │ • Posts          │        │ • Real-time data    │         │
-│  │ • Settings       │        │ • Custom workflows  │         │
-│  │ (Django Unfold)  │        │ (React + Charts)    │         │
-│  └──────────────────┘        └────────────────────┘         │
+│  python manage.py runserver                                  │
+│       │                                                       │
+│       └──► Spawns Streamlit as child process                │
+│            │                                                  │
+│            ├── Port 8501 (or next free)                      │
+│            ├── Inherits Django settings                      │
+│            └── Auto-dies when Django stops                   │
+│                                                               │
+│  Console output:                                             │
+│  Streamlit started on port 8501 (PID: 12345)                │
+│  Streamlit admin available at: http://localhost:8501        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Usage pattern**:
-- **90% of tasks** → Tab 1 (Built-in) - Quick CRUD operations with Django Unfold
-- **10% of tasks** → Tab 2 (Next.js) - Complex dashboards, analytics, custom workflows
-
-**No migration needed** - start with built-in admin, add Next.js features as needed!
+**No separate Docker service needed!**
 
 ---
 
-### Auto TypeScript Generation
+### Custom Extensions with Python Decorators
 
-```bash
-# One command generates everything:
-python manage.py generate_clients --typescript
+```python
+# streamlit/extensions.py
+from core.registry import page_registry
+import streamlit as st
 
-# Output:
-# ✅ Generated TypeScript clients from Django models
-# ✅ Copied to Next.js project
-# ✅ Built Next.js static export
-# ✅ Created ZIP archive (~7MB)
+# Register custom group
+page_registry.register_group("Project", icon="briefcase", order=50)
 
-# Use in Next.js:
-import { CfgClient } from '@/api/generated/cfg';
+# Register custom page
+@page_registry.register("Analytics", icon="bar-chart-line", group="Project")
+def render_analytics_page():
+    st.title("Analytics")
 
-const client = new CfgClient();
-const users = await client.users.list();  // Fully typed!
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Users", "1,234", "+12%")
+    with col2:
+        st.metric("Active Today", "567", "+5%")
+    with col3:
+        st.metric("Revenue", "$12,345", "+8%")
 ```
 
 ---
 
 ### Why This Matters
 
-**Other configuration libraries** focus only on settings management. **Django-CFG** provides a complete modern Django + Next.js stack:
+**Other configuration libraries** focus only on settings management. **Django-CFG** provides a complete modern admin:
 
 | Feature | django-environ | pydantic-settings | Django-CFG |
 |---------|----------------|-------------------|------------|
-| **Admin Interface** | Django admin only | Django admin only | Django + Next.js dual admin |
-| **API Generation** | Manual | Manual | ✅ Auto TypeScript |
-| **Authentication** | Manual JWT setup | Manual JWT setup | ✅ Auto JWT injection |
-| **Theme Sync** | N/A | N/A | ✅ Built-in |
-| **Three-in-One** | N/A | N/A | ✅ Public + Private + Admin |
-| **Setup Time** | Hours | Hours | **5 minutes** |
-
----
-
-### Real-World Use Case
-
-**Scenario**: You need an analytics dashboard with real-time charts, custom filters, and complex data visualization.
-
-**With django-environ or pydantic-settings**:
-1. Set up separate React/Next.js project ⏱️ 2 hours
-2. Configure CORS and authentication ⏱️ 3 hours
-3. Write API endpoints ⏱️ 4 hours
-4. Write TypeScript interfaces manually ⏱️ 2 hours
-5. Set up theme synchronization ⏱️ 2 hours
-6. Configure deployment pipeline ⏱️ 3 hours
-
-**Total: 16+ hours of work**
-
-**With Django-CFG**:
-1. Add one line: `nextjs_admin = NextJsAdminConfig(project_path="../admin")` ⏱️ 1 minute
-2. Run `python manage.py generate_clients --typescript` ⏱️ 2 minutes
-3. Create React component in `admin/app/admin/analytics/page.tsx` ⏱️ Your actual feature work
-
-**Total: 3 minutes setup + your feature work**
+| **Admin Interface** | Django admin only | Django admin only | Django + Streamlit |
+| **Real-Time Updates** | N/A | N/A | ✅ Built-in |
+| **Process Management** | Manual | Manual | ✅ Automatic |
+| **Docker Complexity** | Multiple services | Multiple services | ✅ Single container |
+| **Setup Time** | Hours | Hours | **1 minute** |
 
 ---
 
 ### Learn More
 
-See the complete [Next.js Admin Integration documentation](../../features/integrations/nextjs-admin) for:
-- [Core Concepts](../../features/integrations/nextjs-admin/concepts) - Three-in-One + Dual Admin philosophy
-- [Quick Start](../../features/integrations/nextjs-admin/quick-start) - 5-minute setup guide
-- [Configuration](../../features/integrations/nextjs-admin/configuration) - All options
-- [Examples](../../features/integrations/nextjs-admin/examples) - Real-world patterns
+See the complete [Streamlit Admin documentation](../../features/modules/streamlit-admin/overview) for configuration, custom pages, and theming.
 
 ---
 
@@ -957,7 +872,7 @@ Q6: Is your team comfortable with Pydantic?
 **Choose Django-CFG if you need**:
 - ✅ Type safety (Pydantic v2)
 - ✅ IDE autocomplete
-- ✅ **Next.js admin integration** (three-in-one + dual admin strategy)
+- ✅ **Streamlit admin integration** (auto-start as Django child process)
 - ✅ Built-in apps (support, accounts, AI agents)
 - ✅ Auto TypeScript generation from Django models
 - ✅ Minimal configuration code
@@ -987,16 +902,17 @@ Q6: Is your team comfortable with Pydantic?
 
 ### Does Django-CFG include a modern admin interface?
 
-Yes! Django-CFG is the **only** Django configuration library with **built-in Next.js admin integration**:
+Yes! Django-CFG is the **only** Django configuration library with **built-in Streamlit admin**:
 
-- **Three-in-One Architecture** - Public site + User dashboard + Admin panel in ONE Next.js project
-- **Dual Admin Strategy** - Django Unfold (90% quick CRUD) + Next.js (10% complex features)
-- **Zero Configuration** - One line: `nextjs_admin = NextJsAdminConfig(project_path="../admin")`
-- **Auto Features** - JWT auth, theme sync, TypeScript generation, ZIP deployment
+- **Auto-Start** - Runs as Django child process, no separate service needed
+- **Zero Configuration** - One config block: `streamlit_admin=StreamlitAdminConfig(app_path="streamlit")`
+- **Python-Only** - No Node.js/npm required, just Python
+- **Real-Time** - Built-in real-time updates with Streamlit
+- **Custom Extensions** - Add pages with Python decorators
 
-**Setup time**: 5 minutes vs 16+ hours manual setup with other libraries.
+**Setup time**: 1 minute vs hours of manual setup with other libraries.
 
-See [Next.js Admin Integration docs](../../features/integrations/nextjs-admin) for details.
+See [Streamlit Admin docs](../../features/modules/streamlit-admin/overview) for details.
 
 ---
 

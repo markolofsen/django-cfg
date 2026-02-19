@@ -1,0 +1,24 @@
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+port = 8501
+address = "0.0.0.0"
+maxUploadSize = 200
+enableWebsocketCompression = true
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost" 
+
+[theme]
+base = "dark"
+primaryColor = "#0070F3"
+backgroundColor = "#000000"
+secondaryBackgroundColor = "#111111"
+textColor = "#EDEDED"
+font = "sans serif"
+
+[client]
+showErrorDetails = true
+toolbarMode = "developer" 

@@ -36,7 +36,7 @@ from ...models import (
 from ..encryption.config import EncryptionConfig
 from ...models.api.grpc import GRPCConfig
 from ...models.ngrok import NgrokConfig
-from ...modules.nextjs_admin import NextJsAdminConfig
+from ...modules.streamlit_admin import StreamlitAdminConfig
 from ..exceptions import ConfigurationError
 from ..types.enums import EnvironmentMode, StartupInfoMode
 
@@ -398,19 +398,14 @@ class DjangoConfig(BaseModel):
         description="Ngrok tunneling for development/webhooks",
     )
 
-    nextjs_admin: Optional[NextJsAdminConfig] = Field(
+    streamlit_admin: Optional[StreamlitAdminConfig] = Field(
         default=None,
-        description="Next.js admin panel integration",
+        description="Streamlit admin panel integration",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                          FRONTEND / UI                                    ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
-
-    enable_frontend: bool = Field(
-        default=True,
-        description="Enable Next.js admin panel static serving",
-    )
 
     tailwind_app_name: str = Field(
         default="theme",

@@ -82,9 +82,9 @@ PYTHON_TYPES: dict[FieldType, str] = {
 }
 
 PYTHON_FORMAT_TYPES: dict[FormatType, str] = {
-    FormatType.DATETIME: "datetime",
-    FormatType.DATE: "date",
-    FormatType.TIME: "time",
+    FormatType.DATETIME: "datetime.datetime",
+    FormatType.DATE: "datetime.date",
+    FormatType.TIME: "datetime.time",
     FormatType.UUID: "str",  # Could use UUID but str is simpler
     FormatType.EMAIL: "str",
     FormatType.URI: "str",
@@ -103,9 +103,12 @@ PYTHON_FORMAT_TYPES: dict[FormatType, str] = {
 
 # Python imports needed for specific types
 PYTHON_IMPORTS: dict[str, str] = {
-    "datetime": "from datetime import datetime",
-    "date": "from datetime import date",
-    "time": "from datetime import time",
+    "datetime.datetime": "import datetime",
+    "datetime.date": "import datetime",
+    "datetime.time": "import datetime",
+    "datetime": "import datetime",  # fallback for old references
+    "date": "import datetime",  # fallback for old references
+    "time": "import datetime",  # fallback for old references
     "Any": "from typing import Any",
     "UUID": "from uuid import UUID",
 }

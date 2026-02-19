@@ -29,6 +29,11 @@ def get_enabled_cfg_apps() -> List[str]:
     enabled_apps.append("django_cfg.apps.system.accounts")
     enabled_apps.append("django_cfg.apps.system.totp")
 
+    # API apps (always enabled)
+    enabled_apps.append("django_cfg.apps.api.dashboard")
+    enabled_apps.append("django_cfg.apps.api.health")
+    enabled_apps.append("django_cfg.apps.api.commands")
+
     # Integration apps
     if base_module.is_centrifugo_enabled():
         enabled_apps.append("django_cfg.apps.integrations.centrifugo")
@@ -103,17 +108,16 @@ urlpatterns = [
     path('cfg/commands/', include('django_cfg.apps.api.commands.urls')),
     path('cfg/openapi/', include('django_cfg.modules.django_client.urls')),
     path('cfg/dashboard/', include('django_cfg.apps.api.dashboard.urls')),
-    path('cfg/admin/', include('django_cfg.apps.system.frontend.urls')),
     path('cfg/accounts/', include('django_cfg.apps.system.accounts.urls')),
     path('cfg/totp/', include('django_cfg.apps.system.totp.urls')),
 ]
 
-# External Next.js Admin Integration (conditional)
+# Streamlit Admin Integration (conditional)
 try:
     from django_cfg.core.config import get_current_config
     _config = get_current_config()
-    if _config and _config.nextjs_admin:
-        urlpatterns.append(path('cfg/nextjs-admin/', include('django_cfg.modules.nextjs_admin.urls')))
+    if _config and _config.streamlit_admin:
+        urlpatterns.append(path('cfg/streamlit/', include('django_cfg.modules.streamlit_admin.urls')))
 except Exception:
     pass
 

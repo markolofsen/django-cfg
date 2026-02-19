@@ -110,11 +110,6 @@ class Command(AdminCommand):
         util_group = parser.add_argument_group('Utility Options')
 
         util_group.add_argument(
-            "--no-build",
-            action="store_true",
-            help="Skip Next.js admin build",
-        )
-        util_group.add_argument(
             "--dry-run",
             action="store_true",
             help="Dry run - validate configuration but don't generate files",
@@ -135,14 +130,9 @@ class Command(AdminCommand):
             help="Run in interactive mode",
         )
         util_group.add_argument(
-            "--copy-cfg-clients",
+            "--streamlit",
             action="store_true",
-            help="Copy cfg_* API clients to Next.js admin",
-        )
-        util_group.add_argument(
-            "--skip-nextjs-copy",
-            action="store_true",
-            help="Skip copying clients to Next.js admin project",
+            help="Copy Python clients to Streamlit admin app",
         )
         util_group.add_argument(
             "--verbose",

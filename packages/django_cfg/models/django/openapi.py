@@ -107,9 +107,10 @@ class OpenAPIClientConfig(OpenAPIConfig):
         """
         Get groups as a dictionary, including auto-detected cfg modules and extensions.
 
-        Automatically creates individual groups for:
-        - Each django_cfg.apps.* module (cfg_dashboard, cfg_accounts, cfg_centrifugo, etc.)
-        - Each extensions.apps.* app (ext_knowbase, ext_support, etc.)
+        Automatically creates:
+        - Combined "cfg" group with ALL django_cfg.apps.* modules
+        - Individual groups for each django_cfg.apps.* module (cfg_dashboard, cfg_accounts, etc.)
+        - Individual groups for each extensions.apps.* app (ext_knowbase, ext_support, etc.)
 
         Returns:
             Dict of groups from configuration + auto-detected groups
@@ -120,11 +121,23 @@ class OpenAPIClientConfig(OpenAPIConfig):
         try:
             from django.apps import apps
 
-            # Auto-add individual cfg module groups
+            # Collect all cfg apps
             cfg_apps = [
                 app.name for app in apps.get_app_configs()
                 if app.name.startswith("django_cfg.apps.")
             ]
+
+            # Create combined "cfg" group with ALL django_cfg apps
+            if cfg_apps and "cfg" not in groups:
+                groups["cfg"] = OpenAPIGroupConfig(
+                    name="cfg",
+                    apps=cfg_apps,
+                    title="Django CFG API",
+                    description="Combined Django-CFG framework API (all modules)",
+                    version="1.0.0",
+                )
+
+            # Also create individual cfg module groups for granular access
             for app_name in cfg_apps:
                 # Extract module name: django_cfg.apps.api.dashboard -> dashboard
                 # django_cfg.apps.integrations.centrifugo -> centrifugo

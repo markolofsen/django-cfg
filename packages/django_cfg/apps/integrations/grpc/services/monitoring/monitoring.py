@@ -4,6 +4,7 @@ Monitoring Service.
 Provides business logic for gRPC monitoring and statistics.
 """
 
+import socket
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -98,7 +99,7 @@ class MonitoringService:
         Returns:
             Dictionary with server information including services
         """
-        from ..discovery.discovery import ServiceDiscovery
+        from ..discovery import ServiceDiscovery
 
         # Get current server status
         current_server = GRPCServerStatus.objects.get_current_server()
@@ -113,15 +114,11 @@ class MonitoringService:
                 "port": grpc_server_config.port if grpc_server_config else 50051,
                 "address": f"{grpc_server_config.host}:{grpc_server_config.port}" if grpc_server_config else "[::]:50051",
                 "pid": None,
+                "hostname": socket.gethostname(),
                 "started_at": None,
                 "uptime_seconds": 0,
-                "uptime_display": "Not running",
-                "registered_services_count": 0,
-                "enable_reflection": False,
-                "enable_health_check": False,
                 "last_heartbeat": None,
                 "services": [],
-                "services_healthy": True,
             }
 
         # Get service statistics for the period
@@ -186,13 +183,11 @@ class MonitoringService:
             "port": current_server.port,
             "address": current_server.address,
             "pid": current_server.pid,
+            "hostname": current_server.hostname,
             "started_at": current_server.started_at,
             "uptime_seconds": current_server.uptime_seconds,
-            "uptime_display": current_server.uptime_display,
-            "registered_services_count": len(services_list),
             "last_heartbeat": current_server.last_heartbeat,
             "services": services_list,
-            "services_healthy": services_healthy,
         }
 
     def get_recent_requests(

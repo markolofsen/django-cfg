@@ -3,6 +3,8 @@ title: Documentation
 description: DjangoCFG documentation - A powerful configuration framework for Django
 ---
 
+import { Cards, Callout } from 'nextra/components'
+
 # DjangoCFG Documentation
 
 Welcome to the DjangoCFG documentation. DjangoCFG is a comprehensive configuration framework that simplifies Django project setup and management.
@@ -22,3 +24,66 @@ DjangoCFG provides a unified configuration system for Django projects, offering:
 - **Environment management** - Seamless .env file handling
 - **Modular architecture** - Pick and choose the components you need
 - **AI-powered tools** - Built-in AI agents for development assistance
+
+---
+
+## Streamlit Admin
+
+<Callout type="info">
+**Python-only admin panel that runs as a Django child process — no separate Docker service needed.**
+</Callout>
+
+Modern, real-time admin interface built with Streamlit. Auto-starts with Django, dies when Django dies.
+
+```bash
+# Just start Django — Streamlit starts automatically
+python manage.py runserver
+
+# Console output:
+# Streamlit started on port 8501 (PID: 12345)
+# Streamlit admin available at: http://localhost:8501
+```
+
+**Key benefits:**
+- No separate Docker service or process management
+- Auto-finds free port if default is busy
+- Works in single Docker container
+- Full JWT authentication from Django
+- Custom extensions with Python decorators
+
+<Cards>
+  <Cards.Card title="Streamlit Admin Overview" href="./features/modules/streamlit-admin/overview" />
+</Cards>
+
+---
+
+## Code Generation
+
+Unified code generation for multi-platform API clients (TypeScript, Python, Go, Swift).
+
+```python
+from django_cfg.modules.django_codegen import Config, OpenAPI, Target, Language, TargetType
+
+config = Config(
+    openapi=OpenAPI(
+        targets=[
+            Target(
+                lang=Language.TYPESCRIPT,
+                type=TargetType.ADMIN,
+                path=FRONTEND / "apps/admin/api/generated",
+                groups=["cfg_*", "profiles"],
+            ),
+        ],
+    ),
+)
+```
+
+```bash
+python manage.py gen          # All platforms
+python manage.py gen --ts     # TypeScript only
+python manage.py gen --target admin  # Specific target
+```
+
+<Cards>
+  <Cards.Card title="Code Generation Overview" href="./features/modules/django-codegen/overview" />
+</Cards>

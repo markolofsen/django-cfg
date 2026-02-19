@@ -297,9 +297,9 @@ class DjangoConfig(BaseModel):
         default=None,
         description="Ngrok tunneling for development/webhooks",
     )
-    nextjs_admin: Optional[NextJsAdminConfig] = Field(
+    streamlit_admin: Optional[StreamlitAdminConfig] = Field(
         default=None,
-        description="Next.js admin panel integration",
+        description="Streamlit admin panel (auto-starts with Django)",
     )
 
     # ══════════════════════════════════════════════════════════════
@@ -317,7 +317,7 @@ class DjangoConfig(BaseModel):
 
     enable_frontend: bool = Field(
         default=True,
-        description="Enable Next.js admin panel static serving",
+        description="Enable frontend features",
     )
     tailwind_app_name: str = Field(
         default="theme",

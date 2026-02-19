@@ -1,0 +1,351 @@
+---
+title: Configuration
+sidebar_position: 2
+keywords:
+  - configuration
+  - targets
+  - extensions
+  - openapi
+description: Complete configuration reference for django_codegen module.
+---
+
+# Configuration
+
+Complete reference for `django_codegen` configuration models.
+
+---
+
+## Config
+
+Main configuration container:
+
+```python
+from django_cfg.modules.django_codegen import Config, OpenAPI, Centrifugo, ORM
+
+config = Config(
+    openapi=OpenAPI(...),       # OpenAPI client generation
+    centrifugo=Centrifugo(...), # Centrifugo RPC clients
+    orm=ORM(...),               # FastAPI/SQLModel generation
+)
+```
+
+---
+
+## OpenAPI
+
+OpenAPI client generation configuration:
+
+```python
+from django_cfg.modules.django_codegen import OpenAPI, Target, ExtensionTarget
+
+OpenAPI(
+    targets=[...],              # List of Target objects
+    extensions=ExtensionTarget(...),  # Auto-discover extensions
+    go_module="github.com/org/repo",  # Go module path
+)
+```
+
+### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `targets` | `list[Target]` | Generation targets |
+| `extensions` | `ExtensionTarget \| None` | Extension auto-discovery config |
+| `go_module` | `str \| None` | Go module path for generated code |
+
+---
+
+## Target
+
+Single generation target:
+
+```python
+from django_cfg.modules.django_codegen import Target, Language, TargetType
+
+Target(
+    lang=Language.TYPESCRIPT,
+    type=TargetType.ADMIN,
+    path=Path("frontend/api/generated"),
+    groups=["cfg_*", "profiles"],
+    post_build="pnpm build",
+)
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `lang` | `Language` | Required | Target platform |
+| `type` | `TargetType \| str` | Required | Target type identifier |
+| `path` | `Path` | Required | Output directory |
+| `groups` | `list[str]` | Required | API groups to include |
+| `post_build` | `str \| None` | `None` | Command to run after generation |
+
+---
+
+## ExtensionTarget
+
+Auto-discover extension packages:
+
+```python
+from django_cfg.modules.django_codegen import ExtensionTarget, Language
+
+ExtensionTarget(
+    lang=Language.TYPESCRIPT,
+    frontend_path=Path("frontend/extensions"),
+    package_pattern="ext-{name}",
+    output_pattern="src/api/generated",
+    group_prefix="ext_",
+    post_build=None,
+)
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `lang` | `Language` | `TYPESCRIPT` | Target platform |
+| `frontend_path` | `Path` | Required | Directory to scan for extensions |
+| `package_pattern` | `str` | `"ext-{name}"` | Package naming pattern |
+| `output_pattern` | `str` | `"src/api/generated"` | Output path within package |
+| `group_prefix` | `str` | `"ext_"` | Prefix for Django API groups |
+| `post_build` | `str \| None` | `None` | Post-generation command |
+
+### Discovery Logic
+
+```
+frontend/extensions/
+├── ext-support/          # Matches pattern "ext-{name}"
+│   └── src/api/generated/  # Has generated/ folder = has API
+├── ext-leads/
+│   └── src/api/generated/
+├── ext-base/             # No generated/ folder = skipped
+│   └── src/components/
+```
+
+Results in:
+- `ext-support` → group `ext_support` → Target for `ext_support`
+- `ext-leads` → group `ext_leads` → Target for `ext_leads`
+- `ext-base` → skipped (no API)
+
+---
+
+## Language (Platform)
+
+Available platforms:
+
+```python
+from django_cfg.modules.django_codegen import Language, Platform
+
+# Language and Platform are aliases
+Language.TYPESCRIPT  # TypeScript/JavaScript
+Language.PYTHON      # Python with httpx
+Language.GO          # Go
+Language.SWIFT       # Swift (OpenAPI Runtime)
+Language.SWIFT_CODABLE  # Swift Codable (simple)
+Language.PROTO       # Protocol Buffers
+```
+
+### Platform Methods
+
+```python
+# Get platforms for API generation
+Platform.api_platforms()
+# {TYPESCRIPT, PYTHON, GO, SWIFT, SWIFT_CODABLE, PROTO}
+
+# Default platforms
+Platform.default_platforms()
+# {TYPESCRIPT, PYTHON, GO}
+
+# Check if external generator
+Platform.SWIFT.is_external  # True (uses apple/swift-openapi-generator)
+```
+
+---
+
+## TargetType
+
+Predefined target types:
+
+```python
+from django_cfg.modules.django_codegen import TargetType
+
+TargetType.ADMIN       # Admin panel
+TargetType.WEB         # Public web app
+TargetType.PACKAGES    # Shared packages
+TargetType.EXTENSIONS  # Extension modules
+TargetType.PARSERS     # Parsers/scrapers
+TargetType.SDK         # SDK distribution
+```
+
+Custom types are also supported:
+
+```python
+Target(
+    type="mobile",  # Custom string type
+    ...
+)
+```
+
+---
+
+## ORM Configuration
+
+Generate FastAPI/SQLModel from Django models:
+
+```python
+from django_cfg.modules.django_codegen import ORM, ORMTarget, ORMGenerator
+
+ORM(
+    targets=[
+        ORMTarget(
+            output=Path("fastapi/src/orm"),
+            generator=ORMGenerator.FASTAPI,
+            apps=["profiles", "catalog"],
+        ),
+    ],
+    include_crud=True,
+    include_schemas=True,
+    include_relationships=False,
+    include_database_config=True,
+    async_mode=True,
+    exclude_apps=["admin", "auth", "sessions"],
+    use_jsonb=True,
+    use_array_fields=True,
+    database_env_var="DATABASE_URL",
+)
+```
+
+### ORM Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `targets` | `list[ORMTarget]` | `[]` | Generation targets |
+| `include_crud` | `bool` | `True` | Generate CRUD repositories |
+| `include_schemas` | `bool` | `True` | Generate Pydantic schemas |
+| `include_relationships` | `bool` | `False` | Generate SQLModel relationships |
+| `include_database_config` | `bool` | `True` | Generate database.py |
+| `async_mode` | `bool` | `True` | Generate async code |
+| `exclude_apps` | `list[str]` | Django default apps | Apps to skip |
+| `use_jsonb` | `bool` | `True` | Use JSONB for JSONField |
+| `use_array_fields` | `bool` | `True` | Use native ARRAY type |
+
+---
+
+## GeneratorOptions
+
+Typed options for programmatic generation:
+
+```python
+from django_cfg.modules.django_codegen import GeneratorOptions, Platform
+
+options = GeneratorOptions(
+    platforms={Platform.TYPESCRIPT, Platform.PYTHON},
+    groups=["profiles", "catalog"],
+    dry_run=False,
+    verbose=True,
+    streamlit=False,
+    external_go=False,
+    external_python=False,
+)
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `platforms` | `set[Platform]` | TS, PY, GO | Platforms to generate |
+| `groups` | `list[str] \| None` | `None` | Groups to filter (None = all) |
+| `dry_run` | `bool` | `False` | Show what would be generated |
+| `verbose` | `bool` | `False` | Verbose output |
+| `streamlit` | `bool` | `False` | Copy to Streamlit app |
+| `external_go` | `bool` | `False` | Use oapi-codegen |
+| `external_python` | `bool` | `False` | Use openapi-python-client |
+
+---
+
+## Complete Example
+
+```python
+# generation.py
+from pathlib import Path
+
+from django_cfg.modules.django_codegen import (
+    Config,
+    OpenAPI,
+    Centrifugo,
+    ORM,
+    Target,
+    ExtensionTarget,
+    ORMTarget,
+    Language,
+    TargetType,
+    ORMGenerator,
+)
+
+ROOT = Path(__file__).parent
+FRONTEND = ROOT.parent / "frontend"
+FASTAPI = ROOT.parent / "fastapi_server"
+
+config = Config(
+    # OpenAPI clients
+    openapi=OpenAPI(
+        targets=[
+            # Admin panel
+            Target(
+                lang=Language.TYPESCRIPT,
+                type=TargetType.ADMIN,
+                path=FRONTEND / "apps/admin/api/generated",
+                groups=["cfg_*", "profiles"],
+            ),
+            # Public web
+            Target(
+                lang=Language.TYPESCRIPT,
+                type=TargetType.WEB,
+                path=FRONTEND / "apps/web/api/generated",
+                groups=["catalog", "products"],
+            ),
+            # Python SDK
+            Target(
+                lang=Language.PYTHON,
+                type=TargetType.SDK,
+                path=ROOT / "sdk/generated",
+                groups=["*"],  # All groups
+            ),
+        ],
+        # Auto-discover extensions
+        extensions=ExtensionTarget(
+            frontend_path=FRONTEND / "extensions",
+            package_pattern="ext-{name}",
+            output_pattern="src/api/generated",
+            group_prefix="ext_",
+        ),
+        go_module="github.com/myorg/myproject",
+    ),
+
+    # Centrifugo RPC
+    centrifugo=Centrifugo(
+        targets=[
+            Target(
+                lang=Language.TYPESCRIPT,
+                type=TargetType.WEB,
+                path=FRONTEND / "packages/ws/generated",
+                groups=["notifications"],
+            ),
+        ],
+    ),
+
+    # FastAPI ORM
+    orm=ORM(
+        targets=[
+            ORMTarget(
+                output=FASTAPI / "src/orm",
+                generator=ORMGenerator.FASTAPI,
+                apps=["profiles", "catalog"],
+            ),
+        ],
+        include_crud=True,
+        async_mode=True,
+    ),
+)
+```

@@ -3,23 +3,21 @@
 {% load static %}
 {% load unfold %}
 {% load django_cfg %}
+{% load streamlit_admin %}
 
 {% block extrahead %}
     {{ block.super }}
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
 
-    {# JWT Token Injection for iframe authentication #}
+    {# JWT Token Injection for localStorage (backup) #}
     {% if user.is_authenticated %}
     <script>
     (function() {
         try {
-            // console.log('[Django Admin] User is authenticated:', '{{ user.username }}', 'is_staff:', {{ user.is_staff|lower }}, 'is_superuser:', {{ user.is_superuser|lower }});
             {% generate_jwt_tokens as jwt_tokens %}
-            // console.log('[Django Admin] JWT tokens generated - access:', '{{ jwt_tokens.access }}'.substring(0, 20) + '...', 'refresh:', '{{ jwt_tokens.refresh }}'.substring(0, 20) + '...');
             localStorage.setItem('auth_token', '{{ jwt_tokens.access }}');
             localStorage.setItem('refresh_token', '{{ jwt_tokens.refresh }}');
-            // console.log('[Django Admin] Tokens saved to localStorage');
         } catch (e) {
             console.error('[Django Admin] Failed to inject JWT tokens:', e);
         }
@@ -74,17 +72,16 @@
             flex-direction: column;
         }
 
-        .nextjs-dashboard-iframe {
+        .dashboard-iframe {
             width: 100%;
             height: 100%;
             border: none;
             display: block;
-            /* Show iframe immediately - preloader inside Next.js app will handle loading state */
             visibility: visible;
             opacity: 1;
         }
 
-        .nextjs-dashboard-iframe.loaded {
+        .dashboard-iframe.loaded {
             /* No additional changes needed - iframe is already visible */
         }
 
@@ -161,84 +158,18 @@
 {% block content %}
     <!-- Main Container -->
     {% component "unfold/components/container.html" %}
+        {% has_streamlit_admin as streamlit_enabled %}
+
         <div x-data="{
-            activeTab: 'builtin',
-            previousTab: 'builtin',
-            currentNextjsPath: '',
-            switchTab(tab) {
-                if (this.previousTab !== tab) {
-                    // Reset iframe to initial URL when switching tabs
-                    this.resetIframe(this.previousTab);
-                    this.previousTab = tab;
-                }
-                this.activeTab = tab;
-            },
-            resetIframe(tab) {
-                // Reset the iframe that was just hidden
-                let iframeId;
-                if (tab === 'builtin') {
-                    iframeId = 'nextjs-dashboard-iframe-builtin';
-                } else if (tab === 'nextjs') {
-                    iframeId = 'nextjs-dashboard-iframe-nextjs';
-                }
-
-                const iframe = document.getElementById(iframeId);
-                if (iframe) {
-                    const originalSrc = iframe.getAttribute('data-original-src') || iframe.src;
-                    iframe.src = originalSrc;
-                }
-                // Reset path when resetting iframe
-                if (tab === 'nextjs') {
-                    this.currentNextjsPath = '';
-                }
-            },
             openInNewWindow() {
-                // Get iframe ID based on active tab
-                let iframeId;
-                if (this.activeTab === 'builtin') {
-                    iframeId = 'nextjs-dashboard-iframe-builtin';
-                } else if (this.activeTab === 'nextjs') {
-                    iframeId = 'nextjs-dashboard-iframe-nextjs';
-                }
-
-                const iframe = document.getElementById(iframeId);
+                const iframe = document.getElementById('streamlit-dashboard-iframe');
                 if (!iframe) return;
-
-                // Get base URL from iframe src or data-original-src
-                let baseUrl = iframe.src || iframe.getAttribute('data-original-src');
-
-                // If we have a tracked path from postMessage (only for nextjs tab), use it
-                if (this.activeTab === 'nextjs' && this.currentNextjsPath) {
-                    try {
-                        const url = new URL(baseUrl);
-                        // Replace pathname with tracked path
-                        url.pathname = this.currentNextjsPath;
-                        baseUrl = url.toString();
-                    } catch (e) {
-                        console.warn('[Django-CFG] Failed to construct URL with path:', e);
-                    }
-                }
-
-                if (baseUrl) {
-                    window.open(baseUrl, '_blank', 'noopener,noreferrer');
+                let url = iframe.src || iframe.getAttribute('data-original-src');
+                if (url) {
+                    window.open(url, '_blank', 'noopener,noreferrer');
                 }
             }
         }">
-            {% if is_frontend_dev_mode %}
-            <!-- Development Mode Badge -->
-            <div class="bg-yellow-100 dark:bg-yellow-900 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-300" role="alert">
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                    </svg>
-                    <div>
-                        <p class="font-bold">Frontend Development Mode Active</p>
-                        <p class="text-sm">Loading Next.js from <code class="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">{% nextjs_admin_url %}</code></p>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
             {% version_update_info as version %}
             {% if version.update_available %}
             <!-- Package Update Available Banner -->
@@ -265,568 +196,84 @@
             </a>
             {% endif %}
 
-            <!-- Tab Navigation -->
-            {% is_dev as is_development %}
-            <div>
-                <div class="border-b border-gray-300 dark:border-gray-600" style="border-bottom-color: rgba(209, 213, 219, 0.2);">
-                    <style>
-                        .dark [style*="border-bottom-color"] {
-                            border-bottom-color: rgba(75, 85, 99, 0.2) !important;
-                        }
+            <!-- Header Bar -->
+            <div class="border-b border-gray-300 dark:border-gray-600" style="border-bottom-color: rgba(209, 213, 219, 0.2);">
+                <style>
+                    .dark [style*="border-bottom-color"] {
+                        border-bottom-color: rgba(75, 85, 99, 0.2) !important;
+                    }
+                </style>
+                <div class="flex items-center justify-between px-4">
+                    <div class="flex items-center gap-2 py-4">
+                        <span class="material-icons text-base text-primary-600 dark:text-primary-500">dashboard</span>
+                        <span class="font-medium text-sm text-gray-700 dark:text-gray-300">{% streamlit_admin_tab_title %}</span>
+                    </div>
 
-                        /* Mobile: Scrollable tabs */
-                        .tabs-container {
-                            overflow-x: auto;
-                            -webkit-overflow-scrolling: touch;
-                            scrollbar-width: thin;
-                            scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
-                        }
-
-                        .tabs-container::-webkit-scrollbar {
-                            height: 4px;
-                        }
-
-                        .tabs-container::-webkit-scrollbar-track {
-                            background: transparent;
-                        }
-
-                        .tabs-container::-webkit-scrollbar-thumb {
-                            background-color: rgba(156, 163, 175, 0.3);
-                            border-radius: 2px;
-                        }
-
-                        .tabs-container::-webkit-scrollbar-thumb:hover {
-                            background-color: rgba(156, 163, 175, 0.5);
-                        }
-                    </style>
-                    <div class="tabs-container">
-                        <div class="flex items-center justify-between px-4 min-w-max">
-                            <nav class="-mb-px flex space-x-2 sm:space-x-4 md:space-x-8" aria-label="Dashboard Tabs">
-                        <button @click="switchTab('builtin')"
-                                class="whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all duration-200"
-                                :class="activeTab === 'builtin'
-                                    ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-700'">
-                            <span class="material-icons text-base">dashboard</span>
-                            <span class="hidden sm:inline">Built-in Dashboard</span>
-                            <span class="sm:hidden">Built-in</span>
+                    <!-- Actions & Version -->
+                    <div class="flex items-center gap-2 md:gap-4 py-4">
+                        <!-- Open in new window button -->
+                        <button @click="openInNewWindow()"
+                                title="Open in new window"
+                                class="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-all duration-150 whitespace-nowrap">
+                            <span class="material-icons" style="font-size: 16px;">open_in_new</span>
+                            <span class="hidden sm:inline">Open in New Window</span>
                         </button>
 
-                        <button @click="switchTab('nextjs')"
-                                class="whitespace-nowrap py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-all duration-200"
-                                :class="activeTab === 'nextjs'
-                                    ? 'border-primary-600 text-primary-600 dark:border-primary-500 dark:text-primary-500'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-700'">
-                            <span class="material-icons text-base">web</span>
-                            <span class="hidden sm:inline">{% nextjs_external_admin_title %}</span>
-                            <span class="sm:hidden">Admin</span>
-                        </button>
-                            </nav>
-
-                            <!-- Actions & Version -->
-                            <div class="flex items-center gap-2 md:gap-4 py-4">
-                                <!-- Open in new window button (available for all tabs) -->
-                                <button @click="openInNewWindow()"
-                                        title="Open in new window"
-                                        class="flex items-center gap-1.5 px-2 md:px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-all duration-150 whitespace-nowrap">
-                                    <span class="material-icons" style="font-size: 16px;">open_in_new</span>
-                                    <span class="hidden sm:inline">Open in New Window</span>
-                                </button>
-
-                                <!-- Version info (always visible) -->
-                                {% load django_cfg %}
-                                <a href="https://pypi.org/project/django-cfg/"
-                                   target="_blank"
-                                   rel="noopener noreferrer"
-                                   class="text-xs font-medium text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-500 transition-colors duration-150 whitespace-nowrap">
-                                    {% lib_name %}
-                                </a>
-                            </div>
-                        </div>
+                        <!-- Version info -->
+                        <a href="https://pypi.org/project/django-cfg/"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="text-xs font-medium text-gray-600 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-500 transition-colors duration-150 whitespace-nowrap">
+                            {% lib_name %}
+                        </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Built-in Dashboard Tab Content -->
-            <div x-show="activeTab === 'builtin'" style="display: block;">
-                <div class="iframe-container">
-                    <div class="iframe-loading" id="iframe-loading-builtin">
-                        <div class="spinner"></div>
-                        <p id="loading-text-builtin">Loading...</p>
-                    </div>
+            <!-- Streamlit Dashboard Content -->
+            {% if streamlit_enabled %}
+            {% streamlit_admin_iframe_url_with_token as streamlit_url %}
+            <div class="iframe-container">
+                <div class="iframe-loading" id="iframe-loading-streamlit">
+                    <div class="spinner"></div>
+                    <p>Loading Streamlit...</p>
+                </div>
 
-                    <iframe
-                        id="nextjs-dashboard-iframe-builtin"
-                        class="nextjs-dashboard-iframe"
-                        src="{% nextjs_admin_url %}"
-                        data-original-src="{% nextjs_admin_url %}"
-                        title="Next.js Dashboard"
-                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation"
-                    ></iframe>
+                <iframe
+                    id="streamlit-dashboard-iframe"
+                    class="dashboard-iframe"
+                    src="{{ streamlit_url }}"
+                    data-original-src="{{ streamlit_url }}"
+                    title="{% streamlit_admin_tab_title %}"
+                    sandbox="{% streamlit_admin_iframe_sandbox %}"
+                    onload="this.classList.add('loaded'); document.getElementById('iframe-loading-streamlit').classList.add('hidden');"
+                ></iframe>
+            </div>
+            {% else %}
+            <!-- Streamlit Not Configured -->
+            <div class="flex items-center justify-center h-96 bg-gray-50 dark:bg-base-900 rounded-md border border-gray-200 dark:border-gray-700">
+                <div class="text-center">
+                    <span class="material-icons text-4xl text-gray-400 dark:text-gray-600 mb-4">dashboard_customize</span>
+                    <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">Streamlit Admin Not Configured</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md">
+                        Configure Streamlit admin in your DjangoConfig to enable the dashboard.
+                    </p>
+                    <pre class="mt-4 text-left bg-gray-100 dark:bg-base-800 p-4 rounded-md text-xs text-gray-600 dark:text-gray-400 overflow-x-auto"><code>from django_cfg import DjangoConfig
+from django_cfg.modules.streamlit_admin import StreamlitAdminConfig
+
+config = DjangoConfig(
+    streamlit_admin=StreamlitAdminConfig(
+        app_path="admin_app",
+    ),
+)</code></pre>
                 </div>
             </div>
-
-            <!-- External Next.js Admin Tab Content -->
-            <div x-show="activeTab === 'nextjs'" style="display: none;">
-                <div class="iframe-container">
-                    <div class="iframe-loading" id="iframe-loading-nextjs">
-                        <div class="spinner"></div>
-                        <p id="loading-text-nextjs">Loading...</p>
-                    </div>
-
-                    <iframe
-                        id="nextjs-dashboard-iframe-nextjs"
-                        class="nextjs-dashboard-iframe"
-                        src="{% nextjs_external_admin_url %}"
-                        data-original-src="{% nextjs_external_admin_url %}"
-                        title="{% nextjs_external_admin_title %}"
-                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-storage-access-by-user-activation"
-                    ></iframe>
-                </div>
-            </div>
+            {% endif %}
         </div>
     {% endcomponent %}
 {% endblock %}
 
 {% block footer %}
     {{ block.super }}
-    <script>
-        (function() {
-            'use strict';
-
-            // console.log('[Django-CFG] Script loading... readyState:', document.readyState);
-
-            /**
-             * MessageBridge - Handles postMessage communication with internal Next.js iframes
-             */
-            class MessageBridge {
-                constructor(iframe, origin) {
-                    this.iframe = iframe;
-                    this.origin = origin;
-                    this.themeObserver = null;
-                }
-
-                /**
-                 * Send theme data to iframe
-                 */
-                sendTheme() {
-                    if (!this.iframe?.contentWindow) {
-                        console.warn('[Django-CFG] sendTheme: iframe contentWindow not available');
-                        return;
-                    }
-
-                    const htmlElement = document.documentElement;
-                    const isDark = htmlElement.classList.contains('dark');
-                    const themeMode = this._getThemeMode();
-
-                    // console.log('[Django-CFG] sendTheme: htmlElement classes:', htmlElement.className);
-                    // console.log('[Django-CFG] sendTheme: isDark:', isDark, 'themeMode:', themeMode);
-
-                    try {
-                        // Use '*' in dev mode to handle localhost vs 127.0.0.1 mismatch
-                        const targetOrigin = '*'; // In production, use specific origin for security
-                        // console.log('[Django-CFG] Sending parent-theme message to iframe:', this.iframe.id);
-                        this.iframe.contentWindow.postMessage({
-                            type: 'parent-theme',
-                            data: {
-                                theme: isDark ? 'dark' : 'light',
-                                themeMode: themeMode
-                            }
-                        }, targetOrigin);
-                        // console.log('[Django-CFG] parent-theme message sent successfully');
-                    } catch (e) {
-                        console.error('[Django-CFG] Failed to send theme:', e);
-                    }
-                }
-
-                /**
-                 * Send auth tokens to iframe
-                 */
-                sendAuth() {
-                    if (!this.iframe?.contentWindow) {
-                        console.warn('[Django-CFG] sendAuth: iframe contentWindow not available');
-                        return;
-                    }
-
-                    const authToken = localStorage.getItem('auth_token');
-                    const refreshToken = localStorage.getItem('refresh_token');
-
-                    console.log('[Django-CFG] sendAuth: authToken:', authToken ? authToken.substring(0, 20) + '...' : 'null', 'refreshToken:', refreshToken ? refreshToken.substring(0, 20) + '...' : 'null');
-
-                    if (!authToken) {
-                        console.warn('[Django-CFG] sendAuth: No auth token found in localStorage');
-                        return;
-                    }
-
-                    try {
-                        // Use '*' in dev mode to handle localhost vs 127.0.0.1 mismatch
-                        const targetOrigin = '*'; // In production, use specific origin for security
-                        console.log('[Django-CFG] Sending parent-auth message to iframe:', this.iframe.id);
-                        this.iframe.contentWindow.postMessage({
-                            type: 'parent-auth',
-                            data: { authToken, refreshToken }
-                        }, targetOrigin);
-                        console.log('[Django-CFG] parent-auth message sent successfully');
-                    } catch (e) {
-                        console.error('[Django-CFG] Failed to send auth:', e);
-                    }
-                }
-
-                /**
-                 * Send all data (theme + auth)
-                 */
-                sendAllData() {
-                    console.log('[Django-CFG] sendAllData called');
-                    this.sendTheme();
-                    this.sendAuth();
-                    console.log('[Django-CFG] sendAllData completed');
-                }
-
-                /**
-                 * Start watching for theme changes
-                 */
-                watchThemeChanges() {
-                    this.themeObserver = new MutationObserver(() => {
-                        this.sendTheme();
-                    });
-
-                    this.themeObserver.observe(document.documentElement, {
-                        attributes: true,
-                        attributeFilter: ['class']
-                    });
-                }
-
-                /**
-                 * Stop watching
-                 */
-                destroy() {
-                    if (this.themeObserver) {
-                        this.themeObserver.disconnect();
-                        this.themeObserver = null;
-                    }
-                }
-
-                /**
-                 * Get theme mode from Alpine.js
-                 */
-                _getThemeMode() {
-                    if (!window.Alpine?.$$data) return 'auto';
-
-                    try {
-                        const alpineData = window.Alpine.$data(document.documentElement);
-                        return alpineData?.adminTheme || 'auto';
-                    } catch (e) {
-                        return 'auto';
-                    }
-                }
-            }
-
-            /**
-             * InternalIframeHandler - Handles Next.js internal iframes with postMessage
-             */
-            class InternalIframeHandler {
-                constructor(iframe, loading, origin) {
-                    this.iframe = iframe;
-                    this.loading = loading;
-                    this.origin = origin;
-                    this.messageBridge = new MessageBridge(iframe, origin);
-                    this.messageListener = null;
-                    this.authSent = false; // Track if auth was already sent
-                }
-
-                init() {
-                    this._setupLoadHandler();
-                    // Message listener now handled globally by IframeManager
-                    this.messageBridge.watchThemeChanges();
-                }
-
-                _setupLoadHandler() {
-                    this.iframe.addEventListener('load', () => {
-                        // Reset auth flag on reload (e.g., when switching tabs)
-                        this.authSent = false;
-
-                        // Iframe is visible immediately - Next.js preloader handles loading state
-                    });
-                }
-
-                handleMessage(type, data) {
-                    console.log('[Django-CFG] Received message from iframe:', type, data);
-                    switch (type) {
-                        case 'iframe-ready':
-                            // Only send auth once to prevent infinite loop
-                            if (!this.authSent) {
-                                console.log('[Django-CFG] iframe-ready received (FIRST TIME), sending auth and theme data');
-                                this.messageBridge.sendAllData();
-                                this.authSent = true;
-                            } else {
-                                console.log('[Django-CFG] iframe-ready received (DUPLICATE), ignoring to prevent loop');
-                            }
-                            break;
-
-                        case 'iframe-auth-status':
-                            console.log('[Django-CFG] iframe-auth-status:', data);
-
-                            // Iframe is always visible - Next.js preloader handles loading/auth states
-                            if (data?.isAuthenticated && data?.hasUser && !data?.isLoading) {
-                                console.log('[Django-CFG] User authenticated successfully');
-                                // Mark iframe as loaded (in case we need this for other logic)
-                                this.iframe.classList.add('loaded');
-                            } else if (!data?.isAuthenticated) {
-                                console.warn('[Django-CFG] User not authenticated');
-                            }
-                            break;
-
-                        case 'iframe-navigation':
-                            this._handleNavigation(data?.path);
-                            break;
-                    }
-                }
-
-                _handleNavigation(path) {
-                    if (!path) return;
-
-                    // Track path for "Open in New Window" (only for nextjs tab)
-                    if (this.iframe.id === 'nextjs-dashboard-iframe-nextjs') {
-                        this._updateAlpinePath(path);
-                    }
-                }
-
-                _updateAlpinePath(path) {
-                    const alpineEl = document.querySelector('[x-data]');
-                    if (!alpineEl || !window.Alpine) return;
-
-                    const alpineData = window.Alpine.$data(alpineEl);
-                    if (alpineData) {
-                        alpineData.currentNextjsPath = path;
-                    }
-                }
-
-                destroy() {
-                    this.messageBridge.destroy();
-                    // Message listener cleanup handled by IframeManager
-                }
-            }
-
-            /**
-             * ExternalIframeHandler - Handles external iframes (docs) without postMessage
-             */
-            class ExternalIframeHandler {
-                constructor(iframe, loading) {
-                    this.iframe = iframe;
-                    this.loading = loading;
-                    this.LOAD_TIMEOUT = 5000;
-                }
-
-                init() {
-                    this._setupLoadHandler();
-                    this._setupErrorHandler();
-                    this._setupTimeout();
-                }
-
-                _setupLoadHandler() {
-                    this.iframe.addEventListener('load', () => {
-                        this._showIframe();
-                    });
-                }
-
-                _setupErrorHandler() {
-                    this.iframe.addEventListener('error', () => {
-                        this._showError();
-                    });
-                }
-
-                _setupTimeout() {
-                    setTimeout(() => {
-                        if (!this.iframe.classList.contains('loaded')) {
-                            this._showIframe();
-                        }
-                    }, this.LOAD_TIMEOUT);
-                }
-
-                _showIframe() {
-                    this.loading?.classList.add('hidden');
-                    this.iframe.classList.add('loaded');
-                }
-
-                _showError() {
-                    const loadingText = this.loading?.querySelector('p');
-                    if (loadingText) {
-                        loadingText.textContent = 'Failed to load. Please check your connection.';
-                    }
-                }
-
-                handleMessage(type, data) {
-                    // External iframes don't handle postMessage
-                    // This is a no-op to prevent errors if called
-                }
-
-                destroy() {
-                    // No cleanup needed for external iframes
-                }
-            }
-
-            /**
-             * IframeManager - Factory for creating appropriate iframe handlers
-             */
-            class IframeManager {
-                constructor() {
-                    this.handlers = [];
-                    this.iframeMap = new Map(); // Map iframe contentWindow -> handler
-                    this._setupGlobalMessageListener();
-                }
-
-                /**
-                 * Setup ONE global message listener for ALL iframes
-                 */
-                _setupGlobalMessageListener() {
-                    console.log('[Django-CFG] Setting up global message listener');
-                    window.addEventListener('message', (event) => {
-                        console.log('[Django-CFG] Received message:', {
-                            type: event.data?.type,
-                            origin: event.origin,
-                            source: event.source === window ? 'self' : 'iframe',
-                            mapSize: this.iframeMap.size,
-                        });
-
-                        // Find which handler should handle this message
-                        const handler = this.iframeMap.get(event.source);
-
-                        if (handler) {
-                            console.log('[Django-CFG] Routing message to handler:', handler.iframe.id);
-                            const { type, data } = event.data || {};
-                            handler.handleMessage(type, data);
-                        } else {
-                            // Message from unknown source (browser extension, etc.)
-                            console.log('[Django-CFG] Ignoring message from unknown source, origin:', event.origin);
-                        }
-                    });
-                }
-
-                /**
-                 * Register an iframe for management
-                 */
-                register(iframeId, loadingId, options = {}) {
-                    // console.log('[Django-CFG] register() called for:', iframeId);
-                    const iframe = document.getElementById(iframeId);
-                    const loading = document.getElementById(loadingId);
-
-                    if (!iframe) {
-                        console.warn('[Django-CFG] Iframe not found:', iframeId, '- skipping registration');
-                        return;
-                    }
-
-                    // console.log('[Django-CFG] Creating handler for iframe:', iframeId);
-                    const handler = this._createHandler(iframe, loading, options);
-                    // console.log('[Django-CFG] Handler created:', !!handler, 'for iframe:', iframeId);
-                    if (handler) {
-                        // console.log('[Django-CFG] Initializing handler for:', iframeId);
-                        handler.init();
-                        this.handlers.push(handler);
-                        // console.log('[Django-CFG] Handler added to handlers array for:', iframeId);
-
-                        // Register only InternalIframeHandler in the map for message routing
-                        // ExternalIframeHandler doesn't handle postMessage
-                        if (handler instanceof InternalIframeHandler) {
-                            // console.log('[Django-CFG] Handler is InternalIframeHandler, attempting registration for:', iframeId);
-                            // Try to register immediately if contentWindow is available
-                            if (iframe.contentWindow) {
-                                // console.log('[Django-CFG] contentWindow available, registering immediately');
-                                this.iframeMap.set(iframe.contentWindow, handler);
-                                // console.log('[Django-CFG] Registered handler immediately for iframe:', iframeId, 'map size:', this.iframeMap.size);
-                            } else {
-                                // console.log('[Django-CFG] contentWindow not available yet, waiting for load event');
-                                // Fallback: wait for load if contentWindow not available yet
-                                iframe.addEventListener('load', () => {
-                                    if (iframe.contentWindow) {
-                                        // console.log('[Django-CFG] Load event fired, registering handler');
-                                        this.iframeMap.set(iframe.contentWindow, handler);
-                                        // console.log('[Django-CFG] Registered handler on load for iframe:', iframeId, 'map size:', this.iframeMap.size);
-                                    }
-                                }, { once: true });
-                            }
-                        } else {
-                            // console.log('[Django-CFG] Handler is NOT InternalIframeHandler (is external), skipping map registration for:', iframeId);
-                        }
-                    }
-                }
-
-                /**
-                 * Create appropriate handler based on iframe type
-                 */
-                _createHandler(iframe, loading, options) {
-                    // console.log('[Django-CFG] _createHandler for iframe:', iframe.id);
-                    const src = iframe.src || iframe.getAttribute('src');
-                    // console.log('[Django-CFG] iframe src:', src);
-                    if (!src) {
-                        console.warn('[Django-CFG] Iframe has no src');
-                        return null;
-                    }
-
-                    const url = new URL(src, window.location.origin);
-
-                    // Determine if this is an external iframe (docs, etc.)
-                    // Dev servers on localhost (ports 3000, 3777) are considered INTERNAL
-                    // because they need postMessage communication
-                    const isDevServer = url.hostname === 'localhost' && (url.port === '3000' || url.port === '3777');
-                    const isExternal = options.external && !isDevServer;
-
-                    // console.log('[Django-CFG] iframe url.origin:', url.origin, 'window.location.origin:', window.location.origin, 'isDevServer:', isDevServer, 'isExternal:', isExternal);
-
-                    if (isExternal) {
-                        // console.log('[Django-CFG] Creating ExternalIframeHandler for:', iframe.id);
-                        return new ExternalIframeHandler(iframe, loading);
-                    } else {
-                        // console.log('[Django-CFG] Creating InternalIframeHandler for:', iframe.id);
-                        return new InternalIframeHandler(iframe, loading, url.origin);
-                    }
-                }
-
-                /**
-                 * Cleanup all handlers
-                 */
-                destroy() {
-                    this.handlers.forEach(handler => handler.destroy());
-                    this.handlers = [];
-                    this.iframeMap.clear();
-                }
-            }
-
-            // Initialize iframe manager
-            // console.log('[Django-CFG] Initializing IframeManager...');
-            const manager = new IframeManager();
-            // console.log('[Django-CFG] IframeManager initialized');
-
-            // Register all iframes after DOM is ready
-            // This ensures iframe elements exist before we try to register them
-            function registerIframes() {
-                // console.log('[Django-CFG] registerIframes() called - DOM ready');
-                // console.log('[Django-CFG] Looking for iframes in DOM...');
-
-                const builtinIframe = document.getElementById('nextjs-dashboard-iframe-builtin');
-                const nextjsIframe = document.getElementById('nextjs-dashboard-iframe-nextjs');
-                // console.log('[Django-CFG] Found builtin iframe:', !!builtinIframe);
-                // console.log('[Django-CFG] Found nextjs iframe:', !!nextjsIframe);
-
-                manager.register('nextjs-dashboard-iframe-builtin', 'iframe-loading-builtin');
-                manager.register('nextjs-dashboard-iframe-nextjs', 'iframe-loading-nextjs');
-                // console.log('[Django-CFG] Iframe registration completed');
-            }
-
-            // Register iframes when DOM is ready
-            // console.log('[Django-CFG] Setting up DOM ready listener, readyState:', document.readyState);
-            if (document.readyState === 'loading') {
-                // console.log('[Django-CFG] DOM is loading, waiting for DOMContentLoaded...');
-                document.addEventListener('DOMContentLoaded', registerIframes);
-            } else {
-                // console.log('[Django-CFG] DOM already loaded, registering immediately...');
-                registerIframes();
-            }
-
-            // Cleanup on page unload
-            window.addEventListener('beforeunload', () => {
-                manager.destroy();
-            });
-
-        })();
-    </script>
+    {# Streamlit uses query param token injection - no postMessage needed #}
 {% endblock %}

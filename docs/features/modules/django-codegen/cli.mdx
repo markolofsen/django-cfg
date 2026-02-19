@@ -1,0 +1,257 @@
+---
+title: CLI Commands
+sidebar_position: 3
+keywords:
+  - cli
+  - commands
+  - generate
+  - gen
+description: CLI commands for django_codegen module.
+---
+
+# CLI Commands
+
+The `django_codegen` module provides the `gen` management command for client generation.
+
+---
+
+## Basic Usage
+
+```bash
+# Generate all platforms (TypeScript, Python, Go)
+python manage.py gen
+
+# Short alias
+python manage.py gen
+```
+
+---
+
+## Platform Selection
+
+### Single Platform
+
+```bash
+# TypeScript only
+python manage.py gen --ts
+python manage.py gen --typescript
+
+# Python only
+python manage.py gen --py
+python manage.py gen --python
+
+# Go only
+python manage.py gen --go
+
+# Swift only
+python manage.py gen --swift
+
+# Swift Codable (simple types)
+python manage.py gen --swift-codable
+
+# Protocol Buffers
+python manage.py gen --proto
+```
+
+### Exclude Platforms
+
+```bash
+# All except Go
+python manage.py gen --no-go
+
+# TypeScript and Python only
+python manage.py gen --no-go --no-proto
+```
+
+---
+
+## Target Filtering
+
+### By Target Type
+
+```bash
+# Only admin targets
+python manage.py gen --target admin
+
+# Only web targets
+python manage.py gen --target web
+
+# Only extensions
+python manage.py gen --target extensions
+```
+
+### List Available Targets
+
+```bash
+python manage.py gen --list-targets
+```
+
+Output:
+```
+Available targets:
+  admin (typescript)
+    groups: cfg_*, profiles
+    path: frontend/apps/admin/api/generated
+
+  web (typescript)
+    groups: catalog, products
+    path: frontend/apps/web/api/generated
+
+  extensions (typescript) [auto-discovered]
+    ext_support -> frontend/extensions/ext-support/src/api/generated
+    ext_leads -> frontend/extensions/ext-leads/src/api/generated
+```
+
+---
+
+## Group Filtering
+
+```bash
+# Specific groups
+python manage.py gen --groups profiles catalog
+
+# Single group
+python manage.py gen --groups cfg_accounts
+
+# Wildcards work in config, not CLI
+# Use --target to filter by pre-configured groups
+```
+
+---
+
+## Streamlit Integration
+
+```bash
+# Copy Python clients to Streamlit app
+python manage.py gen --streamlit
+
+# Combined with platform
+python manage.py gen --py --streamlit
+```
+
+---
+
+## External Generators
+
+```bash
+# Use oapi-codegen for Go (instead of built-in)
+python manage.py gen --go --external-go
+
+# Use openapi-python-client for Python
+python manage.py gen --py --external-python
+```
+
+---
+
+## Dry Run
+
+```bash
+# Show what would be generated without writing files
+python manage.py gen --dry-run
+```
+
+Output:
+```
+[DRY RUN] Would generate:
+  TypeScript -> frontend/apps/admin/api/generated
+    Groups: cfg_accounts, cfg_rq, cfg_health, profiles
+
+  TypeScript -> frontend/extensions/ext-support/src/api/generated
+    Groups: ext_support
+```
+
+---
+
+## Verbose Output
+
+```bash
+# Detailed output
+python manage.py gen --verbose
+python manage.py gen -v
+```
+
+---
+
+## Common Workflows
+
+### Development
+
+```bash
+# Quick TypeScript regeneration
+python manage.py gen --ts
+
+# Regenerate after API changes
+python manage.py gen
+```
+
+### CI/CD
+
+```bash
+# Full generation with dry-run check
+python manage.py gen --dry-run
+python manage.py gen
+```
+
+### Extension Development
+
+```bash
+# Regenerate specific extension
+python manage.py gen --target extensions --groups ext_support
+```
+
+### Streamlit Admin
+
+```bash
+# Update Streamlit Python clients
+python manage.py gen --py --streamlit
+```
+
+---
+
+## Makefile Integration
+
+```makefile
+# Makefile
+
+# All clients
+api:
+	python manage.py gen
+
+# TypeScript only (fastest)
+api-ts:
+	python manage.py gen --ts
+
+# Python + Streamlit
+api-py:
+	python manage.py gen --py --streamlit
+
+# List targets
+api-list:
+	python manage.py gen --list-targets
+```
+
+Usage:
+```bash
+make api
+make api-ts
+make api-py
+```
+
+---
+
+## Exit Codes
+
+| Code | Description |
+|------|-------------|
+| `0` | Success |
+| `1` | Generation error |
+| `2` | Configuration error |
+
+---
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `DJANGO_SETTINGS_MODULE` | Django settings (required) |
+| `GENERATION_CONFIG` | Path to generation.py (optional) |

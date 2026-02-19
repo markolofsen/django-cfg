@@ -25,7 +25,6 @@ Structure:
     │   ├── internal.py      # Built-in generators (TS, Python, Go, Proto)
     │   └── external.py      # External CLI generators (Swift, oapi-codegen)
     └── utils/               # Utility modules
-        ├── nextjs.py        # Next.js integration
         ├── typescript.py    # TypeScript type checking
         └── schema.py        # OpenAPI schema utilities
 """
@@ -33,7 +32,7 @@ Structure:
 from .config import GenerationConfig, GenerationResult, LanguageOptions
 from .orchestrator import ClientGenerationOrchestrator
 from .generators import InternalGenerators, ExternalGenerators
-from .utils import NextJsUtils, TypeScriptUtils, SchemaUtils
+from .utils import TypeScriptUtils, SchemaUtils
 
 __all__ = [
     # Config
@@ -46,7 +45,6 @@ __all__ = [
     "InternalGenerators",
     "ExternalGenerators",
     # Utils
-    "NextJsUtils",
     "TypeScriptUtils",
     "SchemaUtils",
 ]

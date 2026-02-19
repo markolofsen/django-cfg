@@ -1,6 +1,8 @@
 export default {
   'index': { display: 'hidden' },
   'overview': 'Overview',
+  'streamlit-admin': 'Streamlit Admin',
+  'django-codegen': 'Code Generation',
   'currency': 'Currency Conversion',
   'django-cleanup': 'File Cleanup',
   'django-client': 'Django Client',
