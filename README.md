@@ -12,7 +12,7 @@
 
 **The Modern Django Framework for Enterprise Applications**
 
-Type-safe configuration • Next.js Admin • Real-time WebSockets • gRPC Streaming • AI-Native Docs • 8 Production Apps
+Type-safe configuration • Streamlit Admin • Real-time WebSockets • gRPC Streaming • AI-Native Docs • 8 Production Apps
 
 [Get Started](https://djangocfg.com/docs/getting-started/intro) • [Live Demo](https://djangocfg.com/demo) • [Documentation](https://djangocfg.com/docs) • [MCP Server](https://djangocfg.com/mcp)
 
@@ -28,7 +28,7 @@ Type-safe configuration • Next.js Admin • Real-time WebSockets • gRPC Stre
 
 - ✅ **Type-safe config** - Pydantic v2 validation catches errors before deployment
 - ✅ **90% less code** - Replace 200+ line settings.py with 30 lines
-- ✅ **Built-in Next.js admin** - Modern React admin interface out of the box
+- ✅ **Streamlit Admin** - Python-only admin panel, auto-starts with Django
 - ✅ **Real-time WebSockets** - Centrifugo integration included
 - ✅ **gRPC streaming** - Bidirectional streaming with WebSocket bridge
 - ✅ **AI-native docs** - First Django framework with MCP server for AI assistants
@@ -59,7 +59,7 @@ poetry run python manage.py runserver
 
 **What you get instantly:**
 - 🎨 Django Admin → `http://127.0.0.1:8000/admin/`
-- ⚛️ Next.js Dashboard → Modern React interface
+- 📊 Streamlit Dashboard → Auto-starts on port 8501
 - 📡 Real-time WebSockets → Live updates
 - 🐳 Docker Ready → Production configs
 - 🖥️ Electron App → Desktop template
@@ -102,8 +102,20 @@ class MyConfig(DjangoConfig):
 ### 🔒 Type-Safe Configuration
 Pydantic v2 models replace error-prone `settings.py` - catch bugs before deployment.
 
-### ⚛️ Next.js Admin
-Only Django framework with built-in Next.js integration - modern admin UI out of the box.
+### 📊 Streamlit Admin
+Python-only admin panel that auto-starts with Django. No npm, no Node.js - just Python.
+
+```python
+from django_cfg import DjangoConfig
+from django_cfg.modules.streamlit_admin import StreamlitAdminConfig
+
+config = DjangoConfig(
+    streamlit_admin=StreamlitAdminConfig(
+        app_path="streamlit",
+        auto_start=True,  # Starts with Django, dies with Django
+    ),
+)
+```
 
 ### 📡 Real-Time WebSockets
 Production-ready Centrifugo integration - live updates, notifications, presence tracking.
@@ -133,12 +145,11 @@ User auth • Support tickets • Newsletter • CRM • AI agents • Knowledge
 - AI agent framework
 - REST API with auto TypeScript generation
 
-**Frontend:**
-- Next.js 16 admin interface
-- React 19 + TypeScript
-- Tailwind CSS 4
-- Real-time WebSocket client
-- PWA support
+**Admin:**
+- Streamlit admin (Python-only)
+- Django Unfold for CRUD
+- JWT authentication
+- Dark theme by default
 
 **DevOps:**
 - Docker Compose setup
@@ -158,7 +169,7 @@ User auth • Support tickets • Newsletter • CRM • AI agents • Knowledge
 
 - **[Getting Started](https://djangocfg.com/docs/getting-started/intro)** - Quick setup guide
 - **[Configuration](https://djangocfg.com/docs/getting-started/configuration)** - Type-safe config
-- **[Next.js Admin](https://djangocfg.com/docs/features/integrations/nextjs-admin)** - Modern admin UI
+- **[Streamlit Admin](https://djangocfg.com/docs/features/modules/streamlit-admin/overview)** - Python admin panel
 - **[Real-Time](https://djangocfg.com/docs/features/integrations/centrifugo)** - WebSockets setup
 - **[gRPC](https://djangocfg.com/docs/features/integrations/grpc)** - Microservices
 - **[AI Agents](https://djangocfg.com/docs/ai-agents/introduction)** - Automation
@@ -184,7 +195,7 @@ MIT License - Free for commercial use
 
 <div align="center">
 
-**Django-CFG** - Modern Django framework with type-safe configuration, AI-native docs, Next.js admin, gRPC streaming, real-time WebSockets, and 8 production-ready apps.
+**Django-CFG** - Modern Django framework with type-safe configuration, AI-native docs, Streamlit admin, gRPC streaming, real-time WebSockets, and 8 production-ready apps.
 
 Made with ❤️ for the Django community
 

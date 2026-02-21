@@ -21,6 +21,18 @@ def to_django_config(config: "DatabaseConfig") -> Dict[str, Any]:  # type: ignor
         DatabaseError: If configuration cannot be converted
     """
     try:
+        # Validate engine is set
+        if config.engine is None:
+            from django_cfg.core.exceptions import DatabaseError
+            raise DatabaseError(
+                "Database ENGINE is required. "
+                f"Database name: '{config.name}'. "
+                "Either provide an explicit 'engine' parameter or use a connection URL "
+                "with a recognizable scheme (postgresql://, mysql://, sqlite://, etc.).",
+                database_alias=getattr(config, "_alias", "unknown"),
+                context={"name": config.name}
+            )
+
         # Base configuration
         django_config = {
             "ENGINE": config.engine,

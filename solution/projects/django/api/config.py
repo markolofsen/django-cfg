@@ -363,6 +363,7 @@ class DjangoCfgConfig(DjangoConfig):
     streamlit_admin: Optional[StreamlitAdminConfig] = StreamlitAdminConfig(
         app_path="streamlit",
         auto_start=True,
+        public_url="https://st.democfg.com" if not env.debug else None,
     )
     
     # ╔══════════════════════════════════════════════════════════════════════════╗

@@ -441,18 +441,12 @@ def should_auto_start() -> bool:
     Determine if Streamlit should auto-start.
 
     Returns True if:
-    - DEBUG mode is enabled
     - streamlit_admin.auto_start is True
-    - Not running under gunicorn/uwsgi (production)
+    - Not running under gunicorn/uwsgi (production WSGI servers)
     - Not running migrations or other management commands
     """
-    from django.conf import settings
-
-    # Must be in DEBUG mode
-    if not settings.DEBUG:
-        return False
-
-    # Check if running under production server
+    # Check if running under production WSGI server (gunicorn/uwsgi)
+    # These don't work well with subprocesses
     if _is_production_server():
         return False
 
@@ -473,12 +467,17 @@ def should_auto_start() -> bool:
 
 
 def _is_production_server() -> bool:
-    """Check if running under production WSGI server."""
-    # Check for gunicorn
+    """
+    Check if running under multi-worker WSGI server.
+
+    Note: uvicorn is OK because we check for workers via RUN_MAIN env var.
+    gunicorn/uwsgi spawn multiple processes that would each try to start Streamlit.
+    """
+    # Check for gunicorn (multi-worker by default)
     if "gunicorn" in sys.modules:
         return True
 
-    # Check for uwsgi
+    # Check for uwsgi (multi-worker by default)
     if "uwsgi" in sys.modules:
         return True
 

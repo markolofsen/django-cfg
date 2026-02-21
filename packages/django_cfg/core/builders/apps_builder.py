@@ -114,6 +114,7 @@ class InstalledAppsBuilder:
             "django_cfg.modules.django_llm_monitoring",  # LLM balance monitoring
             "django_cfg.modules.django_cleanup",  # Automatic file cleanup
             "django_cfg.modules.django_codegen",  # Unified client generation
+            "django_cfg.modules.streamlit_admin",  # Streamlit admin (always loaded for templatetags)
             "django_cfg.apps.api.health",
             "django_cfg.apps.api.commands",
             "django_cfg.apps.api.dashboard",  # Dashboard API
@@ -136,10 +137,6 @@ class InstalledAppsBuilder:
         # Geo app (countries, states, cities database)
         if self.config.geo and self.config.geo.enabled:
             apps.append("django_cfg.apps.tools.geo")
-
-        # Streamlit Admin Integration
-        if self.config.streamlit_admin:
-            apps.append("django_cfg.modules.streamlit_admin")
 
         return apps
 

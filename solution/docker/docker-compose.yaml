@@ -50,7 +50,14 @@ services:
       - "traefik.http.routers.democfg-api.rule=Host(`api.democfg.com`)"
       - "traefik.http.routers.democfg-api.entrypoints=websecure"
       - "traefik.http.routers.democfg-api.tls=true"
+      - "traefik.http.routers.democfg-api.service=democfg-api"
       - "traefik.http.services.democfg-api.loadbalancer.server.port=8000"
+      # Streamlit Admin (st.democfg.com) — direct access with WebSocket support
+      - "traefik.http.routers.democfg-streamlit.rule=Host(`st.democfg.com`)"
+      - "traefik.http.routers.democfg-streamlit.entrypoints=websecure"
+      - "traefik.http.routers.democfg-streamlit.tls=true"
+      - "traefik.http.routers.democfg-streamlit.service=democfg-streamlit"
+      - "traefik.http.services.democfg-streamlit.loadbalancer.server.port=8501"
 
   # RQ Worker (Background Tasks Processor)
   rq-worker:

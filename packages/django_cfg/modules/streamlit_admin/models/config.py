@@ -133,6 +133,17 @@ class StreamlitAdminConfig(BaseModel):
         description="HTML5 iframe sandbox attribute (optional)",
     )
 
+    public_url: Optional[str] = Field(
+        default=None,
+        description=(
+            "Public URL for Streamlit in production (bypasses Django proxy). "
+            "Required for WebSocket support. Streamlit needs WebSocket for "
+            "its _stcore/stream endpoint, which Django cannot proxy. "
+            "Set this to a direct URL to Streamlit (e.g. via Traefik/nginx). "
+            "Example: 'https://st.cmdop.com'"
+        ),
+    )
+
     # =================================================================
     # Computed properties with defaults
     # =================================================================
@@ -182,10 +193,27 @@ class StreamlitAdminConfig(BaseModel):
 
     def get_runtime_url(self) -> str:
         """
-        Get actual runtime URL (may differ if port was auto-assigned).
+        Get actual runtime URL for iframe.
 
-        Falls back to configured dev_url if Streamlit not running.
+        Priority:
+        1. public_url (direct access, supports WebSocket — required for production)
+        2. DEBUG mode: direct localhost URL (auto-start subprocess)
+        3. Fallback: api_url + /cfg/streamlit/ (HTTP-only Django proxy, no WebSocket)
         """
+        # public_url bypasses Django proxy — WebSocket works natively
+        if self.public_url:
+            return self.public_url.rstrip("/")
+
+        from django_cfg.core.config import get_current_config
+
+        config = get_current_config()
+
+        # In production without public_url, fall back to Django proxy (HTTP only)
+        if config and not config.debug:
+            api_url = config.api_url.rstrip("/")
+            return f"{api_url}/cfg/streamlit"
+
+        # In development, try to get actual running URL
         try:
             from django.apps import apps
             app_config = apps.get_app_config("streamlit_admin")
@@ -265,3 +293,14 @@ class StreamlitAdminConfig(BaseModel):
         if not v or not v.strip():
             raise ValueError("host cannot be empty")
         return v.strip()
+
+    @field_validator("public_url")
+    @classmethod
+    def validate_public_url(cls, v: Optional[str]) -> Optional[str]:
+        """Validate and normalize public_url."""
+        if v is None:
+            return None
+        v = v.strip().rstrip("/")
+        if not v.startswith(("http://", "https://")):
+            raise ValueError("public_url must start with http:// or https://")
+        return v

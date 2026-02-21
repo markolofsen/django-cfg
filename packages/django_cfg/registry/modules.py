@@ -39,4 +39,7 @@ MODULES_REGISTRY = {
     "FieldsetConfig": ("django_cfg.modules.django_admin", "FieldsetConfig"),
     "ActionConfig": ("django_cfg.modules.django_admin", "ActionConfig"),
     "WidgetRegistry": ("django_cfg.modules.django_admin", "WidgetRegistry"),
+
+    # Streamlit Admin
+    "StreamlitAdminConfig": ("django_cfg.modules.streamlit_admin", "StreamlitAdminConfig"),
 }

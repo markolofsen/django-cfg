@@ -41,7 +41,14 @@ services:
       - "traefik.http.routers.djangocfg-api.rule=Host(`api.djangocfg.com`)"
       - "traefik.http.routers.djangocfg-api.entrypoints=websecure"
       - "traefik.http.routers.djangocfg-api.tls=true"
+      - "traefik.http.routers.djangocfg-api.service=djangocfg-api"
       - "traefik.http.services.djangocfg-api.loadbalancer.server.port=8000"
+      # Streamlit Admin (st.djangocfg.com) — direct access with WebSocket support
+      - "traefik.http.routers.djangocfg-streamlit.rule=Host(`st.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-streamlit.entrypoints=websecure"
+      - "traefik.http.routers.djangocfg-streamlit.tls=true"
+      - "traefik.http.routers.djangocfg-streamlit.service=djangocfg-streamlit"
+      - "traefik.http.services.djangocfg-streamlit.loadbalancer.server.port=8501"
 
   # RQ Worker (Background Tasks Processor)
   rq-worker:
