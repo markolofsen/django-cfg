@@ -82,16 +82,24 @@ from .keys import (
     reset_key_manager,
 )
 from .middleware import EncryptionMiddleware, encryption_enabled
-from .renderers import EncryptedJSONRenderer, OptionalEncryptedJSONRenderer
-from .serializers import (
-    EncryptableSerializerMixin,
-    EncryptedCharField,
-    EncryptedDecimalField,
-    EncryptedFieldMixin,
-    EncryptedFloatField,
-    EncryptedIntegerField,
-    EncryptedJSONField,
-)
+
+# Lazy imports for DRF-dependent modules to avoid circular imports.
+# DRF triggers Django settings loading at import time, which can cause
+# circular imports when django_cfg is still initializing.
+
+
+def __getattr__(name: str):
+    if name in ("EncryptedJSONRenderer", "OptionalEncryptedJSONRenderer"):
+        from .renderers import EncryptedJSONRenderer, OptionalEncryptedJSONRenderer
+        return {"EncryptedJSONRenderer": EncryptedJSONRenderer, "OptionalEncryptedJSONRenderer": OptionalEncryptedJSONRenderer}[name]
+    if name in (
+        "EncryptableSerializerMixin", "EncryptedCharField", "EncryptedDecimalField",
+        "EncryptedFieldMixin", "EncryptedFloatField", "EncryptedIntegerField", "EncryptedJSONField",
+    ):
+        from . import serializers as _s
+        return getattr(_s, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Config

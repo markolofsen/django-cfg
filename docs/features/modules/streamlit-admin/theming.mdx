@@ -1,0 +1,146 @@
+---
+title: Theming
+sidebar_position: 7
+description: Theme presets for Streamlit Admin. vercel-dark, light, and custom theme configuration via config.toml.
+---
+
+# Theming
+
+Streamlit Admin includes two built-in theme presets. Set the theme in `StreamlitAdminConfig`:
+
+```python
+StreamlitAdminConfig(
+    app_path="streamlit",
+    theme="vercel-dark",  # or "light" or "custom"
+)
+```
+
+---
+
+## vercel-dark (Default)
+
+Vercel-inspired dark theme. Pure black background, Vercel blue accent.
+
+```toml
+[theme]
+base = "dark"
+primaryColor = "#0070F3"
+backgroundColor = "#000000"
+secondaryBackgroundColor = "#111111"
+textColor = "#EDEDED"
+font = "sans serif"
+```
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| Background | `#000000` | Main area |
+| Sidebar | `#0A0A0A` | Navigation |
+| Secondary | `#111111` | Cards, inputs |
+| Text | `#EDEDED` | All text |
+| Accent | `#0070F3` | Buttons, links, highlights |
+
+---
+
+## light
+
+Clean light theme with the same blue accent.
+
+```toml
+[theme]
+base = "light"
+primaryColor = "#0070F3"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#FAFAFA"
+textColor = "#171717"
+font = "sans serif"
+```
+
+---
+
+## custom
+
+Set `theme="custom"` and manage `.streamlit/config.toml` yourself:
+
+```python
+StreamlitAdminConfig(
+    app_path="streamlit",
+    theme="custom",
+)
+```
+
+Then edit `streamlit/.streamlit/config.toml`:
+
+```toml
+[theme]
+base = "dark"
+primaryColor = "#FF4B4B"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#262730"
+textColor = "#FAFAFA"
+```
+
+---
+
+## Full config.toml
+
+The scaffold generates a complete `config.toml`. The theme section is one part of it:
+
+```toml
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+port = 8501
+address = "0.0.0.0"
+maxUploadSize = 200
+enableWebsocketCompression = true
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+
+[theme]
+base = "dark"
+primaryColor = "#0070F3"
+backgroundColor = "#000000"
+secondaryBackgroundColor = "#111111"
+textColor = "#EDEDED"
+font = "sans serif"
+
+[client]
+showErrorDetails = true
+toolbarMode = "developer"
+```
+
+---
+
+## ThemeGenerator
+
+`ThemeGenerator` is used internally by `create_streamlit_app` to write the `config.toml`. You can also use it directly:
+
+```python
+from django_cfg.modules.streamlit_admin.core.theme import ThemeGenerator
+
+gen = ThemeGenerator("vercel-dark")
+toml = gen.generate_config_toml(port=8501, host="0.0.0.0")
+
+with open(".streamlit/config.toml", "w") as f:
+    f.write(toml)
+```
+
+Parameters of `generate_config_toml()`:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `port` | `8501` | Streamlit server port |
+| `host` | `"0.0.0.0"` | Bind address |
+| `enable_cors` | `False` | Enable CORS (disable for iframe) |
+| `enable_xsrf` | `False` | Enable XSRF protection (disable for iframe) |
+
+---
+
+## Notes
+
+- `iframe_sandbox` in `StreamlitAdminConfig` controls the HTML `sandbox` attribute, not the visual theme
+- Streamlit does **not** support a `[theme.sidebar]` config section — sidebar colors are controlled by `secondaryBackgroundColor`
+- Theme changes require a Streamlit restart (or just reload the page after changing `config.toml`)

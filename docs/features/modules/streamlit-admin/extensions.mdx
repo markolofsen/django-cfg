@@ -1,0 +1,177 @@
+---
+title: Extensions
+sidebar_position: 4
+description: Extend Streamlit Admin with custom pages, groups, and programmatic registration using the PageRegistry.
+---
+
+# Extensions
+
+`PageRegistry` is the mechanism for adding custom pages to the Streamlit sidebar. It's a singleton — any code that imports it registers into the same menu.
+
+---
+
+## Import
+
+```python
+from django_cfg.modules.streamlit_admin import page_registry
+```
+
+---
+
+## Register a Page
+
+Use the `@page_registry.register()` decorator on any function:
+
+```python
+import streamlit as st
+from django_cfg.modules.streamlit_admin import page_registry
+
+@page_registry.register("Reports", icon="file-earmark-text", group="Analytics")
+def render_reports():
+    st.title("Reports")
+    st.write("Your report content here.")
+```
+
+### Decorator Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | required | Page name shown in sidebar |
+| `icon` | `str` | `"file"` | Bootstrap icon name (without `bi-` prefix) |
+| `group` | `str \| None` | `None` | Group name. `None` = top-level item |
+| `order` | `int` | `100` | Sort order. Lower number = higher in menu |
+
+---
+
+## Register a Group
+
+Before registering pages into a group, optionally pre-define the group with a custom icon and order:
+
+```python
+page_registry.register_group(
+    "Analytics",
+    icon="bar-chart-line",
+    order=30,
+)
+```
+
+If you register pages into a group that doesn't exist yet, the group is created automatically with defaults.
+
+### Group Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | required | Group name |
+| `icon` | `str` | `"folder"` | Bootstrap icon |
+| `order` | `int` | `100` | Group sort order |
+
+---
+
+## Extension Loading
+
+The registry loads extensions at Streamlit startup from these locations (checked in order):
+
+1. **`extensions.py`** in your `app_path` directory
+2. **`pages/*.py`** files in your `app_path` directory (loaded alphabetically, files starting with `_` are skipped)
+
+```
+streamlit/
+├── extensions.py          # ← loaded first
+└── pages/
+    ├── 01_analytics.py    # ← loaded second
+    ├── 02_reports.py      # ← loaded third
+    └── _helpers.py        # ← skipped (starts with _)
+```
+
+---
+
+## Programmatic Registration
+
+Without a decorator:
+
+```python
+def render_dashboard():
+    st.title("Custom Dashboard")
+
+page_registry.register_page(
+    name="Dashboard",
+    render_func=render_dashboard,
+    icon="speedometer2",
+    group=None,   # top-level
+    order=5,
+)
+```
+
+---
+
+## Complete Example
+
+```python
+# streamlit/extensions.py
+import streamlit as st
+import pandas as pd
+from django_cfg.modules.streamlit_admin import page_registry
+
+# Register groups first (optional, for custom icons/ordering)
+page_registry.register_group("Analytics", icon="bar-chart-line", order=30)
+page_registry.register_group("Operations", icon="gear", order=40)
+
+
+@page_registry.register("Overview", icon="speedometer2", order=5)  # top-level
+def render_overview():
+    st.title("Overview")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Users", "1,234", "+12%")
+    with col2:
+        st.metric("Active Today", "567", "+5%")
+    with col3:
+        st.metric("Revenue", "$12,345", "+8%")
+
+
+@page_registry.register("Traffic", icon="graph-up", group="Analytics", order=10)
+def render_traffic():
+    st.title("Traffic Analytics")
+    chart_data = pd.DataFrame({"visits": [100, 200, 150, 300]})
+    st.line_chart(chart_data)
+
+
+@page_registry.register("Deploy", icon="cloud-upload", group="Operations", order=10)
+def render_deploy():
+    st.title("Deploy")
+    if st.button("Trigger Deploy", type="primary"):
+        with st.spinner("Deploying..."):
+            st.success("Deploy triggered!")
+```
+
+---
+
+## Sidebar Order
+
+The full sidebar order is determined by:
+
+1. Top-level pages sorted by `order` (ascending)
+2. Groups sorted by `order` (ascending), each with their pages sorted by `order`
+
+Built-in groups (Dashboard, System, etc.) use low order numbers (1–20). Use `order=30+` for custom groups to place them below built-ins.
+
+---
+
+## Registry API
+
+```python
+# Get all registered pages (sorted)
+pages = page_registry.get_all_pages()
+
+# Get top-level pages only (no group)
+top = page_registry.get_top_level_pages()
+
+# Get all groups with their pages
+groups = page_registry.get_groups()
+
+# Render a page by name
+page_registry.render_page("Reports")
+
+# Clear all (useful in tests)
+page_registry.clear()
+```

@@ -1,0 +1,203 @@
+---
+title: Deployment
+sidebar_position: 8
+description: Production deployment for Streamlit Admin. WebSocket support via public_url, nginx config, Docker single-container setup, and Traefik routing.
+---
+
+# Deployment
+
+In development, Streamlit runs as a Django child process — zero config needed. Production requires a direct public route to Streamlit because **Django cannot proxy WebSocket**.
+
+---
+
+## The WebSocket Problem
+
+Streamlit uses WebSocket for `/_stcore/stream` — the live data connection. Django's HTTP proxy (`StreamlitProxyView`) works for regular HTTP but **drops WebSocket upgrades**.
+
+**Result without `public_url`:** The iframe loads, but the Streamlit app hangs on "connecting..." or shows a blank screen.
+
+**Fix:** expose Streamlit directly on a domain/subdomain and set `public_url`.
+
+---
+
+## Configuration for Production
+
+```python
+StreamlitAdminConfig(
+    app_path="streamlit",
+    port=8501,
+    host="0.0.0.0",
+    auto_start=False,              # managed separately in production
+    public_url="https://st.example.com",
+    theme="vercel-dark",
+    jwt_secret=env("STREAMLIT_JWT_SECRET"),
+)
+```
+
+With `public_url` set, `get_runtime_url()` returns `"https://st.example.com"` and Django generates the iframe URL as `https://st.example.com/?token=<JWT>`.
+
+---
+
+## nginx — WebSocket Proxy
+
+Use nginx to expose Streamlit directly with WebSocket support:
+
+```nginx
+# Streamlit admin — WebSocket-capable proxy
+server {
+    listen 443 ssl;
+    server_name st.example.com;
+
+    ssl_certificate     /etc/ssl/certs/fullchain.pem;
+    ssl_certificate_key /etc/ssl/private/key.pem;
+
+    location / {
+        proxy_pass http://localhost:8501;
+        proxy_http_version 1.1;
+
+        # WebSocket upgrade headers
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_read_timeout 86400;
+        proxy_buffering off;
+    }
+}
+```
+
+---
+
+## Traefik
+
+If you use Traefik, add labels to expose Streamlit directly:
+
+```yaml
+services:
+  django:
+    image: myapp
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.django.rule=Host(`app.example.com`)"
+      - "traefik.http.services.django.loadbalancer.server.port=8000"
+
+  streamlit:
+    image: myapp        # same image, different command
+    command: python -m streamlit run streamlit/app.py --server.port 8501
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.streamlit.rule=Host(`st.example.com`)"
+      - "traefik.http.services.streamlit.loadbalancer.server.port=8501"
+    environment:
+      - DJANGO_API_URL=http://django:8000/api
+```
+
+---
+
+## Docker — Single Container
+
+For single-container setups where Streamlit auto-starts inside Django:
+
+```dockerfile
+# Dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+COPY . .
+RUN pip install -r requirements.txt
+
+EXPOSE 8000 8501
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Streamlit auto-starts on 8501 as subprocess
+```
+
+```yaml
+# docker-compose.yml
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+      - "8501:8501"
+    environment:
+      - DEBUG=True
+      - DJANGO_ENV=development
+```
+
+> **Note:** Single-container auto-start only works with `DEBUG=True`. For production, use separate containers.
+
+---
+
+## Docker — Separate Containers
+
+Recommended for production. Streamlit runs independently, managed by its own container:
+
+```yaml
+services:
+  django:
+    build: .
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - STREAMLIT_PUBLIC_URL=https://st.example.com
+
+  streamlit:
+    build: .
+    command: python -m streamlit run streamlit/app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - DJANGO_API_URL=http://django:8000/api
+    depends_on:
+      - django
+```
+
+---
+
+## Management Commands
+
+```bash
+# Start Streamlit manually (if auto_start=False)
+python manage.py run_streamlit
+
+# Create a new scaffold
+python manage.py create_streamlit_app streamlit --theme vercel-dark --with-pages
+
+# Regenerate API clients after schema changes
+python manage.py generate_client
+```
+
+---
+
+## Health Check
+
+Streamlit exposes `/_stcore/health` — use it for container/load-balancer health checks:
+
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+```
+
+Django also exposes a health proxy at `/cfg/streamlit/health/` via `StreamlitHealthView`.
+
+---
+
+## Summary
+
+| Scenario | `auto_start` | `public_url` | WebSocket |
+|----------|-------------|-------------|-----------|
+| Local dev | `True` | Not needed | ✅ direct |
+| Single container (debug) | `True` | Not needed | ✅ direct |
+| Production (same domain, nginx sub-path) | `False` | Required | ✅ with nginx |
+| Production (subdomain) | `False` | Required | ✅ with nginx/Traefik |
+| Production without direct route | `False` | Not set | ❌ HTTP only |

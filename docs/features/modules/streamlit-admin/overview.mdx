@@ -141,6 +141,7 @@ Streamlit admin is now available at `http://localhost:8501`
 | `host` | `str` | `"0.0.0.0"` | Bind address |
 | `theme` | `str` | `"vercel-dark"` | Theme preset |
 | `auto_start` | `bool` | `True` | Auto-start with Django |
+| `public_url` | `str \| None` | `None` | Direct public URL to Streamlit (e.g. `"https://st.example.com"`). Required for WebSocket support in production. |
 | `api_clients_path` | `str` | `"generated"` | Python client destination |
 | `jwt_secret` | `str \| None` | `None` | JWT secret (defaults to Django SECRET_KEY) |
 
@@ -373,7 +374,10 @@ location /cfg/streamlit/ {
 
 ## Next Steps
 
-- **[Custom Pages](./custom-pages)** — Building custom admin pages
-- **[Authentication](./authentication)** — JWT and session handling
-- **[API Integration](./api-integration)** — Using generated Python clients
-- **[Theming](./theming)** — Customizing appearance
+- **[Quick Start](./quick-start)** — Get running in 5 minutes
+- **[Configuration](./configuration)** — All `StreamlitAdminConfig` fields including `public_url`
+- **[Extensions](./extensions)** — Build custom admin pages with `PageRegistry`
+- **[Authentication](./authentication)** — JWT flow and user access
+- **[API Integration](./api-integration)** — Call Django REST API from Streamlit
+- **[Theming](./theming)** — Customize appearance with presets or custom config
+- **[Deployment](./deployment)** — Production setup with WebSocket support

@@ -1,0 +1,171 @@
+---
+title: Configuration
+sidebar_position: 3
+description: Complete StreamlitAdminConfig reference. All fields, defaults, computed methods, and example configurations for development and production.
+---
+
+# Configuration
+
+`StreamlitAdminConfig` is a Pydantic v2 model. All fields are validated on assignment.
+
+```python
+from django_cfg import DjangoConfig
+from django_cfg.modules.streamlit_admin import StreamlitAdminConfig
+
+config = DjangoConfig(
+    streamlit_admin=StreamlitAdminConfig(
+        app_path="streamlit",
+    ),
+)
+```
+
+---
+
+## Fields
+
+### Required
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `app_path` | `str` | Path to Streamlit app directory. Relative paths are resolved from `BASE_DIR`. |
+
+### Server
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `port` | `int` | `8501` | Server port (1024–65535) |
+| `host` | `str` | `"0.0.0.0"` | Bind address |
+| `auto_start` | `bool` | `True` | Auto-start Streamlit as Django child process (DEBUG mode only) |
+
+### URLs
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `static_url` | `str \| None` | `None` → `"/cfg/streamlit/"` | URL prefix for reverse proxy |
+| `dev_url` | `str \| None` | `None` → `"http://localhost:{port}"` | Dev server URL override |
+| `public_url` | `str \| None` | `None` | **Production**: Direct public URL to Streamlit (e.g. `"https://st.example.com"`). Required for WebSocket support — see below. |
+
+### UI
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `tab_title` | `str \| None` | `None` → `"Streamlit Admin"` | Browser tab title |
+| `theme` | `str` | `"vercel-dark"` | Theme preset: `"vercel-dark"`, `"light"`, `"custom"` |
+| `iframe_route` | `str \| None` | `None` → `"/"` | Streamlit route shown in iframe |
+| `iframe_sandbox` | `str \| None` | `None` → full sandbox attrs | HTML5 `sandbox` attribute for iframe |
+
+### Auth & API
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `jwt_secret` | `str \| None` | `None` → Django `SECRET_KEY` | JWT signing secret |
+| `api_clients_path` | `str \| None` | `None` → `"generated"` | Path for generated Python API clients (relative to `app_path`) |
+
+---
+
+## `public_url` — WebSocket in Production
+
+Streamlit uses WebSocket for its `/_stcore/stream` endpoint. Django's HTTP proxy **cannot proxy WebSocket**, so the iframe's WebSocket connections will fail in production without a direct route.
+
+**Solution:** expose Streamlit directly via Traefik/nginx on a subdomain and set `public_url`:
+
+```python
+StreamlitAdminConfig(
+    app_path="streamlit",
+    public_url="https://st.example.com",  # direct, no Django in between
+)
+```
+
+**URL resolution priority** (`get_runtime_url()`):
+
+1. `public_url` — direct access, WebSocket works natively ✅
+2. DEBUG mode — `http://localhost:{port}` (auto-start subprocess) ✅
+3. Fallback — `{api_url}/cfg/streamlit/` (HTTP-only Django proxy, no WebSocket) ⚠️
+
+---
+
+## Computed Methods
+
+These are called internally and also available for use in your Streamlit app:
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_static_url()` | `str` | Proxy URL with leading/trailing slash |
+| `get_dev_url()` | `str` | `http://localhost:{port}` |
+| `get_iframe_route()` | `str` | Route for iframe embedding |
+| `get_tab_title()` | `str` | `"Streamlit Admin"` or custom |
+| `get_api_clients_path()` | `str` | `"generated"` or custom path |
+| `get_iframe_sandbox()` | `str` | Full sandbox attribute string |
+| `get_jwt_secret(django_secret)` | `str` | `jwt_secret` or `SECRET_KEY` |
+| `get_runtime_url()` | `str` | Actual URL used in iframe (public_url → dev → proxy) |
+| `get_runtime_port()` | `int` | Actual running port (from env or app config) |
+
+---
+
+## Example Configurations
+
+### Minimal (development)
+
+```python
+StreamlitAdminConfig(
+    app_path="streamlit",
+)
+```
+
+Starts on `http://localhost:8501`, dark theme, auto-starts with Django.
+
+### Custom port and title
+
+```python
+StreamlitAdminConfig(
+    app_path="admin_app",
+    port=8502,
+    tab_title="My Admin",
+    theme="vercel-dark",
+)
+```
+
+### Production with `public_url`
+
+```python
+StreamlitAdminConfig(
+    app_path="streamlit",
+    port=8501,
+    host="0.0.0.0",
+    auto_start=False,           # managed by supervisor/Docker
+    public_url="https://st.example.com",
+    theme="vercel-dark",
+    jwt_secret=env("STREAMLIT_JWT_SECRET"),
+)
+```
+
+### Full development config
+
+```python
+StreamlitAdminConfig(
+    app_path="streamlit",
+    port=8501,
+    host="0.0.0.0",
+    theme="vercel-dark",
+    auto_start=True,
+    tab_title="Admin Panel",
+    iframe_route="/",
+    api_clients_path="api/generated",
+    jwt_secret=None,            # use Django SECRET_KEY
+)
+```
+
+---
+
+## Auto-Start Conditions
+
+`auto_start=True` triggers Streamlit only when **all** conditions are met:
+
+| Condition | Required value |
+|-----------|---------------|
+| `DEBUG` | `True` |
+| `auto_start` in config | `True` |
+| `manage.py` command | `runserver` or `runserver_plus` |
+| WSGI server | NOT gunicorn / uwsgi |
+
+Other management commands (`migrate`, `shell`, `test`, etc.) skip auto-start automatically.

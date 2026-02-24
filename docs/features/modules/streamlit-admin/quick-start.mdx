@@ -1,0 +1,115 @@
+---
+title: Quick Start
+sidebar_position: 2
+description: Get Streamlit Admin running in 5 minutes. Install, configure, create an app scaffold, and start developing.
+---
+
+# Quick Start
+
+Get a working Streamlit admin panel in under 5 minutes.
+
+## Prerequisites
+
+- `django-cfg` installed
+- Python 3.11+
+- Streamlit installed in your environment
+
+```bash
+pip install django-cfg streamlit
+```
+
+---
+
+## Step 1: Configure
+
+Add `StreamlitAdminConfig` to your `DjangoConfig`:
+
+```python
+# api/config.py
+from django_cfg import DjangoConfig
+from django_cfg.modules.streamlit_admin import StreamlitAdminConfig
+
+config = DjangoConfig(
+    streamlit_admin=StreamlitAdminConfig(
+        app_path="streamlit",  # directory for your Streamlit app
+    ),
+)
+```
+
+That's the minimal config. Streamlit will auto-start on port `8501` with the `vercel-dark` theme.
+
+---
+
+## Step 2: Scaffold the App
+
+Generate a ready-to-run Streamlit app with the management command:
+
+```bash
+python manage.py create_streamlit_app streamlit --theme vercel-dark --with-pages
+```
+
+This creates:
+
+```
+streamlit/
+├── app.py                   # Entry point
+├── extensions.py            # Register custom pages
+├── .streamlit/
+│   └── config.toml          # Streamlit server + theme config
+├── api/
+│   ├── config.py            # API base URL
+│   ├── auth.py              # JWT authentication helpers
+│   └── client.py            # AdminAPI wrapper
+├── components/
+│   └── utils.py             # Shared UI components
+└── pages/
+    ├── 01_users.py          # Example Users page
+    └── 02_settings.py       # Example Settings page
+```
+
+---
+
+## Step 3: Start Django
+
+```bash
+python manage.py runserver
+```
+
+Console output:
+```
+Streamlit started on port 8501 (PID: 12345)
+Django version 5.x, using settings 'settings'
+Starting development server at http://127.0.0.1:8000/
+```
+
+Open **http://localhost:8501** — Streamlit admin is running.
+
+---
+
+## Step 4: Add a Custom Page
+
+Edit `streamlit/extensions.py`:
+
+```python
+from django_cfg.modules.streamlit_admin import page_registry
+import streamlit as st
+
+@page_registry.register("Hello World", icon="star", group="Demo")
+def render_hello():
+    st.title("Hello World")
+    st.write("My first custom admin page!")
+    st.metric("Users", "1,234", "+12 today")
+```
+
+Save the file — Streamlit reloads automatically, your page appears in the sidebar.
+
+---
+
+## What's Next
+
+- **[Configuration](./configuration)** — All `StreamlitAdminConfig` fields
+- **[Extensions](./extensions)** — Build more complex custom pages
+- **[Authentication](./authentication)** — Access user info and JWT tokens
+- **[API Integration](./api-integration)** — Call Django REST API from Streamlit
+- **[Theming](./theming)** — Customize the look and feel
+- **[Deployment](./deployment)** — Production setup with nginx and Docker
