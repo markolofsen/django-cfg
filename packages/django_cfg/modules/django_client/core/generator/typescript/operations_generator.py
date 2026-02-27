@@ -269,8 +269,11 @@ class OperationsGenerator:
                     body_lines.append("const formData = new FormData();")
                     for prop_name, prop in schema.properties.items():
                         if prop.format == "binary":
-                            # Append file
-                            body_lines.append(f"formData.append('{prop_name}', data.{prop_name});")
+                            # Append file (conditionally if optional)
+                            if prop_name not in schema.required:
+                                body_lines.append(f"if (data.{prop_name} !== undefined) formData.append('{prop_name}', data.{prop_name});")
+                            else:
+                                body_lines.append(f"formData.append('{prop_name}', data.{prop_name});")
                         elif prop_name in schema.required or True:  # Append all non-undefined fields
                             # Append other fields (wrap in if check for optional)
                             if prop_name not in schema.required:
