@@ -49,8 +49,8 @@ class OperationsGenerator:
 
         # Check if this is a file upload operation
         is_multipart = (
-            operation.request_body
-            and operation.request_body.content_type == "multipart/form-data"
+            (operation.request_body and operation.request_body.content_type == "multipart/form-data")
+            or (operation.patch_request_body and operation.patch_request_body.content_type == "multipart/form-data")
         )
 
         # Check if this is a binary upload operation
@@ -261,9 +261,10 @@ class OperationsGenerator:
 
         # Body / FormData / Binary
         if operation.request_body or operation.patch_request_body:
-            if is_multipart and operation.request_body:
+            req_body = operation.request_body or operation.patch_request_body
+            if is_multipart and req_body:
                 # Build FormData for multipart upload
-                schema_name = operation.request_body.schema_name
+                schema_name = req_body.schema_name
                 if schema_name and schema_name in self.context.schemas:
                     schema = self.context.schemas[schema_name]
                     body_lines.append("const formData = new FormData();")

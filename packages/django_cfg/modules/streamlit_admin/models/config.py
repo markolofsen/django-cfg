@@ -196,32 +196,35 @@ class StreamlitAdminConfig(BaseModel):
         Get actual runtime URL for iframe.
 
         Priority:
-        1. public_url (direct access, supports WebSocket — required for production)
-        2. DEBUG mode: direct localhost URL (auto-start subprocess)
-        3. Fallback: api_url + /cfg/streamlit/ (HTTP-only Django proxy, no WebSocket)
+        1. Development: direct localhost URL (auto-start subprocess)
+        2. Production + public_url: direct access (supports WebSocket)
+        3. Production without public_url: api_url + /cfg/streamlit/ (HTTP-only proxy)
         """
-        # public_url bypasses Django proxy — WebSocket works natively
-        if self.public_url:
-            return self.public_url.rstrip("/")
-
         from django_cfg.core.config import get_current_config
 
         config = get_current_config()
 
-        # In production without public_url, fall back to Django proxy (HTTP only)
-        if config and not config.debug:
+        # Development — always use localhost, ignore public_url
+        if config and config.is_development:
+            try:
+                from django.apps import apps
+                app_config = apps.get_app_config("streamlit_admin")
+                url = app_config.get_streamlit_url()
+                if url:
+                    return url
+            except Exception:
+                pass
+            return self.get_dev_url()
+
+        # Production — use public_url if set (WebSocket support)
+        if self.public_url:
+            return self.public_url.rstrip("/")
+
+        # Production fallback — Django proxy (HTTP only, no WebSocket)
+        if config:
             api_url = config.api_url.rstrip("/")
             return f"{api_url}/cfg/streamlit"
 
-        # In development, try to get actual running URL
-        try:
-            from django.apps import apps
-            app_config = apps.get_app_config("streamlit_admin")
-            url = app_config.get_streamlit_url()
-            if url:
-                return url
-        except Exception:
-            pass
         return self.get_dev_url()
 
     def get_runtime_port(self) -> int:
