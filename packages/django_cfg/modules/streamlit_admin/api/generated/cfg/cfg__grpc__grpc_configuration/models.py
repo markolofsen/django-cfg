@@ -6,9 +6,9 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class GRPCFeatures(BaseModel):
+class GRPCFrameworkConfig(BaseModel):
     """
-    gRPC features configuration.
+    gRPC framework configuration details.
 
     Response model (includes read-only fields).
     """
@@ -19,10 +19,10 @@ class GRPCFeatures(BaseModel):
         frozen=False,
     )
 
-    api_key_auth: bool = Field(description='API key authentication enabled')
-    request_logging: bool = Field(description='Request logging enabled')
-    metrics: bool = Field(description='Metrics collection enabled')
-    reflection: bool = Field(description='gRPC reflection enabled')
+    enabled: bool = Field(description='Whether framework is enabled')
+    auto_discover: bool = Field(description='Auto-discover services')
+    services_path: str = Field(description='Services discovery path pattern')
+    interceptors: list[str] | None = Field(None, description='Registered interceptors')
 
 
 
@@ -50,9 +50,9 @@ class GRPCServerConfig(BaseModel):
 
 
 
-class GRPCFrameworkConfig(BaseModel):
+class GRPCFeatures(BaseModel):
     """
-    gRPC framework configuration details.
+    gRPC features configuration.
 
     Response model (includes read-only fields).
     """
@@ -63,10 +63,10 @@ class GRPCFrameworkConfig(BaseModel):
         frozen=False,
     )
 
-    enabled: bool = Field(description='Whether framework is enabled')
-    auto_discover: bool = Field(description='Auto-discover services')
-    services_path: str = Field(description='Services discovery path pattern')
-    interceptors: list[str] | None = Field(None, description='Registered interceptors')
+    api_key_auth: bool = Field(description='API key authentication enabled')
+    request_logging: bool = Field(description='Request logging enabled')
+    metrics: bool = Field(description='Metrics collection enabled')
+    reflection: bool = Field(description='gRPC reflection enabled')
 
 
 

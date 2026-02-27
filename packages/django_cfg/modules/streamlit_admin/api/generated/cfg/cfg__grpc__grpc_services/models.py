@@ -54,9 +54,9 @@ class PaginatedServiceSummaryList(BaseModel):
 
 
 
-class MethodInfo(BaseModel):
+class RecentError(BaseModel):
     """
-    Information about a service method.
+    Recent error information.
 
     Response model (includes read-only fields).
     """
@@ -67,12 +67,10 @@ class MethodInfo(BaseModel):
         frozen=False,
     )
 
-    name: str = Field(description='Method name')
-    full_name: str = Field(description='Full method name (/service/method)')
-    request_type: str | None = Field(None, description='Request message type')
-    response_type: str | None = Field(None, description='Response message type')
-    streaming: bool | None = Field(None, description='Whether method uses streaming')
-    auth_required: bool | None = Field(None, description='Whether authentication is required')
+    method: str = Field(description='Method name where error occurred')
+    error_message: str = Field(description='Error message')
+    grpc_status_code: str = Field(description='gRPC status code')
+    occurred_at: str = Field(description='When error occurred (ISO timestamp)')
 
 
 
@@ -98,9 +96,9 @@ class ServiceStats(BaseModel):
 
 
 
-class RecentError(BaseModel):
+class MethodInfo(BaseModel):
     """
-    Recent error information.
+    Information about a service method.
 
     Response model (includes read-only fields).
     """
@@ -111,10 +109,12 @@ class RecentError(BaseModel):
         frozen=False,
     )
 
-    method: str = Field(description='Method name where error occurred')
-    error_message: str = Field(description='Error message')
-    grpc_status_code: str = Field(description='gRPC status code')
-    occurred_at: str = Field(description='When error occurred (ISO timestamp)')
+    name: str = Field(description='Method name')
+    full_name: str = Field(description='Full method name (/service/method)')
+    request_type: str | None = Field(None, description='Request message type')
+    response_type: str | None = Field(None, description='Response message type')
+    streaming: bool | None = Field(None, description='Whether method uses streaming')
+    auth_required: bool | None = Field(None, description='Whether authentication is required')
 
 
 

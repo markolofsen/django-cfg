@@ -501,9 +501,8 @@ class ClientGenerationOrchestrator:
         """
         Copy Python clients to Streamlit admin app.
 
-        Triggered by:
-        - --streamlit flag explicitly
-        - Auto-detect if streamlit_admin is configured and Python was generated
+        Only triggered by explicit --streamlit flag.
+        For standalone generation use: python manage.py gen_streamlit
         """
         langs = self.config.languages
 
@@ -511,10 +510,8 @@ class ClientGenerationOrchestrator:
         if not langs.python:
             return
 
-        # Check if we should copy to Streamlit
-        should_copy = self.config.streamlit or self._has_streamlit_config()
-
-        if not should_copy:
+        # Only copy when explicitly requested via --streamlit flag
+        if not self.config.streamlit:
             return
 
         try:

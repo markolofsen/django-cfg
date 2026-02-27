@@ -6,6 +6,185 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class ConfigMeta(BaseModel):
+    """
+    Config metadata.
+
+    Response model (includes read-only fields).
+    """
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        frozen=False,
+    )
+
+    config_class: str = ...
+    secret_key_configured: bool = ...
+
+
+
+class GitHubOAuthConfig(BaseModel):
+    """
+    GitHub OAuth configuration.
+
+    Response model (includes read-only fields).
+    """
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        frozen=False,
+    )
+
+    enabled: bool | None = None
+    client_id: str | None = None
+    client_secret: str | None = None
+    scope: list[str] | None = None
+    authorize_url: str | None = None
+    token_url: str | None = None
+    user_api_url: str | None = None
+    emails_api_url: str | None = None
+    callback_path: str | None = None
+    state_timeout_seconds: int | None = None
+    allow_account_linking: bool | None = None
+    auto_create_user: bool | None = None
+
+
+
+class NextJSAdminConfig(BaseModel):
+    """
+    Next.js Admin application configuration.
+
+    Response model (includes read-only fields).
+    """
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        frozen=False,
+    )
+
+    enabled: bool | None = None
+    url: str | None = None
+    api_base_url: str | None = None
+
+
+
+class SpectacularConfig(BaseModel):
+    """
+    DRF Spectacular configuration.
+
+    Response model (includes read-only fields).
+    """
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        frozen=False,
+    )
+
+    title: str | None = None
+    description: str | None = None
+    version: str | None = None
+
+
+
+class NgrokConfig(BaseModel):
+    """
+    Ngrok tunneling configuration.
+
+    Response model (includes read-only fields).
+    """
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        frozen=False,
+    )
+
+    enabled: bool | None = None
+    authtoken: str | None = None
+    basic_auth: list[str] | None = None
+    compression: bool | None = None
+
+
+
+class EmailConfig(BaseModel):
+    """
+    Email configuration.
+
+    Response model (includes read-only fields).
+    """
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        frozen=False,
+    )
+
+    backend: str | None = None
+    host: str | None = None
+    port: int | None = None
+    username: str | None = None
+    password: str | None = None
+    use_tls: bool | None = None
+    use_ssl: bool | None = None
+    ssl_verify: bool | None = None
+    timeout: int | None = None
+    default_from: str | None = None
+
+
+
+class GRPCConfigDashboard(BaseModel):
+    """
+    gRPC configuration for dashboard.
+
+    Response model (includes read-only fields).
+    """
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        frozen=False,
+    )
+
+    enabled: bool | None = None
+    host: str | None = None
+    port: int | None = None
+    public_url: str | None = None
+    enable_reflection: bool | None = None
+    package_prefix: str | None = None
+    output_dir: str | None = None
+    handlers_hook: list[str] | None = None
+    auto_register_apps: bool | None = None
+    enabled_apps: list[str] | None = None
+    custom_services: dict[str, Any] | None = None
+    server: dict[str, Any] | None = None
+    auth: dict[str, Any] | None = None
+    proto: dict[str, Any] | None = None
+    observability: dict[str, Any] | None = None
+
+
+
+class DRFConfig(BaseModel):
+    """
+    Django REST Framework configuration.
+
+    Response model (includes read-only fields).
+    """
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        frozen=False,
+    )
+
+    default_pagination_class: str | None = None
+    page_size: int | None = None
+
+
+
 class RedisQueueConfig(BaseModel):
     """
     Redis Queue configuration.
@@ -80,28 +259,9 @@ class DjangoRQConfig(BaseModel):
 
 
 
-class SpectacularConfig(BaseModel):
+class AxesConfig(BaseModel):
     """
-    DRF Spectacular configuration.
-
-    Response model (includes read-only fields).
-    """
-
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="allow",
-        frozen=False,
-    )
-
-    title: str | None = None
-    description: str | None = None
-    version: str | None = None
-
-
-
-class NgrokConfig(BaseModel):
-    """
-    Ngrok tunneling configuration.
+    Django-Axes brute-force protection configuration.
 
     Response model (includes read-only fields).
     """
@@ -113,53 +273,22 @@ class NgrokConfig(BaseModel):
     )
 
     enabled: bool | None = None
-    authtoken: str | None = None
-    basic_auth: list[str] | None = None
-    compression: bool | None = None
-
-
-
-class DRFConfig(BaseModel):
-    """
-    Django REST Framework configuration.
-
-    Response model (includes read-only fields).
-    """
-
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="allow",
-        frozen=False,
-    )
-
-    default_pagination_class: str | None = None
-    page_size: int | None = None
-
-
-
-class TelegramConfig(BaseModel):
-    """
-    Telegram service configuration.
-
-    Response model (includes read-only fields).
-    """
-
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="allow",
-        frozen=False,
-    )
-
-    bot_token: str | None = None
-    chat_id: int | None = None
-    parse_mode: str | None = None
-    disable_notification: bool | None = None
-    disable_web_page_preview: bool | None = None
-    timeout: int | None = None
-    webhook_url: str | None = None
-    webhook_secret: str | None = None
-    max_retries: int | None = None
-    retry_delay: float | None = None
+    failure_limit: int | None = None
+    cooloff_time: int | None = None
+    lock_out_at_failure: bool | None = None
+    reset_on_success: bool | None = None
+    only_user_failures: bool | None = None
+    lockout_template: str | None = None
+    lockout_url: str | None = None
+    verbose: bool | None = None
+    enable_access_failure_log: bool | None = None
+    ipware_proxy_count: int | None = None
+    ipware_meta_precedence_order: list[str] | None = None
+    allowed_ips: list[str] | None = None
+    denied_ips: list[str] | None = None
+    cache_name: str | None = None
+    use_user_agent: bool | None = None
+    username_form_field: str | None = None
 
 
 
@@ -196,9 +325,9 @@ class CentrifugoConfig(BaseModel):
 
 
 
-class NextJSAdminConfig(BaseModel):
+class TelegramConfig(BaseModel):
     """
-    Next.js Admin application configuration.
+    Telegram service configuration.
 
     Response model (includes read-only fields).
     """
@@ -209,145 +338,16 @@ class NextJSAdminConfig(BaseModel):
         frozen=False,
     )
 
-    enabled: bool | None = None
-    url: str | None = None
-    api_base_url: str | None = None
-
-
-
-class ConfigMeta(BaseModel):
-    """
-    Config metadata.
-
-    Response model (includes read-only fields).
-    """
-
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="allow",
-        frozen=False,
-    )
-
-    config_class: str = ...
-    secret_key_configured: bool = ...
-
-
-
-class AxesConfig(BaseModel):
-    """
-    Django-Axes brute-force protection configuration.
-
-    Response model (includes read-only fields).
-    """
-
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="allow",
-        frozen=False,
-    )
-
-    enabled: bool | None = None
-    failure_limit: int | None = None
-    cooloff_time: int | None = None
-    lock_out_at_failure: bool | None = None
-    reset_on_success: bool | None = None
-    only_user_failures: bool | None = None
-    lockout_template: str | None = None
-    lockout_url: str | None = None
-    verbose: bool | None = None
-    enable_access_failure_log: bool | None = None
-    ipware_proxy_count: int | None = None
-    ipware_meta_precedence_order: list[str] | None = None
-    allowed_ips: list[str] | None = None
-    denied_ips: list[str] | None = None
-    cache_name: str | None = None
-    use_user_agent: bool | None = None
-    username_form_field: str | None = None
-
-
-
-class EmailConfig(BaseModel):
-    """
-    Email configuration.
-
-    Response model (includes read-only fields).
-    """
-
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="allow",
-        frozen=False,
-    )
-
-    backend: str | None = None
-    host: str | None = None
-    port: int | None = None
-    username: str | None = None
-    password: str | None = None
-    use_tls: bool | None = None
-    use_ssl: bool | None = None
-    ssl_verify: bool | None = None
+    bot_token: str | None = None
+    chat_id: int | None = None
+    parse_mode: str | None = None
+    disable_notification: bool | None = None
+    disable_web_page_preview: bool | None = None
     timeout: int | None = None
-    default_from: str | None = None
-
-
-
-class GitHubOAuthConfig(BaseModel):
-    """
-    GitHub OAuth configuration.
-
-    Response model (includes read-only fields).
-    """
-
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="allow",
-        frozen=False,
-    )
-
-    enabled: bool | None = None
-    client_id: str | None = None
-    client_secret: str | None = None
-    scope: list[str] | None = None
-    authorize_url: str | None = None
-    token_url: str | None = None
-    user_api_url: str | None = None
-    emails_api_url: str | None = None
-    callback_path: str | None = None
-    state_timeout_seconds: int | None = None
-    allow_account_linking: bool | None = None
-    auto_create_user: bool | None = None
-
-
-
-class GRPCConfigDashboard(BaseModel):
-    """
-    gRPC configuration for dashboard.
-
-    Response model (includes read-only fields).
-    """
-
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="allow",
-        frozen=False,
-    )
-
-    enabled: bool | None = None
-    host: str | None = None
-    port: int | None = None
-    public_url: str | None = None
-    enable_reflection: bool | None = None
-    package_prefix: str | None = None
-    output_dir: str | None = None
-    handlers_hook: list[str] | None = None
-    auto_register_apps: bool | None = None
-    enabled_apps: list[str] | None = None
-    custom_services: dict[str, Any] | None = None
-    server: dict[str, Any] | None = None
-    auth: dict[str, Any] | None = None
-    proto: dict[str, Any] | None = None
-    observability: dict[str, Any] | None = None
+    webhook_url: str | None = None
+    webhook_secret: str | None = None
+    max_retries: int | None = None
+    retry_delay: float | None = None
 
 
 

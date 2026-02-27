@@ -23,6 +23,23 @@ class CentrifugoChannelsRequestRequest(BaseModel):
 
 
 
+class CentrifugoChannelsResult(BaseModel):
+    """
+    Channels result wrapper.
+
+    Response model (includes read-only fields).
+    """
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="allow",
+        frozen=False,
+    )
+
+    channels: dict[str, Any] = Field(description='Map of channel names to channel ...')
+
+
+
 class CentrifugoError(BaseModel):
     """
     Centrifugo API error structure.
@@ -38,23 +55,6 @@ class CentrifugoError(BaseModel):
 
     code: int | None = Field(None, description='Error code (0 = no error)')
     message: str | None = Field(None, description='Error message')
-
-
-
-class CentrifugoChannelsResult(BaseModel):
-    """
-    Channels result wrapper.
-
-    Response model (includes read-only fields).
-    """
-
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="allow",
-        frozen=False,
-    )
-
-    channels: dict[str, Any] = Field(description='Map of channel names to channel ...')
 
 
 
