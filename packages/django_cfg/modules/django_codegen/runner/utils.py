@@ -180,6 +180,23 @@ def copy_groups(
     return copied
 
 
+GO_STDLIB_PACKAGES = frozenset({
+    "archive", "bufio", "bytes", "cmp", "compress", "container", "context",
+    "crypto", "database", "debug", "embed", "encoding", "errors", "expvar",
+    "flag", "fmt", "go", "hash", "html", "image", "io", "iter", "log",
+    "maps", "math", "mime", "net", "os", "path", "plugin", "reflect",
+    "regexp", "runtime", "slices", "sort", "strconv", "strings", "structs",
+    "sync", "syscall", "testing", "text", "time", "unicode", "unique",
+    "unsafe",
+})
+
+
+def _is_go_stdlib(import_path: str) -> bool:
+    """Check if an import path is a Go standard library package."""
+    root = import_path.split("/")[0]
+    return root in GO_STDLIB_PACKAGES
+
+
 def fix_go_imports(
     target: Path,
     module_path: str,
@@ -197,10 +214,6 @@ def fix_go_imports(
         content = go_file.read_text()
         original = content
 
-        # Get relative path for this file's package
-        rel_path = go_file.parent.relative_to(target)
-        base_import = f"{module_path}/{rel_path}"
-
         # Fix import blocks
         def replace_import_block(match: re.Match) -> str:
             imports = match.group(1)
@@ -214,9 +227,10 @@ def fix_go_imports(
                 import_match = re.match(r'^"([^"]+)"', line)
                 if import_match:
                     import_path = import_match.group(1)
-                    # Fix relative imports
-                    if not import_path.startswith((".", "/", "github.com", "golang.org")):
-                        line = f'"{base_import}/{import_path}"'
+                    # Fix bare imports: add module prefix
+                    # Skip stdlib, already-qualified paths, and dot/slash imports
+                    if not import_path.startswith((".", "/", "github.com", "golang.org")) and not _is_go_stdlib(import_path):
+                        line = f'"{module_path}/{import_path}"'
                 fixed.append(line)
 
             return f"import (\n{chr(10).join(fixed)}\n)"
