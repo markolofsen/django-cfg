@@ -74,6 +74,19 @@ class OperationsGenerator:
             if request_type == "InlineRequestBody":
                 request_type = "map[string]interface{}"
 
+        # For multipart operations, suppress request_type if the schema has no
+        # actual fields to send (e.g. DRF @action stubs that inherit the ViewSet
+        # serializer but don't actually accept a request body).
+        if is_multipart and request_type:
+            multipart_fields = self._get_multipart_fields(operation)
+            has_fields = (
+                bool(multipart_fields.get("file_fields"))
+                or bool(multipart_fields.get("data_fields"))
+            )
+            if not has_fields:
+                request_type = None
+                is_multipart = False
+
         # Get response type - handle array responses
         response_type = "interface{}"
         is_array_response = False
