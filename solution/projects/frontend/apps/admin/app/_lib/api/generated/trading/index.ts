@@ -102,6 +102,20 @@ export { withRetry, shouldRetry, DEFAULT_RETRY_CONFIG } from "./retry";
 export const TOKEN_KEY = "auth_token";
 export const REFRESH_TOKEN_KEY = "refresh_token";
 
+/** Auto-detect locale from cookie NEXT_LOCALE or navigator.language */
+function detectLocale(): string | null {
+  try {
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]*)/);
+      if (match) return match[1];
+    }
+    if (typeof navigator !== 'undefined' && navigator.language) {
+      return navigator.language;
+    }
+  } catch {}
+  return null;
+}
+
 export interface APIOptions {
   /** Custom storage adapter (defaults to LocalStorageAdapter) */
   storage?: StorageAdapter;
@@ -109,6 +123,8 @@ export interface APIOptions {
   retryConfig?: RetryConfig;
   /** Logger configuration */
   loggerConfig?: Partial<LoggerConfig>;
+  /** Locale for Accept-Language header (e.g. 'en', 'ko', 'ru') */
+  locale?: string;
 }
 
 export class API {
@@ -116,6 +132,7 @@ export class API {
   private _client: APIClient;
   private _token: string | null = null;
   private _refreshToken: string | null = null;
+  private _locale: string | null = null;
   private storage: StorageAdapter;
   private options?: APIOptions;
 
@@ -131,6 +148,8 @@ export class API {
 
     // Initialize storage with logger
     this.storage = options?.storage || new LocalStorageAdapter(logger);
+
+    this._locale = options?.locale || null;
 
     this._loadTokensFromStorage();
 
@@ -177,11 +196,13 @@ export class API {
     ): Promise<T> => {
       // Read token from storage dynamically (supports JWT injection after instantiation)
       const token = this.getToken();
+      const locale = this._locale || detectLocale();
       const mergedOptions = {
         ...options,
         headers: {
           ...(options?.headers || {}),
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(locale ? { 'Accept-Language': locale } : {}),
         },
       };
 
@@ -255,6 +276,21 @@ export class API {
    */
   getBaseUrl(): string {
     return this.baseUrl;
+  }
+
+  /**
+   * Set locale for Accept-Language header
+   * @param locale - Locale string (e.g. 'en', 'ko', 'ru') or null to clear
+   */
+  setLocale(locale: string | null): void {
+    this._locale = locale;
+  }
+
+  /**
+   * Get current locale
+   */
+  getLocale(): string | null {
+    return this._locale;
   }
 
   /**

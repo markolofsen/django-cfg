@@ -17,7 +17,7 @@ importers:
         version: 3.8.1
       turbo:
         specifier: ^2.5.8
-        version: 2.8.11
+        version: 2.8.12
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -26,31 +26,31 @@ importers:
     dependencies:
       '@djangocfg/api':
         specifier: latest
-        version: 2.1.187(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.0(react@19.1.0))(zod@4.3.6)
+        version: 2.1.193(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.1(react@19.1.0))(zod@4.3.6)
       '@djangocfg/centrifugo':
         specifier: latest
-        version: 2.1.187(gwbzrlvghkgfzp7dnm5257zleq)
+        version: 2.1.193(2luftdtv77t322hdbqb7tt5gg4)
       '@djangocfg/ext-base':
         specifier: latest
-        version: 1.0.19(@djangocfg/api@2.1.187(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.0(react@19.1.0))(zod@4.3.6))(consola@3.4.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.4.0(react@19.1.0))
+        version: 1.0.19(@djangocfg/api@2.1.193(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.1(react@19.1.0))(zod@4.3.6))(consola@3.4.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.4.1(react@19.1.0))
       '@djangocfg/ext-leads':
         specifier: latest
-        version: 1.0.29(keqeiv52e6nyduegn6nbnj7jsm)
+        version: 1.0.29(ijyigdbxuvvakdtvdas2qxpaqi)
       '@djangocfg/i18n':
         specifier: latest
-        version: 2.1.187(react@19.1.0)(zod@4.3.6)
+        version: 2.1.193(react@19.1.0)(zod@4.3.6)
       '@djangocfg/layouts':
         specifier: latest
-        version: 2.1.187(66sy55wzzfzxl4fy3xlckx6z4q)
+        version: 2.1.193(b3ssgguf663skgx2rywr4pup3e)
       '@djangocfg/ui-core':
         specifier: latest
-        version: 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+        version: 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
       '@djangocfg/ui-nextjs':
         specifier: latest
-        version: 2.1.187(ru67fox5lt46cs5it5zkcgswuq)
+        version: 2.1.193(utruuadrfyhc653aijpbfccq2m)
       '@djangocfg/ui-tools':
         specifier: latest
-        version: 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+        version: 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
       '@hookform/resolvers':
         specifier: ^5.2.2
         version: 5.2.2(react-hook-form@7.71.2(react@19.1.0))
@@ -92,7 +92,7 @@ importers:
         version: 2.15.4(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       swr:
         specifier: ^2.3.7
-        version: 2.4.0(react@19.1.0)
+        version: 2.4.1(react@19.1.0)
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.2.1)
@@ -105,16 +105,16 @@ importers:
     devDependencies:
       '@djangocfg/llm':
         specifier: latest
-        version: 2.1.187(zod@4.3.6)
+        version: 2.1.193(zod@4.3.6)
       '@djangocfg/nextjs':
         specifier: latest
-        version: 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(browserslist@4.28.1)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(webpack@5.105.3)
+        version: 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(browserslist@4.28.1)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(webpack@5.105.3)
       '@djangocfg/seo':
         specifier: latest
-        version: 2.1.187
+        version: 2.1.193
       '@djangocfg/typescript-config':
         specifier: latest
-        version: 2.1.187
+        version: 2.1.193
       '@next/bundle-analyzer':
         specifier: ^16.0.1
         version: 16.1.6
@@ -129,7 +129,7 @@ importers:
         version: 0.5.19(tailwindcss@4.2.1)
       '@types/node':
         specifier: ^24.7.2
-        version: 24.10.15
+        version: 24.11.0
       '@types/react':
         specifier: ^19.2.7
         version: 19.2.14
@@ -174,20 +174,20 @@ packages:
   '@braintree/sanitize-url@7.1.2':
     resolution: {integrity: sha512-jigsZK+sMF/cuiB7sERuo9V7N9jx+dhmHHnQyDSVdpZwVutaBu7WvNYqMDLSgFgfB30n452TP3vjDAvFC973mA==}
 
-  '@chevrotain/cst-dts-gen@11.1.1':
-    resolution: {integrity: sha512-fRHyv6/f542qQqiRGalrfJl/evD39mAvbJLCekPazhiextEatq1Jx1K/i9gSd5NNO0ds03ek0Cbo/4uVKmOBcw==}
+  '@chevrotain/cst-dts-gen@11.1.2':
+    resolution: {integrity: sha512-XTsjvDVB5nDZBQB8o0o/0ozNelQtn2KrUVteIHSlPd2VAV2utEb6JzyCJaJ8tGxACR4RiBNWy5uYUHX2eji88Q==}
 
-  '@chevrotain/gast@11.1.1':
-    resolution: {integrity: sha512-Ko/5vPEYy1vn5CbCjjvnSO4U7GgxyGm+dfUZZJIWTlQFkXkyym0jFYrWEU10hyCjrA7rQtiHtBr0EaZqvHFZvg==}
+  '@chevrotain/gast@11.1.2':
+    resolution: {integrity: sha512-Z9zfXR5jNZb1Hlsd/p+4XWeUFugrHirq36bKzPWDSIacV+GPSVXdk+ahVWZTwjhNwofAWg/sZg58fyucKSQx5g==}
 
-  '@chevrotain/regexp-to-ast@11.1.1':
-    resolution: {integrity: sha512-ctRw1OKSXkOrR8VTvOxrQ5USEc4sNrfwXHa1NuTcR7wre4YbjPcKw+82C2uylg/TEwFRgwLmbhlln4qkmDyteg==}
+  '@chevrotain/regexp-to-ast@11.1.2':
+    resolution: {integrity: sha512-nMU3Uj8naWer7xpZTYJdxbAs6RIv/dxYzkYU8GSwgUtcAAlzjcPfX1w+RKRcYG8POlzMeayOQ/znfwxEGo5ulw==}
 
-  '@chevrotain/types@11.1.1':
-    resolution: {integrity: sha512-wb2ToxG8LkgPYnKe9FH8oGn3TMCBdnwiuNC5l5y+CtlaVRbCytU0kbVsk6CGrqTL4ZN4ksJa0TXOYbxpbthtqw==}
+  '@chevrotain/types@11.1.2':
+    resolution: {integrity: sha512-U+HFai5+zmJCkK86QsaJtoITlboZHBqrVketcO2ROv865xfCMSFpELQoz1GkX5GzME8pTa+3kbKrZHQtI0gdbw==}
 
-  '@chevrotain/utils@11.1.1':
-    resolution: {integrity: sha512-71eTYMzYXYSFPrbg/ZwftSaSDld7UYlS8OQa3lNnn9jzNtpFbaReRRyghzqS7rI3CDaorqpPJJcXGHK+FE1TVQ==}
+  '@chevrotain/utils@11.1.2':
+    resolution: {integrity: sha512-4mudFAQ6H+MqBTfqLmU7G1ZwRzCLfJEooL/fsF6rCX5eePMbGhoy5n4g+G4vlh2muDcsCTJtL+uKbOzWxs5LHA==}
 
   '@date-fns/tz@1.4.1':
     resolution: {integrity: sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA==}
@@ -196,8 +196,8 @@ packages:
     resolution: {integrity: sha512-dBVuXR082gk3jsFp7Rd/JI4kytwGHecnCoTtXFb7DB6CNHp4rg5k1bhg0nWdLGLnOV71lmDzGQaLMy8iPLY0pw==}
     engines: {node: '>=10.0.0'}
 
-  '@djangocfg/api@2.1.187':
-    resolution: {integrity: sha512-TVfeiAZCjWA8Uv0hsYCxeuVAKEsf+YPDGlY6aOtlEDSwc7j+tCqp57rIjwngtj1Hm07DguMEIla4FMXTiSoLog==}
+  '@djangocfg/api@2.1.193':
+    resolution: {integrity: sha512-b4MNwXkW3nRElc0pQFQ4OdTtZB4VYcRoGo3phJ1hSPHSyspHmYPk1icLsYxEZU5h6eHgoUgCVfDLH5z4DfkeZw==}
     peerDependencies:
       consola: ^3.4.2
       next: '>=16.0.0'
@@ -206,13 +206,13 @@ packages:
       swr: ^2.3.7
       zod: ^4.1.13
 
-  '@djangocfg/centrifugo@2.1.187':
-    resolution: {integrity: sha512-DKLTPf9xbDnIitCdYB2VVwpKz1tmIYcxJ9qaresudtEN5q4oNy32mjQa/PWFNSUnMeRJexXVvF4XGiPYZT5iBg==}
+  '@djangocfg/centrifugo@2.1.193':
+    resolution: {integrity: sha512-Vs4aKJU9d8exuJOVQBnZeDAMRgORqKOgL7Ovmu5etBufHOZCcdGNZ14ianE7GjRFLVaf008cTpOqYxihRJOPEw==}
     peerDependencies:
-      '@djangocfg/api': ^2.1.187
-      '@djangocfg/i18n': ^2.1.187
-      '@djangocfg/ui-core': ^2.1.187
-      '@djangocfg/ui-tools': ^2.1.187
+      '@djangocfg/api': ^2.1.193
+      '@djangocfg/i18n': ^2.1.193
+      '@djangocfg/ui-core': ^2.1.193
+      '@djangocfg/ui-tools': ^2.1.193
       consola: ^3.4.2
       lucide-react: ^0.545.0
       moment: ^2.30.1
@@ -247,21 +247,21 @@ packages:
       swr: ^2.3.7
       zod: ^4.3.4
 
-  '@djangocfg/i18n@2.1.187':
-    resolution: {integrity: sha512-cdb3GWPmu1ZY3BtG3P5Ulnpm6KBUqvvs9dvb3XhHY6RP086agD4RByDvsRGrDRrv8bYRSR9dwaYAWt/I3ykR7w==}
+  '@djangocfg/i18n@2.1.193':
+    resolution: {integrity: sha512-/7jPI5PScaj3LsHBC5bxaSSgGSUZ8HccA4w1WUJGbDdc1i8EaJ1K8d3sLF//7rexQE8kU4IWeAEGdtQzCX4NpA==}
     hasBin: true
     peerDependencies:
       react: 19.1.0
 
-  '@djangocfg/layouts@2.1.187':
-    resolution: {integrity: sha512-Q4AyxBrbR53/3EWDaYqo2kLyHJm59Jn5wpaUp0fqc7AKYY6I8I+Kk5GwztUkF5l7QTjBB2ICtDM3uitpnnbAWA==}
+  '@djangocfg/layouts@2.1.193':
+    resolution: {integrity: sha512-jZ8OTSg1WO4crv0PA3jBn+qMhv3T/UwJWqgyyhjZgpcGdQ3wk1aBW4Gulfj9FAc6OQ0KQYCbZEcx/AvlQGngOA==}
     peerDependencies:
-      '@djangocfg/api': ^2.1.187
-      '@djangocfg/centrifugo': ^2.1.187
-      '@djangocfg/i18n': ^2.1.187
-      '@djangocfg/ui-core': ^2.1.187
-      '@djangocfg/ui-nextjs': ^2.1.187
-      '@djangocfg/ui-tools': ^2.1.187
+      '@djangocfg/api': ^2.1.193
+      '@djangocfg/centrifugo': ^2.1.193
+      '@djangocfg/i18n': ^2.1.193
+      '@djangocfg/ui-core': ^2.1.193
+      '@djangocfg/ui-nextjs': ^2.1.193
+      '@djangocfg/ui-tools': ^2.1.193
       '@hookform/resolvers': ^5.2.2
       consola: ^3.4.2
       lucide-react: ^0.545.0
@@ -277,31 +277,31 @@ packages:
       tailwindcss-animate: ^1.0.7
       zod: ^4.3.4
 
-  '@djangocfg/llm@2.1.187':
-    resolution: {integrity: sha512-iKolO972RsvTyg1Dp1Zre6N05rZNPGZU+rKaQZl1qrOoP8ZYLFFk5qx0jD1tVSV9m0td7NlaoY9ZMuz9o2JwQw==}
+  '@djangocfg/llm@2.1.193':
+    resolution: {integrity: sha512-vUaYTCnTdug2r2Bvq1WD5nLGrmkkUIMzzWHuRu3u7xs9kkZhk7w49RF8xN8LUhFhR00hlTidNEQTXeDgQ+JeuQ==}
 
-  '@djangocfg/nextjs@2.1.187':
-    resolution: {integrity: sha512-jo3ailqPh7FeTEio07TWBQd3ipYDMSxb7vHvlE7QOoB+a/a47u0bt04Sga1xJ/l9ylk8OGX2DlALUBMV0WM+nQ==}
+  '@djangocfg/nextjs@2.1.193':
+    resolution: {integrity: sha512-6t74slZ2X9OkD5eOplpm8hDtcBJT8PI2ccNB+JnpMrOUS065h71UcJma2ahxMG31AGfLdUaDaKGmtWfYGl0H2Q==}
     hasBin: true
     peerDependencies:
-      '@djangocfg/i18n': ^2.1.187
-      '@djangocfg/ui-core': ^2.1.187
+      '@djangocfg/i18n': ^2.1.193
+      '@djangocfg/ui-core': ^2.1.193
       next: ^16.0.10
     peerDependenciesMeta:
       '@djangocfg/ui-core':
         optional: true
 
-  '@djangocfg/seo@2.1.187':
-    resolution: {integrity: sha512-YUlmMlZsx9kfeCarUg5+sVzZbtZa+6+Txsgaj8yDuYHylpSYWqMywTlELuv3Bk1X0SxdUJF2iPI2fpi1P/Vp5A==}
+  '@djangocfg/seo@2.1.193':
+    resolution: {integrity: sha512-MM2v4ApPEQZ1EaGqgiRdVQFHV3milQILAmKZO13a3+Pbsq7B15Pu+5E5JODNc9efc1GQ5qvrY660UXU95E+1rw==}
     hasBin: true
 
-  '@djangocfg/typescript-config@2.1.187':
-    resolution: {integrity: sha512-/Gs+jsS3appsXKGDrT2xEGu++MqOhuv4TQae+DtRDdMgIeDXwZZPjT+vYvNNQcVfauOj4f9PkgqL5KApI1RqPA==}
+  '@djangocfg/typescript-config@2.1.193':
+    resolution: {integrity: sha512-ONEXybZa1s8LKxaGCAs1ddAQjfSO1xIzZZwPOGfETT6xWb7useqnqHz89D2nlad6xyHMMWjMwbENvEVeOHanWA==}
 
-  '@djangocfg/ui-core@2.1.187':
-    resolution: {integrity: sha512-m/klFTe6eLW35WtFUse0XZY3dr8hmy+cfI16SFm3QOa65vgwhQm7hvhf0ygM50VbjZExMrkfAe0WXd8jxk/DBA==}
+  '@djangocfg/ui-core@2.1.193':
+    resolution: {integrity: sha512-9BRiSR0osT19BLyKHQrP5EKXLkmfHKxg6rwy1lbefRP5XO1gG8d3sK3yWdZHcXXIIIj+rVjeI4DHiUmuPFbACQ==}
     peerDependencies:
-      '@djangocfg/i18n': ^2.1.187
+      '@djangocfg/i18n': ^2.1.193
       consola: ^3.4.2
       lucide-react: ^0.545.0
       moment: ^2.30.1
@@ -313,13 +313,13 @@ packages:
       zod: ^4.0.0
       zustand: ^5.0.0
 
-  '@djangocfg/ui-nextjs@2.1.187':
-    resolution: {integrity: sha512-SsBlcVgl58v9bdHslnGAAK/80pRPUPQH4qmN7mLdCx5rR1k5KDEttvA8idq5PiEK/7gKAz0/OG2ec5k5auaWCg==}
+  '@djangocfg/ui-nextjs@2.1.193':
+    resolution: {integrity: sha512-Uca9PvFCwvtY7zLLyghsMZ2ZenNIDyliYnO09YdpFaUsEgfh//q5myjKQ7fqL8dwvGGPIuyOF35oBxOLOdskmw==}
     peerDependencies:
-      '@djangocfg/api': ^2.1.187
-      '@djangocfg/nextjs': ^2.1.187
-      '@djangocfg/ui-core': ^2.1.187
-      '@djangocfg/ui-tools': ^2.1.187
+      '@djangocfg/api': ^2.1.193
+      '@djangocfg/nextjs': ^2.1.193
+      '@djangocfg/ui-core': ^2.1.193
+      '@djangocfg/ui-tools': ^2.1.193
       '@types/react': ^19.1.0
       '@types/react-dom': ^19.1.0
       consola: ^3.4.2
@@ -334,11 +334,11 @@ packages:
       zod: ^4.1.13
       zustand: ^5.0.9
 
-  '@djangocfg/ui-tools@2.1.187':
-    resolution: {integrity: sha512-1GnMIWRoZNrKhdgk7bDlAxaVtMMn7Hb0AcDfAxTjh2oaNT+7VWqaiLe2yRTWdMJTDmSTAuLk0SCzAiU+ml0H1A==}
+  '@djangocfg/ui-tools@2.1.193':
+    resolution: {integrity: sha512-K6uQmsM5tJcUCb4jdBfUIYVsBPTGX0g11gQ3F5rCEcbZ+6Wbvyuwa5swuUtie0TeiOq8xgh703l9ghxxx5NEWA==}
     peerDependencies:
-      '@djangocfg/i18n': ^2.1.187
-      '@djangocfg/ui-core': ^2.1.187
+      '@djangocfg/i18n': ^2.1.193
+      '@djangocfg/ui-core': ^2.1.193
       consola: ^3.4.2
       lucide-react: ^0.545.0
       react: 19.1.0
@@ -1979,8 +1979,8 @@ packages:
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
-  '@types/node@24.10.15':
-    resolution: {integrity: sha512-BgjLoRuSr0MTI5wA6gMw9Xy0sFudAaUuvrnjgGx9wZ522fYYLA5SYJ+1Y30vTcJEG+DRCyDHx/gzQVfofYzSdg==}
+  '@types/node@24.11.0':
+    resolution: {integrity: sha512-fPxQqz4VTgPI/IQ+lj9r0h+fDR66bzoeMGHp8ASee+32OSGIkeASsoZuJixsQoVef1QJbeubcPBxKk22QVoWdw==}
 
   '@types/pbf@3.0.5':
     resolution: {integrity: sha512-j3pOPiEcWZ34R6a6mN07mUkM4o4Lwf6hPNt8eilOeZhTFbxFXmKhvXl9Y28jotFPaI1bpPDJsbCprUoNke6OrA==}
@@ -2439,8 +2439,8 @@ packages:
   brace-expansion@2.0.2:
     resolution: {integrity: sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ==}
 
-  brace-expansion@5.0.3:
-    resolution: {integrity: sha512-fy6KJm2RawA5RcHkLa1z/ScpBeA762UF9KmZQxwIbDtRJrgLzM10depAiEQ+CXYcoiqW1/m96OAAoke2nE9EeA==}
+  brace-expansion@5.0.4:
+    resolution: {integrity: sha512-h+DEnpVvxmfVefa4jFbCf5HdH5YMDXRsmKflpf1pILZWRFlTbJpxeU55nJl4Smt5HQaGzg1o6RHFPJaOqnmBDg==}
     engines: {node: 18 || 20 || >=22}
 
   braces@3.0.3:
@@ -2518,8 +2518,8 @@ packages:
     peerDependencies:
       chevrotain: ^11.0.0
 
-  chevrotain@11.1.1:
-    resolution: {integrity: sha512-f0yv5CPKaFxfsPTBzX7vGuim4oIC1/gcS7LUGdBSwl2dU6+FON6LVUksdOo1qJjoUvXNn45urgh8C+0a24pACQ==}
+  chevrotain@11.1.2:
+    resolution: {integrity: sha512-opLQzEVriiH1uUQ4Kctsd49bRoFDXGGSC4GUqj7pGyxM3RehRhvTlZJc1FL/Flew2p5uwxa1tUDWKzI4wNM8pg==}
 
   chrome-trace-event@1.0.4:
     resolution: {integrity: sha512-rNjApaLzuwaOTjCiT8lSDdGN1APCiqkChLMJxJPWLunPAt5fy8xgU9/jNOchV84wfIxrA0lRQB7oCT8jrn/wrQ==}
@@ -4908,8 +4908,8 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  swr@2.4.0:
-    resolution: {integrity: sha512-sUlC20T8EOt1pHmDiqueUWMmRRX03W7w5YxovWX7VR2KHEPCTMly85x05vpkP5i6Bu4h44ePSMD9Tc+G2MItFw==}
+  swr@2.4.1:
+    resolution: {integrity: sha512-2CC6CiKQtEwaEeNiqWTAw9PGykW8SR5zZX8MZk6TeAvEAnVS7Visz8WzphqgtQ8v2xz/4Q5K+j+SeMaKXeeQIA==}
     peerDependencies:
       react: 19.1.0
 
@@ -5003,38 +5003,38 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  turbo-darwin-64@2.8.11:
-    resolution: {integrity: sha512-XKaCWaz4OCt77oYYvGCIRpvYD4c/aNaKjRkUpv+e8rN3RZb+5Xsyew4yRO+gaHdMIUhQznXNXfHlhs+/p7lIhA==}
+  turbo-darwin-64@2.8.12:
+    resolution: {integrity: sha512-EiHJmW2MeQQx+21x8hjMHw/uPhXt9PIxvDrxzOtyVwrXzL0tQmsxtO4qHf2l7uA+K6PUJ4+TjY1MHZDuCvWXrw==}
     cpu: [x64]
     os: [darwin]
 
-  turbo-darwin-arm64@2.8.11:
-    resolution: {integrity: sha512-VvynLHGUNvQ9k7GZjRPSsRcK4VkioTfFb7O7liAk4nHKjEcMdls7GqxzjVWgJiKz3hWmQGaP9hRa9UUnhVWCxA==}
+  turbo-darwin-arm64@2.8.12:
+    resolution: {integrity: sha512-cbqqGN0vd7ly2TeuaM8k9AK9u1CABO4kBA5KPSqovTiLL3sORccn/mZzJSbvQf0EsYRfU34MgW5FotfwW3kx8Q==}
     cpu: [arm64]
     os: [darwin]
 
-  turbo-linux-64@2.8.11:
-    resolution: {integrity: sha512-cbSn37dcm+EmkQ7DD0euy7xV7o2el4GAOr1XujvkAyKjjNvQ+6QIUeDgQcwAx3D17zPpDvfDMJY2dLQadWnkmQ==}
+  turbo-linux-64@2.8.12:
+    resolution: {integrity: sha512-jXKw9j4r4q6s0goSXuKI3aKbQK2qiNeP25lGGEnq018TM6SWRW1CCpPMxyG91aCKrub7wDm/K45sGNT4ZFBcFQ==}
     cpu: [x64]
     os: [linux]
 
-  turbo-linux-arm64@2.8.11:
-    resolution: {integrity: sha512-+trymp2s2aBrhS04l6qFxcExzZ8ffndevuUB9c5RCeqsVpZeiWuGQlWNm5XjOmzoMayxRARZ5ma7yiWbGMiLqQ==}
+  turbo-linux-arm64@2.8.12:
+    resolution: {integrity: sha512-BRJCMdyXjyBoL0GYpvj9d2WNfMHwc3tKmJG5ATn2Efvil9LsiOsd/93/NxDqW0jACtHFNVOPnd/CBwXRPiRbwA==}
     cpu: [arm64]
     os: [linux]
 
-  turbo-windows-64@2.8.11:
-    resolution: {integrity: sha512-3kJjFSM4yw1n9Uzmi+XkAUgCae19l/bH6RJ442xo7mnZm0tpOjo33F+FYHoSVpIWVMd0HG0LDccyafPSdylQbA==}
+  turbo-windows-64@2.8.12:
+    resolution: {integrity: sha512-vyFOlpFFzQFkikvSVhVkESEfzIopgs2J7J1rYvtSwSHQ4zmHxkC95Q8Kjkus8gg+8X2mZyP1GS5jirmaypGiPw==}
     cpu: [x64]
     os: [win32]
 
-  turbo-windows-arm64@2.8.11:
-    resolution: {integrity: sha512-JOM4uF2vuLsJUvibdR6X9QqdZr6BhC6Nhlrw4LKFPsXZZI/9HHLoqAiYRpE4MuzIwldCH/jVySnWXrI1SKto0g==}
+  turbo-windows-arm64@2.8.12:
+    resolution: {integrity: sha512-9nRnlw5DF0LkJClkIws1evaIF36dmmMEO84J5Uj4oQ8C0QTHwlH7DNe5Kq2Jdmu8GXESCNDNuUYG8Cx6W/vm3g==}
     cpu: [arm64]
     os: [win32]
 
-  turbo@2.8.11:
-    resolution: {integrity: sha512-H+rwSHHPLoyPOSoHdmI1zY0zy0GGj1Dmr7SeJW+nZiWLz2nex8EJ+fkdVabxXFMNEux+aywI4Sae8EqhmnOv4A==}
+  turbo@2.8.12:
+    resolution: {integrity: sha512-auUAMLmi0eJhxDhQrxzvuhfEbICnVt0CTiYQYY8WyRJ5nwCDZxD0JG8bCSxT4nusI2CwJzmZAay5BfF6LmK7Hw==}
     hasBin: true
 
   type-check@0.4.0:
@@ -5367,42 +5367,42 @@ snapshots:
 
   '@braintree/sanitize-url@7.1.2': {}
 
-  '@chevrotain/cst-dts-gen@11.1.1':
+  '@chevrotain/cst-dts-gen@11.1.2':
     dependencies:
-      '@chevrotain/gast': 11.1.1
-      '@chevrotain/types': 11.1.1
+      '@chevrotain/gast': 11.1.2
+      '@chevrotain/types': 11.1.2
       lodash-es: 4.17.23
 
-  '@chevrotain/gast@11.1.1':
+  '@chevrotain/gast@11.1.2':
     dependencies:
-      '@chevrotain/types': 11.1.1
+      '@chevrotain/types': 11.1.2
       lodash-es: 4.17.23
 
-  '@chevrotain/regexp-to-ast@11.1.1': {}
+  '@chevrotain/regexp-to-ast@11.1.2': {}
 
-  '@chevrotain/types@11.1.1': {}
+  '@chevrotain/types@11.1.2': {}
 
-  '@chevrotain/utils@11.1.1': {}
+  '@chevrotain/utils@11.1.2': {}
 
   '@date-fns/tz@1.4.1': {}
 
   '@discoveryjs/json-ext@0.5.7': {}
 
-  '@djangocfg/api@2.1.187(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.0(react@19.1.0))(zod@4.3.6)':
+  '@djangocfg/api@2.1.193(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.1(react@19.1.0))(zod@4.3.6)':
     dependencies:
       consola: 3.4.2
       next: 16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       p-retry: 7.1.1
       react: 19.1.0
-      swr: 2.4.0(react@19.1.0)
+      swr: 2.4.1(react@19.1.0)
       zod: 4.3.6
 
-  '@djangocfg/centrifugo@2.1.187(gwbzrlvghkgfzp7dnm5257zleq)':
+  '@djangocfg/centrifugo@2.1.193(2luftdtv77t322hdbqb7tt5gg4)':
     dependencies:
-      '@djangocfg/api': 2.1.187(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.0(react@19.1.0))(zod@4.3.6)
-      '@djangocfg/i18n': 2.1.187(react@19.1.0)(zod@4.3.6)
-      '@djangocfg/ui-core': 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
-      '@djangocfg/ui-tools': 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+      '@djangocfg/api': 2.1.193(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.1(react@19.1.0))(zod@4.3.6)
+      '@djangocfg/i18n': 2.1.193(react@19.1.0)(zod@4.3.6)
+      '@djangocfg/ui-core': 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+      '@djangocfg/ui-tools': 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
       centrifuge: 5.5.3
       consola: 3.4.2
       lucide-react: 0.545.0(react@19.1.0)
@@ -5410,23 +5410,23 @@ snapshots:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
-  '@djangocfg/ext-base@1.0.19(@djangocfg/api@2.1.187(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.0(react@19.1.0))(zod@4.3.6))(consola@3.4.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.4.0(react@19.1.0))':
+  '@djangocfg/ext-base@1.0.19(@djangocfg/api@2.1.193(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.1(react@19.1.0))(zod@4.3.6))(consola@3.4.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.4.1(react@19.1.0))':
     dependencies:
-      '@djangocfg/api': 2.1.187(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.0(react@19.1.0))(zod@4.3.6)
+      '@djangocfg/api': 2.1.193(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.1(react@19.1.0))(zod@4.3.6)
       chalk: 5.6.2
       consola: 3.4.2
       picocolors: 1.1.1
       prompts: 2.4.2
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
-      swr: 2.4.0(react@19.1.0)
+      swr: 2.4.1(react@19.1.0)
 
-  '@djangocfg/ext-leads@1.0.29(keqeiv52e6nyduegn6nbnj7jsm)':
+  '@djangocfg/ext-leads@1.0.29(ijyigdbxuvvakdtvdas2qxpaqi)':
     dependencies:
-      '@djangocfg/api': 2.1.187(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.0(react@19.1.0))(zod@4.3.6)
-      '@djangocfg/ext-base': 1.0.19(@djangocfg/api@2.1.187(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.0(react@19.1.0))(zod@4.3.6))(consola@3.4.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.4.0(react@19.1.0))
-      '@djangocfg/i18n': 2.1.187(react@19.1.0)(zod@4.3.6)
-      '@djangocfg/ui-core': 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+      '@djangocfg/api': 2.1.193(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.1(react@19.1.0))(zod@4.3.6)
+      '@djangocfg/ext-base': 1.0.19(@djangocfg/api@2.1.193(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.1(react@19.1.0))(zod@4.3.6))(consola@3.4.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(swr@2.4.1(react@19.1.0))
+      '@djangocfg/i18n': 2.1.193(react@19.1.0)(zod@4.3.6)
+      '@djangocfg/ui-core': 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
       '@hookform/resolvers': 5.2.2(react-hook-form@7.71.2(react@19.1.0))
       consola: 3.4.2
       lucide-react: 0.545.0(react@19.1.0)
@@ -5435,12 +5435,12 @@ snapshots:
       p-retry: 7.1.1
       react: 19.1.0
       react-hook-form: 7.71.2(react@19.1.0)
-      swr: 2.4.0(react@19.1.0)
+      swr: 2.4.1(react@19.1.0)
       zod: 4.3.6
 
-  '@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6)':
+  '@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6)':
     dependencies:
-      '@djangocfg/llm': 2.1.187(zod@4.3.6)
+      '@djangocfg/llm': 2.1.193(zod@4.3.6)
       citty: 0.1.6
       consola: 3.4.2
       jiti: 2.6.1
@@ -5449,14 +5449,14 @@ snapshots:
       - ws
       - zod
 
-  '@djangocfg/layouts@2.1.187(66sy55wzzfzxl4fy3xlckx6z4q)':
+  '@djangocfg/layouts@2.1.193(b3ssgguf663skgx2rywr4pup3e)':
     dependencies:
-      '@djangocfg/api': 2.1.187(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.0(react@19.1.0))(zod@4.3.6)
-      '@djangocfg/centrifugo': 2.1.187(gwbzrlvghkgfzp7dnm5257zleq)
-      '@djangocfg/i18n': 2.1.187(react@19.1.0)(zod@4.3.6)
-      '@djangocfg/ui-core': 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
-      '@djangocfg/ui-nextjs': 2.1.187(ru67fox5lt46cs5it5zkcgswuq)
-      '@djangocfg/ui-tools': 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+      '@djangocfg/api': 2.1.193(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.1(react@19.1.0))(zod@4.3.6)
+      '@djangocfg/centrifugo': 2.1.193(2luftdtv77t322hdbqb7tt5gg4)
+      '@djangocfg/i18n': 2.1.193(react@19.1.0)(zod@4.3.6)
+      '@djangocfg/ui-core': 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+      '@djangocfg/ui-nextjs': 2.1.193(utruuadrfyhc653aijpbfccq2m)
+      '@djangocfg/ui-tools': 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
       '@hookform/resolvers': 5.2.2(react-hook-form@7.71.2(react@19.1.0))
       consola: 3.4.2
       lucide-react: 0.545.0(react@19.1.0)
@@ -5470,22 +5470,22 @@ snapshots:
       react-ga4: 2.1.0
       react-hook-form: 7.71.2(react@19.1.0)
       sonner: 2.0.7(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      swr: 2.4.0(react@19.1.0)
+      swr: 2.4.1(react@19.1.0)
       tailwindcss: 4.2.1
       tailwindcss-animate: 1.0.7(tailwindcss@4.2.1)
       uuid: 11.1.0
       zod: 4.3.6
 
-  '@djangocfg/llm@2.1.187(zod@4.3.6)':
+  '@djangocfg/llm@2.1.193(zod@4.3.6)':
     dependencies:
       openai: 6.25.0(zod@4.3.6)
     transitivePeerDependencies:
       - ws
       - zod
 
-  '@djangocfg/nextjs@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(browserslist@4.28.1)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(webpack@5.105.3)':
+  '@djangocfg/nextjs@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(browserslist@4.28.1)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(webpack@5.105.3)':
     dependencies:
-      '@djangocfg/i18n': 2.1.187(react@19.1.0)(zod@4.3.6)
+      '@djangocfg/i18n': 2.1.193(react@19.1.0)(zod@4.3.6)
       '@serwist/next': 9.5.6(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(webpack@5.105.3)
       '@serwist/sw': 9.5.6(browserslist@4.28.1)(typescript@5.9.3)
       chalk: 5.6.2
@@ -5496,7 +5496,7 @@ snapshots:
       semver: 7.7.4
       serwist: 9.5.6(browserslist@4.28.1)(typescript@5.9.3)
     optionalDependencies:
-      '@djangocfg/ui-core': 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+      '@djangocfg/ui-core': 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
     transitivePeerDependencies:
       - '@serwist/cli'
       - '@swc/helpers'
@@ -5505,7 +5505,7 @@ snapshots:
       - typescript
       - webpack
 
-  '@djangocfg/seo@2.1.187':
+  '@djangocfg/seo@2.1.193':
     dependencies:
       '@googleapis/searchconsole': 1.0.5
       chalk: 5.6.2
@@ -5523,11 +5523,11 @@ snapshots:
       - encoding
       - supports-color
 
-  '@djangocfg/typescript-config@2.1.187': {}
+  '@djangocfg/typescript-config@2.1.193': {}
 
-  '@djangocfg/ui-core@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))':
+  '@djangocfg/ui-core@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))':
     dependencies:
-      '@djangocfg/i18n': 2.1.187(react@19.1.0)(zod@4.3.6)
+      '@djangocfg/i18n': 2.1.193(react@19.1.0)(zod@4.3.6)
       '@hookform/resolvers': 5.2.2(react-hook-form@7.71.2(react@19.1.0))
       '@radix-ui/react-accordion': 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@radix-ui/react-alert-dialog': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -5590,12 +5590,12 @@ snapshots:
       - '@types/react-dom'
       - typescript
 
-  '@djangocfg/ui-nextjs@2.1.187(ru67fox5lt46cs5it5zkcgswuq)':
+  '@djangocfg/ui-nextjs@2.1.193(utruuadrfyhc653aijpbfccq2m)':
     dependencies:
-      '@djangocfg/api': 2.1.187(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.0(react@19.1.0))(zod@4.3.6)
-      '@djangocfg/nextjs': 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(browserslist@4.28.1)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(webpack@5.105.3)
-      '@djangocfg/ui-core': 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
-      '@djangocfg/ui-tools': 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+      '@djangocfg/api': 2.1.193(consola@3.4.2)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(p-retry@7.1.1)(react@19.1.0)(swr@2.4.1(react@19.1.0))(zod@4.3.6)
+      '@djangocfg/nextjs': 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(browserslist@4.28.1)(next@16.0.10(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.9.3)(webpack@5.105.3)
+      '@djangocfg/ui-core': 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+      '@djangocfg/ui-tools': 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
       chart.js: 4.5.1
@@ -5615,10 +5615,10 @@ snapshots:
       zod: 4.3.6
       zustand: 5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))
 
-  '@djangocfg/ui-tools@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))':
+  '@djangocfg/ui-tools@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@djangocfg/ui-core@2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))':
     dependencies:
-      '@djangocfg/i18n': 2.1.187(react@19.1.0)(zod@4.3.6)
-      '@djangocfg/ui-core': 2.1.187(@djangocfg/i18n@2.1.187(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
+      '@djangocfg/i18n': 2.1.193(react@19.1.0)(zod@4.3.6)
+      '@djangocfg/ui-core': 2.1.193(@djangocfg/i18n@2.1.193(react@19.1.0)(zod@4.3.6))(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(consola@3.4.2)(lucide-react@0.545.0(react@19.1.0))(moment@2.30.1)(react-device-detect@2.2.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react-hook-form@7.71.2(react@19.1.0))(react@19.1.0)(tailwindcss@4.2.1)(typescript@5.9.3)(zod@4.3.6)(zustand@5.0.11(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0)))
       '@rjsf/core': 6.3.1(@rjsf/utils@6.3.1(react@19.1.0))(react@19.1.0)
       '@rjsf/utils': 6.3.1(react@19.1.0)
       '@rjsf/validator-ajv8': 6.3.1(@rjsf/utils@6.3.1(react@19.1.0))
@@ -7326,7 +7326,7 @@ snapshots:
 
   '@types/ms@2.1.0': {}
 
-  '@types/node@24.10.15':
+  '@types/node@24.11.0':
     dependencies:
       undici-types: 7.16.0
 
@@ -7805,7 +7805,7 @@ snapshots:
     dependencies:
       balanced-match: 1.0.2
 
-  brace-expansion@5.0.3:
+  brace-expansion@5.0.4:
     dependencies:
       balanced-match: 4.0.4
 
@@ -7881,18 +7881,18 @@ snapshots:
     dependencies:
       '@kurkle/color': 0.3.4
 
-  chevrotain-allstar@0.3.1(chevrotain@11.1.1):
+  chevrotain-allstar@0.3.1(chevrotain@11.1.2):
     dependencies:
-      chevrotain: 11.1.1
+      chevrotain: 11.1.2
       lodash-es: 4.17.23
 
-  chevrotain@11.1.1:
+  chevrotain@11.1.2:
     dependencies:
-      '@chevrotain/cst-dts-gen': 11.1.1
-      '@chevrotain/gast': 11.1.1
-      '@chevrotain/regexp-to-ast': 11.1.1
-      '@chevrotain/types': 11.1.1
-      '@chevrotain/utils': 11.1.1
+      '@chevrotain/cst-dts-gen': 11.1.2
+      '@chevrotain/gast': 11.1.2
+      '@chevrotain/regexp-to-ast': 11.1.2
+      '@chevrotain/types': 11.1.2
+      '@chevrotain/utils': 11.1.2
       lodash-es: 4.17.23
 
   chrome-trace-event@1.0.4: {}
@@ -9188,7 +9188,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 24.10.15
+      '@types/node': 24.11.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
@@ -9266,8 +9266,8 @@ snapshots:
 
   langium@4.2.1:
     dependencies:
-      chevrotain: 11.1.1
-      chevrotain-allstar: 0.3.1(chevrotain@11.1.1)
+      chevrotain: 11.1.2
+      chevrotain-allstar: 0.3.1(chevrotain@11.1.2)
       vscode-languageserver: 9.0.1
       vscode-languageserver-textdocument: 1.0.12
       vscode-uri: 3.1.0
@@ -9844,7 +9844,7 @@ snapshots:
 
   minimatch@10.2.4:
     dependencies:
-      brace-expansion: 5.0.3
+      brace-expansion: 5.0.4
 
   minimatch@3.1.5:
     dependencies:
@@ -10165,7 +10165,7 @@ snapshots:
       '@protobufjs/path': 1.1.2
       '@protobufjs/pool': 1.1.0
       '@protobufjs/utf8': 1.1.0
-      '@types/node': 24.10.15
+      '@types/node': 24.11.0
       long: 5.3.2
 
   protocol-buffers-schema@3.6.0: {}
@@ -10782,7 +10782,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  swr@2.4.0(react@19.1.0):
+  swr@2.4.1(react@19.1.0):
     dependencies:
       dequal: 2.0.3
       react: 19.1.0
@@ -10858,32 +10858,32 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  turbo-darwin-64@2.8.11:
+  turbo-darwin-64@2.8.12:
     optional: true
 
-  turbo-darwin-arm64@2.8.11:
+  turbo-darwin-arm64@2.8.12:
     optional: true
 
-  turbo-linux-64@2.8.11:
+  turbo-linux-64@2.8.12:
     optional: true
 
-  turbo-linux-arm64@2.8.11:
+  turbo-linux-arm64@2.8.12:
     optional: true
 
-  turbo-windows-64@2.8.11:
+  turbo-windows-64@2.8.12:
     optional: true
 
-  turbo-windows-arm64@2.8.11:
+  turbo-windows-arm64@2.8.12:
     optional: true
 
-  turbo@2.8.11:
+  turbo@2.8.12:
     optionalDependencies:
-      turbo-darwin-64: 2.8.11
-      turbo-darwin-arm64: 2.8.11
-      turbo-linux-64: 2.8.11
-      turbo-linux-arm64: 2.8.11
-      turbo-windows-64: 2.8.11
-      turbo-windows-arm64: 2.8.11
+      turbo-darwin-64: 2.8.12
+      turbo-darwin-arm64: 2.8.12
+      turbo-linux-64: 2.8.12
+      turbo-linux-arm64: 2.8.12
+      turbo-windows-64: 2.8.12
+      turbo-windows-arm64: 2.8.12
 
   type-check@0.4.0:
     dependencies:
