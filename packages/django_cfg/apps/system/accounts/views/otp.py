@@ -60,15 +60,16 @@ class OTPViewSet(viewsets.GenericViewSet):
         if not channel:
             channel = 'email' if '@' in identifier else 'phone'
 
+        accept_language = request.META.get('HTTP_ACCEPT_LANGUAGE', '') or ''
         logger.debug(f"Starting OTP request for {channel}: {identifier}, source: {source_url}")
 
         try:
             if channel == 'email':
-                success, error_type = OTPService.request_otp(identifier, source_url)
+                success, error_type = OTPService.request_otp(identifier, source_url, accept_language=accept_language)
             else:
                 # For phone OTP, we'll need to implement phone OTP service
                 # For now, fallback to email-based service
-                success, error_type = OTPService.request_otp(identifier, source_url)
+                success, error_type = OTPService.request_otp(identifier, source_url, accept_language=accept_language)
         except Exception as e:
             # Log the full traceback for debugging
             logger.error(f"OTP request failed with exception: {str(e)}")

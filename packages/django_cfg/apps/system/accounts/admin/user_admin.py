@@ -60,6 +60,7 @@ customuser_config = AdminConfig(
         "email",
         "full_name",
         "status",
+        "language",
         "is_test_account",
         "twofa_status",
         "sources_count",
@@ -146,7 +147,7 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
         (
             "Contact Information",
             {
-                "fields": ("company", "phone", "position"),
+                "fields": ("company", "phone", "position", "language"),
             },
         ),
         (

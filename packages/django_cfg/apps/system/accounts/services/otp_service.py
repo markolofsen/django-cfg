@@ -24,7 +24,7 @@ class OTPService:
 
     @staticmethod
     @transaction.atomic
-    def request_otp(email: str, source_url: Optional[str] = None) -> tuple[bool, str]:
+    def request_otp(email: str, source_url: Optional[str] = None, accept_language: Optional[str] = None) -> tuple[bool, str]:
         """Generate and send OTP to email. Returns (success, error_type)."""
         cleaned_email = email.strip().lower()
         if not cleaned_email:
@@ -39,6 +39,13 @@ class OTPService:
 
             if created:
                 logger.info(f"Created new user: {cleaned_email}")
+
+            # Save user language from Accept-Language (only if not already set)
+            if accept_language and not user.language:
+                lang_code = accept_language.split(',')[0].split(';')[0].strip().split('-')[0]
+                if lang_code:
+                    user.language = lang_code
+                    user.save(update_fields=['language'])
 
         except Exception as e:
             logger.error(

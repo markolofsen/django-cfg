@@ -26,6 +26,7 @@ class CustomUser(AbstractUser):
     company = models.CharField(max_length=100, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     position = models.CharField(max_length=100, blank=True)
+    language = models.CharField(max_length=10, blank=True, default='')
     avatar = models.ImageField(upload_to=user_avatar_path, blank=True, null=True)
 
     # Test account for App Store review, API testing, etc.
