@@ -24,6 +24,10 @@ def _get_openapi_group_urls() -> List[URLPattern]:
     3. For each app with urls.py, include it
     4. Add path("{api_prefix}/{app_basename}/", include("{app}.urls"))
 
+    Uses importlib.util.find_spec() instead of import_module() to check for
+    urls.py existence without triggering circular imports. For apps that fail
+    eager include() due to circular imports, a deferred include is used.
+
     Returns:
         List of URL patterns for OpenAPI groups
     """
@@ -62,29 +66,40 @@ def _get_openapi_group_urls() -> List[URLPattern]:
                 if app_name in added_apps:
                     continue
 
-                # Check if the app has a urls.py module
+                # Check if the app has a urls.py module using find_spec
+                # (safe — does not trigger imports or circular dependencies)
+                urls_module = f"{app_name}.urls"
                 try:
-                    urls_module = f"{app_name}.urls"
-                    importlib.import_module(urls_module)
+                    spec = importlib.util.find_spec(urls_module)
+                except (ModuleNotFoundError, ValueError):
+                    spec = None
 
-                    # Get the app basename (last part of the app path)
-                    # e.g., "apps.workspaces" -> "workspaces"
-                    app_basename = app_name.split('.')[-1]
+                if spec is None:
+                    continue
 
-                    # Add URL pattern for this app
-                    url_pattern = f"{api_prefix}/{app_basename}/"
+                # Get the app basename (last part of the app path)
+                # e.g., "apps.workspaces" -> "workspaces"
+                app_basename = app_name.split('.')[-1]
+                url_pattern = f"{api_prefix}/{app_basename}/"
+
+                # Try eager include first
+                try:
                     patterns.append(path(url_pattern, include(urls_module)))
                     added_apps.add(app_name)
-
-                    # Log successful auto-registration
-                    sys.stderr.write(f"✅ Auto-registered URL: /{url_pattern} -> {urls_module}\n")
-                    sys.stderr.flush()
-
                 except ImportError as e:
-                    # App doesn't have urls.py - skip it
-                    sys.stderr.write(f"⚠️  Skipping {app_name}: {e}\n")
-                    sys.stderr.flush()
-                    continue
+                    if "circular import" in str(e) or "partially initialized" in str(e):
+                        # Circular import — use a deferred include via lazy resolver
+                        sys.stderr.write(
+                            f"⚠️  Circular import for {urls_module}, using deferred include: {e}\n"
+                        )
+                        sys.stderr.flush()
+                        patterns.append(
+                            path(url_pattern, _make_deferred_include(urls_module))
+                        )
+                        added_apps.add(app_name)
+                    else:
+                        sys.stderr.write(f"⚠️  Skipping {app_name}: {e}\n")
+                        sys.stderr.flush()
 
     except Exception as e:
         # Don't break if OpenAPI config is not available
@@ -92,6 +107,16 @@ def _get_openapi_group_urls() -> List[URLPattern]:
         sys.stderr.flush()
 
     return patterns
+
+
+def _make_deferred_include(urls_module: str):
+    """
+    Create a deferred URL include that resolves lazily on first request.
+
+    Delegates to the shared implementation in GroupManager module.
+    """
+    from django_cfg.modules.django_client.core.groups.manager import _deferred_include
+    return _deferred_include(urls_module)
 
 
 def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
