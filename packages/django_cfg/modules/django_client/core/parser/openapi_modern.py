@@ -10,7 +10,7 @@ References:
 """
 
 from .base import BaseParser
-from .models import SchemaObject
+from .models import ReferenceObject, SchemaObject
 
 
 class OpenAPIModernParser(BaseParser):
@@ -85,24 +85,25 @@ class OpenAPIModernParser(BaseParser):
         if schema.is_nullable_30:
             return True
 
-        # Check anyOf: [{"type": "X"}, {"type": "null"}] format (Pydantic)
-        # or anyOf: [{"$ref": "..."}, {"type": "null"}] format
-        if schema.anyOf and len(schema.anyOf) == 2:
-            has_null = False
-            has_actual_type = False
+        # Check anyOf/oneOf: [{"type": "X"}, {"type": "null"}] format
+        # or anyOf/oneOf: [{"$ref": "..."}, {"type": "null"}] format
+        # drf-spectacular uses oneOf for @extend_schema_field(Serializer(allow_null=True))
+        for combinator in (schema.anyOf, schema.oneOf):
+            if combinator and len(combinator) == 2:
+                has_null = False
+                has_actual_type = False
 
-            for item in schema.anyOf:
-                if not isinstance(item, SchemaObject):
-                    continue
+                for item in combinator:
+                    if isinstance(item, SchemaObject):
+                        if item.base_type == 'null':
+                            has_null = True
+                        elif item.base_type or item.ref:
+                            has_actual_type = True
+                    elif isinstance(item, ReferenceObject):
+                        # $ref counts as actual type
+                        has_actual_type = True
 
-                if item.base_type == 'null':
-                    has_null = True
-                elif item.base_type or item.ref:
-                    # Has actual type (either base_type or $ref)
-                    has_actual_type = True
-
-            # If one is null and another is actual type, it's nullable
-            if has_null and has_actual_type:
-                return True
+                if has_null and has_actual_type:
+                    return True
 
         return False
