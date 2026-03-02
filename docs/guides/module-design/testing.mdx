@@ -1,0 +1,281 @@
+---
+title: Testing
+sidebar_position: 5
+keywords:
+  - python testing
+  - pytest patterns
+  - python mocking
+  - test factories
+description: Testing framework for Python modules. Directory structure, pytest setup, unit/integration/performance tests, mocking, factories, and CI configuration.
+---
+
+# Testing
+
+Every module has tests. Target 95%+ coverage with fast, isolated, deterministic tests.
+
+## Directory Structure
+
+```
+tests/
+├── __init__.py
+├── conftest.py              # Shared fixtures
+├── factories.py             # Test data factories
+├── unit/
+│   ├── __init__.py
+│   ├── test_models.py       # Model validation tests
+│   ├── test_services.py     # Service unit tests
+│   └── test_utils.py        # Utility function tests
+├── integration/
+│   ├── __init__.py
+│   ├── test_api.py          # API integration tests
+│   └── test_database.py     # Database tests
+├── performance/
+│   └── test_benchmarks.py   # Performance benchmarks
+└── security/
+    └── test_vulnerabilities.py
+```
+
+## pytest Configuration
+
+```ini
+# pyproject.toml
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = [
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-fail-under=95",
+    "--asyncio-mode=auto",
+    "-v",
+    "--strict-markers",
+]
+markers = [
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (may use external services)",
+    "performance: Performance benchmarks",
+    "security: Security tests",
+]
+```
+
+## Fixtures (conftest.py)
+
+```python
+import pytest
+from unittest.mock import AsyncMock, MagicMock
+
+@pytest.fixture
+def test_config() -> Config:
+    return Config(
+        api_key="test_api_key_12345678901234567890",
+        base_url="http://localhost:8000",
+        timeout=5,
+        debug=True,
+    )
+
+@pytest.fixture
+def mock_repository() -> AsyncMock:
+    repo = AsyncMock(spec=UserRepositoryProtocol)
+    repo.find_by_id.return_value = None
+    repo.save.return_value = MagicMock(id=1)
+    return repo
+
+@pytest.fixture
+def user_service(mock_repository, test_config) -> UserService:
+    return UserService(config=test_config, repository=mock_repository)
+
+@pytest.fixture(autouse=True)
+def reset_singletons():
+    """Reset global singletons before each test."""
+    from src.config import reset_config
+    reset_config()
+    yield
+    reset_config()
+```
+
+## Unit Tests
+
+### Model Validation
+
+```python
+import pytest
+from pydantic import ValidationError
+
+class TestUserModel:
+    def test_create_valid_user(self):
+        user = User(id=1, name="John", email="john@example.com")
+        assert user.id == 1
+        assert user.name == "John"
+
+    def test_reject_empty_name(self):
+        with pytest.raises(ValidationError) as exc_info:
+            User(id=1, name="", email="john@example.com")
+        errors = exc_info.value.errors()
+        assert any(e["loc"] == ("name",) for e in errors)
+
+    @pytest.mark.parametrize("email", [
+        "test@example.com",
+        "user.name@domain.org",
+        "user+tag@example.co.uk",
+    ])
+    def test_valid_email_formats(self, email: str):
+        user = User(id=1, name="Test", email=email)
+        assert user.email == email
+
+    def test_model_dump_excludes_none(self):
+        user = User(id=1, name="John", email="john@example.com", metadata=None)
+        data = user.model_dump(exclude_none=True)
+        assert "metadata" not in data
+```
+
+### Service Tests
+
+```python
+class TestUserService:
+    def test_get_user_success(self, user_service, mock_repository, sample_user):
+        mock_repository.find_by_id.return_value = sample_user
+        result = user_service.get_user(1)
+
+        assert result == sample_user
+        mock_repository.find_by_id.assert_called_once_with(1)
+
+    def test_get_user_not_found(self, user_service, mock_repository):
+        mock_repository.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundError):
+            user_service.get_user(999)
+
+
+@pytest.mark.asyncio
+class TestAsyncUserService:
+    async def test_get_user_async(self, async_user_service, mock_repository, sample_user):
+        mock_repository.find_by_id.return_value = sample_user
+        result = await async_user_service.get_user(1)
+        assert result == sample_user
+
+    async def test_batch_fetch(self, async_user_service, mock_repository, sample_users):
+        mock_repository.find_by_id.side_effect = sample_users
+        results = await async_user_service.get_users_batch([1, 2, 3, 4, 5])
+
+        assert len(results) == 5
+        assert mock_repository.find_by_id.call_count == 5
+```
+
+## Integration Tests
+
+```python
+@pytest.mark.integration
+class TestClientIntegration:
+    @pytest.fixture
+    def live_client(self, test_config) -> Client:
+        return Client(api_key=test_config.api_key, base_url=test_config.base_url)
+
+    def test_create_and_get_workflow(self, live_client):
+        created = live_client.users.create({"name": "Test", "email": "test@test.com"})
+        assert created.id is not None
+
+        retrieved = live_client.users.get(created.id)
+        assert retrieved.id == created.id
+
+        live_client.users.delete(created.id)
+```
+
+## Performance Tests
+
+```python
+@pytest.mark.performance
+class TestPerformance:
+    def test_response_time(self, benchmark, user_service, sample_user):
+        user_service._repository.find_by_id.return_value = sample_user
+        result = benchmark(user_service.get_user, 1)
+        assert benchmark.stats.mean < 0.1  # <100ms
+
+    @pytest.mark.asyncio
+    async def test_concurrent_ops(self, async_user_service, sample_users):
+        async_user_service._repository.find_by_id.side_effect = sample_users * 10
+
+        start = time.time()
+        tasks = [async_user_service.get_user(i) for i in range(50)]
+        results = await asyncio.gather(*tasks)
+        elapsed = (time.time() - start) * 1000
+
+        assert len(results) == 50
+        assert elapsed < 500
+```
+
+## Mocking
+
+### Mock vs AsyncMock
+
+```python
+from unittest.mock import MagicMock, AsyncMock, patch
+
+# Sync
+mock_service = MagicMock()
+mock_service.get_user.return_value = User(id=1, name="Test")
+
+# Async
+async_mock = AsyncMock()
+async_mock.get_user.return_value = User(id=1, name="Test")
+
+# Patching
+@patch("src.services.UserRepository")
+def test_with_patched_repo(mock_repo_class):
+    mock_repo = MagicMock()
+    mock_repo_class.return_value = mock_repo
+```
+
+### Side Effects
+
+```python
+# Successive return values
+mock.get_user.side_effect = [user1, user2, user3]
+
+# Raise exception
+mock.get_user.side_effect = NotFoundError("User", "999")
+
+# Custom function
+def side_effect_func(user_id):
+    if user_id == 1:
+        return User(id=1, name="Found")
+    raise NotFoundError("User", str(user_id))
+
+mock.get_user.side_effect = side_effect_func
+```
+
+## Test Data Factories
+
+```python
+# tests/factories.py
+
+class UserFactory:
+    _counter = 0
+
+    @classmethod
+    def create(cls, id: int | None = None, name: str | None = None, **kwargs) -> User:
+        cls._counter += 1
+        return User(
+            id=id or cls._counter,
+            name=name or f"Test User {cls._counter}",
+            email=f"user{cls._counter}@test.com",
+            **kwargs,
+        )
+
+    @classmethod
+    def create_batch(cls, count: int, **kwargs) -> list[User]:
+        return [cls.create(**kwargs) for _ in range(count)]
+
+    @classmethod
+    def reset(cls) -> None:
+        cls._counter = 0
+```
+
+## Rules
+
+1. **95%+ coverage** — `--cov-fail-under=95`
+2. **Isolated tests** — no shared state, reset singletons
+3. **Fast feedback** — total suite < 60 seconds
+4. **Use factories** — don't create test data manually in every test
+5. **Mock external calls** — never hit real APIs in unit tests
+6. **Parametrize edge cases** — `@pytest.mark.parametrize`
+7. **One assertion concept per test** — test name describes what's tested
+8. **Separate test layers** — unit/, integration/, performance/, security/

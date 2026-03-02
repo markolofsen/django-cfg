@@ -1,0 +1,293 @@
+---
+title: Service Layer
+sidebar_position: 4
+keywords:
+  - django services
+  - django-cfg service layer
+  - business logic django
+description: Service layer patterns for Django-CFG apps. When to use services, transaction handling, return types, and real examples from production code.
+---
+
+# Service Layer
+
+Services contain business logic that doesn't belong in models or views. They orchestrate multi-model operations, handle transactions, and interact with external systems.
+
+## When to Use Services
+
+| Situation | Where it goes |
+|-----------|--------------|
+| Single-model query filter | Manager |
+| Simple CRUD | ViewSet directly |
+| Multi-model transaction | **Service** |
+| External API call | **Service** |
+| Complex business rules | **Service** |
+| Authorization scoping | **Service** |
+| Data aggregation across models | **Service** |
+
+## Static Methods Pattern
+
+The simplest approach — static methods grouped in a class:
+
+```python
+# services/confidence_service.py
+
+from django.db import transaction
+
+class ConfidenceService:
+    @staticmethod
+    def record(agent, confidence, regime=None, source=None, actual_outcome=None):
+        """Record a confidence prediction."""
+        entry = ConfidenceHistory.objects.create(
+            agent=agent,
+            confidence=confidence,
+            regime=regime,
+            source=source,
+            actual_outcome=actual_outcome,
+        )
+        if actual_outcome and regime:
+            ConfidenceService._update_calibration(agent, regime, confidence, actual_outcome)
+        return entry
+
+    @staticmethod
+    def get_calibration(agent, regime):
+        """Get calibration profile for agent + regime."""
+        profile = RegimeConfidenceProfile.objects.filter(
+            agent=agent, regime=regime
+        ).first()
+        if not profile:
+            return {"regime": regime, "avg_confidence": 0, "actual_accuracy": 0, "sample_count": 0}
+        return {
+            "regime": regime,
+            "avg_confidence": profile.avg_confidence,
+            "actual_accuracy": profile.actual_accuracy,
+            "sample_count": profile.sample_count,
+        }
+
+    @staticmethod
+    def _update_calibration(agent, regime, confidence, actual_outcome):
+        """Private: recalculate calibration from new data point."""
+        profile, _ = RegimeConfidenceProfile.objects.get_or_create(
+            agent=agent, regime=regime
+        )
+        profile.sample_count += 1
+        # Running average update
+        profile.avg_confidence += (confidence - profile.avg_confidence) / profile.sample_count
+        profile.save(update_fields=["avg_confidence", "sample_count"])
+```
+
+From **market** (stockapis-trader) — records predictions and maintains calibration profiles.
+
+## Class-Based Service with Result Dataclass
+
+For operations that return structured results:
+
+```python
+# services/sync_service.py
+
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class SyncResult:
+    exchange: str
+    market_type: Optional[str]
+    created: int
+    updated: int
+    deactivated: int
+    total: int
+    errors: list
+
+
+class SyncService:
+    EXCHANGE_DATA_CONFIG = {
+        "binance": {"spot": True, "linear": True, "inverse": True},
+        "bybit": {"spot": True, "linear": True, "inverse": False},
+    }
+
+    def sync(self, exchange: str, market_type: str) -> SyncResult:
+        """Sync symbols for one exchange + market type."""
+        raw_data = self._fetch_from_exchange(exchange, market_type)
+        created, updated, deactivated = self._upsert_symbols(raw_data)
+        return SyncResult(
+            exchange=exchange,
+            market_type=market_type,
+            created=created,
+            updated=updated,
+            deactivated=deactivated,
+            total=created + updated,
+            errors=[],
+        )
+
+    def sync_all(self) -> list[SyncResult]:
+        """Sync all exchanges and market types."""
+        results = []
+        for exchange, markets in self.EXCHANGE_DATA_CONFIG.items():
+            for market_type, enabled in markets.items():
+                if enabled:
+                    results.append(self.sync(exchange, market_type))
+        return results
+```
+
+From **symbols** (stockapis) — returns a typed result object instead of a raw dict.
+
+## QuerySet Scoping Service
+
+When visibility logic is complex, use a service to scope querysets:
+
+```python
+# services/skill_service.py
+
+class SkillService:
+    @staticmethod
+    def get_public_queryset():
+        """Published, public skills."""
+        return Skill.objects.filter(
+            status=Skill.Status.PUBLISHED,
+            visibility=Skill.Visibility.PUBLIC,
+        )
+
+    @staticmethod
+    def get_accessible_queryset(user):
+        """User's own skills + public skills."""
+        return Skill.objects.filter(
+            models.Q(author=user) |
+            models.Q(status=Skill.Status.PUBLISHED, visibility=Skill.Visibility.PUBLIC)
+        )
+
+    @staticmethod
+    def check_author(skill, user):
+        """Check if user is the skill author."""
+        if skill.author != user:
+            raise PermissionDenied("You are not the author of this skill.")
+```
+
+From **skills** (cmdop) — the ViewSet calls `SkillService.get_accessible_queryset(user)` in `get_queryset()`.
+
+## Transactional Service
+
+For operations that modify multiple models:
+
+```python
+# services/machine_service.py
+
+from django.db import transaction
+
+class MachineService:
+    @staticmethod
+    @transaction.atomic
+    def get_or_create_from_registration(workspace, data):
+        """Register a machine — find existing or create new.
+
+        One physical machine = one DB record (matched by hostname).
+        """
+        # Try global lookup first (machine may already exist in another workspace)
+        machine = Machine.objects.filter(
+            hostname=data["hostname"],
+            device_id=data.get("device_id"),
+        ).first()
+
+        if machine:
+            # Update existing machine's info
+            machine.workspace = workspace
+            machine.os = MachineService._map_platform(data["platform"])
+            machine.agent_version = data.get("agent_version", "")
+            machine.save()
+            return machine, False
+
+        # Create new machine
+        machine = Machine.objects.create(
+            workspace=workspace,
+            hostname=data["hostname"],
+            os=MachineService._map_platform(data["platform"]),
+            agent_token=Machine.generate_token(),
+            **{k: v for k, v in data.items() if k in Machine.UPDATABLE_FIELDS},
+        )
+        return machine, True
+
+    @staticmethod
+    def _map_platform(platform_str):
+        mapping = {"darwin": "macos", "win32": "windows", "linux": "linux"}
+        return mapping.get(platform_str, "linux")
+```
+
+From **machines** (cmdop) — `@transaction.atomic` ensures partial registration doesn't leave dirty data.
+
+## Stateless Aggregation Service
+
+For endpoints that don't map to a single model:
+
+```python
+# services/stats_service.py
+
+from django.db.models import Count, Sum, Q
+
+class StatsService:
+    @staticmethod
+    def get_skills_stats():
+        """Public statistics for the skills marketplace."""
+        return {
+            "total_skills": Skill.objects.filter(
+                status="published", visibility="public"
+            ).count(),
+            "total_installs": SkillInstall.objects.aggregate(
+                total=Count("id")
+            )["total"] or 0,
+            "top_categories": list(
+                SkillCategory.objects.annotate(
+                    skill_count=Count("skills")
+                ).order_by("-skill_count").values("name", "skill_count")[:10]
+            ),
+        }
+```
+
+From **site** (cmdop) — the ViewSet is a plain `viewsets.ViewSet` (not `ModelViewSet`), it just calls this service and returns the result.
+
+## Specialized Service Collection
+
+For complex domains, split services into focused files:
+
+```
+services/
+├── download_service.py          # Main orchestration
+├── data_availability.py         # Check what's already downloaded
+├── availability_grid.py         # Monthly coverage matrix
+├── availability_heatmap.py      # Multi-data-type heatmap
+├── symbols_with_data.py         # Query DB for symbols that have data
+├── questdb_client.py            # Direct database client
+├── overlap_checker.py           # Detect duplicate downloads
+├── date_range_splitter.py       # Break date ranges into segments
+└── utils.py                     # Shared helpers
+```
+
+From **cryptodb_driver** (stockapis) — 8 service files, each under 300 lines, each with a single responsibility.
+
+## Convenience Functions
+
+Expose a module-level function for simple calls:
+
+```python
+# services/sync_service.py
+
+class SyncService:
+    def sync(self, exchange, market_type):
+        ...
+
+# Convenience function at module level
+def sync_symbols(exchange=None, market_type=None):
+    service = SyncService()
+    if exchange and market_type:
+        return service.sync(exchange, market_type)
+    return service.sync_all()
+```
+
+This lets tasks and management commands call `sync_symbols()` without instantiating the class.
+
+## Rules
+
+1. **No Django request/response objects in services** — pass plain data (strings, dicts, dataclasses)
+2. **No serializer usage in services** — serializers belong to the view layer
+3. **Use `@transaction.atomic`** for multi-model writes
+4. **Return typed results** — dataclasses, Pydantic models, or typed dicts
+5. **Keep services stateless** — no instance variables, use static methods or plain functions
+6. **Max 300 lines per service file** — split into focused files when needed

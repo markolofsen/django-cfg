@@ -1,0 +1,197 @@
+---
+title: Architecture
+sidebar_position: 1
+keywords:
+  - next.js directory structure
+  - app router
+  - typescript aliases
+  - route definitions
+  - server components
+description: Canonical directory structure, naming conventions, TypeScript aliases, route definitions, and server vs client component boundaries.
+---
+
+# Architecture
+
+Every Next.js app in the django-cfg ecosystem follows the same directory layout and naming conventions.
+
+<Callout type="info">
+For Django backend app structure see [App Design Guide](/guides/app-design/app-structure). For reusable package structure see [Module Design Guide](/guides/module-design).
+</Callout>
+
+## Canonical Directory Structure
+
+```
+app/
+├── [locale]/                    # next-intl locale wrapper
+│   ├── layout.tsx               # Root: font + I18nProvider + AppLayout
+│   ├── page.tsx                 # Homepage
+│   ├── error.tsx                # Error boundary
+│   ├── not-found.tsx            # 404
+│   └── (pages)/                 # Route group
+│       ├── auth/page.tsx
+│       ├── admin/layout.tsx
+│       ├── private/             # Auth-guarded routes
+│       │   ├── layout.tsx       # Auth guard
+│       │   ├── profile/
+│       │   └── payments/        # Can be self-contained mini-app
+│       └── <feature>/           # Public feature routes
+│           ├── page.tsx         # Server Component (SSR fetch)
+│           ├── layout.tsx       # Passthrough or providers
+│           ├── <Feature>View.tsx      # 'use client' wrapper
+│           └── [id]/page.tsx    # Dynamic routes
+│
+├── api/                         # Next.js API routes
+│   ├── contact/route.ts
+│   ├── health/route.ts
+│   └── og/[data]/route.ts      # OG image generation
+│
+├── _core/                       # App-level configuration
+│   ├── settings.ts              # App name, API URL, media paths
+│   ├── metadata.ts              # Next.js metadata helper
+│   ├── images.ts                # Auto-generated image catalog
+│   └── globals.css              # Tailwind entry point
+│
+├── _routes/                     # Typed route definitions
+│   ├── index.ts                 # Combined routes
+│   ├── public.ts                # Public routes + URL builders
+│   ├── private.ts               # Auth-required routes
+│   └── admin.ts                 # Admin routes
+│
+├── _layouts/                    # Layout wrappers
+│   ├── AppLayout.tsx            # Root (uses BaseAppLayout from @djangocfg/layouts)
+│   ├── PublicLayout.tsx
+│   ├── PrivateLayout.tsx
+│   ├── AdminLayout.tsx
+│   ├── DashboardLayout/
+│   └── <Feature>Layout/         # Complex layouts with sub-providers
+│
+├── _components/                 # Feature UI components (colocated by domain)
+│   ├── <domain>/
+│   │   ├── cards/
+│   │   ├── detail/
+│   │   ├── filters/
+│   │   ├── list/
+│   │   ├── shared/
+│   │   └── index.ts             # Barrel export
+│   └── common/                  # Cross-domain shared components
+│
+├── _lib/                        # Business logic layer
+│   ├── api/
+│   │   ├── BaseClient.ts        # Singleton API factory
+│   │   ├── server.ts            # SSR-safe API factories
+│   │   └── generated/           # DO NOT EDIT — auto-generated
+│   │       └── <domain>/
+│   │           ├── _utils/fetchers/    # Zod-validated fetch functions
+│   │           ├── _utils/hooks/       # SWR hooks
+│   │           └── _utils/schemas/     # Zod schemas per model
+│   ├── contexts/
+│   │   ├── <domain>/
+│   │   │   ├── <Domain>Context.tsx
+│   │   │   ├── types.ts         # Single source of truth (re-exports from generated)
+│   │   │   └── index.ts
+│   │   └── AppProvider.tsx      # Composed provider (optional)
+│   ├── stores/                  # Zustand stores (if needed)
+│   ├── hooks/                   # Custom hooks
+│   ├── utils/                   # Pure utility functions
+│   └── providers/
+│       └── SWRProvider.tsx      # Global SWR config + presets
+│
+├── _ws/                         # WebSocket (Centrifugo) — DO NOT EDIT
+│   ├── generated/
+│   ├── context/
+│   └── hooks/
+│
+└── _views/                      # Optional: page-level view components
+```
+
+## Naming Conventions
+
+| Category | Convention | Example |
+|----------|-----------|---------|
+| Directories | Underscore prefix for non-route | `_lib/`, `_components/`, `_core/` |
+| Pages | `page.tsx` (server), `<Name>View.tsx` (client) | `CatalogView.tsx` |
+| Contexts | `<Domain>Context.tsx` + `types.ts` | `MachinesContext.tsx` |
+| Stores | `<domain>Store.ts` | `timelineStore.ts` |
+| Hooks | `use<Name>.ts` | `usePlaybackLoop.ts` |
+| Layouts | `<Name>Layout.tsx` | `DashboardLayout.tsx` |
+| Barrel exports | `index.ts` everywhere | Every directory |
+
+## TypeScript Path Aliases
+
+Standard aliases from `tsconfig.json`:
+
+```json
+{
+  "@/*":          ["./app/*"],
+  "@core/*":      ["./app/_core/*"],
+  "@components":  ["./app/_components"],
+  "@lib/*":       ["./app/_lib/*"],
+  "@api/*":       ["./app/_lib/api/*"],
+  "@contexts":    ["./app/_lib/contexts"],
+  "@stores/*":    ["./app/_stores/*"],
+  "@layouts":     ["./app/_layouts"],
+  "@routes":      ["./app/_routes"],
+  "@ws":          ["./app/_ws"],
+  "@i18n/*":      ["./i18n/*"]
+}
+```
+
+Never use relative imports with more than one level (`../../`). Use aliases instead.
+
+## Route Definitions
+
+Routes use `defineRoute()` from `@djangocfg/nextjs/navigation`:
+
+```typescript
+export const catalog = defineRoute('/catalog', {
+  label: 'nav.catalog',
+  icon: 'Car',
+  protected: false,
+  group: 'main',
+  order: 2,
+});
+
+// URL builders alongside routes
+export function catalogUrl(filters: Partial<FilterState>): string { ... }
+export function vehicleUrl(id: string): string { ... }
+```
+
+Three route domains — `public`, `private`, `admin` — aggregated in `_routes/index.ts`.
+
+## next.config.ts Pattern
+
+All apps use `createBaseNextConfig` from `@djangocfg/nextjs/config`:
+
+```typescript
+import { createBaseNextConfig } from '@djangocfg/nextjs/config';
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+const config = createBaseNextConfig({
+  pwa: { /* Serwist options */ },
+  i18n: { locales: ['en', 'ru', 'ko'], defaultLocale: 'en' },
+});
+
+export default withNextIntl(config);
+```
+
+Auto-handles: standalone output (production), transpile packages, dev webpack optimizations, update checks, CORS, and iframe CSP.
+
+## Server vs Client Component Split
+
+| Component | Directive | Use for |
+|-----------|-----------|---------|
+| `page.tsx` | none (Server) | SSR data fetch, metadata, pass initialData |
+| `layout.tsx` | none (Server) | Font, i18n, provider wrapping |
+| `<Feature>View.tsx` | `'use client'` | Interactive UI, hooks, context consumption |
+| `<Feature>Context.tsx` | `'use client'` | State + SWR |
+| `<store>.ts` | `'use client'` (implicit via zustand) | Client state |
+
+## Rules
+
+1. Every non-route directory uses an underscore prefix (`_lib/`, `_components/`, `_core/`)
+2. Never use relative imports deeper than one level — use TypeScript aliases (`@lib/`, `@api/`, `@contexts`)
+3. Never edit `generated/` directories manually — regenerate with `make api` or `make centrifuge`
+4. Route definitions live in `_routes/` with `defineRoute()` — co-locate URL builder functions with the route they serve
+5. Server Components handle data fetching and metadata — Client Components handle interactivity and hooks
+6. Every directory exports a barrel `index.ts` for clean import paths

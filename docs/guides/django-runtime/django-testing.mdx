@@ -1,0 +1,299 @@
+---
+title: Django Testing
+sidebar_position: 3
+keywords:
+  - django async testing
+  - pytest django_db
+  - asyncclient django
+  - websocket testing
+  - channels testing
+description: Django-specific testing patterns — pytest.mark.django_db for async tests, AsyncClient, WebsocketCommunicator, and sync_to_async bridge testing.
+---
+
+# Django Testing
+
+Testing patterns specific to Django async ORM, async views, and Channels WebSocket consumers.
+
+<Callout type="info">
+For generic pytest patterns (fixtures, mocking, parametrize) see [Testing](/guides/module-design/testing). For Django app-level testing (models, views, serializers) see [App Design Testing](/guides/app-design/testing).
+</Callout>
+
+## Async ORM Tests
+
+### pytest.mark.django_db with transaction=True
+
+Async ORM tests require `transaction=True` because async operations cannot run inside a standard test transaction wrapper:
+
+```python
+import pytest
+from myapp.models import Book
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_async_create_and_retrieve():
+    book = await Book.objects.acreate(
+        title="Test Book",
+        author="Test Author",
+    )
+
+    retrieved = await Book.objects.aget(id=book.id)
+    assert retrieved.title == "Test Book"
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_async_filtering():
+    await Book.objects.acreate(title="Python", author="Alice")
+    await Book.objects.acreate(title="Django", author="Alice")
+    await Book.objects.acreate(title="React", author="Bob")
+
+    count = await Book.objects.filter(author="Alice").acount()
+    assert count == 2
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_async_iteration():
+    await Book.objects.acreate(title="Book A", author="Author")
+    await Book.objects.acreate(title="Book B", author="Author")
+
+    titles = []
+    async for book in Book.objects.filter(author="Author").order_by("title"):
+        titles.append(book.title)
+
+    assert titles == ["Book A", "Book B"]
+```
+
+<Callout type="warning">
+Without `transaction=True`, async tests raise `SynchronousOnlyOperation` because Django's default test wrapper uses thread-local transactions incompatible with async.
+</Callout>
+
+### Bulk Operations
+
+```python
+@pytest.mark.django_db(transaction=True)
+async def test_async_update_and_delete():
+    await Book.objects.acreate(title="Old Title", author="Author")
+
+    updated = await Book.objects.filter(title="Old Title").aupdate(
+        title="New Title"
+    )
+    assert updated == 1
+
+    deleted_count, _ = await Book.objects.filter(title="New Title").adelete()
+    assert deleted_count == 1
+
+    exists = await Book.objects.filter(title="New Title").aexists()
+    assert exists is False
+```
+
+## AsyncClient for Async Views
+
+Django's `AsyncClient` sends requests through the ASGI handler, testing async views end-to-end:
+
+```python
+import pytest
+from django.test import AsyncClient
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_async_view_list():
+    client = AsyncClient()
+    response = await client.get("/api/books/")
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_async_view_create():
+    client = AsyncClient()
+    response = await client.post(
+        "/api/books/",
+        data={"title": "New Book", "author": "Author"},
+        content_type="application/json",
+    )
+    assert response.status_code == 201
+
+    # Verify via async ORM
+    exists = await Book.objects.filter(title="New Book").aexists()
+    assert exists is True
+```
+
+### Authenticated Requests
+
+```python
+from django.contrib.auth.models import User
+
+
+@pytest.fixture
+async def auth_client():
+    user = await User.objects.acreate_user(
+        username="testuser", password="testpass"
+    )
+    client = AsyncClient()
+    await client.alogin(username="testuser", password="testpass")
+    return client
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_protected_endpoint(auth_client):
+    response = await auth_client.get("/api/profile/")
+    assert response.status_code == 200
+```
+
+## WebSocket Consumer Tests
+
+Use `WebsocketCommunicator` from `channels.testing` to test consumers:
+
+```python
+import pytest
+from channels.testing import WebsocketCommunicator
+from myapp.consumers import ChatConsumer
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_websocket_connect():
+    communicator = WebsocketCommunicator(
+        ChatConsumer.as_asgi(),
+        "/ws/chat/test-room/",
+    )
+    connected, _ = await communicator.connect()
+    assert connected is True
+
+    await communicator.disconnect()
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_websocket_send_receive():
+    communicator = WebsocketCommunicator(
+        ChatConsumer.as_asgi(),
+        "/ws/chat/test-room/",
+    )
+    await communicator.connect()
+
+    # Send a message
+    await communicator.send_json_to({"message": "Hello"})
+
+    # Receive broadcast
+    response = await communicator.receive_json_from(timeout=5)
+    assert response["message"] == "Hello"
+
+    await communicator.disconnect()
+```
+
+### Testing with Authentication
+
+```python
+from channels.testing import WebsocketCommunicator
+from channels.db import database_sync_to_async
+
+
+@pytest.fixture
+async def authenticated_communicator():
+    user = await database_sync_to_async(User.objects.create_user)(
+        username="wsuser", password="testpass"
+    )
+    communicator = WebsocketCommunicator(
+        ChatConsumer.as_asgi(),
+        "/ws/chat/room/",
+    )
+    communicator.scope["user"] = user
+    return communicator
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_authenticated_websocket(authenticated_communicator):
+    connected, _ = await authenticated_communicator.connect()
+    assert connected is True
+    await authenticated_communicator.disconnect()
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_unauthenticated_rejected():
+    from django.contrib.auth.models import AnonymousUser
+
+    communicator = WebsocketCommunicator(
+        ChatConsumer.as_asgi(),
+        "/ws/chat/room/",
+    )
+    communicator.scope["user"] = AnonymousUser()
+    connected, _ = await communicator.connect()
+    assert connected is False
+```
+
+## Testing sync_to_async Bridges
+
+Test that sync ORM operations wrapped with `sync_to_async` work correctly in async contexts:
+
+```python
+from asgiref.sync import sync_to_async
+
+
+@sync_to_async
+def get_book_count() -> int:
+    return Book.objects.count()
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_sync_to_async_bridge():
+    await Book.objects.acreate(title="Book 1", author="Author")
+    await Book.objects.acreate(title="Book 2", author="Author")
+
+    count = await get_book_count()
+    assert count == 2
+```
+
+### Testing Context-Aware Services
+
+```python
+class BookService:
+    @sync_to_async
+    def _get_books_sync(self, author: str) -> list:
+        return list(Book.objects.filter(author=author))
+
+    async def get_books(self, author: str) -> list:
+        return await self._get_books_sync(author)
+
+
+@pytest.mark.django_db(transaction=True)
+async def test_context_aware_service():
+    await Book.objects.acreate(title="Async Book", author="Alice")
+
+    service = BookService()
+    books = await service.get_books("Alice")
+    assert len(books) == 1
+    assert books[0].title == "Async Book"
+```
+
+## conftest.py Setup
+
+Recommended `conftest.py` for Django async tests:
+
+```python
+# tests/conftest.py
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _channel_layers(settings):
+    """Use in-memory channel layer for all tests."""
+    settings.CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
+```
+
+Ensure `pytest.ini` or `pyproject.toml` has:
+
+```ini
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "project.settings"
+asyncio_mode = "auto"
+```
+
+## Rules
+
+1. Always use `@pytest.mark.django_db(transaction=True)` for async ORM tests
+2. Use `AsyncClient` for testing async views — standard `Client` sends requests through WSGI
+3. Always call `await communicator.disconnect()` after WebSocket tests to prevent resource leaks
+4. Set `communicator.scope["user"]` to inject authentication in WebSocket tests
+5. Use `InMemoryChannelLayer` in test settings — never connect to Redis during tests
+6. Set `asyncio_mode = "auto"` in pytest config to avoid decorating every test with `@pytest.mark.asyncio`

@@ -51,6 +51,8 @@ class CentrifugoMonitorViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
     serializer_class = PublishSerializer
 
+    queryset = type("_", (), {"model": None})()
+
     @extend_schema(
         tags=["Centrifugo Monitoring"],
         summary="Get Centrifugo health status",

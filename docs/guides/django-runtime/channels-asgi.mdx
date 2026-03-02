@@ -1,0 +1,277 @@
+---
+title: Channels & ASGI
+sidebar_position: 2
+keywords:
+  - django channels
+  - asgi
+  - websocket django
+  - asyncwebsocketconsumer
+  - channel layers
+description: Django Channels setup — ASGI configuration, AsyncWebsocketConsumer lifecycle, channel groups, WebSocket authentication, and URL routing.
+---
+
+# Channels & ASGI
+
+Django Channels extends Django with WebSocket support and long-lived connections via the ASGI protocol.
+
+## ASGI Application Setup
+
+The `asgi.py` file routes HTTP and WebSocket traffic to the appropriate handler:
+
+```python
+# project/asgi.py
+import os
+from channels.auth import AuthMiddlewareStack
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.security.websocket import AllowedHostsOriginValidator
+from django.core.asgi import get_asgi_application
+from django.urls import path
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "project.settings")
+
+http_application = get_asgi_application()
+
+from apps.chat.consumers import ChatConsumer
+from apps.notifications.consumers import NotificationConsumer
+
+websocket_urlpatterns = [
+    path("ws/notifications/", NotificationConsumer.as_asgi()),
+    path("ws/chat/<str:room_name>/", ChatConsumer.as_asgi()),
+]
+
+application = ProtocolTypeRouter({
+    "http": http_application,
+    "websocket": AllowedHostsOriginValidator(
+        AuthMiddlewareStack(URLRouter(websocket_urlpatterns))
+    ),
+})
+```
+
+**Key components:**
+
+| Component | Purpose |
+|-----------|---------|
+| `ProtocolTypeRouter` | Routes by protocol: `"http"` for HTTP, `"websocket"` for WS |
+| `URLRouter` | Matches WebSocket URLs to consumers (like Django's `urlpatterns`) |
+| `AuthMiddlewareStack` | Populates `self.scope["user"]` from session/cookie auth |
+| `AllowedHostsOriginValidator` | Rejects connections from origins not in `ALLOWED_HOSTS` |
+
+## Settings
+
+```python
+# settings.py
+INSTALLED_APPS = [
+    # ...
+    "channels",
+]
+
+# Point to your ASGI application
+ASGI_APPLICATION = "project.asgi.application"
+
+# Channel layers — Redis for production
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
+```
+
+For tests and local development without Redis:
+
+```python
+# settings_test.py
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
+```
+
+## AsyncWebsocketConsumer
+
+The consumer handles the WebSocket lifecycle: connect, receive messages, and disconnect.
+
+```python
+import json
+from channels.generic.websocket import AsyncWebsocketConsumer
+
+
+class ChatConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
+        self.room_group = f"chat_{self.room_name}"
+
+        # Join room group
+        await self.channel_layer.group_add(
+            self.room_group,
+            self.channel_name,
+        )
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        # Leave room group
+        await self.channel_layer.group_discard(
+            self.room_group,
+            self.channel_name,
+        )
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        message = data["message"]
+
+        # Broadcast to room group
+        await self.channel_layer.group_send(
+            self.room_group,
+            {
+                "type": "chat.message",
+                "message": message,
+                "sender": self.scope["user"].username,
+            },
+        )
+
+    # Handler for messages of type "chat.message"
+    async def chat_message(self, event):
+        await self.send(text_data=json.dumps({
+            "message": event["message"],
+            "sender": event["sender"],
+        }))
+```
+
+### Lifecycle
+
+| Method | When | Typical actions |
+|--------|------|-----------------|
+| `connect()` | Client opens WS | Validate, join groups, `await self.accept()` |
+| `receive(text_data)` | Client sends message | Parse JSON, broadcast via `group_send` |
+| `disconnect(close_code)` | Client closes WS | Leave groups, clean up resources |
+
+The `type` field in `group_send` maps to a handler method: `"chat.message"` calls `chat_message()` (dots become underscores).
+
+## Channel Groups
+
+Groups enable broadcasting to multiple connected clients.
+
+```python
+# Add a channel to a group
+await self.channel_layer.group_add("room_42", self.channel_name)
+
+# Remove a channel from a group
+await self.channel_layer.group_discard("room_42", self.channel_name)
+
+# Send to all channels in a group
+await self.channel_layer.group_send(
+    "room_42",
+    {"type": "notify", "text": "Hello room"},
+)
+```
+
+### Sending from Outside a Consumer
+
+Send messages from views, Celery tasks, or management commands:
+
+```python
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
+channel_layer = get_channel_layer()
+
+# From sync code
+async_to_sync(channel_layer.group_send)(
+    "room_42",
+    {"type": "chat.message", "message": "Server notification"},
+)
+
+# From async code
+await channel_layer.group_send(
+    "room_42",
+    {"type": "chat.message", "message": "Server notification"},
+)
+```
+
+## WebSocket Authentication
+
+`AuthMiddlewareStack` reads session cookies and populates `self.scope["user"]`:
+
+```python
+class SecureConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        user = self.scope["user"]
+
+        if not user.is_authenticated:
+            await self.close()
+            return
+
+        # User-specific group
+        self.user_group = f"user_{user.id}"
+        await self.channel_layer.group_add(
+            self.user_group,
+            self.channel_name,
+        )
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if hasattr(self, "user_group"):
+            await self.channel_layer.group_discard(
+                self.user_group,
+                self.channel_name,
+            )
+```
+
+For token-based auth (JWT, API keys), write custom middleware:
+
+```python
+from channels.middleware import BaseMiddleware
+from channels.db import database_sync_to_async
+from django.contrib.auth.models import AnonymousUser
+
+
+class TokenAuthMiddleware(BaseMiddleware):
+    async def __call__(self, scope, receive, send):
+        headers = dict(scope.get("headers", []))
+        token = headers.get(b"authorization", b"").decode()
+
+        scope["user"] = await self.get_user_from_token(token)
+        return await super().__call__(scope, receive, send)
+
+    @database_sync_to_async
+    def get_user_from_token(self, token: str):
+        try:
+            return User.objects.get(auth_token=token)
+        except User.DoesNotExist:
+            return AnonymousUser()
+```
+
+## URL Routing
+
+WebSocket routes follow the same `path()` pattern as Django HTTP URLs:
+
+```python
+# project/routing.py
+from django.urls import path
+from apps.chat.consumers import ChatConsumer
+from apps.notifications.consumers import NotificationConsumer
+
+websocket_urlpatterns = [
+    path("ws/chat/<str:room_name>/", ChatConsumer.as_asgi()),
+    path("ws/notifications/", NotificationConsumer.as_asgi()),
+]
+```
+
+URL parameters are available via `self.scope["url_route"]["kwargs"]`:
+
+```python
+async def connect(self):
+    room_name = self.scope["url_route"]["kwargs"]["room_name"]
+```
+
+## Rules
+
+1. Always call `.as_asgi()` on consumer classes in URL patterns
+2. Use `AllowedHostsOriginValidator` to prevent cross-origin WebSocket connections
+3. Use Redis channel layer in production — `InMemoryChannelLayer` is for tests only
+4. Close the connection in `connect()` for unauthenticated users instead of silently accepting
+5. Clean up group memberships in `disconnect()` to prevent stale channels
+6. Use `async_to_sync` when sending to channel layers from synchronous code (views, Celery)

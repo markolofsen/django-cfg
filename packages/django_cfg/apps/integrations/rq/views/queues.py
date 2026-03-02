@@ -18,7 +18,7 @@ from ..services import queue_to_model
 logger = get_logger("rq.queues")
 
 
-class QueueViewSet(AdminAPIMixin, viewsets.ViewSet):
+class QueueViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     """
     ViewSet for RQ queue management.
 
@@ -30,6 +30,10 @@ class QueueViewSet(AdminAPIMixin, viewsets.ViewSet):
 
     Requires admin authentication (JWT, Session, or Basic Auth).
     """
+
+    serializer_class = QueueStatsSerializer
+
+    queryset = type("_", (), {"model": None})()
 
     @extend_schema(
         tags=["RQ Queues"],
@@ -107,6 +111,14 @@ class QueueViewSet(AdminAPIMixin, viewsets.ViewSet):
         tags=["RQ Queues"],
         summary="Get queue details",
         description="Returns detailed information about a specific queue.",
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Queue name",
+            ),
+        ],
         responses={
             200: QueueDetailSerializer,
             404: {"description": "Queue not found"},
@@ -163,6 +175,14 @@ class QueueViewSet(AdminAPIMixin, viewsets.ViewSet):
         tags=["RQ Queues"],
         summary="Empty queue",
         description="Removes all jobs from the specified queue.",
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Queue name",
+            ),
+        ],
         responses={
             200: {"description": "Queue emptied successfully"},
             404: {"description": "Queue not found"},
@@ -204,6 +224,12 @@ class QueueViewSet(AdminAPIMixin, viewsets.ViewSet):
         summary="Get queue jobs",
         description="Returns list of job IDs in the queue.",
         parameters=[
+            OpenApiParameter(
+                name="id",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Queue name",
+            ),
             OpenApiParameter(
                 name="limit",
                 type=OpenApiTypes.INT,

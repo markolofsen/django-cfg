@@ -36,6 +36,8 @@ class StatisticsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
     serializer_class = StatCardSerializer
 
+    queryset = type("_", (), {"model": None})()
+
     @extend_schema(
         summary="Get statistics cards",
         description="Retrieve dashboard statistics cards with key metrics",

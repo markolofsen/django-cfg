@@ -42,6 +42,8 @@ class DeviceViewSet(viewsets.GenericViewSet):
 
     def get_queryset(self):
         """Return devices for authenticated user."""
+        if getattr(self, "swagger_fake_view", False):
+            return TOTPDevice.objects.none()
         return TOTPDevice.objects.filter(user=self.request.user)
 
     @action(detail=False, methods=["get"], url_path="list", url_name="list")

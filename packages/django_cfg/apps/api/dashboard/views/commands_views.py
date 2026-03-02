@@ -13,7 +13,7 @@ import logging
 
 from django.http import StreamingHttpResponse
 from django_cfg.mixins import SuperAdminAPIMixin
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -38,6 +38,8 @@ class CommandsViewSet(SuperAdminAPIMixin, viewsets.GenericViewSet):
     """
 
     serializer_class = CommandSerializer
+
+    queryset = type("_", (), {"model": None})()
     pagination_class = None  # Disable pagination for commands list
 
     @extend_schema(
@@ -135,6 +137,14 @@ class CommandsViewSet(SuperAdminAPIMixin, viewsets.GenericViewSet):
     @extend_schema(
         summary="Get command help",
         description="Get detailed help text for a specific Django management command",
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Command name",
+            ),
+        ],
         responses={200: CommandHelpResponseSerializer},
         tags=["Dashboard - Commands"]
     )

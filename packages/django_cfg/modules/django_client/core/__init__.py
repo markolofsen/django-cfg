@@ -7,7 +7,7 @@ No Django dependencies - can be used standalone or with any framework.
 Architecture:
 - Config: OpenAPIConfig, DjangoOpenAPI, get_openapi_service
 - Groups: GroupManager, GroupDetector
-- Parsing: parse_openapi, OpenAPI30Parser, OpenAPI31Parser
+- Parsing: parse_openapi, OpenAPI30Parser, OpenAPIModernParser
 - IR: IRContext, IRSchemaObject, IROperationObject
 - Generation: Use ClientGenerationOrchestrator from generate_client module
 
@@ -41,7 +41,7 @@ from .ir import (
 )
 
 # Parsers
-from .parser import OpenAPI30Parser, OpenAPI31Parser, parse_openapi
+from .parser import OpenAPI30Parser, OpenAPIModernParser, parse_openapi
 
 __all__ = [
     "__version__",
@@ -63,5 +63,5 @@ __all__ = [
     # Parsers
     "parse_openapi",
     "OpenAPI30Parser",
-    "OpenAPI31Parser",
+    "OpenAPIModernParser",
 ]

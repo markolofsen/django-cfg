@@ -4,5 +4,6 @@ export default {
   'modules': 'Auto-Configuring Modules',
   'tools': 'Tools & Utilities',
   'integrations': 'Integrations',
-  'api-generation': 'API Generation'
+  'api-generation': 'API Generation',
+  'drf-guide': 'DRF Guide'
 }

@@ -1,0 +1,115 @@
+---
+title: Tailwind v4
+sidebar_position: 7
+keywords:
+  - tailwind css v4
+  - css-first config
+  - opacity modifiers
+  - theme variables
+  - migration
+description: Tailwind CSS v4 migration — @import instead of @tailwind, CSS-first @theme config, broken opacity modifier workaround, and arbitrary value changes.
+---
+
+# Tailwind v4
+
+All django-cfg apps use Tailwind CSS v4 with CSS-first configuration.
+
+<Callout type="info">
+For the full UI component library see [UI Components](/guides/nextjs-app-design/recipes/ui-components).
+</Callout>
+
+## Migration from v3
+
+### Import Syntax
+
+v4 uses `@import` instead of `@tailwind` directives:
+
+```css
+/* globals.css — v4 */
+@import './theme.css';        /* Custom properties first */
+@import 'tailwindcss';        /* NOT @tailwind directives */
+```
+
+Theme variables must come before the Tailwind import.
+
+### CSS-First Config
+
+Theme configuration uses `@theme {}` blocks with CSS custom properties instead of `tailwind.config.js`:
+
+```css
+@theme {
+  --color-primary: hsl(222.2 47.4% 11.2%);
+  --color-background: hsl(0 0% 100%);
+  --color-destructive: hsl(0 84.2% 60.2%);
+  --radius-lg: 0.5rem;
+  --radius-md: calc(var(--radius-lg) - 2px);
+  --radius-sm: calc(var(--radius-lg) - 4px);
+}
+```
+
+## Broken Opacity Modifiers
+
+<Callout type="warning">
+`bg-background/80` does NOT work with HSL color variables in Tailwind v4. This is a known issue.
+</Callout>
+
+```typescript
+// BROKEN — opacity modifier with CSS variable
+<div className="bg-background/80" />
+
+// CORRECT — inline HSL style
+<div style={{ backgroundColor: 'hsl(var(--background) / 0.8)' }} />
+
+// Also broken for borders
+// BROKEN
+<div className="border-border/30" />
+
+// CORRECT
+<div style={{ borderColor: 'hsl(var(--border) / 0.3)' }} />
+```
+
+Use inline `hsl()` styles whenever you need opacity on a CSS variable color.
+
+## Arbitrary Values
+
+Arbitrary values like `h-[80px]` may not work reliably in v4. Define tokens in `@theme` or use inline styles:
+
+```css
+/* In @theme block */
+@theme {
+  --spacing-header: 80px;
+  --spacing-sidebar: 280px;
+}
+```
+
+```typescript
+// Use the token
+<div className="h-[--spacing-header]" />
+
+// Or use inline style
+<div style={{ width: '80px', height: '80px' }} />
+```
+
+## Breakpoints
+
+Mobile-first breakpoints are unchanged from v3:
+
+| Breakpoint | Min Width |
+|-----------|-----------|
+| `sm:` | 640px |
+| `md:` | 768px |
+| `lg:` | 1024px |
+| `xl:` | 1280px |
+| `2xl:` | 1536px |
+
+## DjangoCFG Preset
+
+`@djangocfg/ui-core` provides a shared theme preset that all apps extend. The preset defines color tokens, border radii, font sizes, and animation timings that components depend on.
+
+## Rules
+
+1. Use `@import 'tailwindcss'` — never `@tailwind base/components/utilities` directives
+2. Import `theme.css` before `tailwindcss` in `globals.css` — order matters
+3. Use inline `hsl(var(--color) / opacity)` styles for opacity on CSS variable colors — the `/80` modifier syntax is broken
+4. Define reusable spacing and size values as tokens in `@theme {}` instead of using arbitrary values
+5. Keep breakpoints mobile-first — all utility classes apply from the specified breakpoint and up

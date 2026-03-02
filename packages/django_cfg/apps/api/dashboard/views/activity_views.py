@@ -30,6 +30,8 @@ class ActivityViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
     serializer_class = ActivityEntrySerializer
 
+    queryset = type("_", (), {"model": None})()
+
     @extend_schema(
         summary="Get recent activity",
         description="Retrieve recent system activity entries",

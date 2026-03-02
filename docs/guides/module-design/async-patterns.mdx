@@ -1,0 +1,339 @@
+---
+title: Async & Concurrency
+sidebar_position: 3
+keywords:
+  - python async
+  - asyncio patterns
+  - python concurrency
+  - async await python
+description: Async programming patterns for Python modules. Async functions, gather, semaphores, dual API, streaming, background tasks, and graceful shutdown.
+---
+
+# Async & Concurrency
+
+All I/O operations should be async. Provide sync wrappers for simple use cases.
+
+## Core Principles
+
+1. **Async for I/O** — network, file, database operations
+2. **Sync wrapper available** — for consumers who don't need async
+3. **No blocking in async** — never call sync I/O in async context
+4. **Proper cleanup** — use context managers for resources
+
+## Basic Patterns
+
+### Async Function
+
+```python
+import asyncio
+import httpx
+
+async def get_user(user_id: int) -> User | None:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"/api/users/{user_id}")
+        if response.status_code == 404:
+            return None
+        return User.model_validate(response.json())
+```
+
+### Async Context Manager
+
+```python
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+
+class DatabasePool:
+    async def startup(self) -> None:
+        self._pool = await asyncpg.create_pool(self._dsn, min_size=5, max_size=20)
+
+    async def shutdown(self) -> None:
+        if self._pool:
+            await self._pool.close()
+
+    @asynccontextmanager
+    async def transaction(self) -> AsyncIterator:
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                yield conn
+```
+
+### Async Iterator
+
+```python
+class PaginatedFetcher:
+    """Iterate over paginated API results."""
+
+    def __init__(self, base_url: str, per_page: int = 100):
+        self._base_url = base_url
+        self._per_page = per_page
+        self._page = 1
+        self._has_more = True
+
+    def __aiter__(self) -> "PaginatedFetcher":
+        return self
+
+    async def __anext__(self) -> list[dict]:
+        if not self._has_more:
+            raise StopAsyncIteration
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                self._base_url,
+                params={"page": self._page, "per_page": self._per_page},
+            )
+            data = response.json()
+
+            if not data["items"]:
+                raise StopAsyncIteration
+
+            self._has_more = data.get("has_more", False)
+            self._page += 1
+            return data["items"]
+
+# Usage
+async for batch in PaginatedFetcher("https://api.example.com/items"):
+    process(batch)
+```
+
+## Concurrent Operations
+
+### asyncio.gather — Parallel Execution
+
+```python
+async def fetch_user_data(user_id: int) -> dict:
+    """Fetch all user data concurrently."""
+    profile, posts, followers = await asyncio.gather(
+        fetch_profile(user_id),
+        fetch_posts(user_id),
+        fetch_followers(user_id),
+    )
+    return {"profile": profile, "posts": posts, "followers": followers}
+```
+
+With error handling — `return_exceptions=True` prevents one failure from canceling others:
+
+```python
+async def fetch_many(user_ids: list[int]) -> list[User]:
+    tasks = [fetch_user(uid) for uid in user_ids]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    users = []
+    for uid, result in zip(user_ids, results):
+        if isinstance(result, Exception):
+            logger.error(f"Failed to fetch user {uid}: {result}")
+        else:
+            users.append(result)
+    return users
+```
+
+### Semaphore — Concurrency Limiting
+
+```python
+class RateLimitedFetcher:
+    def __init__(self, max_concurrent: int = 10):
+        self._semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def fetch(self, url: str) -> dict:
+        async with self._semaphore:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url)
+                return response.json()
+
+    async def fetch_many(self, urls: list[str]) -> list[dict]:
+        tasks = [self.fetch(url) for url in urls]
+        return await asyncio.gather(*tasks, return_exceptions=True)
+```
+
+### Timeout
+
+```python
+async def fetch_with_timeout(url: str, timeout: float = 10.0) -> dict:
+    try:
+        return await asyncio.wait_for(_fetch_impl(url), timeout=timeout)
+    except asyncio.TimeoutError:
+        raise TimeoutError(f"Request to {url} timed out after {timeout}s")
+
+async def fetch_with_fallback(primary: str, fallback: str) -> dict:
+    try:
+        return await asyncio.wait_for(_fetch_impl(primary), timeout=5.0)
+    except (asyncio.TimeoutError, httpx.HTTPError):
+        logger.warning("Primary failed, trying fallback")
+        return await _fetch_impl(fallback)
+```
+
+## Dual API Pattern
+
+### Separate Classes (Preferred)
+
+```python
+class UserService:
+    """Synchronous user service."""
+
+    def __init__(self, config: Config):
+        self._client = httpx.Client(base_url=config.base_url)
+
+    def get_user(self, user_id: int) -> User:
+        response = self._client.get(f"/users/{user_id}")
+        response.raise_for_status()
+        return User.model_validate(response.json())
+
+    def close(self) -> None:
+        self._client.close()
+
+
+class AsyncUserService:
+    """Asynchronous user service."""
+
+    def __init__(self, config: Config):
+        self._config = config
+        self._client: httpx.AsyncClient | None = None
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None:
+            self._client = httpx.AsyncClient(base_url=self._config.base_url)
+        return self._client
+
+    async def get_user(self, user_id: int) -> User:
+        client = await self._get_client()
+        response = await client.get(f"/users/{user_id}")
+        response.raise_for_status()
+        return User.model_validate(response.json())
+
+    async def close(self) -> None:
+        if self._client:
+            await self._client.aclose()
+            self._client = None
+```
+
+### Sync Wrapper Around Async
+
+```python
+def run_sync(coro):
+    """Run async function synchronously."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        return pool.submit(asyncio.run, coro).result()
+
+
+class DualModeService:
+    async def get_user_async(self, user_id: int) -> User:
+        """Async implementation."""
+        ...
+
+    def get_user(self, user_id: int) -> User:
+        """Sync wrapper."""
+        return run_sync(self.get_user_async(user_id))
+```
+
+## Streaming
+
+### HTTP Streaming
+
+```python
+async def stream_large_file(url: str) -> AsyncIterator[bytes]:
+    async with httpx.AsyncClient() as client:
+        async with client.stream("GET", url) as response:
+            async for chunk in response.aiter_bytes(chunk_size=8192):
+                yield chunk
+```
+
+### Server-Sent Events
+
+```python
+async def stream_events(url: str) -> AsyncIterator[dict]:
+    async with httpx.AsyncClient() as client:
+        async with client.stream("GET", url) as response:
+            async for line in response.aiter_lines():
+                if line.startswith("data:"):
+                    yield json.loads(line[5:])
+```
+
+## Background Tasks
+
+```python
+class BackgroundTaskManager:
+    def __init__(self):
+        self._tasks: set[asyncio.Task] = set()
+
+    def start_task(self, coro, name: str | None = None) -> asyncio.Task:
+        task = asyncio.create_task(coro, name=name)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
+        return task
+
+    async def cancel_all(self) -> None:
+        for task in self._tasks:
+            task.cancel()
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+```
+
+### Periodic Task
+
+```python
+async def run_periodic(
+    func: Callable,
+    interval: float,
+    stop_event: asyncio.Event,
+) -> None:
+    while not stop_event.is_set():
+        try:
+            await func()
+        except Exception as e:
+            logger.error(f"Periodic task failed: {e}")
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=interval)
+        except asyncio.TimeoutError:
+            pass  # Expected — continue loop
+```
+
+## Graceful Shutdown
+
+```python
+class AsyncService:
+    def __init__(self):
+        self._shutdown_event = asyncio.Event()
+        self._running = False
+
+    async def start(self) -> None:
+        self._running = True
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(
+                sig, lambda: asyncio.create_task(self.stop())
+            )
+        await self._run()
+
+    async def stop(self) -> None:
+        self._running = False
+        self._shutdown_event.set()
+
+    async def _run(self) -> None:
+        while self._running:
+            try:
+                await self._process()
+            except Exception as e:
+                logger.error(f"Error in main loop: {e}")
+            try:
+                await asyncio.wait_for(self._shutdown_event.wait(), timeout=1.0)
+                break
+            except asyncio.TimeoutError:
+                continue
+```
+
+## Rules
+
+1. **Async for all I/O** — network, file, database operations
+2. **Provide sync wrapper** — for consumers who don't need async
+3. **No blocking in async** — never call sync I/O from async context
+4. **Use context managers** — `async with` for resources
+5. **`gather` for parallel I/O** — with `return_exceptions=True`
+6. **Semaphore for rate limiting** — don't flood external services
+7. **Always set timeouts** — `asyncio.wait_for()` or client-level timeout
+8. **Track background tasks** — store references, cancel on shutdown
+9. **Graceful shutdown** — handle SIGINT/SIGTERM, drain tasks

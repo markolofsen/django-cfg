@@ -1,0 +1,32 @@
+---
+title: Next.js App Design Guide
+description: Architecture, data layer, SSR, state management, component patterns, and WebSocket integration for Next.js apps in the django-cfg ecosystem.
+---
+
+# Next.js App Design Guide
+
+How to build Next.js frontend applications with django-cfg — directory structure, generated API clients, SSR hydration, state management, and real-time communication. For Django backend patterns see [App Design Guide](/guides/app-design), for module packaging see [Module Design Guide](/guides/module-design).
+
+<Cards>
+  <Card title="Architecture" href="/guides/nextjs-app-design/architecture">
+    Canonical directory structure, naming conventions, TypeScript aliases, route definitions, and server vs client component split
+  </Card>
+  <Card title="Data Layer" href="/guides/nextjs-app-design/data-layer">
+    Generated API clients, BaseClient singleton, Zod validation, SWR hooks, and type re-export pattern
+  </Card>
+  <Card title="SSR & Hydration" href="/guides/nextjs-app-design/ssr-hydration">
+    Server Component data fetching, SWR initialData hydration, force-dynamic pages, and metadata generation
+  </Card>
+  <Card title="State Management" href="/guides/nextjs-app-design/state-management">
+    Context architecture, provider composition, URL-first filter state, and when to use Zustand
+  </Card>
+  <Card title="Component Patterns" href="/guides/nextjs-app-design/component-patterns">
+    useMemo data preparation, component structure order, decomposition patterns, and type safety
+  </Card>
+  <Card title="WebSocket" href="/guides/nextjs-app-design/websocket">
+    Centrifugo integration, subscription patterns, RPC client, channel naming, and stale closure prevention
+  </Card>
+  <Card title="Recipes" href="/guides/nextjs-app-design/recipes">
+    Library-specific patterns — Zustand, forms, i18n, drag and drop, animations, UI components, Tailwind v4, and extensions
+  </Card>
+</Cards>

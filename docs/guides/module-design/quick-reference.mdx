@@ -1,0 +1,271 @@
+---
+title: Quick Reference
+sidebar_position: 11
+keywords:
+  - python cheat sheet
+  - pydantic quick reference
+  - python patterns cheat sheet
+description: Quick reference for Python module design. Pydantic v2 migration table, code templates, size limits, anti-pattern mapping, and command cheat sheet.
+---
+
+# Quick Reference
+
+Fast lookup for common patterns during development.
+
+## Pydantic v2 Migration
+
+| v1 | v2 | Example |
+|----|-----|---------|
+| `.parse_obj(x)` | `.model_validate(x)` | `User.model_validate(data)` |
+| `.dict()` | `.model_dump()` | `user.model_dump()` |
+| `.json()` | `.model_dump_json()` | `user.model_dump_json()` |
+| `@validator` | `@field_validator` | `@field_validator('name')` |
+| `@root_validator` | `@model_validator` | `@model_validator(mode='after')` |
+| `Config` class | `model_config` | `model_config = ConfigDict(...)` |
+| `__fields__` | `model_fields` | `cls.model_fields` |
+| `.copy()` | `.model_copy()` | `user.model_copy(update={...})` |
+
+## Size Limits
+
+| Unit | Max Lines |
+|------|-----------|
+| Function | 20 |
+| Class | 200 |
+| File | 500 |
+
+## Anti-Pattern → Pattern
+
+| BAD | GOOD |
+|-----|------|
+| `dict` type hint | Pydantic model |
+| `Any` type | Specific type |
+| `except:` | `except SpecificError:` |
+| `except Exception:` | `except SpecificError: ... raise` |
+| Global state | Dependency injection |
+| Hidden dependencies | Constructor injection |
+| `requests.get(url)` sync | `await client.get(url)` async |
+| Deep inheritance | Composition |
+| OFFSET pagination | Keyset pagination |
+| N individual queries | Batch operations |
+
+## Model Template
+
+```python
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+class MyModel(BaseModel):
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="forbid",
+        str_strip_whitespace=True,
+    )
+
+    id: int = Field(..., gt=0)
+    name: str = Field(..., min_length=1, max_length=100)
+    email: str = Field(..., pattern=r"^[^@]+@[^@]+\.[^@]+$")
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        return v.strip().title()
+```
+
+## Config Template
+
+```python
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class Config(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="APP_",
+        env_file=".env",
+        extra="ignore",
+    )
+
+    api_key: str = Field(..., min_length=32)
+    base_url: str = "https://api.example.com"
+    timeout: int = Field(default=30, gt=0, le=300)
+    debug: bool = False
+```
+
+## Exception Template
+
+```python
+class LibraryError(Exception):
+    def __init__(self, message: str, error_code: str | None = None, suggestion: str | None = None):
+        self.message = message
+        self.error_code = error_code
+        self.suggestion = suggestion
+        super().__init__(message)
+
+class ValidationError(LibraryError): ...
+class NetworkError(LibraryError): ...
+class NotFoundError(LibraryError): ...
+```
+
+## Async Service Template
+
+```python
+class AsyncUserService:
+    __slots__ = ("_config", "_client")
+
+    def __init__(self, config: Config):
+        self._config = config
+        self._client: httpx.AsyncClient | None = None
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None:
+            self._client = httpx.AsyncClient(
+                base_url=self._config.base_url,
+                timeout=self._config.timeout,
+            )
+        return self._client
+
+    async def get_user(self, user_id: int) -> User:
+        client = await self._get_client()
+        response = await client.get(f"/users/{user_id}")
+        response.raise_for_status()
+        return User.model_validate(response.json())
+
+    async def close(self) -> None:
+        if self._client:
+            await self._client.aclose()
+            self._client = None
+```
+
+## Test Template
+
+```python
+import pytest
+from unittest.mock import AsyncMock
+
+@pytest.fixture
+def mock_repo() -> AsyncMock:
+    repo = AsyncMock()
+    repo.find_by_id.return_value = None
+    return repo
+
+@pytest.fixture
+def service(mock_repo) -> UserService:
+    return UserService(repository=mock_repo)
+
+class TestUserService:
+    @pytest.mark.asyncio
+    async def test_get_user_success(self, service, mock_repo):
+        mock_repo.find_by_id.return_value = User(id=1, name="Test")
+        result = await service.get_user(1)
+        assert result.id == 1
+        mock_repo.find_by_id.assert_called_once_with(1)
+
+    @pytest.mark.asyncio
+    async def test_not_found(self, service, mock_repo):
+        mock_repo.find_by_id.return_value = None
+        with pytest.raises(NotFoundError):
+            await service.get_user(999)
+```
+
+## Protocol Template
+
+```python
+from typing import Protocol
+
+class RepositoryProtocol(Protocol):
+    async def find_by_id(self, id: int) -> Model | None: ...
+    async def save(self, entity: Model) -> Model: ...
+    async def delete(self, id: int) -> bool: ...
+```
+
+## Error Handler
+
+```python
+from functools import wraps
+
+def async_error_handler(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except httpx.HTTPStatusError as e:
+            raise NetworkError(str(e)) from e
+        except asyncio.TimeoutError as e:
+            raise TimeoutError("Request timed out") from e
+    return wrapper
+```
+
+## Retry with Backoff
+
+```python
+async def retry(func, max_retries=3, base_delay=1.0):
+    for attempt in range(max_retries + 1):
+        try:
+            return await func()
+        except Exception as e:
+            if attempt == max_retries:
+                raise
+            await asyncio.sleep(base_delay * (2 ** attempt))
+```
+
+## Circuit Breaker (Minimal)
+
+```python
+class CircuitBreaker:
+    def __init__(self, threshold=5, timeout=60):
+        self.failures = 0
+        self.threshold = threshold
+        self.timeout = timeout
+        self.open_since = None
+
+    def allow_request(self) -> bool:
+        if self.open_since:
+            if time.time() - self.open_since < self.timeout:
+                return False
+            self.failures = 0
+            self.open_since = None
+        return True
+
+    def record_success(self):
+        self.failures = 0
+
+    def record_failure(self):
+        self.failures += 1
+        if self.failures >= self.threshold:
+            self.open_since = time.time()
+```
+
+## Concurrent Operations
+
+```python
+# Parallel
+results = await asyncio.gather(*tasks, return_exceptions=True)
+
+# Rate limited
+semaphore = asyncio.Semaphore(10)
+async with semaphore:
+    result = await fetch(url)
+
+# With timeout
+result = await asyncio.wait_for(fetch(url), timeout=30)
+```
+
+## Commands Cheat Sheet
+
+```bash
+# Format & Lint
+black .
+isort .
+flake8 .
+mypy . --strict
+
+# Test
+pytest --cov=src --cov-fail-under=95
+
+# Security
+bandit -r src/
+safety check
+
+# Find issues
+grep -r "Dict\[str.*Any\]" src/   # Raw dicts
+grep -r "except:" src/             # Bare excepts
+grep -r "\.parse_obj" src/         # v1 methods
+grep -r "\.dict()" src/            # v1 methods
+```

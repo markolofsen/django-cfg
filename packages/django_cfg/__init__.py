@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "1.7.34"
+__version__ = "1.7.36"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)

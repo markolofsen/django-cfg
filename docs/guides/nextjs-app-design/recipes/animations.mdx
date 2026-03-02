@@ -1,0 +1,96 @@
+---
+title: Animations
+sidebar_position: 5
+keywords:
+  - framer motion
+  - animations
+  - animatepresence
+  - layout animations
+  - animated background
+description: Framer Motion basics — motion components, AnimatePresence for mount/unmount, layout animations, and AnimatedBackground patterns.
+---
+
+# Animations
+
+Animations use Framer Motion (`framer-motion`) for page transitions, list animations, and interactive feedback.
+
+## Basic Motion Components
+
+```typescript
+import { motion } from 'framer-motion';
+
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.2 }}
+>
+  Content
+</motion.div>
+```
+
+## AnimatePresence for Mount/Unmount
+
+Wrap components that conditionally render to animate their entry and exit:
+
+```typescript
+import { motion, AnimatePresence } from 'framer-motion';
+
+<AnimatePresence mode="wait">
+  <motion.div
+    key={route}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+    transition={{ duration: 0.2 }}
+  >
+    {children}
+  </motion.div>
+</AnimatePresence>
+```
+
+The `key` prop tells AnimatePresence when to unmount and remount the child. Use `mode="wait"` to finish the exit animation before starting the enter.
+
+## Layout Animations
+
+Automatically animate position and size changes when items reorder:
+
+```typescript
+<motion.div layout layoutId={item.id}>
+  <ItemCard />
+</motion.div>
+```
+
+The `layout` prop enables automatic layout animation. `layoutId` links the same logical element across renders for smooth transitions.
+
+## Gesture Animations
+
+```typescript
+<motion.button
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+>
+  Click me
+</motion.button>
+```
+
+## AnimatedBackground
+
+`@djangocfg/ui-nextjs` includes pre-built animated backgrounds:
+
+```typescript
+import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
+
+<AnimatedBackground variant="aurora" />
+<AnimatedBackground variant="mesh-gradient" />
+<AnimatedBackground variant="floating-orbs" />
+```
+
+Eight animation variants are available in the `ui-core` animations package.
+
+## Rules
+
+1. Use `AnimatePresence` with a `key` prop for conditional rendering — without it, exit animations will not play
+2. Set `mode="wait"` on `AnimatePresence` to sequence exit → enter instead of overlapping
+3. Use `layout` and `layoutId` for list reorder animations — do not manually animate `top`/`left`
+4. Keep transition durations short (0.1–0.3s) for UI interactions — longer durations feel sluggish
+5. Import `AnimatedBackground` from `@djangocfg/ui-nextjs/animations` for pre-built background effects

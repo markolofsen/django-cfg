@@ -1,0 +1,292 @@
+---
+title: Resilience Patterns
+sidebar_position: 7
+keywords:
+  - circuit breaker python
+  - retry backoff
+  - bulkhead pattern
+  - rate limiting python
+description: Resilience patterns for Python modules. Circuit breaker, retry with backoff, timeout, bulkhead isolation, rate limiting, and health checks.
+---
+
+# Resilience Patterns
+
+External services fail. Code for it — circuit breakers, retries, timeouts, and fallbacks.
+
+## Core Principles
+
+1. **Fail fast** — detect failures early, don't wait indefinitely
+2. **Graceful degradation** — provide fallbacks when services fail
+3. **Recovery** — automatically recover when services restore
+4. **Visibility** — log and track failures for debugging
+
+## Circuit Breaker
+
+Three states: **Closed** (normal) → **Open** (fail fast) → **Half-Open** (testing recovery).
+
+```python
+from dataclasses import dataclass
+from enum import Enum
+
+class CircuitState(str, Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+@dataclass
+class CircuitBreakerConfig:
+    failure_threshold: int = 5
+    success_threshold: int = 2
+    recovery_timeout: float = 60.0
+
+class CircuitBreaker:
+    def __init__(self, config: CircuitBreakerConfig | None = None):
+        self._config = config or CircuitBreakerConfig()
+        self._state = CircuitState.CLOSED
+        self._failures = 0
+        self._successes = 0
+        self._opened_at: float | None = None
+        self._lock = asyncio.Lock()
+
+    async def allow_request(self) -> bool:
+        async with self._lock:
+            if self._state == CircuitState.CLOSED:
+                return True
+            if self._state == CircuitState.OPEN:
+                if time.time() - self._opened_at >= self._config.recovery_timeout:
+                    self._state = CircuitState.HALF_OPEN
+                    self._successes = 0
+                    return True
+                return False
+            return True  # Half-open allows limited calls
+
+    async def record_success(self) -> None:
+        async with self._lock:
+            if self._state == CircuitState.HALF_OPEN:
+                self._successes += 1
+                if self._successes >= self._config.success_threshold:
+                    self._state = CircuitState.CLOSED
+                    self._failures = 0
+            elif self._state == CircuitState.CLOSED:
+                self._failures = 0
+
+    async def record_failure(self) -> None:
+        async with self._lock:
+            self._failures += 1
+            if self._state == CircuitState.CLOSED:
+                if self._failures >= self._config.failure_threshold:
+                    self._state = CircuitState.OPEN
+                    self._opened_at = time.time()
+            elif self._state == CircuitState.HALF_OPEN:
+                self._state = CircuitState.OPEN
+                self._opened_at = time.time()
+```
+
+### Usage
+
+```python
+class ResilientService:
+    def __init__(self):
+        self._breaker = CircuitBreaker(CircuitBreakerConfig(failure_threshold=5))
+
+    async def call_api(self, endpoint: str) -> dict:
+        if not await self._breaker.allow_request():
+            raise ServiceUnavailableError("Circuit open, try later")
+
+        try:
+            result = await self._http.get(endpoint)
+            await self._breaker.record_success()
+            return result.json()
+        except httpx.HTTPError:
+            await self._breaker.record_failure()
+            raise
+```
+
+## Retry with Backoff
+
+Exponential backoff with jitter prevents thundering herd:
+
+```python
+@dataclass
+class RetryConfig:
+    max_retries: int = 3
+    base_delay: float = 1.0
+    max_delay: float = 60.0
+    jitter: float = 0.1
+    retryable_exceptions: tuple[type[Exception], ...] = (Exception,)
+
+async def retry_with_backoff(func, *args, config: RetryConfig | None = None, **kwargs):
+    cfg = config or RetryConfig()
+    last_exception = None
+
+    for attempt in range(cfg.max_retries + 1):
+        try:
+            return await func(*args, **kwargs)
+        except cfg.retryable_exceptions as e:
+            last_exception = e
+            if attempt == cfg.max_retries:
+                break
+            delay = min(cfg.base_delay * (2 ** attempt), cfg.max_delay)
+            delay *= 1 + random.uniform(-cfg.jitter, cfg.jitter)
+            logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay:.1f}s")
+            await asyncio.sleep(delay)
+
+    raise last_exception
+```
+
+### Retry Decorator
+
+```python
+def retry(max_retries: int = 3, exceptions: tuple = (Exception,)):
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            config = RetryConfig(max_retries=max_retries, retryable_exceptions=exceptions)
+            return await retry_with_backoff(func, *args, config=config, **kwargs)
+        return wrapper
+    return decorator
+
+class ApiService:
+    @retry(max_retries=3, exceptions=(httpx.HTTPError,))
+    async def fetch_data(self, endpoint: str) -> dict:
+        response = await self._client.get(endpoint)
+        response.raise_for_status()
+        return response.json()
+```
+
+## Timeout
+
+```python
+@asynccontextmanager
+async def with_timeout(timeout: float, operation: str = "operation"):
+    try:
+        async with asyncio.timeout(timeout):
+            yield
+    except asyncio.TimeoutError:
+        raise TimeoutError(f"{operation} timed out after {timeout}s")
+
+# With fallback
+async def fetch_with_fallback(primary: str, fallback: str, timeout: float = 5.0) -> dict:
+    try:
+        async with asyncio.timeout(timeout):
+            return await fetch(primary)
+    except (asyncio.TimeoutError, httpx.HTTPError):
+        logger.warning("Primary failed, trying fallback")
+        return await fetch(fallback)
+```
+
+## Bulkhead
+
+Semaphore-based isolation prevents one slow service from exhausting all resources:
+
+```python
+class Bulkhead:
+    def __init__(self, max_concurrent: int = 10, timeout: float = 30.0):
+        self._semaphore = asyncio.Semaphore(max_concurrent)
+        self._timeout = timeout
+
+    @asynccontextmanager
+    async def __call__(self):
+        try:
+            await asyncio.wait_for(self._semaphore.acquire(), timeout=self._timeout)
+        except asyncio.TimeoutError:
+            raise ResourceExhaustedError("Bulkhead capacity exceeded")
+        try:
+            yield
+        finally:
+            self._semaphore.release()
+
+# Separate bulkheads per resource
+class Service:
+    def __init__(self):
+        self._db_bulkhead = Bulkhead(max_concurrent=20)
+        self._api_bulkhead = Bulkhead(max_concurrent=10)
+
+    async def get_user(self, user_id: int) -> User:
+        async with self._db_bulkhead():
+            return await self._db.fetch_user(user_id)
+
+    async def call_external(self, endpoint: str) -> dict:
+        async with self._api_bulkhead():
+            return await self._http.get(endpoint)
+```
+
+## Rate Limiting
+
+Token bucket algorithm:
+
+```python
+class TokenBucket:
+    def __init__(self, rate: float, capacity: int = 10):
+        self._rate = rate         # Tokens per second
+        self._capacity = capacity
+        self._tokens = float(capacity)
+        self._last_update = time.time()
+        self._lock = asyncio.Lock()
+
+    async def wait_for_token(self) -> None:
+        while True:
+            async with self._lock:
+                now = time.time()
+                self._tokens = min(
+                    self._capacity,
+                    self._tokens + (now - self._last_update) * self._rate,
+                )
+                self._last_update = now
+
+                if self._tokens >= 1:
+                    self._tokens -= 1
+                    return
+                wait_time = (1 - self._tokens) / self._rate
+            await asyncio.sleep(wait_time)
+
+# Usage
+class RateLimitedClient:
+    def __init__(self, requests_per_second: float = 10.0):
+        self._limiter = TokenBucket(rate=requests_per_second)
+
+    async def get(self, url: str) -> dict:
+        await self._limiter.wait_for_token()
+        return await self._client.get(url)
+```
+
+## Health Checks
+
+```python
+class HealthChecker:
+    def __init__(self):
+        self._checks: list[tuple[str, Callable]] = []
+
+    def register(self, name: str, check_func: Callable) -> None:
+        self._checks.append((name, check_func))
+
+    async def check_health(self) -> dict:
+        results = []
+        for name, func in self._checks:
+            try:
+                healthy = await asyncio.wait_for(func(), timeout=5.0)
+                results.append({"name": name, "status": "healthy" if healthy else "unhealthy"})
+            except Exception as e:
+                results.append({"name": name, "status": "unhealthy", "error": str(e)})
+
+        unhealthy = sum(1 for r in results if r["status"] == "unhealthy")
+        overall = "healthy" if unhealthy == 0 else "degraded" if unhealthy < len(results) else "unhealthy"
+        return {"status": overall, "checks": results}
+
+# Register checks
+checker = HealthChecker()
+checker.register("database", check_db)
+checker.register("cache", check_cache)
+checker.register("external_api", check_api)
+```
+
+## Rules
+
+1. **Circuit breaker for external services** — fail fast when service is down
+2. **Retry transient errors** — with exponential backoff + jitter
+3. **Timeout on every I/O** — never wait indefinitely
+4. **Bulkhead per resource** — isolate failures, prevent cascading
+5. **Rate limit external calls** — respect API limits, prevent bans
+6. **Health checks** — monitor all dependencies
+7. **Combine patterns** — circuit breaker + retry + timeout + bulkhead
+8. **Log all failures** — with context for debugging

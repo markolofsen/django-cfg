@@ -1,0 +1,207 @@
+---
+title: Array Responses
+sidebar_position: 7
+keywords:
+  - drf array responses
+  - drf-spectacular many=True
+  - viewset action array
+  - pagination_class none
+description: How to return simple arrays from DRF ViewSet actions without pagination wrapping. Correct patterns for generating typed array responses in TypeScript clients.
+---
+
+# Array Responses
+
+When a `@action` returns a list of items without pagination, the generated TypeScript client must know it's an array — not a paginated object. This requires specific drf-spectacular configuration.
+
+## The Problem
+
+By default, drf-spectacular inherits `pagination_class` from the ViewSet. When it sees `many=True`, it generates a **paginated response schema** instead of a simple array:
+
+```yaml
+# ❌ What you get without proper config
+responses:
+  '200':
+    schema:
+      $ref: '#/components/schemas/PaginatedItemList'
+
+# ✅ What you want
+responses:
+  '200':
+    schema:
+      type: array
+      items:
+        $ref: '#/components/schemas/Item'
+```
+
+**Frontend symptoms:**
+- `"expected object, received array"` runtime error
+- TypeScript type `Item` instead of `Item[]`
+- Missing fetchers/hooks for the endpoint
+
+## The Solution
+
+Three things must be correct:
+
+### 1. Disable pagination on the action
+
+```python
+@action(
+    detail=False,
+    methods=['get'],
+    pagination_class=None  # ← Prevents paginated schema
+)
+def available_items(self, request):
+    ...
+```
+
+### 2. Use dict format for responses
+
+```python
+@extend_schema(
+    responses={200: ItemSerializer(many=True)}  # ← Dict format + many=True
+)
+```
+
+### 3. Put `@extend_schema` before `@action`
+
+```python
+# ✅ Correct order
+@extend_schema(...)
+@action(...)
+def my_action(self, request):
+    ...
+```
+
+## Complete Pattern
+
+```python
+from drf_spectacular.utils import extend_schema
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+class CommandViewSet(viewsets.GenericViewSet):
+    serializer_class = CommandSerializer  # Required for drf-spectacular
+
+    @extend_schema(
+        summary="List available commands",
+        responses={200: CommandAvailableSerializer(many=True)},
+        tags=["commands"],
+    )
+    @action(
+        detail=False,
+        methods=['get'],
+        pagination_class=None,  # Simple array, no pagination
+    )
+    def available(self, request):
+        commands = [
+            {"name": "migrate", "title": "Database Migration"},
+            {"name": "collectstatic", "title": "Collect Static Files"},
+        ]
+        serializer = CommandAvailableSerializer(commands, many=True)
+        return Response(serializer.data)
+```
+
+## Common Mistakes
+
+### Missing `pagination_class=None`
+
+```python
+# ❌ Pagination inherited from ViewSet
+@extend_schema(responses={200: ItemSerializer(many=True)})
+@action(detail=False, methods=['get'])  # No pagination_class=None!
+def items(self, request):
+    ...
+```
+
+**Result:** Schema wraps the array in `{count, next, previous, results}`.
+
+### Bare serializer format
+
+```python
+# ❌ Not using dict format
+@extend_schema(
+    responses=ItemSerializer(many=True)  # Should be {200: ItemSerializer(many=True)}
+)
+```
+
+**Result:** TypeScript generator creates `Promise<any>` instead of `Promise<Item[]>`.
+
+### Wrong decorator order
+
+```python
+# ❌ @action before @extend_schema
+@action(detail=False, methods=['get'], pagination_class=None)
+@extend_schema(responses={200: ItemSerializer(many=True)})
+def items(self, request):
+    ...
+```
+
+**Result:** Wrong operationId, wrong tags, possibly wrong serializer reference.
+
+## Verification
+
+### Check the OpenAPI schema
+
+```bash
+python manage.py spectacular --file schema.yaml --validate
+```
+
+Look for correct array format:
+
+```yaml
+/api/commands/available/:
+  get:
+    responses:
+      '200':
+        content:
+          application/json:
+            schema:
+              type: array       # ✅ Simple array
+              items:
+                $ref: '#/components/schemas/CommandAvailable'
+```
+
+### Check generated TypeScript
+
+After generation, the fetcher should return an array type:
+
+```typescript
+// ✅ Correct
+export async function getCommandsAvailable(): Promise<CommandAvailable[]> { ... }
+export function useCommandsAvailable(): SWRResponse<CommandAvailable[]> { ... }
+
+// ❌ Wrong (paginated wrapper)
+export async function getCommandsAvailable(): Promise<PaginatedCommandAvailableList> { ... }
+```
+
+### Test API response
+
+```bash
+curl http://localhost:8000/api/commands/available/
+```
+
+Should return a bare array:
+
+```json
+[
+  {"name": "migrate", "title": "Database Migration"},
+  {"name": "collectstatic", "title": "Collect Static Files"}
+]
+```
+
+## When to Use Pagination vs Array
+
+| Scenario | Pattern | Why |
+|----------|---------|-----|
+| Large lists (users, orders) | `pagination_class` (default) | Performance, frontend pagination UI |
+| Small fixed lists (commands, statuses) | `pagination_class=None` | No pagination needed |
+| Dropdown options | `pagination_class=None` | All items loaded at once |
+| Dashboard cards | `pagination_class=None` | Fixed number of items |
+| Search results | `pagination_class` (default) | Potentially large result set |
+
+## Next Steps
+
+- **[DRF ViewSets & Serializers](./drf-viewsets)** — General ViewSet patterns
+- **[Nested Serializers](./drf-nested-serializers)** — Handling `allOf` and nested types
+- **[Pagination](./drf-pagination)** — Pagination patterns for ViewSet actions

@@ -1,0 +1,254 @@
+---
+title: Module Architecture
+sidebar_position: 1
+keywords:
+  - python module structure
+  - package architecture
+  - layered architecture
+  - python package design
+description: Python module architecture patterns. Directory structure, 4-layer design, size limits, public API facade, naming conventions, and dependency flow.
+---
+
+# Module Architecture
+
+Every Python package follows a layered architecture with a clear public API, separated concerns, and strict size limits.
+
+## Directory Structure
+
+```
+package_name/
+├── __init__.py              # Public API facade (re-exports)
+├── _client.py               # Main client classes (sync/async)
+├── _config.py               # Pydantic Settings configuration
+├── _constants.py            # Constants, defaults, env vars
+│
+├── exceptions/              # Exception hierarchy
+│   ├── __init__.py          # Re-exports all exceptions
+│   ├── types.py             # Exception class definitions
+│   └── handlers.py          # Decorators, context managers
+│
+├── models/                  # Pydantic v2 models
+│   ├── __init__.py
+│   ├── base.py              # Base models, common fields
+│   ├── requests.py          # Request payload models
+│   └── responses.py         # Response models
+│
+├── services/                # Business logic
+│   ├── __init__.py
+│   ├── base.py              # BaseService, AsyncBaseService
+│   └── user_service.py      # Domain services
+│
+├── core/                    # State, lifecycle, protocols
+│   ├── __init__.py
+│   └── protocols.py         # Protocol interfaces
+│
+├── utils/                   # Pure utility functions
+│   └── parsing.py
+│
+└── _internal/               # Private implementation details
+    └── helpers.py
+```
+
+<Callout type="info">
+Prefix private modules with `_underscore`. Only `__init__.py` exports form the public API.
+</Callout>
+
+## Layered Architecture
+
+Four layers, top to bottom. Upper layers depend on lower — never reverse.
+
+```
+Client (facade)      →  Entry point for consumers
+    ↓
+Services             →  Business logic, orchestration
+    ↓
+Core / Repositories  →  Data access, protocols, state
+    ↓
+Models               →  Data structures (Pydantic)
+```
+
+### Layer 1: Public API Facade
+
+`__init__.py` defines what users can import. Explicit `__all__`, no internal details:
+
+```python
+# __init__.py
+from ._client import Client, AsyncClient
+from ._config import Config, configure
+from .exceptions import LibraryError, ValidationError
+from .models import UserModel, RequestModel
+
+__all__ = [
+    "Client", "AsyncClient",
+    "Config", "configure",
+    "LibraryError", "ValidationError",
+    "UserModel", "RequestModel",
+]
+
+__version__ = "1.0.0"
+```
+
+### Layer 2: Client (Entry Point)
+
+Main class that consumers instantiate. Delegates to services, provides configuration:
+
+```python
+# _client.py
+
+class Client:
+    """Main synchronous client."""
+
+    __slots__ = ("_config", "_user_service")
+
+    def __init__(self, api_key: str | None = None) -> None:
+        if api_key:
+            self._config = configure(api_key=api_key)
+        else:
+            self._config = get_config()
+        self._user_service: UserService | None = None
+
+    @property
+    def users(self) -> UserService:
+        """Lazy-loaded user service."""
+        if self._user_service is None:
+            self._user_service = UserService(self._config)
+        return self._user_service
+```
+
+### Layer 3: Configuration
+
+Pydantic Settings with env var support and singleton pattern:
+
+```python
+# _config.py
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class Config(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="MYLIB_",
+        env_file=".env",
+        extra="ignore",
+    )
+
+    api_key: str
+    base_url: str = "https://api.example.com"
+    timeout: int = 30
+
+_config: Config | None = None
+
+def get_config() -> Config:
+    global _config
+    if _config is None:
+        _config = Config()
+    return _config
+
+def configure(**kwargs) -> Config:
+    global _config
+    _config = Config.model_validate(kwargs)
+    return _config
+```
+
+### Layer 4: Services
+
+Business logic with injected config. Each service covers one domain:
+
+```python
+# services/base.py
+from abc import ABC
+
+class BaseService(ABC):
+    __slots__ = ("_config", "_http_client")
+
+    def __init__(self, config: Config) -> None:
+        self._config = config
+        self._http_client = httpx.Client(
+            base_url=config.base_url,
+            timeout=config.timeout,
+        )
+```
+
+## Size Limits
+
+| Unit | Max Lines | Action if Exceeded |
+|------|-----------|-------------------|
+| Function | 20 | Split into smaller functions |
+| Class | 200 | Extract into separate classes |
+| File | 500 | Split into submodules |
+
+### Decomposition Example
+
+```python
+# BAD — monolithic function (40+ lines)
+def process_everything(data):
+    # validation (10 lines)
+    # transformation (10 lines)
+    # business logic (10 lines)
+    # persistence (10 lines)
+    pass
+
+# GOOD — single responsibility
+def validate_data(data: InputModel) -> ValidatedModel: ...
+def transform_data(data: ValidatedModel) -> TransformedModel: ...
+def apply_rules(data: TransformedModel) -> ProcessedModel: ...
+
+def process_data(data: InputModel) -> ProcessedModel:
+    """Orchestrate the pipeline."""
+    validated = validate_data(data)
+    transformed = transform_data(validated)
+    return apply_rules(transformed)
+```
+
+## Naming Conventions
+
+### Files
+
+```
+_private_module.py     # Private (underscore prefix)
+public_module.py       # Public
+base.py                # Base classes
+types.py               # Type definitions
+protocols.py           # Protocol interfaces
+```
+
+### Classes and Functions
+
+```python
+class UserService:        # PascalCase, noun + role
+class AsyncUserService:   # Async prefix for async variant
+class BaseRepository:     # Base prefix for base classes
+
+def get_user(id: int):    # verb_noun pattern
+def is_valid(data):       # is/has for boolean returns
+def process_batch(items): # verb for operations
+```
+
+## Dependency Flow
+
+```python
+# GOOD — dependency injection
+class UserService:
+    def __init__(
+        self,
+        config: Config,
+        repository: UserRepositoryProtocol,
+    ) -> None:
+        self._config = config
+        self._repository = repository
+
+# BAD — hidden dependencies
+class UserService:
+    def __init__(self) -> None:
+        self._repository = UserRepository()  # Hidden!
+        self._cache = get_global_cache()     # Global state!
+```
+
+## Rules
+
+1. **Explicit public API** — only `__init__.py` exports, always define `__all__`
+2. **Underscore for private** — prefix private modules with `_`
+3. **Functions < 20 lines** — split when exceeded
+4. **Classes < 200 lines** — extract when exceeded
+5. **Files < 500 lines** — split into submodules when exceeded
+6. **No circular imports** — upper layers depend on lower, never reverse
+7. **Inject dependencies** — via constructor, not global state
+8. **Pass models, not dicts** — use Pydantic models between layers

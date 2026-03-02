@@ -202,6 +202,7 @@ def upload_avatar(request):
 
     The account can be restored by an administrator if needed.
     """,
+    request=None,
     responses={
         200: AccountDeleteResponseSerializer,
         401: {"description": "Authentication credentials were not provided."},

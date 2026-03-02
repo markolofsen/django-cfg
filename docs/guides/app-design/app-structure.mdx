@@ -1,0 +1,167 @@
+---
+title: App Structure
+sidebar_position: 1
+keywords:
+  - django app structure
+  - django-cfg app layout
+  - django project organization
+description: Standard directory structure for Django-CFG apps. How to organize models, views, services, admin, and tests for maintainable, scalable applications.
+---
+
+# App Structure
+
+Every django-cfg app follows a layered architecture with clear separation of concerns.
+
+## Standard Layout
+
+```
+my_app/
+├── models/
+│   ├── __init__.py            # Re-exports all models
+│   ├── my_model.py
+│   └── choices.py             # TextChoices enums
+├── managers/
+│   ├── __init__.py
+│   └── my_model_managers.py   # Custom QuerySet + Manager
+├── services/
+│   ├── __init__.py
+│   └── my_service.py          # Business logic
+├── views/
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── my_viewsets.py     # DRF ViewSets
+│   └── serializers/
+│       ├── __init__.py
+│       └── my_serializers.py  # DRF Serializers
+├── admin/
+│   ├── __init__.py
+│   ├── my_admin.py            # PydanticAdmin config
+│   └── actions.py             # Admin actions
+├── tasks/
+│   ├── __init__.py
+│   └── process_task.py        # Background tasks (RQ/Dramatiq)
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py            # Fixtures
+│   ├── factories.py           # Model factories
+│   ├── test_models.py
+│   └── test_services.py
+├── management/
+│   └── commands/
+│       └── my_command.py      # Management commands
+├── migrations/
+├── apps.py
+├── urls.py                    # DRF router
+└── signals.py                 # Django signals (if needed)
+```
+
+## When to Use Files vs Directories
+
+### Single file — simple apps
+
+If an app has 1-2 models and straightforward logic, use flat files:
+
+```
+activity/
+├── models.py            # Single model
+├── admin.py             # Single admin class
+├── urls.py
+└── views/
+    ├── api/
+    │   └── activity_viewsets.py
+    └── serializers/
+        └── activity_serializers.py
+```
+
+Real example: the **activity** app (cmdop) is a simple audit logger — one model, one read-only ViewSet, one serializer.
+
+### Directory — complex apps
+
+When a file exceeds ~300 lines or has multiple related classes, split into a directory with `__init__.py` re-exports:
+
+```python
+# models/__init__.py
+from .download_request import DownloadRequest
+from .download_segment import DownloadSegment
+from .download_error import DownloadError
+from .export_job import ExportJob
+```
+
+Real example: **cryptodb_driver** (stockapis) has 4 models, 8 services, 5 task files — everything is in directories.
+
+## File Size Limits
+
+| File type | Max lines | Notes |
+|-----------|-----------|-------|
+| Production code | 500 | Excluding comments and docstrings |
+| Complex logic (models, services) | 300 | Split into multiple files if exceeded |
+| Configuration files | 200 | Admin configs, app configs |
+| Test files | 400 | Per test file |
+| Test classes | 150 | Per class within a file |
+
+<Callout type="warning">
+When a file approaches the limit, decompose it — don't compress code to fit. Create a directory with focused files instead.
+</Callout>
+
+## Layer Flow
+
+```
+Request → URLs → ViewSet → Serializer → Service → Manager → Model → DB
+                                ↑                      ↑
+                          (validation)          (query logic)
+```
+
+Each layer has a single responsibility:
+
+| Layer | Responsibility | Imports from |
+|-------|---------------|-------------|
+| **Models** | Schema, constraints, properties | Nothing (bottom layer) |
+| **Managers** | Query composition, chainable filters | Models |
+| **Services** | Business logic, transactions, external APIs | Models, Managers |
+| **Serializers** | Validation, field mapping, formatting | Models |
+| **ViewSets** | HTTP handling, permissions, routing | Serializers, Services |
+| **Admin** | Admin UI configuration | Models |
+
+<Callout type="info">
+**Key rule:** ViewSets should never contain business logic. They orchestrate: validate input (serializer) → call service → serialize output.
+</Callout>
+
+## App Registration
+
+All django-cfg apps are registered through the core builder — never in local project configs:
+
+```python
+# django_cfg/core/builders/apps_builder.py
+apps.append("django_cfg.apps.system.my_app")  # ✅ Correct
+
+# django_cfg/apps/urls.py
+path('cfg/my-app/', include('django_cfg.apps.system.my_app.urls'))  # ✅ Correct
+```
+
+## Naming Conventions
+
+| Entity | Pattern | Example |
+|--------|---------|---------|
+| App directory | `snake_case` | `api_keys`, `cryptodb_driver` |
+| Model class | `PascalCase` | `DownloadRequest`, `WorkspaceMember` |
+| Manager | `{Model}Manager` | `MachineManager`, `AgentManager` |
+| QuerySet | `{Model}QuerySet` | `MachineQuerySet` |
+| ViewSet | `{Model}ViewSet` | `SymbolViewSet`, `ActivityViewSet` |
+| Serializer | `{Model}{Action}Serializer` | `AgentListSerializer`, `APIKeyCreateSerializer` |
+| Service | `{Feature}Service` | `SyncService`, `ConfidenceService` |
+| Task function | `{verb}_{noun}_task` | `sync_all_symbols_task` |
+| URL basename | `snake_case` | `basename='api-key'` |
+
+## Checklist for New Apps
+
+- [ ] Choose flat files or directories based on complexity
+- [ ] Create models with proper constraints and indexes
+- [ ] Add custom managers for common query patterns
+- [ ] Implement services for business logic
+- [ ] Create ViewSet with `@extend_schema` decorators
+- [ ] Write separate serializers per action (List, Detail, Create)
+- [ ] Configure admin with `PydanticAdmin` + `AdminConfig`
+- [ ] Register app in `apps_builder.py`
+- [ ] Register URLs in `django_cfg/apps/urls.py`
+- [ ] Write tests (models + services)
+- [ ] Create and apply migrations

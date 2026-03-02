@@ -2,7 +2,7 @@
 Universal Parser - OpenAPI → IR conversion.
 
 This package provides parsers for converting OpenAPI specifications
-(both 3.0.3 and 3.1.0) to the unified IR (Intermediate Representation).
+(3.0.x, 3.1.0, 3.2.0) to the unified IR (Intermediate Representation).
 
 Usage:
     >>> from django_cfg.modules.django_client.core.parser import parse_openapi
@@ -15,7 +15,7 @@ Usage:
 
 Auto-detection:
     The parse_openapi() function automatically detects the OpenAPI version
-    and uses the appropriate parser (OpenAPI30Parser or OpenAPI31Parser).
+    and uses the appropriate parser (OpenAPI30Parser or OpenAPIModernParser).
 """
 
 from typing import Any
@@ -23,12 +23,12 @@ from typing import Any
 from django_cfg.modules.django_client.core.ir import IRContext
 from django_cfg.modules.django_client.core.parser.models import OpenAPISpec
 from django_cfg.modules.django_client.core.parser.openapi30 import OpenAPI30Parser
-from django_cfg.modules.django_client.core.parser.openapi31 import OpenAPI31Parser
+from django_cfg.modules.django_client.core.parser.openapi_modern import OpenAPIModernParser
 
 __all__ = [
     "parse_openapi",
     "OpenAPI30Parser",
-    "OpenAPI31Parser",
+    "OpenAPIModernParser",
 ]
 
 
@@ -65,10 +65,8 @@ def parse_openapi(spec_dict: dict[str, Any]) -> IRContext:
     # Select parser based on version
     if spec.is_openapi_30:
         parser = OpenAPI30Parser(spec)
-    elif spec.is_openapi_31:
-        parser = OpenAPI31Parser(spec)
     else:
-        raise ValueError(f"Unsupported OpenAPI version: {spec.openapi}")
+        parser = OpenAPIModernParser(spec)
 
     # Parse to IR
     return parser.parse()

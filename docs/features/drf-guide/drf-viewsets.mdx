@@ -1,0 +1,259 @@
+---
+title: DRF ViewSets & Serializers
+sidebar_position: 6
+keywords:
+  - django-cfg drf viewsets
+  - drf serializers openapi
+  - drf-spectacular viewsets
+  - api client generation drf
+description: Best practices for writing DRF ViewSets and serializers that produce clean OpenAPI schemas and type-safe generated clients.
+---
+
+# DRF ViewSets & Serializers
+
+Writing ViewSets and serializers that produce clean OpenAPI schemas for type-safe client generation.
+
+<Callout type="info">
+**Core Pattern**
+
+Django-CFG uses `GenericViewSet` + `@action` pattern exclusively. Standard CRUD ViewSets (`ModelViewSet`, `ReadOnlyModelViewSet`) also work but custom actions are preferred for explicit API contracts.
+</Callout>
+
+## ViewSet Requirements
+
+### Always set `serializer_class`
+
+Every ViewSet **must** have a `serializer_class` defined. Without it, drf-spectacular cannot generate schemas.
+
+```python
+# ✅ Correct
+class DashboardViewSet(viewsets.GenericViewSet):
+    serializer_class = DashboardSerializer  # Required!
+
+    @action(detail=False, methods=['get'])
+    def overview(self, request):
+        ...
+
+# ❌ Wrong - will cause generation errors
+class DashboardViewSet(viewsets.GenericViewSet):
+    # Missing serializer_class!
+    @action(detail=False, methods=['get'])
+    def overview(self, request):
+        ...
+```
+
+### Use `get_serializer_class()` for multiple serializers
+
+When a ViewSet uses different serializers per action, implement `get_serializer_class()`:
+
+```python
+class UserViewSet(viewsets.GenericViewSet):
+    serializer_class = UserSerializer  # Default (fallback)
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return UserCreateSerializer
+        elif self.action == 'update':
+            return UserUpdateSerializer
+        return UserSerializer
+```
+
+### Decorator order matters
+
+`@extend_schema` must come **before** `@action`:
+
+```python
+# ✅ Correct order
+@extend_schema(
+    summary="Get dashboard overview",
+    responses={200: DashboardSerializer},
+    tags=["dashboard"]
+)
+@action(detail=False, methods=['get'])
+def overview(self, request):
+    ...
+
+# ❌ Wrong order - causes wrong tags, operationIds, serializer refs
+@action(detail=False, methods=['get'])
+@extend_schema(
+    summary="Get dashboard overview",
+    responses={200: DashboardSerializer},
+    tags=["dashboard"]
+)
+def overview(self, request):
+    ...
+```
+
+## Serializer Best Practices
+
+### Use `read_only_fields` for detail serializers
+
+To prevent TypeScript type splitting (`Readable`/`Writable` variants), make all fields read-only in response serializers:
+
+```python
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'name', 'created_at', 'is_active']
+        read_only_fields = fields  # All read-only → single TS type
+```
+
+Without this, the generator may create `UserDetailReadable` and `UserDetailWritable` types, and references to the base `UserDetail` type will break.
+
+### Separate read/write serializers
+
+For endpoints with both input and output, use separate serializers:
+
+```python
+# Response serializer (read-only)
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'name', 'avatar', 'created_at']
+        read_only_fields = fields
+
+# Request serializer (writable)
+class UserCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    name = serializers.CharField(max_length=100)
+    password = serializers.CharField(write_only=True)
+```
+
+### Explicit `responses` in `@extend_schema`
+
+Always use dict format with status codes:
+
+```python
+@extend_schema(
+    request=UserCreateSerializer,
+    responses={
+        201: UserSerializer,
+        400: ErrorSerializer,
+    }
+)
+@action(detail=False, methods=['post'])
+def register(self, request):
+    ...
+```
+
+The dict format `{200: Serializer}` produces better TypeScript types than the bare `responses=Serializer` format.
+
+## Tag Grouping
+
+### Single ViewSet = Single tag
+
+All actions in one ViewSet should use the same primary tag. Different tags cause endpoint splitting across multiple generated files.
+
+```python
+# ✅ Correct - consistent tag
+class DashboardViewSet(viewsets.GenericViewSet):
+    @extend_schema(tags=["dashboard"])
+    @action(detail=False, methods=['get'])
+    def overview(self, request): ...
+
+    @extend_schema(tags=["dashboard"])
+    @action(detail=False, methods=['get'])
+    def stats(self, request): ...
+```
+
+```python
+# ❌ Wrong - different tags split into separate files
+class DashboardViewSet(viewsets.GenericViewSet):
+    @extend_schema(tags=["Statistics"])     # → fetchers/statistics.ts
+    @action(...)
+    def stats(self, request): ...
+
+    @extend_schema(tags=["System Health"])  # → fetchers/system_health.ts
+    @action(...)
+    def health(self, request): ...
+```
+
+### Multiple tags for documentation
+
+Use multiple tags where the **first tag** determines file grouping:
+
+```python
+@extend_schema(
+    tags=["dashboard", "Statistics"],  # Grouped under "dashboard"
+    responses={200: StatSerializer(many=True)}
+)
+```
+
+## Tag naming
+
+Use lowercase tags with underscores:
+
+- `dashboard` — all endpoints grouped in one file
+- `user_management` — clear naming
+- `Admin Panel - Commands` — spaces and dashes work but create verbose file names
+
+## Complete Example
+
+```python
+from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="List users",
+        tags=["users"],
+    ),
+    retrieve=extend_schema(
+        summary="Get user details",
+        tags=["users"],
+    ),
+)
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return UserListSerializer
+        return UserSerializer
+
+    @extend_schema(
+        summary="Get current user profile",
+        responses={200: UserSerializer},
+        tags=["users"],
+    )
+    @action(detail=False, methods=['get'], url_path='me')
+    def me(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="Update profile",
+        request=UserUpdateSerializer,
+        responses={200: UserSerializer},
+        tags=["users"],
+    )
+    @action(detail=False, methods=['patch'], url_path='me')
+    def update_me(self, request):
+        serializer = UserUpdateSerializer(
+            request.user, data=request.data, partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(UserSerializer(request.user).data)
+```
+
+## Checklist
+
+Before running client generation, verify:
+
+- [ ] Every ViewSet has `serializer_class` defined
+- [ ] `@extend_schema` comes before `@action` decorators
+- [ ] Responses use dict format: `{200: Serializer}`
+- [ ] Detail serializers use `read_only_fields = fields`
+- [ ] All actions in a ViewSet use the same primary tag
+- [ ] Read/write operations use separate serializers
+
+## Next Steps
+
+- **[Array Responses](./drf-array-responses)** — Returning arrays from `@action` methods
+- **[Nested Serializers](./drf-nested-serializers)** — Handling `allOf` and nested types
+- **[Pagination](./drf-pagination)** — Pagination patterns for ViewSet actions

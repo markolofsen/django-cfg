@@ -9,7 +9,7 @@ This module defines the root IRContext model that contains:
 
 Key Features:
 - Single source of truth for code generation
-- Version-agnostic (normalized from 3.0.3 and 3.1.0)
+- Version-agnostic (normalized from 3.0.3, 3.1.0, and 3.2.0)
 - Django-aware (validates COMPONENT_SPLIT_REQUEST)
 """
 
@@ -44,8 +44,8 @@ class OpenAPIInfo(BaseModel):
         str_strip_whitespace=True,
     )
 
-    version: Literal["3.0.3", "3.1.0"] = Field(
-        ..., description="OpenAPI version (3.0.3 or 3.1.0)"
+    version: Literal["3.0.3", "3.1.0", "3.2.0"] = Field(
+        ..., description="OpenAPI version (3.0.3, 3.1.0, or 3.2.0)"
     )
     title: str = Field(..., description="API title")
     description: str | None = Field(None, description="API description")
@@ -62,6 +62,11 @@ class OpenAPIInfo(BaseModel):
     contact_email: str | None = Field(None, description="Contact email")
     license_name: str | None = Field(None, description="License name (e.g., 'MIT')")
     license_url: str | None = Field(None, description="License URL")
+
+    @property
+    def is_openapi_modern(self) -> bool:
+        """Check if OpenAPI 3.1.0+ (JSON Schema based)."""
+        return self.version != "3.0.3"
 
     @property
     def is_openapi_31(self) -> bool:
@@ -120,9 +125,9 @@ class DjangoGlobalMetadata(BaseModel):
         True,
         description="COMPONENT_SPLIT_PATCH setting (separate PatchedUser models)",
     )
-    oas_version: Literal["3.0.3", "3.1.0"] = Field(
+    oas_version: Literal["3.0.3", "3.1.0", "3.2.0"] = Field(
         "3.1.0",
-        description="OAS_VERSION setting (3.1.0 recommended)",
+        description="OAS_VERSION setting (3.1.0 or 3.2.0 recommended)",
     )
 
     # ===== Default Authentication/Permissions =====

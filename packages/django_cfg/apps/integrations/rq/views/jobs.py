@@ -35,6 +35,8 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     pagination_class = DefaultPagination
     serializer_class = JobListSerializer
 
+    queryset = type("_", (), {"model": None})()
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._job_service = JobService()
@@ -105,6 +107,14 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         tags=["RQ Jobs"],
         summary="Get job details",
         description="Returns detailed information about a specific job.",
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Job ID",
+            ),
+        ],
         responses={
             200: JobDetailSerializer,
             404: {"description": "Job not found"},
@@ -159,6 +169,12 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         description="Cancels a job. For queued jobs, cancels immediately. For running jobs, sets cancellation flag for cooperative cancellation. Use force=true to send SIGTERM (dangerous).",
         parameters=[
             OpenApiParameter(
+                name="id",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Job ID",
+            ),
+            OpenApiParameter(
                 name="force",
                 type=bool,
                 location=OpenApiParameter.QUERY,
@@ -206,6 +222,14 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         tags=["RQ Jobs"],
         summary="Requeue job",
         description="Requeues a failed job.",
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Job ID",
+            ),
+        ],
         responses={
             200: JobActionResponseSerializer,
             404: {"description": "Job not found"},
@@ -245,6 +269,14 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         tags=["RQ Jobs"],
         summary="Delete job",
         description="Deletes a job from the queue.",
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Job ID",
+            ),
+        ],
         responses={
             200: JobActionResponseSerializer,
             404: {"description": "Job not found"},

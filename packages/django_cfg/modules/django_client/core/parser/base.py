@@ -39,7 +39,7 @@ class BaseParser(ABC):
 
     Subclasses implement version-specific logic:
     - OpenAPI30Parser: Handles nullable: true
-    - OpenAPI31Parser: Handles type: ['string', 'null']
+    - OpenAPIModernParser: Handles type: ['string', 'null'] (3.1.x, 3.2.x)
     """
 
     def __init__(self, spec: OpenAPISpec):
@@ -615,7 +615,7 @@ class BaseParser(ABC):
 
         Subclasses implement:
         - OpenAPI30Parser: Check nullable: true
-        - OpenAPI31Parser: Check type: ['string', 'null']
+        - OpenAPIModernParser: Check type: ['string', 'null'] (3.1.x, 3.2.x)
 
         Args:
             schema: Raw SchemaObject

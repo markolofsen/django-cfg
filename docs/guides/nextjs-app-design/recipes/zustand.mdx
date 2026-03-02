@@ -1,0 +1,228 @@
+---
+title: Zustand
+sidebar_position: 1
+keywords:
+  - zustand
+  - zundo
+  - undo redo
+  - state management
+  - store patterns
+description: Zustand store patterns — standard store, slice architecture, zundo undo/redo, 60fps module-level refs, persistence, and global store reset.
+---
+
+# Zustand
+
+Zustand is used when Context + SWR is not enough — complex client-only state with frequent updates, undo/redo, or cross-component synchronization.
+
+<Callout type="info">
+For deciding when to use Zustand vs Context see [State Management](/guides/nextjs-app-design/state-management).
+</Callout>
+
+## When to Use Zustand
+
+| Scenario | Use Zustand? |
+|----------|-------------|
+| Server data with CRUD | No — use SWR + Context |
+| URL filters / pagination | No — use `useSearchParams` |
+| Local preferences | No — use `useLocalStorage` |
+| Complex editor state | Yes |
+| Undo/redo | Yes (with zundo) |
+| High-frequency updates (drag, 60fps) | Yes (with module-level refs) |
+| Cross-component sync without prop drilling | Maybe — try Context first |
+
+## Standard Store Pattern
+
+```typescript
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+
+export const useProjectStore = create<ProjectStore>()(
+  devtools(
+    persist(
+      (set, get) => ({
+        // State
+        projectId: null,
+        title: '',
+        // Actions
+        setProject: (project) => set({ projectId: project.id, title: project.title }),
+        reset: () => set({ projectId: null, title: '' }),
+      }),
+      createPersistConfig('project', STORE_VERSIONS.project)
+    ),
+    { name: 'ProjectStore' }
+  )
+);
+
+// Register for global reset
+registerStoreReset('project', () => useProjectStore.getState().reset());
+```
+
+## Store Organization
+
+15 stores in gptkino/studio organized by category:
+
+| Category | Stores | Persisted? |
+|----------|--------|-----------|
+| Project | projectStore, projectConfigStore | Yes |
+| Editor | editorStore, uiStore, storyboardStore | Partial |
+| Media | mediaStore, assetsStore, voicesStore | No |
+| Complex | widgetStore (slice-based + zundo), timelineStore (60fps), playbackStore | No |
+
+## Slice Architecture
+
+Split large stores into focused slices:
+
+```typescript
+// Slice creator
+const createWidgetCrudSlice = (set, get) => ({
+  widgets: [],
+  addWidget: (widget) => set((s) => ({ widgets: [...s.widgets, widget] })),
+  removeWidget: (id) => set((s) => ({ widgets: s.widgets.filter(w => w.id !== id) })),
+});
+
+const createSelectionSlice = (set, get) => ({
+  selectedIds: new Set<string>(),
+  select: (id) => set((s) => {
+    const next = new Set(s.selectedIds);
+    next.add(id);
+    return { selectedIds: next };
+  }),
+});
+```
+
+Compose slices into one store:
+
+```typescript
+export const useWidgetStore = create<WidgetStore>()(
+  subscribeWithSelector(
+    temporal(
+      devtools((set, get) => ({
+        ...createInitialState(),
+        ...createWidgetCrudSlice(set, get),
+        ...createSelectionSlice(set, get),
+        ...createTrackSlice(set, get),
+        ...createClipboardSlice(set, get),
+        ...createDragResizeSlice(set, get),
+      }), { name: 'WidgetStore' }),
+      { limit: 50, equality: temporalEquality }
+    )
+  )
+);
+```
+
+## Zundo: Undo/Redo
+
+Wrap the store with `temporal` from zundo:
+
+```typescript
+import { temporal } from 'zundo';
+
+export const useWidgetStore = create<WidgetStore>()(
+  temporal(
+    devtools((set, get) => ({
+      ...createWidgetCrudSlice(set, get),
+      ...createSelectionSlice(set, get),
+    }), { name: 'WidgetStore' }),
+    { limit: 50 }  // max undo steps
+  )
+);
+
+// Undo/redo
+const { undo, redo, clear } = useWidgetStore.temporal.getState();
+```
+
+## 60fps Module-Level Refs
+
+For high-frequency updates (drag, resize), avoid Zustand state entirely. Module-level refs update without triggering re-renders:
+
+```typescript
+// Module-level ref — NOT zustand state
+let dragCurrentXRef = 0;
+const dragPositionListeners = new Set<PositionListener>();
+
+// In store actions:
+updateDrag: (currentX) => {
+  dragCurrentXRef = currentX;  // No state update, no re-renders
+  dragPositionListeners.forEach((listener) => listener(currentX));
+},
+
+// Components subscribe directly:
+function useSubscribeToDragPosition(callback: PositionListener) {
+  useEffect(() => {
+    dragPositionListeners.add(callback);
+    return () => { dragPositionListeners.delete(callback); };
+  }, [callback]);
+}
+```
+
+Store holds the logic (start/end drag, snap calculations). The ref holds the continuously-changing position value.
+
+## Persistence
+
+Version-stamped persistence with auto-reset on version bump:
+
+```typescript
+import { createJSONStorage, persist } from 'zustand/middleware';
+
+const STORE_VERSIONS = { project: 2, editor: 1 };
+
+function createPersistConfig(name: string, version: number) {
+  return {
+    name: `app-${name}`,
+    version,
+    storage: createJSONStorage(() => localStorage),
+    // Bump version to auto-reset stale state
+  };
+}
+
+export const useProjectStore = create<ProjectStore>()(
+  devtools(
+    persist((set) => ({ ... }), createPersistConfig('project', STORE_VERSIONS.project)),
+    { name: 'ProjectStore' }
+  )
+);
+```
+
+## Global Store Reset
+
+All stores register a reset function. On project switch, reset everything:
+
+```typescript
+// stores/index.ts
+const resetRegistry = new Map<string, () => void>();
+
+export function registerStoreReset(name: string, resetFn: () => void) {
+  resetRegistry.set(name, resetFn);
+}
+
+export function resetAllStores() {
+  resetRegistry.forEach((resetFn) => resetFn());
+}
+```
+
+Call `resetAllStores()` when the user switches projects to clear stale state.
+
+## Debounced API Sync
+
+Sync store state to the API with debounce:
+
+```typescript
+import debounce from 'lodash-es/debounce';
+
+const debouncedSync = useMemo(
+  () => debounce(syncToAPI, 500),
+  [syncToAPI]
+);
+
+// Cleanup on unmount
+useEffect(() => () => { debouncedSync.flush(); }, [debouncedSync]);
+```
+
+## Rules
+
+1. Use Zustand only for complex client-only state — Context + SWR is the default
+2. Wrap every store with `devtools` middleware for debugging
+3. Use slice architecture for stores with more than ~5 actions
+4. Use module-level refs (not Zustand state) for high-frequency drag/resize updates
+5. Version your persistence config — bump version to auto-reset stale state
+6. Register every store with `registerStoreReset` for clean project switching

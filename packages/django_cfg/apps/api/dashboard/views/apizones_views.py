@@ -30,6 +30,8 @@ class APIZonesViewSet(AdminAPIMixin, viewsets.GenericViewSet):
     """
 
     serializer_class = APIZoneSerializer
+
+    queryset = type("_", (), {"model": None})()
     pagination_class = None  # Disable pagination for zones list
 
     @extend_schema(

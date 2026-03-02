@@ -13,7 +13,7 @@ from ..serializers.metrics import MetricsResponseSerializer
 from ..services.metrics_service import MetricsService
 
 
-class MetricsViewSet(viewsets.ViewSet):
+class MetricsViewSet(viewsets.GenericViewSet):
     """
     Universal metrics API.
 
@@ -28,6 +28,10 @@ class MetricsViewSet(viewsets.ViewSet):
 
     TAGS: metrics, api, dashboard
     """
+
+    serializer_class = MetricsResponseSerializer
+
+    queryset = type("_", (), {"model": None})()
 
     @extend_schema(
         summary="Get all metrics",

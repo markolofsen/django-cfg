@@ -1,0 +1,213 @@
+---
+title: Nested Serializers & allOf
+sidebar_position: 8
+keywords:
+  - drf nested serializers
+  - drf-spectacular allOf
+  - typescript Record string any
+  - openapi nested objects
+description: How to handle nested DRF serializers that produce allOf in OpenAPI schemas, causing TypeScript to generate Record<string, any> instead of typed interfaces.
+---
+
+# Nested Serializers & allOf
+
+When using nested serializers, drf-spectacular generates `allOf` constructs that the TypeScript generator converts to `Record<string, any>`, losing type safety. This page explains why and how to work around it.
+
+## The Problem
+
+**Django serializer:**
+
+```python
+class DashboardOverviewSerializer(serializers.Serializer):
+    system_metrics = SystemMetricsSerializer(help_text="System metrics")
+    user_statistics = UserStatisticsSerializer(help_text="User stats")
+```
+
+**Generated OpenAPI schema:**
+
+```yaml
+DashboardOverview:
+  properties:
+    system_metrics:
+      allOf:
+        - $ref: "#/components/schemas/SystemMetrics"
+    user_statistics:
+      allOf:
+        - $ref: "#/components/schemas/UserStatistics"
+```
+
+**Generated TypeScript (broken):**
+
+```typescript
+export interface DashboardOverview {
+  system_metrics: Record<string, any>;  // ❌ Lost type safety!
+  user_statistics: Record<string, any>; // ❌ Lost type safety!
+}
+```
+
+## Why allOf Appears
+
+DRF Spectacular wraps nested serializer references in `allOf` when:
+
+1. **`read_only=True`** — adds `readOnly` property outside the `$ref`
+2. **`allow_null=True`** — adds `nullable` property outside the `$ref`
+3. **Any custom field properties** — `help_text`, `required`, etc.
+
+The TypeScript generator doesn't resolve single-item `allOf` to a direct `$ref`.
+
+## Solutions
+
+### Solution 1: DictField (for flexible responses)
+
+Best for dashboard/reporting endpoints where strict typing isn't critical:
+
+```python
+class DashboardOverviewSerializer(serializers.Serializer):
+    stat_cards = serializers.ListField(
+        child=serializers.DictField(),
+        help_text="Dashboard statistics cards"
+    )
+    system_metrics = serializers.DictField(
+        help_text="System performance metrics"
+    )
+    user_statistics = serializers.DictField(
+        help_text="User statistics"
+    )
+```
+
+**Generated TypeScript:**
+
+```typescript
+export interface DashboardOverview {
+  stat_cards: Array<Record<string, any>>;
+  system_metrics: Record<string, any>;
+  user_statistics: Record<string, any>;
+}
+```
+
+**When to use:**
+- Dashboard and reporting endpoints
+- Data aggregation APIs
+- Read-only responses without ORM models
+- Rapid prototyping
+
+### Solution 2: Flat serializers (type-safe)
+
+Best for CRUD APIs where strict typing matters:
+
+```python
+# Instead of nesting SystemMetricsSerializer:
+class DashboardOverviewSerializer(serializers.Serializer):
+    # Inline system metrics fields
+    cpu_usage = serializers.FloatField()
+    memory_usage = serializers.FloatField()
+    disk_usage = serializers.FloatField()
+
+    # Inline user statistics fields
+    total_users = serializers.IntegerField()
+    active_users = serializers.IntegerField()
+```
+
+**Generated TypeScript:**
+
+```typescript
+export interface DashboardOverview {
+  cpu_usage: number;
+  memory_usage: number;
+  disk_usage: number;
+  total_users: number;
+  active_users: number;
+}
+```
+
+**When to use:**
+- CRUD operations
+- Form submissions
+- APIs that need strict frontend validation
+
+### Solution 3: Separate typed endpoints (hybrid)
+
+Provide both a flexible overview and typed sub-endpoints:
+
+```python
+class DashboardViewSet(viewsets.GenericViewSet):
+    serializer_class = DashboardOverviewSerializer
+
+    # Flexible overview — Record<string, any> on frontend
+    @extend_schema(responses={200: DashboardOverviewSerializer}, tags=["dashboard"])
+    @action(detail=False, methods=['get'])
+    def overview(self, request):
+        return Response({
+            'stat_cards': service.get_stat_cards(),
+            'system_metrics': service.get_system_metrics(),
+        })
+
+    # Typed endpoint — SystemMetrics type on frontend
+    @extend_schema(responses={200: SystemMetricsSerializer}, tags=["dashboard"])
+    @action(detail=False, methods=['get'])
+    def system_metrics(self, request):
+        return Response(service.get_system_metrics())
+```
+
+**Frontend usage:**
+
+```typescript
+// Flexible overview
+const overview = await api.dashboard.overview();
+const cards = overview.stat_cards; // Record<string, any>[]
+
+// Type-safe specific endpoint
+const metrics = await api.dashboard.systemMetrics();
+console.log(metrics.cpu_usage); // ✅ number
+```
+
+## Decision Matrix
+
+| Scenario | Solution | Type Safety | Flexibility |
+|----------|----------|-------------|-------------|
+| Dashboard/Reports | DictField | Low | High |
+| CRUD APIs | Flat Serializers | High | Low |
+| Mixed Read/Write | Hybrid Endpoints | High | High |
+| Rapid Prototyping | DictField | Low | High |
+| Production Forms | Flat Serializers | High | Low |
+
+## What Doesn't Work
+
+These approaches don't fix the `allOf` → `Record<string, any>` issue:
+
+```python
+# ❌ Still generates allOf
+system_metrics = SystemMetricsSerializer(read_only=True)
+
+# ❌ Ignored by drf-spectacular
+@extend_schema(
+    responses={200: inline_serializer(
+        name='Overview',
+        fields={'metrics': SystemMetricsSerializer()}
+    )}
+)
+
+# ❌ Creates inline schema, not named component
+@extend_schema(
+    responses={200: {
+        'type': 'object',
+        'properties': {
+            'metrics': {'$ref': '#/components/schemas/SystemMetrics'}
+        }
+    }}
+)
+```
+
+## Best Practices
+
+1. **Use DictField for dashboard/reporting endpoints** — avoids `allOf` entirely
+2. **Provide typed sub-endpoints** for critical data that needs frontend validation
+3. **Don't nest deeper than 2 levels** — each level risks `allOf` wrapping
+4. **Validate in services, not serializers** — when using DictField
+5. **Never manually edit `generated/`** — fix the serializers instead
+
+## Next Steps
+
+- **[DRF ViewSets & Serializers](./drf-viewsets)** — General ViewSet patterns
+- **[Array Responses](./drf-array-responses)** — Returning arrays from `@action` methods
+- **[Pagination](./drf-pagination)** — Pagination patterns for ViewSet actions

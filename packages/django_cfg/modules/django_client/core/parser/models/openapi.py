@@ -2,9 +2,11 @@
 OpenAPI Input Models - Root OpenAPI Spec.
 
 This module defines the root OpenAPISpec model that represents a complete
-OpenAPI specification (version 3.0.3 or 3.1.0).
+OpenAPI specification (version 3.0.x, 3.1.0, or 3.2.0).
 
-Reference: https://spec.openapis.org/oas/v3.1.0
+References:
+    https://spec.openapis.org/oas/v3.1.0
+    https://spec.openapis.org/oas/v3.2.0
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ class OpenAPISpec(BaseModel):
     OpenAPI Specification root object.
 
     This is the top-level object representing a complete OpenAPI specification.
-    Supports both OpenAPI 3.0.3 and 3.1.0.
+    Supports OpenAPI 3.0.x, 3.1.0, and 3.2.0.
 
     Reference: https://spec.openapis.org/oas/v3.1.0
 
@@ -35,7 +37,7 @@ class OpenAPISpec(BaseModel):
         ... )
         >>> spec.openapi_version
         '3.1.0'
-        >>> spec.is_openapi_31
+        >>> spec.is_openapi_modern
         True
     """
 
@@ -47,7 +49,7 @@ class OpenAPISpec(BaseModel):
     # ===== Required Fields =====
     openapi: str = Field(
         ...,
-        description="OpenAPI version (3.0.0, 3.0.1, 3.0.2, 3.0.3, 3.1.0)",
+        description="OpenAPI version (3.0.0\u20133.0.3, 3.1.0, 3.2.0)",
     )
     info: InfoObject = Field(..., description="API metadata")
     paths: dict[str, PathItemObject] | None = Field(
@@ -90,8 +92,8 @@ class OpenAPISpec(BaseModel):
     @field_validator("openapi")
     @classmethod
     def validate_openapi_version(cls, v: str) -> str:
-        """Validate OpenAPI version is 3.0.x or 3.1.0."""
-        valid_versions = ["3.0.0", "3.0.1", "3.0.2", "3.0.3", "3.1.0"]
+        """Validate OpenAPI version is 3.0.x, 3.1.0, or 3.2.0."""
+        valid_versions = ["3.0.0", "3.0.1", "3.0.2", "3.0.3", "3.1.0", "3.2.0"]
         if v not in valid_versions:
             raise ValueError(
                 f"Unsupported OpenAPI version: {v}. "
@@ -112,19 +114,21 @@ class OpenAPISpec(BaseModel):
         return self.openapi.startswith("3.0.")
 
     @property
-    def is_openapi_31(self) -> bool:
-        """Check if OpenAPI 3.1.0."""
-        return self.openapi == "3.1.0"
+    def is_openapi_modern(self) -> bool:
+        """Check if OpenAPI 3.1.0+ (JSON Schema based)."""
+        return not self.is_openapi_30
 
     @property
-    def normalized_version(self) -> Literal["3.0.3", "3.1.0"]:
+    def normalized_version(self) -> Literal["3.0.3", "3.1.0", "3.2.0"]:
         """
-        Get normalized OpenAPI version (3.0.3 or 3.1.0).
+        Get normalized OpenAPI version (3.0.3, 3.1.0, or 3.2.0).
 
         All 3.0.x versions are normalized to 3.0.3.
         """
         if self.is_openapi_30:
             return "3.0.3"
+        if self.openapi.startswith("3.2."):
+            return "3.2.0"
         return "3.1.0"
 
     @property

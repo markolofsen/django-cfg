@@ -1,19 +1,24 @@
 """
-OpenAPI 3.1.0 Parser - Handles type: ['string', 'null'].
+OpenAPI Modern Parser - Handles type: ['string', 'null'].
 
-This parser handles OpenAPI 3.1.0 specifications which use JSON Schema 2020-12
-standard for nullable fields (type arrays with 'null').
+Parser for OpenAPI 3.1.0+ specifications (3.1.x, 3.2.x) which use
+JSON Schema 2020-12 standard for nullable fields (type arrays with 'null').
 
-Reference: https://spec.openapis.org/oas/v3.1.0
+References:
+    https://spec.openapis.org/oas/v3.1.0
+    https://spec.openapis.org/oas/v3.2.0
 """
 
 from .base import BaseParser
 from .models import SchemaObject
 
 
-class OpenAPI31Parser(BaseParser):
+class OpenAPIModernParser(BaseParser):
     """
-    Parser for OpenAPI 3.1.0 specifications.
+    Parser for OpenAPI 3.1.0+ specifications (3.1.x, 3.2.x).
+
+    Both 3.1.x and 3.2.x use JSON Schema Draft 2020-12. The ``nullable: true``
+    keyword was removed in 3.2.0, but the type-array style is identical.
 
     Key differences from 3.0.x:
     - Uses type: ['string', 'null'] (JSON Schema standard)
@@ -25,9 +30,9 @@ class OpenAPI31Parser(BaseParser):
 
     Examples:
         >>> from django_cfg.modules.django_client.core.parser.models import OpenAPISpec
-        >>> spec_dict = {...}  # OAS 3.1.0 spec
+        >>> spec_dict = {...}  # OAS 3.1.0 or 3.2.0 spec
         >>> spec = OpenAPISpec.model_validate(spec_dict)
-        >>> parser = OpenAPI31Parser(spec)
+        >>> parser = OpenAPIModernParser(spec)
         >>> context = parser.parse()
         >>> context.openapi_info.version
         '3.1.0'
@@ -43,6 +48,10 @@ class OpenAPI31Parser(BaseParser):
             anyOf: [{"type": "string"}, {"type": "null"}]  # Pydantic style
             etc.
 
+        Also handles OAS 3.0.3-style ``nullable: true`` as a fallback, since
+        tools like drf-spectacular may emit ``nullable: true`` in custom schemas
+        (e.g. pagination) even when the spec version is 3.1.0.
+
         Examples:
             >>> schema = SchemaObject(type=['string', 'null'])
             >>> parser._detect_nullable(schema)
@@ -56,6 +65,10 @@ class OpenAPI31Parser(BaseParser):
             >>> parser._detect_nullable(schema)
             True
 
+            >>> schema = SchemaObject(type='integer', nullable=True)
+            >>> parser._detect_nullable(schema)
+            True
+
         Args:
             schema: Raw SchemaObject from spec
 
@@ -64,6 +77,12 @@ class OpenAPI31Parser(BaseParser):
         """
         # Check standard type: ['string', 'null'] format
         if schema.is_nullable_31:
+            return True
+
+        # Fallback: check OAS 3.0.3-style nullable: true
+        # drf-spectacular custom schemas (e.g. pagination) may use this
+        # even in a 3.1.0 spec
+        if schema.is_nullable_30:
             return True
 
         # Check anyOf: [{"type": "X"}, {"type": "null"}] format (Pydantic)

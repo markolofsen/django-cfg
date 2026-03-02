@@ -1,0 +1,240 @@
+---
+title: Admin Configuration
+sidebar_position: 8
+keywords:
+  - django admin
+  - django-cfg admin
+  - pydantic admin
+  - admin config
+description: Admin configuration for Django-CFG apps using PydanticAdmin and AdminConfig. Display fields, badges, actions, fieldsets, and read-only admin patterns.
+---
+
+# Admin Configuration
+
+Django-CFG uses a declarative admin system based on `PydanticAdmin` and `AdminConfig`. No more scattered `list_display`, `fieldsets`, and method definitions — everything is configured in one place.
+
+<Callout type="info">
+For a full reference on the admin system including all field types and configuration options, see the [Django Admin module docs](/features/modules/django-admin/overview).
+</Callout>
+
+## Basic Setup
+
+```python
+# admin/my_admin.py
+
+from django.contrib import admin
+from django_cfg.modules.django_admin import AdminConfig, BadgeField, DateTimeField
+from django_cfg.modules.django_admin.base import PydanticAdmin
+
+from ..models import APIKey
+
+config = AdminConfig(
+    model=APIKey,
+    list_display=["name", "prefix", "status_badge", "last_used_display", "created_at"],
+    list_filter=["is_active", "key_type"],
+    search_fields=["name", "prefix"],
+    ordering=["-created_at"],
+    display_fields=[
+        BadgeField(
+            name="status_badge",
+            label_map={"active": "success", "expired": "danger", "revoked": "warning"},
+        ),
+        DateTimeField(name="last_used_display", show_relative=True),
+    ],
+)
+
+@admin.register(APIKey)
+class APIKeyAdmin(PydanticAdmin):
+    config = config
+```
+
+From **api_keys** (stockapis) — the entire admin configuration in one `AdminConfig` object.
+
+## Display Fields
+
+Special field types for rich admin display:
+
+```python
+display_fields=[
+    # Status badge with color mapping
+    BadgeField(
+        name="type_badge",
+        label_map={
+            "command": "info",
+            "machine": "success",
+            "auth": "warning",
+            "settings": "secondary",
+        },
+    ),
+
+    # Relative timestamps ("2 hours ago")
+    DateTimeField(name="created_display", show_relative=True),
+
+    # User display with avatar
+    UserField(name="user_display"),
+
+    # Truncated text
+    TextField(name="details_preview", truncate=100),
+]
+```
+
+## Computed Fields
+
+For dynamic display that requires logic:
+
+```python
+@admin.register(Symbol)
+class SymbolAdmin(PydanticAdmin):
+    config = config
+
+    @computed_field("Status")
+    def status_display(self, obj):
+        if obj.is_tradeable:
+            return self.html.badge("Active", "success")
+        return self.html.badge("Inactive", "danger")
+
+    @computed_field("Data Coverage")
+    def data_coverage(self, obj):
+        flags = []
+        if obj.has_klines:
+            flags.append("Klines")
+        if obj.has_trades:
+            flags.append("Trades")
+        return self.html.text(", ".join(flags) if flags else "None")
+```
+
+From **symbols** (stockapis) — `@computed_field` methods use `self.html` helpers.
+
+## Fieldsets
+
+Group fields into sections:
+
+```python
+from django_cfg.modules.django_admin import FieldsetConfig
+
+config = AdminConfig(
+    model=Activity,
+    fieldsets=[
+        FieldsetConfig(
+            title="Activity Info",
+            fields=["type", "action", "target"],
+        ),
+        FieldsetConfig(
+            title="Context",
+            fields=["details", "ip_address", "user_agent"],
+            collapsed=True,
+        ),
+        FieldsetConfig(
+            title="Relations",
+            fields=["workspace", "user"],
+        ),
+    ],
+)
+```
+
+## Actions
+
+Custom admin actions with confirmation and bulk support:
+
+```python
+from django_cfg.modules.django_admin import ActionConfig
+
+config = AdminConfig(
+    model=APIKey,
+    actions=[
+        ActionConfig(
+            name="revoke_keys",
+            label="Revoke selected keys",
+            icon="block",
+            variant="danger",
+        ),
+        ActionConfig(
+            name="activate_keys",
+            label="Activate selected keys",
+            icon="check_circle",
+            variant="success",
+        ),
+    ],
+)
+
+@admin.register(APIKey)
+class APIKeyAdmin(PydanticAdmin):
+    config = config
+
+    def revoke_keys(self, request, queryset):
+        count = queryset.update(is_active=False)
+        self.message_user(request, f"Revoked {count} keys.")
+
+    def activate_keys(self, request, queryset):
+        count = queryset.update(is_active=True)
+        self.message_user(request, f"Activated {count} keys.")
+```
+
+## Read-Only Admin
+
+For audit logs and activity records — view-only, no create/edit:
+
+```python
+config = AdminConfig(
+    model=Activity,
+    list_display=["type_badge", "action", "target", "user_display", "created_display"],
+    select_related=["workspace", "user"],
+    readonly_fields="__all__",
+)
+
+@admin.register(Activity)
+class ActivityAdmin(PydanticAdmin):
+    config = config
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
+```
+
+From **activity** (cmdop) — audit logs are immutable, only superusers can delete.
+
+## Query Optimization
+
+Use `select_related` in AdminConfig to prevent N+1 queries in list views:
+
+```python
+config = AdminConfig(
+    model=Activity,
+    select_related=["workspace", "user"],  # Joined in SQL
+    list_display=["workspace_name", "user_email", "type", "action"],
+)
+```
+
+## Inline Admin
+
+For parent-child relationships displayed inline:
+
+```python
+class CoreMemoryBlockInline(admin.TabularInline):
+    model = CoreMemoryBlock
+    extra = 0
+    readonly_fields = ["block_type", "content", "version"]
+
+@admin.register(Agent)
+class AgentAdmin(PydanticAdmin):
+    config = agent_config
+    inlines = [CoreMemoryBlockInline]
+```
+
+From **agents** (stockapis-trader) — memory blocks displayed inline within the agent detail view.
+
+## File Organization
+
+```
+admin/
+├── __init__.py                 # Re-exports
+├── my_model_admin.py           # AdminConfig + PydanticAdmin
+└── actions.py                  # Shared action handlers (optional)
+```
+
+For simple apps, a single `admin.py` is fine. Split into a directory when you have multiple models with complex admin configs.

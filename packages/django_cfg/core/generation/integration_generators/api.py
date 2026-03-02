@@ -178,6 +178,10 @@ class APIFrameworksGenerator:
                 },
                 "COMPONENT_SPLIT_REQUEST": True,
                 "COMPONENT_SPLIT_PATCH": True,
+                # OpenAPI 3.1 for Pydantic nullable field compatibility
+                "OAS_VERSION": "3.1.0",
+                # Prevent null from appearing as explicit enum value
+                "ENUM_ADD_EXPLICIT_BLANK_NULL_CHOICE": False,
                 # Postprocessing hooks
                 "POSTPROCESSING_HOOKS": [
                     "django_cfg.modules.django_client.spectacular.auto_fix_enum_names",

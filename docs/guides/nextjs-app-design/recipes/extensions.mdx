@@ -1,0 +1,155 @@
+---
+title: Extensions
+sidebar_position: 8
+keywords:
+  - extensions
+  - ext-base
+  - ext-payments
+  - adapter pattern
+  - mini-app
+description: "@djangocfg extension packages — standard structure, shared auth via ext-base, adapter pattern (API vs Demo), and self-contained mini-apps."
+---
+
+# Extensions
+
+Six `@djangocfg/ext-*` packages provide drop-in features that follow identical patterns.
+
+<Callout type="info">
+For the generated API layer that extensions build on see [Data Layer](/guides/nextjs-app-design/data-layer). For Context architecture see [State Management](/guides/nextjs-app-design/state-management).
+</Callout>
+
+## Available Extensions
+
+| Extension | Purpose | Key Exports |
+|-----------|---------|-------------|
+| `ext-base` | Foundation for all extensions | `ExtensionProvider`, `createExtensionContext`, `createExtensionAPI` |
+| `ext-knowbase` | Knowledge base + AI chat RAG | `KnowbaseChatProvider`, `KnowledgeChat`, `ChatWidget` |
+| `ext-leads` | Contact forms / CRM | `ContactForm`, `ContactPage`, `ContactFormProvider` |
+| `ext-newsletter` | Email subscriptions | `HeroProps`, newsletter API |
+| `ext-payments` | Crypto/fiat wallet | `WalletPage`, `WalletProvider`, `useBalance`, `useActivity` |
+| `ext-support` | Support tickets / helpdesk | `SupportPage`, `SupportProvider`, `useTickets` |
+
+## Standard Extension Structure
+
+All six extensions follow this package layout:
+
+```
+@djangocfg/ext-<name>/
+├── src/
+│   ├── index.ts           # Server-safe exports (types, API, config)
+│   ├── hooks.ts           # Client-only exports (providers, SWR hooks, components)
+│   ├── api/
+│   │   └── generated/     # Auto-generated from Django OpenAPI
+│   │       └── ext_<name>/
+│   │           ├── _utils/fetchers/
+│   │           ├── _utils/hooks/
+│   │           └── _utils/schemas/
+│   ├── contexts/          # React context providers
+│   ├── components/        # UI components
+│   └── adapters/          # API vs Demo adapters (ext-payments, ext-support)
+├── package.json
+└── tsup.config.ts         # ESM + CJS dual build
+```
+
+Server-safe exports go through `index.ts`, client-only exports through `hooks.ts`.
+
+## Integration Pattern
+
+```typescript
+// In Next.js layout or page
+import { WalletProvider } from '@djangocfg/ext-payments';
+import { WalletPage } from '@djangocfg/ext-payments';
+
+export default function PaymentsPage() {
+  return (
+    <WalletProvider>
+      <WalletPage />
+    </WalletProvider>
+  );
+}
+
+// Demo mode (no backend needed)
+<WalletPage isDemo />
+```
+
+## Shared Auth via ext-base
+
+Extensions share auth storage with the main `@djangocfg/api` client:
+
+```typescript
+import { createExtensionAPI } from '@djangocfg/ext-base';
+import { getSharedAuthStorage } from '@djangocfg/ext-base/api';
+
+// Extension API automatically uses the same JWT tokens
+const extensionApi = createExtensionAPI({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL,
+  storage: getSharedAuthStorage(),
+});
+```
+
+This means users authenticate once with the main app and all extensions share that session.
+
+## Adapter Pattern
+
+`ext-payments` and `ext-support` support both live API and demo mode via adapters:
+
+```typescript
+// adapters/api.ts — real backend
+export class APIAdapter implements WalletAdapter {
+  async getBalance(): Promise<BalanceResult> {
+    return await api.ext_payments.balanceList();
+  }
+}
+
+// adapters/demo.ts — mock data
+export class DemoAdapter implements WalletAdapter {
+  async getBalance(): Promise<BalanceResult> {
+    return { balance: 1250.00, currency: 'USD' };
+  }
+}
+
+// Context picks adapter based on isDemo prop
+const adapter = isDemo ? new DemoAdapter() : new APIAdapter();
+```
+
+The adapter interface ensures both implementations expose the same methods. New environments (test, staging) can provide their own adapter.
+
+## Self-Contained Mini-Apps
+
+Extensions can be deployed as fully self-contained modules within an app:
+
+```
+private/payments/src/
+├── api/generated/ext_payments/    # Own generated API
+├── contexts/WalletContext.tsx      # Own context
+├── contexts/types.ts              # Own type re-exports
+├── components/                    # Own components
+└── hooks/                         # Own hooks
+```
+
+Does not share `_lib/api/` or `_lib/contexts/` with the parent app. Useful for features backed by separate Django apps.
+
+## Data Merging with useMemo
+
+Extensions that aggregate multiple data sources use `useMemo` for merging:
+
+```typescript
+const activity = useMemo(() => {
+  const items: ActivityItem[] = [
+    ...payments.map(p => ({ ...p, activityType: 'payment' as const })),
+    ...transactions.map(t => ({ ...t, activityType: 'transaction' as const })),
+    ...withdrawals.map(w => ({ ...w, activityType: 'withdrawal' as const })),
+  ];
+  return items.sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}, [payments, transactions, withdrawals]);
+```
+
+## Rules
+
+1. Import server-safe exports from `@djangocfg/ext-<name>`, client-only exports from `@djangocfg/ext-<name>/hooks`
+2. Use `createExtensionAPI` with `getSharedAuthStorage()` to share auth with the main app
+3. Use the adapter pattern for extensions that need demo mode — define an interface, implement API and Demo variants
+4. Extension translations register via `createRequestConfig` with a dedicated namespace
+5. Self-contained extension modules have their own `generated/`, `contexts/`, `types.ts` — they do not share the parent app's `_lib/`

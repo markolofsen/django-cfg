@@ -1,0 +1,198 @@
+---
+title: Managers & QuerySets
+sidebar_position: 3
+keywords:
+  - django custom managers
+  - django queryset
+  - django-cfg managers
+description: Custom Manager and QuerySet patterns for Django-CFG apps. Chainable filters, prefetch helpers, and when to use managers vs services.
+---
+
+# Managers & QuerySets
+
+Custom managers encapsulate common query patterns as chainable, reusable methods. They keep query logic out of views and services.
+
+## Basic Pattern
+
+Define a QuerySet with methods, then create a Manager from it:
+
+```python
+# managers/machine_managers.py
+
+from django.db import models
+from django.utils import timezone
+from datetime import timedelta
+
+
+class MachineQuerySet(models.QuerySet):
+    def online(self):
+        return self.filter(status="online")
+
+    def offline(self):
+        return self.filter(status="offline")
+
+    def by_os(self, os):
+        return self.filter(os=os)
+
+    def macos(self):
+        return self.by_os("macos")
+
+    def windows(self):
+        return self.by_os("windows")
+
+    def linux(self):
+        return self.by_os("linux")
+
+    def for_workspace(self, workspace):
+        return self.filter(workspace=workspace)
+
+    def for_user(self, user):
+        return self.filter(workspace__members=user)
+
+    def recently_seen(self, minutes=5):
+        cutoff = timezone.now() - timedelta(minutes=minutes)
+        return self.filter(last_seen__gte=cutoff)
+
+    def stale(self, minutes=10):
+        cutoff = timezone.now() - timedelta(minutes=minutes)
+        return self.filter(last_seen__lt=cutoff)
+
+
+MachineManager = models.Manager.from_queryset(MachineQuerySet)
+```
+
+From **machines** (cmdop) — the QuerySet has methods for OS, status, time ranges, and workspace scoping.
+
+## Using in Models
+
+```python
+class Machine(models.Model):
+    objects = MachineManager()  # Replaces default manager
+
+    class Meta:
+        ...
+```
+
+Now every query starts with these chainable methods:
+
+```python
+# In a view or service
+Machine.objects.online().macos().recently_seen(minutes=2)
+Machine.objects.for_workspace(workspace).stale(minutes=30)
+```
+
+## Prefetch Helpers
+
+Add methods that optimize related object loading:
+
+```python
+class MachineQuerySet(models.QuerySet):
+    # ... filter methods above ...
+
+    def with_workspace(self):
+        return self.select_related("workspace")
+
+    def with_active_sessions(self):
+        return self.prefetch_related(
+            models.Prefetch(
+                "sessions",
+                queryset=Session.objects.filter(is_active=True),
+            )
+        )
+```
+
+Call them in ViewSets:
+
+```python
+def get_queryset(self):
+    return Machine.objects.for_user(
+        self.request.user
+    ).with_workspace().with_active_sessions()
+```
+
+## Domain-Specific Methods
+
+### Latest record
+
+```python
+class MarketSnapshotQuerySet(models.QuerySet):
+    def for_agent(self, agent):
+        return self.filter(agent=agent)
+
+    def latest_snapshot(self, agent):
+        return self.filter(agent=agent).order_by("-timestamp").first()
+
+    def by_range(self, agent, hours=24):
+        cutoff = timezone.now() - timedelta(hours=hours)
+        return self.filter(agent=agent, timestamp__gte=cutoff)
+```
+
+From **market** (stockapis-trader) — snapshot data queried by agent and time range.
+
+### Full state dump
+
+```python
+class NumericalLedgerQuerySet(models.QuerySet):
+    def full_ledger(self, agent):
+        """Return all key-value pairs for an agent as a dict."""
+        entries = self.filter(agent=agent).values_list("key", "value")
+        return dict(entries)
+```
+
+From **trading** (stockapis-trader) — ledger stores portfolio state as key-value pairs.
+
+### Active/inactive scoping
+
+```python
+class AgentQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(is_active=True)
+
+    def by_exchange(self, exchange):
+        return self.filter(exchange=exchange)
+
+    def by_symbol(self, symbol):
+        return self.filter(symbol=symbol)
+```
+
+## Manager vs Service — When to Use Which
+
+| Use Manager when... | Use Service when... |
+|---------------------|---------------------|
+| Pure query composition | Multi-model transactions |
+| Chainable filters | External API calls |
+| Prefetch/select_related optimization | Complex business rules |
+| Single-model aggregation | Cross-model data assembly |
+| Result is a QuerySet | Result is a dict, dataclass, or Pydantic model |
+
+**Example boundary:** a manager's `.stats()` returns aggregated data from one model. A service's `.get_decision_stats()` calls the manager but also adds external context or cross-model calculations.
+
+```python
+# Manager — pure query
+class TradeDecisionQuerySet(models.QuerySet):
+    def stats(self, agent):
+        return self.filter(agent=agent).aggregate(
+            total=Count("id"),
+            wins=Count("id", filter=Q(pnl__gt=0)),
+            total_pnl=Sum("pnl"),
+        )
+
+# Service — orchestration
+class StatsService:
+    @staticmethod
+    def get_decision_stats(agent):
+        raw = TradeDecision.objects.stats(agent)
+        raw["win_rate"] = raw["wins"] / raw["total"] if raw["total"] else 0
+        return raw
+```
+
+## Naming Conventions
+
+| Class | Pattern |
+|-------|---------|
+| QuerySet | `{Model}QuerySet` |
+| Manager | `{Model}Manager` |
+| File | `{model_name}_managers.py` |
+| Filter methods | verb or adjective: `active()`, `online()`, `for_user()` |
+| Prefetch methods | `with_{relation}()` |
+| Aggregate methods | noun: `stats()`, `full_ledger()`, `latest_snapshot()` |

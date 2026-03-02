@@ -1,0 +1,302 @@
+---
+title: Pydantic v2 Models
+sidebar_position: 2
+keywords:
+  - pydantic v2
+  - python data models
+  - pydantic validation
+  - pydantic serialization
+description: Pydantic v2 patterns for Python modules. Model categories, validation, serialization, computed fields, discriminated unions, and v1 migration.
+---
+
+# Pydantic v2 Models
+
+All data structures use Pydantic models. No raw dicts, no `Any` types.
+
+## Core Principles
+
+1. **No raw dicts** — always use Pydantic models
+2. **No `Any` type** — explicit types everywhere
+3. **Validate at boundaries** — validate on input, trust internally
+4. **Immutability preferred** — use `frozen=True` where possible
+
+## Model Categories
+
+### Domain Model
+
+```python
+from datetime import datetime
+from enum import Enum
+from pydantic import BaseModel, Field, ConfigDict
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    USER = "user"
+    GUEST = "guest"
+
+class User(BaseModel):
+    model_config = ConfigDict(
+        validate_assignment=True,
+        extra="forbid",
+        use_enum_values=True,
+        str_strip_whitespace=True,
+    )
+
+    id: int = Field(..., gt=0)
+    name: str = Field(..., min_length=1, max_length=100)
+    email: str = Field(..., pattern=r"^[^@]+@[^@]+\.[^@]+$")
+    role: UserRole = UserRole.USER
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    tags: list[str] = Field(default_factory=list)
+```
+
+### Configuration (Settings)
+
+```python
+from pydantic import Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class AppConfig(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="APP_",
+        env_file=".env",
+        extra="ignore",
+        case_sensitive=False,
+    )
+
+    api_key: str = Field(..., min_length=32)
+    database_url: str
+    debug: bool = False
+    timeout: int = Field(default=30, gt=0, le=300)
+    workers: int = Field(default=4, ge=1, le=32)
+
+    @model_validator(mode="after")
+    def validate_settings(self) -> "AppConfig":
+        if self.debug and self.workers > 1:
+            object.__setattr__(self, "workers", 1)
+        return self
+```
+
+### Request / Response
+
+```python
+from typing import Generic, TypeVar
+
+T = TypeVar("T")
+
+class PaginationParams(BaseModel):
+    page: int = Field(default=1, ge=1)
+    per_page: int = Field(default=20, ge=1, le=100)
+
+class ApiResponse(BaseModel, Generic[T]):
+    success: bool
+    data: T | None = None
+    error: str | None = None
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
+
+    @property
+    def has_next(self) -> bool:
+        return self.page < self.total_pages
+```
+
+## Validation
+
+### Field Validators
+
+```python
+from pydantic import field_validator
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Name cannot be empty")
+        return v.strip().title()
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        v = v.lower().strip()
+        if "@" not in v:
+            raise ValueError("Invalid email format")
+        return v
+```
+
+### Model Validators (Cross-Field)
+
+```python
+from pydantic import model_validator
+
+class DateRange(BaseModel):
+    start_date: datetime
+    end_date: datetime
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "DateRange":
+        if self.start_date >= self.end_date:
+            raise ValueError("start_date must be before end_date")
+        return self
+```
+
+### Before Validation
+
+```python
+class FlexibleInput(BaseModel):
+    value: int
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_input(cls, data: Any) -> dict:
+        if isinstance(data, (int, str)):
+            return {"value": int(data)}
+        return data
+```
+
+## Serialization
+
+```python
+user = User(id=1, name="John", email="john@example.com")
+
+# Basic
+data = user.model_dump()
+
+# Exclude None values
+data = user.model_dump(exclude_none=True)
+
+# Specific fields only
+data = user.model_dump(include={"id", "name"})
+
+# JSON-safe types (datetime → ISO string)
+data = user.model_dump(mode="json")
+
+# Direct JSON string
+json_str = user.model_dump_json()
+```
+
+### Custom Serialization
+
+```python
+from pydantic import field_serializer
+from decimal import Decimal
+
+class Product(BaseModel):
+    name: str
+    price: Decimal
+
+    @field_serializer("price")
+    def serialize_price(self, value: Decimal) -> str:
+        return f"${value:.2f}"
+```
+
+## Computed Fields
+
+```python
+from pydantic import computed_field
+
+class Rectangle(BaseModel):
+    width: float
+    height: float
+
+    @computed_field
+    @property
+    def area(self) -> float:
+        return self.width * self.height
+
+rect = Rectangle(width=10, height=5)
+rect.model_dump()  # {"width": 10, "height": 5, "area": 50.0}
+```
+
+## Discriminated Unions
+
+```python
+from typing import Literal, Annotated, Union
+
+class Cat(BaseModel):
+    pet_type: Literal["cat"] = "cat"
+    meows: int
+
+class Dog(BaseModel):
+    pet_type: Literal["dog"] = "dog"
+    barks: float
+
+Pet = Annotated[Union[Cat, Dog], Field(discriminator="pet_type")]
+
+class Owner(BaseModel):
+    name: str
+    pet: Pet
+```
+
+## Immutable Models
+
+```python
+class ImmutableUser(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: int
+    name: str
+    email: str
+
+user = ImmutableUser(id=1, name="John", email="john@test.com")
+user.name = "Jane"  # FrozenInstanceError!
+```
+
+## v1 to v2 Migration
+
+| v1 | v2 | Notes |
+|----|-----|-------|
+| `.parse_obj(x)` | `.model_validate(x)` | Main validation |
+| `.dict()` | `.model_dump()` | Serialization |
+| `.json()` | `.model_dump_json()` | JSON output |
+| `.parse_raw(s)` | `.model_validate_json(s)` | JSON parsing |
+| `.schema()` | `.model_json_schema()` | JSON schema |
+| `@validator` | `@field_validator` | Field validation |
+| `@root_validator` | `@model_validator` | Model validation |
+| `Config` inner class | `model_config = ConfigDict()` | Configuration |
+| `__fields__` | `model_fields` | Field access |
+| `.copy()` | `.model_copy()` | Copying |
+
+## Anti-Patterns
+
+```python
+# BAD — raw dict
+def process(data: dict) -> dict:
+    return {"result": data["value"]}
+
+# BAD — Any type
+def process(data: Any) -> Any:
+    return data
+
+# BAD — dict field in model
+class BadModel(BaseModel):
+    data: dict  # Use nested Pydantic model!
+
+# GOOD — nested model
+class NestedData(BaseModel):
+    key: str
+    value: int
+
+class GoodModel(BaseModel):
+    data: NestedData
+```
+
+## Rules
+
+1. **No raw dicts** — every data structure is a Pydantic model
+2. **No `Any` type** — explicit types for every field
+3. **Validate at boundaries** — `model_validate()` at input, trust internally
+4. **Use `ConfigDict`** — not inner `Config` class (v2 syntax)
+5. **`model_dump()` not `.dict()`** — use v2 methods only
+6. **`@field_validator`** not `@validator` — use v2 decorators
+7. **Immutable where possible** — `frozen=True` for value objects
+8. **Constraints on fields** — `min_length`, `gt`, `le`, `pattern`

@@ -1,0 +1,145 @@
+---
+title: Forms
+sidebar_position: 2
+keywords:
+  - react-hook-form
+  - zod validation
+  - zodresolver
+  - form patterns
+description: react-hook-form with Zod validation — schema definition, zodResolver setup, field patterns, error display, and API integration.
+---
+
+# Forms
+
+All forms use react-hook-form with Zod validation via `zodResolver`.
+
+<Callout type="info">
+For the dialog wrapper pattern (separating dialog state from form logic) see [Component Patterns](/guides/nextjs-app-design/component-patterns).
+</Callout>
+
+## Schema + Types
+
+Define the Zod schema first, then infer the TypeScript type:
+
+```typescript
+import { z } from 'zod';
+
+const schema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1).max(100),
+  role: z.enum(['admin', 'user', 'viewer']),
+  notify: z.boolean().default(false),
+});
+
+type FormData = z.infer<typeof schema>;
+```
+
+## Form Setup
+
+```typescript
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+const form = useForm<FormData>({
+  resolver: zodResolver(schema),
+  defaultValues: {
+    email: '',
+    name: '',
+    role: 'user',
+    notify: false,
+  },
+});
+```
+
+## Field Patterns
+
+### Simple Inputs
+
+```typescript
+<Input
+  {...form.register('email')}
+  placeholder="Email"
+/>
+{form.formState.errors.email && (
+  <span className="text-sm text-destructive">
+    {form.formState.errors.email.message}
+  </span>
+)}
+```
+
+### Controller for Complex Components
+
+Use `Controller` for components that do not support `ref` forwarding:
+
+```typescript
+import { Controller } from 'react-hook-form';
+
+<Controller
+  control={form.control}
+  name="role"
+  render={({ field }) => (
+    <Select value={field.value} onValueChange={field.onChange}>
+      <SelectItem value="admin">Admin</SelectItem>
+      <SelectItem value="user">User</SelectItem>
+      <SelectItem value="viewer">Viewer</SelectItem>
+    </Select>
+  )}
+/>
+```
+
+## Submit with API Integration
+
+```typescript
+const { createMachine } = useMachines();
+
+const onSubmit = useCallback(async (data: FormData) => {
+  try {
+    await createMachine(data);
+    form.reset();
+    onSuccess?.();
+  } catch (error) {
+    form.setError('root', { message: 'Failed to create. Please try again.' });
+  }
+}, [createMachine, form, onSuccess]);
+
+<form onSubmit={form.handleSubmit(onSubmit)}>
+  {/* fields */}
+  {form.formState.errors.root && (
+    <Alert variant="destructive">{form.formState.errors.root.message}</Alert>
+  )}
+  <Button type="submit" disabled={form.formState.isSubmitting}>
+    {form.formState.isSubmitting ? 'Saving...' : 'Save'}
+  </Button>
+</form>
+```
+
+## Dialog + Form Separation
+
+Always separate dialog state from form logic:
+
+```typescript
+// EditDialog.tsx — handles open/close
+export function EditDialog({ open, onOpenChange }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <EditForm onSuccess={() => onOpenChange(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// EditForm.tsx — handles form logic only
+export function EditForm({ onSuccess }) {
+  const form = useForm<FormData>({ resolver: zodResolver(schema) });
+  // ... validation, submission, no dialog concerns
+}
+```
+
+## Rules
+
+1. Define the Zod schema first, then derive the TypeScript type with `z.infer`
+2. Always use `zodResolver` — never validate manually in `onSubmit`
+3. Use `Controller` for components that do not support `ref` forwarding (Select, Combobox, DatePicker)
+4. Set API errors on `root` with `form.setError('root', ...)` — display at the form level
+5. Separate dialog state from form logic — form component receives `onSuccess`, not `open`/`onOpenChange`

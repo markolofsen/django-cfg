@@ -43,6 +43,8 @@ class ScheduleViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
     serializer_class = ScheduledJobSerializer
 
+    queryset = type("_", (), {"model": None})()
+
     @extend_schema(
         tags=["RQ Schedules"],
         summary="List scheduled jobs",
@@ -259,10 +261,10 @@ class ScheduleViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         description="Returns detailed information about a specific scheduled job.",
         parameters=[
             OpenApiParameter(
-                name="pk",
+                name="id",
                 type=str,
                 location=OpenApiParameter.PATH,
-                description="Job ID",
+                description="Scheduled job ID",
             ),
             OpenApiParameter(
                 name="queue",
@@ -343,7 +345,7 @@ class ScheduleViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         description="Cancel a scheduled job by ID.",
         parameters=[
             OpenApiParameter(
-                name="pk",
+                name="id",
                 type=str,
                 location=OpenApiParameter.PATH,
                 description="Job ID",

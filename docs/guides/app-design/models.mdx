@@ -1,0 +1,255 @@
+---
+title: Models
+sidebar_position: 2
+keywords:
+  - django models
+  - django-cfg models
+  - django model design
+  - uuid primary key
+description: Model design patterns for Django-CFG apps. UUID primary keys, TextChoices, computed properties, constraints, and relationship patterns with real examples.
+---
+
+# Models
+
+Models define database schema and expose computed state. Keep them focused on data — business logic belongs in services.
+
+## UUID Primary Keys
+
+Prefer UUID for public-facing entities:
+
+```python
+import uuid
+from django.db import models
+
+class Agent(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agent_id = models.CharField(max_length=100, unique=True)  # Human-readable lookup
+```
+
+This pattern from the **agents** app (stockapis-trader) gives you non-guessable IDs for API exposure while keeping a human-readable `agent_id` for lookups (`lookup_field = "agent_id"` in the ViewSet).
+
+## TextChoices
+
+Use inner classes for enumerated fields:
+
+```python
+class Symbol(models.Model):
+    class Exchange(models.TextChoices):
+        BINANCE = "binance", "Binance"
+        BYBIT = "bybit", "Bybit"
+        OKX = "okx", "OKX"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        INACTIVE = "inactive", "Inactive"
+        DELISTED = "delisted", "Delisted"
+
+    exchange = models.CharField(max_length=20, choices=Exchange.choices)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+```
+
+From the **symbols** app — choices live inside the model, no separate enums file needed for small sets.
+
+For choices shared across apps, centralize them:
+
+```python
+# core/enums.py
+EXCHANGE_CHOICES = ["binance", "bybit", "okx"]
+
+class ExchangeEnum(str, Enum):
+    BINANCE = "binance"
+    BYBIT = "bybit"
+    OKX = "okx"
+```
+
+## Computed Properties
+
+Use `@property` for state derived from child objects — don't store it in the DB:
+
+```python
+class DownloadRequest(models.Model):
+    # No status field in the DB!
+
+    @property
+    def status(self) -> str:
+        """Computed from child segments."""
+        segments = self.segments.all()
+        if not segments.exists():
+            return "pending"
+        if segments.filter(status="failed").exists():
+            return "failed"
+        if segments.filter(status="processing").exists():
+            return "processing"
+        if all(s.status == "completed" for s in segments):
+            return "completed"
+        return "partial"
+
+    @property
+    def progress_percent(self) -> float:
+        """Aggregated from segments."""
+        total = self.segments.count()
+        if not total:
+            return 0.0
+        completed = self.segments.filter(status="completed").count()
+        return round((completed / total) * 100, 1)
+```
+
+From **cryptodb_driver** (stockapis) — the parent model computes status from its children, avoiding stale data.
+
+## Model Methods
+
+Keep methods that operate on the model instance:
+
+```python
+class APIKey(models.Model):
+    hashed_key = models.CharField(max_length=64)
+    prefix = models.CharField(max_length=10)
+    is_active = models.BooleanField(default=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    @property
+    def is_expired(self):
+        if not self.expires_at:
+            return False
+        return timezone.now() > self.expires_at
+
+    @property
+    def is_valid(self):
+        return self.is_active and not self.is_expired
+
+    @classmethod
+    def create_key(cls, user, name):
+        """Create key and return (instance, raw_key) — raw_key shown only once."""
+        raw_key = cls.generate_api_key()
+        instance = cls.objects.create(
+            user=user,
+            name=name,
+            hashed_key=hash_api_key(raw_key),
+            prefix=raw_key[:10],
+        )
+        return instance, raw_key
+
+    def mark_used(self):
+        self.last_used = timezone.now()
+        self.save(update_fields=["last_used"])
+```
+
+From **api_keys** — the `create_key()` classmethod returns a tuple because the raw key cannot be retrieved after creation.
+
+## Constraints and Indexes
+
+### Unique constraints
+
+```python
+class Meta:
+    constraints = [
+        models.UniqueConstraint(
+            fields=["exchange", "symbol", "market_type"],
+            name="unique_symbol_per_exchange_market",
+        ),
+    ]
+```
+
+### Composite indexes
+
+```python
+class Meta:
+    indexes = [
+        models.Index(fields=["agent", "timestamp"]),
+        models.Index(fields=["agent", "regime"]),
+        models.Index(fields=["exchange", "market_type"]),
+    ]
+```
+
+From **market** (stockapis-trader) — MarketSnapshot has 1440 records per agent per day, so indexes on `(agent, timestamp)` are critical.
+
+## Relationship Patterns
+
+### Through model with role properties
+
+```python
+class WorkspaceMember(models.Model):
+    class Role(models.TextChoices):
+        OWNER = "owner", "Owner"
+        ADMIN = "admin", "Admin"
+        MEMBER = "member", "Member"
+
+    workspace = models.ForeignKey("Workspace", on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)
+
+    class Meta:
+        unique_together = ("workspace", "user")
+
+    @property
+    def can_manage_machines(self):
+        return self.role in (self.Role.OWNER, self.Role.ADMIN)
+
+    @property
+    def can_invite_members(self):
+        return self.role in (self.Role.OWNER, self.Role.ADMIN)
+
+    @property
+    def can_delete_workspace(self):
+        return self.role == self.Role.OWNER
+```
+
+From **workspaces** (cmdop) — permission checks as model properties, used directly in views.
+
+### OneToOne profile extension
+
+```python
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    company = models.CharField(max_length=200, blank=True)
+    job_title = models.CharField(max_length=200, blank=True)
+```
+
+### FK with on_delete choices
+
+| Pattern | When to use |
+|---------|------------|
+| `CASCADE` | Child cannot exist without parent (segments of a request) |
+| `PROTECT` | Prevent accidental parent deletion (symbol referenced by downloads) |
+| `SET_NULL` | Keep record but clear reference (user deleted, keep audit log) |
+
+## Timestamps
+
+Standard pattern for all models:
+
+```python
+created_at = models.DateTimeField(auto_now_add=True)
+updated_at = models.DateTimeField(auto_now=True)
+```
+
+For activity tracking, add optional heartbeat:
+
+```python
+last_seen = models.DateTimeField(null=True, blank=True)
+
+@property
+def is_online(self):
+    if not self.last_seen:
+        return False
+    age = (timezone.now() - self.last_seen).total_seconds()
+    return age < 120  # 2 minutes
+```
+
+From **machines** (cmdop) — heartbeat-based online status.
+
+## Specialized Fields
+
+```python
+# JSON for flexible data
+context = models.JSONField(default=dict, blank=True)
+tools_used = models.JSONField(default=list, blank=True)
+
+# PostgreSQL array
+tags = ArrayField(models.CharField(max_length=50), default=list, blank=True)
+
+# Decimal for financial precision
+price = models.DecimalField(max_digits=20, decimal_places=8)
+
+# pgvector for semantic search
+embedding = VectorField(dimensions=1536)
+```

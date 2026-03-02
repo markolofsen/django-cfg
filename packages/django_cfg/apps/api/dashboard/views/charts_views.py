@@ -37,6 +37,8 @@ class ChartsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
     serializer_class = ChartDataSerializer
 
+    queryset = type("_", (), {"model": None})()
+
     @extend_schema(
         summary="Get user registration chart",
         description="Retrieve user registration data for chart visualization",

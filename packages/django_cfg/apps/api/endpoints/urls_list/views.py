@@ -9,6 +9,7 @@ from urllib.parse import urljoin
 
 from django.conf import settings
 from django.urls import URLPattern, URLResolver, get_resolver
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
@@ -228,6 +229,12 @@ class DRFURLsListView(APIView):
         return view_info
 
 
+@extend_schema(
+    tags=["System"],
+    summary="Compact URL list",
+    description="Returns a compact list of all URL patterns and their names.",
+    responses={200: {"type": "object"}},
+)
 class DRFURLsListCompactView(APIView):
     """
     Compact URLs list endpoint - just patterns and names.
