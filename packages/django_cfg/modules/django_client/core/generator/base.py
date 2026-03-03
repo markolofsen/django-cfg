@@ -7,6 +7,7 @@ common functionality for all code generators (Python, TypeScript, etc.).
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -693,7 +694,10 @@ class BaseGenerator(ABC):
                 for value in schema.enum:
                     if isinstance(value, str):
                         # Convert "waiting_for_user" → "WAITING_FOR_USER"
-                        var_name = value.upper().replace("-", "_").replace(" ", "_")
+                        # Replace all non-alphanumeric chars with underscore
+                        var_name = re.sub(r'[^a-zA-Z0-9]', '_', value.upper())
+                        # Collapse multiple underscores
+                        var_name = re.sub(r'_+', '_', var_name).strip('_')
                     else:
                         # For integers: 1 → "VALUE_1"
                         var_name = f"VALUE_{value}"
