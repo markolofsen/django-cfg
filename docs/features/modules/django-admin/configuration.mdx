@@ -30,6 +30,7 @@ config = AdminConfig(
     # List display
     list_display=["field1", "field2"],  # Field names
     list_display_links=["field1"],      # Clickable fields (optional)
+    list_editable=["field2"],           # Inline-editable fields in list view
     list_per_page=50,                   # Pagination
     list_max_show_all=200,              # "Show all" limit
 
@@ -79,6 +80,40 @@ config = AdminConfig(
 <Callout type="info">
 **Automatic Optimization**
 `select_related` and `prefetch_related` are automatically applied to all queries in the admin. No need to override `get_queryset()`!
+
+</Callout>
+
+### List Editable
+
+Allow editing fields directly in the list view without opening the change form. Useful for quick moderation, ordering, and status toggling:
+
+```python
+config = AdminConfig(
+    model=Review,
+
+    list_display=["created_at", "user", "quote", "is_published", "order"],
+    list_display_links=["created_at"],
+    list_editable=["is_published", "order"],
+
+    display_fields=[
+        DateTimeField(name="created_at", title="Created", show_relative=True),
+        UserField(name="user", title="User"),
+        TextField(name="quote", title="Quote", truncate=60),
+    ],
+)
+```
+
+<Callout type="info">
+**Automatic Display Method Skipping**
+Fields in `list_editable` are rendered as form inputs by Django. Display methods (from `display_fields`) are automatically skipped for these fields — no manual workaround needed.
+
+</Callout>
+
+<Callout type="warning">
+**Django Rules for list_editable**
+- Fields must be in `list_display`
+- Fields **cannot** be in `list_display_links` (a field can't be both a link and editable)
+- The first field in `list_display` cannot be editable (unless you set `list_display_links`)
 
 </Callout>
 

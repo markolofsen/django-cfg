@@ -29,6 +29,7 @@ class AdminConfig(BaseModel):
     # Display
     list_display: List[str] = []
     list_display_links: List[str] | None = None
+    list_editable: List[str] = []       # Fields editable directly in list view
     list_per_page: int = 50
     list_max_show_all: int = 200
 

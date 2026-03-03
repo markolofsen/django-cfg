@@ -103,6 +103,10 @@ class PydanticAdminMixin(ViewMixin):
         else:
             cls.list_display_links = getattr(cls, 'list_display_links', None)
 
+        # List editable
+        if config.list_editable:
+            cls.list_editable = config.list_editable
+
         # Pagination
         cls.list_per_page = config.list_per_page
         cls.list_max_show_all = config.list_max_show_all

@@ -332,6 +332,32 @@ fieldsets=[
 
 ---
 
+## List Editable
+
+Edit fields directly in the list view — no need to open each record:
+
+```python
+config = AdminConfig(
+    model=Review,
+    list_display=['created_at', 'user', 'quote', 'source', 'is_published', 'order'],
+    list_display_links=['created_at'],
+    list_editable=['is_published', 'order'],  # Inline editing in list view
+    display_fields=[
+        DateTimeField(name='created_at', title='Created', show_relative=True),
+        UserField(name='user', title='User'),
+        # Note: fields in list_editable are rendered as form inputs,
+        # so they skip display method generation automatically.
+    ],
+)
+```
+
+**Rules:**
+- Fields in `list_editable` cannot be in `list_display_links`
+- Fields in `list_editable` must be in `list_display`
+- Display methods are automatically skipped for editable fields (they render as form inputs)
+
+---
+
 ## Filters & Search
 
 ```python

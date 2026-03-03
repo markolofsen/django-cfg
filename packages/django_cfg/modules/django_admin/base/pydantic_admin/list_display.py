@@ -45,8 +45,15 @@ def build_list_display(cls, config: 'AdminConfig') -> List[str]:
     result = []
     # Get list_display_links for detecting link fields
     link_fields = config.list_display_links or []
+    # Editable fields must remain as raw model field names in list_display
+    # (Django renders them as form inputs, display methods are not used)
+    editable_fields = set(config.list_editable) if config.list_editable else set()
 
     for field_name in config.list_display:
+        if field_name in editable_fields:
+            result.append(field_name)
+            continue
+
         # Check if we have a FieldConfig for this field
         field_config = config.get_display_field_config(field_name)
 

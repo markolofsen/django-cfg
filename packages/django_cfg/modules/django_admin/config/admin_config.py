@@ -59,6 +59,10 @@ class AdminConfig(BaseModel):
         default_factory=list,
         description="Fields that should be linked to change form"
     )
+    list_editable: List[str] = Field(
+        default_factory=list,
+        description="Fields editable directly in the list view"
+    )
     display_fields: List[FieldConfig] = Field(
         default_factory=list,
         description="Field configurations with widgets"
