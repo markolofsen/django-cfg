@@ -8,7 +8,7 @@ Reference: https://swagger.io/docs/specification/data-models/data-types/#null
 """
 
 from .base import BaseParser
-from .models import SchemaObject
+from .models import ReferenceObject, SchemaObject
 
 
 class OpenAPI30Parser(BaseParser):
@@ -65,13 +65,12 @@ class OpenAPI30Parser(BaseParser):
             has_actual_type = False
 
             for item in schema.anyOf:
-                if not isinstance(item, SchemaObject):
-                    continue
-
-                if item.base_type == 'null':
-                    has_null = True
-                elif item.base_type or item.ref:
-                    # Has actual type (either base_type or $ref)
+                if isinstance(item, SchemaObject):
+                    if item.base_type == 'null':
+                        has_null = True
+                    elif item.base_type:
+                        has_actual_type = True
+                elif isinstance(item, ReferenceObject):
                     has_actual_type = True
 
             # If one is null and another is actual type, it's nullable

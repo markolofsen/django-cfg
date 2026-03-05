@@ -420,6 +420,8 @@ class OperationsGenerator:
             lines.append("        pass")
             lines.append("    elif hasattr(value, 'value'):  # Enum")
             lines.append("        _form_data[key] = value.value")
+            lines.append("    elif isinstance(value, list) and all(isinstance(i, (str, int, float)) for i in value):")
+            lines.append("        _form_data[key] = [str(i) for i in value]  # Repeated keys for multipart")
             lines.append("    elif isinstance(value, (dict, list)):  # JSON-serializable")
             lines.append("        _form_data[key] = _json.dumps(value)")
             lines.append("    elif isinstance(value, bool):  # Boolean before int check")
@@ -466,8 +468,14 @@ class OperationsGenerator:
                 # Enum fields: extract .value for StrEnum/IntEnum
                 lines.append(f"    _val = _raw_data['{field}']")
                 lines.append(f"    _form_data['{field}'] = _val.value if hasattr(_val, 'value') else _val")
+            elif prop_schema.is_array and prop_schema.items and prop_schema.items.is_primitive:
+                # Array of primitives: send as repeated keys for multipart
+                # e.g. tags=["a","b"] → tags=a&tags=b
+                lines.append(f"    _form_data.setdefault('{field}', [])")
+                lines.append(f"    for _item in _raw_data['{field}']:")
+                lines.append(f"        _form_data['{field}'].append(str(_item))")
             elif prop_schema.is_object or prop_schema.is_array:
-                # Object/array fields: serialize to JSON string
+                # Object/array-of-objects fields: serialize to JSON string
                 lines.append(f"    _form_data['{field}'] = _json.dumps(_raw_data['{field}'])")
             elif prop_schema.type == "boolean":
                 # Boolean fields: httpx sends Python repr "True"/"False",

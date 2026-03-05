@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from .base import FieldConfig
 
@@ -11,8 +11,11 @@ class UserField(FieldConfig):
     """
     User display widget configuration.
 
+    ``user_avatar`` widget requires ``header=True`` (set automatically).
+    ``user_simple`` renders inline HTML without header format.
+
     Examples:
-        UserField(name="owner", ui_widget="user_avatar", show_email=True)
+        UserField(name="owner", show_email=True)
         UserField(name="created_by", ui_widget="user_simple")
     """
 
@@ -21,6 +24,13 @@ class UserField(FieldConfig):
     show_email: bool = Field(True, description="Show user email")
     show_avatar: bool = Field(True, description="Show user avatar")
     avatar_size: int = Field(32, description="Avatar size in pixels")
+
+    @model_validator(mode='after')
+    def _auto_header_for_avatar(self) -> 'UserField':
+        """user_avatar widget returns list format — requires header=True."""
+        if self.ui_widget == "user_avatar" and not self.header:
+            self.header = True
+        return self
 
     def get_widget_config(self) -> Dict[str, Any]:
         """Extract user widget configuration."""

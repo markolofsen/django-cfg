@@ -97,7 +97,7 @@ class OpenAPIModernParser(BaseParser):
                     if isinstance(item, SchemaObject):
                         if item.base_type == 'null':
                             has_null = True
-                        elif item.base_type or item.ref:
+                        elif item.base_type:
                             has_actual_type = True
                     elif isinstance(item, ReferenceObject):
                         # $ref counts as actual type
