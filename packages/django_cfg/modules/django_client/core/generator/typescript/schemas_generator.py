@@ -148,7 +148,7 @@ class SchemasGenerator:
             string (format: email) -> z.email()
             string (format: date-time) -> z.string().datetime({ offset: true })
             string (format: uri) -> z.url()
-            integer -> z.int()
+            integer -> z.number().int()
             number -> z.number()
             boolean -> z.boolean()
             array -> z.array(...)
@@ -208,7 +208,7 @@ class SchemasGenerator:
 
         # Integer type
         elif schema_type == "integer":
-            base_type = "z.int()"
+            base_type = "z.number().int()"
 
             # Add range constraints
             if schema.minimum is not None:
