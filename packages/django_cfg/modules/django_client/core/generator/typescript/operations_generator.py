@@ -247,8 +247,10 @@ class OperationsGenerator:
                 body_lines.append(f"  params = args[{first_query_pos}];")
                 body_lines.append("} else {")
                 # Separate params style - collect from individual args
+                # Must match overload signature order: required params first, then optional
+                sorted_query = sorted(query_params_list, key=lambda x: (not x[2], param_names.index(x[0])))
                 param_extractions = []
-                for i, param_name in enumerate(param_names):
+                for i, (param_name, _, _) in enumerate(sorted_query):
                     param_extractions.append(f"{param_name}: args[{first_query_pos + i}]")
                 body_lines.append(f"  params = {{ {', '.join(param_extractions)} }};")
                 body_lines.append("}")
