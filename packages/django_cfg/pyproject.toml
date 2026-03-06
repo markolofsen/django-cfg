@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.7.41"
+version = "1.7.42"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -507,6 +507,7 @@ exclude = [
     "**/static/frontend/nextjs_admin/",
     "**/static/frontend/*.zip",
     "**/static/frontend/*.version",
+    "**/apps/tools/geo/data/*.json",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -532,6 +533,7 @@ exclude = [
     "**/static/frontend/nextjs_admin/",
     "**/static/frontend/*.zip",
     "**/static/frontend/*.version",
+    "**/apps/tools/geo/data/*.json",
 ]
 
 [tool.hatch.build.targets.wheel.force-include]
