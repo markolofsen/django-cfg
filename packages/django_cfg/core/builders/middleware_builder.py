@@ -105,6 +105,11 @@ class MiddlewareBuilder:
                 # django-browser-reload not installed, skip it
                 pass
 
+        # Route debug middleware — logs 404s with partial URL pattern matches
+        # Helps diagnose nested DRF router misconfiguration (routes leaked to wrong group)
+        if self.config.debug:
+            middleware.append("django_cfg.middleware.route_debug.RouteDebugMiddleware")
+
         return middleware
 
     def _get_extension_middleware(self) -> List[str]:

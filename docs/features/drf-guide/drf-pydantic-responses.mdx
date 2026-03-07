@@ -1,0 +1,268 @@
+---
+title: Pydantic v2 Response Schemas
+sidebar_position: 9
+keywords:
+  - pydantic v2 drf
+  - drf-spectacular pydantic
+  - pydantic openapi schema
+  - typed api responses django
+  - pydantic basemodel viewset
+description: Use Pydantic v2 models directly as response schemas in DRF ViewSets. Django-CFG ships with built-in support — no extra config required.
+---
+
+# Pydantic v2 Response Schemas
+
+Django-CFG has built-in support for using Pydantic v2 `BaseModel` classes directly in `@extend_schema(responses=...)`. No DRF serializer needed for responses — Pydantic generates the OpenAPI schema automatically, and django-cfg client generator produces typed Zod schemas and TypeScript interfaces from it.
+
+<Callout type="info">
+**Zero configuration required**
+
+`drf-spectacular` ships with `PydanticExtension` that handles Pydantic v2 models automatically. Django-CFG enables `OAS_VERSION: "3.1.0"` by default, which is required for Pydantic's nullable fields (`str | None`) to generate valid OpenAPI.
+</Callout>
+
+## The Pattern
+
+```
+Service method → returns Pydantic model
+View → Response(result.model_dump())
+@extend_schema → responses={200: MyPydanticModel}
+drf-spectacular → generates OpenAPI schema from Pydantic JSON schema
+django-cfg → generates TypeScript interface + Zod schema
+```
+
+Compare to the old approach that required duplicate DRF serializers:
+
+```python
+# ❌ Old: write DRF serializer just to describe the response shape
+class ExtractDialogueResponseSerializer(serializers.Serializer):
+    segments = DialogueSegmentSerializer(many=True)
+    scene_context = serializers.CharField()
+    motion_description = serializers.CharField()
+
+@extend_schema(responses={200: ExtractDialogueResponseSerializer})
+def extract_dialogue(self, request):
+    result = DialogueService.extract_dialogue(scene)
+    return Response(ExtractDialogueResponseSerializer(result).data)
+```
+
+```python
+# ✅ New: define once in Pydantic, use everywhere
+class ExtractDialogueResult(BaseModel):
+    segments: list[DialogueSegmentOut]
+    scene_context: str
+    motion_description_display: str
+    motion_description_en: str
+
+@extend_schema(responses={200: ExtractDialogueResult})
+def extract_dialogue(self, request):
+    result = DialogueService.extract_dialogue(scene)
+    return Response(result.model_dump())
+```
+
+## Setting Up Service Schemas
+
+Place Pydantic response schemas in a dedicated `schemas.py` next to the service:
+
+```
+apps/
+  generation/
+    services/
+      dialogue.py       ← service logic
+      schemas.py        ← Pydantic response models
+```
+
+```python
+# apps/generation/services/schemas.py
+from pydantic import BaseModel, Field
+
+
+class DialogueSegmentOut(BaseModel):
+    order: int
+    character_name: str
+    text: str
+    emotion: str
+    direction: str | None
+    estimated_duration: float
+
+
+class ExtractDialogueResult(BaseModel):
+    segments: list[DialogueSegmentOut]
+    scene_context: str
+    motion_description_display: str
+    motion_description_en: str
+
+
+class GenerateDialogueResult(BaseModel):
+    status: str
+    reason: str = ""
+    segments: int = 0
+    tracks_created: int = 0
+    track_ids: list[str] = Field(default_factory=list)
+    tts_tasks: list[str] = Field(default_factory=list)
+    motion_description: str = ""
+
+
+class ScreenwriteResult(BaseModel):
+    formatted_script: str
+    dialogue_segments: list[DialogueSegmentOut]
+    optimized_motion_prompt: str
+    recommended_duration: int
+    confidence: float
+    optimization_notes: str
+```
+
+## Service Returns Pydantic
+
+The service constructs and returns a Pydantic object — full type safety inside Python:
+
+```python
+# apps/generation/services/dialogue.py
+from apps.generation.services.schemas import ExtractDialogueResult, DialogueSegmentOut
+
+class DialogueService:
+
+    @staticmethod
+    def extract_dialogue(scene: Scene, description: str = "") -> ExtractDialogueResult:
+        ...
+        result = llm_service.extract(description, chars)
+
+        return ExtractDialogueResult(
+            segments=[DialogueSegmentOut(**s.model_dump()) for s in result.segments],
+            scene_context=result.scene_context,
+            motion_description_display=result.motion_description_display,
+            motion_description_en=result.motion_description_en,
+        )
+```
+
+## ViewSet Uses `.model_dump()`
+
+Import Pydantic schemas directly into the view and pass to `responses=`:
+
+```python
+# apps/generation/api/views/generation.py
+from apps.generation.services.schemas import (
+    ExtractDialogueResult,
+    GenerateDialogueResult,
+    ScreenwriteResult,
+)
+
+class GenerationViewSet(GenericViewSet):
+
+    @extend_schema(
+        request=ExtractDialogueRequestSerializer,
+        responses={200: ExtractDialogueResult},   # ← Pydantic class directly
+    )
+    @action(detail=False, methods=["post"], url_path="extract-dialogue")
+    def extract_dialogue(self, request, project_pk=None):
+        serializer = ExtractDialogueRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ...
+        result = DialogueService.extract_dialogue(scene, data.get("description", ""))
+        return Response(result.model_dump())   # ← .model_dump() for Response
+
+    @extend_schema(
+        request=GenerateDialogueRequestSerializer,
+        responses={200: GenerateDialogueResult},
+    )
+    @action(detail=False, methods=["post"], url_path="generate-dialogue")
+    def generate_dialogue(self, request, project_pk=None):
+        ...
+        result = DialogueService.generate_dialogue(scene, description, target_model=model)
+        return Response(result.model_dump())
+
+    @extend_schema(
+        request=ScreenwriteRequestSerializer,
+        responses={200: ScreenwriteResult},
+    )
+    @action(detail=False, methods=["post"], url_path="screenwrite")
+    def screenwrite(self, request, project_pk=None):
+        ...
+        result = DialogueService.screenwrite(scene, brief=brief, target_model=model)
+        return Response(result.model_dump())
+```
+
+<Callout type="warning">
+**Request bodies still need DRF serializers**
+
+Pydantic is only for *responses*. DRF serializers are still required for request validation (`request=MySerializer`). `serializer.is_valid(raise_exception=True)` uses DRF's validation pipeline.
+</Callout>
+
+## What Gets Generated
+
+After `make gen`, the client generator produces:
+
+**Zod schema** (`ExtractDialogueResult.schema.ts`):
+```typescript
+import { z } from 'zod'
+import { DialogueSegmentOutSchema } from './DialogueSegmentOut.schema'
+
+export const ExtractDialogueResultSchema = z.object({
+  segments: z.array(DialogueSegmentOutSchema),
+  scene_context: z.string(),
+  motion_description_display: z.string(),
+  motion_description_en: z.string(),
+})
+
+export type ExtractDialogueResult = z.infer<typeof ExtractDialogueResultSchema>
+```
+
+**Typed fetcher** (`fetchers/scenes__api__generation.ts`):
+```typescript
+import { ExtractDialogueResultSchema, type ExtractDialogueResult } from '../schemas/ExtractDialogueResult.schema'
+
+export async function postGenerationExtractDialogue(
+  project_pk: string,
+  data: ExtractDialogueRequest,
+): Promise<ExtractDialogueResult> {
+  const response = await apiClient.post(...)
+  return ExtractDialogueResultSchema.parse(response)
+}
+```
+
+Nested models (like `DialogueSegmentOut`) get their own schema files and are cross-referenced — exactly like named DRF serializers.
+
+## Nullable Fields
+
+Pydantic's `str | None` generates `anyOf: [{type: string}, {type: null}]` which is valid OpenAPI 3.1 syntax. Django-CFG sets `OAS_VERSION: "3.1.0"` by default so this works out of the box.
+
+```python
+class MyResult(BaseModel):
+    optional_field: str | None = None   # ✅ works with OAS 3.1.0
+    required_field: str                 # ✅ always works
+    list_field: list[str] = []          # ✅ generates array type
+```
+
+<Callout type="warning">
+If you manually set `OAS_VERSION: "3.0.3"` in your project's spectacular settings, Pydantic nullable fields will cause schema validation errors. Either upgrade to 3.1.0 or avoid `str | None` in response models.
+</Callout>
+
+## When to Use DRF Serializer vs Pydantic
+
+| Scenario | Use |
+|---|---|
+| Request validation (input from user) | DRF Serializer |
+| Response from service layer | Pydantic `BaseModel` |
+| ModelSerializer (ORM → JSON) | DRF ModelSerializer |
+| LLM structured output | Pydantic `BaseModel` |
+| Complex nested response built manually | Pydantic `BaseModel` |
+| Simple response wrapping ORM queryset | DRF Serializer |
+
+## How It Works Internally
+
+drf-spectacular ships with `PydanticExtension` that:
+
+1. Detects any `pydantic.BaseModel` subclass passed to `responses=`
+2. Calls `pydantic.json_schema.model_json_schema(cls, mode="serialization")` to get the JSON schema
+3. Extracts nested models from `$defs` into OpenAPI `components/schemas`
+4. Returns the root schema with `$ref` pointers to components
+
+You can verify it's active:
+
+```python
+from drf_spectacular.extensions import OpenApiSerializerExtension
+exts = OpenApiSerializerExtension._registry
+print([e for e in exts if 'pydantic' in str(e).lower()])
+# [<class 'drf_spectacular.contrib.pydantic.PydanticExtension'>]
+```
+
+No registration or configuration needed — it's loaded automatically with drf-spectacular.

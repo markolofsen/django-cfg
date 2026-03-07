@@ -4,4 +4,5 @@ export default {
   'drf-array-responses': 'Array Responses',
   'drf-nested-serializers': 'Nested Serializers & allOf',
   'drf-pagination': 'Pagination',
+  'drf-pydantic-responses': 'Pydantic v2 Response Schemas',
 }
