@@ -205,6 +205,10 @@ class DjangoModelParser:
             # Choices
             if hasattr(field, 'choices') and field.choices:
                 parsed.choices = list(field.choices)
+                # Detect TextChoices class for enum generation
+                # Django stores choices as a plain list, so we find the class
+                # by scanning the model's module for TextChoices subclasses
+                parsed.choices_class = self._detect_choices_class(field)
 
             # Default value
             default = getattr(field, 'default', models.NOT_PROVIDED)
@@ -342,6 +346,42 @@ class DjangoModelParser:
         except Exception:
             pass
         return field_name
+
+    def _detect_choices_class(self, field) -> str | None:
+        """
+        Find the TextChoices class that backs a field's choices.
+
+        Django stores choices as a plain list of (value, label) tuples,
+        so we find the originating TextChoices subclass by scanning the
+        model's module for a class whose .choices match the field's choices.
+        """
+        try:
+            import inspect
+            import sys
+            from django.db.models import TextChoices, IntegerChoices
+
+            field_choices = list(field.choices)
+            if not field_choices:
+                return None
+
+            # Get the module where the Django model is defined
+            model = field.model
+            if model is None:
+                return None
+            module = sys.modules.get(model.__module__)
+            if module is None:
+                return None
+
+            for name, obj in inspect.getmembers(module):
+                if not inspect.isclass(obj):
+                    continue
+                if not (issubclass(obj, (TextChoices, IntegerChoices)) and obj not in (TextChoices, IntegerChoices)):
+                    continue
+                if list(obj.choices) == field_choices:
+                    return name
+        except Exception as e:
+            logger.debug(f"Could not detect choices class: {e}")
+        return None
 
     def _get_indexes(self, meta) -> list[dict]:
         """Extract model indexes."""

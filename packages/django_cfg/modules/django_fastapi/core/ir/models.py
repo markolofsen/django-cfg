@@ -49,6 +49,7 @@ class ParsedField:
 
     # Choices
     choices: Optional[list[tuple[Any, str]]] = None
+    choices_class: Optional[str] = None  # Name of TextChoices class (e.g., "LLMProviderType")
 
     # Relationship info (for FK, O2O, M2M)
     is_relation: bool = False

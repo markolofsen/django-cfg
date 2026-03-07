@@ -16,6 +16,7 @@ from .generator import (
     SchemasGenerator,
     CRUDGenerator,
     DatabaseConfigGenerator,
+    EnumsGenerator,
 )
 from ..config import FastAPIConfig
 
@@ -116,6 +117,13 @@ class FastAPIOrchestrator:
 
         # 3. Run generators
         all_files: list[GeneratedFile] = []
+
+        # Enums (TextChoices -> StrEnum), must run before models
+        enums_gen = EnumsGenerator(context)
+        enum_files = enums_gen.generate()
+        if enum_files:
+            logger.info(f"Generating enums ({len(enum_files)} apps with TextChoices)...")
+            all_files.extend(enum_files)
 
         # SQLModel models
         logger.info("Generating SQLModel models...")

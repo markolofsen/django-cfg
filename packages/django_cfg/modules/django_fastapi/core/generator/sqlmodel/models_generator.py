@@ -54,6 +54,8 @@ class SQLModelGenerator(BaseGenerator):
         self._needs_optional_import = False
         # Track type aliases needed (when field name = type name)
         self._type_aliases_needed: set[str] = set()
+        # Track enum classes used (from choices_class) — imported from enums.py
+        self._enum_classes_used: set[str] = set()
 
     def generate(self) -> list[GeneratedFile]:
         """Generate SQLModel files for all apps."""
@@ -78,6 +80,9 @@ class SQLModelGenerator(BaseGenerator):
         self._needs_desc_import = False
         self._needs_optional_import = False
         self._type_aliases_needed = set()
+
+        # Reset enum tracking per app
+        self._enum_classes_used = set()
 
         # Process all models first to collect imports
         model_definitions = []
@@ -157,6 +162,15 @@ class SQLModelGenerator(BaseGenerator):
         # Get Python type
         python_type = self.type_mapper.get_python_type(field)
 
+        # If field has a TextChoices enum class, use it as the type
+        if field.choices_class:
+            self._enum_classes_used.add(field.choices_class)
+            if field.nullable:
+                python_type = f"Optional[{field.choices_class}]"
+                self.type_mapper._imports.add(("typing", "Optional"))
+            else:
+                python_type = field.choices_class
+
         # Handle field name conflicting with type name (e.g., date: date)
         # Need to use aliased type (e.g., date: DateType)
         if field.name in TYPE_ALIASES:
@@ -186,6 +200,14 @@ class SQLModelGenerator(BaseGenerator):
 
         # Check if we need sa_column first (affects primary_key handling)
         sa_column = self.type_mapper.get_sqlalchemy_column(field)
+
+        # If field uses a StrEnum (choices_class), force sa_column=Column(String(...)) to prevent
+        # SQLAlchemy from creating a PostgreSQL ENUM type. Django stores these as plain VARCHAR.
+        if field.choices_class and not sa_column:
+            str_type = f"String({field.max_length})" if field.max_length else "String"
+            sa_column = f"Column({str_type})"
+            self.type_mapper._imports.add(("sqlalchemy", "String"))
+            self._needs_column_import = True
 
         # If field name is reserved, we must use sa_column to specify the actual column name
         if db_column_name and not sa_column:
@@ -407,17 +429,29 @@ class SQLModelGenerator(BaseGenerator):
         if sa_pg_imports:
             lines.append(f"from sqlalchemy.dialects.postgresql import {', '.join(sorted(set(sa_pg_imports)))}")
 
+        # Enum imports from enums.py (same app)
+        if self._enum_classes_used:
+            lines.append(f"from .enums import {', '.join(sorted(self._enum_classes_used))}")
+
         return "\n".join(lines)
 
     def _generate_init_file(self, models: list[ParsedModel]) -> str:
         """Generate __init__.py with exports."""
         model_names = [m.name for m in models]
-        exports = ", ".join(model_names)
         imports = "\n".join(f"from .models import {name}" for name in model_names)
+
+        # Check if any field in any model uses a TextChoices enum
+        has_enums = any(
+            f.choices_class
+            for m in models
+            for f in m.fields
+            if f.choices_class
+        )
+        enum_import = "\nfrom .enums import *  # noqa: F401, F403" if has_enums else ""
 
         return f'''"""Models for this app."""
 
-{imports}
+{imports}{enum_import}
 
 __all__ = [{", ".join(f'"{n}"' for n in model_names)}]
 '''
