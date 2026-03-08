@@ -99,6 +99,9 @@ class OpenAPIModernParser(BaseParser):
                             has_null = True
                         elif item.base_type:
                             has_actual_type = True
+                        else:
+                            # Empty schema {} (e.g. JSONField with no type) counts as actual type
+                            has_actual_type = True
                     elif isinstance(item, ReferenceObject):
                         # $ref counts as actual type
                         has_actual_type = True

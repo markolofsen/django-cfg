@@ -648,6 +648,26 @@ class BaseParser(ABC):
                     # Found the actual type (not null)
                     return item.base_type
 
+        # Check oneOf: [{}, {"type": "null"}] pattern (drf-spectacular JSONField nullable)
+        # When oneOf contains an empty schema {} and a null type, treat as "any" (JSONField)
+        if schema.oneOf and len(schema.oneOf) == 2:
+            has_null = False
+            has_empty = False
+            actual_type = None
+            for item in schema.oneOf:
+                if isinstance(item, SchemaObject):
+                    if item.base_type == 'null':
+                        has_null = True
+                    elif item.base_type:
+                        actual_type = item.base_type
+                    else:
+                        # Empty schema {} — JSONField
+                        has_empty = True
+            if has_null and has_empty:
+                return "any"
+            if has_null and actual_type:
+                return actual_type
+
         # Fallback: infer from other properties
         if schema.properties is not None:
             return "object"
