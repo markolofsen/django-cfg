@@ -2,6 +2,7 @@ export default {
   'index': { display: 'hidden' },
   'architecture': 'Module Architecture',
   'pydantic-models': 'Pydantic v2 Models',
+  'type-checking': 'Type Checking',
   'async-patterns': 'Async & Concurrency',
   'error-handling': 'Error Handling',
   'testing': 'Testing',

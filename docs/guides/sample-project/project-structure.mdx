@@ -76,7 +76,7 @@ class SampleProjectConfig(DjangoConfig):
     drf: DRFConfig
 ```
 
-See [Configuration Setup](../configuration) for detailed examples.
+See [Configuration Setup](./configuration) for detailed examples.
 
 #### settings.py
 
@@ -135,7 +135,7 @@ database:
 
 **loader.py** - Configuration loader that reads YAML files and environment variables.
 
-See [Configuration Setup](../configuration) for environment configuration patterns.
+See [Configuration Setup](./configuration) for environment configuration patterns.
 
 ### 📁 apps/ - Django Applications
 
@@ -235,7 +235,7 @@ db/
 
 **Note**: This directory is gitignored and only exists in development.
 
-See [Multi-Database Setup](../multi-database) for routing and migration strategies.
+See [Multi-Database Setup](./multi-database) for routing and migration strategies.
 
 ### 📁 docker/ - Docker Configuration
 
@@ -253,7 +253,7 @@ docker/
     └── wait-for-it.sh # Service dependency script
 ```
 
-See [Deployment Guide](../deployment) for Docker setup details.
+See [Deployment Guide](./deployment) for Docker setup details.
 
 ### 📁 static/ - Static Files
 
@@ -415,16 +415,16 @@ The sample project components are interconnected:
 
 To understand how these work together:
 
-1. Start with [Configuration Setup](../configuration)
-2. Review [Multi-Database Setup](../multi-database) for data layer
-3. Explore [Admin Interface](../admin-interface) for management UI
-4. Check [API Documentation](../api-documentation) for REST API
+1. Start with [Configuration Setup](./configuration)
+2. Review [Multi-Database Setup](./multi-database) for data layer
+3. Explore [Admin Interface](./admin-interface) for management UI
+4. Check [API Documentation](./api-documentation) for REST API
 5. Learn [Background Tasks](/docs/features/integrations/django-rq/overview) for async processing
 
 ## Related Topics
 
-- [Configuration Setup](../configuration) - Detailed configuration guide
-- [Multi-Database Setup](../multi-database) - Database routing explained
-- [Deployment Guide](../deployment) - Production deployment structure
+- [Configuration Setup](./configuration) - Detailed configuration guide
+- [Multi-Database Setup](./multi-database) - Database routing explained
+- [Deployment Guide](./deployment) - Production deployment structure
 
 Understanding the project structure helps you navigate and extend the sample project effectively.

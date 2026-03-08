@@ -567,7 +567,7 @@ config = ResilienceConfig(
 )
 ```
 
-Learn more: [Resilience Patterns](../resilience)
+Learn more: [Resilience Patterns](./resilience)
 
 ---
 
@@ -614,7 +614,7 @@ async with AsyncResilientGRPCClient(
     result = await client.call_method(...)
 ```
 
-Learn more: [Connection Pooling](../connection-pooling)
+Learn more: [Connection Pooling](./connection-pooling)
 
 ---
 
@@ -901,7 +901,7 @@ BotStreamingConfig = BidirectionalStreamingConfig(
 
 Setting `connection_timeout` causes premature `StopAsyncIteration` in grpcio 1.76.0+. Always use `connection_timeout=None` and rely on ping/keepalive for liveness detection.
 
-See [Troubleshooting](../troubleshooting#connection-timeout-bug) for details.
+See [Troubleshooting](./troubleshooting#connection-timeout-bug) for details.
 </Callout>
 
 ### Streaming Modes
@@ -919,7 +919,7 @@ See [Troubleshooting](../troubleshooting#connection-timeout-bug) for details.
 | `INTERVAL` | Send ping every N seconds |
 | `ON_IDLE` | Send ping only when no messages for N seconds |
 
-Learn more: [Streaming Patterns](../streaming-patterns)
+Learn more: [Streaming Patterns](./streaming-patterns)
 
 ---
 
@@ -1004,14 +1004,14 @@ server = grpc.server(
 
 ## Related Documentation
 
-- **[Getting Started](../getting-started)** - Build your first service
-- **[Resilience Patterns](../resilience)** - Retry, circuit breaker, logging
-- **[Connection Pooling](../connection-pooling)** - Channel reuse
-- **[Betterproto2](../betterproto2)** - Modern Python gRPC
-- **[Streaming Patterns](../streaming-patterns)** - Bidirectional streaming configuration
-- **[Troubleshooting](../troubleshooting)** - Common issues and solutions
-- **[Authentication](../authentication)** - API keys authentication
-- **[FAQ](../faq)** - Common questions
+- **[Getting Started](./getting-started)** - Build your first service
+- **[Resilience Patterns](./resilience)** - Retry, circuit breaker, logging
+- **[Connection Pooling](./connection-pooling)** - Channel reuse
+- **[Betterproto2](./betterproto2)** - Modern Python gRPC
+- **[Streaming Patterns](./streaming-patterns)** - Bidirectional streaming configuration
+- **[Troubleshooting](./troubleshooting)** - Common issues and solutions
+- **[Authentication](./authentication)** - API keys authentication
+- **[FAQ](./faq)** - Common questions
 
 ---
 

@@ -4,4 +4,5 @@ export default {
   'channels-asgi': 'Channels & ASGI',
   'django-testing': 'Django Testing',
   'quality-gates': 'Quality Gates',
+  'route-debug': 'Route Debug',
 }

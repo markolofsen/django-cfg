@@ -26,13 +26,13 @@ Django-CFG provides **production-ready Docker infrastructure** with modular comp
 Choose your Docker journey:
 
 ### 🚀 Get Started Fast
-- **[Development Setup](../development)** - Local development with Docker Compose
-- **[Production Deployment](../production)** - Production-grade Docker setup
-- **[Configuration Strategy](../configuration)** - YAML + env vars configuration
+- **[Development Setup](./development)** - Local development with Docker Compose
+- **[Production Deployment](./production)** - Production-grade Docker setup
+- **[Configuration Strategy](./configuration)** - YAML + env vars configuration
 
 ### 🔧 Advanced Topics
-- **[Build Optimization](../build-optimization)** - Critical lessons for multi-stage builds
-- **[Troubleshooting](../troubleshooting)** - Common issues and quick fixes
+- **[Build Optimization](./build-optimization)** - Critical lessons for multi-stage builds
+- **[Troubleshooting](./troubleshooting)** - Common issues and quick fixes
 
 ---
 
@@ -172,7 +172,7 @@ Settings load in this order (highest priority first):
 4. **`config.*.yaml`** - Base templates (in git)
 5. **Built-in defaults** - Pydantic model defaults
 
-[Learn Complete Configuration Strategy →](../configuration)
+[Learn Complete Configuration Strategy →](./configuration)
 
 ### Quick Example: Add New API Key
 
@@ -207,7 +207,7 @@ docker compose restart django  # ✅ 10 seconds
 - **`config.*.docker.yaml`** for structure (git-ignored)
 - **Environment variables** from secrets manager (AWS Secrets Manager, Vault)
 
-See [Configuration Security Guide](../configuration#security-best-practices) for details.
+See [Configuration Security Guide](./configuration#security-best-practices) for details.
 
 </Callout>
 
@@ -250,7 +250,7 @@ projects/django/api/environment/
 └── config.prod.docker.yaml         # Docker prod config (git-ignored!)
 ```
 
-[Explore Development Setup →](../development)
+[Explore Development Setup →](./development)
 
 ---
 
@@ -278,7 +278,7 @@ docker compose restart django
 docker compose up -d --build django
 ```
 
-[See all commands in Quick Reference →](../troubleshooting#essential-commands)
+[See all commands in Quick Reference →](./troubleshooting#essential-commands)
 
 ### Database Operations
 
@@ -299,7 +299,7 @@ docker exec -i djangocfg_postgres psql -U postgres djangocfg < backup.sql
 
 For production-ready deployment with SSL/TLS, health monitoring, and scaling:
 
-**[Complete Production Setup Guide →](../production)**
+**[Complete Production Setup Guide →](./production)**
 
 Key features:
 - ✅ Multi-stage builds for minimal image sizes
@@ -325,7 +325,7 @@ Django-CFG Docker setup uses advanced techniques to minimize build times:
 **Before optimization**: 2.13GB context, 380s transfer time ❌
 **After optimization**: 280KB context, 4s transfer time ✅
 
-[Learn Build Optimization Techniques →](../build-optimization)
+[Learn Build Optimization Techniques →](./build-optimization)
 
 ### Runtime Performance
 
@@ -364,37 +364,37 @@ docker exec django python -c "from api.environment.loader import env; print(env)
 docker exec djangocfg_postgres pg_isready -U postgres
 ```
 
-[Complete Troubleshooting Guide →](../troubleshooting)
+[Complete Troubleshooting Guide →](./troubleshooting)
 
 ---
 
 ## Learning Paths
 
 ### 🎓 Beginner Path
-1. [Docker Development Setup](../development) - Start here
-2. [Configuration Basics](../configuration)
+1. [Docker Development Setup](./development) - Start here
+2. [Configuration Basics](./configuration)
 3. [First Django-CFG Project](/docs/getting-started/first-project)
 
 ### 🚀 Production Path
-1. [Production Docker Setup](../production)
+1. [Production Docker Setup](./production)
 2. [Security Configuration](/docs/deployment/security)
 3. [Monitoring Setup](/docs/deployment/monitoring)
 
 ### 🔧 Advanced Path
-1. [Build Optimization](../build-optimization)
-2. [Multi-Database Setup](../../multi-database)
-3. [Scaling Strategies](../../production-config)
+1. [Build Optimization](./build-optimization)
+2. [Multi-Database Setup](../multi-database)
+3. [Scaling Strategies](../production-config)
 
 ---
 
 ## See Also
 
 ### Docker Guides
-- **[Development Setup](../development)** - Local Docker environment
-- **[Production Setup](../production)** - Production deployment
-- **[Configuration](../configuration)** - YAML + env vars strategy
-- **[Build Optimization](../build-optimization)** - Critical Docker lessons
-- **[Troubleshooting](../troubleshooting)** - Common issues solved
+- **[Development Setup](./development)** - Local Docker environment
+- **[Production Setup](./production)** - Production deployment
+- **[Configuration](./configuration)** - YAML + env vars strategy
+- **[Build Optimization](./build-optimization)** - Critical Docker lessons
+- **[Troubleshooting](./troubleshooting)** - Common issues solved
 
 ### Deployment
 - **[Deployment Overview](/docs/deployment/overview)** - All deployment options
@@ -418,20 +418,20 @@ docker exec djangocfg_postgres pg_isready -U postgres
 
 Ready to get started? Choose your path:
 
-**[Start Development →](../development)**
+**[Start Development →](./development)**
 Set up local Docker environment
 
-**[Deploy to Production →](../production)**
+**[Deploy to Production →](./production)**
 Production-ready Docker setup
 
-**[Learn Configuration →](../configuration)**
+**[Learn Configuration →](./configuration)**
 Master YAML + env var strategy
 
 
 <Callout type="info">
 **Need Help?**
-- **Issues?** Check [Troubleshooting Guide](../troubleshooting)
-- **Questions?** See [FAQ](../../faq)
+- **Issues?** Check [Troubleshooting Guide](./troubleshooting)
+- **Questions?** See [FAQ](../faq)
 - **Bugs?** Report on [GitHub](https://github.com/your-repo/issues)
 
 </Callout>

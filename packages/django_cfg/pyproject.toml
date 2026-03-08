@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.7.45"
+version = "1.7.47"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -135,6 +135,8 @@ dependencies = [
     
     # Type Checking
     "mypy>=1.18.2,<2.0.0",
+    "django-stubs[compatible-mypy]>=5.2.9,<6.0",
+    "djangorestframework-stubs[compatible-mypy]>=3.16.8,<4.0",
     
     # Python 3.13+ compatibility
     "setuptools>=75.0.0; python_version>='3.13'",
@@ -363,7 +365,8 @@ sections = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main"]
 check_untyped_defs = true
 ignore_missing_imports = true
 warn_unused_ignores = true
@@ -374,10 +377,12 @@ disallow_incomplete_defs = true
 disallow_untyped_decorators = true
 strict_optional = true
 show_error_codes = true
+
+[tool.django-stubs]
+django_settings_module = "django_cfg.config"
+
 [[tool.mypy.overrides]]
 module = [
-    "django.*",
-    "rest_framework.*",
     "django_redis.*",
     "yaml.*",
 ]

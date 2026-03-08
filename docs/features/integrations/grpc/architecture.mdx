@@ -620,7 +620,7 @@ async with AsyncResilientGRPCClient(
     )
 ```
 
-Learn more: [Resilience Patterns](../resilience) | [Connection Pooling](../connection-pooling)
+Learn more: [Resilience Patterns](./resilience) | [Connection Pooling](./connection-pooling)
 
 ---
 
@@ -661,7 +661,7 @@ graph TB
 3. **Dynamic Message Creation** - Create protobuf messages from JSON/dict
 4. **No Proto Files Required** - Use reflection to understand service contracts
 
-Learn more: [Dynamic Invocation Guide](../dynamic-invocation)
+Learn more: [Dynamic Invocation Guide](./dynamic-invocation)
 
 ---
 
@@ -781,7 +781,7 @@ graph TB
 ### Critical Configuration
 
 <Callout type="warning">
-**Never set `connection_timeout`** - it causes premature `StopAsyncIteration` in grpcio. See [Troubleshooting](../troubleshooting#connection-timeout-bug).
+**Never set `connection_timeout`** - it causes premature `StopAsyncIteration` in grpcio. See [Troubleshooting](./troubleshooting#connection-timeout-bug).
 </Callout>
 
 ```python
@@ -794,7 +794,7 @@ BidirectionalStreamingConfig(
 )
 ```
 
-Learn more: [Streaming Patterns](../streaming-patterns)
+Learn more: [Streaming Patterns](./streaming-patterns)
 
 ---
 
@@ -856,15 +856,15 @@ GRPCServerConfig(
 
 ## Related Documentation
 
-- **[Getting Started](../getting-started)** - Configure gRPC in your project
-- **[Resilience Patterns](../resilience)** - Retry, circuit breaker, logging
-- **[Connection Pooling](../connection-pooling)** - Channel reuse
-- **[Betterproto2](../betterproto2)** - Modern Python gRPC
-- **[Streaming Patterns](../streaming-patterns)** - Bidirectional streaming patterns
-- **[Troubleshooting](../troubleshooting)** - Common issues and solutions
-- **[Configuration](../configuration)** - Configure gRPC settings
-- **[FAQ](../faq)** - Common questions and answers
+- **[Getting Started](./getting-started)** - Configure gRPC in your project
+- **[Resilience Patterns](./resilience)** - Retry, circuit breaker, logging
+- **[Connection Pooling](./connection-pooling)** - Channel reuse
+- **[Betterproto2](./betterproto2)** - Modern Python gRPC
+- **[Streaming Patterns](./streaming-patterns)** - Bidirectional streaming patterns
+- **[Troubleshooting](./troubleshooting)** - Common issues and solutions
+- **[Configuration](./configuration)** - Configure gRPC settings
+- **[FAQ](./faq)** - Common questions and answers
 
 ---
 
-**Next:** Learn how to [get started with gRPC](../getting-started) or explore [streaming patterns](../streaming-patterns).
+**Next:** Learn how to [get started with gRPC](./getting-started) or explore [streaming patterns](./streaming-patterns).

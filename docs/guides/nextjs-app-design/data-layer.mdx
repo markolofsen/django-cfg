@@ -15,7 +15,7 @@ description: Generated API clients from Django ViewSets, BaseClient singleton, Z
 The data layer is fully generated from Django ViewSets via OpenAPI. Every API response is validated at runtime with Zod.
 
 <Callout type="info">
-For Django ViewSet patterns see [App Design Guide — ViewSets](/guides/app-design/viewsets). For SSR data fetching see [SSR & Hydration](/guides/nextjs-app-design/ssr-hydration).
+For Django ViewSet patterns see [App Design Guide — ViewSets](../app-design/viewsets). For SSR data fetching see [SSR & Hydration](./ssr-hydration).
 </Callout>
 
 ## Generation Pipeline
@@ -156,7 +156,7 @@ Two tiers of API clients:
 | CFG API | `@djangocfg/api` | Universal: accounts, auth, JWT, 2FA |
 | Custom API | `generated/` per app | App-specific: catalog, projects, terminals |
 
-Extensions use `createExtensionAPI()` from `@djangocfg/ext-base` to share auth storage with the core API client. See [Extensions recipe](/guides/nextjs-app-design/recipes/extensions).
+Extensions use `createExtensionAPI()` from `@djangocfg/ext-base` to share auth storage with the core API client. See [Extensions recipe](./recipes/extensions).
 
 ## Rules
 

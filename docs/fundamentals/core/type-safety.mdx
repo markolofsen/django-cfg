@@ -129,7 +129,7 @@ Django-CFG replaces traditional `settings.py` with **[Pydantic v2](https://docs.
 3. ✅ **Type checking** - mypy/pyright catch errors at compile time
 4. ✅ **Self-documenting** - Field descriptions become IDE hints
 5. ✅ **Testable** - Easy to instantiate and test different configs
-6. ✅ **90% less code** - Smart defaults eliminate [boilerplate configuration](../../configuration)
+6. ✅ **90% less code** - Smart defaults eliminate [boilerplate configuration](../configuration)
 
 ### How Type Safety Prevents Disasters
 
@@ -472,7 +472,7 @@ email:
   password: app-specific-password
 ```
 
-**Benefits of this approach** (learn more in [Environment Variables](../../configuration/environment)):
+**Benefits of this approach** (learn more in [Environment Variables](../configuration/environment)):
 - ✅ All secrets in one YAML file (gitignored)
 - ✅ Pydantic validates types automatically
 - ✅ IDE autocomplete works: `env.database.port` (knows it's int)
@@ -659,7 +659,7 @@ class MultiDatabaseConfig(DjangoConfig):
 
 ### Environment-Specific Configuration
 
-See [Environment Detection](../../configuration/environment) for auto-detection patterns.
+See [Environment Detection](../configuration/environment) for auto-detection patterns.
 
 ```python
 from django_cfg import DjangoConfig, detect_environment
@@ -784,7 +784,7 @@ Yes! Django-CFG is tested with:
 
 ### What about secrets management?
 
-Django-CFG recommends **YAML + gitignore** approach (see [Environment Variables Guide](../../configuration/environment)):
+Django-CFG recommends **YAML + gitignore** approach (see [Environment Variables Guide](../configuration/environment)):
 
 ```yaml
 # config.yaml (gitignored)
@@ -863,7 +863,7 @@ Django-CFG is **actively maintained** with:
 - [**Installation Guide**](/docs/getting-started/installation) - Get started in 5 minutes
 - [**First Project**](/docs/getting-started/first-project) - Create your first Django-CFG project
 - [**Migration Guide**](/docs/guides/migration-guide) - Migrate from settings.py step-by-step
-- [**Configuration Reference**](../../configuration) - All configuration options
+- [**Configuration Reference**](../configuration) - All configuration options
 
 ### Advanced Topics
 - [**Multi-Database Setup**](/docs/guides/multi-database) - Complex database routing

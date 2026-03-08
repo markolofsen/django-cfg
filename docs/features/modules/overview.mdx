@@ -263,7 +263,7 @@ django_rq = DjangoRQConfig(
 
 **Features:** High performance (10K+ jobs/sec), cron & interval scheduling, built-in monitoring (Admin, REST API, Prometheus), job dependencies, retry logic, type-safe configuration, and production-ready error handling.
 
-**Learn more:** [Django-RQ Integration Documentation](../../integrations/django-rq/overview)
+**Learn more:** [Django-RQ Integration Documentation](../integrations/django-rq/overview)
 
 ### 🔧 Development Tools
 
@@ -329,7 +329,7 @@ response = client.chat_completion(
 )
 ```
 
-**Note:** See [LLM Module Documentation](../llm/overview) for complete API reference.
+**Note:** See [LLM Module Documentation](./llm/overview) for complete API reference.
 
 
 ## 🔌 Creating Custom Modules
@@ -500,35 +500,35 @@ class MyProjectConfig(DjangoConfig):
 ## Explore Modules
 
 ### Currency & Finance
-- **[Currency Overview](../currency/overview)** - Multi-currency conversion with crypto support
-- **[Currency Quick Start](../currency/quick-start)** - Get started in 5 minutes
-- **[Database Integration](../currency/database-integration)** - ORM integration guide
+- **[Currency Overview](../modules/currency/overview)** - Multi-currency conversion with crypto support
+- **[Currency Quick Start](./currency/quick-start)** - Get started in 5 minutes
+- **[Database Integration](../modules/currency/overview)** - ORM integration guide
 
 ### Communication
-- **[Email Overview](../email/overview)** - Advanced email system
-- **[Telegram Overview](../telegram/overview)** - Bot integration and notifications
+- **[Email Overview](../modules/email/overview)** - Advanced email system
+- **[Telegram Overview](../modules/telegram/overview)** - Bot integration and notifications
 
 ### AI & Intelligence  
-- **[LLM Overview](../llm/overview)** - Multi-provider AI integration
+- **[LLM Overview](./llm/overview)** - Multi-provider AI integration
 
 ### Operations
-- **[Health Overview](../health/overview)** - System monitoring
-- **[Import/Export Overview](../import-export/overview)** - Data management
-- **[Unfold Overview](../unfold/overview)** - Modern admin interface
-- **[Background Tasks](../../integrations/django-rq/overview)** - Django-RQ task queue
+- **[Health Overview](./health/overview)** - System monitoring
+- **[Import/Export Overview](./import-export/overview)** - Data management
+- **[Unfold Overview](./unfold/overview)** - Modern admin interface
+- **[Background Tasks](../integrations/django-rq/overview)** - Django-RQ task queue
 
 ### Related Documentation
 
 **Available Modules:**
-- **[Currency Module](../currency/overview)** - Multi-currency conversion with 14K+ currencies
-- **[Email Module](../email/overview)** - Production email service integration
-- **[Telegram Module](../telegram/overview)** - Telegram bot and notifications
-- **[LLM Module](../llm/overview)** - Multi-provider LLM integration
-- **[Tasks Module](../../built-in-apps/operations/tasks)** - Background task management
-- **[Health Module](../health/overview)** - System health checks
-- **[Import/Export Module](../import-export/overview)** - Data import/export utilities
-- **[Unfold Module](../unfold/overview)** - Modern admin interface
-- **[Background Tasks](../../integrations/django-rq/overview)** - Django-RQ distributed task queue
+- **[Currency Module](../modules/currency/overview)** - Multi-currency conversion with 14K+ currencies
+- **[Email Module](../modules/email/overview)** - Production email service integration
+- **[Telegram Module](../modules/telegram/overview)** - Telegram bot and notifications
+- **[LLM Module](./llm/overview)** - Multi-provider LLM integration
+- **[Tasks Module](../built-in-apps/operations/tasks)** - Background task management
+- **[Health Module](./health/overview)** - System health checks
+- **[Import/Export Module](./import-export/overview)** - Data import/export utilities
+- **[Unfold Module](./unfold/overview)** - Modern admin interface
+- **[Background Tasks](../integrations/django-rq/overview)** - Django-RQ distributed task queue
 
 **Configuration & Setup:**
 - **[Configuration Guide](/docs/fundamentals/configuration)** - Configure modules
@@ -537,16 +537,16 @@ class MyProjectConfig(DjangoConfig):
 - **[Installation](/docs/getting-started/installation)** - Install Django-CFG with modules
 
 **Apps Using Modules:**
-- **[Built-in Apps Overview](../../built-in-apps/overview)** - Production-ready apps
-- **[User Management](../../built-in-apps/user-management/overview)** - Uses Email, Tasks modules
-- **[Payment System](../../built-in-apps/payments/overview)** - Uses Currency, Tasks modules
-- **[AI Knowledge Base](../../built-in-apps/ai-knowledge/overview)** - Uses LLM, Tasks modules
+- **[Built-in Apps Overview](../built-in-apps/overview)** - Production-ready apps
+- **[User Management](../built-in-apps/user-management/overview)** - Uses Email, Tasks modules
+- **[Payment System](../built-in-apps/payments/overview)** - Uses Currency, Tasks modules
+- **[AI Knowledge Base](../built-in-apps/ai-knowledge/overview)** - Uses LLM, Tasks modules
 
 **Integrations:**
-- **[Django-RQ Integration](../../built-in-apps/operations/tasks)** - Background task processing
-- **[Ngrok Integration](../../integrations/ngrok/overview)** - Webhook testing
-- **[API Generation](../../api-generation/overview)** - Auto-generate API clients
-- **[Integrations Overview](../../integrations/overview)** - All integrations
+- **[Django-RQ Integration](../built-in-apps/operations/tasks)** - Background task processing
+- **[Ngrok Integration](../integrations/ngrok/overview)** - Webhook testing
+- **[API Generation](../api-generation/overview)** - Auto-generate API clients
+- **[Integrations Overview](../integrations/overview)** - All integrations
 
 **Guides & Tools:**
 - **[CLI Tools](/docs/cli/introduction)** - Manage modules via CLI

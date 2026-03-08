@@ -21,7 +21,7 @@ Django-CFG provides seamless integrations with essential third-party services an
 
 ### 🔄 Background Tasks
 
-### [Django-RQ Integration](../django-rq/overview)
+### [Django-RQ Integration](./django-rq/overview)
 
 Production-ready Redis-based task queue with built-in monitoring:
 
@@ -35,17 +35,17 @@ Production-ready Redis-based task queue with built-in monitoring:
 - ✅ **Job dependencies** and retry logic with exponential backoff
 
 **Use Cases:**
-- Email sending and notifications ([Email Module](../../modules/email/overview))
-- Payment processing ([Payment System](../../built-in-apps/payments/overview))
-- Document processing ([AI Knowledge Base](../../built-in-apps/ai-knowledge/overview))
+- Email sending and notifications ([Email Module](../modules/email/overview))
+- Payment processing ([Payment System](../built-in-apps/payments/overview))
+- Document processing ([AI Knowledge Base](../built-in-apps/ai-knowledge/overview))
 - Bulk operations (Newsletter campaigns, data imports)
 - Scheduled tasks (cleanup jobs, report generation)
 
-[**Full Django-RQ Guide →**](../django-rq/overview)
+[**Full Django-RQ Guide →**](./django-rq/overview)
 
 ### 🔧 Development Tools
 
-### [Ngrok Integration](../ngrok/overview)
+### [Ngrok Integration](./ngrok/overview)
 
 Secure tunnels for webhook testing in development:
 
@@ -57,16 +57,16 @@ Secure tunnels for webhook testing in development:
 - ✅ **CLI integration** with `runserver_ngrok` command
 
 **Use Cases:**
-- Testing payment webhooks locally ([Payment System](../../built-in-apps/payments/overview))
-- OAuth callback testing ([Authentication](../auth))
+- Testing payment webhooks locally ([Payment System](../built-in-apps/payments/overview))
+- OAuth callback testing ([Authentication](./auth))
 - Third-party API webhooks
 - Mobile app development
 
-[**Full Ngrok Guide →**](../ngrok/overview)
+[**Full Ngrok Guide →**](./ngrok/overview)
 
 ### 🔐 Authentication
 
-### [Authentication Patterns](../auth)
+### [Authentication Patterns](./auth)
 
 Enterprise authentication integration:
 
@@ -84,11 +84,11 @@ Enterprise authentication integration:
 - Passwordless login with email OTP
 - OAuth2 with GitHub and other providers
 
-[**Full Auth Guide →**](../auth)
+[**Full Auth Guide →**](./auth)
 
 ### 📐 Best Practices
 
-### [Integration Patterns](../patterns)
+### [Integration Patterns](./patterns)
 
 Common patterns and best practices:
 
@@ -105,7 +105,7 @@ Common patterns and best practices:
 - Managing third-party secrets
 - Testing external integrations
 
-[**Full Patterns Guide →**](../patterns)
+[**Full Patterns Guide →**](./patterns)
 
 
 ---
@@ -144,7 +144,7 @@ queue = django_rq.get_queue('default')
 queue.enqueue('apps.myapp.tasks.send_welcome_email', user_id=123)
 ```
 
-[**Full Django-RQ Guide →**](../django-rq/overview)
+[**Full Django-RQ Guide →**](./django-rq/overview)
 
 ### Enable Ngrok for Webhook Testing
 
@@ -161,7 +161,7 @@ ngrok:
 python manage.py runserver_ngrok
 ```
 
-[**Full Ngrok Guide →**](../ngrok/overview)
+[**Full Ngrok Guide →**](./ngrok/overview)
 
 ---
 
@@ -281,23 +281,23 @@ python manage.py runserver_ngrok --test
 ### Core Integrations
 
 **Background Processing:**
-- **[Django-RQ Overview](../django-rq/overview)** - Complete task queue guide
-- **[Django-RQ Architecture](../django-rq/architecture)** - System design and components
-- **[Django-RQ Configuration](../django-rq/configuration)** - Setup and configuration
-- **[Django-RQ Examples](../django-rq/examples)** - Real-world task patterns
-- **[Django-RQ Monitoring](../django-rq/monitoring)** - Task monitoring and observability
+- **[Django-RQ Overview](./django-rq/overview)** - Complete task queue guide
+- **[Django-RQ Architecture](./django-rq/architecture)** - System design and components
+- **[Django-RQ Configuration](./django-rq/configuration)** - Setup and configuration
+- **[Django-RQ Examples](./django-rq/examples)** - Real-world task patterns
+- **[Django-RQ Monitoring](./django-rq/monitoring)** - Task monitoring and observability
 
 **Development Tools:**
-- **[Ngrok Overview](../ngrok/overview)** - Webhook testing guide
-- **[Ngrok Configuration](../ngrok/configuration)** - Tunnel configuration
+- **[Ngrok Overview](./ngrok/overview)** - Webhook testing guide
+- **[Ngrok Configuration](./ngrok/configuration)** - Tunnel configuration
 
 **Authentication:**
-- **[Auth Patterns](../auth)** - Enterprise authentication
-- **[User Management](../../built-in-apps/user-management/accounts)** - Built-in user system
+- **[Auth Patterns](./auth)** - Enterprise authentication
+- **[User Management](../built-in-apps/user-management/accounts)** - Built-in user system
 
 **Communication:**
-- **[Telegram Module](../../modules/telegram/overview)** - Bot notifications
-- **[Email Module](../../modules/email/overview)** - Email sending
+- **[Telegram Module](../modules/telegram/overview)** - Bot notifications
+- **[Email Module](../modules/email/overview)** - Email sending
 
 ### Configuration & Setup
 
@@ -314,13 +314,13 @@ python manage.py runserver_ngrok --test
 ### Related Features
 
 **Apps Using Integrations:**
-- **[Payment System](../../built-in-apps/payments/overview)** - Uses Django-RQ for async processing
-- **[AI Knowledge Base](../../built-in-apps/ai-knowledge/overview)** - Uses Django-RQ for document processing
-- **[Newsletter](../../built-in-apps/user-management/newsletter)** - Uses Django-RQ for bulk emails
+- **[Payment System](../built-in-apps/payments/overview)** - Uses Django-RQ for async processing
+- **[AI Knowledge Base](../built-in-apps/ai-knowledge/overview)** - Uses Django-RQ for document processing
+- **[Newsletter](../built-in-apps/user-management/newsletter)** - Uses Django-RQ for bulk emails
 
 **Other Modules:**
-- **[Modules Overview](../../modules/overview)** - All available modules
-- **[LLM Module](../../modules/llm/overview)** - AI model integration
+- **[Modules Overview](../modules/overview)** - All available modules
+- **[LLM Module](../modules/llm/overview)** - AI model integration
 
 ### Tools & Guides
 
@@ -328,7 +328,7 @@ python manage.py runserver_ngrok --test
 - **[CLI Introduction](/docs/cli/introduction)** - All CLI tools
 
 **Guides:**
-- **[Integration Patterns](../patterns)** - Best practices
+- **[Integration Patterns](./patterns)** - Best practices
 - **[Production Config](/docs/guides/production-config)** - Production integration setup
 - **[Troubleshooting](/docs/guides/troubleshooting)** - Common integration issues
 
@@ -337,15 +337,15 @@ python manage.py runserver_ngrok --test
 ## Next Steps
 
 **New to Integrations?**
-1. Start with [Django-RQ Overview](../django-rq/overview) for background tasks
-2. Try [Ngrok Overview](../ngrok/overview) for webhook testing
-3. Review [Integration Patterns](../patterns) for best practices
+1. Start with [Django-RQ Overview](./django-rq/overview) for background tasks
+2. Try [Ngrok Overview](./ngrok/overview) for webhook testing
+3. Review [Integration Patterns](./patterns) for best practices
 
 **Ready for Production?**
 1. Review [Production Config](/docs/guides/production-config)
 2. Set up [Redis](/docs/fundamentals/configuration/cache) for Django-RQ
 3. Configure [environment variables](/docs/fundamentals/configuration/environment) for secrets
-4. Deploy workers using [Django-RQ Monitoring](../django-rq/monitoring) guide
+4. Deploy workers using [Django-RQ Monitoring](./django-rq/monitoring) guide
 
 **Need Help?**
 - [Troubleshooting Guide](/docs/guides/troubleshooting)

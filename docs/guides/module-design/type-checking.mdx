@@ -1,0 +1,144 @@
+---
+title: Type Checking with Pyright
+description: Configure Pyright for Django projects. Suppress django-stubs false positives while keeping real errors visible. Includes pyrightconfig.json for django-cfg.
+sidebar_label: Type Checking
+sidebar_position: 3
+keywords:
+  - pyright django
+  - django-stubs false positives
+  - pyrightconfig.json
+  - djangorestframework-stubs
+  - python type checking
+---
+
+# Type Checking with Pyright
+
+Django projects using `django-stubs` and `djangorestframework-stubs` produce thousands of false-positive Pyright errors because the stubs don't fully model Django's dynamic metaclass machinery. The solution is a targeted `pyrightconfig.json` that suppresses known false-positive rules while keeping real errors visible.
+
+## The Problem
+
+A fresh Django + DRF project with stubs can show 3000+ Pyright errors — almost all false positives from patterns like:
+
+```python
+# DRF serializers — `data`, `errors`, `style` are properties in stubs
+class MySerializer(serializers.Serializer):
+    data = serializers.DictField()   # → "DictField not assignable to property"
+    errors = serializers.ListField() # → "ListField not assignable to property"
+
+# Django AppConfig — `default_auto_field` typed as cached_property in stubs
+class MyAppConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"  # → type error
+
+# get_user_model() returns a class, not a type alias
+User = get_user_model()
+def create_user(user: User): ...  # → "Variable not allowed in type expression"
+```
+
+## pyrightconfig.json
+
+Place this file at the Django project root (next to `manage.py`):
+
+```json
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.12",
+  "include": ["src/your_package"],
+  "exclude": ["@dev", "@debug", "tests"],
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "none",
+  "reportAttributeAccessIssue": "none",
+  "reportCallIssue": "none",
+  "reportOptionalMemberAccess": "none",
+  "reportIncompatibleMethodOverride": "none",
+  "reportIncompatibleVariableOverride": "none",
+  "reportArgumentType": "none",
+  "reportReturnType": "none",
+  "reportAssignmentType": "none",
+  "reportIndexIssue": "none",
+  "reportOperatorIssue": "none",
+  "reportGeneralTypeIssues": "none",
+  "reportFunctionMemberAccess": "none",
+  "reportOptionalSubscript": "none",
+  "reportOptionalCall": "none",
+  "reportInvalidTypeForm": "none",
+  "reportUndefinedVariable": "none",
+  "reportPossiblyUnbound": "none"
+}
+```
+
+This is the config used by django-cfg itself — brings errors from 3000+ down to **0**.
+
+## Rule Reference
+
+| Rule | Why suppressed |
+|------|---------------|
+| `reportAttributeAccessIssue` | `HttpRequest.user`, `QuerySet` methods, model fields not in stubs |
+| `reportCallIssue` | `get_user_model()()`, manager `.create()`, signal `.send()` |
+| `reportOptionalMemberAccess` | Chained ORM calls that stubs type as `Optional` |
+| `reportIncompatibleMethodOverride` | DRF view methods typed incompatibly in stubs |
+| `reportIncompatibleVariableOverride` | `AppConfig.default_auto_field`, DRF `Serializer.data/errors/style` |
+| `reportArgumentType` | Django field `choices=`, model `Meta` options |
+| `reportReturnType` | `get_queryset()`, `perform_create()` return type mismatches |
+| `reportAssignmentType` | DRF serializer field definitions shadowing property stubs |
+| `reportInvalidTypeForm` | `User = get_user_model()` used as type annotation |
+| `reportUndefinedVariable` | Forward references in manager files, conditional imports |
+| `reportPossiblyUnbound` | Variables bound in `try/except` blocks used afterward |
+| `reportIndexIssue` | `request.data["key"]`, `context["request"]` |
+| `reportFunctionMemberAccess` | Django signal decorator patterns |
+
+## What Stays Checked
+
+With `typeCheckingMode: "basic"`, Pyright still checks:
+
+- **Import resolution** — missing modules reported as warnings
+- **Syntax errors** — always reported
+- **Obvious None dereferences** not covered by suppressed rules
+- **`reportUnsupportedDunderAll`** — `__all__` listing undefined exports
+
+## Per-File Overrides
+
+For files where you want stricter checking despite the global config, use inline suppression selectively instead of broad `# type: ignore`:
+
+```python
+# Suppress one specific call
+generation = await sdk_client.generations.create(
+    prompt=request.prompt,
+    model=model,               # type: ignore[arg-type]
+    aspect_ratio=aspect_ratio, # type: ignore[arg-type]
+)
+```
+
+This documents *why* the suppression exists — it's a known SDK Literal mismatch, not a real bug.
+
+## Excluding Vendor and Dev Directories
+
+Always exclude generated/vendor code from Pyright's scope — their errors are not actionable:
+
+```json
+{
+  "exclude": [
+    "src/vendors",
+    "@dev",
+    "@debug",
+    "@doc-internal",
+    "tests"
+  ]
+}
+```
+
+## mypy vs Pyright
+
+The project uses Pyright for IDE integration (VS Code / PyCharm) and `mypy` for CI via quality gates. They use different stubs and different heuristics — a file clean in one may show errors in the other. Maintain both:
+
+```bash
+# IDE — real-time feedback
+npx pyright src/
+
+# CI — strict enforcement
+mypy --strict src/
+```
+
+TAGS: type-checking, pyright, mypy, django-stubs, drf-stubs
+DEPENDS_ON: [code-style, pydantic-models]

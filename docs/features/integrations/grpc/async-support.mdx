@@ -113,7 +113,7 @@ class ChatService(BaseService):
 ```
 
 <Callout type="info">
-**For production bidirectional streaming**, use `BidirectionalStreamingService` which provides ping/keepalive, connection management, and proper error handling. See [Streaming Patterns](../streaming-patterns).
+**For production bidirectional streaming**, use `BidirectionalStreamingService` which provides ping/keepalive, connection management, and proper error handling. See [Streaming Patterns](./streaming-patterns).
 </Callout>
 
 ## BidirectionalStreamingService
@@ -145,7 +145,7 @@ class BotService(BidirectionalStreamingService):
         return await self.dispatch_message(message)
 ```
 
-See [Streaming Patterns](../streaming-patterns) for complete documentation.
+See [Streaming Patterns](./streaming-patterns) for complete documentation.
 
 ## Django ORM with Async
 
@@ -338,12 +338,12 @@ python manage.py rungrpc --asyncio-debug
 |-------|----------|
 | `RuntimeError: no running event loop` | Make method `async def` |
 | `SynchronousOnlyOperation` | Use `await asyncio.to_thread()` or async ORM |
-| Stream closes unexpectedly | See [Troubleshooting](../troubleshooting#connection-timeout-bug) |
+| Stream closes unexpectedly | See [Troubleshooting](./troubleshooting#connection-timeout-bug) |
 | Memory usage growing | Check queue sizes and cleanup |
 
 ## Related Documentation
 
-- **[Streaming Patterns](../streaming-patterns)** - Production streaming patterns
-- **[Troubleshooting](../troubleshooting)** - Common issues and solutions
-- **[Configuration](../configuration)** - Full configuration options
-- **[Architecture](../architecture)** - System architecture
+- **[Streaming Patterns](./streaming-patterns)** - Production streaming patterns
+- **[Troubleshooting](./troubleshooting)** - Common issues and solutions
+- **[Configuration](./configuration)** - Full configuration options
+- **[Architecture](./architecture)** - System architecture
