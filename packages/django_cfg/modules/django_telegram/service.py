@@ -5,7 +5,12 @@ Auto-configuring Telegram notification service that integrates with DjangoConfig
 Supports custom bot_token and chat_id per-call with fallback to config defaults.
 """
 
-from typing import Any, BinaryIO, Dict, Optional, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, BinaryIO, Dict, Optional, Union
+
+if TYPE_CHECKING:
+    from .shortcuts import TelegramContext, TelegramLinks
 
 import telebot
 
@@ -479,34 +484,59 @@ class DjangoTelegram(BaseCfgModule):
     # ========== CLASS METHOD SHORTCUTS (backward compatibility) ==========
 
     @classmethod
-    def send_error(cls, error: str, context: Optional[Dict[str, Any]] = None) -> None:
+    def send_error(
+        cls,
+        error: str,
+        context: TelegramContext | None = None,
+        links: TelegramLinks | None = None,
+    ) -> None:
         """Send error notification. See shortcuts.send_error for details."""
         from .shortcuts import send_error
-        send_error(error, context)
+        send_error(error, context, links=links)
 
     @classmethod
-    def send_success(cls, message: str, details: Optional[Dict[str, Any]] = None) -> None:
+    def send_success(
+        cls,
+        message: str,
+        details: TelegramContext | None = None,
+        links: TelegramLinks | None = None,
+    ) -> None:
         """Send success notification. See shortcuts.send_success for details."""
         from .shortcuts import send_success
-        send_success(message, details)
+        send_success(message, details, links=links)
 
     @classmethod
-    def send_warning(cls, warning: str, context: Optional[Dict[str, Any]] = None) -> None:
+    def send_warning(
+        cls,
+        warning: str,
+        context: TelegramContext | None = None,
+        links: TelegramLinks | None = None,
+    ) -> None:
         """Send warning notification. See shortcuts.send_warning for details."""
         from .shortcuts import send_warning
-        send_warning(warning, context)
+        send_warning(warning, context, links=links)
 
     @classmethod
-    def send_info(cls, message: str, data: Optional[Dict[str, Any]] = None) -> None:
+    def send_info(
+        cls,
+        message: str,
+        data: TelegramContext | None = None,
+        links: TelegramLinks | None = None,
+    ) -> None:
         """Send info notification. See shortcuts.send_info for details."""
         from .shortcuts import send_info
-        send_info(message, data)
+        send_info(message, data, links=links)
 
     @classmethod
-    def send_stats(cls, title: str, stats: Dict[str, Any]) -> None:
+    def send_stats(
+        cls,
+        title: str,
+        stats: TelegramContext,
+        links: TelegramLinks | None = None,
+    ) -> None:
         """Send stats notification. See shortcuts.send_stats for details."""
         from .shortcuts import send_stats
-        send_stats(title, stats)
+        send_stats(title, stats, links=links)
 
 
 __all__ = [

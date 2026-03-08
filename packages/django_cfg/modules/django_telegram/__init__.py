@@ -31,6 +31,8 @@ from .queue import (
 )
 from .service import DjangoTelegram
 from .shortcuts import (
+    TelegramContext,
+    TelegramLinks,
     send_alert,
     send_error,
     send_info,
@@ -61,6 +63,8 @@ __all__ = [
     "format_to_yaml",
     "format_message_with_context",
     # Shortcuts
+    "TelegramContext",
+    "TelegramLinks",
     "send_error",
     "send_success",
     "send_warning",
