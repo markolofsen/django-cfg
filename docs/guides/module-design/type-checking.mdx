@@ -142,3 +142,48 @@ mypy --strict src/
 
 TAGS: type-checking, pyright, mypy, django-stubs, drf-stubs
 DEPENDS_ON: [code-style, pydantic-models]
+
+## DRF `validated_data` False Positives
+
+A common Pyright false positive with DRF: after `serializer.is_valid(raise_exception=True)`, Pyright still reports errors on `validated_data` access because DRF's stubs don't have an overload for `raise_exception=True`.
+
+```python
+serializer = MySerializer(data=request.data)
+serializer.is_valid(raise_exception=True)
+
+# Pyright may warn on these without the fix:
+name = serializer.validated_data["name"]       # reportOptionalSubscript
+value = serializer.validated_data.get("value") # reportOptionalMemberAccess
+```
+
+### Automatic Fix (django-cfg)
+
+**django-cfg fixes this automatically** — no manual configuration needed.
+
+When `django_cfg` is in `INSTALLED_APPS`, on first `manage.py` startup it:
+
+1. Writes `typings/rest_framework/serializers.pyi` to your project root with proper `@overload` for `is_valid`
+2. Adds `"stubPath": "typings"` to your `pyrightconfig.json`
+
+The stub adds:
+```python
+@overload
+def is_valid(self, *, raise_exception: Literal[True]) -> Literal[True]: ...
+@overload
+def is_valid(self, *, raise_exception: Literal[False] = ...) -> bool: ...
+```
+
+After Pyright picks up the new `stubPath`, `validated_data` is typed as `dict[str, Any]` and all access is clean — no `# type: ignore` needed.
+
+The stubs are versioned: when you upgrade django-cfg, the stubs update automatically on next startup.
+
+### Manual Workaround (without django-cfg)
+
+If not using django-cfg, suppress at the specific lines or add `"reportOptionalSubscript": "none"` to `pyrightconfig.json`:
+
+```python
+data: dict = serializer.validated_data  # type: ignore[assignment]
+name = data["name"]
+```
+
+TAGS: type-checking, pyright, drf, validated-data, stubs
