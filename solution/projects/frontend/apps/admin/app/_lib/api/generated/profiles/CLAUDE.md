@@ -10,7 +10,7 @@ python manage.py generate_client --groups profiles --typescript
 
 | | |
 |---|---|
-| Version | 3.0.3 |
+| Version | 3.1.0 |
 | Operations | 10 |
 | Schemas | 8 |
 

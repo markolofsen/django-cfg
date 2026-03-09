@@ -11,8 +11,8 @@ import * as Enums from '../../enums'
  * Serializer for orders.
  */
 export const OrderSchema = z.object({
-  id: z.int(),
-  portfolio: z.int(),
+  id: z.number().int(),
+  portfolio: z.number().int(),
   symbol: z.string().max(20),
   order_type: z.nativeEnum(Enums.OrderOrderType).optional(),
   side: z.nativeEnum(Enums.OrderSide),

@@ -3,6 +3,7 @@ export default {
   'overview': 'Overview',
   'quick-reference': 'Quick Reference',
   'core-commands': 'Core Commands',
+  'codegen': 'Code Generation',
   'ai-docs': 'AI Documentation',
   'development': 'Development',
   'ai-agents': 'AI Agents',

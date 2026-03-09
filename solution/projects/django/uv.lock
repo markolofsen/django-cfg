@@ -927,7 +927,7 @@ wheels = [
 
 [[package]]
 name = "django-cfg"
-version = "1.7.32"
+version = "1.7.53"
 source = { editable = "../../../../../../../../../../djangocfg" }
 dependencies = [
     { name = "adrf" },
@@ -949,10 +949,12 @@ dependencies = [
     { name = "django-json-widget" },
     { name = "django-ratelimit" },
     { name = "django-redis" },
+    { name = "django-stubs", extra = ["compatible-mypy"] },
     { name = "django-tailwind", extra = ["reload"] },
     { name = "django-unfold" },
     { name = "djangorestframework" },
     { name = "djangorestframework-simplejwt" },
+    { name = "djangorestframework-stubs", extra = ["compatible-mypy"] },
     { name = "drf-nested-routers" },
     { name = "drf-spectacular" },
     { name = "drf-spectacular-sidecar" },
@@ -1088,10 +1090,12 @@ requires-dist = [
     { name = "django-redis", specifier = ">=6.0.0,<7.0" },
     { name = "django-rq", marker = "extra == 'full'", specifier = ">=3.0" },
     { name = "django-rq", marker = "extra == 'rq'", specifier = ">=3.0" },
+    { name = "django-stubs", extras = ["compatible-mypy"], specifier = ">=5.2.9,<6.0" },
     { name = "django-tailwind", extras = ["reload"], specifier = ">=4.2.0,<5.0.0" },
     { name = "django-unfold", specifier = ">=0.73.1" },
     { name = "djangorestframework", specifier = ">=3.16.0,<4.0" },
     { name = "djangorestframework-simplejwt", specifier = ">=5.5.0,<6.0" },
+    { name = "djangorestframework-stubs", extras = ["compatible-mypy"], specifier = ">=3.16.8,<4.0" },
     { name = "drf-nested-routers", specifier = ">=0.94.0,<1.0" },
     { name = "drf-spectacular", specifier = ">=0.28.0,<1.0" },
     { name = "drf-spectacular-sidecar", specifier = ">=2025.8.0,<2026.0" },
@@ -1383,6 +1387,39 @@ wheels = [
 ]
 
 [[package]]
+name = "django-stubs"
+version = "5.2.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "django-stubs-ext" },
+    { name = "types-pyyaml" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9c/01/86c921e0e19c9fa7e705bf795998dbf55eb183e7be0342a3027dc1bcbc9f/django_stubs-5.2.9.tar.gz", hash = "sha256:c192257120b08785cfe6f2f1c91f1797aceae8e9daa689c336e52c91e8f6a493", size = 257970, upload_time = "2026-01-20T23:59:27.018Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0d/05/4c9c419b7051eb4b350100b086be6df487f968ab672d3d370f8ccf7c3746/django_stubs-5.2.9-py3-none-any.whl", hash = "sha256:2317a7130afdaa76f6ff7f623650d7f3bf1b6c86a60f95840e14e6ec6de1a7cd", size = 508656, upload_time = "2026-01-20T23:59:25.12Z" },
+]
+
+[package.optional-dependencies]
+compatible-mypy = [
+    { name = "mypy" },
+]
+
+[[package]]
+name = "django-stubs-ext"
+version = "5.2.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/55/03/9c2be939490d2282328db4611bc5956899f5ff7eabc3e88bd4b964a87373/django_stubs_ext-5.2.9.tar.gz", hash = "sha256:6db4054d1580657b979b7d391474719f1a978773e66c7070a5e246cd445a25a9", size = 6497, upload_time = "2026-01-20T23:58:59.462Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9b/f7/0d5f7d7e76fe972d9f560f687fdc0cab4db9e1624fd90728ca29b4ed7a63/django_stubs_ext-5.2.9-py3-none-any.whl", hash = "sha256:230c51575551b0165be40177f0f6805f1e3ebf799b835c85f5d64c371ca6cf71", size = 9974, upload_time = "2026-01-20T23:58:58.438Z" },
+]
+
+[[package]]
 name = "django-tailwind"
 version = "4.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1436,6 +1473,26 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a8/27/2874a325c11112066139769f7794afae238a07ce6adf96259f08fd37a9d7/djangorestframework_simplejwt-5.5.1.tar.gz", hash = "sha256:e72c5572f51d7803021288e2057afcbd03f17fe11d484096f40a460abc76e87f", size = 101265, upload_time = "2025-07-21T16:52:25.026Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/60/94/fdfb7b2f0b16cd3ed4d4171c55c1c07a2d1e3b106c5978c8ad0c15b4a48b/djangorestframework_simplejwt-5.5.1-py3-none-any.whl", hash = "sha256:2c30f3707053d384e9f315d11c2daccfcb548d4faa453111ca19a542b732e469", size = 107674, upload_time = "2025-07-21T16:52:07.493Z" },
+]
+
+[[package]]
+name = "djangorestframework-stubs"
+version = "3.16.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django-stubs" },
+    { name = "types-pyyaml" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/78/d5/87166a827833eb39703856ef957ca0fb4e9d15285331251186a2e738c20c/djangorestframework_stubs-3.16.8.tar.gz", hash = "sha256:f6d464b54fa2f929610e957446c04e6ac29558265418e0a2d9f653a4cdd410b5", size = 32312, upload_time = "2026-02-03T22:35:53.182Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ea/e9/d9c363b08d07d975c21793fe821b2020dfd3627ac4ce19c5c12df94ce9d0/djangorestframework_stubs-3.16.8-py3-none-any.whl", hash = "sha256:c5bf61def0f330a071dd5f470f05710189d06c467b3f3e186b32c5a23d4952fb", size = 56517, upload_time = "2026-02-03T22:35:50.67Z" },
+]
+
+[package.optional-dependencies]
+compatible-mypy = [
+    { name = "django-stubs", extra = ["compatible-mypy"] },
+    { name = "mypy" },
 ]
 
 [[package]]
@@ -5420,6 +5477,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c2/59/c743a842911887cd96d56aa8936522b0cd5f7a7f228c96e81b59fced45be/types_protobuf-6.32.1.20251210.tar.gz", hash = "sha256:c698bb3f020274b1a2798ae09dc773728ce3f75209a35187bd11916ebfde6763", size = 63900, upload_time = "2025-12-10T03:14:25.451Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/aa/43/58e75bac4219cbafee83179505ff44cae3153ec279be0e30583a73b8f108/types_protobuf-6.32.1.20251210-py3-none-any.whl", hash = "sha256:2641f78f3696822a048cfb8d0ff42ccd85c25f12f871fbebe86da63793692140", size = 77921, upload_time = "2025-12-10T03:14:24.477Z" },
+]
+
+[[package]]
+name = "types-pyyaml"
+version = "6.0.12.20250915"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/69/3c51b36d04da19b92f9e815be12753125bd8bc247ba0470a982e6979e71c/types_pyyaml-6.0.12.20250915.tar.gz", hash = "sha256:0f8b54a528c303f0e6f7165687dd33fafa81c807fcac23f632b63aa624ced1d3", size = 17522, upload_time = "2025-09-15T03:01:00.728Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/e0/1eed384f02555dde685fff1a1ac805c1c7dcb6dd019c916fe659b1c1f9ec/types_pyyaml-6.0.12.20250915-py3-none-any.whl", hash = "sha256:e7d4d9e064e89a3b3cae120b4990cd370874d2bf12fa5f46c97018dd5d3c9ab6", size = 20338, upload_time = "2025-09-15T03:00:59.218Z" },
 ]
 
 [[package]]

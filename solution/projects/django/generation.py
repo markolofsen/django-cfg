@@ -18,13 +18,16 @@ from django_cfg.modules.django_codegen import (
 ROOT = Path(__file__).parent
 FRONTEND = ROOT.parent / "frontend"
 
+ADMIN_API = FRONTEND / "apps" / "admin" / "app" / "_lib" / "api" / "generated"
+EXTENSIONS = FRONTEND / "extensions"
+
 config = Config(
     openapi=OpenAPI(
         targets=[
             Target(
                 lang=Language.TYPESCRIPT,
                 type=TargetType.ADMIN,
-                path=FRONTEND / "apps" / "admin" / "app" / "_lib" / "api" / "generated",
+                path=ADMIN_API,
                 groups=["profiles", "trading", "crypto"],
             ),
         ],
@@ -32,7 +35,7 @@ config = Config(
         # Auto-discover extensions
         extensions=ExtensionTarget(
             lang=Language.TYPESCRIPT,
-            frontend_path=FRONTEND / "extensions",
+            frontend_path=EXTENSIONS,
             package_pattern="ext-{name}",
             output_pattern="src/api/generated",
             group_prefix="ext_",

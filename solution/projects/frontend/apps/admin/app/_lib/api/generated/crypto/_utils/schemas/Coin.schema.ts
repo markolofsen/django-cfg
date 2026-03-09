@@ -10,7 +10,7 @@ import { z } from 'zod'
  * Serializer for coins.
  */
 export const CoinSchema = z.object({
-  id: z.int(),
+  id: z.number().int(),
   symbol: z.string().max(10),
   name: z.string().max(100),
   slug: z.string().max(100),
@@ -20,11 +20,11 @@ export const CoinSchema = z.object({
   price_change_24h_percent: z.string().optional(),
   price_change_7d_percent: z.string().optional(),
   price_change_30d_percent: z.string().optional(),
-  logo_url: z.union([z.url(), z.literal('')]).optional(),
+  logo_url: z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), { message: 'Must be a URL or relative path' }).optional(),
   description: z.string().optional(),
-  website: z.union([z.url(), z.literal('')]).optional(),
-  whitepaper_url: z.union([z.url(), z.literal('')]).optional(),
-  rank: z.int().min(0.0).max(2147483647.0).optional(),
+  website: z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), { message: 'Must be a URL or relative path' }).optional(),
+  whitepaper_url: z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), { message: 'Must be a URL or relative path' }).optional(),
+  rank: z.number().int().min(0.0).max(2147483647.0).optional(),
   is_active: z.boolean().optional(),
   is_tradeable: z.boolean().optional(),
   is_price_up_24h: z.boolean(),

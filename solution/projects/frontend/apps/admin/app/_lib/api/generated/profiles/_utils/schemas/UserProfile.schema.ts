@@ -10,18 +10,18 @@ import { z } from 'zod'
  * Serializer for user profiles.
  */
 export const UserProfileSchema = z.object({
-  id: z.int(),
-  user: z.int(),
+  id: z.number().int(),
+  user: z.number().int(),
   user_info: z.record(z.string(), z.any()),
-  website: z.union([z.url(), z.literal('')]).optional(),
+  website: z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), { message: 'Must be a URL or relative path' }).optional(),
   github: z.string().max(100).optional(),
   twitter: z.string().max(100).optional(),
   linkedin: z.string().max(100).optional(),
   company: z.string().max(100).optional(),
   job_title: z.string().max(100).optional(),
-  posts_count: z.int(),
-  comments_count: z.int(),
-  orders_count: z.int(),
+  posts_count: z.number().int(),
+  comments_count: z.number().int(),
+  orders_count: z.number().int(),
   created_at: z.string().datetime({ offset: true }),
   updated_at: z.string().datetime({ offset: true }),
 })

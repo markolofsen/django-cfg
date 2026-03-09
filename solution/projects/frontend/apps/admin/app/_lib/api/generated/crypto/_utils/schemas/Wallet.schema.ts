@@ -11,9 +11,9 @@ import { CoinListSchema } from './CoinList.schema'
  * Serializer for wallets.
  */
 export const WalletSchema = z.object({
-  id: z.int(),
-  user: z.int(),
-  coin: z.int(),
+  id: z.number().int(),
+  user: z.number().int(),
+  coin: z.number().int(),
   coin_info: CoinListSchema,
   balance: z.string().optional(),
   locked_balance: z.string(),

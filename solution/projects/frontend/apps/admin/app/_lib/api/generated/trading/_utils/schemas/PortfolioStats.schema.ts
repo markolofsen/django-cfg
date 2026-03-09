@@ -10,9 +10,9 @@ import { z } from 'zod'
  * Serializer for portfolio statistics.
  */
 export const PortfolioStatsSchema = z.object({
-  total_portfolios: z.int(),
+  total_portfolios: z.number().int(),
   total_volume_usd: z.string(),
-  total_orders: z.int(),
+  total_orders: z.number().int(),
 })
 
 /**

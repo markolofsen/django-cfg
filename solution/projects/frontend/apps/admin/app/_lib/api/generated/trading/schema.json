@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.3",
+  "openapi": "3.1.0",
   "info": {
     "title": "Django CFG API",
     "version": "1.0.0",
@@ -510,10 +510,12 @@
             "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
           },
           "price": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "decimal",
-            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
-            "nullable": true
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
           },
           "filled_quantity": {
             "type": "string",
@@ -596,10 +598,12 @@
             "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
           },
           "price": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "decimal",
-            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
-            "nullable": true
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
           }
         },
         "required": [
@@ -643,10 +647,12 @@
             "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
           },
           "price": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "decimal",
-            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
-            "nullable": true
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
           }
         },
         "required": [
@@ -693,10 +699,12 @@
             "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
           },
           "price": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "decimal",
-            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
-            "nullable": true
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
           }
         },
         "required": [
@@ -870,10 +878,12 @@
             "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
           },
           "price": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "decimal",
-            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
-            "nullable": true
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
           }
         }
       },

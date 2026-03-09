@@ -11,7 +11,7 @@ import { CoinListSchema } from './CoinList.schema'
  * Serializer for coin statistics.
  */
 export const CoinStatsSchema = z.object({
-  total_coins: z.int(),
+  total_coins: z.number().int(),
   total_market_cap_usd: z.string(),
   total_volume_24h_usd: z.string(),
   trending_coins: z.array(CoinListSchema),

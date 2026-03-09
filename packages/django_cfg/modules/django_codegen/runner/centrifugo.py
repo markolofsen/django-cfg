@@ -3,17 +3,19 @@ Centrifugo generation runner.
 
 v6.1: Rich logging integration.
 v6.2: Platform enum instead of Language.
+v6.3: New targets format (list[Target]).
 """
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.core.management import call_command
 
 from django_cfg.modules.django_codegen.config import Centrifugo
-from django_cfg.modules.django_codegen.runner.utils import copy_groups
 
 if TYPE_CHECKING:
     from django_cfg.modules.django_codegen.runner.logger import GenerationLogger
@@ -27,21 +29,20 @@ def run_centrifugo(
     logger: GenerationLogger,
 ) -> None:
     """Run Centrifugo generation."""
-    platforms = {
-        "typescript": cfg.typescript,
-        "swift": cfg.swift,
-        "go": cfg.go,
-    }
+    # Group targets by platform
+    by_platform: dict[str, list] = {}
+    for target in cfg.targets:
+        key = target.lang.value
+        by_platform.setdefault(key, []).append(target)
 
-    for platform, groups in platforms.items():
-        if not groups:
-            continue
+    for platform, targets in by_platform.items():
         if only_platforms and platform not in only_platforms:
             continue
 
-        effective_groups = groups
+        all_groups = [g for t in targets for g in t.groups]
+        effective_groups = all_groups
         if only_groups:
-            effective_groups = [g for g in groups if g in only_groups]
+            effective_groups = [g for g in all_groups if g in only_groups]
 
         if not effective_groups:
             continue
@@ -62,12 +63,14 @@ def run_centrifugo(
             logger.error(f"Generation failed: {e}")
             continue
 
-        # Copy
-        if platform in cfg.targets:
-            target = cfg.targets[platform]
-            from django.conf import settings
-
-            source = Path(settings.BASE_DIR) / "openapi" / "centrifuge" / platform
-
-            copied = copy_groups(source, target, effective_groups, logger)
-            logger.gen_complete(copied)
+        # Copy entire generated dir to each target path (centrifugo has no per-group subfolders)
+        source = Path(settings.BASE_DIR) / "openapi" / "centrifuge" / platform
+        for target in targets:
+            if not source.exists():
+                logger.warning(f"Source not found: {source}")
+                continue
+            target.path.mkdir(parents=True, exist_ok=True)
+            if target.path.exists():
+                shutil.rmtree(target.path)
+            shutil.copytree(source, target.path)
+            logger.gen_complete(1)

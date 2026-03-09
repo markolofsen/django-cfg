@@ -10,22 +10,22 @@ import { z } from 'zod'
  * Serializer for exchanges.
  */
 export const ExchangeSchema = z.object({
-  id: z.int(),
+  id: z.number().int(),
   name: z.string().max(100),
   slug: z.string().max(100),
   code: z.string().max(20),
   description: z.string().optional(),
-  website: z.union([z.url(), z.literal('')]).optional(),
-  logo_url: z.union([z.url(), z.literal('')]).optional(),
+  website: z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), { message: 'Must be a URL or relative path' }).optional(),
+  logo_url: z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), { message: 'Must be a URL or relative path' }).optional(),
   volume_24h_usd: z.string().optional(),
-  num_markets: z.int().min(0.0).max(2147483647.0).optional(),
-  num_coins: z.int().min(0.0).max(2147483647.0).optional(),
+  num_markets: z.number().int().min(0.0).max(2147483647.0).optional(),
+  num_coins: z.number().int().min(0.0).max(2147483647.0).optional(),
   maker_fee_percent: z.string().optional(),
   taker_fee_percent: z.string().optional(),
   is_active: z.boolean().optional(),
   is_verified: z.boolean().optional(),
   supports_api: z.boolean().optional(),
-  rank: z.int().min(0.0).max(2147483647.0).optional(),
+  rank: z.number().int().min(0.0).max(2147483647.0).optional(),
   created_at: z.string().datetime({ offset: true }),
   updated_at: z.string().datetime({ offset: true }),
 })

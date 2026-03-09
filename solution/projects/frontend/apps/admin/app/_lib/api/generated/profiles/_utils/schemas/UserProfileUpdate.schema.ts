@@ -10,7 +10,7 @@ import { z } from 'zod'
  * Serializer for updating user profiles.
  */
 export const UserProfileUpdateSchema = z.object({
-  website: z.union([z.url(), z.literal('')]).optional(),
+  website: z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), { message: 'Must be a URL or relative path' }).optional(),
   github: z.string().max(100).optional(),
   twitter: z.string().max(100).optional(),
   linkedin: z.string().max(100).optional(),

@@ -10,7 +10,7 @@ python manage.py generate_client --groups crypto --typescript
 
 | | |
 |---|---|
-| Version | 3.0.3 |
+| Version | 3.1.0 |
 | Operations | 7 |
 | Schemas | 8 |
 

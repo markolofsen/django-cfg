@@ -257,18 +257,7 @@ class Centrifugo(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    # New format (v5.3)
     targets: list[Target] = []
-
-    # Legacy format
-    typescript: list[str] = []
-    swift: list[str] = []
-    go: list[str] = []
-    legacy_targets: dict[str, Path] = {}
-
-    def is_legacy_format(self) -> bool:
-        """Check if using legacy format."""
-        return bool(self.typescript or self.swift or self.go) and not self.targets
 
 
 # =============================================================================
