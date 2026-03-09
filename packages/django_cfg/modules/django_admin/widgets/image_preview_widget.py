@@ -100,7 +100,7 @@ class ImagePreviewWidget(forms.ClearableFileInput):
 
         super().__init__(attrs=attrs)
 
-    def get_context(self, name, value, attrs):
+    def get_context(self, name, value, attrs) -> dict[str, Any]:
         """Add image preview context."""
         context = super().get_context(name, value, attrs)
 

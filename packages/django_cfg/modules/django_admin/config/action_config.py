@@ -34,7 +34,10 @@ class ActionConfig(BaseModel):
         "bulk",
         description="Type of action: 'bulk' (requires selection) or 'changelist' (button above listing)"
     )
-    variant: str = Field("default", description="Button variant: default, success, warning, danger, primary, info")
+    variant: Literal["default", "success", "warning", "danger", "primary", "info"] = Field(
+        "default",
+        description="Button variant for changelist action button",
+    )
     icon: Optional[str] = Field(None, description="Material icon name")
     url_path: Optional[str] = Field(None, description="Custom URL path for changelist actions (auto-generated if not provided)")
     confirmation: bool = Field(False, description="Require confirmation before execution")

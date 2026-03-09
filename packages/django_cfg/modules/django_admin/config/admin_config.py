@@ -28,15 +28,18 @@ Documentation:
     - examples.md - Real-world examples
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeAlias, Union
 
 from django.db import models
 from pydantic import BaseModel, ConfigDict, Field
 
+# TypeAlias for Django list_filter entries
+FilterSpec: TypeAlias = str | type | tuple[str, type]
+
 from .action_config import ActionConfig
 from .background_task_config import BackgroundTaskConfig
 from .documentation_config import DocumentationConfig
-from .field_config import FieldConfig
+from .field_config import FieldConfig, FieldConfigType
 from .fieldset_config import FieldsetConfig
 from .resource_config import ResourceConfig
 
@@ -63,13 +66,13 @@ class AdminConfig(BaseModel):
         default_factory=list,
         description="Fields editable directly in the list view"
     )
-    display_fields: List[FieldConfig] = Field(
+    display_fields: List[FieldConfigType] = Field(
         default_factory=list,
         description="Field configurations with widgets"
     )
 
     # Filters and search
-    list_filter: List[Union[str, Type, Tuple[str, Type]]] = Field(
+    list_filter: List[FilterSpec] = Field(
         default_factory=list,
         description="List filters (supports strings, filter classes, and tuples like ('field', FilterClass))"
     )

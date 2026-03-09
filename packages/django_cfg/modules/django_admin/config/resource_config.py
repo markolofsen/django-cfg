@@ -2,7 +2,7 @@
 Resource configuration for import/export functionality.
 """
 
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -65,19 +65,19 @@ class ResourceConfig(BaseModel):
     )
 
     # Validation and hooks (can be string paths or callables)
-    before_import: Optional[Union[str, Callable]] = Field(
+    before_import: str | Callable | None = Field(
         None,
         description="Hook called before import starts (receives dataset, dry_run)"
     )
-    after_import: Optional[Union[str, Callable]] = Field(
+    after_import: str | Callable | None = Field(
         None,
         description="Hook called after import completes (receives dataset, result, dry_run)"
     )
-    before_import_row: Optional[Union[str, Callable]] = Field(
+    before_import_row: str | Callable | None = Field(
         None,
         description="Hook called before each row import (receives row, row_number, dry_run)"
     )
-    after_import_row: Optional[Union[str, Callable]] = Field(
+    after_import_row: str | Callable | None = Field(
         None,
         description="Hook called after each row import (receives row, row_result, row_number)"
     )

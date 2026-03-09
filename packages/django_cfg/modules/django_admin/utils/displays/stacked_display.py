@@ -7,6 +7,7 @@ Renders multiple field values in a stacked layout.
 from typing import Any, Dict, List, Optional, Union
 
 from django.template.loader import render_to_string
+from django.utils.safestring import SafeString
 
 
 class StackedDisplay:
@@ -21,7 +22,7 @@ class StackedDisplay:
         cls,
         rows_data: List[Union[Dict[str, Any], List[Dict[str, Any]]]],
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render stacked display.
 
@@ -55,7 +56,7 @@ class StackedDisplay:
         obj: Any,
         field: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render stacked display from model object.
 
@@ -98,7 +99,7 @@ class StackedDisplay:
         return cls.render(rows_data, config)
 
     @classmethod
-    def _render_item(cls, obj: Any, item_config: Dict[str, Any]) -> str:
+    def _render_item(cls, obj: Any, item_config: Dict[str, Any]) -> SafeString:
         """
         Render a single item.
 
@@ -155,7 +156,7 @@ class StackedDisplay:
         return False
 
     @classmethod
-    def _render_text(cls, value: Any, config: Dict[str, Any]) -> str:
+    def _render_text(cls, value: Any, config: Dict[str, Any]) -> SafeString:
         """Render text item."""
         if value is None:
             value = ""
@@ -201,7 +202,7 @@ class StackedDisplay:
         )
 
     @classmethod
-    def _render_badge(cls, value: Any, config: Dict[str, Any]) -> str:
+    def _render_badge(cls, value: Any, config: Dict[str, Any]) -> SafeString:
         """Render badge item."""
         if value is None:
             return ""
@@ -256,7 +257,7 @@ class StackedDisplay:
         )
 
     @classmethod
-    def _render_datetime(cls, value: Any, config: Dict[str, Any]) -> str:
+    def _render_datetime(cls, value: Any, config: Dict[str, Any]) -> SafeString:
         """Render datetime item."""
         if value is None:
             return ""
@@ -288,7 +289,7 @@ class StackedDisplay:
     @classmethod
     def _render_money(
         cls, obj: Any, field_name: str, config: Dict[str, Any]
-    ) -> str:
+    ) -> SafeString:
         """Render money field item."""
         # Try to use full_display property if available
         full_display_field = f"{field_name}_full_display"

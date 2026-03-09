@@ -1,0 +1,396 @@
+---
+title: Flash Messages
+description: One-time session-based messages for displaying sensitive data like API keys, passwords, and tokens directly in Django Admin — shown once, then gone.
+sidebar_label: Flash Messages
+sidebar_position: 8
+keywords:
+  - flash messages
+  - one-time display
+  - API keys
+  - session storage
+  - sensitive data
+  - django admin
+  - FlashMixin
+  - one_time_flash_fields
+---
+
+
+# Flash Messages
+
+Display sensitive data — API keys, passwords, tokens — exactly once in the Django Admin change view, then erase it from the session automatically.
+
+## The Problem
+
+When you generate a secret on save (e.g. a plain-text API key), you need to show it to the admin user immediately. But you cannot store it in the database as plain text, and there is no built-in Django mechanism to show data "once and never again" in the admin.
+
+Flash messages solve this by writing the sensitive content to the Django session on save, injecting a virtual readonly field into the change page, rendering the content on first view, and deleting the session key immediately — so a page reload shows nothing.
+
+<Callout type="info">
+**Truly One-Time**
+The session key is consumed (deleted) the moment the field renders. Refreshing the page, closing and reopening the tab, or navigating away and back — the content is gone every time.
+</Callout>
+
+## Quick Example
+
+```python
+from django.contrib import admin
+from django_cfg.modules.django_admin.base import PydanticAdmin
+from django_cfg.modules.django_admin.base.pydantic_admin.flash import FlashFieldConfig
+
+api_key_config = AdminConfig(
+    model=ApiKey,
+    readonly_fields=["created_at"],
+    fieldsets=[
+        FieldsetConfig(title="API Key", fields=["name", "prefix", "created_at"]),
+    ],
+)
+
+@admin.register(ApiKey)
+class ApiKeyAdmin(PydanticAdmin):
+    config = api_key_config
+    one_time_flash_fields = {
+        'plain_key_display': FlashFieldConfig(
+            source='_generated_plain_key',
+            style='code_warning',
+            title='Plain API Key (One-Time Display)',
+            message='SAVE THIS KEY NOW — You will not see it again!',
+        )
+    }
+```
+
+## Usage Patterns
+
+There are two ways to trigger a flash message: **declarative** (via `one_time_flash_fields`) and **imperative** (via `self.flash_once()`).
+
+### Declarative — `one_time_flash_fields`
+
+Define `one_time_flash_fields` as a class attribute mapping a field name to a `FlashFieldConfig`. The system automatically calls `flash_once()` after every **create** (not edit).
+
+```python
+from django.contrib import admin
+from django_cfg.modules.django_admin.base import PydanticAdmin
+from django_cfg.modules.django_admin.base.pydantic_admin.flash import FlashFieldConfig
+
+@admin.register(ApiKey)
+class ApiKeyAdmin(PydanticAdmin):
+    config = api_key_config
+
+    one_time_flash_fields = {
+        'plain_key_display': FlashFieldConfig(
+            source='_generated_plain_key',      # Transient attribute on the saved obj
+            style='code_warning',
+            title='Plain API Key (One-Time Display)',
+            message='SAVE THIS KEY NOW — You will not see it again!',
+        )
+    }
+```
+
+`source` is the name of a transient attribute that must be set on `obj` **before** `obj.save()` is called. Set it in your model's `save()` method:
+
+```python
+class ApiKey(models.Model):
+    name = models.CharField(max_length=100)
+    prefix = models.CharField(max_length=8, editable=False)
+    hashed_key = models.CharField(max_length=128, editable=False)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            import secrets
+            plain_key = secrets.token_urlsafe(32)
+            self._generated_plain_key = plain_key          # Transient attribute
+            self.prefix = plain_key[:8]
+            self.hashed_key = make_password(plain_key)
+        super().save(*args, **kwargs)
+```
+
+<Callout type="warning">
+**Create Only**
+The declarative style fires only on object creation (`change=False`). It does not trigger when editing an existing record. Use the imperative style if you need to flash on updates.
+</Callout>
+
+### Imperative — `self.flash_once()`
+
+Call `flash_once()` manually inside `save_model()` when you need full control — conditional logic, edit-time flashing, or multiple fields at once.
+
+```python
+@admin.register(ApiKey)
+class ApiKeyAdmin(PydanticAdmin):
+    config = api_key_config
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not change and hasattr(obj, '_generated_plain_key'):
+            self.flash_once(
+                request, obj,
+                field_name='plain_key_display',
+                content=obj._generated_plain_key,
+                title='Plain API Key (One-Time Display)',
+                message='SAVE THIS KEY NOW — You will not see it again!',
+                style='code_warning',
+            )
+```
+
+**Signature:**
+
+```python
+def flash_once(
+    self,
+    request,
+    obj,
+    field_name: str,
+    content: str,
+    title: str = '',
+    message: str = '',
+    style: FlashStyle = 'code_warning',
+) -> None: ...
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `request` | `HttpRequest` | Current admin request (provides the session) |
+| `obj` | Model instance | Saved model object (provides `pk`, `app_label`, `model_name`) |
+| `field_name` | `str` | Virtual field name that will appear in `readonly_fields` |
+| `content` | `str` | The sensitive content to display |
+| `title` | `str` | Bold heading shown above the content |
+| `message` | `str` | Subtitle or instruction shown below the title |
+| `style` | `FlashStyle` | Visual style — see [Style Reference](#style-reference) |
+
+## Style Reference
+
+Eight styles are available via the `FlashStyle` literal type.
+
+| Style | Appearance | Use Case |
+|-------|-----------|----------|
+| `code_warning` | Yellow background, dark code block, green monospace text | **Default.** API keys, tokens — "save this now" |
+| `code_error` | Red background, dark code block, red monospace text | Destructive secrets, credentials that can cause damage |
+| `code_success` | Green background, dark code block, green monospace text | Successfully generated keys, confirmation codes |
+| `info` | Blue box, plain text | Informational one-time messages |
+| `warning` | Yellow box, plain text | Warnings without sensitive code |
+| `error` | Red box, plain text | Error notices, failed generation messages |
+| `success` | Green box, plain text | Success confirmations without code |
+| `raw` | Renders content as raw HTML | Custom HTML layouts — use with care |
+
+<Callout type="warning">
+**`raw` Style and XSS**
+The `raw` style skips HTML escaping and injects content directly into the page. Only use it with trusted, application-generated content — never with user-supplied strings.
+
+All other styles pass content through Django's `format_html()`, making them safe against XSS by default.
+</Callout>
+
+## FlashFieldConfig Reference
+
+`FlashFieldConfig` is a Pydantic v2 model used with the declarative `one_time_flash_fields` dict.
+
+```python
+from django_cfg.modules.django_admin.base.pydantic_admin.flash import FlashFieldConfig
+
+FlashFieldConfig(
+    source='_generated_plain_key',   # Required
+    style='code_warning',            # Optional, default: 'code_warning'
+    title='Plain API Key',           # Optional
+    message='Save this now!',        # Optional
+)
+```
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `source` | `str` | Yes | — | Name of the transient attribute on `obj` to read from |
+| `style` | `FlashStyle` | No | `'code_warning'` | Visual style for the rendered field |
+| `title` | `str` | No | `''` | Bold heading displayed above the content |
+| `message` | `str` | No | `''` | Subtitle or instruction shown below the title |
+
+## How It Works
+
+The full lifecycle of a flash message, step by step:
+
+1. **Save** — `save_model()` runs. For the declarative style, the mixin checks `one_time_flash_fields` and calls `flash_once()` automatically. For the imperative style, you call `flash_once()` directly.
+
+2. **Session write** — `flash_once()` constructs a `FlashPayload` Pydantic model from the provided data, validates it, serialises it to JSON, and stores it in `request.session` under the key:
+   ```
+   _pydantic_admin_flash_{app_label}_{model_name}_{pk}_{field_name}
+   ```
+
+3. **Redirect** — Django redirects to the change page for the newly created object (standard admin behaviour).
+
+4. **`get_readonly_fields()`** — When the change page loads, the mixin scans the session for pending flash keys matching this object. For each found key, the corresponding `field_name` is appended to `readonly_fields`.
+
+5. **`get_fieldsets()`** — Flash field names are prepended to the first fieldset so they appear at the top of the change form.
+
+6. **Render and consume** — The display method renders the styled HTML block and immediately deletes the session key. The field will not appear on any subsequent page load.
+
+<Callout type="info">
+**No Manual Configuration**
+You do not need to add the flash field name to `AdminConfig.readonly_fields` or `fieldsets`. Steps 4 and 5 handle injection automatically.
+</Callout>
+
+## Complete Example — API Key Admin
+
+A full working example showing model, admin config, and flash setup:
+
+```python
+# models.py
+import secrets
+from django.contrib.auth.hashers import make_password
+from django.db import models
+
+class ApiKey(models.Model):
+    name = models.CharField(max_length=100)
+    prefix = models.CharField(max_length=8, editable=False)
+    hashed_key = models.CharField(max_length=128, editable=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            plain_key = secrets.token_urlsafe(32)
+            self._generated_plain_key = plain_key   # Transient — not saved to DB
+            self.prefix = plain_key[:8]
+            self.hashed_key = make_password(plain_key)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.prefix}...)"
+```
+
+```python
+# admin.py
+from django.contrib import admin
+from django_cfg.modules.django_admin import AdminConfig, BadgeField, DateTimeField, FieldsetConfig, Icons
+from django_cfg.modules.django_admin.base import PydanticAdmin
+from django_cfg.modules.django_admin.base.pydantic_admin.flash import FlashFieldConfig
+from .models import ApiKey
+
+api_key_config = AdminConfig(
+    model=ApiKey,
+    list_display=["name", "prefix", "is_active", "created_at"],
+    display_fields=[
+        BadgeField(name="prefix", title="Key Prefix", variant="info", icon=Icons.KEY),
+        DateTimeField(name="created_at", title="Created", ordering="created_at"),
+    ],
+    readonly_fields=["prefix", "created_at"],
+    fieldsets=[
+        FieldsetConfig(
+            title="API Key",
+            fields=["name", "prefix", "is_active", "created_at"],
+        ),
+    ],
+    search_fields=["name", "prefix"],
+)
+
+@admin.register(ApiKey)
+class ApiKeyAdmin(PydanticAdmin):
+    config = api_key_config
+
+    # Declarative: auto-fires on create
+    one_time_flash_fields = {
+        'plain_key_display': FlashFieldConfig(
+            source='_generated_plain_key',
+            style='code_warning',
+            title='Plain API Key (One-Time Display)',
+            message='SAVE THIS KEY NOW — You will not see it again!',
+        )
+    }
+```
+
+After creating an API key, the change page shows:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  Plain API Key (One-Time Display)                        │
+│  SAVE THIS KEY NOW — You will not see it again!          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │ xK3mQ8zR2pL9nW5vY1tA6bC4dF0gH7jI...              │  │
+│  └────────────────────────────────────────────────────┘  │
+├──────────────────────────────────────────────────────────┤
+│  API Key                                                 │
+│  Name:       My Service Key                              │
+│  Prefix:     xK3mQ8zR                                    │
+│  Active:     ✓                                           │
+│  Created:    2026-03-09 14:22:01                         │
+└──────────────────────────────────────────────────────────┘
+```
+
+On the next page load, the flash field is gone.
+
+## Imperative Pattern — Conditional Flash
+
+Use `flash_once()` directly when you need conditional logic:
+
+```python
+@admin.register(RotatingCredential)
+class RotatingCredentialAdmin(PydanticAdmin):
+    config = credential_config
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+
+        # Flash on both create and rotation (edit)
+        if hasattr(obj, '_new_plain_secret'):
+            action = 'Rotated' if change else 'Generated'
+            self.flash_once(
+                request, obj,
+                field_name='secret_display',
+                content=obj._new_plain_secret,
+                title=f'Secret {action} (One-Time Display)',
+                message='Store this in your secrets manager immediately.',
+                style='code_error' if change else 'code_warning',
+            )
+```
+
+## Security Notes
+
+### XSS Safety
+
+All flash content (except `raw` style) is escaped through Django's `format_html()` before being inserted into the page. This prevents cross-site scripting even if `content` contains HTML characters.
+
+Only the `raw` style bypasses escaping. It is intended for pre-built, application-controlled HTML — never pass user input to a `raw`-style flash field.
+
+### Session Storage
+
+Flash data is stored in Django's standard session backend. Key properties:
+
+- The session key is **unique per object and field name** — multiple flash fields on the same object are independent.
+- The key is **deleted on first render** — not on first page load, but at the moment the display method runs.
+- If the admin user closes the tab before the change page loads, the data remains in the session until the session expires (governed by `SESSION_COOKIE_AGE`).
+- Flash data is never written to the database model; only the hashed/derived value is persisted.
+
+<Callout type="warning">
+**Session Expiry**
+If the session expires before the admin user visits the change page, the flash data is lost silently. The field simply will not appear. This is by design — the alternative is persisting the plain-text secret, which is worse.
+</Callout>
+
+### Transient Attributes
+
+The `source` attribute in `FlashFieldConfig` must exist on the model instance at the time `flash_once()` is called. Set it in the model's `save()` method or in `save_model()` **before** calling `super().save_model()`.
+
+```python
+# Correct: set the transient attribute in model.save()
+def save(self, *args, **kwargs):
+    if not self.pk:
+        plain = secrets.token_urlsafe(32)
+        self._generated_plain_key = plain   # Set BEFORE super().save()
+        self.hashed_key = make_password(plain)
+    super().save(*args, **kwargs)
+```
+
+```python
+# Also correct: set it in save_model() before calling super()
+def save_model(self, request, obj, form, change):
+    if not change:
+        plain = secrets.token_urlsafe(32)
+        obj._generated_plain_key = plain    # Set BEFORE super().save_model()
+        obj.hashed_key = make_password(plain)
+    super().save_model(request, obj, form, change)
+    if not change:
+        self.flash_once(request, obj, field_name='plain_key_display',
+                        content=obj._generated_plain_key, style='code_warning')
+```
+
+## Next Steps
+
+- **[Configuration](./configuration)** — AdminConfig reference, fieldsets, readonly fields
+- **[Field Types](./field-types)** — Display field types for list views
+- **[Examples](./examples)** — Real-world admin examples
+
+
+TAGS: flash-messages, one-time-display, api-keys, session, sensitive-data

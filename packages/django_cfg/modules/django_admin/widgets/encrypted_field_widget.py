@@ -26,7 +26,7 @@ class EncryptedFieldWidget(UnfoldAdminTextInputWidget):
         self.show_copy_button = show_copy_button
         super().__init__(attrs=attrs)
 
-    def get_context(self, name, value, attrs):
+    def get_context(self, name, value, attrs) -> dict[str, Any]:
         """Add copy button context."""
         context = super().get_context(name, value, attrs)
         context['widget']['show_copy_button'] = self.show_copy_button
@@ -59,7 +59,7 @@ class EncryptedPasswordWidget(UnfoldAdminPasswordInput):
         self.show_copy_button = show_copy_button
         super().__init__(attrs=attrs, render_value=render_value)
 
-    def get_context(self, name, value, attrs):
+    def get_context(self, name, value, attrs) -> dict[str, Any]:
         """Add copy button context."""
         context = super().get_context(name, value, attrs)
         context['widget']['show_copy_button'] = self.show_copy_button

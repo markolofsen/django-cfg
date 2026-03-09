@@ -10,7 +10,7 @@ import json
 from typing import Any, Dict, Optional
 
 from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 
 def _highlight_json(json_obj: Any, theme: str) -> str:
@@ -63,7 +63,7 @@ class JSONDisplay:
         cls,
         json_value: Any,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render JSON with syntax highlighting.
 
@@ -138,7 +138,7 @@ class JSONDisplay:
         obj: Any,
         field: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render JSON from model field.
 

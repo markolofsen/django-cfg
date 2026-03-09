@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from django import forms
 from django.forms.widgets import Select
 from django.urls import reverse
-from django.utils.safestring import mark_safe
+from django.utils.safestring import mark_safe, SafeString
 
 # Unfold-compatible CSS classes (same as money_widget.py)
 INPUT_CLASSES = " ".join([
@@ -103,7 +103,7 @@ class CountrySelectWidget(Select):
 
         return context
 
-    def format_readonly(self, code: str) -> str:
+    def format_readonly(self, code: str) -> SafeString:
         """
         Render readonly display with flag.
 
@@ -208,7 +208,7 @@ class CitySelectWidget(Select):
         except Exception:
             return str(city_id)
 
-    def format_readonly(self, city_id: Any) -> str:
+    def format_readonly(self, city_id: Any) -> SafeString:
         """
         Render readonly display with flag.
 

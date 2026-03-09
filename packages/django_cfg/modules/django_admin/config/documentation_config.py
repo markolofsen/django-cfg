@@ -310,7 +310,7 @@ class DocumentationConfig(BaseModel):
 
         return sections
 
-    def _discover_management_commands(self, app_path: Optional[Path] = None) -> List[Dict[str, any]]:
+    def _discover_management_commands(self, app_path: Optional[Path] = None) -> List[Dict[str, Any]]:
         """
         Discover management commands in app's management/commands directory.
 

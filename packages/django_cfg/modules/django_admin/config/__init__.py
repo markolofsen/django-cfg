@@ -16,6 +16,7 @@ from .field_config import (
     DateTimeField,
     DecimalField,
     FieldConfig,
+    FieldConfigType,
     ForeignKeyField,
     ImageField,
     ImagePreviewField,
@@ -30,7 +31,9 @@ from .field_config import (
     UserField,
     VideoField,
 )
-from .fieldset_config import FieldsetConfig
+from .fieldset_config import DjangoFieldsets, FieldsetConfig, FieldsetOptions, FieldsetTuple
+from .admin_config import FilterSpec  # re-export TypeAlias
+from .flash_config import FlashFieldConfig, FlashPayload, FlashStyle
 from .resource_config import ResourceConfig
 from .widget_config import ImagePreviewWidgetConfig, JSONWidgetConfig, TextWidgetConfig, WidgetConfig
 
@@ -70,4 +73,14 @@ __all__ = [
     "JSONWidgetConfig",
     "TextWidgetConfig",
     "ImagePreviewWidgetConfig",
+    # Type aliases and discriminated unions
+    "FieldConfigType",
+    "FilterSpec",
+    "DjangoFieldsets",
+    "FieldsetOptions",
+    "FieldsetTuple",
+    # Flash types
+    "FlashFieldConfig",
+    "FlashPayload",
+    "FlashStyle",
 ]

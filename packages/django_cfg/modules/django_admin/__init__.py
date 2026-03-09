@@ -67,7 +67,14 @@ from .config import (
     DecimalField,
     DocumentationConfig,
     FieldConfig,
+    FieldConfigType,
     FieldsetConfig,
+    DjangoFieldsets,
+    FieldsetOptions,
+    FieldsetTuple,
+    FilterSpec,
+    FlashFieldConfig,
+    FlashStyle,
     ForeignKeyField,
     ImageField,
     ImagePreviewField,
@@ -165,6 +172,15 @@ __all__ = [
     "JSONWidgetConfig",
     "TextWidgetConfig",
     "ImagePreviewWidgetConfig",
+    # Type aliases and discriminated unions
+    "FieldConfigType",
+    "FilterSpec",
+    "DjangoFieldsets",
+    "FieldsetOptions",
+    "FieldsetTuple",
+    # Flash messages (one-time sensitive data display)
+    "FlashFieldConfig",
+    "FlashStyle",
     # Advanced
     "WidgetRegistry",
     # Icons

@@ -4,7 +4,7 @@ import re
 from typing import Any, Dict, Optional
 
 from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 
 class VideoDisplay:
@@ -86,7 +86,7 @@ class VideoDisplay:
         }
 
     @classmethod
-    def render(cls, url: str, config: Optional[Dict[str, Any]] = None) -> str:
+    def render(cls, url: str, config: Optional[Dict[str, Any]] = None) -> SafeString:
         """
         Render video thumbnail/player.
 
@@ -122,7 +122,7 @@ class VideoDisplay:
         obj: Any,
         field: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render video from model field.
 

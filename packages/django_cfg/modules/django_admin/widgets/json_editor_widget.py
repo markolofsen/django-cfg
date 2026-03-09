@@ -84,7 +84,7 @@ class JSONEditorWidget(BaseJSONEditorWidget):
         # Initialize parent
         super().__init__(attrs=attrs, options=options)
 
-    def get_context(self, name, value, attrs):
+    def get_context(self, name, value, attrs) -> dict[str, Any]:
         """Add copy button context."""
         context = super().get_context(name, value, attrs)
         context['widget']['show_copy_button'] = self.show_copy_button

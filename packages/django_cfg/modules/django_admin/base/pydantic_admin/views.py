@@ -1,19 +1,46 @@
 """
 View overrides for admin.
 
-Provides changelist_view, changeform_view, get_fieldsets, and formfield_for_dbfield.
+Provides changelist_view, changeform_view, get_fieldsets, get_readonly_fields,
+and formfield_for_dbfield.
 """
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Any, Optional
 
+from django.http import HttpRequest
+from django.db import models
 from django.utils.safestring import mark_safe
+
+from .flash import FlashMixin
+
+if TYPE_CHECKING:
+    from ...config import AdminConfig
+    from ...config.fieldset_config import DjangoFieldsets
 
 logger = logging.getLogger(__name__)
 
 
-class ViewMixin:
+def _prepend_flash_fields_to_fieldsets(
+    fieldsets: "DjangoFieldsets",
+    field_names: list[str],
+) -> "DjangoFieldsets":
+    """Prepend flash field names to the first fieldset's fields list."""
+    if not fieldsets or not field_names:
+        return fieldsets
+    mutable = list(fieldsets)
+    title, options = mutable[0]
+    options = options.copy()
+    existing = list(options.get('fields', []))
+    # Only add fields not already present
+    to_add = [f for f in field_names if f not in existing]
+    options['fields'] = tuple(to_add + existing)
+    mutable[0] = (title, options)
+    return tuple(mutable)  # type: ignore[return-value]
+
+
+class ViewMixin(FlashMixin):
     """
     Mixin providing view-related overrides for ModelAdmin.
 
@@ -23,6 +50,13 @@ class ViewMixin:
     - get_fieldsets for filtering non-editable fields on add form
     - formfield_for_dbfield for JSON and encrypted field widgets
     """
+
+    # Attributes provided by Django's ModelAdmin at runtime
+    model: type[models.Model]
+    config: "AdminConfig"
+    readonly_fields: list[str]
+    documentation_config: Any
+    _current_request: Optional[HttpRequest]
 
     def _get_app_path(self) -> Optional[Path]:
         """
@@ -66,6 +100,21 @@ class ViewMixin:
 
         return qs
 
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Extend readonly_fields with any pending flash field names for this request.
+
+        Flash fields are injected per-request only — not at class level — so they
+        disappear automatically after the session key is consumed.
+        """
+        readonly = list(super().get_readonly_fields(request, obj))
+        if obj and obj.pk:
+            pending = self._get_pending_flash_fields(request, obj)
+            for field_name in pending:
+                if field_name not in readonly:
+                    readonly.insert(0, field_name)
+        return readonly
+
     def get_fieldsets(self, request, obj=None):
         """
         Return fieldsets, filtering out non-editable fields from add form.
@@ -77,11 +126,15 @@ class ViewMixin:
         - methods (not actual model fields)
 
         For change form (obj exists), we show all fieldsets as-is.
+        Flash fields are prepended to the first fieldset when pending.
         """
         fieldsets = super().get_fieldsets(request, obj)
 
-        # For change form, return fieldsets as-is (readonly fields will be shown)
+        # For change form: inject pending flash fields into first fieldset
         if obj is not None:
+            pending = self._get_pending_flash_fields(request, obj)
+            if pending:
+                fieldsets = _prepend_flash_fields_to_fieldsets(fieldsets, list(pending.keys()))
             return fieldsets
 
         # For add form, filter out non-editable fields
@@ -160,6 +213,9 @@ class ViewMixin:
         """Override to add documentation context to changeform."""
         if extra_context is None:
             extra_context = {}
+
+        # Store request on self so flash display methods can access it
+        self._current_request = request
 
         # Store object in request for formfield_for_dbfield (MoneyFieldAdminMixin)
         if object_id:

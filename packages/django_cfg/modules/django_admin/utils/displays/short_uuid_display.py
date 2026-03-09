@@ -7,7 +7,7 @@ Renders truncated UUID with tooltip and copy-on-click.
 from typing import Any, Dict, Optional
 
 from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 
 class ShortUUIDDisplay:
@@ -28,7 +28,7 @@ class ShortUUIDDisplay:
         cls,
         uuid_value: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render shortened UUID.
 
@@ -75,7 +75,7 @@ class ShortUUIDDisplay:
         obj: Any,
         field: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render short UUID from model field.
 

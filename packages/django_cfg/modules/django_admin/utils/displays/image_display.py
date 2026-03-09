@@ -9,7 +9,7 @@ import re
 from typing import Any, Dict, Optional
 
 from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 
 class ImageDisplay:
@@ -31,7 +31,7 @@ class ImageDisplay:
         cls,
         image_url: Optional[str],
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render simple image.
 
@@ -79,7 +79,7 @@ class ImageDisplay:
         obj: Any,
         field: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render image from model field.
 

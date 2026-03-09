@@ -7,7 +7,7 @@ Renders multiple conditional status badges.
 from typing import Any, Dict, List, Optional
 
 from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 
 # Badge color classes mapping
@@ -40,7 +40,7 @@ class StatusBadgesDisplay:
         cls,
         badges: List[Dict[str, Any]],
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render multiple status badges.
 
@@ -74,7 +74,7 @@ class StatusBadgesDisplay:
         obj: Any,
         field: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render status badges from model field.
 

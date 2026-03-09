@@ -8,7 +8,7 @@ import re
 from typing import Any, Dict, Optional
 
 from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 
 # Badge color classes mapping
@@ -39,7 +39,7 @@ class CounterBadgeDisplay:
         cls,
         count: int,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render counter badge.
 
@@ -90,7 +90,7 @@ class CounterBadgeDisplay:
         obj: Any,
         field: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render counter badge from model field.
 

@@ -26,6 +26,7 @@ The Django Admin module provides:
 - **Computed Field Decorators** - `@computed_field` for type-safe custom logic
 - **Modern UI** - Seamless Unfold integration with Material Design icons
 - **Query Optimization** - Built-in select_related/prefetch_related support
+- **Flash Messages** - One-time display for sensitive data (API keys, passwords) after object creation
 - **Zero Boilerplate** - Minimal code, maximum functionality
 
 ## Philosophy
@@ -294,6 +295,26 @@ config = AdminConfig(
 )
 ```
 
+### 8. Flash Messages
+
+For sensitive data that must be shown exactly once (API keys, passwords, tokens) after object creation:
+
+```python
+# Declarative approach — auto-triggers on create
+class ApiKeyAdmin(PydanticAdmin):
+    config = api_key_config
+    one_time_flash_fields = {
+        'plain_key_display': FlashFieldConfig(
+            source='_generated_plain_key',  # transient attr set during save
+            style='code_warning',
+            title='Plain API Key (One-Time Display)',
+            message='Save this key now — it will never be shown again.',
+        )
+    }
+```
+
+The key is displayed once in a styled code block, then permanently removed from session. No template changes needed.
+
 ## Architecture
 
 ```
@@ -320,10 +341,14 @@ config = AdminConfig(
                  │    ├── @annotated_field → for aggregations
                  │    └── self.html → for readonly fields
                  │
-                 └──> Widget Registry
-                      ├── badge → render_badge()
-                      ├── currency → render_currency()
-                      └── datetime → render_datetime()
+                 ├──> Widget Registry
+                 │    ├── badge → render_badge()
+                 │    ├── currency → render_currency()
+                 │    └── datetime → render_datetime()
+                 │
+                 └──> Flash Messages
+                      ├── one_time_flash_fields → auto-triggers on create
+                      └── self.flash_once() → imperative API
 ```
 
 ## Integration with Unfold
@@ -463,6 +488,7 @@ class PaymentAdmin(PydanticAdmin):
 - **[Configuration](./configuration)** - AdminConfig options, decorators, utilities
 - **[Filters](./filters)** - Complete guide to filters and third-party integrations
 - **[Examples](./examples)** - Real-world examples
+- **[Flash Messages](./flash-messages)** - One-time display for sensitive data
 
 
 <Callout type="info">
@@ -471,5 +497,6 @@ class PaymentAdmin(PydanticAdmin):
 - **@computed_field** decorator for custom list display logic
 - **self.html** utilities for custom readonly fields
 - **Display utilities** (UserDisplay, MoneyDisplay, DateTimeDisplay) for advanced formatting
+- **Flash messages** for sensitive one-time data (API keys, passwords)
 
 </Callout>

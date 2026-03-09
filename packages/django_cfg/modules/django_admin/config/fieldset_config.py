@@ -2,9 +2,14 @@
 Fieldset configuration for declarative admin.
 """
 
-from typing import List, Optional
+from typing import Any, List, Optional, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field
+
+# TypeAliases for Django admin fieldset structures
+FieldsetOptions: TypeAlias = dict[str, Any]
+FieldsetTuple: TypeAlias = tuple[Optional[str], FieldsetOptions]
+DjangoFieldsets: TypeAlias = tuple[FieldsetTuple, ...]
 
 
 class FieldsetConfig(BaseModel):
@@ -46,9 +51,9 @@ class FieldsetConfig(BaseModel):
     css_class: Optional[str] = Field(None, description="Custom CSS class")
     description: Optional[str] = Field(None, description="Fieldset description")
 
-    def to_django_fieldset(self) -> tuple:
+    def to_django_fieldset(self) -> FieldsetTuple:
         """Convert to Django admin fieldset format."""
-        options = {
+        options: FieldsetOptions = {
             'fields': tuple(self.fields)
         }
 
@@ -66,3 +71,11 @@ class FieldsetConfig(BaseModel):
             options['description'] = self.description
 
         return (self.title, options)
+
+
+__all__ = [
+    "FieldsetOptions",
+    "FieldsetTuple",
+    "DjangoFieldsets",
+    "FieldsetConfig",
+]

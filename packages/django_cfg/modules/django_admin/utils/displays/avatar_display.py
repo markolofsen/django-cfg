@@ -7,7 +7,7 @@ Renders user avatar with fallback to initials badge.
 from typing import Any, Dict, Optional
 
 from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 
 # Badge color classes mapping
@@ -41,7 +41,7 @@ class AvatarDisplay:
         name: str,
         initials: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render avatar with initials fallback.
 
@@ -84,7 +84,7 @@ class AvatarDisplay:
         obj: Any,
         field: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render avatar from model field.
 

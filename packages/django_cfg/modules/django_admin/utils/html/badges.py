@@ -4,7 +4,7 @@ Badge elements for Django Admin.
 Provides badge rendering with variants and icons.
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
@@ -14,7 +14,7 @@ class BadgeElements:
     """Badge display elements."""
 
     @staticmethod
-    def badge(text: any, variant: str = "primary", icon: Optional[str] = None) -> SafeString:
+    def badge(text: Any, variant: str = "primary", icon: Optional[str] = None) -> SafeString:
         """
         Render badge with optional icon.
 

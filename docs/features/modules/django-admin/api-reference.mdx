@@ -34,10 +34,12 @@ class AdminConfig(BaseModel):
     list_max_show_all: int = 200
 
     # Display fields (auto-generate display methods)
-    display_fields: List[FieldConfig] = []
+    # Accepts List[FieldConfigType] — discriminated union of all 19 field types
+    display_fields: List[FieldConfigType] = []
 
     # Filters and search
-    list_filter: List[str | Type] = []
+    # Accepts List[FilterSpec] where FilterSpec = str | type | tuple[str, type]
+    list_filter: List[FilterSpec] = []
     search_fields: List[str] = []
     date_hierarchy: str | None = None
 
@@ -970,6 +972,173 @@ class BadgeConfig(BaseModel):
     css_classes: List[str] = []
 ```
 
+### FlashFieldConfig
+
+Pydantic model for declarative `one_time_flash_fields` entries.
+
+```python
+from django_cfg.modules.django_admin import FlashFieldConfig
+
+class FlashFieldConfig(BaseModel):
+    content_attr: str        # Model attribute to read as flash content
+    title: str = ""          # Bold header text
+    message: str = ""        # Subtitle/instruction text
+    style: FlashStyle = "code_warning"  # One of 8 valid style keys
+```
+
+### FlashPayload
+
+Pydantic model for session-stored flash data.
+
+```python
+from django_cfg.modules.django_admin import FlashPayload
+
+class FlashPayload(BaseModel):
+    content: Any
+    title: str = ""
+    message: str = ""
+    style: FlashStyle = "code_warning"
+```
+
+### FlashStyle
+
+Literal type for flash display style.
+
+```python
+from django_cfg.modules.django_admin import FlashStyle
+
+FlashStyle = Literal[
+    "code_warning",   # Code block with warning coloring
+    "code_error",     # Code block with error coloring
+    "code_success",   # Code block with success coloring
+    "info",
+    "warning",
+    "error",
+    "success",
+    "raw",            # Raw HTML, no wrapper styling
+]
+```
+
+### FieldConfigType
+
+Discriminated union of all 19 field config types. Use for type narrowing in custom code.
+
+```python
+from django_cfg.modules.django_admin import FieldConfigType
+
+# FieldConfigType is a Union of all concrete FieldConfig subclasses,
+# discriminated on the `ui_widget` literal field.
+# Use it as the type annotation for display_fields entries:
+display_fields: List[FieldConfigType] = [
+    BadgeField(name="status"),
+    CurrencyField(name="price"),
+    # ... any of the 19 field config types
+]
+```
+
+### DjangoFieldsets
+
+TypeAlias for Django's native fieldsets format.
+
+```python
+from django_cfg.modules.django_admin import DjangoFieldsets
+
+DjangoFieldsets = tuple[tuple[str | None, dict[str, Any]], ...]
+
+# Example value:
+fieldsets: DjangoFieldsets = (
+    (None, {"fields": ["name", "email"]}),
+    ("Advanced", {"fields": ["api_key"], "classes": ["collapse"]}),
+)
+```
+
+### FilterSpec
+
+TypeAlias for `list_filter` entries. Accepts a plain string field name, a filter class, or a `(field_name, filter_class)` tuple.
+
+```python
+from django_cfg.modules.django_admin import FilterSpec
+
+FilterSpec = str | type | tuple[str, type]
+
+# Examples:
+list_filter: List[FilterSpec] = [
+    "status",                          # str — field name
+    MyCustomFilter,                    # type — filter class
+    ("created_at", DateRangeFilter),   # tuple — (field, filter class)
+]
+```
+
+## Flash / One-Time Secret Display
+
+### FlashMixin
+
+`FlashMixin` provides secure one-time display of sensitive values (API keys, passwords, tokens) in Django Admin readonly fields. Content is stored in the session, rendered once, then discarded.
+
+#### flash_once()
+
+Store a value for one-time display in a readonly field.
+
+```python
+FlashMixin.flash_once(
+    request: HttpRequest,
+    obj: Model,          # Must have pk set
+    field_name: str,     # Name of the readonly field to inject into
+    content: Any,        # Sensitive content to display
+    title: str = "",     # Bold header text shown above content
+    message: str = "",   # Subtitle/instruction text
+    style: FlashStyle = "code_warning",
+) -> None
+```
+
+**Parameters:**
+
+- `request` — Django `HttpRequest`
+- `obj` — Model instance; must have a `pk` (call after `save()`)
+- `field_name` — str, name of the readonly field that will render the flash content
+- `content` — Any, the sensitive value to display (string, dict, etc.)
+- `title` — str, bold header text rendered above the content block
+- `message` — str, subtitle or instruction shown below the title
+- `style` — `FlashStyle`, controls the visual wrapper; one of 8 keys (`"code_warning"`, `"code_error"`, `"code_success"`, `"info"`, `"warning"`, `"error"`, `"success"`, `"raw"`)
+
+**Example — call after object creation:**
+
+```python
+class MyModelAdmin(FlashMixin, PydanticAdmin):
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not change:  # only on creation
+            self.flash_once(
+                request, obj,
+                field_name="api_key_display",
+                content=obj.raw_api_key,
+                title="API Key (shown once)",
+                message="Copy and store it securely — it will not be shown again.",
+                style="code_warning",
+            )
+```
+
+#### one_time_flash_fields
+
+Class attribute for declarative flash-on-create behaviour. After a new object is saved, `FlashMixin` automatically calls `flash_once()` for every entry.
+
+```python
+class MyModelAdmin(FlashMixin, PydanticAdmin):
+    one_time_flash_fields: dict[str, FlashFieldConfig | dict] = {
+        "api_key_display": FlashFieldConfig(
+            content_attr="raw_api_key",
+            title="API Key (shown once)",
+            message="Store it securely — it will not be shown again.",
+            style="code_warning",
+        ),
+    }
+```
+
+- **Type:** `dict[str, FlashFieldConfig | dict]`
+- **Key:** readonly field name that renders the flash content
+- **Value:** `FlashFieldConfig` instance (or equivalent plain `dict`)
+- **Trigger:** fires automatically after object **creation** (not updates)
+
 ## Complete Import Example
 
 ```python
@@ -981,6 +1150,16 @@ from django_cfg.modules.django_admin import (
     AdminConfig,
     FieldsetConfig,
     ActionConfig,
+)
+
+# Types and type aliases
+from django_cfg.modules.django_admin import (
+    FlashFieldConfig,    # Pydantic model for one_time_flash_fields entries
+    FlashPayload,        # Pydantic model for session-stored flash data
+    FlashStyle,          # Literal: "code_warning" | "code_error" | ... (8 values)
+    FieldConfigType,     # Discriminated union of all 19 field config types
+    DjangoFieldsets,     # TypeAlias: tuple[tuple[str | None, dict[str, Any]], ...]
+    FilterSpec,          # TypeAlias: str | type | tuple[str, type]
 )
 
 # Field types

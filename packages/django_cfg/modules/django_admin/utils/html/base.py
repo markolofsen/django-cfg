@@ -4,7 +4,7 @@ Basic HTML elements for Django Admin.
 Provides fundamental HTML building blocks: icons, spans, text, divs, links, and empty placeholders.
 """
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
@@ -14,7 +14,11 @@ class BaseElements:
     """Basic HTML building blocks."""
 
     @staticmethod
-    def icon(icon_name: str, size: str = "xs", css_class: str = "") -> SafeString:
+    def icon(
+        icon_name: str,
+        size: Literal['xs', 'sm', 'base', 'lg', 'xl'] = "xs",
+        css_class: str = "",
+    ) -> SafeString:
         """
         Render Material Icon.
 
@@ -53,10 +57,10 @@ class BaseElements:
     @staticmethod
     def text(
         content: Any,
-        variant: Optional[str] = None,
-        size: Optional[str] = None,
-        weight: Optional[str] = None,
-        muted: bool = False
+        variant: Literal['success', 'warning', 'danger', 'info', 'primary'] | None = None,
+        size: Literal['xs', 'sm', 'base', 'lg', 'xl', '2xl'] | None = None,
+        weight: Literal['normal', 'medium', 'semibold', 'bold'] | None = None,
+        muted: bool = False,
     ) -> SafeString:
         """
         Render styled text with semantic variants.
@@ -147,7 +151,7 @@ class BaseElements:
         css_class: str = "",
         target: str = "",
         icon: Optional[str] = None,
-        variant: Optional[str] = None
+        variant: Literal['success', 'warning', 'danger', 'info', 'primary'] | None = None,
     ) -> SafeString:
         """
         Render link.

@@ -4,7 +4,7 @@ Code display elements for Django Admin.
 Provides inline code and code block rendering with syntax highlighting support.
 """
 
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
@@ -38,9 +38,9 @@ class CodeElements:
     @staticmethod
     def code_block(
         text: Any,
-        language: Optional[str] = None,
+        language: Literal['json', 'python', 'bash', 'javascript', 'html', 'css'] | None = None,
         max_height: Optional[str] = None,
-        variant: str = "default"
+        variant: Literal['default', 'warning', 'danger', 'success', 'info'] = "default",
     ) -> SafeString:
         """
         Render code block with optional syntax highlighting and scrolling.

@@ -1,6 +1,7 @@
 """User field configuration."""
 
 from typing import Any, Dict, Literal
+from typing_extensions import Self
 
 from pydantic import Field, model_validator
 
@@ -26,7 +27,7 @@ class UserField(FieldConfig):
     avatar_size: int = Field(32, description="Avatar size in pixels")
 
     @model_validator(mode='after')
-    def _auto_header_for_avatar(self) -> 'UserField':
+    def _auto_header_for_avatar(self) -> Self:
         """user_avatar widget returns list format — requires header=True."""
         if self.ui_widget == "user_avatar" and not self.header:
             self.header = True

@@ -5,7 +5,10 @@ Maps ui_widget names to display utilities.
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, ClassVar, Dict, Optional
+
+# Type for widget handler functions
+WidgetHandler = Callable[[Any, str, Dict[str, Any] | None], Any]
 
 from ..models import (
     DateTimeDisplayConfig,
@@ -43,21 +46,21 @@ class WidgetRegistry:
     Maps declarative widget names to actual display utilities.
     """
 
-    _widgets: Dict[str, Callable] = {}
+    _widgets: ClassVar[Dict[str, WidgetHandler]] = {}
 
     @classmethod
-    def register(cls, name: str, handler: Callable):
+    def register(cls, name: str, handler: WidgetHandler) -> None:
         """Register a custom widget."""
         cls._widgets[name] = handler
         logger.debug(f"Registered widget: {name}")
 
     @classmethod
-    def get(cls, name: str) -> Optional[Callable]:
+    def get(cls, name: str) -> Optional[WidgetHandler]:
         """Get widget handler by name."""
         return cls._widgets.get(name)
 
     @classmethod
-    def render(cls, widget_name: str, obj: Any, field_name: str, config: Dict[str, Any]):
+    def render(cls, widget_name: str, obj: Any, field_name: str, config: Dict[str, Any] | None) -> Any:
         """Render field using specified widget."""
         handler = cls.get(widget_name)
 

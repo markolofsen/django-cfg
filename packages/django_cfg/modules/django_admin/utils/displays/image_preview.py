@@ -9,7 +9,7 @@ import re
 from typing import Any, Dict, Optional
 
 from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 
 class ImagePreviewDisplay:
@@ -50,7 +50,7 @@ class ImagePreviewDisplay:
         cls,
         image_url: Optional[str],
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render image thumbnail (opens global modal on click).
 
@@ -91,7 +91,7 @@ class ImagePreviewDisplay:
         cls,
         image_url: Optional[str],
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render image preview card with file info (for change form).
 
@@ -149,7 +149,7 @@ class ImagePreviewDisplay:
         )
 
     @classmethod
-    def render_modal(cls) -> str:
+    def render_modal(cls) -> SafeString:
         """
         Render global modal component.
 
@@ -167,7 +167,7 @@ class ImagePreviewDisplay:
         obj: Any,
         field: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render image thumbnail from model field.
 

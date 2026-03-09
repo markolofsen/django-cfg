@@ -1,32 +1,25 @@
-# Django Admin - Declarative Configuration
+# Django Admin — Declarative Configuration
 
-Type-safe admin configurations using Pydantic. **60-80% code reduction** vs traditional Django admin.
+Type-safe admin configurations using Pydantic v2. **60-80% code reduction** vs traditional Django admin.
 
 ## Quick Start
 
 ```python
 from django.contrib import admin
-from django_cfg.modules.django_admin import (
-    AdminConfig, BadgeField, DateTimeField, StackedField, RowItem, Icons, computed_field
-)
+from django_cfg.modules.django_admin import AdminConfig, BadgeField, DateTimeField, Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 config = AdminConfig(
     model=Vehicle,
-    select_related=['source', 'brand'],
-    prefetch_related=['photos'],
-    list_display=['main_photo', 'vehicle_info', 'pricing_info', 'status_info'],
+    list_display=['photo', 'vehicle_info', 'price', 'status'],
     display_fields=[
-        StackedField(
-            name='vehicle_info',
-            title='Vehicle',
-            rows=[
-                RowItem(field='display_name', bold=True, truncate=30),
-                [RowItem(field='year'), RowItem(field='mileage', suffix=' km')],
-                RowItem(field='fuel_type', widget='badge', label_map={'electric': 'success'}),
-            ],
-        ),
+        BadgeField(name='status', label_map={'active': 'success', 'sold': 'danger'}),
+        DateTimeField(name='created_at', show_relative=True),
     ],
+    select_related=['brand'],
+    prefetch_related=['photos'],
+    search_fields=['listing_id', 'brand__name'],
+    list_filter=['status', 'brand'],
 )
 
 @admin.register(Vehicle)
@@ -38,47 +31,52 @@ class VehicleAdmin(PydanticAdmin):
 
 ## Field Types
 
-### StackedField (Composite Column)
+### StackedField — Composite Column
 
 Combines multiple fields in one compact column:
 
 ```python
+from django_cfg.modules.django_admin import StackedField, RowItem
+
 StackedField(
-    name='property_info',
-    title='Property',
+    name='vehicle_info',
+    title='Vehicle',
     rows=[
-        RowItem(field='title', bold=True, truncate=35),
+        RowItem(field='display_name', bold=True, truncate=30),
         [  # Inline row (horizontal)
-            RowItem(field='listing_type', widget='badge', label_map={'rent': 'info', 'sale': 'success'}),
-            RowItem(field='property_type__name', muted=True),
+            RowItem(field='year'),
+            RowItem(field='mileage', suffix=' km'),
         ],
-        RowItem(field='location__name', icon='location_on', muted=True),
+        RowItem(field='fuel_type', widget='badge', label_map={'electric': 'success'}),
     ],
     max_width='280px',
 )
 ```
 
 **RowItem options:**
-- `widget`: `text` (default), `badge`, `datetime_relative`, `money_field`
-- `bold`, `muted`, `monospace`: styling
-- `prefix`, `suffix`, `truncate`: text formatting
-- `label_map`: badge colors `{value: 'success'|'warning'|'danger'|'info'|'secondary'}`
-- `true_label`, `false_label`: custom labels for boolean badges
-- `hide_if_empty`: skip if value is None (default: True)
+
+| Option | Values | Description |
+|--------|--------|-------------|
+| `widget` | `text`, `badge`, `datetime_relative`, `money_field` | Display widget |
+| `bold`, `muted`, `monospace` | `bool` | Text styling |
+| `prefix`, `suffix` | `str` | Text decoration |
+| `truncate` | `int` | Max character length |
+| `label_map` | `dict` | Badge colors `{'value': 'success'\|'warning'\|'danger'\|'info'\|'secondary'}` |
+| `true_label`, `false_label` | `str` | Custom labels for boolean values |
+| `hide_if_empty` | `bool` | Skip if value is None (default: `True`) |
 
 ### BadgeField
 
 ```python
 BadgeField(
     name='status',
-    title='Status',
     label_map={'active': 'success', 'inactive': 'secondary', 'sold': 'danger'},
     icon=Icons.INFO,
 )
 
 # Boolean badge
 BadgeField(
-    name='is_normalized',
+    name='is_verified',
     label_map={True: 'success', False: 'warning'},
     icon=Icons.AUTO_FIX_HIGH,
 )
@@ -87,7 +85,7 @@ BadgeField(
 ### BooleanField
 
 ```python
-BooleanField(name='is_active', title='Active')  # Checkmark/cross icon
+BooleanField(name='is_active', title='Active')  # Renders ✓ / ✗ icon
 ```
 
 ### CurrencyField
@@ -99,8 +97,8 @@ CurrencyField(name='amount', currency='USD', precision=2)
 # Dynamic currency from model field
 CurrencyField(
     name='price',
-    currency_field='currency',      # Get currency from model
-    secondary_field='price_usd',    # Show USD equivalent
+    currency_field='currency',       # Read currency from this model field
+    secondary_field='price_usd',     # Show USD equivalent alongside
     secondary_currency='USD',
 )
 ```
@@ -116,18 +114,15 @@ MoneyFieldDisplay(name='price', title='Price')  # Shows: ₩15,700,000 → $10,6
 ### DecimalField
 
 ```python
-# Basic
 DecimalField(name='rate', decimal_places=8)
 
-# With formatting
 DecimalField(
     name='change_percent',
     decimal_places=2,
     suffix='%',
-    show_sign=True,  # +5.25% green, -3.14% red
+    show_sign=True,       # +5.25% green, -3.14% red
 )
 
-# Currency prefix
 DecimalField(name='amount', prefix='$', thousand_separator=True)
 ```
 
@@ -142,7 +137,7 @@ DateTimeField(name='updated_at', format='%Y-%m-%d %H:%M')
 
 ```python
 ShortUUIDField(name='id', length=8, copy_on_click=True)
-ShortUUIDField(name='id', is_link=True)  # Styled as clickable link
+ShortUUIDField(name='id', is_link=True)  # Styled as a clickable link
 ```
 
 ### TextField
@@ -164,10 +159,22 @@ ImagePreviewField(
 )
 ```
 
+### ImageField
+
+```python
+ImageField(name='avatar_url', title='Avatar', size=40)
+```
+
+### AvatarField
+
+```python
+AvatarField(name='avatar', size=40, fallback_icon=Icons.PERSON)
+```
+
 ### UserField
 
 ```python
-UserField(name='user', title='User', header=True)  # With avatar
+UserField(name='user', title='User', header=True)   # With avatar
 UserField(name='created_by', show_email=True)
 ```
 
@@ -218,24 +225,32 @@ MarkdownField(
 )
 ```
 
-### AvatarField
+### VideoField
 
 ```python
-AvatarField(name='avatar', size=40, fallback_icon=Icons.PERSON)
+VideoField(name='video_url', title='Preview', max_width='320px')
+```
+
+### CounterBadgeField
+
+```python
+CounterBadgeField(name='photos_count', title='Photos', variant='info')
 ```
 
 ### StatusBadgesField
 
-Multiple badges from different fields:
+Multiple badges from different fields in one column:
 
 ```python
 StatusBadgesField(
-    name='badges',
+    name='flags',
     rules=[
-        BadgeRule(field='status', label_map={'active': 'success'}),
+        BadgeRule(field='status', label_map={'active': 'success', 'banned': 'danger'}),
         BadgeRule(field='is_verified', true_label='Verified', variant='info'),
+        BadgeRule(field='subscription_tier', label_map={'pro': 'warning', 'free': 'secondary'}),
     ],
 )
+```
 
 ---
 
@@ -266,9 +281,68 @@ class VehicleAdmin(PydanticAdmin):
 
 ---
 
+## Flash Messages — One-Time Secret Display
+
+Show sensitive data (API keys, passwords, tokens) exactly **once** after object creation, then erase it from the session automatically.
+
+### Declarative
+
+```python
+from django_cfg.modules.django_admin import AdminConfig, FlashFieldConfig, FlashStyle
+from django_cfg.modules.django_admin.base import PydanticAdmin
+
+@admin.register(ApiKey)
+class ApiKeyAdmin(PydanticAdmin):
+    config = api_key_config
+
+    one_time_flash_fields = {
+        'plain_key_display': FlashFieldConfig(
+            source='_generated_plain_key',   # Transient attr set in model.save()
+            style='code_warning',
+            title='Plain API Key (One-Time Display)',
+            message='SAVE THIS KEY NOW — You will not see it again!',
+        )
+    }
+```
+
+The field is automatically injected into `readonly_fields` and prepended to the first fieldset on the change page after creation. On the next page load, it is gone.
+
+### Imperative
+
+Call `flash_once()` directly for conditional or edit-time flashing:
+
+```python
+def save_model(self, request, obj, form, change):
+    super().save_model(request, obj, form, change)
+    if not change and hasattr(obj, '_generated_plain_key'):
+        self.flash_once(
+            request, obj,
+            field_name='plain_key_display',
+            content=obj._generated_plain_key,
+            title='Plain API Key (One-Time Display)',
+            message='SAVE THIS KEY NOW — You will not see it again!',
+            style='code_warning',
+        )
+```
+
+### FlashStyle values
+
+| Style | Appearance | Use Case |
+|-------|-----------|----------|
+| `code_warning` | Yellow box, dark code block | API keys, tokens (**default**) |
+| `code_error` | Red box, dark code block | Destructive credentials |
+| `code_success` | Green box, dark code block | Confirmation codes |
+| `info` | Blue box, plain text | Informational messages |
+| `warning` | Yellow box, plain text | Warnings without code |
+| `error` | Red box, plain text | Error notices |
+| `success` | Green box, plain text | Success confirmations |
+| `raw` | Raw HTML | Custom layouts (trusted content only) |
+
+---
+
 ## Actions
 
-### Bulk Actions (require selection)
+### Bulk Actions (require row selection)
 
 ```python
 config = AdminConfig(
@@ -289,7 +363,7 @@ def mark_as_sold(modeladmin, request, queryset):
     messages.success(request, f'{queryset.count()} marked as sold')
 ```
 
-### Changelist Actions (buttons, no selection)
+### Changelist Actions (buttons, no selection required)
 
 ```python
 ActionConfig(
@@ -306,6 +380,8 @@ def sync_all(modeladmin, request):
     return redirect(reverse('admin:app_model_changelist'))  # Must return HttpResponse
 ```
 
+**`variant` values:** `default`, `primary`, `success`, `warning`, `danger`, `info`
+
 ---
 
 ## Performance
@@ -313,9 +389,9 @@ def sync_all(modeladmin, request):
 ```python
 config = AdminConfig(
     model=Property,
-    select_related=['source', 'location'],      # ForeignKey optimization
-    prefetch_related=['photos'],                 # M2M / reverse FK
-    annotations={'total': Count('items')},       # Calculated fields
+    select_related=['source', 'location'],       # ForeignKey optimization
+    prefetch_related=['photos'],                  # M2M / reverse FK
+    annotations={'total': Count('items')},        # Calculated fields
 )
 ```
 
@@ -324,6 +400,8 @@ config = AdminConfig(
 ## Fieldsets
 
 ```python
+from django_cfg.modules.django_admin import FieldsetConfig
+
 fieldsets=[
     FieldsetConfig(title='Basic', fields=['name', 'status']),
     FieldsetConfig(title='Details', fields=['price', 'description'], collapsed=True),
@@ -334,27 +412,21 @@ fieldsets=[
 
 ## List Editable
 
-Edit fields directly in the list view — no need to open each record:
+Edit fields directly in the list view without opening each record:
 
 ```python
 config = AdminConfig(
     model=Review,
-    list_display=['created_at', 'user', 'quote', 'source', 'is_published', 'order'],
+    list_display=['created_at', 'user', 'quote', 'is_published', 'order'],
     list_display_links=['created_at'],
-    list_editable=['is_published', 'order'],  # Inline editing in list view
-    display_fields=[
-        DateTimeField(name='created_at', title='Created', show_relative=True),
-        UserField(name='user', title='User'),
-        # Note: fields in list_editable are rendered as form inputs,
-        # so they skip display method generation automatically.
-    ],
+    list_editable=['is_published', 'order'],
 )
 ```
 
 **Rules:**
 - Fields in `list_editable` cannot be in `list_display_links`
 - Fields in `list_editable` must be in `list_display`
-- Display methods are automatically skipped for editable fields (they render as form inputs)
+- Display methods are automatically skipped for editable fields
 
 ---
 
@@ -363,13 +435,40 @@ config = AdminConfig(
 ```python
 config = AdminConfig(
     model=Property,
-    list_filter=['status', 'listing_type', 'source'],
+    list_filter=['status', 'listing_type', MyCustomFilter],  # str, class, or (field, class)
     search_fields=['title', 'listing_id', 'address'],
     autocomplete_fields=['source', 'location'],
     ordering=['-created_at'],
     date_hierarchy='created_at',
 )
 ```
+
+`list_filter` accepts `FilterSpec = str | type | tuple[str, type]`.
+
+---
+
+## Widget Configs (Form Fields)
+
+Override form widgets declaratively:
+
+```python
+from django_cfg.modules.django_admin import JSONWidgetConfig, TextWidgetConfig, ImagePreviewWidgetConfig
+
+config = AdminConfig(
+    model=MyModel,
+    widgets=[
+        JSONWidgetConfig(field='config_schema', mode='tree', height='500px'),
+        TextWidgetConfig(field='description', rows=10, placeholder='Enter text…'),
+        ImagePreviewWidgetConfig(field='photo', thumbnail_max_width=200, zoom_enabled=True),
+    ],
+)
+```
+
+| Widget | Key Options |
+|--------|-------------|
+| `JSONWidgetConfig` | `mode` (`code`/`tree`/`view`), `height`, `width`, `show_copy_button` |
+| `TextWidgetConfig` | `placeholder`, `max_length`, `rows` |
+| `ImagePreviewWidgetConfig` | `thumbnail_max_width/height`, `zoom_enabled`, `pan_enabled`, `show_info` |
 
 ---
 
@@ -394,16 +493,30 @@ config = AdminConfig(
 
 ## Icons
 
-2234 Material Design Icons via `Icons` class:
+2234 Material Design Icons via `Icons`:
 
 ```python
 from django_cfg.modules.django_admin import Icons
 
 Icons.CHECK_CIRCLE, Icons.ERROR, Icons.WARNING, Icons.INFO
 Icons.LOCATION_ON, Icons.TRENDING_UP, Icons.AUTO_FIX_HIGH
+Icons.KEY, Icons.LOCK, Icons.VISIBILITY, Icons.OPEN_IN_NEW
 ```
 
-See [icons/constants.py](./icons/constants.py) for full list.
+See [icons/constants.py](./icons/constants.py) for the full list.
+
+---
+
+## Type Aliases
+
+| Name | Type | Use Case |
+|------|------|----------|
+| `FieldConfigType` | Discriminated union of all 19 field types | `display_fields` annotation |
+| `FilterSpec` | `str \| type \| tuple[str, type]` | `list_filter` annotation |
+| `DjangoFieldsets` | `tuple[tuple[str \| None, dict], ...]` | Django admin fieldsets format |
+| `FieldsetTuple` | `tuple[str \| None, dict]` | Single fieldset entry |
+| `FieldsetOptions` | `dict[str, Any]` | Fieldset options dict |
+| `FlashStyle` | `Literal[8 values]` | Flash message style key |
 
 ---
 
@@ -414,12 +527,12 @@ apps/your_app/admin/
   __init__.py        # Register admins
   model_admin.py     # AdminConfig + PydanticAdmin
   actions.py         # Action handlers
-  resources.py       # Import/Export
+  resources.py       # Import/Export resources
 ```
 
 ---
 
 ## See Also
 
-- [Full Documentation](../../../docs_public/django_admin/)
-- [Currency Module](../django_currency/) - MoneyField, exchange rates
+- [Full Documentation](https://djangocfg.com/docs/features/modules/django-admin/overview)
+- [Currency Module](../django_currency/) — MoneyField, exchange rates

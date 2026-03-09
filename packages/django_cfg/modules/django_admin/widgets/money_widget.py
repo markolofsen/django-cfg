@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from django import forms
 from django.forms.widgets import MultiWidget, Select, TextInput
-from django.utils.safestring import mark_safe
+from django.utils.safestring import mark_safe, SafeString
 
 from django_cfg.modules.django_currency.formatter import (
     price_formatter,
@@ -361,7 +361,7 @@ class MoneyFieldWidget(MultiWidget):
         target_amount: Any = None,
         rate: Any = None,
         rate_at: Any = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render compact readonly display.
 

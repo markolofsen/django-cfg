@@ -10,17 +10,18 @@ Auto-creates display methods for:
 import json
 import logging
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Tuple, cast
 
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 if TYPE_CHECKING:
     from ...config import AdminConfig
+    from ...config.field_config.base import FieldConfig
 
 logger = logging.getLogger(__name__)
 
 
-def highlight_json(json_obj: Any) -> str:
+def highlight_json(json_obj: Any) -> SafeString:
     """
     Apply syntax highlighting to JSON using Pygments (Unfold style).
 
@@ -34,7 +35,7 @@ def highlight_json(json_obj: Any) -> str:
         # Fallback to plain JSON if Pygments not available
         import html as html_lib
         formatted_json = json.dumps(json_obj, indent=2, ensure_ascii=False)
-        return html_lib.escape(formatted_json)
+        return cast(SafeString, mark_safe(html_lib.escape(formatted_json)))
 
     def format_response(response: str, theme: str) -> str:
         formatter = HtmlFormatter(
@@ -49,10 +50,10 @@ def highlight_json(json_obj: Any) -> str:
     response = json.dumps(json_obj, indent=2, ensure_ascii=False)
 
     # Return dual-theme HTML (light: colorful, dark: monokai)
-    return (
+    return cast(SafeString, mark_safe(
         f'<div class="block dark:hidden">{format_response(response, "colorful")}</div>'
         f'<div class="hidden dark:block">{format_response(response, "monokai")}</div>'
-    )
+    ))
 
 
 def create_jsonfield_display_methods(cls, config: 'AdminConfig') -> Tuple[list, Dict[str, str]]:
@@ -381,7 +382,7 @@ def create_markdownfield_display_methods(cls, readonly_fields: list, config: 'Ad
     return updated_readonly_fields, markdownfield_replacements
 
 
-def apply_replacements_to_fieldsets(fieldsets, replacements: Dict[str, str]):
+def apply_replacements_to_fieldsets(fieldsets: Any, replacements: Dict[str, str]) -> tuple[Any, ...]:
     """
     Apply field replacements to fieldsets.
 

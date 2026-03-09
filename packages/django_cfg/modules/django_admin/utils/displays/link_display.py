@@ -8,7 +8,7 @@ import re
 from typing import Any, Dict, Optional
 
 from django.template.loader import render_to_string
-from django.utils.safestring import mark_safe
+from django.utils.safestring import SafeString, mark_safe
 
 
 class LinkDisplay:
@@ -29,7 +29,7 @@ class LinkDisplay:
         text: str,
         link_url: Optional[str],
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render link with optional subtitle.
 
@@ -66,7 +66,7 @@ class LinkDisplay:
         obj: Any,
         field: str,
         config: Optional[Dict[str, Any]] = None,
-    ) -> str:
+    ) -> SafeString:
         """
         Render link from model field.
 

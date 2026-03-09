@@ -16,12 +16,45 @@ from .display_methods import (
     create_markdownfield_display_methods,
     highlight_json,
 )
+from .flash import create_flash_display_method
+from .flash_config import FlashFieldConfig
 from .list_display import build_list_display, build_list_display_links
 from .actions import register_actions
 from .import_export import generate_resource_class
 from .views import ViewMixin
 
 logger = logging.getLogger(__name__)
+
+
+def _register_flash_fields(cls: Any, flash_fields_config: dict[str, Any]) -> None:
+    """
+    Register declarative one_time_flash_fields on the admin class.
+
+    Creates a display method for each field (via create_flash_display_method)
+    and stores the config for save_model auto-trigger.
+
+    Accepts both FlashFieldConfig instances and plain dicts (backward compat).
+    Does NOT add to cls.readonly_fields — injection happens per-request in
+    ViewMixin.get_readonly_fields() / get_fieldsets().
+    """
+    # Normalize: convert raw dicts to FlashFieldConfig for type safety
+    normalized: dict[str, FlashFieldConfig] = {}
+    for field_name, cfg in flash_fields_config.items():
+        if isinstance(cfg, FlashFieldConfig):
+            normalized[field_name] = cfg
+        elif isinstance(cfg, dict):
+            normalized[field_name] = FlashFieldConfig(**cfg)
+        else:
+            logger.warning(f"Skipping invalid flash field config for '{field_name}': {type(cfg)}")
+            continue
+
+    cls._flash_fields_config = normalized
+
+    for field_name, cfg in normalized.items():
+        title = cfg.title or field_name.replace('_', ' ').title()
+        method = create_flash_display_method(field_name, title)
+        setattr(cls, field_name, method)
+        logger.debug(f"Registered flash display method '{field_name}' on {cls.__name__}")
 
 
 class PydanticAdminMixin(ViewMixin):
@@ -38,6 +71,10 @@ class PydanticAdminMixin(ViewMixin):
 
     config: AdminConfig
     _config_processed = False
+
+    # Declarative flash fields: {field_name: FlashFieldConfig}
+    # Also accepts plain dicts for backward compatibility.
+    one_time_flash_fields: dict[str, Any] = {}
 
     @property
     def html(self):
@@ -195,6 +232,10 @@ class PydanticAdminMixin(ViewMixin):
         # Image preview modal (include once if image_preview widget is used)
         cls._setup_image_preview_modal(config)
 
+        # Declarative one_time_flash_fields support
+        if hasattr(cls, 'one_time_flash_fields') and cls.one_time_flash_fields:
+            _register_flash_fields(cls, cls.one_time_flash_fields)
+
     @classmethod
     def _setup_documentation(cls, config: AdminConfig):
         """
@@ -278,3 +319,36 @@ class PydanticAdminMixin(ViewMixin):
     def _register_actions(cls, config: AdminConfig):
         """Legacy alias for backward compatibility."""
         return register_actions(cls, config)
+
+    def save_model(self, request: Any, obj: Any, form: Any, change: bool) -> None:
+        """
+        Override save_model to auto-trigger declarative one_time_flash_fields.
+
+        When `one_time_flash_fields` is declared on the admin class, PydanticAdmin
+        reads each field's `source` transient attribute from obj after save and
+        calls flash_once() automatically.
+        """
+        super().save_model(request, obj, form, change)  # type: ignore[misc]
+
+        if change:
+            return
+
+        flash_fields_config: dict[str, FlashFieldConfig] | None = getattr(self.__class__, '_flash_fields_config', None)
+        if not flash_fields_config:
+            return
+
+        for field_name, cfg in flash_fields_config.items():
+            source_attr = cfg.source
+            if not hasattr(obj, source_attr):
+                continue
+            content = getattr(obj, source_attr)
+            if content is None:
+                continue
+            self.flash_once(  # type: ignore[attr-defined]
+                request, obj,
+                field_name=field_name,
+                content=content,
+                title=cfg.title,
+                message=cfg.message,
+                style=cfg.style,
+            )

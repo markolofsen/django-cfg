@@ -28,8 +28,8 @@ class CompositionElements:
 
     @staticmethod
     def icon_text(icon_or_text: Union[str, Any], text: Any = None,
-                  icon_size: str = "xs", separator: str = " ", 
-                  color: str = None) -> SafeString:
+                  icon_size: str = "xs", separator: str = " ",
+                  color: str | None = None) -> SafeString:
         """
         Render icon with text or emoji with text.
 
@@ -83,7 +83,7 @@ class CompositionElements:
         return format_html('{}{}<span>{}</span>', icon_html, separator, text_html)
 
     @staticmethod
-    def colored_text(text: Any, color: str = None) -> SafeString:
+    def colored_text(text: Any, color: str | None = None) -> SafeString:
         """
         Render colored text.
 
