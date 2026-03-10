@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/markolofsen/django-cfg/refs/heads/main/static/logo.png" alt="Django-CFG Logo" width="200" />
+![Django-CFG](https://raw.githubusercontent.com/markolofsen/assets/main/libs/django_cfg.webp)
 
 # Django-CFG
 
