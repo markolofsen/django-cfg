@@ -1,252 +1,189 @@
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/markolofsen/django-cfg/refs/heads/main/static/logo.png" alt="Django-CFG Logo" width="200" />
+
 # Django-CFG
 
-**Modern Django framework with type-safe Pydantic v2 configuration**
+[![PyPI](https://img.shields.io/pypi/v/django-cfg.svg?style=flat-square&logo=pypi)](https://pypi.org/project/django-cfg/)
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/django-5.2+-green.svg?style=flat-square&logo=django)](https://www.djangoproject.com/)
+[![License](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/django-cfg.svg?style=flat-square)](https://pypi.org/project/django-cfg/)
 
-![Django-CFG](https://raw.githubusercontent.com/markolofsen/django-cfg/refs/heads/main/static/catroon.webp)
+**The Modern Django Framework for Enterprise Applications**
 
-[![PyPI](https://img.shields.io/pypi/v/django-cfg.svg)](https://pypi.org/project/django-cfg/)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Type-safe configuration • Streamlit Admin • Real-time WebSockets • gRPC Streaming • AI-Native Docs • 8 Production Apps
+
+[Get Started](https://djangocfg.com/docs/getting-started/intro) • [Live Demo](https://djangocfg.com/demo) • [Documentation](https://djangocfg.com/docs) • [MCP Server](https://djangocfg.com/mcp)
+
+</div>
 
 ---
 
-## What is this?
+## What is Django-CFG?
 
-Django-CFG is a Django framework that replaces `settings.py` with type-safe Pydantic v2 models. It includes production-ready enterprise features like Next.js admin, WebSockets, AI agents, and background task processing.
+**Django-CFG** is a next-generation Django framework that replaces `settings.py` with **type-safe Pydantic v2 models**. Catch configuration errors at startup, get full IDE autocomplete, and ship production-ready features in **30 seconds** instead of weeks.
 
-**Key features:**
-- Type-safe configuration with Pydantic v2
-- Startup validation (catch config errors before deployment)
-- Next.js admin integration
-- Real-time WebSockets (Centrifugo)
-- gRPC server support
-- Background tasks (Redis Queue)
-- AI agents framework
-- 8 built-in enterprise apps
+### Why Django-CFG?
+
+- ✅ **Type-safe config** - Pydantic v2 validation catches errors before deployment
+- ✅ **90% less code** - Replace 200+ line settings.py with 30 lines
+- ✅ **Streamlit Admin** - Python-only admin panel, auto-starts with Django
+- ✅ **Real-time WebSockets** - Centrifugo integration included
+- ✅ **gRPC streaming** - Bidirectional streaming with WebSocket bridge
+- ✅ **AI-native docs** - First Django framework with MCP server for AI assistants
+- ✅ **8 enterprise apps** - Save 18+ months of development
 
 ---
 
 ## Quick Start
 
+### One-Line Install
+
 ```bash
-# Install
-pip install django-cfg[full]
+# macOS / Linux
+curl -L https://djangocfg.com/install.sh | sh
 
-# Create project
-django-cfg create-project "My App"
-cd my-app
-
-# Run
-python manage.py runserver
+# Windows (PowerShell)
+powershell -c "iwr https://djangocfg.com/install.ps1 | iex"
 ```
 
-**Access:**
-- Admin: http://127.0.0.1:8000/admin/
-- API: http://127.0.0.1:8000/api/docs/
+### Manual Install
 
----
-
-## Project Structure
-
-This repository contains:
-
-```
-django-cfg/
-├── projects/
-│   ├── django-cfg-dev/          # PyPI package source
-│   │   ├── src/django_cfg/      # Framework core
-│   │   └── pyproject.toml       # Package config
-│   │
-│   ├── django/                  # Sample Django project
-│   │   ├── apps/                # Built-in apps
-│   │   └── api/                 # Configuration
-│   │
-│   └── web/                     # Documentation site
-│       └── docs/                # Markdown docs
-│
-└── README.md                    # This file
-```
-
----
-
-## Installation Options
-
-**Full install (recommended):**
 ```bash
-pip install django-cfg[full]
-```
-
-**Individual extras:**
-```bash
-pip install django-cfg[grpc]        # gRPC microservices
-pip install django-cfg[centrifugo]  # WebSockets
-pip install django-cfg[rq]          # Background tasks
-pip install django-cfg[ai]          # AI agents
-```
-
-**Available extras:**
-- `[full]` - All features (grpc + centrifugo + rq + ai)
-- `[grpc]` - gRPC server (grpcio, grpcio-tools, protobuf)
-- `[centrifugo]` - Real-time WebSockets (cent, websockets)
-- `[rq]` - Redis Queue (django-rq, rq-scheduler, hiredis)
-- `[ai]` - AI framework (pydantic-ai)
-
----
-
-## Development
-
-### Local Development with Package
-
-**Option 1: Use published package**
-```bash
-cd projects/django
-poetry install
+pip install 'django-cfg[full]'
+django-cfg create-project my_app
+cd my_app/projects/django
 poetry run python manage.py runserver
 ```
 
-**Option 2: Use local django-cfg**
-```bash
-cd projects/django
-make install-local  # Uses local django-cfg with [full]
-poetry run python manage.py runserver
-```
+**What you get instantly:**
+- 🎨 Django Admin → `http://127.0.0.1:8000/admin/`
+- 📊 Streamlit Dashboard → Auto-starts on port 8501
+- 📡 Real-time WebSockets → Live updates
+- 🐳 Docker Ready → Production configs
+- 🖥️ Electron App → Desktop template
 
-### Work on Package
-
-```bash
-cd projects/django-cfg-dev
-poetry install
-poetry run pytest
-```
-
-### Documentation
-
-```bash
-cd projects/web
-npm install
-npm run dev  # http://localhost:3000
-```
+[→ Full Installation Guide](https://djangocfg.com/docs/getting-started/installation)
 
 ---
 
 ## Configuration Example
 
-**Replace settings.py with type-safe config:**
-
+**Before: settings.py**
 ```python
-# config.py
+# 200+ lines of untyped configuration
+DEBUG = os.getenv('DEBUG', 'False') == 'True'  # ❌ Bug waiting to happen
+DATABASE_PORT = os.getenv('DB_PORT', '5432')   # ❌ Still a string!
+```
+
+**After: Django-CFG**
+```python
 from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
     project_name: str = "My App"
-    debug: bool = False
-    secret_key: str = "${SECRET_KEY}"
+    debug: bool = False  # ✅ Type-safe
 
-    # Type-safe database
     databases: dict[str, DatabaseConfig] = {
-        "default": DatabaseConfig(name="${DB_NAME}")
+        "default": DatabaseConfig(
+            name="${DB_NAME}",  # ✅ Validated at startup
+            port=5432,          # ✅ Correct type
+        )
     }
-
-    # Optional features
-    enable_accounts: bool = True
-    enable_support: bool = True
-    enable_ai: bool = True
-
-# settings.py (just 3 lines)
-from .config import MyConfig
-config = MyConfig()
-globals().update(config.get_all_settings())
 ```
 
-**Benefits:**
-- IDE autocomplete for all settings
-- Pydantic validation at startup
-- 90% less boilerplate code
-- Environment variable support
+**Full IDE autocomplete** • **Startup validation** • **Zero runtime errors**
 
 ---
 
-## Built-in Apps
+## Features
 
-Enable production-ready apps with one line:
+### 🔒 Type-Safe Configuration
+Pydantic v2 models replace error-prone `settings.py` - catch bugs before deployment.
 
-| App | Description |
-|-----|-------------|
-| `accounts` | User management + OTP + SMS auth |
-| `support` | Ticketing system + SLA tracking |
-| `newsletter` | Email campaigns + analytics |
-| `leads` | CRM + sales pipeline |
-| `agents` | AI workflow automation |
-| `knowbase` | Vector DB + RAG |
-| `payments` | Multi-provider payments |
-| `maintenance` | Multi-site management |
+### 📊 Streamlit Admin
+Python-only admin panel that auto-starts with Django. No npm, no Node.js - just Python.
 
 ```python
-class MyConfig(DjangoConfig):
-    enable_accounts: bool = True
-    enable_support: bool = True
-    # ... more as needed
+from django_cfg import DjangoConfig
+from django_cfg.modules.streamlit_admin import StreamlitAdminConfig
+
+config = DjangoConfig(
+    streamlit_admin=StreamlitAdminConfig(
+        app_path="streamlit",
+        auto_start=True,  # Starts with Django, dies with Django
+    ),
+)
 ```
+
+### 📡 Real-Time WebSockets
+Production-ready Centrifugo integration - live updates, notifications, presence tracking.
+
+### 🌐 gRPC Microservices
+Bidirectional streaming with automatic WebSocket bridge - perfect for real-time architectures.
+
+### 🤖 AI-Native Documentation
+First Django framework with MCP server - AI assistants can access docs instantly.
+
+### 📦 8 Enterprise Apps
+User auth • Support tickets • Newsletter • CRM • AI agents • Knowledge base • Payments • Multi-site
+
+**Time saved: 18+ months of development**
+
+[→ See All Features](https://djangocfg.com/docs)
 
 ---
 
-## Publishing
+## What's Included
 
-**Publish to PyPI:**
+**Backend:**
+- Django 5.2+ with type-safe config
+- PostgreSQL, Redis, Centrifugo
+- gRPC server with streaming
+- 8 production-ready apps
+- AI agent framework
+- REST API with auto TypeScript generation
 
-```bash
-cd projects/django-cfg-dev
+**Admin:**
+- Streamlit admin (Python-only)
+- Django Unfold for CRUD
+- JWT authentication
+- Dark theme by default
 
-# Update version in pyproject.toml
-# Update CHANGELOG.md
+**DevOps:**
+- Docker Compose setup
+- Traefik reverse proxy
+- Production-ready configs
+- Cloudflare integration
 
-# Build and publish
-poetry build
-poetry publish
-```
-
-**Test locally before publish:**
-```bash
-pip install -e projects/django-cfg-dev[full]
-```
+**AI Features:**
+- MCP server for AI assistants
+- Pydantic AI integration
+- Vector DB (ChromaDB)
+- RAG support
 
 ---
 
 ## Documentation
 
-- **Package docs:** `projects/django-cfg-dev/README.md` (published to PyPI)
-- **Full docs:** `projects/web/docs/` (deployed to djangocfg.com)
-- **Sample project:** `projects/django/` (demo all features)
+- **[Getting Started](https://djangocfg.com/docs/getting-started/intro)** - Quick setup guide
+- **[Configuration](https://djangocfg.com/docs/getting-started/configuration)** - Type-safe config
+- **[Streamlit Admin](https://djangocfg.com/docs/features/modules/streamlit-admin/overview)** - Python admin panel
+- **[Real-Time](https://djangocfg.com/docs/features/integrations/centrifugo)** - WebSockets setup
+- **[gRPC](https://djangocfg.com/docs/features/integrations/grpc)** - Microservices
+- **[AI Agents](https://djangocfg.com/docs/ai-agents/introduction)** - Automation
+- **[Built-in Apps](https://djangocfg.com/docs/features/built-in-apps/overview)** - 8 enterprise apps
 
 ---
 
-## Architecture
+## Community
 
-**django-cfg-dev** (PyPI package):
-- Framework core with Pydantic models
-- Type-safe configuration classes
-- Built-in enterprise apps
-- Integration modules (gRPC, Centrifugo, Next.js)
-
-**django** (Sample project):
-- Shows all django-cfg features
-- Production-ready configuration
-- 8 enterprise apps enabled
-- Used as reference implementation
-
-**web** (Documentation):
-- Docusaurus site with full guides
-- API reference and examples
-- Deployment guides
-
----
-
-## Requirements
-
-- Python 3.12+
-- Django 5.2+ (peer dependency, install separately)
-- PostgreSQL (recommended)
-- Redis (for WebSockets/tasks)
+- 🌐 **[djangocfg.com](https://djangocfg.com/)** - Official website
+- 🎯 **[Live Demo](https://djangocfg.com/demo)** - See it in action
+- 🐙 **[GitHub](https://github.com/markolofsen/django-cfg)** - Source code
+- 💬 **[Discussions](https://github.com/markolofsen/django-cfg/discussions)** - Get help
+- 📦 **[PyPI](https://pypi.org/project/django-cfg/)** - Package repository
 
 ---
 
@@ -256,14 +193,12 @@ MIT License - Free for commercial use
 
 ---
 
-## Links
+<div align="center">
 
-- PyPI: https://pypi.org/project/django-cfg/
-- Documentation: https://djangocfg.com
-- Demo: http://demo.djangocfg.com
+**Django-CFG** - Modern Django framework with type-safe configuration, AI-native docs, Streamlit admin, gRPC streaming, real-time WebSockets, and 8 production-ready apps.
 
----
+Made with ❤️ for the Django community
 
-**For contributors:** See `CONTRIBUTING.md` in django-cfg-dev/
+[Get Started](https://djangocfg.com/docs) • [Live Demo](https://djangocfg.com/demo) • [GitHub](https://github.com/markolofsen/django-cfg)
 
-**For users:** Full documentation at https://djangocfg.com/docs/
+</div>
