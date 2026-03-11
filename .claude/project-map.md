@@ -1,6 +1,6 @@
 # Project Map
 > monorepo — A Django configuration framework providing type-safe settings and AI agent integration.
-> Generated: 2026-03-10T12:03:57.987623+00:00
+> Generated: 2026-03-10T12:07:28.055254+00:00
 
 ## Structure
 

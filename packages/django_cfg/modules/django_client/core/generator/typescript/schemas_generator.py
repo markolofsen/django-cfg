@@ -182,7 +182,7 @@ class SchemasGenerator:
             elif schema_format in ("uri", "url"):
                 # URL fields in Django can contain relative paths (e.g. /media/...)
                 # Accept absolute URLs (http/https) or relative paths starting with /
-                base_type = "z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), { message: 'Must be a URL or relative path' })"
+                base_type = "z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://') || v.startsWith('ws://') || v.startsWith('wss://'), { message: 'Must be a URL or relative path' })"
             elif schema_format == "uuid":
                 # Use regex instead of z.uuid() for more lenient validation
                 # z.uuid() uses strict RFC 4122 validation that rejects some valid UUIDs
