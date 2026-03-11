@@ -23,6 +23,7 @@ from .models_generator import ModelsGenerator
 from .naming import get_go_package_name
 from .operations_generator import OperationsGenerator
 from .type_mapper import GoTypeMapper
+from ...utils.schema_resolver import SchemaResolver
 
 
 class GoGenerator(BaseGenerator):
@@ -145,51 +146,8 @@ class GoGenerator(BaseGenerator):
 
     def _get_schemas_for_operations(self, operations: list[IROperationObject]) -> dict[str, IRSchemaObject]:
         """Get all schemas used by given operations, including nested dependencies."""
-        schemas = {}
-        schemas_to_process = set()
-
-        # Collect top-level schemas from operations
-        for operation in operations:
-            # Request body schemas
-            if operation.request_body and operation.request_body.schema_name:
-                schemas_to_process.add(operation.request_body.schema_name)
-
-            # Patch request body schemas
-            if operation.patch_request_body and operation.patch_request_body.schema_name:
-                schemas_to_process.add(operation.patch_request_body.schema_name)
-
-            # Response schemas
-            for status_code, response in operation.responses.items():
-                if response.schema_name:
-                    schemas_to_process.add(response.schema_name)
-                # Also collect array item schemas (for array responses)
-                if response.is_array and response.items_schema_name:
-                    schemas_to_process.add(response.items_schema_name)
-
-        # Recursively collect all dependencies
-        processed = set()
-        while schemas_to_process:
-            schema_name = schemas_to_process.pop()
-            if schema_name in processed or schema_name not in self.context.schemas:
-                continue
-
-            processed.add(schema_name)
-            schema = self.context.schemas[schema_name]
-            schemas[schema_name] = schema
-
-            # Find nested schema references
-            if schema.properties:
-                for prop_name, prop_schema in schema.properties.items():
-                    # Direct reference to another schema
-                    if prop_schema.ref and prop_schema.ref in self.context.schemas:
-                        schemas_to_process.add(prop_schema.ref)
-
-                    # Array items reference
-                    if prop_schema.items and prop_schema.items.ref:
-                        if prop_schema.items.ref in self.context.schemas:
-                            schemas_to_process.add(prop_schema.items.ref)
-
-        return schemas
+        resolver = SchemaResolver(self.context.schemas)
+        return resolver.resolve_for_operations(list(operations))
 
     def _create_generated_file(self, path: str, content: str, description: str) -> GeneratedFile:
         """Create GeneratedFile instance."""

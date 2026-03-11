@@ -7,9 +7,12 @@ common functionality for all code generators (Python, TypeScript, etc.).
 
 from __future__ import annotations
 
+import logging
 import re
 from abc import ABC, abstractmethod
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from ..context import (
     FieldContext,
@@ -19,6 +22,16 @@ from ..context import (
     build_schema_context,
 )
 from ..ir import IRContext, IROperationObject, IRSchemaObject
+from ..utils.enum_collector import EnumCollector
+
+
+def _slugify(s: str) -> str:
+    """Pure Python slugify: lowercase, collapse non-alphanumeric runs to hyphens."""
+    return re.sub(r'[^a-z0-9]+', '-', s.lower()).strip('-')
+
+
+_RE_CFG_PREFIX = re.compile(r'^(django_)?cfg_')
+_RE_ENUM_BULLET = re.compile(r'\s+\*\s+`')
 
 
 class GeneratedFile:
@@ -113,7 +126,7 @@ class BaseGenerator(ABC):
         tag_canonical = {}  # normalized_tag -> canonical_tag mapping
         tag_variants = defaultdict(set)  # Track all variants for warnings
 
-        for op_id, operation in self.context.operations.items():
+        for _, operation in self.context.operations.items():
             tag = operation.tags[0] if operation.tags else "default"
 
             # Normalize tag to lowercase for comparison
@@ -135,8 +148,8 @@ class BaseGenerator(ABC):
             if len(variants) > 1:
                 canonical = tag_canonical[normalized]
                 other_variants = sorted(variants - {canonical})
-                print(f"⚠️  Warning: Found case variants of tag '{canonical}': {other_variants}")
-                print(f"    → Using '{canonical}' as canonical tag")
+                logger.warning("Found case variants of tag '%s': %s", canonical, other_variants)
+                logger.warning("Using '%s' as canonical tag", canonical)
 
         return dict(ops_by_tag)
 
@@ -168,6 +181,16 @@ class BaseGenerator(ABC):
         words = normalized.split('_')
         return ''.join(word.capitalize() for word in words if word) + suffix
 
+    _APP_PREFIXES = ['django_cfg_', 'django_cfg.']
+
+    def _strip_app_prefix(self, normalized: str) -> str:
+        """Strip django_cfg_ or django_cfg. prefix from a normalized string."""
+        for prefix in self._APP_PREFIXES:
+            prefix_norm = _slugify(prefix).replace('-', '_')
+            if normalized.startswith(prefix_norm):
+                return normalized[len(prefix_norm):].lstrip('_')
+        return normalized.lstrip('_')
+
     def tag_to_property_name(self, tag: str) -> str:
         """
         Convert tag to valid property/variable name.
@@ -189,21 +212,11 @@ class BaseGenerator(ABC):
             >>> generator.tag_to_property_name("django_cfg.leads")
             'cfg_leads'  # django_cfg prefix is stripped before adding group prefix
         """
-        from django.utils.text import slugify
-        normalized = slugify(tag).replace('-', '_')
+        normalized = _slugify(tag).replace('-', '_')
 
         # Strip common app label prefixes to avoid duplication
         # (e.g., "django_cfg_leads" → "leads" before adding group prefix)
-        prefixes_to_strip = ['django_cfg_', 'django_cfg.']
-        for prefix in prefixes_to_strip:
-            prefix_normalized = slugify(prefix).replace('-', '_')
-            if normalized.startswith(prefix_normalized):
-                normalized = normalized[len(prefix_normalized):]
-                break
-
-        # Strip leading underscores after prefix removal
-        # (e.g., "django_cfg.accounts" → "django_cfg_accounts" → "_accounts" → "accounts")
-        normalized = normalized.lstrip('_')
+        normalized = self._strip_app_prefix(normalized)
 
         # Add group prefix if configured and not already present
         if self.tag_prefix:
@@ -284,8 +297,6 @@ class BaseGenerator(ABC):
             >>> generator.tag_and_app_to_folder_name("Profiles", operations)  # group=profiles
             'profiles'
         """
-        from django.utils.text import slugify
-
         # Extract app name from first operation's path
         app_name = None
         if operations:
@@ -296,23 +307,10 @@ class BaseGenerator(ABC):
             return self.tag_to_property_name(tag)
 
         # Normalize app name (strip django_cfg prefix)
-        normalized_app = slugify(app_name).replace('-', '_')
-        prefixes_to_strip = ['django_cfg_', 'django_cfg.']
-        for prefix in prefixes_to_strip:
-            prefix_normalized = slugify(prefix).replace('-', '_')
-            if normalized_app.startswith(prefix_normalized):
-                normalized_app = normalized_app[len(prefix_normalized):]
-                break
-        normalized_app = normalized_app.lstrip('_')
+        normalized_app = self._strip_app_prefix(_slugify(app_name).replace('-', '_'))
 
         # Normalize tag (strip django_cfg prefix)
-        normalized_tag = slugify(tag).replace('-', '_')
-        for prefix in prefixes_to_strip:
-            prefix_normalized = slugify(prefix).replace('-', '_')
-            if normalized_tag.startswith(prefix_normalized):
-                normalized_tag = normalized_tag[len(prefix_normalized):]
-                break
-        normalized_tag = normalized_tag.lstrip('_')
+        normalized_tag = self._strip_app_prefix(_slugify(tag).replace('-', '_'))
 
         # Smart deduplication: if tag matches app, skip tag portion
         if normalized_tag == normalized_app:
@@ -361,25 +359,12 @@ class BaseGenerator(ABC):
             >>> generator.tag_to_display_name("user-management")
             'User Management'
         """
-        from django.utils.text import slugify
-
         # If tag is already in title case with spaces, return as-is
         if ' ' in tag and tag[0].isupper():
             return tag
 
         # Normalize the tag
-        normalized = slugify(tag).replace('-', '_')
-
-        # Strip common app label prefixes
-        prefixes_to_strip = ['django_cfg_', 'django_cfg.']
-        for prefix in prefixes_to_strip:
-            prefix_normalized = slugify(prefix).replace('-', '_')
-            if normalized.startswith(prefix_normalized):
-                normalized = normalized[len(prefix_normalized):]
-                break
-
-        # Strip leading underscores
-        normalized = normalized.lstrip('_')
+        normalized = self._strip_app_prefix(_slugify(tag).replace('-', '_'))
 
         # Convert to title case with spaces
         words = normalized.split('_')
@@ -411,32 +396,17 @@ class BaseGenerator(ABC):
             >>> generator.remove_tag_prefix("retrieve", "users")
             'retrieve'  # No prefix to remove
         """
-        import re
-
-        from django.utils.text import slugify
-
         # First, strip common app label prefixes from operation_id
         # This handles cases like "django_cfg_newsletter_campaigns_list" or "cfg_support_tickets_list"
         # Remove only the cfg/django_cfg prefix, not the entire app name
         # Examples:
         #   cfg_support_tickets_list → support_tickets_list
         #   django_cfg_accounts_otp_request → accounts_otp_request
-        cleaned_op_id = re.sub(r'^(django_)?cfg_', '', operation_id)
+        cleaned_op_id = _RE_CFG_PREFIX.sub('', operation_id)
 
         # Now try to remove the normalized tag as a prefix
         # Normalize tag same way as tag_to_property_name but without adding group prefix
-        normalized_tag = slugify(tag).replace('-', '_')
-
-        # Strip django_cfg prefix from tag too
-        tag_prefixes = ['django_cfg_', 'django_cfg.']
-        for prefix in tag_prefixes:
-            prefix_normalized = slugify(prefix).replace('-', '_')
-            if normalized_tag.startswith(prefix_normalized):
-                normalized_tag = normalized_tag[len(prefix_normalized):]
-                break
-
-        # Strip leading underscores from tag
-        normalized_tag = normalized_tag.lstrip('_')
+        normalized_tag = self._strip_app_prefix(_slugify(tag).replace('-', '_'))
 
         # Remove tag prefix from operation_id if it matches
         # This ensures methods in each API folder have clean, contextual names
@@ -582,7 +552,7 @@ class BaseGenerator(ABC):
             >>> field = schema.properties["email"]
             >>> ctx = generator.build_field_context(field, required=True)
             >>> ctx.input_type  # InputType.EMAIL
-            >>> ctx.validation  # ValidationRule.EMAIL
+            >>> ctx.validation  # FieldValidationHint.EMAIL
         """
         return build_field_context(schema, required=required)
 
@@ -684,95 +654,8 @@ class BaseGenerator(ABC):
             >>> enums["StatusEnum"].enum_var_names
             ["OPEN", "CLOSED"]
         """
-        enums = {}
-
-        def auto_generate_enum_var_names(schema: IRSchemaObject) -> IRSchemaObject:
-            """Auto-generate enum_var_names from enum values if missing."""
-            if schema.enum and not schema.enum_var_names:
-                # Generate variable names from values
-                var_names = []
-                for value in schema.enum:
-                    if isinstance(value, str):
-                        # Convert "waiting_for_user" → "WAITING_FOR_USER"
-                        # Replace all non-alphanumeric chars with underscore
-                        var_name = re.sub(r'[^a-zA-Z0-9]', '_', value.upper())
-                        # Collapse multiple underscores
-                        var_name = re.sub(r'_+', '_', var_name).strip('_')
-                    else:
-                        # For integers: 1 → "VALUE_1"
-                        var_name = f"VALUE_{value}"
-                    # Identifiers cannot start with a digit in most languages
-                    if var_name and var_name[0].isdigit():
-                        var_name = '_' + var_name
-                    var_names.append(var_name)
-
-                # Create new schema with auto-generated var names
-                schema = IRSchemaObject(
-                    **{**schema.model_dump(), "enum_var_names": var_names}
-                )
-            return schema
-
-        def collect_recursive(schema: IRSchemaObject):
-            """Recursively collect enums from schema and its nested properties."""
-            # Check if this schema itself is an enum (with or without x-enum-varnames)
-            if schema.enum and schema.name:
-                schema = auto_generate_enum_var_names(schema)
-                enums[schema.name] = schema
-
-            # Check if this schema is a reference to an enum
-            if schema.ref and schema.ref in self.context.schemas:
-                ref_schema = self.context.schemas[schema.ref]
-                if ref_schema.enum:
-                    ref_schema = auto_generate_enum_var_names(ref_schema)
-                    enums[ref_schema.name] = ref_schema
-
-            # Check properties for enums
-            if schema.properties:
-                for prop_schema in schema.properties.values():
-                    # If property has enum, it's a standalone enum
-                    if prop_schema.enum and prop_schema.name:
-                        prop_schema = auto_generate_enum_var_names(prop_schema)
-                        enums[prop_schema.name] = prop_schema
-                    # Check if property is a reference to an enum
-                    elif prop_schema.ref and prop_schema.ref in self.context.schemas:
-                        ref_schema = self.context.schemas[prop_schema.ref]
-                        if ref_schema.enum:
-                            ref_schema = auto_generate_enum_var_names(ref_schema)
-                            enums[ref_schema.name] = ref_schema
-                    # Recurse into nested objects
-                    elif prop_schema.type == "object":
-                        collect_recursive(prop_schema)
-                    # Recurse into arrays
-                    elif prop_schema.type == "array" and prop_schema.items:
-                        if prop_schema.items.enum and prop_schema.items.name:
-                            items = auto_generate_enum_var_names(prop_schema.items)
-                            enums[items.name] = items
-                        elif prop_schema.items.ref and prop_schema.items.ref in self.context.schemas:
-                            ref_items = self.context.schemas[prop_schema.items.ref]
-                            if ref_items.enum:
-                                ref_items = auto_generate_enum_var_names(ref_items)
-                                enums[ref_items.name] = ref_items
-                        elif prop_schema.items.type == "object":
-                            collect_recursive(prop_schema.items)
-
-            # Check array items for enums (if schema itself is array)
-            if schema.items:
-                if schema.items.enum and schema.items.name:
-                    items = auto_generate_enum_var_names(schema.items)
-                    enums[items.name] = items
-                elif schema.items.ref and schema.items.ref in self.context.schemas:
-                    ref_items = self.context.schemas[schema.items.ref]
-                    if ref_items.enum:
-                        ref_items = auto_generate_enum_var_names(ref_items)
-                        enums[ref_items.name] = ref_items
-                elif schema.items.type == "object":
-                    collect_recursive(schema.items)
-
-        # Collect enums from all schemas
-        for schema in schemas.values():
-            collect_recursive(schema)
-
-        return enums
+        collector = EnumCollector(self.context.schemas)
+        return collector.collect(schemas)
 
     def get_operations_by_tag(self) -> dict[str, list[IROperationObject]]:
         """Get operations grouped by tags."""
@@ -904,9 +787,8 @@ class BaseGenerator(ABC):
             return text
 
         # Split by " * `" pattern (preserving the first *)
-        import re
         # Replace " * `" with newline + "* `"
-        formatted = re.sub(r'\s+\*\s+`', '\n* `', text.strip())
+        formatted = _RE_ENUM_BULLET.sub('\n* `', text.strip())
 
         return formatted
 

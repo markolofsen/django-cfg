@@ -21,12 +21,13 @@ from ...types import FieldType, TypeMapper
 
 if TYPE_CHECKING:
     from ...ir import IRSchemaObject
+    from ..base import BaseGenerator
 
 
 class OperationsGenerator:
     """Generates operation methods for Python clients."""
 
-    def __init__(self, jinja_env: Environment, base_generator):
+    def __init__(self, jinja_env: Environment, base_generator: BaseGenerator):
         """
         Initialize operations generator.
 
@@ -40,19 +41,70 @@ class OperationsGenerator:
 
     def generate_async_operation(self, operation: IROperationObject, remove_tag_prefix: bool = False) -> str:
         """Generate async method for operation."""
-        # Get method name
+        method_name = self._resolve_method_name(operation, remove_tag_prefix)
+        params = self._build_operation_params(operation)
+        return_type, response_schemas, has_multiple_responses, primary_response = self._resolve_return_type(operation)
+
+        docstring = self._build_docstring(operation)
+        body_lines = self._build_common_body_lines(operation, is_async=True)
+        self._append_response_parsing(body_lines, return_type, has_multiple_responses, response_schemas, primary_response, operation)
+
+        template = self.jinja_env.get_template('client/operation_method.py.jinja')
+        return template.render(
+            method_name=method_name,
+            params=params,
+            return_type=return_type,
+            docstring=docstring,
+            body_lines=body_lines
+        )
+
+    def generate_sync_operation(self, operation: IROperationObject, remove_tag_prefix: bool = False) -> str:
+        """Generate sync method for operation (mirrors async generate_operation)."""
+        method_name = self._resolve_method_name(operation, remove_tag_prefix)
+        params = self._build_operation_params(operation)
+        return_type, response_schemas, has_multiple_responses, primary_response = self._resolve_return_type(operation)
+
+        docstring = self._build_docstring(operation)
+        body_lines = self._build_common_body_lines(operation, is_async=False)
+        self._append_response_parsing(body_lines, return_type, has_multiple_responses, response_schemas, primary_response, operation)
+
+        # Render template
+        template = self.jinja_env.get_template('client/sync_operation_method.py.jinja')
+        return template.render(
+            method_name=method_name,
+            params=params,
+            return_type=return_type,
+            body_lines=body_lines,
+            docstring=docstring
+        )
+
+    # ------------------------------------------------------------------
+    # Shared helpers
+    # ------------------------------------------------------------------
+
+    def _resolve_method_name(self, operation: IROperationObject, remove_tag_prefix: bool) -> str:
+        """Resolve operation method name, optionally stripping the tag prefix."""
         method_name = operation.operation_id
         if remove_tag_prefix and operation.tags:
-            # Remove tag prefix using base class method
             tag = operation.tags[0]
             method_name = self.base.remove_tag_prefix(method_name, tag)
+        return method_name
 
-        # Build method signature using ParamsBuilder
+    def _build_operation_params(self, operation: IROperationObject) -> list[str]:
+        """Build the Python signature parameter list for an operation."""
         params_builder = ParamsBuilder(operation)
         params_ctx = params_builder.for_python()
-        params = params_ctx["signature_params"]
+        return params_ctx["signature_params"]
 
-        # Return type - handle multiple response types
+    def _resolve_return_type(
+        self, operation: IROperationObject
+    ) -> tuple[str, list, bool, object]:
+        """Resolve return type information for an operation.
+
+        Returns:
+            Tuple of (return_type, response_schemas, has_multiple_responses, primary_response)
+            where response_schemas is a list of (status_code, schema_name) tuples.
+        """
         has_multiple_responses = self._has_multiple_response_types(operation)
         primary_response = operation.primary_success_response
 
@@ -72,9 +124,10 @@ class OperationsGenerator:
             return_type = "None"
             response_schemas = []
 
-        signature = f"async def {method_name}({', '.join(params)}) -> {return_type}:"
+        return return_type, response_schemas, has_multiple_responses, primary_response
 
-        # Docstring
+    def _build_docstring(self, operation: IROperationObject) -> str | None:
+        """Build docstring text for an operation."""
         docstring_lines = []
         if operation.summary:
             docstring_lines.append(operation.summary)
@@ -82,10 +135,19 @@ class OperationsGenerator:
             if docstring_lines:
                 docstring_lines.append("")
             docstring_lines.extend(self.base.wrap_comment(operation.description, 72))
+        return "\n".join(docstring_lines) if docstring_lines else None
 
-        docstring = "\n".join(docstring_lines) if docstring_lines else None
+    def _build_common_body_lines(self, operation: IROperationObject, *, is_async: bool) -> list[str]:
+        """Build the method body lines shared between async and sync operations.
 
-        # Method body
+        Args:
+            operation: The IR operation object.
+            is_async: When True, generates ``await self._client.method(...)``; when
+                False, generates ``self._client.method(...)`` without await.
+
+        Returns:
+            List of Python code lines up to and including the error-handling block.
+        """
         body_lines = []
 
         # Build URL
@@ -111,7 +173,7 @@ class OperationsGenerator:
             request_kwargs.append("params=_params")
 
         # Check if multipart
-        is_multipart = self._is_multipart_operation(operation)
+        is_multipart = operation.is_multipart
 
         # Request body
         if operation.request_body:
@@ -130,10 +192,17 @@ class OperationsGenerator:
 
         # Make request
         method_lower = operation.http_method.lower()
-        request_line = f"response = await self._client.{method_lower}(url"
-        if request_kwargs:
-            request_line += ", " + ", ".join(request_kwargs)
-        request_line += ")"
+        if is_async:
+            request_line = f"response = await self._client.{method_lower}(url"
+            if request_kwargs:
+                request_line += ", " + ", ".join(request_kwargs)
+            request_line += ")"
+        else:
+            if request_kwargs:
+                request_call = f'self._client.{method_lower}(url, {", ".join(request_kwargs)})'
+            else:
+                request_call = f'self._client.{method_lower}(url)'
+            request_line = f"response = {request_call}"
 
         body_lines.append(request_line)
 
@@ -148,6 +217,18 @@ class OperationsGenerator:
         body_lines.append("        msg, request=response.request, response=response"  )
         body_lines.append("    )")
 
+        return body_lines
+
+    def _append_response_parsing(
+        self,
+        body_lines: list[str],
+        return_type: str,
+        has_multiple_responses: bool,
+        response_schemas: list,
+        primary_response,
+        operation: IROperationObject | None = None,
+    ) -> None:
+        """Append response-parsing lines to *body_lines* in place."""
         if return_type != "None":
             if has_multiple_responses and response_schemas:
                 # Multiple response types - check status code
@@ -164,7 +245,7 @@ class OperationsGenerator:
                 # Array response - parse each item
                 item_schema = primary_response.items_schema_name
                 body_lines.append(f"return [{item_schema}.model_validate(item) for item in response.json()]")
-            elif operation.is_list_operation and primary_response and primary_response.schema_name:
+            elif operation is not None and operation.is_list_operation and primary_response and primary_response.schema_name:
                 # Paginated list response - return full paginated object
                 body_lines.append(f"return {primary_response.schema_name}.model_validate(response.json())")
             elif primary_response and primary_response.schema_name:
@@ -174,161 +255,9 @@ class OperationsGenerator:
         else:
             body_lines.append("return None")
 
-        template = self.jinja_env.get_template('client/operation_method.py.jinja')
-        return template.render(
-            method_name=method_name,
-            params=params,
-            return_type=return_type,
-            docstring=docstring,
-            body_lines=body_lines
-        )
-
-    def generate_sync_operation(self, operation: IROperationObject, remove_tag_prefix: bool = False) -> str:
-        """Generate sync method for operation (mirrors async generate_operation)."""
-        # Get method name
-        method_name = operation.operation_id
-        if remove_tag_prefix and operation.tags:
-            # Remove tag prefix using base class method
-            tag = operation.tags[0]
-            method_name = self.base.remove_tag_prefix(method_name, tag)
-
-        # Build method signature using ParamsBuilder
-        params_builder = ParamsBuilder(operation)
-        params_ctx = params_builder.for_python()
-        params = params_ctx["signature_params"]
-
-        # Return type - handle multiple response types
-        has_multiple_responses = self._has_multiple_response_types(operation)
-        primary_response = operation.primary_success_response
-
-        if has_multiple_responses:
-            return_type, response_schemas = self._get_response_type_info(operation)
-        elif primary_response and primary_response.schema_name:
-            if operation.is_list_operation:
-                return_type = f"list[{primary_response.schema_name}]"
-            else:
-                return_type = primary_response.schema_name
-            response_schemas = []
-        elif primary_response and primary_response.is_array and primary_response.items_schema_name:
-            # Array response with items $ref
-            return_type = f"list[{primary_response.items_schema_name}]"
-            response_schemas = []
-        else:
-            return_type = "None"
-            response_schemas = []
-
-        # Docstring
-        docstring_lines = []
-        if operation.summary:
-            docstring_lines.append(operation.summary)
-        if operation.description:
-            if docstring_lines:
-                docstring_lines.append("")
-            docstring_lines.extend(self.base.wrap_comment(operation.description, 72))
-
-        docstring = "\n".join(docstring_lines) if docstring_lines else None
-
-        # Method body
-        body_lines = []
-
-        # Build URL
-        url_expr = f'"{operation.path}"'
-        if operation.path_parameters:
-            # Replace {id} with f-string {id}
-            url_expr = f'f"{operation.path}"'
-
-        body_lines.append(f"url = {url_expr}")
-
-        # Build request
-        request_kwargs = []
-
-        # Query params - filter out None values to avoid sending empty strings
-        if operation.query_parameters:
-            # Build dict comprehension that filters None values
-            body_lines.append("_params = {")
-            body_lines.append("    k: v for k, v in {")
-            for param in operation.query_parameters:
-                body_lines.append(f'        "{param.name}": {param.name},')
-            body_lines.append("    }.items() if v is not None")
-            body_lines.append("}")
-            request_kwargs.append("params=_params")
-
-        # Check if multipart
-        is_multipart = self._is_multipart_operation(operation)
-
-        # Request body
-        if operation.request_body:
-            if is_multipart:
-                # Multipart form data - add file/data building code
-                body_lines.extend(self._generate_multipart_body_lines(operation))
-                request_kwargs.append("files=_files if _files else None")
-                request_kwargs.append("data=_form_data if _form_data else None")
-            else:
-                # JSON body
-                request_kwargs.append("json=data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True)")
-        elif operation.patch_request_body:
-            # Optional PATCH body - build json separately to avoid long lines
-            body_lines.append("_json = data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True) if data else None")
-            request_kwargs.append("json=_json")
-
-        # HTTP method
-        method_lower = operation.http_method.lower()
-
-        # Build request call (sync version - no await)
-        if request_kwargs:
-            request_call = f'self._client.{method_lower}(url, {", ".join(request_kwargs)})'
-        else:
-            request_call = f'self._client.{method_lower}(url)'
-
-        body_lines.append(f"response = {request_call}")
-
-        # Handle response with detailed error
-        body_lines.append("if not response.is_success:")
-        body_lines.append("    try:")
-        body_lines.append("        error_body = response.json()")
-        body_lines.append("    except Exception:")
-        body_lines.append("        error_body = response.text")
-        body_lines.append('    msg = f"{response.status_code}: {error_body}"')
-        body_lines.append("    raise httpx.HTTPStatusError(")
-        body_lines.append("        msg, request=response.request, response=response"  )
-        body_lines.append("    )")
-
-        # Parse response
-        if return_type != "None":
-            if has_multiple_responses and response_schemas:
-                # Multiple response types - check status code
-                for i, (status_code, schema_name) in enumerate(response_schemas):
-                    if i == 0:
-                        body_lines.append(f"if response.status_code == {status_code}:")
-                    else:
-                        body_lines.append(f"elif response.status_code == {status_code}:")
-                    body_lines.append(f"    return {schema_name}.model_validate(response.json())")
-                # Default fallback to first schema
-                body_lines.append("else:")
-                body_lines.append(f"    return {response_schemas[0][1]}.model_validate(response.json())")
-            elif primary_response and primary_response.is_array and primary_response.items_schema_name:
-                # Array response - parse each item
-                item_schema = primary_response.items_schema_name
-                body_lines.append(f"return [{item_schema}.model_validate(item) for item in response.json()]")
-            elif operation.is_list_operation and primary_response and primary_response.schema_name:
-                # List response - return full paginated object
-                primary_schema = primary_response.schema_name
-                body_lines.append(f"return {primary_schema}.model_validate(response.json())")
-            elif primary_response and primary_response.schema_name:
-                # Single object response
-                body_lines.append(f"return {primary_response.schema_name}.model_validate(response.json())")
-            else:
-                body_lines.append("return response.json()")
-
-        # Render template
-        template = self.jinja_env.get_template('client/sync_operation_method.py.jinja')
-        return template.render(
-            method_name=method_name,
-            params=params,
-            return_type=return_type,
-            body_lines=body_lines,
-            docstring=docstring
-        )
+    # ------------------------------------------------------------------
+    # Private utilities
+    # ------------------------------------------------------------------
 
     def _map_param_type(self, schema_type: str) -> str:
         """Map parameter schema type to Python type using unified TypeMapper."""
@@ -337,13 +266,6 @@ class OperationsGenerator:
             return self._type_mapper.to_python(ft)
         except ValueError:
             return "str"
-
-    def _is_multipart_operation(self, operation: IROperationObject) -> bool:
-        """Check if operation uses multipart/form-data content type."""
-        return (
-            operation.request_body is not None
-            and operation.request_body.content_type == "multipart/form-data"
-        )
 
     def _get_schema_for_operation(self, operation: IROperationObject) -> "IRSchemaObject | None":
         """Get the request body schema for an operation."""

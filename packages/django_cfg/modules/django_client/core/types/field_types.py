@@ -271,6 +271,42 @@ PROTO_IMPORTS: dict[str, str] = {
 
 
 # =============================================================================
+# Swift Type Mappings
+# =============================================================================
+
+SWIFT_TYPES: dict[FieldType, str] = {
+    FieldType.STRING: "String",
+    FieldType.INTEGER: "Int",
+    FieldType.NUMBER: "Double",
+    FieldType.BOOLEAN: "Bool",
+    FieldType.ARRAY: "[JSONValue]",   # Replaced with specific type by SwiftTypeMapper
+    FieldType.OBJECT: "[String: JSONValue]",  # Replaced with specific type by SwiftTypeMapper
+    FieldType.NULL: "JSONValue",
+    FieldType.ANY: "JSONValue",
+}
+
+SWIFT_FORMAT_TYPES: dict[FormatType, str] = {
+    FormatType.DATETIME: "Date",
+    FormatType.DATE: "String",   # ISO date string — no dedicated Swift type
+    FormatType.TIME: "String",
+    FormatType.UUID: "String",
+    FormatType.EMAIL: "String",
+    FormatType.URI: "String",
+    FormatType.URL: "String",
+    FormatType.HOSTNAME: "String",
+    FormatType.IPV4: "String",
+    FormatType.IPV6: "String",
+    FormatType.PASSWORD: "String",
+    FormatType.BINARY: "Data",
+    FormatType.BYTE: "Data",
+    FormatType.INT32: "Int32",
+    FormatType.INT64: "Int64",
+    FormatType.FLOAT: "Float",
+    FormatType.DOUBLE: "Double",
+}
+
+
+# =============================================================================
 # Type Mapper Utility
 # =============================================================================
 
@@ -511,3 +547,40 @@ class TypeMapper:
     def get_proto_imports(self) -> list[str]:
         """Get required Proto imports."""
         return sorted(self._proto_imports)
+
+    # -------------------------------------------------------------------------
+    # Swift
+    # -------------------------------------------------------------------------
+
+    def to_swift(
+        self,
+        field_type: FieldType | str,
+        format_type: FormatType | str | None = None,
+        *,
+        optional: bool = False,
+    ) -> str:
+        """
+        Convert to Swift type (primitive mapping only).
+
+        Array/object wrappers and named references are handled by SwiftTypeMapper.
+
+        Args:
+            field_type: OpenAPI type
+            format_type: Optional format specifier
+            optional: Whether to append ``?`` for optionality
+
+        Returns:
+            Swift type string (e.g., "String", "Int32", "Date", "String?")
+        """
+        ft = FieldType(field_type) if isinstance(field_type, str) else field_type
+
+        # Check format first
+        if format_type:
+            fmt = FormatType(format_type) if isinstance(format_type, str) else format_type
+            if fmt in SWIFT_FORMAT_TYPES:
+                type_str = SWIFT_FORMAT_TYPES[fmt]
+                return f"{type_str}?" if optional else type_str
+
+        # Base type
+        type_str = SWIFT_TYPES.get(ft, "JSONValue")
+        return f"{type_str}?" if optional else type_str

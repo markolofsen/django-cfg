@@ -26,7 +26,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from ..detection import detect_field_meta, InputType, ValidationRule
+from ..detection import detect_field_meta, InputType, FieldValidationHint
 from ..types import FieldType, FormatType, TypeMapper
 
 if TYPE_CHECKING:
@@ -72,7 +72,7 @@ class FieldContext:
 
     # === Smart Detection ===
     input_type: InputType
-    validation: ValidationRule | None
+    validation: FieldValidationHint | None
     sensitive: bool
     placeholder: str | None
     autocomplete: str | None

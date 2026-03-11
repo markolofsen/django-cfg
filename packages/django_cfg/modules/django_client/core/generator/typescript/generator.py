@@ -11,7 +11,10 @@ This generator creates a complete TypeScript API client from IR:
 
 from __future__ import annotations
 
+import logging
 import pathlib
+
+logger = logging.getLogger(__name__)
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -26,6 +29,7 @@ from .models_generator import ModelsGenerator
 from .operations_generator import OperationsGenerator
 from .schemas_generator import SchemasGenerator
 from .validator import TypeScriptValidator
+from ...utils.schema_resolver import SchemaResolver
 
 
 class TypeScriptGenerator(BaseGenerator):
@@ -65,124 +69,9 @@ class TypeScriptGenerator(BaseGenerator):
         files = []
 
         if self.client_structure == "namespaced":
-            # Generate per-app folders
-            ops_by_tag = self.group_operations_by_tag()
-
-            for tag, operations in sorted(ops_by_tag.items()):
-                # Generate app folder (models.ts, client.ts, index.ts)
-                files.extend(self._generate_app_folder(tag, operations))
-
-            # Generate shared enums.ts (Variant 2: all enums in root)
-            all_schemas = self.context.schemas
-            all_enums = self._collect_enums_from_schemas(all_schemas)
-            if all_enums:
-                files.append(self.models_gen.generate_shared_enums_file(all_enums))
-
-            # Generate main client.ts
-            files.append(self.client_gen.generate_main_client_file(ops_by_tag))
-
-            # Generate main index.ts
-            files.append(self.files_gen.generate_main_index_file())
-
-            # Generate http.ts with HttpClientAdapter
-            files.append(self.files_gen.generate_http_adapter_file())
-
-            # Generate errors.ts with APIError
-            files.append(self.files_gen.generate_errors_file())
-
-            # Generate storage.ts with StorageAdapter
-            files.append(self.files_gen.generate_storage_file())
-
-            # Generate logger.ts with Consola
-            files.append(self.files_gen.generate_logger_file())
-
-            # Generate retry.ts with p-retry
-            files.append(self.files_gen.generate_retry_file())
-
-            # Generate validation-events.ts (browser CustomEvent for Zod errors)
-            if self.generate_zod_schemas:
-                files.append(self.files_gen.generate_validation_events_file())
-
-            # Generate api-instance.ts singleton (needed for fetchers/hooks)
-            if self.generate_fetchers:
-                files.append(self.files_gen.generate_api_instance_file())
-
-            # Generate schema.ts with OpenAPI schema
-            if self.openapi_schema:
-                files.append(self.files_gen.generate_schema_file())
-
-            # Generate Zod schemas if requested
-            if self.generate_zod_schemas:
-                files.extend(self._generate_zod_schemas())
-
-            # Generate fetchers if requested
-            if self.generate_fetchers:
-                if not self.generate_zod_schemas:
-                    print("⚠️  Warning: Fetchers require Zod schemas. Enable generate_zod_schemas.")
-                else:
-                    files.extend(self._generate_fetchers())
-
-            # Generate SWR hooks if requested
-            if self.generate_swr_hooks:
-                if not self.generate_fetchers:
-                    print("⚠️  Warning: SWR hooks require fetchers. Enable generate_fetchers.")
-                else:
-                    files.extend(self._generate_swr_hooks())
-
-            # Validate generated TypeScript code
-            self._validate_typescript_files(files)
+            files.extend(self._generate_namespaced())
         else:
-            # Flat structure (original logic)
-            files.append(self.models_gen.generate_models_file())
-
-            enum_schemas = self.get_enum_schemas()
-            if enum_schemas:
-                files.append(self.models_gen.generate_enums_file())
-
-            files.append(self.client_gen.generate_client_file())
-            files.append(self.files_gen.generate_index_file())
-
-            # Generate storage.ts with StorageAdapter
-            files.append(self.files_gen.generate_storage_file())
-
-            # Generate logger.ts with Consola
-            files.append(self.files_gen.generate_logger_file())
-
-            # Generate retry.ts with p-retry
-            files.append(self.files_gen.generate_retry_file())
-
-            # Generate validation-events.ts (browser CustomEvent for Zod errors)
-            if self.generate_zod_schemas:
-                files.append(self.files_gen.generate_validation_events_file())
-
-            # Generate api-instance.ts singleton (needed for fetchers/hooks)
-            if self.generate_fetchers:
-                files.append(self.files_gen.generate_api_instance_file())
-
-            # Generate schema.ts with OpenAPI schema
-            if self.openapi_schema:
-                files.append(self.files_gen.generate_schema_file())
-
-            # Generate Zod schemas if requested
-            if self.generate_zod_schemas:
-                files.extend(self._generate_zod_schemas())
-
-            # Generate fetchers if requested
-            if self.generate_fetchers:
-                if not self.generate_zod_schemas:
-                    print("⚠️  Warning: Fetchers require Zod schemas. Enable generate_zod_schemas.")
-                else:
-                    files.extend(self._generate_fetchers())
-
-            # Generate SWR hooks if requested
-            if self.generate_swr_hooks:
-                if not self.generate_fetchers:
-                    print("⚠️  Warning: SWR hooks require fetchers. Enable generate_fetchers.")
-                else:
-                    files.extend(self._generate_swr_hooks())
-
-            # Validate generated TypeScript code
-            self._validate_typescript_files(files)
+            files.extend(self._generate_flat())
 
         # Generate package files if requested
         if self.generate_package_files:
@@ -196,6 +85,111 @@ class TypeScriptGenerator(BaseGenerator):
             generate_swr_hooks=self.generate_swr_hooks,
         )
         files.append(claude_gen.generate())
+
+        return files
+
+    # ===== Structure-specific Generation =====
+
+    def _generate_namespaced(self) -> list[GeneratedFile]:
+        """Generate files for namespaced client structure (one folder per app/tag)."""
+        files = []
+
+        ops_by_tag = self.group_operations_by_tag()
+
+        for tag, operations in sorted(ops_by_tag.items()):
+            # Generate app folder (models.ts, client.ts, index.ts)
+            files.extend(self._generate_app_folder(tag, operations))
+
+        # Generate shared enums.ts (Variant 2: all enums in root)
+        all_schemas = self.context.schemas
+        all_enums = self._collect_enums_from_schemas(all_schemas)
+        if all_enums:
+            files.append(self.models_gen.generate_shared_enums_file(all_enums))
+
+        # Generate main client.ts
+        files.append(self.client_gen.generate_main_client_file(ops_by_tag))
+
+        # Generate main index.ts
+        files.append(self.files_gen.generate_main_index_file())
+
+        # Generate http.ts with HttpClientAdapter
+        files.append(self.files_gen.generate_http_adapter_file())
+
+        # Generate errors.ts with APIError
+        files.append(self.files_gen.generate_errors_file())
+
+        files.extend(self._generate_shared_files(ops_by_tag))
+        return files
+
+    def _generate_flat(self) -> list[GeneratedFile]:
+        """Generate files for flat client structure (single-level output)."""
+        files = []
+
+        files.append(self.models_gen.generate_models_file())
+
+        enum_schemas = self.get_enum_schemas()
+        if enum_schemas:
+            files.append(self.models_gen.generate_enums_file())
+
+        files.append(self.client_gen.generate_client_file())
+        files.append(self.files_gen.generate_index_file())
+
+        files.extend(self._generate_shared_files())
+        return files
+
+    def _generate_shared_files(
+        self,
+        ops_by_tag: dict[str, list[IROperationObject]] | None = None,
+    ) -> list[GeneratedFile]:
+        """
+        Generate files that are identical in both namespaced and flat structures.
+
+        Includes utility files, optional feature files (Zod, fetchers, hooks),
+        and TypeScript validation.
+        """
+        files = []
+
+        # Generate storage.ts with StorageAdapter
+        files.append(self.files_gen.generate_storage_file())
+
+        # Generate logger.ts with Consola
+        files.append(self.files_gen.generate_logger_file())
+
+        # Generate retry.ts with p-retry
+        files.append(self.files_gen.generate_retry_file())
+
+        # Generate validation-events.ts (browser CustomEvent for Zod errors)
+        if self.generate_zod_schemas:
+            files.append(self.files_gen.generate_validation_events_file())
+
+        # Generate api-instance.ts singleton (needed for fetchers/hooks)
+        if self.generate_fetchers:
+            files.append(self.files_gen.generate_api_instance_file())
+
+        # Generate schema.ts with OpenAPI schema
+        if self.openapi_schema:
+            files.append(self.files_gen.generate_schema_file())
+
+        # Generate Zod schemas if requested
+        if self.generate_zod_schemas:
+            files.extend(self._generate_zod_schemas())
+
+        # Generate fetchers if requested
+        if self.generate_fetchers:
+            if not self.generate_zod_schemas:
+                logger.warning("Fetchers require Zod schemas. Enable generate_zod_schemas.")
+            else:
+                files.extend(self._generate_fetchers(ops_by_tag))
+
+        # Generate SWR hooks if requested
+        if self.generate_swr_hooks:
+            if not self.generate_fetchers:
+                logger.warning("SWR hooks require fetchers. Enable generate_fetchers.")
+            else:
+                files.extend(self._generate_swr_hooks(ops_by_tag))
+
+        # Validate generated TypeScript code
+        self._validate_typescript_files(files)
 
         return files
 
@@ -245,101 +239,8 @@ class TypeScriptGenerator(BaseGenerator):
         that nested schemas (e.g., APIKeyList referenced by PaginatedAPIKeyListList)
         are included in the generated models file.
         """
-        schemas = {}
-
-        for operation in operations:
-            # Request body schemas
-            if operation.request_body and operation.request_body.schema_name:
-                schema_name = operation.request_body.schema_name
-                if schema_name in self.context.schemas:
-                    schemas[schema_name] = self.context.schemas[schema_name]
-
-            # Patch request body schemas
-            if operation.patch_request_body and operation.patch_request_body.schema_name:
-                schema_name = operation.patch_request_body.schema_name
-                if schema_name in self.context.schemas:
-                    schemas[schema_name] = self.context.schemas[schema_name]
-
-            # Response schemas
-            for status_code, response in operation.responses.items():
-                if response.schema_name:
-                    if response.schema_name in self.context.schemas:
-                        schemas[response.schema_name] = self.context.schemas[response.schema_name]
-
-        # Recursively resolve all nested schema dependencies
-        schemas = self._resolve_nested_schemas(schemas)
-
-        return schemas
-
-    def _resolve_nested_schemas(self, initial_schemas: dict[str, IRSchemaObject]) -> dict[str, IRSchemaObject]:
-        """
-        Recursively resolve all nested schema dependencies ($ref).
-
-        This ensures that if SchemaA references SchemaB (e.g., via a property or array items),
-        SchemaB is also included in the output, even if it's not directly used in operations.
-
-        Example:
-            PaginatedAPIKeyListList has:
-                results: Array<APIKeyList>  ← $ref to APIKeyList
-
-            This method will find APIKeyList and include it.
-
-        Args:
-            initial_schemas: Schemas directly used by operations
-
-        Returns:
-            All schemas including nested dependencies
-        """
-        resolved = dict(initial_schemas)
-        queue = list(initial_schemas.values())
-        seen = set(initial_schemas.keys())
-
-        while queue:
-            schema = queue.pop(0)
-
-            # Check properties for $ref and nested items
-            if schema.properties:
-                for prop in schema.properties.values():
-                    # Direct $ref on property
-                    if prop.ref and prop.ref not in seen:
-                        if prop.ref in self.context.schemas:
-                            resolved[prop.ref] = self.context.schemas[prop.ref]
-                            queue.append(self.context.schemas[prop.ref])
-                            seen.add(prop.ref)
-
-                    # $ref inside array items (CRITICAL for PaginatedXList patterns!)
-                    if prop.items and prop.items.ref:
-                        if prop.items.ref not in seen:
-                            if prop.items.ref in self.context.schemas:
-                                resolved[prop.items.ref] = self.context.schemas[prop.items.ref]
-                                queue.append(self.context.schemas[prop.items.ref])
-                                seen.add(prop.items.ref)
-
-                    # $ref inside additionalProperties (CRITICAL for Record<string, T> patterns!)
-                    if prop.additional_properties and prop.additional_properties.ref:
-                        if prop.additional_properties.ref not in seen:
-                            if prop.additional_properties.ref in self.context.schemas:
-                                resolved[prop.additional_properties.ref] = self.context.schemas[prop.additional_properties.ref]
-                                queue.append(self.context.schemas[prop.additional_properties.ref])
-                                seen.add(prop.additional_properties.ref)
-
-            # Check array items for $ref at schema level
-            if schema.items and schema.items.ref:
-                if schema.items.ref not in seen:
-                    if schema.items.ref in self.context.schemas:
-                        resolved[schema.items.ref] = self.context.schemas[schema.items.ref]
-                        queue.append(self.context.schemas[schema.items.ref])
-                        seen.add(schema.items.ref)
-
-            # Check additionalProperties for $ref at schema level
-            if schema.additional_properties and schema.additional_properties.ref:
-                if schema.additional_properties.ref not in seen:
-                    if schema.additional_properties.ref in self.context.schemas:
-                        resolved[schema.additional_properties.ref] = self.context.schemas[schema.additional_properties.ref]
-                        queue.append(self.context.schemas[schema.additional_properties.ref])
-                        seen.add(schema.additional_properties.ref)
-
-        return resolved
+        resolver = SchemaResolver(self.context.schemas)
+        return resolver.resolve_for_operations(list(operations))
 
     # ===== Zod Schemas Generation =====
 
@@ -421,7 +322,7 @@ class TypeScriptGenerator(BaseGenerator):
 
     # ===== Fetchers Generation =====
 
-    def _generate_fetchers(self) -> list[GeneratedFile]:
+    def _generate_fetchers(self, ops_by_tag: dict[str, list[IROperationObject]] | None = None) -> list[GeneratedFile]:
         """
         Generate typed fetcher functions for all operations.
 
@@ -433,8 +334,9 @@ class TypeScriptGenerator(BaseGenerator):
         files = []
         module_names = []
 
-        # Group operations by tag
-        ops_by_tag = self.group_operations_by_tag()
+        # Group operations by tag (reuse pre-computed result if available)
+        if ops_by_tag is None:
+            ops_by_tag = self.group_operations_by_tag()
 
         # Generate fetchers for each tag
         for tag, operations in sorted(ops_by_tag.items()):
@@ -452,7 +354,7 @@ class TypeScriptGenerator(BaseGenerator):
 
     # ===== SWR Hooks Generation =====
 
-    def _generate_swr_hooks(self) -> list[GeneratedFile]:
+    def _generate_swr_hooks(self, ops_by_tag: dict[str, list[IROperationObject]] | None = None) -> list[GeneratedFile]:
         """
         Generate SWR hooks for all operations.
 
@@ -464,8 +366,9 @@ class TypeScriptGenerator(BaseGenerator):
         files = []
         module_names = []
 
-        # Group operations by tag
-        ops_by_tag = self.group_operations_by_tag()
+        # Group operations by tag (reuse pre-computed result if available)
+        if ops_by_tag is None:
+            ops_by_tag = self.group_operations_by_tag()
 
         # Generate hooks for each tag
         for tag, operations in sorted(ops_by_tag.items()):
@@ -509,26 +412,22 @@ class TypeScriptGenerator(BaseGenerator):
                 if errors:
                     all_errors[file.path] = errors
 
-        # If errors found, print and exit
+        # If errors found, log and exit
         if all_errors:
-            print("\n" + "=" * 60)
-            print("⚠️  TypeScript Validation Errors Found")
-            print("=" * 60)
+            logger.error("TypeScript Validation Errors Found")
 
             total_errors = 0
             for file_path, errors in all_errors.items():
-                print(f"\n📄 {file_path}")
+                logger.error("File: %s", file_path)
                 for error in errors:
-                    print(f"   {error}")
+                    logger.error("  %s", error)
                     total_errors += 1
 
-            print("\n" + "=" * 60)
-            print(f"❌ Found {total_errors} validation error(s) in {len(all_errors)} file(s)")
-            print("=" * 60 + "\n")
+            logger.error("Found %d validation error(s) in %d file(s)", total_errors, len(all_errors))
 
             # Exit to prevent writing invalid files
             import sys
             sys.exit(1)
 
         # Success - no errors found
-        print("✅ TypeScript validation passed")
+        logger.info("TypeScript validation passed")

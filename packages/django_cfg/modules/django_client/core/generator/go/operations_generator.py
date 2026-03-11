@@ -64,7 +64,7 @@ class OperationsGenerator:
         method_name = to_pascal_case(op_id)
 
         # Check if multipart operation
-        is_multipart = self._is_multipart_operation(operation)
+        is_multipart = operation.is_multipart
 
         # Get request/response types
         request_type = None
@@ -173,13 +173,6 @@ class OperationsGenerator:
             "is_array_response": is_array_response,
         }
 
-    def _is_multipart_operation(self, operation: IROperationObject) -> bool:
-        """Check if operation uses multipart/form-data content type."""
-        return (
-            operation.request_body is not None
-            and operation.request_body.content_type == "multipart/form-data"
-        )
-
     def _get_schema_for_operation(self, operation: IROperationObject) -> "IRSchemaObject | None":
         """Get the request body schema for an operation."""
         if not operation.request_body or not operation.request_body.schema_name:
@@ -211,7 +204,7 @@ class OperationsGenerator:
 
         for prop_name, prop_schema in schema.properties.items():
             go_name = to_pascal_case(prop_name)
-            is_required = prop_name in schema.required
+            is_required = prop_name in schema.required_set
             go_type = self._get_field_go_type(prop_schema, is_required)
 
             # Detect special field types

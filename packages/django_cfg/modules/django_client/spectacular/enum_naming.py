@@ -11,6 +11,9 @@ import logging
 import re
 from typing import Any, Dict
 
+_RE_COLLISION_HASH = re.compile(r'[0-9A-Fa-f]{3,}Enum$')
+_RE_SINGLE_WORD_ENUM = re.compile(r'^[A-Z][a-z]+Enum$')
+
 logger = logging.getLogger(__name__)
 
 
@@ -118,12 +121,12 @@ def _is_collision_enum(enum_name: str) -> bool:
         "ProductStatusEnum" -> False (descriptive)
     """
     # Check if enum contains hash-like patterns (3+ hex chars)
-    if re.search(r'[0-9A-Fa-f]{3,}Enum$', enum_name):
+    if _RE_COLLISION_HASH.search(enum_name):
         return True
 
     # Check for generic single-word enums that are likely collisions
     # (e.g., "StatusEnum" without model prefix)
-    if re.match(r'^[A-Z][a-z]+Enum$', enum_name):
+    if _RE_SINGLE_WORD_ENUM.match(enum_name):
         # Single word + Enum - likely collision
         return True
 

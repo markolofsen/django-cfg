@@ -9,16 +9,22 @@ Handles:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from jinja2 import Environment
 
 from ...ir import IROperationObject
 from ..base import GeneratedFile
 
+if TYPE_CHECKING:
+    from ...ir import IRContext
+    from ..base import BaseGenerator
+
 
 class AsyncClientGenerator:
     """Generates async Python client files."""
 
-    def __init__(self, jinja_env: Environment, context, base_generator, operations_gen):
+    def __init__(self, jinja_env: Environment, context: IRContext, base_generator: BaseGenerator, operations_gen):
         """
         Initialize async client generator.
 

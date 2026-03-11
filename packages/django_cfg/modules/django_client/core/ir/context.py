@@ -17,8 +17,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
+from ._config import IR_MODEL_CONFIG
 from .operation import IROperationObject
 from .schema import IRSchemaObject
 
@@ -36,13 +37,7 @@ class OpenAPIInfo(BaseModel):
         ... )
     """
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="forbid",
-        frozen=False,
-        validate_default=True,
-        str_strip_whitespace=True,
-    )
+    model_config = IR_MODEL_CONFIG
 
     version: Literal["3.0.3", "3.1.0", "3.2.0"] = Field(
         ..., description="OpenAPI version (3.0.3, 3.1.0, or 3.2.0)"
@@ -108,13 +103,7 @@ class DjangoGlobalMetadata(BaseModel):
         ValueError: COMPONENT_SPLIT_REQUEST must be True
     """
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="forbid",
-        frozen=False,
-        validate_default=True,
-        str_strip_whitespace=True,
-    )
+    model_config = IR_MODEL_CONFIG
 
     # ===== CRITICAL: drf-spectacular Settings =====
     component_split_request: bool = Field(
@@ -254,13 +243,7 @@ class IRContext(BaseModel):
         >>> assert len(context.response_models) == 1
     """
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="forbid",
-        frozen=False,
-        validate_default=True,
-        str_strip_whitespace=True,
-    )
+    model_config = IR_MODEL_CONFIG
 
     # ===== Metadata =====
     openapi_info: OpenAPIInfo = Field(..., description="OpenAPI spec metadata")
@@ -339,53 +322,39 @@ class IRContext(BaseModel):
                 result[tag].append(operation)
         return result
 
+    def _filter_operations(self, predicate) -> dict[str, "IROperationObject"]:
+        """Return operations dict filtered by predicate(op) -> bool."""
+        return {k: v for k, v in self.operations.items() if predicate(v)}
+
     @property
     def list_operations(self) -> dict[str, IROperationObject]:
         """Get all list operations (GET endpoints with pagination)."""
-        return {
-            op_id: op
-            for op_id, op in self.operations.items()
-            if op.is_list_operation
-        }
+        return self._filter_operations(lambda op: op.is_list_operation)
 
     @property
     def create_operations(self) -> dict[str, IROperationObject]:
         """Get all create operations (POST endpoints)."""
-        return {
-            op_id: op for op_id, op in self.operations.items() if op.is_create_operation
-        }
+        return self._filter_operations(lambda op: op.is_create_operation)
 
     @property
     def retrieve_operations(self) -> dict[str, IROperationObject]:
         """Get all retrieve operations (GET /{id}/ endpoints)."""
-        return {
-            op_id: op
-            for op_id, op in self.operations.items()
-            if op.is_retrieve_operation
-        }
+        return self._filter_operations(lambda op: op.is_retrieve_operation)
 
     @property
     def update_operations(self) -> dict[str, IROperationObject]:
         """Get all update operations (PUT endpoints)."""
-        return {
-            op_id: op for op_id, op in self.operations.items() if op.is_update_operation
-        }
+        return self._filter_operations(lambda op: op.is_update_operation)
 
     @property
     def partial_update_operations(self) -> dict[str, IROperationObject]:
         """Get all partial update operations (PATCH endpoints)."""
-        return {
-            op_id: op
-            for op_id, op in self.operations.items()
-            if op.is_partial_update_operation
-        }
+        return self._filter_operations(lambda op: op.is_partial_update_operation)
 
     @property
     def delete_operations(self) -> dict[str, IROperationObject]:
         """Get all delete operations (DELETE endpoints)."""
-        return {
-            op_id: op for op_id, op in self.operations.items() if op.is_delete_operation
-        }
+        return self._filter_operations(lambda op: op.is_delete_operation)
 
     def get_schema(self, name: str) -> IRSchemaObject | None:
         """Get schema by name."""

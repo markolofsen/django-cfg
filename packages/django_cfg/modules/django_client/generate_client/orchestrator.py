@@ -10,6 +10,7 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 
+from ..core.utils.naming import to_pascal_case as _to_pascal_case
 from .config import GenerationConfig, GenerationResult
 from .generators import InternalGenerators, ExternalGenerators
 from .utils import TypeScriptUtils, SchemaUtils
@@ -434,11 +435,6 @@ class ClientGenerationOrchestrator:
         self.log_warning("⚠️  DUPLICATE SWIFT TYPES DETECTED — AUTO-RESOLVING")
         self.log_warning("-" * 60)
 
-        def to_pascal(name: str) -> str:
-            """Convert group name to PascalCase prefix."""
-            parts = name.replace("-", "_").split("_")
-            return "".join(part.capitalize() for part in parts)
-
         # Build per-file rename map: {file_path: {old_name: new_name}}
         file_renames: dict[Path, dict[str, str]] = {}
 
@@ -446,7 +442,7 @@ class ClientGenerationOrchestrator:
             self.log_warning(f"\n  {type_name} (defined in {len(locations)} groups):")
 
             for group, file_path, line_num in locations:
-                prefix = to_pascal(group)
+                prefix = _to_pascal_case(group)
                 new_name = f"{prefix}{type_name}"
                 self.log_warning(f"    → {group}/{file_path.name}:{line_num}  ⟹  {new_name}")
 

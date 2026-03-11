@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.7.58"
+version = "1.7.59"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -205,7 +205,7 @@ grpc = [
 
 centrifugo = [
     "cent>=5.0.0,<6.0",
-    "websockets>=13.0,<15.0",
+    "websockets>=16.0",
 ]
 
 rq = [
@@ -307,7 +307,7 @@ full = [
     "betterproto2[all]>=0.9.0,<1.0",
     "grpclib>=0.4.8,<1.0",
     "cent>=5.0.0,<6.0",
-    "websockets>=13.0,<15.0",
+    "websockets>=16.0",
     "django-rq>=3.0",
     "rq>=1.0",
     "rq-scheduler>=0.13",

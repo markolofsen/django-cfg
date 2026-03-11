@@ -9,8 +9,17 @@ Performs fast syntax checks to catch common issues:
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
+
+_RE_REQUIRED_AFTER_OPTIONAL = re.compile(r'\w+\?:\s*[\w\[\]<>|]+\s*,\s*\w+:\s*[\w\[\]<>|]+')
+_RE_REQUIRED_IN_OPTIONAL_OBJECT = re.compile(r'params\?\s*:\s*\{[^}]*\w+:\s*[\w\[\]<>|]+')
+_RE_OPTIONAL_OBJECT_FIELD = re.compile(r'\{[^}]*(\w+):\s*[\w\[\]<>|]+')
+_RE_ASYNC_FUNCTION = re.compile(r'(?:export\s+)?async\s+function\s+\w+\s*\([^)]*\)', re.MULTILINE)
+_RE_FUNCTION_PARAMS = re.compile(r'\((.*)\)', re.DOTALL)
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -96,9 +105,7 @@ class TypeScriptValidator:
         """
         # Match function parameters with optional followed by required
         # Pattern: word?: type followed by word: type
-        pattern = r'\w+\?:\s*[\w\[\]<>|]+\s*,\s*\w+:\s*[\w\[\]<>|]+'
-
-        if re.search(pattern, line):
+        if _RE_REQUIRED_AFTER_OPTIONAL.search(line):
             self.errors.append(
                 ValidationError(
                     file_path=file_path,
@@ -120,11 +127,9 @@ class TypeScriptValidator:
         """
         # Match params?: { with required field (no ? before :)
         # Look for: params?: { word: type (without ? between word and :)
-        pattern = r'params\?\s*:\s*\{[^}]*\w+:\s*[\w\[\]<>|]+'
-
-        if re.search(pattern, line):
+        if _RE_REQUIRED_IN_OPTIONAL_OBJECT.search(line):
             # Extract the required field for better error message
-            field_match = re.search(r'\{[^}]*(\w+):\s*[\w\[\]<>|]+', line)
+            field_match = _RE_OPTIONAL_OBJECT_FIELD.search(line)
             field_name = field_match.group(1) if field_match else "unknown"
 
             self.errors.append(
@@ -145,13 +150,11 @@ class TypeScriptValidator:
         """
         # Pattern to match async function declarations (may span multiple lines)
         # This is a simplified check - full parsing would be more robust
-        function_pattern = r'(?:export\s+)?async\s+function\s+\w+\s*\([^)]*\)'
-
-        for match in re.finditer(function_pattern, content, re.MULTILINE):
+        for match in _RE_ASYNC_FUNCTION.finditer(content):
             signature = match.group(0)
 
             # Extract parameters from signature
-            params_match = re.search(r'\((.*)\)', signature, re.DOTALL)
+            params_match = _RE_FUNCTION_PARAMS.search(signature)
             if params_match:
                 params_str = params_match.group(1)
 
@@ -269,21 +272,17 @@ def validate_generated_code(output_dir: Path) -> bool:
     if not results:
         return True
 
-    # Print errors
-    print("\n" + "=" * 60)
-    print("⚠️  TypeScript Validation Errors Found")
-    print("=" * 60)
+    # Log errors
+    logger.error("TypeScript Validation Errors Found")
 
     total_errors = 0
     for file_path, errors in results.items():
-        print(f"\n📄 {file_path}")
+        logger.error("File: %s", file_path)
         for error in errors:
-            print(f"   {error}")
+            logger.error("  %s", error)
             total_errors += 1
 
-    print("\n" + "=" * 60)
-    print(f"❌ Found {total_errors} validation error(s) in {len(results)} file(s)")
-    print("=" * 60 + "\n")
+    logger.error("Found %d validation error(s) in %d file(s)", total_errors, len(results))
 
     return False
 

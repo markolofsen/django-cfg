@@ -13,6 +13,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from .type_mapper import GoStructDef, GoStructField
+
 if TYPE_CHECKING:
     from jinja2 import Environment
 
@@ -59,17 +61,17 @@ class ModelsGenerator:
         structs = []
 
         # Generate response models
-        for schema_name, schema in sorted(self.context.response_models.items()):
+        for _, schema in sorted(self.context.response_models.items()):
             struct_def = self.generator.type_mapper.ir_schema_to_struct(schema)
             structs.append(struct_def)
 
         # Generate request models
-        for schema_name, schema in sorted(self.context.request_models.items()):
+        for _, schema in sorted(self.context.request_models.items()):
             struct_def = self.generator.type_mapper.ir_schema_to_struct(schema)
             structs.append(struct_def)
 
         # Generate patch models
-        for schema_name, schema in sorted(self.context.patch_models.items()):
+        for _, schema in sorted(self.context.patch_models.items()):
             struct_def = self.generator.type_mapper.ir_schema_to_struct(schema)
             structs.append(struct_def)
 
@@ -89,7 +91,7 @@ class ModelsGenerator:
             description="API data models"
         )
 
-    def generate_enums_file(self) -> GeneratedFile:
+    def generate_enums_file(self) -> GeneratedFile | None:
         """
         Generate enums.go with enum type definitions.
 
@@ -156,7 +158,7 @@ class ModelsGenerator:
             description="API enum types"
         )
 
-    def generate_shared_enums_file(self, enums: dict[str, IRSchemaObject]) -> GeneratedFile:
+    def generate_shared_enums_file(self, enums: dict[str, IRSchemaObject]) -> GeneratedFile | None:
         """
         Generate shared enums.go (for namespaced structure).
 
@@ -239,18 +241,19 @@ class ModelsGenerator:
             description=f"{tag} API models"
         )
 
-    def _collect_imports(self, structs: list[dict]) -> list[str]:
+    def _collect_imports(self, structs: list[GoStructDef]) -> list[str]:
         """
         Collect required imports for structs.
 
         Args:
-            structs: List of struct definitions
+            structs: List of GoStructDef instances
 
         Returns:
             List of import paths
 
         Examples:
-            >>> structs = [{"needs_time_import": True}]
+            >>> from .type_mapper import GoStructDef, GoStructField
+            >>> structs = [GoStructDef(name="X", fields=[], doc="", needs_time_import=True)]
             >>> imports = generator._collect_imports(structs)
             >>> "time" in imports
             True
@@ -259,11 +262,11 @@ class ModelsGenerator:
 
         for struct in structs:
             # Check if time import is needed
-            if struct.get("needs_time_import"):
+            if struct.needs_time_import:
                 imports.add("time")
 
-            for field in struct.get("fields", []):
-                field_type = field.get("type", "")
+            for field in struct.fields:
+                field_type = field.type
 
                 # Check if types package is used (for enums)
                 if "types." in field_type:
@@ -291,18 +294,18 @@ class ModelsGenerator:
         lines = []
 
         # Add doc comment
-        if struct_def["doc"]:
-            lines.append(f"// {struct_def['doc']}")
+        if struct_def.doc:
+            lines.append(f"// {struct_def.doc}")
 
         # Add struct definition
-        lines.append(f"type {struct_def['name']} struct {{")
+        lines.append(f"type {struct_def.name} struct {{")
 
         # Add fields
-        for field in struct_def["fields"]:
-            if field["description"]:
-                lines.append(f"\t// {field['description']}")
+        for field in struct_def.fields:
+            if field.description:
+                lines.append(f"\t// {field.description}")
 
-            lines.append(f"\t{field['name']} {field['type']} {field['json_tag']}")
+            lines.append(f"\t{field.name} {field.type} {field.json_tag}")
 
         lines.append("}")
 

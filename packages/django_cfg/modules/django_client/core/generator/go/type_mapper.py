@@ -14,6 +14,7 @@ Uses unified TypeMapper for base type lookups.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .naming import sanitize_go_identifier, to_pascal_case
@@ -21,6 +22,24 @@ from ...types import FieldType, FormatType, TypeMapper
 
 if TYPE_CHECKING:
     from ...ir import IRSchemaObject
+
+
+@dataclass
+class GoStructField:
+    name: str
+    type: str
+    json_tag: str
+    description: str
+    required: bool
+    deprecated: bool
+
+
+@dataclass
+class GoStructDef:
+    name: str
+    fields: list[GoStructField]
+    doc: str
+    needs_time_import: bool
 
 
 class GoTypeMapper:
@@ -128,7 +147,7 @@ class GoTypeMapper:
     def ir_schema_to_struct(
         self,
         schema: IRSchemaObject,
-    ) -> dict:
+    ) -> GoStructDef:
         """
         Convert IR schema to Go struct definition.
 
@@ -136,22 +155,7 @@ class GoTypeMapper:
             schema: IRSchemaObject to convert
 
         Returns:
-            Dictionary with struct definition:
-            {
-                "name": "User",
-                "fields": [
-                    {
-                        "name": "ID",
-                        "type": "int64",
-                        "json_tag": '`json:"id"`',
-                        "description": "User ID",
-                        "required": True
-                    },
-                    ...
-                ],
-                "doc": "User represents a registered user.",
-                "needs_time_import": False,
-            }
+            GoStructDef with struct definition.
 
         Examples:
             >>> schema = IRSchemaObject(
@@ -165,9 +169,9 @@ class GoTypeMapper:
             ...     required=["id", "username"],
             ... )
             >>> struct = mapper.ir_schema_to_struct(schema)
-            >>> struct["name"]
+            >>> struct.name
             'User'
-            >>> len(struct["fields"])
+            >>> len(struct.fields)
             3
         """
         fields = []
@@ -177,7 +181,7 @@ class GoTypeMapper:
 
         # Process properties
         for prop_name, prop_schema in (schema.properties or {}).items():
-            is_required = prop_name in (schema.required or [])
+            is_required = prop_name in schema.required_set
 
             # Get Go type
             go_type = self.ir_schema_to_go_type(prop_schema, is_required, parent_schema=schema)
@@ -189,22 +193,22 @@ class GoTypeMapper:
                 json_tag = f'`json:"{prop_name}"`'
 
             # Create field definition
-            field = {
-                "name": to_pascal_case(prop_name),
-                "type": go_type,
-                "json_tag": json_tag,
-                "description": prop_schema.description or "",
-                "required": is_required,
-                "deprecated": prop_schema.deprecated,
-            }
+            field = GoStructField(
+                name=to_pascal_case(prop_name),
+                type=go_type,
+                json_tag=json_tag,
+                description=prop_schema.description or "",
+                required=is_required,
+                deprecated=prop_schema.deprecated,
+            )
             fields.append(field)
 
-        return {
-            "name": schema.name,
-            "fields": fields,
-            "doc": schema.description or f"{schema.name} model.",
-            "needs_time_import": "time" in self._type_mapper.get_go_imports(),
-        }
+        return GoStructDef(
+            name=schema.name,
+            fields=fields,
+            doc=schema.description or f"{schema.name} model.",
+            needs_time_import="time" in self._type_mapper.get_go_imports(),
+        )
 
     def _get_enum_type_name(self, schema: IRSchemaObject) -> str:
         """

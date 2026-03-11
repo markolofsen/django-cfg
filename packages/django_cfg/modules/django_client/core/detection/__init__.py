@@ -7,7 +7,7 @@ Infers field semantics from naming conventions and OpenAPI metadata.
 from .field_detector import (
     FieldMeta,
     InputType,
-    ValidationRule,
+    FieldValidationHint,
     detect_field_meta,
     get_default_input_type,
 )
@@ -15,7 +15,7 @@ from .field_detector import (
 __all__ = [
     "FieldMeta",
     "InputType",
-    "ValidationRule",
+    "FieldValidationHint",
     "detect_field_meta",
     "get_default_input_type",
 ]

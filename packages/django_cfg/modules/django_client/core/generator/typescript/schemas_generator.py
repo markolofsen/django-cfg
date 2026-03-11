@@ -16,6 +16,22 @@ from ...ir import IRContext, IRSchemaObject
 from ..base import BaseGenerator, GeneratedFile
 
 
+# Maps OpenAPI string format → Zod validation expression.
+# Notes on specific entries:
+#   "date-time" / "datetime": offset: true — accepts both Z and +HH:MM timezone formats
+#   "uri" / "url": Django can return relative paths (/media/…), so z.string() is used instead of z.url()
+#   "uuid": regex instead of z.uuid() — z.uuid() rejects some valid UUIDs (e.g. version 0)
+_ZOD_FORMAT_MAP: dict[str, str] = {
+    "email": "z.email()",
+    "date-time": "z.string().datetime({ offset: true })",
+    "datetime": "z.string().datetime({ offset: true })",
+    "date": "z.iso.date()",
+    "uri": "z.string()",
+    "url": "z.string()",
+    "uuid": r"z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)",
+}
+
+
 class SchemasGenerator:
     """
     Generate Zod schemas from IR schemas.
@@ -167,27 +183,9 @@ class SchemasGenerator:
         if schema_type == "string":
             base_type = "z.string()"
 
-            # Add format validation - use new Zod v4 format APIs
-            if schema_format == "email":
-                base_type = "z.email()"
-            elif schema_format in ("date-time", "datetime"):
-                # Django outputs various ISO formats:
-                # - "2024-01-14T03:51:36Z" (no fractional seconds, Z suffix)
-                # - "2024-01-14T03:55:38.621173+00:00" (microseconds + offset)
-                # offset: true - accepts both Z and +HH:MM timezone formats
-                # No precision param - accepts any number of fractional digits (0-6)
-                base_type = "z.string().datetime({ offset: true })"
-            elif schema_format == "date":
-                base_type = "z.iso.date()"
-            elif schema_format in ("uri", "url"):
-                # URL fields in Django can contain relative paths (e.g. /media/...)
-                # Accept absolute URLs (http/https) or relative paths starting with /
-                base_type = "z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://') || v.startsWith('ws://') || v.startsWith('wss://'), { message: 'Must be a URL or relative path' })"
-            elif schema_format == "uuid":
-                # Use regex instead of z.uuid() for more lenient validation
-                # z.uuid() uses strict RFC 4122 validation that rejects some valid UUIDs
-                # (e.g., "00000000-0000-0000-0000-000000000001" fails version check)
-                base_type = "z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)"
+            # Add format validation via module-level _ZOD_FORMAT_MAP
+            if schema_format and schema_format in _ZOD_FORMAT_MAP:
+                base_type = _ZOD_FORMAT_MAP[schema_format]
 
             # Add length constraints (only for plain strings, not formatted ones)
             if base_type == "z.string()":

@@ -7,6 +7,8 @@ Uses unified TypeMapper for base type lookups.
 
 from __future__ import annotations
 
+import re as _re
+
 from ...types import FieldType, FormatType, TypeMapper
 
 
@@ -121,5 +123,5 @@ class ProtoTypeMapper:
             Proto-compatible message name
         """
         # Ensure PascalCase
-        parts = name.replace("_", " ").replace("-", " ").split()
+        parts = _re.sub(r'[_-]', ' ', name).split()
         return "".join(word.capitalize() for word in parts)

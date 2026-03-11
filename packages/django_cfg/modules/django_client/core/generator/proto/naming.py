@@ -6,6 +6,13 @@ Centralized name sanitization and conversion for proto file generation.
 
 import re
 
+from ...utils.naming import to_pascal_case  # noqa: F401 — re-exported for callers
+
+_RE_CAMEL_TO_SNAKE_1 = re.compile(r'(.)([A-Z][a-z]+)')
+_RE_CAMEL_TO_SNAKE_2 = re.compile(r'([a-z0-9])([A-Z])')
+_RE_NON_ALNUM_PROTO = re.compile(r'[^a-zA-Z0-9]')
+_RE_MULTI_UNDERSCORE = re.compile(r'_+')
+
 # Swift/SwiftUI reserved type names that conflict when used as proto message names
 # These will be prefixed with "Proto" when generating Swift code
 SWIFT_RESERVED_TYPES = {
@@ -43,22 +50,6 @@ SWIFT_RESERVED_TYPES = {
 }
 
 
-def to_pascal_case(name: str) -> str:
-    """
-    Convert snake_case or kebab-case to PascalCase.
-
-    Examples:
-        >>> to_pascal_case("terminal_streaming_relay")
-        'TerminalStreamingRelay'
-        >>> to_pascal_case("user-profile")
-        'UserProfile'
-        >>> to_pascal_case("get_user_by_id")
-        'GetUserById'
-    """
-    words = re.split(r'[-_]', name)
-    return ''.join(word.capitalize() for word in words if word)
-
-
 def to_snake_case(name: str) -> str:
     """
     Convert PascalCase or camelCase to snake_case.
@@ -70,8 +61,8 @@ def to_snake_case(name: str) -> str:
         'get_access_token'
     """
     # Insert underscore before uppercase letters
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    s1 = _RE_CAMEL_TO_SNAKE_1.sub(r'\1_\2', name)
+    return _RE_CAMEL_TO_SNAKE_2.sub(r'\1_\2', s1).lower()
 
 
 def sanitize_proto_name(name: str) -> str:
@@ -90,9 +81,9 @@ def sanitize_proto_name(name: str) -> str:
         'some_nested_name'
     """
     # Replace all non-alphanumeric characters with underscores
-    sanitized = re.sub(r'[^a-zA-Z0-9]', '_', name)
+    sanitized = _RE_NON_ALNUM_PROTO.sub('_', name)
     # Clean up multiple underscores
-    sanitized = re.sub(r'_+', '_', sanitized)
+    sanitized = _RE_MULTI_UNDERSCORE.sub('_', sanitized)
     # Strip leading/trailing underscores
     sanitized = sanitized.strip('_')
     # Ensure starts with letter (prefix with underscore if starts with digit)

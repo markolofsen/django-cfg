@@ -19,64 +19,86 @@ The `django_client` module provides powerful management commands for generating 
 
 | Command | Purpose | Key Features |
 |---------|---------|--------------|
-| `generate_client` | Generate TypeScript and Python clients | Multi-group generation, dry-run, interactive mode |
+| `generate_client` | Generate clients for all 5 languages | Multi-group, dry-run, interactive mode, external generators |
 | `validate_openapi` | Validate and fix OpenAPI schema quality | Auto-fix issues, detailed reports, rule-based validation |
 
 ---
 
 ## `generate_client`
 
-Generate type-safe TypeScript and Python API clients from your Django REST Framework API.
+Generate type-safe API clients from your Django REST Framework API. Supports **5 languages**: TypeScript, Python, Go, Swift (Codable), and Protocol Buffers.
 
 ### Basic Usage
 
 ```bash
-# Generate all configured groups
+# Generate all configured groups (all languages)
 python manage.py generate_client
 
 # Generate specific groups
 python manage.py generate_client --groups core billing
 
-# Generate Python only
+# Generate single language
 python manage.py generate_client --python
-
-# Generate TypeScript only
 python manage.py generate_client --typescript
+python manage.py generate_client --go
+python manage.py generate_client --proto
+python manage.py generate_client --swift-codable
 ```
 
 ### Command Options
 
-#### Generation Options
+#### Language Selection
 
-**`--groups [GROUP ...]`**
-- Generate specific groups only
-- Default: all configured groups
-```bash
-python manage.py generate_client --groups core custom
-```
-
-**`--python`**
-- Generate Python client only (skip TypeScript)
+**`--python`** — Generate Python client (Pydantic 2 + httpx async)
 ```bash
 python manage.py generate_client --python
 ```
 
-**`--typescript`**
-- Generate TypeScript client only (skip Python)
+**`--typescript`** — Generate TypeScript client (Fetch API + Zod schemas + SWR hooks)
 ```bash
 python manage.py generate_client --typescript
 ```
 
-**`--no-python`**
-- Skip Python client generation
+**`--go`** — Generate Go client (net/http, context-aware structs)
 ```bash
-python manage.py generate_client --no-python
+python manage.py generate_client --go
 ```
 
-**`--no-typescript`**
-- Skip TypeScript client generation
+**`--proto`** — Generate Protocol Buffer definitions (gRPC services)
 ```bash
+python manage.py generate_client --proto
+```
+
+**`--swift-codable`** — Generate Swift client using the **built-in** Codable generator (no external tools required)
+```bash
+python manage.py generate_client --swift-codable
+```
+
+**`--swift`** — Generate Swift client using **Apple's** `swift-openapi-generator` (external tool, requires `brew install swift-openapi-generator`)
+```bash
+python manage.py generate_client --swift
+```
+
+#### Skip Languages
+
+**`--no-python`** — Skip Python generation
+**`--no-typescript`** — Skip TypeScript generation
+**`--no-go`** — Skip Go generation
+**`--no-proto`** — Skip Protocol Buffer generation
+
+```bash
+# All languages except TypeScript
 python manage.py generate_client --no-typescript
+```
+
+#### External Generators
+
+**`--external-go`** — Use external Go generator (`oapi-codegen`) instead of the built-in one
+**`--external-python`** — Use external Python generator instead of the built-in one
+**`--check-external`** — Check which external generators are installed and available
+
+```bash
+python manage.py generate_client --check-external
 ```
 
 #### Utility Options

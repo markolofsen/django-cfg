@@ -9,6 +9,11 @@ Handles conversions between Python/OpenAPI naming and Go naming conventions:
 
 import re
 
+_RE_NON_ALNUM_UNDERSCORE = re.compile(r'[^a-zA-Z0-9_]')
+_RE_CAMEL_TO_SNAKE_1 = re.compile(r'(.)([A-Z][a-z]+)')
+_RE_CAMEL_TO_SNAKE_2 = re.compile(r'([a-z0-9])([A-Z])')
+_RE_NON_ALNUM_LOWER = re.compile(r'[^a-z0-9]')
+
 
 def to_pascal_case(snake_str: str) -> str:
     """
@@ -111,7 +116,7 @@ def sanitize_go_identifier(name: str) -> str:
     name = name.replace('-', '_')
 
     # Remove invalid characters
-    name = re.sub(r'[^a-zA-Z0-9_]', '', name)
+    name = _RE_NON_ALNUM_UNDERSCORE.sub('', name)
 
     # If starts with digit, prefix with 'N'
     if name and name[0].isdigit():
@@ -140,9 +145,9 @@ def to_snake_case(camel_str: str) -> str:
         'https_connection'
     """
     # Insert underscore before uppercase letters (except first)
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', camel_str)
+    s1 = _RE_CAMEL_TO_SNAKE_1.sub(r'\1_\2', camel_str)
     # Insert underscore before uppercase letters followed by lowercase
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    return _RE_CAMEL_TO_SNAKE_2.sub(r'\1_\2', s1).lower()
 
 
 def get_go_field_name(field_name: str) -> str:
@@ -184,7 +189,7 @@ def get_go_package_name(name: str) -> str:
     name = name.lower()
 
     # Remove invalid characters (keep only letters and digits)
-    name = re.sub(r'[^a-z0-9]', '', name)
+    name = _RE_NON_ALNUM_LOWER.sub('', name)
 
     # Must not start with digit
     if name and name[0].isdigit():

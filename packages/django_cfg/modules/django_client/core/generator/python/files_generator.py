@@ -11,18 +11,22 @@ Handles:
 from __future__ import annotations
 
 import json
-import re
+from typing import TYPE_CHECKING
 
 from jinja2 import Environment
 
 from ...ir import IROperationObject
 from ..base import GeneratedFile
 
+if TYPE_CHECKING:
+    from ...ir import IRContext
+    from ..base import BaseGenerator
+
 
 class FilesGenerator:
     """Generates auxiliary Python files."""
 
-    def __init__(self, jinja_env: Environment, context, base_generator):
+    def __init__(self, jinja_env: Environment, context: IRContext, base_generator: BaseGenerator):
         """
         Initialize files generator.
 
@@ -156,7 +160,7 @@ class FilesGenerator:
             description="Retry utilities with tenacity",
         )
 
-    def generate_pyproject_toml_file(self, package_config: dict = None) -> GeneratedFile:
+    def generate_pyproject_toml_file(self, package_config: dict | None = None) -> GeneratedFile:
         """Generate pyproject.toml for Poetry/PyPI publishing."""
         if package_config is None:
             package_config = {}

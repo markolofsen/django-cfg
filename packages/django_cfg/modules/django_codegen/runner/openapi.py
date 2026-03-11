@@ -1,8 +1,5 @@
 """
 OpenAPI generation runner.
-
-v6.1: Rich logging integration.
-v6.2: Platform enum instead of Language.
 """
 
 from django.core.management import call_command
@@ -27,80 +24,10 @@ def run_openapi(
     logger: GenerationLogger,
 ) -> None:
     """Run OpenAPI generation."""
-    # Handle both legacy and new format
-    if cfg.is_legacy_format():
-        _run_openapi_legacy(cfg, only_platforms, only_groups, dry_run, logger)
-    else:
-        _run_openapi_new(cfg, only_platforms, only_target, only_groups, dry_run, logger)
+    _run_openapi(cfg, only_platforms, only_target, only_groups, dry_run, logger)
 
 
-def _run_openapi_legacy(
-    cfg: OpenAPI,
-    only_platforms: list[str] | None,
-    only_groups: list[str] | None,
-    dry_run: bool,
-    logger: GenerationLogger,
-) -> None:
-    """Run OpenAPI generation with legacy config format."""
-    platforms = {
-        "typescript": cfg.typescript,
-        "python": cfg.python,
-        "go": cfg.go,
-        "swift": cfg.swift,
-    }
-
-    for platform, groups in platforms.items():
-        if not groups:
-            continue
-        if only_platforms and platform not in only_platforms:
-            continue
-
-        effective_groups = groups
-        if only_groups:
-            effective_groups = [g for g in groups if g in only_groups]
-
-        if not effective_groups:
-            continue
-
-        logger.gen_start("OpenAPI", platform)
-        logger.gen_groups(effective_groups)
-
-        if dry_run:
-            logger.skip(f"Would generate and copy {len(effective_groups)} groups")
-            continue
-
-        # Generate
-        try:
-            cmd_opts: dict = {
-                platform: True,
-                "groups": effective_groups,
-            }
-            # Disable other platforms (only typescript, python, go have no_ flags)
-            for other in ["typescript", "python", "go"]:
-                if other != platform:
-                    cmd_opts[f"no_{other}"] = True
-
-            with logger.spinner(f"Generating {platform}..."):
-                call_command("generate_clients", **cmd_opts)
-            logger.success(f"Generated {len(effective_groups)} groups")
-        except Exception as e:
-            logger.error(f"Generation failed: {e}")
-            continue
-
-        # Copy
-        if platform in cfg.legacy_targets:
-            target = cfg.legacy_targets[platform]
-            source = get_source_dir(platform)
-
-            copied = copy_groups(source, target, effective_groups, logger)
-            logger.gen_complete(copied)
-
-            # Go import fixing
-            if platform == "go" and cfg.go_module:
-                fix_go_imports(target, cfg.go_module, logger)
-
-
-def _run_openapi_new(
+def _run_openapi(
     cfg: OpenAPI,
     only_platforms: list[str] | None,
     only_target: str | None,
@@ -166,9 +93,6 @@ def _run_openapi_new(
             cmd_opts: dict = {
                 platform.value: True,
             }
-            for other in ["typescript", "python", "go"]:
-                if other != platform.value:
-                    cmd_opts[f"no_{other}"] = True
 
             if wildcard_patterns:
                 # Wildcards present - generate all (no groups filter)

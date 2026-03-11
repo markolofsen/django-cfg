@@ -25,15 +25,15 @@ class ModelsGenerator:
         schema_codes = []
 
         # Response models first
-        for name, schema in self.base.get_response_schemas().items():
+        for _, schema in self.base.get_response_schemas().items():
             schema_codes.append(self.generate_schema(schema))
 
         # Request models
-        for name, schema in self.base.get_request_schemas().items():
+        for _, schema in self.base.get_request_schemas().items():
             schema_codes.append(self.generate_schema(schema))
 
         # Patch models
-        for name, schema in self.base.get_patch_schemas().items():
+        for _, schema in self.base.get_patch_schemas().items():
             schema_codes.append(self.generate_schema(schema))
 
         template = self.jinja_env.get_template('models/models.ts.jinja')
@@ -48,37 +48,29 @@ class ModelsGenerator:
             description="TypeScript interfaces (Request/Response/Patch)",
         )
 
+    def _render_enums_file(
+        self,
+        enums: dict,
+        *,
+        path: str = "enums.ts",
+        description: str = "Enum types from x-enum-varnames",
+    ) -> GeneratedFile:
+        """Render enums file from an enums dict."""
+        enum_codes = [self.generate_enum(s) for s in enums.values()]
+        template = self.jinja_env.get_template('models/enums.ts.jinja')
+        return GeneratedFile(
+            path=path,
+            content=template.render(enums=enum_codes),
+            description=description,
+        )
+
     def generate_enums_file(self):
         """Generate enums.ts with all enum types (flat structure)."""
-
-        enum_codes = []
-        for name, schema in self.base.get_enum_schemas().items():
-            enum_codes.append(self.generate_enum(schema))
-
-        template = self.jinja_env.get_template('models/enums.ts.jinja')
-        content = template.render(enums=enum_codes)
-
-        return GeneratedFile(
-            path="enums.ts",
-            content=content,
-            description="Enum types from x-enum-varnames",
-        )
+        return self._render_enums_file(self.base.get_enum_schemas())
 
     def generate_shared_enums_file(self, enums: dict[str, IRSchemaObject]):
         """Generate shared enums.ts for namespaced structure (Variant 2)."""
-
-        enum_codes = []
-        for name, schema in enums.items():
-            enum_codes.append(self.generate_enum(schema))
-
-        template = self.jinja_env.get_template('models/enums.ts.jinja')
-        content = template.render(enums=enum_codes)
-
-        return GeneratedFile(
-            path="enums.ts",
-            content=content,
-            description="Shared enum types from x-enum-varnames",
-        )
+        return self._render_enums_file(enums, description="Shared enum types from x-enum-varnames")
 
     def generate_schema(self, schema: IRSchemaObject) -> str:
         """Generate TypeScript interface for schema."""
@@ -218,7 +210,7 @@ class ModelsGenerator:
 
         # Enum members
         member_lines = []
-        for var_name, value in zip(schema.enum_var_names, schema.enum):
+        for var_name, value in zip(schema.enum_var_names or [], schema.enum or []):
             # Skip empty values (from blank=True in Django)
             if not var_name or (isinstance(value, str) and value == ''):
                 continue
@@ -226,13 +218,11 @@ class ModelsGenerator:
             # Sanitize var_name: replace special chars with words/underscores, convert to UPPER_CASE
             # "A+" -> "A_PLUS", "A-" -> "A_MINUS", "TAR.GZ" -> "TAR_DOT_GZ", "TAR GZ" -> "TAR_GZ"
             # "urn:ietf:params:oauth:grant-type:device_code" -> "URN_IETF_PARAMS_OAUTH_GRANT_TYPE_DEVICE_CODE"
-            sanitized_var_name = (var_name
-                .replace('+', '_PLUS')
-                .replace('-', '_MINUS')
-                .replace('.', '_DOT_')
-                .replace(':', '_')  # Handle URN/URI format (e.g., urn:ietf:params:oauth:grant-type:device_code)
-                .replace(' ', '_')
-                .upper())
+            _char_map = [('+', '_PLUS'), ('-', '_MINUS'), ('.', '_DOT_'), (':', '_'), (' ', '_')]
+            sanitized_var_name = var_name
+            for old, new in _char_map:
+                sanitized_var_name = sanitized_var_name.replace(old, new)
+            sanitized_var_name = sanitized_var_name.upper()
 
             # TypeScript enum keys cannot start with a digit, prefix with underscore
             # "58COM" -> "_58COM"
@@ -268,7 +258,7 @@ class ModelsGenerator:
 
         # Generate schemas
         schema_codes = []
-        for name, schema in schemas.items():
+        for _, schema in schemas.items():
             schema_codes.append(self.generate_schema(schema))
 
         template = self.jinja_env.get_template('models/app_models.ts.jinja')

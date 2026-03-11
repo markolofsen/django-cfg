@@ -14,11 +14,15 @@ Key Features:
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from ..types import FieldType, FormatType, TypeMapper
+from ._config import IR_MODEL_CONFIG
+
+_STATIC_MAPPER = TypeMapper()
 
 
 class IRSchemaObject(BaseModel):
@@ -69,13 +73,7 @@ class IRSchemaObject(BaseModel):
         >>> assert status_enum.has_enum is True
     """
 
-    model_config = ConfigDict(
-        validate_assignment=True,  # Validate on attribute assignment
-        extra="forbid",  # No extra fields allowed
-        frozen=False,  # Allow mutations (for plugin transforms)
-        validate_default=True,  # Validate default values
-        str_strip_whitespace=True,  # Strip whitespace from strings
-    )
+    model_config = IR_MODEL_CONFIG
 
     # ===== Core Fields =====
     name: str = Field(..., description="Schema name (e.g., 'User', 'UserRequest')")
@@ -209,6 +207,11 @@ class IRSchemaObject(BaseModel):
 
     # ===== Computed Properties =====
 
+    @cached_property
+    def required_set(self) -> frozenset[str]:
+        """Cached frozenset of required property names for O(1) membership tests."""
+        return frozenset(self.required or [])
+
     @property
     def has_enum(self) -> bool:
         """
@@ -301,8 +304,6 @@ class IRSchemaObject(BaseModel):
             ... ).python_type
             'list[PhotoInputRequest]'
         """
-        mapper = TypeMapper()
-
         # Handle $ref (e.g., User, PhotoInputRequest, etc.)
         if self.ref:
             base_type = self.ref
@@ -317,7 +318,7 @@ class IRSchemaObject(BaseModel):
         if self.type == "string" and self.format:
             try:
                 fmt = FormatType(self.format)
-                base_type = mapper.to_python(FieldType.STRING, fmt)
+                base_type = _STATIC_MAPPER.to_python(FieldType.STRING, fmt)
                 return f"{base_type} | None" if self.nullable else base_type
             except ValueError:
                 pass  # Unknown format, continue to normal handling
@@ -359,7 +360,7 @@ class IRSchemaObject(BaseModel):
         try:
             field_type = FieldType(self.type)
             fmt = FormatType(self.format) if self.format else None
-            base_type = mapper.to_python(field_type, fmt, nullable=self.nullable)
+            base_type = _STATIC_MAPPER.to_python(field_type, fmt, nullable=self.nullable)
             return base_type
         except ValueError:
             # Unknown type, fallback to Any
@@ -394,8 +395,6 @@ class IRSchemaObject(BaseModel):
             >>> IRSchemaObject(name="file", type="string", format="binary").typescript_type
             'File | Blob'
         """
-        mapper = TypeMapper()
-
         # Handle $ref (e.g., CentrifugoConfig, User, etc.)
         if self.ref:
             base_type = self.ref
@@ -439,7 +438,7 @@ class IRSchemaObject(BaseModel):
             try:
                 field_type = FieldType(self.type)
                 fmt = FormatType(self.format) if self.format else None
-                base_type = mapper.to_typescript(field_type, fmt)
+                base_type = _STATIC_MAPPER.to_typescript(field_type, fmt)
             except ValueError:
                 base_type = "any"
 

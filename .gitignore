@@ -39,6 +39,10 @@ Thumbs.db
 
 .ruff_cache
 
+# Claude AI assistant files
+.claude/
+CLAUDE.md
+
 # pnpm
 .pnpm-store/
 packages/django_cfg/apps/tools/geo/data/

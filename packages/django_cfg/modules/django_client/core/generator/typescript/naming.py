@@ -6,11 +6,14 @@ Strategy: Use full operation_id, remove tag prefix, convert to camelCase/PascalC
 
 
 
+import re as _re
+
+_SEPARATORS_RE = _re.compile(r'[-.]')
+
+
 def to_camel_case(s: str) -> str:
     """Convert snake_case, kebab-case, or dot.case to camelCase."""
-    # Replace all separators with underscore
-    s = s.replace('-', '_').replace('.', '_')
-    parts = s.split('_')
+    parts = _SEPARATORS_RE.sub('_', s).split('_')
     if not parts:
         return ''
     return parts[0].lower() + ''.join(p.capitalize() for p in parts[1:])
@@ -18,9 +21,7 @@ def to_camel_case(s: str) -> str:
 
 def to_pascal_case(s: str) -> str:
     """Convert snake_case, kebab-case, or dot.case to PascalCase."""
-    # Replace all separators with underscore
-    s = s.replace('-', '_').replace('.', '_')
-    return ''.join(p.capitalize() for p in s.split('_'))
+    return ''.join(p.capitalize() for p in _SEPARATORS_RE.sub('_', s).split('_'))
 
 
 def remove_tag_prefix(operation_id: str) -> str:

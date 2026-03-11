@@ -3,8 +3,7 @@ Swift naming conventions for code generation.
 
 Handles all naming conversions for Swift Codable generator.
 """
-
-import re
+import re as _re
 
 # Swift reserved keywords that need backticks or renaming
 SWIFT_KEYWORDS = {
@@ -50,7 +49,7 @@ def to_pascal_case(name: str) -> str:
         return name
 
     # Normalize: replace all separators with space (including : for URN-style values)
-    normalized = name.replace("-", " ").replace("_", " ").replace(":", " ")
+    normalized = _re.sub(r'[-_:]', ' ', name)
 
     # Split and capitalize first letter of each word (preserve rest)
     parts = normalized.split()
@@ -102,7 +101,7 @@ def sanitize_swift_identifier(name: str) -> str:
         'N2users'
     """
     # Remove invalid characters (keep only alphanumeric and underscores)
-    clean = re.sub(r'[^a-zA-Z0-9_ -]', '', name)
+    clean = _re.sub(r'[^a-zA-Z0-9_ -]', '', name)
 
     # Convert to PascalCase
     result = to_pascal_case(clean)

@@ -17,10 +17,11 @@ Usage:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
 
 from ..types import FieldType, TypeMapper
+from ..types.content_type import ContentType
 from ..utils import header_to_param_name
 
 if TYPE_CHECKING:
@@ -69,28 +70,7 @@ class ParamContext:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for template context."""
-        return {
-            "name": self.name,
-            "location": self.location,
-            "schema_type": self.schema_type,
-            "python_type": self.python_type,
-            "ts_type": self.ts_type,
-            "go_type": self.go_type,
-            "proto_type": self.proto_type,
-            "required": self.required,
-            "has_default": self.has_default,
-            "default": self.default,
-            "enum": self.enum,
-            "pattern": self.pattern,
-            "min_length": self.min_length,
-            "max_length": self.max_length,
-            "minimum": self.minimum,
-            "maximum": self.maximum,
-            "is_array": self.is_array,
-            "items_type": self.items_type,
-            "description": self.description,
-            "deprecated": self.deprecated,
-        }
+        return asdict(self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,16 +92,7 @@ class BodyContext:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for template context."""
-        return {
-            "schema_name": self.schema_name,
-            "content_type": self.content_type,
-            "required": self.required,
-            "description": self.description,
-            "is_json": self.is_json,
-            "is_multipart": self.is_multipart,
-            "is_binary": self.is_binary,
-            "is_form_urlencoded": self.is_form_urlencoded,
-        }
+        return asdict(self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,21 +126,7 @@ class OperationParamsContext:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for template context."""
-        return {
-            "path_params": [p.to_dict() for p in self.path_params],
-            "query_params": [p.to_dict() for p in self.query_params],
-            "header_params": [p.to_dict() for p in self.header_params],
-            "cookie_params": [p.to_dict() for p in self.cookie_params],
-            "body": self.body.to_dict() if self.body else None,
-            "patch_body": self.patch_body.to_dict() if self.patch_body else None,
-            "has_path_params": self.has_path_params,
-            "has_query_params": self.has_query_params,
-            "has_header_params": self.has_header_params,
-            "has_body": self.has_body,
-            "has_required_params": self.has_required_params,
-            "has_optional_params": self.has_optional_params,
-            "all_params_sorted": [p.to_dict() for p in self.all_params_sorted],
-        }
+        return asdict(self)
 
 
 class ParamsBuilder:
@@ -282,25 +239,15 @@ class ParamsBuilder:
             content_type=content_type,
             required=body.required,
             description=body.description,
-            is_json=content_type == "application/json",
-            is_multipart=content_type == "multipart/form-data",
-            is_binary=content_type == "application/octet-stream",
-            is_form_urlencoded=content_type == "application/x-www-form-urlencoded",
+            is_json=content_type == ContentType.JSON,
+            is_multipart=content_type == ContentType.MULTIPART,
+            is_binary=content_type == ContentType.OCTET_STREAM,
+            is_form_urlencoded=content_type == ContentType.FORM_URLENCODED,
         )
 
     def _get_python_type(self, param: IRParameterObject) -> str:
         """Get Python type for parameter."""
-        type_map = {
-            "string": "str",
-            "integer": "int",
-            "number": "float",
-            "boolean": "bool",
-            "array": f"list[{param.items_type or 'Any'}]",
-        }
-        base_type = type_map.get(param.schema_type, "Any")
-        if not param.required:
-            return f"{base_type} | None"
-        return base_type
+        return param.python_type
 
     def _get_ts_type(self, param: IRParameterObject) -> str:
         """Get TypeScript type for parameter."""

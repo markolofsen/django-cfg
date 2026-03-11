@@ -7,7 +7,7 @@ v5.3: Groups only in Target, no inheritance.
 from enum import Enum
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict
 
 
 # =============================================================================
@@ -184,63 +184,25 @@ class OpenAPI(BaseModel):
     """
     OpenAPI client generation config.
 
-    New format (v5.3):
+    Example:
         OpenAPI(
             targets=[
                 Target(lang=Language.TYPESCRIPT, type=TargetType.ADMIN, path=..., groups=["cfg_*"]),
                 Target(lang=Language.PYTHON, type=TargetType.PARSERS, path=..., groups=["normalizer"]),
             ],
         )
-
-    Legacy format (v5.0) - still supported:
-        OpenAPI(
-            typescript=["profiles", "catalog"],
-            legacy_targets={"typescript": Path("frontend/api/generated")},
-        )
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    # New format (v5.3) - list of targets
     targets: list[Target] = []
-
-    # Auto-discovered extensions
     extensions: ExtensionTarget | None = None
-
-    # Go-specific
     go_module: str | None = None
-
-    # Legacy format (v5.0) - still supported
-    typescript: list[str] = []
-    python: list[str] = []
-    go: list[str] = []
-    swift: list[str] = []
-    legacy_targets: dict[str, Path] = {}
-
-    def is_legacy_format(self) -> bool:
-        """Check if using legacy v5.0 format."""
-        return bool(self.typescript or self.python or self.go or self.swift) and not self.targets
 
     def get_targets_for_lang(self, lang: Language) -> list[Target]:
         """Get all targets for a language including auto-discovered extensions."""
-        result = []
+        result = [t for t in self.targets if t.lang == lang]
 
-        if self.is_legacy_format():
-            # Convert legacy format to Target
-            if lang.value in self.legacy_targets:
-                result.append(
-                    Target(
-                        lang=lang,
-                        type=TargetType.ADMIN,  # Default type for legacy
-                        path=self.legacy_targets[lang.value],
-                        groups=getattr(self, lang.value, []),
-                    )
-                )
-        else:
-            # Filter targets by language
-            result.extend([t for t in self.targets if t.lang == lang])
-
-        # Add auto-discovered extensions
         if self.extensions and self.extensions.lang == lang:
             result.extend(self.extensions.discover())
 
@@ -463,13 +425,6 @@ class Config(BaseModel):
             ),
         )
 
-    Example (v5.0 legacy):
-        config = Config(
-            openapi=OpenAPI(
-                typescript=["profiles", "catalog"],
-                legacy_targets={"typescript": FRONTEND / "api/generated"},
-            ),
-        )
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

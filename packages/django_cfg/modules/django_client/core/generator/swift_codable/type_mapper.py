@@ -6,44 +6,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .naming import to_pascal_case, to_camel_case, swift_property_name
+from .naming import to_pascal_case
+from ...types.field_types import TypeMapper
 
 if TYPE_CHECKING:
-    from django_cfg.modules.django_client.core.ir import IRSchemaObject
+    from ...ir import IRSchemaObject
 
 
 class SwiftTypeMapper:
     """Maps IR types to Swift types."""
 
-    # OpenAPI type → Swift type mapping
-    TYPE_MAP = {
-        "string": "String",
-        "integer": "Int",
-        "number": "Double",
-        "boolean": "Bool",
-        "array": "[JSONValue]",  # Will be replaced with specific type
-        "object": "[String: JSONValue]",  # Will be replaced with specific type
-    }
-
-    # OpenAPI format → Swift type mapping
-    FORMAT_MAP = {
-        "date": "String",  # ISO date string
-        "date-time": "Date",
-        "time": "String",
-        "email": "String",
-        "uri": "String",
-        "url": "String",
-        "uuid": "String",
-        "int32": "Int32",
-        "int64": "Int64",
-        "float": "Float",
-        "double": "Double",
-        "binary": "Data",
-        "byte": "Data",
-    }
-
     def __init__(self):
         self.known_types: set[str] = set()
+        self._type_mapper = TypeMapper()
 
     def map_type(
         self,
@@ -101,13 +76,12 @@ class SwiftTypeMapper:
             self.known_types.add(type_name)
             return type_name
 
-        # Format-specific mapping
-        if schema.format and schema.format in self.FORMAT_MAP:
-            return self.FORMAT_MAP[schema.format]
-
-        # Basic type mapping
-        if schema.type and schema.type in self.TYPE_MAP:
-            return self.TYPE_MAP[schema.type]
+        # Delegate primitive type/format mapping to the unified TypeMapper
+        if schema.type or schema.format:
+            return self._type_mapper.to_swift(
+                schema.type or "string",
+                schema.format or None,
+            )
 
         # Default to JSONValue for unknown types
         return "JSONValue"

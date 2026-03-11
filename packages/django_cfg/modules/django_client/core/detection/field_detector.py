@@ -48,8 +48,8 @@ class InputType(str, Enum):
     COLOR = "color"
 
 
-class ValidationRule(str, Enum):
-    """Common validation rules."""
+class FieldValidationHint(str, Enum):
+    """HTML validation hints for form field generation (e.g. pattern, type=email)."""
 
     EMAIL = "email"
     URL = "url"
@@ -128,7 +128,7 @@ class FieldMeta:
     """
 
     input_type: InputType = InputType.TEXT
-    validation: ValidationRule | None = None
+    validation: FieldValidationHint | None = None
     sensitive: bool = False
     readonly: bool = False
     placeholder: str | None = None
@@ -180,7 +180,7 @@ def detect_field_meta(
 
     Examples:
         >>> detect_field_meta("email", "string")
-        FieldMeta(input_type=<InputType.EMAIL>, validation=<ValidationRule.EMAIL>, ...)
+        FieldMeta(input_type=<InputType.EMAIL>, validation=<FieldValidationHint.EMAIL>, ...)
 
         >>> detect_field_meta("password", "string")
         FieldMeta(input_type=<InputType.PASSWORD>, sensitive=True, ...)
@@ -205,7 +205,7 @@ def detect_field_meta(
     if _matches_patterns(name_lower, EMAIL_PATTERNS):
         return FieldMeta(
             input_type=InputType.EMAIL,
-            validation=ValidationRule.EMAIL,
+            validation=FieldValidationHint.EMAIL,
             autocomplete="email",
             placeholder="user@example.com",
         )
@@ -214,7 +214,7 @@ def detect_field_meta(
     if _matches_patterns(name_lower, PHONE_PATTERNS):
         return FieldMeta(
             input_type=InputType.TEL,
-            validation=ValidationRule.PHONE,
+            validation=FieldValidationHint.PHONE,
             autocomplete="tel",
             placeholder="+1 (555) 123-4567",
         )
@@ -233,7 +233,7 @@ def detect_field_meta(
     if _matches_patterns(name_lower, URL_PATTERNS):
         return FieldMeta(
             input_type=InputType.URL,
-            validation=ValidationRule.URL,
+            validation=FieldValidationHint.URL,
             autocomplete="url",
             placeholder="https://example.com",
         )
@@ -256,7 +256,7 @@ def detect_field_meta(
     if _matches_patterns(name_lower, SLUG_PATTERNS):
         return FieldMeta(
             input_type=InputType.TEXT,
-            validation=ValidationRule.SLUG,
+            validation=FieldValidationHint.SLUG,
             pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$",
             placeholder="my-slug-here",
         )
@@ -383,20 +383,20 @@ def _detect_from_format(
     if format_type == Fmt.EMAIL:
         return FieldMeta(
             input_type=InputType.EMAIL,
-            validation=ValidationRule.EMAIL,
+            validation=FieldValidationHint.EMAIL,
             autocomplete="email",
         )
 
     if format_type == Fmt.URI or format_type == Fmt.URL:
         return FieldMeta(
             input_type=InputType.URL,
-            validation=ValidationRule.URL,
+            validation=FieldValidationHint.URL,
         )
 
     if format_type == Fmt.UUID:
         return FieldMeta(
             input_type=InputType.TEXT,
-            validation=ValidationRule.UUID,
+            validation=FieldValidationHint.UUID,
             readonly=read_only or _is_id_field(name_lower),
             pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
         )
@@ -435,7 +435,7 @@ def _detect_from_format(
     if format_type == Fmt.IPV4 or format_type == Fmt.IPV6:
         return FieldMeta(
             input_type=InputType.TEXT,
-            validation=ValidationRule.IP_ADDRESS,
+            validation=FieldValidationHint.IP_ADDRESS,
         )
 
     return None

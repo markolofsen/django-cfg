@@ -9,16 +9,21 @@ Handles:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from jinja2 import Environment
 
 from ...ir import IROperationObject
 from ..base import GeneratedFile
 
+if TYPE_CHECKING:
+    from ..base import BaseGenerator
+
 
 class SyncClientGenerator:
     """Generates sync Python client files."""
 
-    def __init__(self, jinja_env: Environment, base_generator, operations_gen):
+    def __init__(self, jinja_env: Environment, base_generator: BaseGenerator, operations_gen):
         """
         Initialize sync client generator.
 

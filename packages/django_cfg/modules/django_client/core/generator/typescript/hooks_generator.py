@@ -22,6 +22,16 @@ from ...ir import IRContext, IROperationObject
 from ..base import BaseGenerator, GeneratedFile
 from .naming import operation_to_method_name
 
+_CFG_PREFIXES = ['django_cfg_', 'cfg_']
+
+
+def _strip_cfg_prefix(operation_id: str) -> str:
+    """Remove django_cfg_ or cfg_ prefix from operation_id."""
+    for prefix in _CFG_PREFIXES:
+        if operation_id.startswith(prefix):
+            return operation_id[len(prefix):]
+    return operation_id
+
 
 class HooksGenerator:
     """
@@ -136,26 +146,13 @@ class HooksGenerator:
         """
 
         # Remove cfg_ prefix but keep tag + resource for uniqueness (same as fetchers)
-        operation_id = operation.operation_id
-        if operation_id.startswith('django_cfg_'):
-            operation_id = operation_id.replace('django_cfg_', '', 1)
-        elif operation_id.startswith('cfg_'):
-            operation_id = operation_id.replace('cfg_', '', 1)
+        operation_id = _strip_cfg_prefix(operation.operation_id)
 
         # Determine prefix based on HTTP method
-        if operation.http_method == 'GET':
-            prefix = 'use'
-        elif operation.http_method == 'POST':
-            prefix = 'useCreate'
-        elif operation.http_method in ('PUT', 'PATCH'):
-            if '_partial_update' in operation_id:
-                prefix = 'usePartialUpdate'
-            else:
-                prefix = 'useUpdate'
-        elif operation.http_method == 'DELETE':
-            prefix = 'useDelete'
-        else:
-            prefix = 'use'
+        _hook_prefixes = {'GET': 'use', 'POST': 'useCreate', 'PUT': 'useUpdate', 'PATCH': 'useUpdate', 'DELETE': 'useDelete'}
+        prefix = _hook_prefixes.get(operation.http_method, 'use')
+        if operation.http_method in ('PUT', 'PATCH') and '_partial_update' in operation_id:
+            prefix = 'usePartialUpdate'
 
         # For hooks, path is not critical but pass for consistency
         return operation_to_method_name(operation_id, operation.http_method, prefix, self.base, operation.path)
@@ -165,26 +162,13 @@ class HooksGenerator:
 
 
         # Remove cfg_ prefix but keep tag + resource (must match fetchers_generator exactly)
-        operation_id = operation.operation_id
-        if operation_id.startswith('django_cfg_'):
-            operation_id = operation_id.replace('django_cfg_', '', 1)
-        elif operation_id.startswith('cfg_'):
-            operation_id = operation_id.replace('cfg_', '', 1)
+        operation_id = _strip_cfg_prefix(operation.operation_id)
 
         # Determine prefix (must match fetchers_generator exactly)
-        if operation.http_method == 'GET':
-            prefix = 'get'
-        elif operation.http_method == 'POST':
-            prefix = 'create'
-        elif operation.http_method in ('PUT', 'PATCH'):
-            if '_partial_update' in operation_id:
-                prefix = 'partialUpdate'
-            else:
-                prefix = 'update'
-        elif operation.http_method == 'DELETE':
-            prefix = 'delete'
-        else:
-            prefix = ''
+        _fetcher_prefixes = {'GET': 'get', 'POST': 'create', 'PUT': 'update', 'PATCH': 'update', 'DELETE': 'delete'}
+        prefix = _fetcher_prefixes.get(operation.http_method, '')
+        if operation.http_method in ('PUT', 'PATCH') and '_partial_update' in operation_id:
+            prefix = 'partialUpdate'
 
         # Must match fetchers exactly, including path
         return operation_to_method_name(operation_id, operation.http_method, prefix, self.base, operation.path)
@@ -291,12 +275,14 @@ class HooksGenerator:
         # Get resource name from operation_id
         op_id = operation.operation_id
 
-        # Determine if list or detail
-        is_list = op_id.endswith("_list")
+        # Determine if detail
         is_detail = op_id.endswith("_retrieve")
 
         # Remove common suffixes
-        resource = op_id.replace("_list", "").replace("_retrieve", "")
+        _view_suffixes = ["_list", "_retrieve"]
+        resource = op_id
+        for suffix in _view_suffixes:
+            resource = resource.replace(suffix, "")
 
         # For detail views, use singular form
         if is_detail:
@@ -338,7 +324,10 @@ class HooksGenerator:
         keys = []
 
         op_id = operation.operation_id
-        resource = op_id.replace("_create", "").replace("_update", "").replace("_partial_update", "").replace("_destroy", "")
+        _op_suffixes = ["_partial_update", "_create", "_update", "_destroy"]
+        resource = op_id
+        for suffix in _op_suffixes:
+            resource = resource.replace(suffix, "")
 
         # List key (for revalidating lists)
         list_key = f"{resource.replace('_', '-')}"

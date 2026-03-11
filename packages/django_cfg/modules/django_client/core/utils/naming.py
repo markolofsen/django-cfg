@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import re
 
+_RE_CAMEL_TO_SNAKE = re.compile(r"(?<!^)(?=[A-Z])")
+
 
 def to_camel_case(name: str) -> str:
     """
@@ -90,7 +92,7 @@ def to_snake_case(name: str) -> str:
         'http_client'
     """
     # Insert underscore before uppercase letters (except at start)
-    result = re.sub(r"(?<!^)(?=[A-Z])", "_", name)
+    result = _RE_CAMEL_TO_SNAKE.sub("_", name)
     return result.lower()
 
 

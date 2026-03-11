@@ -9,6 +9,8 @@ Version-specific logic (nullable handling, etc.) is delegated to subclasses.
 
 from __future__ import annotations
 
+import sys
+import traceback
 from abc import ABC, abstractmethod
 
 from ..ir import (
@@ -263,9 +265,6 @@ class BaseParser(ABC):
             - Case-insensitive: "Profile" and "profile" → filesystem conflict
             - Exact duplicate: "HealthCheck" from multiple serializers → schema conflict
         """
-        import traceback
-        import sys
-
         if not self.spec.components or not self.spec.components.schemas:
             return  # No schemas to validate
 
@@ -880,7 +879,7 @@ class BaseParser(ABC):
 
     def _to_pascal_case(self, name: str) -> str:
         """Convert snake_case or kebab-case to PascalCase."""
-        from ..generator.proto.naming import to_pascal_case
+        from ..utils.naming import to_pascal_case
         return to_pascal_case(name)
 
     def _parse_responses(

@@ -72,7 +72,7 @@ class ClientGenerator:
         """Generate flat APIClient (all methods in one class)."""
         # Generate all operation methods
         method_codes = []
-        for op_id, operation in self.context.operations.items():
+        for operation in self.context.operations.values():
             method_codes.append(self.operations_gen.generate_operation(operation))
             # Add URL builder method for streaming operations
             if self._is_streaming_operation(operation):

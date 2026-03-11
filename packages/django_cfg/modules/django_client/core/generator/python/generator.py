@@ -23,6 +23,7 @@ from .files_generator import FilesGenerator
 from .models_generator import ModelsGenerator
 from .operations_generator import OperationsGenerator
 from .sync_client_gen import SyncClientGenerator
+from ...utils.schema_resolver import SchemaResolver
 
 
 class PythonGenerator(BaseGenerator):
@@ -61,55 +62,9 @@ class PythonGenerator(BaseGenerator):
         files = []
 
         if self.client_structure == "namespaced":
-            # Generate per-app folders
-            ops_by_tag = self.group_operations_by_tag()
-
-            for tag, operations in sorted(ops_by_tag.items()):
-                # Generate app folder (models.py, client.py, sync_client.py, __init__.py)
-                files.extend(self._generate_app_folder(tag, operations))
-
-            # Generate shared enums.py (Variant 2: all enums in root)
-            all_schemas = self.context.schemas
-            all_enums = self._collect_enums_from_schemas(all_schemas)
-            if all_enums:
-                files.append(self.models_gen.generate_shared_enums_file(all_enums))
-
-            # Generate main async client.py
-            files.append(self.async_client_gen.generate_main_client_file(ops_by_tag))
-
-            # Generate main sync client.py
-            files.append(self.sync_client_gen.generate_sync_main_client_file(ops_by_tag))
-
-            # Generate main __init__.py
-            files.append(self.files_gen.generate_main_init_file())
-
-            # Generate helpers/ package
-            files.append(self.files_gen.generate_helpers_init_file())
-            files.append(self.files_gen.generate_logger_file())
-            files.append(self.files_gen.generate_retry_file())
-
-            # Generate schema.py with OpenAPI schema
-            if self.openapi_schema:
-                files.append(self.files_gen.generate_schema_file(self.openapi_schema))
+            files.extend(self._generate_namespaced())
         else:
-            # Flat structure (original logic)
-            files.append(self.models_gen.generate_models_file())
-
-            enum_schemas = self.get_enum_schemas()
-            if enum_schemas:
-                files.append(self.models_gen.generate_enums_file())
-
-            files.append(self.async_client_gen.generate_client_file())
-            files.append(self.files_gen.generate_init_file())
-
-            # Generate helpers/ package
-            files.append(self.files_gen.generate_helpers_init_file())
-            files.append(self.files_gen.generate_logger_file())
-            files.append(self.files_gen.generate_retry_file())
-
-            # Generate schema.py with OpenAPI schema
-            if self.openapi_schema:
-                files.append(self.files_gen.generate_schema_file(self.openapi_schema))
+            files.extend(self._generate_flat())
 
         # Generate package files if requested
         if self.generate_package_files:
@@ -117,6 +72,71 @@ class PythonGenerator(BaseGenerator):
 
         # Generate CLAUDE.md
         files.append(ClaudeGenerator(self.context, "python", group_name=self.group_name).generate())
+
+        return files
+
+    # ===== Structure-specific Generation =====
+
+    def _generate_namespaced(self) -> list[GeneratedFile]:
+        """Generate files for namespaced client structure (one folder per app/tag)."""
+        files = []
+
+        ops_by_tag = self.group_operations_by_tag()
+
+        for tag, operations in sorted(ops_by_tag.items()):
+            # Generate app folder (models.py, client.py, sync_client.py, __init__.py)
+            files.extend(self._generate_app_folder(tag, operations))
+
+        # Generate shared enums.py (Variant 2: all enums in root)
+        all_schemas = self.context.schemas
+        all_enums = self._collect_enums_from_schemas(all_schemas)
+        if all_enums:
+            files.append(self.models_gen.generate_shared_enums_file(all_enums))
+
+        # Generate main async client.py
+        files.append(self.async_client_gen.generate_main_client_file(ops_by_tag))
+
+        # Generate main sync client.py
+        files.append(self.sync_client_gen.generate_sync_main_client_file(ops_by_tag))
+
+        # Generate main __init__.py
+        files.append(self.files_gen.generate_main_init_file())
+
+        files.extend(self._generate_shared_files())
+        return files
+
+    def _generate_flat(self) -> list[GeneratedFile]:
+        """Generate files for flat client structure (single-level output)."""
+        files = []
+
+        files.append(self.models_gen.generate_models_file())
+
+        enum_schemas = self.get_enum_schemas()
+        if enum_schemas:
+            files.append(self.models_gen.generate_enums_file())
+
+        files.append(self.async_client_gen.generate_client_file())
+        files.append(self.files_gen.generate_init_file())
+
+        files.extend(self._generate_shared_files())
+        return files
+
+    def _generate_shared_files(self) -> list[GeneratedFile]:
+        """
+        Generate files that are identical in both namespaced and flat structures.
+
+        Includes the helpers/ package files and the optional OpenAPI schema file.
+        """
+        files = []
+
+        # Generate helpers/ package
+        files.append(self.files_gen.generate_helpers_init_file())
+        files.append(self.files_gen.generate_logger_file())
+        files.append(self.files_gen.generate_retry_file())
+
+        # Generate schema.py with OpenAPI schema
+        if self.openapi_schema:
+            files.append(self.files_gen.generate_schema_file(self.openapi_schema))
 
         return files
 
@@ -143,63 +163,8 @@ class PythonGenerator(BaseGenerator):
 
     def _get_schemas_for_operations(self, operations: list[IROperationObject]) -> dict[str, IRSchemaObject]:
         """Get all schemas used by given operations, including nested $ref schemas."""
-        schemas = {}
-
-        def collect_nested_refs(schema: IRSchemaObject, collected: dict[str, IRSchemaObject]):
-            """Recursively collect all schemas referenced by $ref."""
-            if not schema:
-                return
-
-            # Check properties for nested $ref
-            for prop_name, prop_schema in schema.properties.items():
-                # Direct $ref on property
-                if prop_schema.ref and prop_schema.ref in self.context.schemas:
-                    ref_name = prop_schema.ref
-                    if ref_name not in collected:
-                        collected[ref_name] = self.context.schemas[ref_name]
-                        # Recursively collect refs from nested schema
-                        collect_nested_refs(self.context.schemas[ref_name], collected)
-
-                # Array items with $ref
-                if prop_schema.items and prop_schema.items.ref:
-                    ref_name = prop_schema.items.ref
-                    if ref_name in self.context.schemas and ref_name not in collected:
-                        collected[ref_name] = self.context.schemas[ref_name]
-                        # Recursively collect refs from nested schema
-                        collect_nested_refs(self.context.schemas[ref_name], collected)
-
-        for operation in operations:
-            # Request body schemas
-            if operation.request_body and operation.request_body.schema_name:
-                schema_name = operation.request_body.schema_name
-                if schema_name in self.context.schemas:
-                    schemas[schema_name] = self.context.schemas[schema_name]
-                    # Collect nested refs
-                    collect_nested_refs(self.context.schemas[schema_name], schemas)
-
-            # Patch request body schemas
-            if operation.patch_request_body and operation.patch_request_body.schema_name:
-                schema_name = operation.patch_request_body.schema_name
-                if schema_name in self.context.schemas:
-                    schemas[schema_name] = self.context.schemas[schema_name]
-                    # Collect nested refs
-                    collect_nested_refs(self.context.schemas[schema_name], schemas)
-
-            # Response schemas
-            for status_code, response in operation.responses.items():
-                if response.schema_name:
-                    if response.schema_name in self.context.schemas:
-                        schemas[response.schema_name] = self.context.schemas[response.schema_name]
-                        # Collect nested refs
-                        collect_nested_refs(self.context.schemas[response.schema_name], schemas)
-                # Array response items schema
-                if response.is_array and response.items_schema_name:
-                    if response.items_schema_name in self.context.schemas:
-                        schemas[response.items_schema_name] = self.context.schemas[response.items_schema_name]
-                        # Collect nested refs
-                        collect_nested_refs(self.context.schemas[response.items_schema_name], schemas)
-
-        return schemas
+        resolver = SchemaResolver(self.context.schemas)
+        return resolver.resolve_for_operations(list(operations))
 
     # Backward compatibility - delegate to sub-generators
     def generate_schema(self, schema: IRSchemaObject) -> str:

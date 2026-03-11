@@ -15,7 +15,10 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
+
+from ._config import IR_MODEL_CONFIG
+from ..types.content_type import ContentType
 
 
 class IRParameterObject(BaseModel):
@@ -43,13 +46,7 @@ class IRParameterObject(BaseModel):
         ... )
     """
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="forbid",
-        frozen=False,
-        validate_default=True,
-        str_strip_whitespace=True,
-    )
+    model_config = IR_MODEL_CONFIG
 
     name: str = Field(..., description="Parameter name (e.g., 'id', 'page_size')")
     location: Literal["path", "query", "header", "cookie"] = Field(
@@ -144,13 +141,7 @@ class IRRequestBodyObject(BaseModel):
         ... )
     """
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="forbid",
-        frozen=False,
-        validate_default=True,
-        str_strip_whitespace=True,
-    )
+    model_config = IR_MODEL_CONFIG
 
     schema_name: str = Field(
         ..., description="Schema reference (e.g., 'UserRequest', 'PatchedUser')"
@@ -209,13 +200,7 @@ class IRResponseObject(BaseModel):
         ... )
     """
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="forbid",
-        frozen=False,
-        validate_default=True,
-        str_strip_whitespace=True,
-    )
+    model_config = IR_MODEL_CONFIG
 
     status_code: int = Field(
         ..., ge=100, le=599, description="HTTP status code (200, 201, 400, etc.)"
@@ -332,13 +317,7 @@ class IROperationObject(BaseModel):
         ... )
     """
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="forbid",
-        frozen=False,
-        validate_default=True,
-        str_strip_whitespace=True,
-    )
+    model_config = IR_MODEL_CONFIG
 
     # ===== Core Fields =====
     operation_id: str = Field(
@@ -394,6 +373,14 @@ class IROperationObject(BaseModel):
     deprecated: bool = Field(False, description="Is operation deprecated")
 
     # ===== Computed Properties =====
+
+    @property
+    def is_multipart(self) -> bool:
+        """Check if this operation uses multipart/form-data request body."""
+        return (
+            self.request_body is not None
+            and self.request_body.content_type == ContentType.MULTIPART
+        )
 
     @property
     def is_list_operation(self) -> bool:

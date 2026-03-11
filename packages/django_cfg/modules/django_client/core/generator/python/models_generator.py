@@ -10,17 +10,26 @@ Handles:
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 from jinja2 import Environment
 
 from ...ir import IRSchemaObject
 from ..base import GeneratedFile
 
+if TYPE_CHECKING:
+    from ...ir import IRContext
+    from ..base import BaseGenerator
+
+_RE_DATETIME_TYPE = re.compile(r": datetime\b")
+_RE_DATE_TYPE = re.compile(r": date\b")
+_RE_TIME_TYPE = re.compile(r": time\b")
+
 
 class ModelsGenerator:
     """Generates Pydantic models and enum classes."""
 
-    def __init__(self, jinja_env: Environment, context, base_generator):
+    def __init__(self, jinja_env: Environment, context: IRContext, base_generator: BaseGenerator):
         """
         Initialize models generator.
 
@@ -39,23 +48,23 @@ class ModelsGenerator:
         schema_codes = []
 
         # Response models first
-        for name, schema in self.base.get_response_schemas().items():
+        for _, schema in self.base.get_response_schemas().items():
             schema_codes.append(self.generate_schema(schema))
 
         # Request models
-        for name, schema in self.base.get_request_schemas().items():
+        for _, schema in self.base.get_request_schemas().items():
             schema_codes.append(self.generate_schema(schema))
 
         # Patch models
-        for name, schema in self.base.get_patch_schemas().items():
+        for _, schema in self.base.get_patch_schemas().items():
             schema_codes.append(self.generate_schema(schema))
 
         # Check if any generated schema code uses datetime/date/time types
         # Use regex patterns to avoid false positives
         all_code = "\n".join(schema_codes)
-        has_datetime = bool(re.search(r": datetime\b", all_code))
-        has_date = bool(re.search(r": date\b", all_code))
-        has_time = bool(re.search(r": time\b", all_code))
+        has_datetime = bool(_RE_DATETIME_TYPE.search(all_code))
+        has_date = bool(_RE_DATE_TYPE.search(all_code))
+        has_time = bool(_RE_TIME_TYPE.search(all_code))
 
         template = self.jinja_env.get_template('models/models.py.jinja')
         content = template.render(
@@ -81,49 +90,30 @@ class ModelsGenerator:
                 return True
         return False
 
+    def _render_enums_file(
+        self,
+        enums: dict,
+        *,
+        path: str = "enums.py",
+        description: str = "Enum classes from x-enum-varnames",
+    ) -> GeneratedFile:
+        """Render enums file from an enums dict."""
+        has_int_enum = any(schema.type == "integer" for schema in enums.values())
+        enum_codes = [self.generate_enum(s) for s in enums.values()]
+        template = self.jinja_env.get_template('models/enums.py.jinja')
+        return GeneratedFile(
+            path=path,
+            content=template.render(enums=enum_codes, has_int_enum=has_int_enum),
+            description=description,
+        )
+
     def generate_enums_file(self) -> GeneratedFile:
         """Generate enums.py with all Enum classes (flat structure)."""
-        # Check if any IntEnum is used
-        has_int_enum = any(
-            schema.type == "integer"
-            for schema in self.base.get_enum_schemas().values()
-        )
-
-        # Generate all enums
-        enum_codes = []
-        for name, schema in self.base.get_enum_schemas().items():
-            enum_codes.append(self.generate_enum(schema))
-
-        template = self.jinja_env.get_template('models/enums.py.jinja')
-        content = template.render(enums=enum_codes, has_int_enum=has_int_enum)
-
-        return GeneratedFile(
-            path="enums.py",
-            content=content,
-            description="Enum classes from x-enum-varnames",
-        )
+        return self._render_enums_file(self.base.get_enum_schemas())
 
     def generate_shared_enums_file(self, enums: dict[str, IRSchemaObject]) -> GeneratedFile:
         """Generate shared enums.py for namespaced structure (Variant 2)."""
-        # Check if any IntEnum is used
-        has_int_enum = any(
-            schema.type == "integer"
-            for schema in enums.values()
-        )
-
-        # Generate all enums
-        enum_codes = []
-        for name, schema in enums.items():
-            enum_codes.append(self.generate_enum(schema))
-
-        template = self.jinja_env.get_template('models/enums.py.jinja')
-        content = template.render(enums=enum_codes, has_int_enum=has_int_enum)
-
-        return GeneratedFile(
-            path="enums.py",
-            content=content,
-            description="Shared enum classes from x-enum-varnames",
-        )
+        return self._render_enums_file(enums, description="Shared enum classes from x-enum-varnames")
 
     def generate_schema(self, schema: IRSchemaObject) -> str:
         """Generate Pydantic model for schema."""
@@ -287,7 +277,7 @@ class ModelsGenerator:
 
         # Enum members
         member_lines = []
-        for var_name, value in zip(schema.enum_var_names, schema.enum):
+        for var_name, value in zip(schema.enum_var_names or [], schema.enum or []):
             # Skip empty values (from blank=True in Django)
             if not var_name or (isinstance(value, str) and value == ''):
                 continue
@@ -385,9 +375,9 @@ class ModelsGenerator:
         # Check if any generated schema code uses datetime/date/time types
         # Use regex patterns to avoid false positives
         all_code = "\n".join(schema_codes)
-        has_datetime = bool(re.search(r": datetime\b", all_code))
-        has_date = bool(re.search(r": date\b", all_code))
-        has_time = bool(re.search(r": time\b", all_code))
+        has_datetime = bool(_RE_DATETIME_TYPE.search(all_code))
+        has_date = bool(_RE_DATE_TYPE.search(all_code))
+        has_time = bool(_RE_TIME_TYPE.search(all_code))
 
         template = self.jinja_env.get_template('models/app_models.py.jinja')
         content = template.render(

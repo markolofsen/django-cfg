@@ -60,6 +60,14 @@ from django_cfg.modules.django_codegen.config import (
     GeneratorOptions,
 )
 from django_cfg.modules.django_codegen.runner import run, run_with_options
+from django_cfg.modules.django_codegen.config_inspector import (
+    inspect_config,
+    ConfigSummary,
+    TargetSummary,
+    ExtensionsSummary,
+    SDKPackageSummary,
+    ORMTargetSummary,
+)
 
 __all__ = [
     # Enums
@@ -83,6 +91,13 @@ __all__ = [
     # Runner
     "run",
     "run_with_options",
+    # Inspector
+    "inspect_config",
+    "ConfigSummary",
+    "TargetSummary",
+    "ExtensionsSummary",
+    "SDKPackageSummary",
+    "ORMTargetSummary",
 ]
 
 default_app_config = "django_cfg.modules.django_codegen.apps.DjangoCodegenConfig"

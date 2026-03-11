@@ -376,9 +376,9 @@ public enum JSONValue: Codable, Sendable, Hashable {
         )
 
     def _to_pascal_case(self, name: str) -> str:
-        """Convert to PascalCase."""
-        parts = name.replace("-", "_").split("_")
-        return "".join(part.capitalize() for part in parts)
+        """Convert to PascalCase. Delegates to canonical naming utility."""
+        from ...utils.naming import to_pascal_case
+        return to_pascal_case(name)
 
     # Required abstract method implementations
 

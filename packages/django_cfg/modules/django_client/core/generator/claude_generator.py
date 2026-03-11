@@ -4,9 +4,11 @@ CLAUDE.md Generator - Generates AI assistant documentation for generated clients
 
 from __future__ import annotations
 
+import re as _re
 from typing import TYPE_CHECKING
 
 from .base import GeneratedFile
+from ..types.content_type import ContentType
 
 if TYPE_CHECKING:
     from ..ir import IRContext
@@ -19,7 +21,7 @@ class ClaudeGenerator:
     STREAMING_CONTENT_TYPES = frozenset([
         'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
         'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/flac',
-        'application/octet-stream',
+        ContentType.OCTET_STREAM,
     ])
 
     def __init__(self, context: "IRContext", language: str, group_name: str = "", **kwargs):
@@ -294,7 +296,7 @@ protoc --go_out=. --go-grpc_out=. *.proto
                 streaming_ops.append(op)
         return streaming_ops
 
-    def _build_streaming_section(self, ops_by_tag: dict) -> str:
+    def _build_streaming_section(self, _ops_by_tag: dict) -> str:
         """Build section about streaming URL methods (TypeScript only)."""
         if self.language != "typescript":
             return ""
@@ -322,7 +324,7 @@ protoc --go_out=. --go-grpc_out=. *.proto
                 op_id = op.operation_id
                 # Remove tag prefix for method name
                 if op.tags:
-                    t = op.tags[0].lower().replace("-", "_").replace(" ", "_")
+                    t = _re.sub(r'[-\s]', '_', op.tags[0].lower())
                     if op_id.lower().startswith(t):
                         op_id = op_id[len(t):].lstrip("_")
                 # Convert to camelCase
