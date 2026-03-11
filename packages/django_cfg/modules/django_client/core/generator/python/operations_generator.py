@@ -366,12 +366,16 @@ class OperationsGenerator:
         lines.append("# Build multipart form data")
         lines.append("_files = {}")
         lines.append("_form_data = {}")
-        lines.append("_raw_data = data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True)")
 
-        # Handle file fields
+        # Handle file fields — access directly on data to preserve binary file objects.
+        # model_dump(mode="json") would attempt to UTF-8 encode bytes, breaking binary uploads.
         for field in file_fields:
-            lines.append(f"if '{field}' in _raw_data and _raw_data['{field}'] is not None:")
-            lines.append(f"    _files['{field}'] = _raw_data['{field}']")
+            lines.append(f"if data.{field} is not None:")
+            lines.append(f"    _files['{field}'] = data.{field}")
+
+        # Only dump non-file fields to avoid serializing binary data
+        if data_fields:
+            lines.append("_raw_data = data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True)")
 
         # Check if we need json import for object/array serialization
         needs_json = any(
