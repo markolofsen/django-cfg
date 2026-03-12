@@ -1,0 +1,211 @@
+---
+title: Test Runners
+description: SmartTestRunner, FastTestRunner, and MigrationManager — the testing infrastructure built into Django-CFG.
+keywords:
+  - SmartTestRunner
+  - FastTestRunner
+  - MigrationManager
+  - django test runner
+  - migration fix
+  - inconsistent migration history
+---
+
+import { Callout } from 'nextra/components'
+
+# Test Runners
+
+Django-CFG provides two test runners and a migration utility that work together to eliminate the most common test setup failures.
+
+## SmartTestRunner
+
+The default runner. Used automatically when you run `python manage.py test`.
+
+**What it does:**
+
+1. Drops stale test databases before creation (no confirmation prompt)
+2. Installs PostgreSQL extensions detected in your migrations
+3. Fixes inconsistent migration history automatically
+4. Passes `autoclobber=True` to Django so CI never blocks on stdin
+
+### Importing
+
+```python
+# Lazy import (recommended)
+from django_cfg import SmartTestRunner
+
+# Direct import
+from django_cfg.testing.runners import SmartTestRunner
+
+# In settings.py (without django-cfg config)
+TEST_RUNNER = "django_cfg.testing.runners.SmartTestRunner"
+```
+
+### Disable Auto-Cleanup
+
+If you need to preserve the test database between runs:
+
+```python
+from django_cfg.testing.runners import SmartTestRunner
+
+class MyTestRunner(SmartTestRunner):
+    def _cleanup_old_test_databases(self):
+        pass  # skip cleanup
+```
+
+<Callout type="warning">
+Disabling cleanup can cause `InconsistentMigrationHistory` errors when migrations change. Use `--keepdb` instead if you want to speed up reruns.
+</Callout>
+
+---
+
+## FastTestRunner
+
+Switches all databases to SQLite in-memory. Use for unit tests that don't need PostgreSQL.
+
+```bash
+python manage.py test --testrunner=django_cfg.testing.runners.FastTestRunner
+```
+
+**Trade-offs:**
+
+| | SmartTestRunner | FastTestRunner |
+|---|---|---|
+| Speed | Normal | ~10× faster |
+| PostgreSQL features | Full | None |
+| pgvector / uuid PK | Works | Not supported |
+| Use for | Integration tests | Pure unit tests |
+
+### Importing
+
+```python
+from django_cfg import FastTestRunner
+from django_cfg.testing.runners import FastTestRunner
+```
+
+---
+
+## MigrationManager
+
+Handles migration inconsistencies automatically. Used internally by `SmartTestRunner`, but available for direct use.
+
+### Usage
+
+```python
+from django_cfg.management.utils.migration_manager import MigrationManager
+
+manager = MigrationManager(stdout=self.stdout, style=self.style)
+
+# Migrate with auto-fix (default)
+manager.migrate_test_database("default", auto_fix=True)
+
+# Check consistency only
+has_issues = manager.check_migration_consistency("default")
+
+# Manual fix
+if has_issues:
+    manager.fix_inconsistent_migrations("default")
+    manager._migrate_with_bypass("default")
+```
+
+### API Reference
+
+```python
+class MigrationManager:
+    def __init__(self, stdout=None, style=None, logger=None): ...
+
+    def migrate_test_database(self, db_name: str, auto_fix: bool = True) -> None:
+        """Migrate test database. Auto-fixes errors when auto_fix=True."""
+
+    def check_migration_consistency(self, db_name: str) -> bool:
+        """Returns True if inconsistencies found."""
+
+    def fix_inconsistent_migrations(self, db_name: str) -> None:
+        """Removes problematic migration records so Django reapplies them correctly."""
+
+    def _migrate_with_bypass(self, db_name: str) -> None:
+        """Runs migrate with consistency-check patch applied."""
+```
+
+### What Gets Fixed
+
+#### Admin before custom user model
+
+**Problem:**
+```
+Migration admin.0001_initial is applied before its dependency
+django_cfg_accounts.0001_initial
+```
+
+**Cause:** Django applies `admin` migrations before the custom `AUTH_USER_MODEL` app migrations when reading from an old test database.
+
+**Fix:** `fix_inconsistent_migrations()` deletes `admin` migration records from `django_migrations`. Django reapplies them after `django_cfg_accounts` on the next `migrate` run.
+
+#### Missing PostgreSQL extensions
+
+**Problem:**
+```
+django.db.utils.ProgrammingError: type "vector" does not exist
+```
+
+**Fix:** `migrate_test_database()` detects `pgvector` usage by scanning migrations and runs `CREATE EXTENSION IF NOT EXISTS vector` before applying migrations.
+
+#### Swappable dependency order
+
+**Problem:** Django doesn't always respect `swappable_dependency()` ordering when creating test databases.
+
+**Fix:** `_migrate_with_bypass()` patches `MigrationLoader.check_consistent_history` to log the error instead of raising, then calls `migrate`. After the call the original method is restored.
+
+```python
+# What the bypass does internally
+original_check = MigrationLoader.check_consistent_history
+
+def patched_check(self, connection):
+    try:
+        return original_check(self, connection)
+    except InconsistentMigrationHistory:
+        pass  # log, don't raise
+
+MigrationLoader.check_consistent_history = patched_check
+try:
+    call_command("migrate", database=db_name)
+finally:
+    MigrationLoader.check_consistent_history = original_check
+```
+
+### In Test Cases
+
+```python
+from django.test import TestCase
+from django_cfg.management.utils.migration_manager import MigrationManager
+
+
+class MyTestCase(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        manager = MigrationManager()
+        if manager.check_migration_consistency("default"):
+            manager.fix_inconsistent_migrations("default")
+```
+
+### In Management Commands
+
+```python
+from django.core.management.base import BaseCommand
+from django_cfg.management.utils.migration_manager import MigrationManager
+
+
+class Command(BaseCommand):
+    def handle(self, *args, **options):
+        manager = MigrationManager(self.stdout, self.style)
+        manager.migrate_test_database("default", auto_fix=True)
+```
+
+## See Also
+
+- [Overview](./overview) — quick start and what's automatic
+- [test_db Command](./test-db-command) — CLI for manual database management
+- [Migration Internals](./migration-internals) — root cause analysis of test DB failures
+
+TAGS: SmartTestRunner, FastTestRunner, MigrationManager, test runners, migration fix
+DEPENDS_ON: [overview, test-db-command, migration-internals]

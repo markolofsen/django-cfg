@@ -1,0 +1,250 @@
+---
+title: test_db Command
+description: Django management command for inspecting, cleaning up, and resetting test databases. Useful in CI/CD pipelines and for local debugging.
+keywords:
+  - test_db command
+  - django management command
+  - test database cleanup
+  - postgresql extensions check
+  - CI/CD test database
+---
+
+import { Callout } from 'nextra/components'
+
+# test_db Command
+
+A Django management command for managing test databases. Useful when tests leave orphaned databases or when you need to inspect extension state.
+
+## Actions
+
+| Action | Description |
+|--------|-------------|
+| `info` | Show test database info (name, size, status, extensions) |
+| `cleanup` | Drop test databases |
+| `reset` | Drop and recreate from scratch |
+| `check-extensions` | List installed and missing PostgreSQL extensions |
+
+## Common Options
+
+| Option | Description |
+|--------|-------------|
+| `--database DATABASE` | Database alias (default: `default`) |
+| `--all` | Apply to all configured databases |
+| `--force` | Skip confirmation prompt |
+| `--json` | Output in JSON format |
+
+---
+
+## info
+
+```bash
+python manage.py test_db info
+python manage.py test_db info --all
+python manage.py test_db info --json
+```
+
+**Output:**
+```
+======================================================================
+         TEST DATABASE INFORMATION
+======================================================================
+
+Database Alias: default
+  Test DB Name:    test_myapp
+  Status:          EXISTS
+  Size:            11 MB
+  Extensions:      pgvector, pg_trgm
+  Engine:          django.db.backends.postgresql
+
+======================================================================
+```
+
+**JSON output:**
+```json
+[
+  {
+    "alias": "default",
+    "test_db_name": "test_myapp",
+    "exists": true,
+    "engine": "django.db.backends.postgresql",
+    "size": "11 MB",
+    "extensions": ["pgvector", "pg_trgm"]
+  }
+]
+```
+
+---
+
+## cleanup
+
+Removes test databases. Use this when tests fail and leave orphaned databases behind.
+
+```bash
+python manage.py test_db cleanup              # with confirmation
+python manage.py test_db cleanup --force      # no confirmation
+python manage.py test_db cleanup --all        # all databases
+python manage.py test_db cleanup --all --force
+```
+
+**Output:**
+```
+Found 2 test database(s):
+  • test_myapp (alias: default)
+  • test_analytics (alias: analytics)
+
+Remove these databases? [y/N]: y
+
+Removed: test_myapp
+Removed: test_analytics
+
+Cleanup complete: 2/2 databases removed
+```
+
+<Callout type="info">
+`SmartTestRunner` runs cleanup automatically before each test run. Use this command only for manual cleanup or CI pre-steps.
+</Callout>
+
+---
+
+## reset
+
+Drops and recreates the test database from scratch — including extension installation.
+
+```bash
+python manage.py test_db reset                          # with confirmation
+python manage.py test_db reset --force                  # no confirmation
+python manage.py test_db reset --database=analytics     # specific alias
+```
+
+**Output:**
+```
+Database: test_myapp (alias: default)
+Status:   EXISTS
+
+This will DROP and recreate the test database. Continue? [y/N]: y
+
+Dropped: test_myapp
+Created: test_myapp
+Installed extensions
+
+Test database reset complete
+```
+
+Use this when migrations are inconsistent and you want a guaranteed clean state before running tests.
+
+---
+
+## check-extensions
+
+Lists which PostgreSQL extensions are installed and which are required but missing.
+
+```bash
+python manage.py test_db check-extensions
+python manage.py test_db check-extensions --database=analytics
+python manage.py test_db check-extensions --json
+```
+
+**Output:**
+```
+======================================================================
+         TEST DATABASE EXTENSIONS
+======================================================================
+
+Database: test_myapp
+
+Installed Extensions:
+  (none)
+
+Required Extensions:
+  ❌ vector (missing)
+  ❌ pg_trgm (missing)
+  ❌ unaccent (missing)
+
+======================================================================
+```
+
+**JSON output:**
+```json
+{
+  "test_db_name": "test_myapp",
+  "installed_extensions": [],
+  "needs_pgvector": true
+}
+```
+
+If extensions are missing, run your tests — `SmartTestRunner` will install them:
+
+```bash
+python manage.py test
+```
+
+---
+
+## Typical Workflows
+
+### After a failed test run
+
+```bash
+# Remove orphaned databases
+python manage.py test_db cleanup --all --force
+
+# Run tests again
+python manage.py test
+```
+
+### Fresh start before debugging
+
+```bash
+python manage.py test_db reset --force
+python manage.py test
+```
+
+### Inspect before a CI run
+
+```bash
+python manage.py test_db info --json
+python manage.py test_db check-extensions --json
+```
+
+### Multi-database project
+
+```bash
+python manage.py test_db info --all
+python manage.py test_db cleanup --all --force
+python manage.py test_db reset --database=analytics
+```
+
+### Full debug sequence
+
+```bash
+python manage.py test_db info
+python manage.py test_db check-extensions
+python manage.py test_db reset --force
+python manage.py test
+```
+
+---
+
+## CI/CD Integration
+
+```yaml
+# GitHub Actions
+- name: Cleanup stale test databases
+  run: poetry run python manage.py test_db cleanup --all --force
+
+- name: Run tests
+  run: poetry run python manage.py test
+  # SmartTestRunner handles the rest automatically
+```
+
+<Callout type="warning">
+Always use `--force` in CI/CD. Without it the command will wait for stdin and block the pipeline.
+</Callout>
+
+## See Also
+
+- [Overview](./overview) — what's automatic vs manual
+- [Test Runners](./test-runners) — `SmartTestRunner` and `MigrationManager`
+
+TAGS: test_db, management command, test database, cleanup, CI/CD
+DEPENDS_ON: [overview, test-runners]

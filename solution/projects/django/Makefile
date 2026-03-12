@@ -51,22 +51,12 @@ install:
 	@echo "To use local django-cfg: make install-local"
 
 install-local:
-	@echo "Switching to local django-cfg..."
-	@echo "   Path: $(DJANGO_CFG_LOCAL)"
-	@test -d $(DJANGO_CFG_LOCAL) || (echo "Error: $(DJANGO_CFG_LOCAL) not found" && exit 1)
-	@# Remove existing [tool.uv.sources] if present
-	@grep -q '^\[tool\.uv\.sources\]' pyproject.toml && \
-		sed -i '' '/^\[tool\.uv\.sources\]/,/^$$/d' pyproject.toml || true
-	@# Add local source override
-	@echo '' >> pyproject.toml
-	@echo '[tool.uv.sources]' >> pyproject.toml
-	@echo 'django-cfg = { path = "$(DJANGO_CFG_LOCAL)", editable = true }' >> pyproject.toml
-	@echo '' >> pyproject.toml
-	@echo "Installing with local django-cfg..."
-	uv sync
+	@uv sync
+	@bash $(HOME)/djangocfg/scripts/install_local_djangocfg.sh --venv .venv
 	@echo ""
-	@echo "Local django-cfg installed (editable mode)"
-	@echo "Changes in $(DJANGO_CFG_LOCAL) will be immediately reflected"
+	@echo "✅ Local django-cfg installed (editable mode)"
+	@echo "📍 Changes in $(DJANGO_CFG_LOCAL) will be immediately reflected"
+	@echo "⚠️  Note: Do not run uv sync - it will revert to PyPI versions"
 
 env:
 	@uv run python -c "import sys; print(sys.prefix)"

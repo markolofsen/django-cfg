@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.7.61"
+version = "1.7.63"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -90,7 +90,7 @@ dependencies = [
     # REST Framework
     "djangorestframework>=3.16.0,<4.0",
     "djangorestframework-simplejwt>=5.5.0,<6.0",
-    "drf-nested-routers>=0.94.0,<1.0",
+    "drf-nested-routers>=0.95.0,<1.0",
     "django-filter>=25.0,<26.0",
     "django-ratelimit>=4.1.0,<5.0.0",
     "drf-spectacular>=0.28.0,<1.0",
