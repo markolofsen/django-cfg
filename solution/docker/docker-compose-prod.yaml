@@ -1,0 +1,14 @@
+name: django-cfg
+
+# Django-CFG - Production Orchestrator
+# Includes all group files for full-stack deployment.
+#
+# Usage:
+#   docker compose -f docker-compose-prod.yaml up -d
+#
+# Requires Docker Compose v2.20+
+
+include:
+  - docker-compose-prod.django.yaml
+  - docker-compose-prod.infra.yaml
+  - docker-compose-prod.frontend.yaml

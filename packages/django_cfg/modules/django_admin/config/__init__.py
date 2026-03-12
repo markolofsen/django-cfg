@@ -33,6 +33,7 @@ from .field_config import (
 )
 from .fieldset_config import DjangoFieldsets, FieldsetConfig, FieldsetOptions, FieldsetTuple
 from .admin_config import FilterSpec  # re-export TypeAlias
+from .filter_config import FilterConfig, FilterType
 from .flash_config import FlashFieldConfig, FlashPayload, FlashStyle
 from .resource_config import ResourceConfig
 from .widget_config import ImagePreviewWidgetConfig, JSONWidgetConfig, TextWidgetConfig, WidgetConfig
@@ -76,6 +77,8 @@ __all__ = [
     # Type aliases and discriminated unions
     "FieldConfigType",
     "FilterSpec",
+    "FilterConfig",
+    "FilterType",
     "DjangoFieldsets",
     "FieldsetOptions",
     "FieldsetTuple",

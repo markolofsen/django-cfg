@@ -1,7 +1,7 @@
 name: django-cfg
 
-# Django-CFG - Production Deployment
-# Services: Django API + Frontend + WebSocket
+# Django-CFG - Production: Django Group
+# Services: django, rq-worker, rq-scheduler, grpc
 
 services:
   # Django API
@@ -64,7 +64,7 @@ services:
       - "../projects/django:/app:rw"
     depends_on:
       django:
-        condition: service_healthy  # Wait for Django to be healthy (migrations complete)
+        condition: service_healthy
     command: python manage.py rqworker high default low knowledge
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f rqworker > /dev/null || exit 1"]
@@ -96,7 +96,7 @@ services:
       - "../projects/django:/app:rw"
     depends_on:
       django:
-        condition: service_healthy  # Wait for Django to be healthy (migrations complete)
+        condition: service_healthy
     command: python manage.py rqscheduler
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f rqscheduler > /dev/null || exit 1"]
@@ -129,7 +129,7 @@ services:
       - "../projects/django:/app:rw"
     depends_on:
       django:
-        condition: service_healthy  # Wait for Django to be healthy (migrations complete)
+        condition: service_healthy
     command: python manage.py rungrpc
     ports:
       - "50051:50051"
@@ -157,118 +157,6 @@ services:
       - "traefik.http.routers.djangocfg-grpc.tls=true"
       - "traefik.http.services.djangocfg-grpc.loadbalancer.server.port=50051"
       - "traefik.http.services.djangocfg-grpc.loadbalancer.server.scheme=h2c"
-
-  # Centrifugo WebSocket Server
-  centrifugo:
-    image: centrifugo/centrifugo:v6
-    container_name: django-cfg-centrifugo
-    restart: unless-stopped
-    entrypoint: ["/docker-entrypoint.sh"]
-    environment:
-      # Only Centrifugo-specific variables (no CENTRIFUGO__ prefixed vars)
-      CENTRIFUGO_API_KEY: centrifugo-api-key-change-in-production-min-32-chars
-      CENTRIFUGO_TOKEN_HMAC_SECRET: django-secret-key-change-in-production-at-least-32-chars
-      CENTRIFUGO_ADMIN_PASSWORD: admin
-      CENTRIFUGO_ADMIN_SECRET: admin-secret-change-in-production
-      CENTRIFUGO_LOG_LEVEL: info
-    volumes:
-      - ./services/centrifugo/docker-entrypoint.sh:/docker-entrypoint.sh:ro
-      - ./services/centrifugo/config.json:/centrifugo/config.template.json:ro
-    networks:
-      - dokploy-network
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          memory: 128M
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.djangocfg-centrifugo.rule=Host(`ws.djangocfg.com`)"
-      - "traefik.http.routers.djangocfg-centrifugo.entrypoints=websecure"
-      - "traefik.http.routers.djangocfg-centrifugo.service=djangocfg-centrifugo"
-      - "traefik.http.routers.djangocfg-centrifugo.tls=true"
-      - "traefik.http.services.djangocfg-centrifugo.loadbalancer.server.port=8000"
-
-  # Frontend Admin (demo.djangocfg.com) - DISABLED
-  frontend:
-    build:
-      context: ..
-      dockerfile: docker/services/frontend/Dockerfile.admin
-    image: django-cfg-frontend:latest
-    container_name: django-cfg-frontend
-    restart: unless-stopped
-    env_file:
-      - .env.prod
-    environment:
-      NODE_ENV: production
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          memory: 128M
-    networks:
-      - dokploy-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.djangocfg-demo.rule=Host(`demo.djangocfg.com`)"
-      - "traefik.http.routers.djangocfg-demo.entrypoints=websecure"
-      - "traefik.http.routers.djangocfg-demo.tls=true"
-      - "traefik.http.services.djangocfg-demo.loadbalancer.server.port=3200"
-
-  # RQ Dashboard is integrated into Django Admin Next.js UI
-  # Access it at: https://api.djangocfg.com/cfg/admin/ → RQ tab
-  # No separate service needed!
-
-  # Demo Database Auto-Resetter (for demo environment only)
-  demo-resetter:
-    build:
-      context: ..
-      dockerfile: docker/services/demo-resetter/Dockerfile
-    image: django-cfg-demo-resetter:latest
-    container_name: django-cfg-demo-resetter
-    restart: unless-stopped
-    env_file:
-      - .env.prod
-    environment:
-      # Configuration (1440 = 24 hours)
-      DEMO_RESET_INTERVAL_MINUTES: ${DEMO_RESET_INTERVAL_MINUTES:-1440}
-      DJANGO_CONTAINER_NAME: django-cfg-django
-
-      # Admin user configuration
-      DEMO_ADMIN_USERNAME: ${DEMO_ADMIN_USERNAME:-admin}
-      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@example.com}
-      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-admin123}
-      DEMO_ADMIN_FIRSTNAME: ${DEMO_ADMIN_FIRSTNAME:-Demo}
-      DEMO_ADMIN_LASTNAME: ${DEMO_ADMIN_LASTNAME:-Admin}
-    volumes:
-      # Mount docker socket to execute commands in Django container
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - dokploy-network
-    depends_on:
-      django:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "pgrep", "-f", "db-reset.sh"]
-      interval: 60s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    # Only run if ENABLE_DEMO_RESET is true
-    profiles:
-      - demo-reset
 
 networks:
   dokploy-network:

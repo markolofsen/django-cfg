@@ -1,116 +1,175 @@
-# DemoCFG Docker Management
-# Domain: democfg.com (Demo environment with auto-reset)
+# Django-CFG Docker Management
+# Domain: djangocfg.com (Production environment)
 
-.PHONY: help build up down restart logs status deploy createdb migrate
+.PHONY: help \
+        build build-django build-frontend \
+        up up-django up-infra up-frontend up-reset \
+        down down-django down-infra down-frontend \
+        restart status logs logs-django logs-rq \
+        createdb dropdb migrate shell bash \
+        prod deploy deploy-django deploy-reset \
+        health collectstatic reset-db
 
 .DEFAULT_GOAL := help
 
 # Colors
-BLUE := \033[0;34m
-GREEN := \033[0;32m
+BLUE   := \033[0;34m
+GREEN  := \033[0;32m
 YELLOW := \033[1;33m
-RED := \033[0;31m
-NC := \033[0m
+RED    := \033[0;31m
+NC     := \033[0m
+
+# Compose definitions
+ENV_PROD  := --env-file .env.prod
+ENV_LOCAL := --env-file .env.local
+
+DC_DJANGO   := docker compose -f docker-compose-prod.django.yaml   $(ENV_PROD)
+DC_INFRA    := docker compose -f docker-compose-prod.infra.yaml    $(ENV_PROD)
+DC_FRONTEND := docker compose -f docker-compose-prod.frontend.yaml $(ENV_PROD)
+DC_LOCAL    := docker compose -f docker-compose-local.yaml         $(ENV_LOCAL)
 
 ##@ General
 
 help: ## Display this help
-	@echo "$(BLUE)DemoCFG Docker Management$(NC)"
-	@echo "$(YELLOW)Domain: democfg.com$(NC)"
+	@echo "$(BLUE)Django-CFG Docker Management$(NC)"
+	@echo "$(YELLOW)Domain: djangocfg.com$(NC)"
 	@echo ""
-	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make $(GREEN)<target>$(NC)\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2 } /^##@/ { printf "\n$(YELLOW)%s$(NC)\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make $(GREEN)<target>$(NC)\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  $(GREEN)%-22s$(NC) %s\n", $$1, $$2 } /^##@/ { printf "\n$(YELLOW)%s$(NC)\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 ##@ Build
 
-build: ## Build all Docker images
-	@echo "$(BLUE)Building DemoCFG images...$(NC)"
-	@docker compose build
+build: build-django build-frontend ## Build all production images
 
-build-api: ## Build only API image
-	@echo "$(BLUE)Building API image...$(NC)"
-	@docker compose build api
+build-django: ## Build Django image
+	@echo "$(BLUE)Building django-cfg-django image...$(NC)"
+	@$(DC_DJANGO) build django
 
-build-frontend: ## Build frontend images
-	@echo "$(BLUE)Building frontend images...$(NC)"
-	@docker compose build frontend playground
+build-frontend: ## Build frontend image
+	@echo "$(BLUE)Building django-cfg-frontend image...$(NC)"
+	@$(DC_FRONTEND) build frontend
 
 ##@ Services
 
-up: ## Start all services
-	@echo "$(BLUE)Starting DemoCFG services...$(NC)"
-	@docker compose up -d
+up: up-django up-infra up-frontend ## Start all production services
 
-up-reset: ## Start all services including resetter
-	@echo "$(BLUE)Starting DemoCFG services with resetter...$(NC)"
-	@docker compose --profile demo-reset up -d
+up-django: ## Start Django group (django, rq-worker, rq-scheduler, grpc)
+	@echo "$(BLUE)Starting Django group...$(NC)"
+	@$(DC_DJANGO) up -d
 
-down: ## Stop all services
-	@echo "$(YELLOW)Stopping DemoCFG services...$(NC)"
-	@docker compose --profile demo-reset down
+up-infra: ## Start infra group (centrifugo)
+	@echo "$(BLUE)Starting infra group...$(NC)"
+	@$(DC_INFRA) up -d
 
-restart: ## Restart all services
-	@docker compose restart
+up-frontend: ## Start frontend group (frontend)
+	@echo "$(BLUE)Starting frontend group...$(NC)"
+	@$(DC_FRONTEND) up -d
 
-status: ## Show service status
-	@docker compose ps
+up-reset: ## Start frontend group including demo-resetter
+	@echo "$(BLUE)Starting frontend group with demo-resetter...$(NC)"
+	@$(DC_FRONTEND) --profile demo-reset up -d
 
-logs: ## Show logs (all services)
-	@docker compose logs -f --tail=100
+down: down-django down-infra down-frontend ## Stop all production services
 
-logs-api: ## Show API logs
-	@docker compose logs -f api --tail=100
+down-django: ## Stop Django group
+	@echo "$(YELLOW)Stopping Django group...$(NC)"
+	@$(DC_DJANGO) down
 
-logs-rq: ## Show RQ worker logs
-	@docker compose logs -f rq-worker --tail=100
+down-infra: ## Stop infra group
+	@echo "$(YELLOW)Stopping infra group...$(NC)"
+	@$(DC_INFRA) down
+
+down-frontend: ## Stop frontend group
+	@echo "$(YELLOW)Stopping frontend group...$(NC)"
+	@$(DC_FRONTEND) --profile demo-reset down
+
+restart: ## Restart all production services
+	@$(DC_DJANGO) restart
+	@$(DC_INFRA) restart
+	@$(DC_FRONTEND) restart
+
+status: ## Show service status (all groups)
+	@$(DC_DJANGO) ps
+	@$(DC_INFRA) ps
+	@$(DC_FRONTEND) ps
+
+logs: ## Show logs for all Django-group services
+	@$(DC_DJANGO) logs -f --tail=100
+
+logs-django: ## Show django container logs
+	@$(DC_DJANGO) logs -f django --tail=100
+
+logs-rq: ## Show rq-worker logs
+	@$(DC_DJANGO) logs -f rq-worker --tail=100
+
+##@ Health
+
+health: ## Wait until django-cfg-django is healthy
+	@echo "$(BLUE)Waiting for django-cfg-django to be healthy...$(NC)"
+	@until [ "$$(docker inspect -f '{{.State.Health.Status}}' django-cfg-django 2>/dev/null)" = "healthy" ]; do \
+		echo "  ...waiting"; \
+		sleep 5; \
+	done
+	@echo "$(GREEN)django-cfg-django is healthy$(NC)"
 
 ##@ Database
 
-createdb: ## Create democfg database with pgvector
-	@echo "$(BLUE)Creating democfg database...$(NC)"
-	@docker exec shared-db-postgres psql -U postgres -c "CREATE DATABASE democfg;" 2>/dev/null || echo "$(YELLOW)Database already exists$(NC)"
-	@docker exec shared-db-postgres psql -U postgres -d democfg -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || true
+createdb: ## Create djangocfg database with pgvector
+	@echo "$(BLUE)Creating djangocfg database...$(NC)"
+	@docker exec shared-db-postgres psql -U postgres -c "CREATE DATABASE djangocfg;" 2>/dev/null || echo "$(YELLOW)Database already exists$(NC)"
+	@docker exec shared-db-postgres psql -U postgres -d djangocfg -c "CREATE EXTENSION IF NOT EXISTS vector;" 2>/dev/null || true
 	@echo "$(GREEN)Database ready$(NC)"
 
-dropdb: ## Drop democfg database (DESTRUCTIVE!)
-	@echo "$(RED)Dropping democfg database...$(NC)"
-	@docker exec shared-db-postgres psql -U postgres -c "DROP DATABASE IF EXISTS democfg;"
+dropdb: ## Drop djangocfg database (DESTRUCTIVE!)
+	@echo "$(RED)Dropping djangocfg database...$(NC)"
+	@docker exec shared-db-postgres psql -U postgres -c "DROP DATABASE IF EXISTS djangocfg;"
 
 migrate: ## Run Django migrations
 	@echo "$(BLUE)Running migrations...$(NC)"
-	@docker exec democfg-api uv run python manage.py migrate
+	@docker exec django-cfg-django uv run python manage.py migrate
 
 ##@ Deployment
 
-deploy: createdb build up migrate status ## Full deployment
+prod: up-django health up-infra up-frontend ## Start full production stack (django first, then infra + frontend)
+	@echo "$(GREEN)Production stack is up$(NC)"
+
+deploy-django: build-django up-django health migrate ## Build + start Django group + wait healthy + migrate
 	@echo ""
-	@echo "$(GREEN)DemoCFG deployed!$(NC)"
+	@echo "$(GREEN)Django group deployed!$(NC)"
 	@echo ""
 	@echo "$(BLUE)Endpoints:$(NC)"
-	@echo "  API:        https://api.democfg.com"
-	@echo "  Frontend:   https://democfg.com"
-	@echo "  Playground: https://playground.democfg.com"
-	@echo "  WebSocket:  https://ws.democfg.com"
-	@echo "  gRPC:       https://grpc.democfg.com"
+	@echo "  API:       https://api.djangocfg.com"
+	@echo "  gRPC:      https://grpc.djangocfg.com"
+	@echo "  WebSocket: https://ws.djangocfg.com"
 	@echo ""
 
-deploy-reset: createdb build up-reset migrate status ## Full deployment with resetter
+deploy: createdb build up-django health migrate up-infra up-frontend status ## Full production deployment
 	@echo ""
-	@echo "$(GREEN)DemoCFG deployed with auto-reset!$(NC)"
+	@echo "$(GREEN)Django-CFG deployed!$(NC)"
+	@echo ""
+	@echo "$(BLUE)Endpoints:$(NC)"
+	@echo "  API:       https://api.djangocfg.com"
+	@echo "  gRPC:      https://grpc.djangocfg.com"
+	@echo "  WebSocket: https://ws.djangocfg.com"
+	@echo ""
+
+deploy-reset: createdb build up-django health migrate up-infra up-reset status ## Full deployment with demo-resetter
+	@echo ""
+	@echo "$(GREEN)Django-CFG deployed with auto-reset!$(NC)"
 
 ##@ Maintenance
 
 shell: ## Open Django shell
-	@docker exec -it democfg-api uv run python manage.py shell
+	@docker exec -it django-cfg-django uv run python manage.py shell
 
-bash: ## Open bash in API container
-	@docker exec -it democfg-api bash
+bash: ## Open bash in django container
+	@docker exec -it django-cfg-django bash
 
 reset-db: ## Manually reset demo database
 	@echo "$(YELLOW)Resetting demo database...$(NC)"
-	@docker exec democfg-api uv run python manage.py flush --no-input
-	@docker exec democfg-api uv run python manage.py migrate
-	@docker exec democfg-api uv run python manage.py createsuperuser --noinput || true
+	@docker exec django-cfg-django uv run python manage.py flush --no-input
+	@docker exec django-cfg-django uv run python manage.py migrate
+	@docker exec django-cfg-django uv run python manage.py createsuperuser --noinput || true
 	@echo "$(GREEN)Database reset complete$(NC)"
 
 collectstatic: ## Collect static files
-	@docker exec democfg-api uv run python manage.py collectstatic --noinput
+	@docker exec django-cfg-django uv run python manage.py collectstatic --noinput

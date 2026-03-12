@@ -38,10 +38,11 @@ class AdminConfig(BaseModel):
     display_fields: List[FieldConfigType] = []
 
     # Filters and search
-    # Accepts List[FilterSpec] where FilterSpec = str | type | tuple[str, type]
+    # Accepts List[FilterSpec] where FilterSpec = str | type | tuple[str, type] | FilterConfig
     list_filter: List[FilterSpec] = []
     search_fields: List[str] = []
     date_hierarchy: str | None = None
+    show_facets: bool = False  # Show result counts next to filter options (Django 5.0+)
 
     # Ordering
     ordering: List[str] = []
@@ -1054,18 +1055,82 @@ fieldsets: DjangoFieldsets = (
 
 ### FilterSpec
 
-TypeAlias for `list_filter` entries. Accepts a plain string field name, a filter class, or a `(field_name, filter_class)` tuple.
+TypeAlias for `list_filter` entries. Accepts a plain string field name, a filter class,
+a `(field_name, filter_class)` tuple, or a `FilterConfig` instance.
 
 ```python
 from django_cfg.modules.django_admin import FilterSpec
 
-FilterSpec = str | type | tuple[str, type]
+FilterSpec = str | type | tuple[str, type] | FilterConfig
+```
 
-# Examples:
-list_filter: List[FilterSpec] = [
-    "status",                          # str — field name
-    MyCustomFilter,                    # type — filter class
-    ("created_at", DateRangeFilter),   # tuple — (field, filter class)
+---
+
+### FilterConfig
+
+Pydantic model for declarative filter configuration. Converts to the Django-compatible
+`list_filter` entry format under the hood.
+
+```python
+from django_cfg.modules.django_admin import FilterConfig
+
+FilterConfig(
+    field: str,                         # Model field name
+    type: FilterType | None = None,     # One of 17 preset filter types
+    filter_class: type | None = None,   # Raw Django/Unfold class (bypasses type)
+    title: str | None = None,           # Sidebar label (SimpleListFilter types only)
+)
+```
+
+**`type` must be set unless `filter_class` is provided.**
+
+```python
+from django_cfg.modules.django_admin import AdminConfig, FilterConfig
+
+config = AdminConfig(
+    model=Order,
+    list_filter=[
+        FilterConfig(field='status',     type='choices_dropdown'),
+        FilterConfig(field='created_at', type='range_date'),
+        FilterConfig(field='amount',     type='range_numeric'),
+        FilterConfig(field='customer',   type='autocomplete'),
+        FilterConfig(field='is_active',  type='boolean'),
+        # Raw entries still work alongside FilterConfig:
+        'currency',
+        MyCustomFilter,
+    ],
+)
+```
+
+See **[Filters Guide](./filters)** for all type values and usage patterns.
+
+---
+
+### FilterType
+
+`Literal` type with all valid `FilterConfig.type` values:
+
+```python
+FilterType = Literal[
+    # FieldListFilter-based (bound to model field)
+    "choices_dropdown",          # CharField/IntegerField with choices — single select
+    "choices_dropdown_multiple", # Same — multi-select
+    "choices_checkbox",          # choices as checkboxes
+    "choices_radio",             # choices as radio buttons
+    "boolean",                   # BooleanField — Yes/No
+    "related_dropdown",          # ForeignKey — single select
+    "related_dropdown_multiple", # ForeignKey — multi-select
+    "related_checkbox",          # ForeignKey — checkboxes
+    "autocomplete",              # ForeignKey with search input (needs related search_fields)
+    "autocomplete_multiple",     # Same — multi-select
+    "range_numeric",             # Numeric from/to inputs
+    "slider",                    # Numeric slider (auto min/max from queryset)
+    "range_date",                # DateField from/to
+    "range_datetime",            # DateTimeField from/to
+    "text",                      # icontains text search
+    # SimpleListFilter-based (dynamic subclass — needs custom queryset logic)
+    "dropdown",                  # Single dropdown
+    "dropdown_multiple",         # Multi dropdown
 ]
 ```
 
@@ -1159,7 +1224,9 @@ from django_cfg.modules.django_admin import (
     FlashStyle,          # Literal: "code_warning" | "code_error" | ... (8 values)
     FieldConfigType,     # Discriminated union of all 19 field config types
     DjangoFieldsets,     # TypeAlias: tuple[tuple[str | None, dict[str, Any]], ...]
-    FilterSpec,          # TypeAlias: str | type | tuple[str, type]
+    FilterSpec,          # TypeAlias: str | type | tuple[str, type] | FilterConfig
+    FilterConfig,        # Pydantic model for declarative list_filter entries
+    FilterType,          # Literal of all 17 filter type keys
 )
 
 # Field types

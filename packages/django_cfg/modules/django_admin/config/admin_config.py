@@ -34,7 +34,9 @@ from django.db import models
 from pydantic import BaseModel, ConfigDict, Field
 
 # TypeAlias for Django list_filter entries
-FilterSpec: TypeAlias = str | type | tuple[str, type]
+from .filter_config import FilterConfig  # noqa: E402
+
+FilterSpec: TypeAlias = str | type | tuple[str, type] | FilterConfig
 
 from .action_config import ActionConfig
 from .background_task_config import BackgroundTaskConfig
@@ -74,11 +76,18 @@ class AdminConfig(BaseModel):
     # Filters and search
     list_filter: List[FilterSpec] = Field(
         default_factory=list,
-        description="List filters (supports strings, filter classes, and tuples like ('field', FilterClass))"
+        description=(
+            "List filters. Accepts strings, Unfold/Django filter classes, tuples, "
+            "or FilterConfig(field='x', type='choices_dropdown') for declarative style."
+        ),
     )
     search_fields: List[str] = Field(
         default_factory=list,
         description="Searchable fields"
+    )
+    show_facets: bool = Field(
+        False,
+        description="Show result counts next to filter options (Django 5.0+, requires SHOW_FACETS=ShowFacets.ALLOW in settings)",
     )
 
     # Ordering

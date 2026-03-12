@@ -26,6 +26,22 @@ from .views import ViewMixin
 logger = logging.getLogger(__name__)
 
 
+def _resolve_list_filter(filters: list) -> list:
+    """
+    Resolve list_filter entries, converting FilterConfig instances to
+    Django-compatible entries. Passes raw str/type/tuple through unchanged.
+    """
+    from ...config.filter_config import FilterConfig as _FilterConfig
+
+    resolved = []
+    for entry in filters:
+        if isinstance(entry, _FilterConfig):
+            resolved.append(entry.to_list_filter_entry())
+        else:
+            resolved.append(entry)
+    return resolved
+
+
 def _register_flash_fields(cls: Any, flash_fields_config: dict[str, Any]) -> None:
     """
     Register declarative one_time_flash_fields on the admin class.
@@ -114,7 +130,9 @@ class PydanticAdminMixin(ViewMixin):
 
         # Basic list display
         cls.list_display = build_list_display(cls, config)
-        cls.list_filter = config.list_filter
+        cls.list_filter = _resolve_list_filter(config.list_filter)
+        if config.show_facets:
+            cls.show_facets = True
         cls.search_fields = config.search_fields
         cls.ordering = config.ordering if config.ordering else []
 

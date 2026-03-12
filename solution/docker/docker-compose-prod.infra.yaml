@@ -1,0 +1,49 @@
+name: django-cfg
+
+# Django-CFG - Production: Infra Group
+# Services: centrifugo
+
+services:
+  # Centrifugo WebSocket Server
+  centrifugo:
+    image: centrifugo/centrifugo:v6
+    container_name: django-cfg-centrifugo
+    restart: unless-stopped
+    entrypoint: ["/docker-entrypoint.sh"]
+    environment:
+      # Only Centrifugo-specific variables (no CENTRIFUGO__ prefixed vars)
+      CENTRIFUGO_API_KEY: centrifugo-api-key-change-in-production-min-32-chars
+      CENTRIFUGO_TOKEN_HMAC_SECRET: django-secret-key-change-in-production-at-least-32-chars
+      CENTRIFUGO_ADMIN_PASSWORD: admin
+      CENTRIFUGO_ADMIN_SECRET: admin-secret-change-in-production
+      CENTRIFUGO_LOG_LEVEL: info
+    volumes:
+      - ./services/centrifugo/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+      - ./services/centrifugo/config.json:/centrifugo/config.template.json:ro
+    networks:
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.djangocfg-centrifugo.rule=Host(`ws.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-centrifugo.entrypoints=websecure"
+      - "traefik.http.routers.djangocfg-centrifugo.service=djangocfg-centrifugo"
+      - "traefik.http.routers.djangocfg-centrifugo.tls=true"
+      - "traefik.http.services.djangocfg-centrifugo.loadbalancer.server.port=8000"
+
+networks:
+  dokploy-network:
+    external: true

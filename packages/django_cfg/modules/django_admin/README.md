@@ -432,18 +432,49 @@ config = AdminConfig(
 
 ## Filters & Search
 
+### Declarative style (recommended)
+
 ```python
+from django_cfg.modules.django_admin import AdminConfig, FilterConfig
+
 config = AdminConfig(
-    model=Property,
-    list_filter=['status', 'listing_type', MyCustomFilter],  # str, class, or (field, class)
-    search_fields=['title', 'listing_id', 'address'],
-    autocomplete_fields=['source', 'location'],
-    ordering=['-created_at'],
+    model=Order,
+    list_filter=[
+        FilterConfig(field='status',     type='choices_dropdown'),
+        FilterConfig(field='created_at', type='range_date'),
+        FilterConfig(field='amount',     type='range_numeric'),
+        FilterConfig(field='customer',   type='autocomplete'),  # needs search_fields on CustomerAdmin
+        FilterConfig(field='is_active',  type='boolean'),
+        # Raw entries still work:
+        'currency',
+        MyCustomFilter,
+    ],
+    show_facets=True,   # Show result counts next to filter options (Django 5.0+)
+    search_fields=['id', 'customer__email'],
     date_hierarchy='created_at',
 )
 ```
 
-`list_filter` accepts `FilterSpec = str | type | tuple[str, type]`.
+### FilterType quick reference
+
+| `type` | Use case |
+|--------|----------|
+| `choices_dropdown` / `choices_checkbox` / `choices_radio` | Field with `choices=` |
+| `boolean` | `BooleanField` |
+| `related_dropdown` / `related_checkbox` | `ForeignKey` |
+| `autocomplete` / `autocomplete_multiple` | `ForeignKey` with search |
+| `range_numeric` / `slider` | Numeric from/to |
+| `range_date` / `range_datetime` | Date/datetime from/to |
+| `text` | Text `icontains` search |
+| `dropdown` / `dropdown_multiple` | Custom `SimpleListFilter` |
+
+### Raw style (still works)
+
+```python
+list_filter=['status', MyCustomFilter, ('created_at', RangeDateFilter)]
+```
+
+`FilterSpec = str | type | tuple[str, type] | FilterConfig`
 
 ---
 
@@ -512,7 +543,9 @@ See [icons/constants.py](./icons/constants.py) for the full list.
 | Name | Type | Use Case |
 |------|------|----------|
 | `FieldConfigType` | Discriminated union of all 19 field types | `display_fields` annotation |
-| `FilterSpec` | `str \| type \| tuple[str, type]` | `list_filter` annotation |
+| `FilterSpec` | `str \| type \| tuple[str, type] \| FilterConfig` | `list_filter` annotation |
+| `FilterConfig` | Pydantic model | Declarative `list_filter` entry |
+| `FilterType` | `Literal[17 values]` | Valid `FilterConfig.type` keys |
 | `DjangoFieldsets` | `tuple[tuple[str \| None, dict], ...]` | Django admin fieldsets format |
 | `FieldsetTuple` | `tuple[str \| None, dict]` | Single fieldset entry |
 | `FieldsetOptions` | `dict[str, Any]` | Fieldset options dict |

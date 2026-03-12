@@ -1,0 +1,74 @@
+name: django-cfg
+
+# Django-CFG - Production: Frontend Group
+# Services: frontend, demo-resetter
+
+services:
+  # Frontend Admin (demo.djangocfg.com)
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/services/frontend/Dockerfile.admin
+    image: django-cfg-frontend:latest
+    container_name: django-cfg-frontend
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+    networks:
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.djangocfg-demo.rule=Host(`demo.djangocfg.com`)"
+      - "traefik.http.routers.djangocfg-demo.entrypoints=websecure"
+      - "traefik.http.routers.djangocfg-demo.tls=true"
+      - "traefik.http.services.djangocfg-demo.loadbalancer.server.port=3200"
+
+  # Demo Database Auto-Resetter (for demo environment only)
+  demo-resetter:
+    build:
+      context: ..
+      dockerfile: docker/services/demo-resetter/Dockerfile
+    image: django-cfg-demo-resetter:latest
+    container_name: django-cfg-demo-resetter
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      # Configuration (1440 = 24 hours)
+      DEMO_RESET_INTERVAL_MINUTES: ${DEMO_RESET_INTERVAL_MINUTES:-1440}
+      DJANGO_CONTAINER_NAME: django-cfg-django
+
+      # Admin user configuration
+      DEMO_ADMIN_USERNAME: ${DEMO_ADMIN_USERNAME:-admin}
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@example.com}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-admin123}
+      DEMO_ADMIN_FIRSTNAME: ${DEMO_ADMIN_FIRSTNAME:-Demo}
+      DEMO_ADMIN_LASTNAME: ${DEMO_ADMIN_LASTNAME:-Admin}
+    volumes:
+      # Mount docker socket to execute commands in Django container
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "db-reset.sh"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # Only run if ENABLE_DEMO_RESET is true
+    profiles:
+      - demo-reset
+
+networks:
+  dokploy-network:
+    external: true

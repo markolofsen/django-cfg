@@ -73,6 +73,8 @@ from .config import (
     FieldsetOptions,
     FieldsetTuple,
     FilterSpec,
+    FilterConfig,
+    FilterType,
     FlashFieldConfig,
     FlashStyle,
     ForeignKeyField,
@@ -175,6 +177,8 @@ __all__ = [
     # Type aliases and discriminated unions
     "FieldConfigType",
     "FilterSpec",
+    "FilterConfig",
+    "FilterType",
     "DjangoFieldsets",
     "FieldsetOptions",
     "FieldsetTuple",
