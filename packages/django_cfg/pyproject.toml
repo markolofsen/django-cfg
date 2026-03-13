@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.7.64"
+version = "1.7.69"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -62,6 +62,10 @@ dependencies = [
     "loguru>=0.7.0,<1.0",
     "cachetools>=5.3.0,<7.0",
     "toml>=0.10.2,<0.11.0",
+
+    # Image rendering (django_ogimage)
+    "pillow>=11.0.0,<12.0",
+    "pictex>=2.1.0,<3.0",
     "coolname>=2.2.0,<3.0",
     "tzlocal>=5.3.1,<6.0",
     "psutil>=7.0.0",
@@ -428,7 +432,6 @@ dev = [
     "psutil>=7.0.0",
     "aiohttp>=3.12.15,<4.0",
     "pytest-asyncio>=1.2.0,<2.0",
-    "pillow>=11.3.0,<12.0",
     "pytest>=8.4.2,<9.0",
     "pytest-django>=4.11.1,<5.0",
     "fakeredis>=2.31.3,<3.0",
@@ -513,6 +516,8 @@ exclude = [
     "**/static/frontend/*.zip",
     "**/static/frontend/*.version",
     "**/apps/tools/geo/data/*.json",
+    # All fonts excluded — system font used as default, others downloaded on demand
+    "**/django_ogimage/core/assets/fonts/*.ttf",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -539,6 +544,7 @@ exclude = [
     "**/static/frontend/*.zip",
     "**/static/frontend/*.version",
     "**/apps/tools/geo/data/*.json",
+    "**/django_ogimage/core/assets/fonts/*.ttf",
 ]
 
 [tool.hatch.build.targets.wheel.force-include]

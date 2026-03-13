@@ -167,6 +167,7 @@ class JobViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         tags=["RQ Jobs"],
         summary="Cancel job",
         description="Cancels a job. For queued jobs, cancels immediately. For running jobs, sets cancellation flag for cooperative cancellation. Use force=true to send SIGTERM (dangerous).",
+        request=None,
         parameters=[
             OpenApiParameter(
                 name="id",

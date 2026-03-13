@@ -1,0 +1,94 @@
+---
+title: OG Image Configuration
+description: Environment variables and settings for the django-cfg OG image module.
+sidebar_label: Configuration
+sidebar_position: 3
+keywords:
+  - django-cfg ogimage settings
+  - OGIMAGE env vars
+  - ogimage configuration
+---
+
+# OG Image Configuration
+
+All settings are optional and configured via environment variables. No changes to `settings.py` are required beyond the standard `MEDIA_ROOT` / `MEDIA_URL`.
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `OGIMAGE__MEDIA_SUBDIR` | `ogimage` | Subdirectory inside `MEDIA_ROOT` where PNG files are stored |
+| `OGIMAGE__CACHE_ENABLED` | `true` | Set to `false` to always re-render (useful in development) |
+| `DJANGO_CFG_FONTS_DIR` | `~/.cache/django_cfg/fonts/` | Directory where fonts are downloaded and cached |
+
+### Examples
+
+```bash
+# .env
+
+# Store images in a custom subdirectory
+OGIMAGE__MEDIA_SUBDIR=assets/og
+
+# Disable cache in development (always re-renders)
+OGIMAGE__CACHE_ENABLED=false
+
+# Custom font cache (e.g. shared Docker volume)
+DJANGO_CFG_FONTS_DIR=/var/cache/django_cfg/fonts
+```
+
+## Fonts
+
+Fonts are downloaded on first use and cached locally — nothing is bundled with the package. At Django startup all fonts begin downloading in background daemon threads, so they are ready by the time the first OG image request arrives.
+
+**Download locations:**
+
+| Font | Source |
+|---|---|
+| Inter, Noto Sans KR/JP/SC/Arabic/Hebrew | `github.com/google/fonts` (variable TTF) |
+
+If a download fails (no network, SSL error) the module falls back to a system font without raising an exception. To update font URLs, edit `core/font_sources.py` in the package source.
+
+## Django settings requirements
+
+The module reads `settings.MEDIA_ROOT` and `settings.MEDIA_URL` — both must be set:
+
+```python
+# settings.py
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+```
+
+Both are configured automatically if you use djangocfg's `DjangoConfig`.
+
+## Cache layout
+
+Images are stored in a two-level sharded directory to avoid inode limits:
+
+```
+MEDIA_ROOT/
+└── ogimage/
+    └── ab/
+        └── cd/
+            └── abcdef1234...png
+```
+
+The path components (`ab`, `cd`) are the first 4 characters of the SHA256 cache key — the same sharding scheme Git uses for objects.
+
+## Cache key
+
+The cache key is `SHA256[:40]` computed from a stable JSON representation of `OGImageParams` — **excluding `page_url`**. This means:
+
+- Same visual params + same title → same cached file, regardless of the source page
+- Changing `page_url` does not invalidate the cache
+- Changing any visual param or content field produces a new file
+
+## Disabling cache
+
+When `OGIMAGE__CACHE_ENABLED=false`, the view re-renders on every request and overwrites the file. Useful for visual development — change renderer code and refresh immediately.
+
+## Related
+
+- [Overview](/docs/features/modules/og-image/overview) — quick start
+- [Presets](/docs/features/modules/og-image/presets) — color scheme presets
+- [Layouts](/docs/features/modules/og-image/layouts) — layout presets
+- [Branding & Icons](/docs/features/modules/og-image/branding) — logo, icons, `get_branded_og_url`

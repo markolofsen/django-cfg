@@ -103,6 +103,7 @@ def get_default_cfg_group():
 
 # Core API endpoints (always enabled)
 urlpatterns = [
+    path('og/', include('django_cfg.modules.django_ogimage.http.urls')),
     path('cfg/health/', include('django_cfg.apps.api.health.urls')),
     path('cfg/endpoints/', include('django_cfg.apps.api.endpoints.urls')),
     path('cfg/commands/', include('django_cfg.apps.api.commands.urls')),
@@ -137,3 +138,7 @@ if base_module.is_grpc_enabled():
 # Geo app (countries, states, cities)
 if base_module.is_geo_enabled():
     urlpatterns.append(path('cfg/geo/', include('django_cfg.apps.tools.geo.urls')))
+
+# Frontend Monitor app (Sentry-like browser error collection)
+if base_module.is_frontend_monitor_enabled():
+    urlpatterns.append(path('cfg/frontend-monitor/', include('django_cfg.apps.system.frontend_monitor.urls')))

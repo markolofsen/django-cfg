@@ -7,15 +7,17 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import TYPE_CHECKING
 
+from ..models import ReferenceObject, SchemaObject
+from ...ir import IRSchemaObject
+
 if TYPE_CHECKING:
-    from ..models import ReferenceObject, SchemaObject
-    from ...ir import IRSchemaObject
+    from ._protocol import ParserState
 
 
 class SchemaParserMixin:
     """Parses OpenAPI component schemas and inline schemas to IRSchemaObject."""
 
-    def _parse_all_schemas(self) -> dict[str, IRSchemaObject]:
+    def _parse_all_schemas(self: ParserState) -> dict[str, IRSchemaObject]:
         """
         Parse all schemas from components.
 
@@ -25,7 +27,6 @@ class SchemaParserMixin:
         if not self.spec.components or not self.spec.components.schemas:
             return {}
 
-        from ..models import ReferenceObject
         schemas = {}
         for name, schema_or_ref in self.spec.components.schemas.items():
             if isinstance(schema_or_ref, ReferenceObject):
@@ -33,13 +34,10 @@ class SchemaParserMixin:
             schemas[name] = self._parse_schema(name, schema_or_ref)
         return schemas
 
-    def _parse_schema(self, name: str, schema: SchemaObject) -> IRSchemaObject:
+    def _parse_schema(self: ParserState, name: str, schema: SchemaObject) -> IRSchemaObject:
         """Parse SchemaObject to IRSchemaObject."""
         if name in self._schema_cache:
             return self._schema_cache[name]
-
-        from ..models import ReferenceObject
-        from ...ir import IRSchemaObject
 
         is_request = name.endswith("Request")
         is_patch = name.startswith("Patched")
@@ -145,7 +143,7 @@ class SchemaParserMixin:
         self._schema_cache[name] = ir_schema
         return ir_schema
 
-    def _schema_exists(self, name: str) -> bool:
+    def _schema_exists(self: ParserState, name: str) -> bool:
         """Check if schema exists in components."""
         if not self.spec.components or not self.spec.components.schemas:
             return False
@@ -153,7 +151,6 @@ class SchemaParserMixin:
 
     def _resolve_ref(self, ref: ReferenceObject) -> IRSchemaObject:
         """Resolve $ref to a lightweight IRSchemaObject reference stub."""
-        from ...ir import IRSchemaObject
         if not ref.ref.startswith("#/components/schemas/"):
             raise ValueError(f"Unsupported $ref format: {ref.ref}")
         schema_name = ref.ref.split("/")[-1]
@@ -166,7 +163,6 @@ class SchemaParserMixin:
         DRF-spectacular wraps enum refs in allOf:
             "status": {"allOf": [{"$ref": "..."}], "description": "..."}
         """
-        from ..models import ReferenceObject
         for combinator in (schema.allOf, schema.anyOf, schema.oneOf):
             if combinator:
                 for item in combinator:
@@ -181,13 +177,12 @@ class SchemaParserMixin:
 
     def _normalize_type(self, schema: SchemaObject) -> str:
         """Normalize schema type to a single string (handles OAS 3.1 type arrays)."""
-        from ..models import SchemaObject as _Schema
         if schema.base_type:
             return schema.base_type
 
         if schema.anyOf and len(schema.anyOf) == 2:
             for item in schema.anyOf:
-                if isinstance(item, _Schema) and item.base_type and item.base_type != 'null':
+                if isinstance(item, SchemaObject) and item.base_type and item.base_type != 'null':
                     return item.base_type
 
         if schema.oneOf and len(schema.oneOf) == 2:
@@ -195,7 +190,7 @@ class SchemaParserMixin:
             has_empty = False
             actual_type = None
             for item in schema.oneOf:
-                if isinstance(item, _Schema):
+                if isinstance(item, SchemaObject):
                     if item.base_type == 'null':
                         has_null = True
                     elif item.base_type:
@@ -227,9 +222,8 @@ class SchemaParserMixin:
 
         return "string"
 
-    def _schema_has_binary_field(self, schema_name: str) -> bool:
+    def _schema_has_binary_field(self: ParserState, schema_name: str) -> bool:
         """Check if a schema has any binary (file upload) fields."""
-        from ..models import ReferenceObject
         if not self.spec.components or not self.spec.components.schemas:
             return False
         schema = self.spec.components.schemas.get(schema_name)
@@ -243,7 +237,3 @@ class SchemaParserMixin:
             if prop_schema.format == "binary":
                 return True
         return False
-
-    def _to_pascal_case(self, name: str) -> str:
-        from ...utils.naming import to_pascal_case
-        return to_pascal_case(name)

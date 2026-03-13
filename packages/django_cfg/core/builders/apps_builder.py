@@ -138,6 +138,10 @@ class InstalledAppsBuilder:
         if self.config.geo and self.config.geo.enabled:
             apps.append("django_cfg.apps.tools.geo")
 
+        # Frontend Monitor app (Sentry-like browser error collection)
+        if self.config.frontend_monitor and self.config.frontend_monitor.enabled:
+            apps.append("django_cfg.apps.system.frontend_monitor")
+
         return apps
 
     def _get_extension_apps(self) -> List[str]:

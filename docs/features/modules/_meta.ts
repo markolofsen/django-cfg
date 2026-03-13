@@ -14,5 +14,6 @@ export default {
   'telegram': 'Telegram Bot',
   'import-export': 'Import/Export',
   'django-admin': 'Django Admin',
-  'unfold': 'Django Unfold'
+  'unfold': 'Django Unfold',
+  'og-image': 'OG Images'
 }

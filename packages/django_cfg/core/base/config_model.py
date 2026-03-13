@@ -24,6 +24,7 @@ from ...models import (
     DjangoRQConfig,
     DRFConfig,
     EmailConfig,
+    FrontendMonitorConfig,
     GeoConfig,
     GitHubOAuthConfig,
     LimitsConfig,
@@ -373,6 +374,15 @@ class DjangoConfig(BaseModel):
     geo: Optional[GeoConfig] = Field(
         default=None,
         description="Geographic data (countries, states, cities)",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                       FRONTEND MONITORING                                 ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    frontend_monitor: Optional[FrontendMonitorConfig] = Field(
+        default=None,
+        description="Frontend error monitoring (Sentry-like browser event collection)",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

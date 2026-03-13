@@ -1,0 +1,117 @@
+---
+title: OG Image Layouts
+description: Layout presets for OG image generation — control accent bar, brand overlay, and content position without any custom code.
+sidebar_label: Layouts
+sidebar_position: 3
+keywords:
+  - django-cfg og image layouts
+  - ogimage layout preset
+  - OGLayoutPreset
+---
+
+# OG Image Layouts
+
+Layout presets control the visual structure of a rendered image: where the accent bar appears, where the brand overlay (logo + site name) is placed, and how content text is aligned.
+
+## Built-in presets
+
+| Preset | Accent | Brand | Content align | Title font |
+|---|---|---|---|---|
+| `DEFAULT` | top | bottom-left | center | 68 |
+| `HERO` | top | top-left | bottom | 80 |
+| `ARTICLE` | none | top-left | center | 60 |
+| `MINIMAL` | none | none | center | 72 |
+
+### DEFAULT
+
+Standard OG image — accent bar at the top, brand in the bottom-left corner, content centered vertically.
+
+```python
+from django_cfg.modules.django_ogimage import DEFAULT, render, OGImageParams
+
+png = render(OGImageParams(title="Hello"), layout=DEFAULT)
+```
+
+### HERO
+
+Large title, content pushed to the bottom, brand in the top-left — good for landing page screenshots or product images.
+
+```python
+from django_cfg.modules.django_ogimage import HERO, get_branded_og_url, DARK_BLUE
+
+url = get_branded_og_url(
+    DARK_BLUE.to_params(title="Product Launch"),
+    site_name="Acme",
+    layout=HERO,
+)
+```
+
+### ARTICLE
+
+No accent bar, smaller title font, brand in the top-left — editorial look for blog posts and documentation pages.
+
+```python
+from django_cfg.modules.django_ogimage import ARTICLE
+
+url = get_branded_og_url(
+    DARK_BLUE.to_params(title="How to Deploy Django", description="Step-by-step guide"),
+    site_name="Acme Docs",
+    layout=ARTICLE,
+)
+```
+
+### MINIMAL
+
+No accent, no brand overlay — content only, centered. Maximum whitespace.
+
+```python
+from django_cfg.modules.django_ogimage import MINIMAL
+
+png = render(OGImageParams(title="Just the title"), layout=MINIMAL)
+```
+
+## Registry
+
+```python
+from django_cfg.modules.django_ogimage import ALL, get_layout
+
+# All presets as dict
+# {"default": DEFAULT, "hero": HERO, "article": ARTICLE, "minimal": MINIMAL}
+
+layout = get_layout("hero")         # returns HERO
+layout = get_layout("nonexistent")  # raises ValueError
+```
+
+## OGLayoutPreset fields
+
+| Field | Type | Default (DEFAULT) | Description |
+|---|---|---|---|
+| `name` | str | `"default"` | Registry key |
+| `accent_position` | `"top"` \| `"bottom"` \| `"none"` | `"top"` | Accent bar placement |
+| `brand_position` | `"top-left"` \| `"top-right"` \| `"bottom-left"` \| `"bottom-right"` \| `"none"` | `"bottom-left"` | Brand overlay corner |
+| `content_align` | `"center"` \| `"start"` \| `"end"` | `"center"` | Vertical alignment of title/description block |
+| `padding_x` | int | 60 | Horizontal padding in pixels |
+| `padding_y` | int | 60 | Vertical padding in pixels |
+| `logo_size` | int | 40 | Logo/icon height in pixels |
+| `site_name_font_size` | int | 26 | Site name label font size |
+| `title_font_size` | int | 68 | Title font size |
+| `description_font_size` | int | 30 | Description font size |
+
+Presets are **frozen** — mutation raises an exception. They are also hashable and safe to use as dict keys or in sets.
+
+## `corner_to_fixed_pos`
+
+Low-level helper used internally by the renderer to translate a `brand_position` corner name into pixel coordinates:
+
+```python
+from django_cfg.modules.django_ogimage import corner_to_fixed_pos
+
+pos = corner_to_fixed_pos("bottom-left", px=60, py=60)
+# → {"bottom": 68, "left": 60}
+```
+
+## Related
+
+- [Overview](/docs/features/modules/og-image/overview) — quick start
+- [Branding & Icons](/docs/features/modules/og-image/branding) — `get_branded_og_url` uses layouts
+- [Presets](/docs/features/modules/og-image/presets) — color scheme presets

@@ -21,6 +21,22 @@ class DjangoCfgConfig(AppConfig):
         """Called when Django is ready - register integrations."""
         self._register_constance_admin()
         self._install_type_stubs()
+        self._patch_drf_authentication()
+
+    def _patch_drf_authentication(self):
+        """
+        Apply JWT-aware DRF authentication patch.
+
+        Ensures that AuthenticationFailed raised by non-JWT backends (e.g. API-key
+        backends) does not block JWT authentication when the request carries a JWT
+        Bearer token.  Called here — after all apps are loaded — so the patch is
+        guaranteed to be in place before the first request is handled.
+        """
+        try:
+            from django_cfg.middleware.authentication import _patch_drf_authenticate
+            _patch_drf_authenticate()
+        except Exception:
+            pass
 
     def _register_constance_admin(self):
         """Register Constance admin with Unfold integration."""

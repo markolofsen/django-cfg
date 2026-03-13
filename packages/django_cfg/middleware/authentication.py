@@ -3,6 +3,10 @@ Custom JWT Authentication for Django CFG.
 
 Extends rest_framework_simplejwt.authentication.JWTAuthentication to automatically
 update user's last_login field on successful authentication.
+
+Also provides JWTAwareAuthenticationMixin for explicit use in project backends,
+and patches DRF's Request._authenticate so that any extra authentication backend
+automatically skips JWT tokens without requiring any changes in the project.
 """
 
 import logging
@@ -10,9 +14,83 @@ import logging
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import exceptions
+from rest_framework.request import Request as DRFRequest
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 logger = logging.getLogger(__name__)
+
+# JWT tokens always start with Base64url-encoded '{"' = 'eyJ'
+_JWT_PREFIX = "eyJ"
+
+
+def _bearer_is_jwt(request) -> bool:
+    """Return True if the request carries a JWT Bearer token."""
+    auth = request.META.get("HTTP_AUTHORIZATION", "")
+    if auth.startswith("Bearer "):
+        return auth[7:].startswith(_JWT_PREFIX)
+    return False
+
+
+def _patch_drf_authenticate():
+    """
+    Monkey-patch DRF Request._authenticate once at import time.
+
+    The patched version catches AuthenticationFailed raised by non-JWT backends
+    when the request carries a JWT Bearer token, and continues to the next
+    backend instead of propagating the error.  This lets projects register
+    API-key backends in extra_authentication_classes without any changes to
+    those backends — JWT logins just fall through to JWTAuthentication.
+    """
+    def _jwt_aware_authenticate(self):
+        jwt_request = _bearer_is_jwt(self)
+        for authenticator in self.authenticators:
+            try:
+                result = authenticator.authenticate(self)
+            except exceptions.AuthenticationFailed:
+                if jwt_request:
+                    # This backend rejected a JWT token — skip it, try the next one
+                    continue
+                self._not_authenticated()
+                raise
+            except exceptions.APIException:
+                self._not_authenticated()
+                raise
+
+            if result is not None:
+                self._authenticator = authenticator
+                self.user, self.auth = result
+                return
+
+        self._not_authenticated()
+
+    DRFRequest._authenticate = _jwt_aware_authenticate  # type: ignore[method-assign]
+
+
+# Apply the patch immediately when this module is imported.
+# This module is always imported by DRF before the first request because
+# 'django_cfg.middleware.authentication.JWTAuthenticationWithLastLogin' is in
+# DEFAULT_AUTHENTICATION_CLASSES — DRF imports it on first authenticate() call.
+# The patch is idempotent: re-running it is safe (replaces the same method again).
+# DjangoCfgConfig.ready() also calls it for even earlier application.
+_patch_drf_authenticate()
+
+
+class JWTAwareAuthenticationMixin:
+    """
+    Optional explicit mixin for API-key backends.
+
+    Not required when using django_cfg — the DRF patch above handles it
+    automatically for all backends.  Kept for projects that want to be
+    explicit or that don't use django_cfg's DRF integration.
+    """
+
+    JWT_PREFIX = _JWT_PREFIX
+
+    def authenticate(self, request):
+        auth = request.META.get("HTTP_AUTHORIZATION", "")
+        if auth.startswith("Bearer ") and auth[7:].startswith(self.JWT_PREFIX):
+            return None
+        return super().authenticate(request)  # type: ignore[misc]
 
 User = get_user_model()
 

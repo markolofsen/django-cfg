@@ -42,6 +42,7 @@ from .django.currency import CurrencyConfig
 from .django.django_rq import DjangoRQConfig, RQQueueConfig
 from .django.storage import StorageConfig
 from .django.environment import EnvironmentConfig
+from .django.frontend_monitor import FrontendMonitorConfig
 from .django.geo import GeoConfig
 from .django.openapi import OpenAPIClientConfig
 from .infrastructure.cache import CacheConfig
@@ -99,6 +100,7 @@ __all__ = [
     "CurrencyConfig",
     "DjangoRQConfig",
     "RQQueueConfig",
+    "FrontendMonitorConfig",
     "GeoConfig",
     "StorageConfig",
     "OpenAPIClientConfig",

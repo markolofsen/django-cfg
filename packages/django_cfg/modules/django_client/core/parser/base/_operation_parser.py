@@ -4,11 +4,9 @@ Operation parsing mixin — converts OpenAPI path items to IROperationObjects.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..models import OperationObject, PathItemObject, ParameterObject, RequestBodyObject
-    from ...ir import IROperationObject, IRParameterObject, IRRequestBodyObject, IRResponseObject
+from ..models import OperationObject, PathItemObject, ParameterObject, RequestBodyObject, ReferenceObject, SchemaObject
+from ...ir import IROperationObject, IRParameterObject, IRRequestBodyObject, IRResponseObject
+from ...utils.naming import to_pascal_case
 
 
 class OperationParserMixin:
@@ -35,9 +33,6 @@ class OperationParserMixin:
         path: str,
         path_item: PathItemObject,
     ) -> IROperationObject:
-        from ..models import ReferenceObject
-        from ...ir import IROperationObject
-
         parameters = self._parse_parameters(operation, path_item)
 
         request_body = None
@@ -73,7 +68,6 @@ class OperationParserMixin:
         operation: OperationObject,
         path_item: PathItemObject,
     ) -> list[IRParameterObject]:
-        from ..models import ReferenceObject
         params = []
         for param_or_ref in (path_item.parameters or []):
             if not isinstance(param_or_ref, ReferenceObject):
@@ -84,9 +78,6 @@ class OperationParserMixin:
         return params
 
     def _parse_parameter(self, param: ParameterObject) -> IRParameterObject:
-        from ..models import SchemaObject
-        from ...ir import IRParameterObject
-
         schema_type = "string"
         items_type = None
 
@@ -109,9 +100,6 @@ class OperationParserMixin:
         )
 
     def _parse_request_body(self, body: RequestBodyObject, operation_id: str) -> IRRequestBodyObject:
-        from ..models import ReferenceObject
-        from ...ir import IRRequestBodyObject
-
         schema_name = None
         content_type = "application/json"
 
@@ -129,7 +117,7 @@ class OperationParserMixin:
                     if "multipart/form-data" in content_types and self._schema_has_binary_field(schema_name):
                         content_type = "multipart/form-data"
                 else:
-                    schema_name = self._to_pascal_case(operation_id) + "Request"
+                    schema_name = to_pascal_case(operation_id) + "Request"
                     inline_schema = self._parse_schema(schema_name, media_type.schema_)
                     inline_schema.is_request_model = True
                     self._inline_schemas[schema_name] = inline_schema
@@ -145,9 +133,6 @@ class OperationParserMixin:
         self,
         responses: dict[str, any],
     ) -> dict[int, IRResponseObject]:
-        from ..models import ReferenceObject, SchemaObject
-        from ...ir import IRResponseObject
-
         ir_responses = {}
         for status_code_str, response_or_ref in responses.items():
             if status_code_str == "default":

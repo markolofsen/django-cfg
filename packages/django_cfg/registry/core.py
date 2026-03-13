@@ -65,6 +65,9 @@ CORE_REGISTRY = {
     # Geo models
     "GeoConfig": ("django_cfg.models.django.geo", "GeoConfig"),
 
+    # Frontend Monitor models
+    "FrontendMonitorConfig": ("django_cfg.models.django.frontend_monitor", "FrontendMonitorConfig"),
+
     # Pagination classes
     "DefaultPagination": ("django_cfg.middleware.pagination", "DefaultPagination"),
     "LargePagination": ("django_cfg.middleware.pagination", "LargePagination"),

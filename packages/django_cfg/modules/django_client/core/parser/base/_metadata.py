@@ -4,12 +4,43 @@ Metadata parsing mixin — OpenAPI info and Django/drf-spectacular settings.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+from ...ir import DjangoGlobalMetadata, OpenAPIInfo
+
+if TYPE_CHECKING:
+    from ..models import OpenAPISpec
+    from ._protocol import ParserState
+
+
+# ---------------------------------------------------------------------------
+# Pure helpers — independently testable without a parser instance
+# ---------------------------------------------------------------------------
+
+def _detect_split_request(spec: OpenAPISpec) -> bool:
+    """Return True if the spec contains paired FooRequest / Foo schemas."""
+    if not spec.components or not spec.components.schemas:
+        return False
+    names = set(spec.components.schemas.keys())
+    return any(n.endswith("Request") and n[:-7] in names for n in names)
+
+
+def _detect_split_patch(spec: OpenAPISpec) -> bool:
+    """Return True if the spec contains paired PatchedFoo / Foo schemas."""
+    if not spec.components or not spec.components.schemas:
+        return False
+    names = set(spec.components.schemas.keys())
+    return any(n.startswith("Patched") and n[7:] in names for n in names)
+
+
+# ---------------------------------------------------------------------------
+# Mixin
+# ---------------------------------------------------------------------------
 
 class MetadataParserMixin:
     """Parses OpenAPI info block and Django metadata (SPECTACULAR_SETTINGS, auth classes)."""
 
-    def _parse_openapi_info(self):
-        from ...ir import OpenAPIInfo
+    def _parse_openapi_info(self: ParserState) -> OpenAPIInfo:
         info = self.spec.info
         return OpenAPIInfo(
             version=self.spec.normalized_version,
@@ -23,15 +54,14 @@ class MetadataParserMixin:
             license_url=info.license.url if info.license else None,
         )
 
-    def _parse_django_metadata(self):
-        from ...ir import DjangoGlobalMetadata
+    def _parse_django_metadata(self: ParserState) -> DjangoGlobalMetadata:
         has_split = self._get_django_spectacular_setting('COMPONENT_SPLIT_REQUEST')
         has_patch = self._get_django_spectacular_setting('COMPONENT_SPLIT_PATCH')
 
         if has_split is None:
-            has_split = self._detect_component_split_request()
+            has_split = _detect_split_request(self.spec)
         if has_patch is None:
-            has_patch = self._detect_component_split_patch()
+            has_patch = _detect_split_patch(self.spec)
 
         auth_classes = self._get_drf_authentication_classes()
 
@@ -68,23 +98,3 @@ class MetadataParserMixin:
             return []
         except Exception:
             return []
-
-    def _detect_component_split_request(self) -> bool:
-        if not self.spec.components or not self.spec.components.schemas:
-            return False
-        schema_names = set(self.spec.components.schemas.keys())
-        for name in schema_names:
-            if name.endswith("Request"):
-                if name[:-7] in schema_names:
-                    return True
-        return False
-
-    def _detect_component_split_patch(self) -> bool:
-        if not self.spec.components or not self.spec.components.schemas:
-            return False
-        schema_names = set(self.spec.components.schemas.keys())
-        for name in schema_names:
-            if name.startswith("Patched"):
-                if name[7:] in schema_names:
-                    return True
-        return False

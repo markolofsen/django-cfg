@@ -14,14 +14,13 @@ from typing import Dict, Final
 class Icons:
     """
     Material Design Icons constants for IDE autocompletion.
-    
-    Usage:
-        from django_cfg.modules.django_unfold.icons import Icons
-        
-        # IDE will provide autocompletion
+
+    Usage::
+
+        from django_cfg.modules.django_admin.icons import Icons
+
         icon = Icons.DASHBOARD
         icon = Icons.SETTINGS
-        icon = Icons.PEOPLE
     """
 
     _10K: Final[str] = "10k"
@@ -2259,7 +2258,7 @@ class Icons:
     ZOOM_OUT: Final[str] = "zoom_out"
     ZOOM_OUT_MAP: Final[str] = "zoom_out_map"
 
-    # Common aliases for better IDE experience
+    # Common aliases
     USERS = PEOPLE
     USER = PERSON
     DOCUMENTS = DESCRIPTION
@@ -2272,31 +2271,31 @@ class Icons:
     AI = SMART_TOY
 
 
-# IDE-friendly icon categories for easy discovery
+# IDE-friendly icon categories
 class IconCategories:
     """Categorized icon collections for easy discovery."""
 
     NAVIGATION: Dict[str, str] = {
         'add_home': Icons.ADD_HOME,
         'add_home_work': Icons.ADD_HOME_WORK,
-        'add_home_work': Icons.ADD_HOME_WORK,
-        'add_to_home_screen': Icons.ADD_TO_HOME_SCREEN,
         'app_settings_alt': Icons.APP_SETTINGS_ALT,
         'apps': Icons.APPS,
-        'apps': Icons.APPS,
-        'apps_outage': Icons.APPS_OUTAGE,
         'apps_outage': Icons.APPS_OUTAGE,
         'arrow_back': Icons.ARROW_BACK,
-        'arrow_back': Icons.ARROW_BACK,
         'arrow_back_ios': Icons.ARROW_BACK_IOS,
-        'arrow_back_ios': Icons.ARROW_BACK_IOS,
-        'arrow_back_ios_new': Icons.ARROW_BACK_IOS_NEW,
         'arrow_back_ios_new': Icons.ARROW_BACK_IOS_NEW,
         'arrow_circle_down': Icons.ARROW_CIRCLE_DOWN,
         'arrow_circle_left': Icons.ARROW_CIRCLE_LEFT,
         'arrow_circle_right': Icons.ARROW_CIRCLE_RIGHT,
         'arrow_circle_up': Icons.ARROW_CIRCLE_UP,
         'arrow_downward': Icons.ARROW_DOWNWARD,
+        'arrow_drop_down': Icons.ARROW_DROP_DOWN,
+        'arrow_drop_down_circle': Icons.ARROW_DROP_DOWN_CIRCLE,
+        'arrow_drop_up': Icons.ARROW_DROP_UP,
+        'arrow_forward': Icons.ARROW_FORWARD,
+        'arrow_forward_ios': Icons.ARROW_FORWARD_IOS,
+        'arrow_left': Icons.ARROW_LEFT,
+        'arrow_outward': Icons.ARROW_OUTWARD,
     }
 
     USERS: Dict[str, str] = {
@@ -2304,168 +2303,135 @@ class IconCategories:
         'account_balance_wallet': Icons.ACCOUNT_BALANCE_WALLET,
         'account_box': Icons.ACCOUNT_BOX,
         'account_circle': Icons.ACCOUNT_CIRCLE,
-        'account_tree': Icons.ACCOUNT_TREE,
         'broadcast_on_personal': Icons.BROADCAST_ON_PERSONAL,
-        'emoji_people': Icons.EMOJI_PEOPLE,
         'face': Icons.FACE,
-        'face_2': Icons.FACE_2,
-        'face_3': Icons.FACE_3,
-        'face_4': Icons.FACE_4,
-        'face_5': Icons.FACE_5,
-        'face_6': Icons.FACE_6,
-        'face_retouching_natural': Icons.FACE_RETOUCHING_NATURAL,
-        'face_retouching_off': Icons.FACE_RETOUCHING_OFF,
         'facebook': Icons.FACEBOOK,
-        'group': Icons.GROUP,
-        'group_add': Icons.GROUP_ADD,
-        'group_off': Icons.GROUP_OFF,
-        'group_remove': Icons.GROUP_REMOVE,
+        'group_work': Icons.GROUP_WORK,
+        'lock_person': Icons.LOCK_PERSON,
+        'manage_accounts': Icons.MANAGE_ACCOUNTS,
+        'no_accounts': Icons.NO_ACCOUNTS,
+        'supervised_user_circle': Icons.SUPERVISED_USER_CIRCLE,
+        'supervisor_account': Icons.SUPERVISOR_ACCOUNT,
+        'verified_user': Icons.VERIFIED_USER,
     }
 
     DOCUMENTS: Dict[str, str] = {
         'article': Icons.ARTICLE,
-        'attach_file': Icons.ATTACH_FILE,
-        'audio_file': Icons.AUDIO_FILE,
         'contact_page': Icons.CONTACT_PAGE,
-        'create_new_folder': Icons.CREATE_NEW_FOLDER,
         'description': Icons.DESCRIPTION,
-        'document_scanner': Icons.DOCUMENT_SCANNER,
-        'drive_file_move': Icons.DRIVE_FILE_MOVE,
         'drive_file_move_outline': Icons.DRIVE_FILE_MOVE_OUTLINE,
-        'drive_file_move_rtl': Icons.DRIVE_FILE_MOVE_RTL,
-        'drive_file_rename_outline': Icons.DRIVE_FILE_RENAME_OUTLINE,
-        'drive_folder_upload': Icons.DRIVE_FOLDER_UPLOAD,
         'edit_document': Icons.EDIT_DOCUMENT,
-        'edit_note': Icons.EDIT_NOTE,
-        'event_note': Icons.EVENT_NOTE,
-        'file_copy': Icons.FILE_COPY,
-        'file_download': Icons.FILE_DOWNLOAD,
-        'file_download_done': Icons.FILE_DOWNLOAD_DONE,
-        'file_download_off': Icons.FILE_DOWNLOAD_OFF,
-        'file_open': Icons.FILE_OPEN,
+        'file_present': Icons.FILE_PRESENT,
+        'file_upload_off': Icons.FILE_UPLOAD_OFF,
+        'find_in_page': Icons.FIND_IN_PAGE,
+        'note_add': Icons.NOTE_ADD,
+        'pageview': Icons.PAGEVIEW,
+        'request_page': Icons.REQUEST_PAGE,
+        'restore_page': Icons.RESTORE_PAGE,
+        'speaker_notes': Icons.SPEAKER_NOTES,
+        'speaker_notes_off': Icons.SPEAKER_NOTES_OFF,
+        'sticky_note_2': Icons.STICKY_NOTE_2,
+        'text_rotate_up': Icons.TEXT_ROTATE_UP,
+        'text_rotate_vertical': Icons.TEXT_ROTATE_VERTICAL,
+        'text_rotation_angledown': Icons.TEXT_ROTATION_ANGLEDOWN,
+        'text_rotation_angleup': Icons.TEXT_ROTATION_ANGLEUP,
+        'text_rotation_down': Icons.TEXT_ROTATION_DOWN,
     }
 
     COMMUNICATION: Dict[str, str] = {
         '3p': Icons._3P,
         'add_call': Icons.ADD_CALL,
-        'add_comment': Icons.ADD_COMMENT,
         'add_ic_call': Icons.ADD_IC_CALL,
-        'add_ic_call': Icons.ADD_IC_CALL,
-        'alternate_email': Icons.ALTERNATE_EMAIL,
         'alternate_email': Icons.ALTERNATE_EMAIL,
         'app_registration': Icons.APP_REGISTRATION,
-        'attach_email': Icons.ATTACH_EMAIL,
         'business': Icons.BUSINESS,
         'call': Icons.CALL,
-        'call': Icons.CALL,
-        'call_end': Icons.CALL_END,
         'call_end': Icons.CALL_END,
         'call_made': Icons.CALL_MADE,
-        'call_made': Icons.CALL_MADE,
-        'call_merge': Icons.CALL_MERGE,
         'call_merge': Icons.CALL_MERGE,
         'call_missed': Icons.CALL_MISSED,
-        'call_missed': Icons.CALL_MISSED,
+        'call_missed_outgoing': Icons.CALL_MISSED_OUTGOING,
+        'call_received': Icons.CALL_RECEIVED,
+        'call_split': Icons.CALL_SPLIT,
+        'cancel_presentation': Icons.CANCEL_PRESENTATION,
+        'cell_tower': Icons.CELL_TOWER,
+        'cell_wifi': Icons.CELL_WIFI,
+        'chat': Icons.CHAT,
+        'chat_bubble': Icons.CHAT_BUBBLE,
+        'chat_bubble_outline': Icons.CHAT_BUBBLE_OUTLINE,
     }
 
     AI_AUTOMATION: Dict[str, str] = {
-        'auto_awesome': Icons.AUTO_AWESOME,
-        'auto_awesome_mosaic': Icons.AUTO_AWESOME_MOSAIC,
-        'auto_awesome_motion': Icons.AUTO_AWESOME_MOTION,
         'auto_delete': Icons.AUTO_DELETE,
-        'auto_fix_high': Icons.AUTO_FIX_HIGH,
-        'auto_fix_normal': Icons.AUTO_FIX_NORMAL,
-        'auto_fix_off': Icons.AUTO_FIX_OFF,
-        'auto_graph': Icons.AUTO_GRAPH,
         'auto_mode': Icons.AUTO_MODE,
-        'auto_stories': Icons.AUTO_STORIES,
-        'autofps_select': Icons.AUTOFPS_SELECT,
         'autorenew': Icons.AUTORENEW,
-        'brightness_auto': Icons.BRIGHTNESS_AUTO,
-        'cloud_sync': Icons.CLOUD_SYNC,
         'event_repeat': Icons.EVENT_REPEAT,
-        'fiber_smart_record': Icons.FIBER_SMART_RECORD,
-        'flash_auto': Icons.FLASH_AUTO,
-        'hdr_auto': Icons.HDR_AUTO,
-        'hdr_auto_select': Icons.HDR_AUTO_SELECT,
-        'memory': Icons.MEMORY,
+        'smart_button': Icons.SMART_BUTTON,
+        'sync_alt': Icons.SYNC_ALT,
     }
 
     ACTIONS: Dict[str, str] = {
-        'add': Icons.ADD,
-        'add_a_photo': Icons.ADD_A_PHOTO,
-        'add_alarm': Icons.ADD_ALARM,
         'add_alert': Icons.ADD_ALERT,
-        'add_box': Icons.ADD_BOX,
-        'add_business': Icons.ADD_BUSINESS,
         'add_card': Icons.ADD_CARD,
-        'add_chart': Icons.ADD_CHART,
-        'add_circle': Icons.ADD_CIRCLE,
-        'add_circle_outline': Icons.ADD_CIRCLE_OUTLINE,
-        'add_link': Icons.ADD_LINK,
-        'add_location': Icons.ADD_LOCATION,
-        'add_location_alt': Icons.ADD_LOCATION_ALT,
-        'add_moderator': Icons.ADD_MODERATOR,
-        'add_photo_alternate': Icons.ADD_PHOTO_ALTERNATE,
-        'add_reaction': Icons.ADD_REACTION,
-        'add_road': Icons.ADD_ROAD,
         'add_shopping_cart': Icons.ADD_SHOPPING_CART,
         'add_task': Icons.ADD_TASK,
         'add_to_drive': Icons.ADD_TO_DRIVE,
+        'addchart': Icons.ADDCHART,
+        'alarm_add': Icons.ALARM_ADD,
+        'assignment_add': Icons.ASSIGNMENT_ADD,
+        'bookmark_add': Icons.BOOKMARK_ADD,
+        'bookmark_added': Icons.BOOKMARK_ADDED,
+        'bookmark_remove': Icons.BOOKMARK_REMOVE,
+        'cancel_schedule_send': Icons.CANCEL_SCHEDULE_SEND,
+        'credit_card': Icons.CREDIT_CARD,
+        'credit_card_off': Icons.CREDIT_CARD_OFF,
+        'delete': Icons.DELETE,
+        'delete_forever': Icons.DELETE_FOREVER,
+        'delete_outline': Icons.DELETE_OUTLINE,
+        'display_settings': Icons.DISPLAY_SETTINGS,
+        'done': Icons.DONE,
+        'done_all': Icons.DONE_ALL,
     }
 
     STATUS: Dict[str, str] = {
-        'check': Icons.CHECK,
-        'check_box': Icons.CHECK_BOX,
-        'check_box_outline_blank': Icons.CHECK_BOX_OUTLINE_BLANK,
         'check_circle': Icons.CHECK_CIRCLE,
         'check_circle_outline': Icons.CHECK_CIRCLE_OUTLINE,
-        'checklist': Icons.CHECKLIST,
-        'checklist_rtl': Icons.CHECKLIST_RTL,
-        'checkroom': Icons.CHECKROOM,
         'error': Icons.ERROR,
         'error_outline': Icons.ERROR_OUTLINE,
-        'escalator_warning': Icons.ESCALATOR_WARNING,
         'fact_check': Icons.FACT_CHECK,
-        'indeterminate_check_box': Icons.INDETERMINATE_CHECK_BOX,
         'info': Icons.INFO,
         'info_outline': Icons.INFO_OUTLINE,
-        'medical_information': Icons.MEDICAL_INFORMATION,
-        'nearby_error': Icons.NEARBY_ERROR,
-        'network_check': Icons.NETWORK_CHECK,
         'pending': Icons.PENDING,
         'pending_actions': Icons.PENDING_ACTIONS,
+        'perm_device_info': Icons.PERM_DEVICE_INFO,
+        'perm_device_information': Icons.PERM_DEVICE_INFORMATION,
+        'shopping_cart_checkout': Icons.SHOPPING_CART_CHECKOUT,
+        'spellcheck': Icons.SPELLCHECK,
+        'warning': Icons.WARNING,
+        'warning_amber': Icons.WARNING_AMBER,
+        'wifi_tethering_error_rounded': Icons.WIFI_TETHERING_ERROR_ROUNDED,
     }
 
     MEDIA: Dict[str, str] = {
-        'assistant_photo': Icons.ASSISTANT_PHOTO,
-        'audiotrack': Icons.AUDIOTRACK,
-        'bluetooth_audio': Icons.BLUETOOTH_AUDIO,
-        'broken_image': Icons.BROKEN_IMAGE,
-        'camera': Icons.CAMERA,
-        'camera_alt': Icons.CAMERA_ALT,
         'camera_enhance': Icons.CAMERA_ENHANCE,
-        'camera_front': Icons.CAMERA_FRONT,
         'camera_indoor': Icons.CAMERA_INDOOR,
         'camera_outdoor': Icons.CAMERA_OUTDOOR,
-        'camera_rear': Icons.CAMERA_REAR,
-        'camera_roll': Icons.CAMERA_ROLL,
-        'cameraswitch': Icons.CAMERASWITCH,
-        'control_camera': Icons.CONTROL_CAMERA,
-        'dynamic_feed': Icons.DYNAMIC_FEED,
         'dynamic_form': Icons.DYNAMIC_FORM,
         'enhance_photo_translate': Icons.ENHANCE_PHOTO_TRANSLATE,
-        'featured_video': Icons.FEATURED_VIDEO,
-        'flip_camera_android': Icons.FLIP_CAMERA_ANDROID,
-        'flip_camera_ios': Icons.FLIP_CAMERA_IOS,
+        'multitrack_audio': Icons.MULTITRACK_AUDIO,
+        'my_library_music': Icons.MY_LIBRARY_MUSIC,
+        'perm_camera_mic': Icons.PERM_CAMERA_MIC,
+        'settings_input_svideo': Icons.SETTINGS_INPUT_SVIDEO,
+        'spatial_audio': Icons.SPATIAL_AUDIO,
+        'spatial_audio_off': Icons.SPATIAL_AUDIO_OFF,
+        'video_collection': Icons.VIDEO_COLLECTION,
+        'volume_down_alt': Icons.VOLUME_DOWN_ALT,
     }
 
     SETTINGS: Dict[str, str] = {
         'admin_panel_settings': Icons.ADMIN_PANEL_SETTINGS,
-        'app_settings_alt': Icons.APP_SETTINGS_ALT,
         'build': Icons.BUILD,
         'build_circle': Icons.BUILD_CIRCLE,
-        'construction': Icons.CONSTRUCTION,
         'power_settings_new': Icons.POWER_SETTINGS_NEW,
         'query_builder': Icons.QUERY_BUILDER,
         'settings': Icons.SETTINGS,
@@ -2481,50 +2447,35 @@ class IconCategories:
         'settings_input_composite': Icons.SETTINGS_INPUT_COMPOSITE,
         'settings_input_hdmi': Icons.SETTINGS_INPUT_HDMI,
         'settings_overscan': Icons.SETTINGS_OVERSCAN,
+        'settings_power': Icons.SETTINGS_POWER,
+        'settings_remote': Icons.SETTINGS_REMOTE,
     }
 
     COMMERCE: Dict[str, str] = {
-        'attach_money': Icons.ATTACH_MONEY,
-        'local_convenience_store': Icons.LOCAL_CONVENIENCE_STORE,
-        'local_grocery_store': Icons.LOCAL_GROCERY_STORE,
-        'money': Icons.MONEY,
-        'money_off': Icons.MONEY_OFF,
-        'money_off_csred': Icons.MONEY_OFF_CSRED,
         'payment': Icons.PAYMENT,
-        'payments': Icons.PAYMENTS,
-        'price_change': Icons.PRICE_CHANGE,
         'restore': Icons.RESTORE,
         'restore_from_trash': Icons.RESTORE_FROM_TRASH,
-        'sell': Icons.SELL,
         'shopping_bag': Icons.SHOPPING_BAG,
         'shopping_basket': Icons.SHOPPING_BASKET,
         'shopping_cart': Icons.SHOPPING_CART,
         'store': Icons.STORE,
-        'store_mall_directory': Icons.STORE_MALL_DIRECTORY,
-        'storefront': Icons.STOREFRONT,
     }
 
     TRAVEL: Dict[str, str] = {
-        'car_crash': Icons.CAR_CRASH,
-        'car_rental': Icons.CAR_RENTAL,
-        'car_repair': Icons.CAR_REPAIR,
         'card_giftcard': Icons.CARD_GIFTCARD,
         'card_membership': Icons.CARD_MEMBERSHIP,
         'card_travel': Icons.CARD_TRAVEL,
-        'carpenter': Icons.CARPENTER,
-        'child_care': Icons.CHILD_CARE,
-        'directions': Icons.DIRECTIONS,
-        'directions_bike': Icons.DIRECTIONS_BIKE,
-        'directions_boat': Icons.DIRECTIONS_BOAT,
-        'directions_boat_filled': Icons.DIRECTIONS_BOAT_FILLED,
-        'directions_bus': Icons.DIRECTIONS_BUS,
-        'directions_bus_filled': Icons.DIRECTIONS_BUS_FILLED,
-        'directions_car': Icons.DIRECTIONS_CAR,
-        'directions_car_filled': Icons.DIRECTIONS_CAR_FILLED,
         'directions_ferry': Icons.DIRECTIONS_FERRY,
-        'directions_off': Icons.DIRECTIONS_OFF,
-        'directions_railway': Icons.DIRECTIONS_RAILWAY,
-        'directions_railway_filled': Icons.DIRECTIONS_RAILWAY_FILLED,
+        'directions_train': Icons.DIRECTIONS_TRAIN,
+        'flight_land': Icons.FLIGHT_LAND,
+        'flight_takeoff': Icons.FLIGHT_TAKEOFF,
+        'hotel_class': Icons.HOTEL_CLASS,
+        'location_history': Icons.LOCATION_HISTORY,
+        'location_pin': Icons.LOCATION_PIN,
+        'model_training': Icons.MODEL_TRAINING,
+        'on_device_training': Icons.ON_DEVICE_TRAINING,
+        'view_carousel': Icons.VIEW_CAROUSEL,
+        'wallet_giftcard': Icons.WALLET_GIFTCARD,
     }
 
     SOCIAL: Dict[str, str] = {
@@ -2545,9 +2496,9 @@ class IconCategories:
         'catching_pokemon': Icons.CATCHING_POKEMON,
         'clean_hands': Icons.CLEAN_HANDS,
         'co2': Icons.CO2,
-        'collections_bookmark': Icons.COLLECTIONS_BOOKMARK,
         'compost': Icons.COMPOST,
         'connect_without_contact': Icons.CONNECT_WITHOUT_CONTACT,
+        'construction': Icons.CONSTRUCTION,
     }
 
     DEVICE: Dict[str, str] = {
@@ -2577,16 +2528,10 @@ class IconCategories:
         'add_chart': Icons.ADD_CHART,
         'add_comment': Icons.ADD_COMMENT,
         'align_horizontal_center': Icons.ALIGN_HORIZONTAL_CENTER,
-        'align_horizontal_center': Icons.ALIGN_HORIZONTAL_CENTER,
-        'align_horizontal_left': Icons.ALIGN_HORIZONTAL_LEFT,
         'align_horizontal_left': Icons.ALIGN_HORIZONTAL_LEFT,
         'align_horizontal_right': Icons.ALIGN_HORIZONTAL_RIGHT,
-        'align_horizontal_right': Icons.ALIGN_HORIZONTAL_RIGHT,
-        'align_vertical_bottom': Icons.ALIGN_VERTICAL_BOTTOM,
         'align_vertical_bottom': Icons.ALIGN_VERTICAL_BOTTOM,
         'align_vertical_center': Icons.ALIGN_VERTICAL_CENTER,
-        'align_vertical_center': Icons.ALIGN_VERTICAL_CENTER,
-        'align_vertical_top': Icons.ALIGN_VERTICAL_TOP,
         'align_vertical_top': Icons.ALIGN_VERTICAL_TOP,
         'area_chart': Icons.AREA_CHART,
         'attach_file': Icons.ATTACH_FILE,
@@ -2594,6 +2539,12 @@ class IconCategories:
         'auto_graph': Icons.AUTO_GRAPH,
         'bar_chart': Icons.BAR_CHART,
         'border_all': Icons.BORDER_ALL,
+        'border_bottom': Icons.BORDER_BOTTOM,
+        'border_clear': Icons.BORDER_CLEAR,
+        'border_color': Icons.BORDER_COLOR,
+        'border_horizontal': Icons.BORDER_HORIZONTAL,
+        'border_inner': Icons.BORDER_INNER,
+        'border_left': Icons.BORDER_LEFT,
     }
 
     MAPS: Dict[str, str] = {
@@ -2631,20 +2582,18 @@ class IconCategories:
         'airline_seat_recline_extra': Icons.AIRLINE_SEAT_RECLINE_EXTRA,
         'airline_seat_recline_normal': Icons.AIRLINE_SEAT_RECLINE_NORMAL,
         'announcement': Icons.ANNOUNCEMENT,
-        'battery_alert': Icons.BATTERY_ALERT,
         'bluetooth_audio': Icons.BLUETOOTH_AUDIO,
-        'bus_alert': Icons.BUS_ALERT,
         'circle_notifications': Icons.CIRCLE_NOTIFICATIONS,
         'confirmation_number': Icons.CONFIRMATION_NUMBER,
-        'crisis_alert': Icons.CRISIS_ALERT,
         'directions_off': Icons.DIRECTIONS_OFF,
         'disc_full': Icons.DISC_FULL,
         'do_disturb': Icons.DO_DISTURB,
+        'do_disturb_alt': Icons.DO_DISTURB_ALT,
+        'do_disturb_off': Icons.DO_DISTURB_OFF,
+        'do_disturb_on': Icons.DO_DISTURB_ON,
     }
 
     CONTENT: Dict[str, str] = {
-        '30fps_select': Icons._30FPS_SELECT,
-        '60fps_select': Icons._60FPS_SELECT,
         'add': Icons.ADD,
         'add_box': Icons.ADD_BOX,
         'add_circle': Icons.ADD_CIRCLE,
@@ -2662,30 +2611,32 @@ class IconCategories:
         'change_circle': Icons.CHANGE_CIRCLE,
         'clear': Icons.CLEAR,
         'content_copy': Icons.CONTENT_COPY,
-        'content_copy': Icons.CONTENT_COPY,
+        'content_cut': Icons.CONTENT_CUT,
+        'content_paste': Icons.CONTENT_PASTE,
+        'content_paste_go': Icons.CONTENT_PASTE_GO,
     }
 
     HARDWARE: Dict[str, str] = {
         'adf_scanner': Icons.ADF_SCANNER,
-        'battery_0_bar': Icons.BATTERY_0_BAR,
-        'battery_1_bar': Icons.BATTERY_1_BAR,
-        'battery_2_bar': Icons.BATTERY_2_BAR,
-        'battery_3_bar': Icons.BATTERY_3_BAR,
-        'battery_4_bar': Icons.BATTERY_4_BAR,
-        'battery_5_bar': Icons.BATTERY_5_BAR,
-        'battery_6_bar': Icons.BATTERY_6_BAR,
-        'battery_charging_full': Icons.BATTERY_CHARGING_FULL,
-        'battery_full': Icons.BATTERY_FULL,
-        'battery_std': Icons.BATTERY_STD,
-        'battery_unknown': Icons.BATTERY_UNKNOWN,
-        'bluetooth': Icons.BLUETOOTH,
-        'bluetooth_connected': Icons.BLUETOOTH_CONNECTED,
-        'bluetooth_disabled': Icons.BLUETOOTH_DISABLED,
-        'bluetooth_drive': Icons.BLUETOOTH_DRIVE,
-        'bluetooth_searching': Icons.BLUETOOTH_SEARCHING,
         'browser_not_supported': Icons.BROWSER_NOT_SUPPORTED,
         'browser_updated': Icons.BROWSER_UPDATED,
         'cast': Icons.CAST,
+        'cast_connected': Icons.CAST_CONNECTED,
+        'cast_for_education': Icons.CAST_FOR_EDUCATION,
+        'computer': Icons.COMPUTER,
+        'connected_tv': Icons.CONNECTED_TV,
+        'desktop_mac': Icons.DESKTOP_MAC,
+        'desktop_windows': Icons.DESKTOP_WINDOWS,
+        'developer_board': Icons.DEVELOPER_BOARD,
+        'developer_board_off': Icons.DEVELOPER_BOARD_OFF,
+        'device_hub': Icons.DEVICE_HUB,
+        'device_unknown': Icons.DEVICE_UNKNOWN,
+        'devices_other': Icons.DEVICES_OTHER,
+        'dock': Icons.DOCK,
+        'earbuds': Icons.EARBUDS,
+        'earbuds_battery': Icons.EARBUDS_BATTERY,
+        'gamepad': Icons.GAMEPAD,
+        'headphones': Icons.HEADPHONES,
     }
 
     IMAGE: Dict[str, str] = {
@@ -2759,25 +2710,25 @@ class IconCategories:
 
     FILE: Dict[str, str] = {
         'approval': Icons.APPROVAL,
-        'archive': Icons.ARCHIVE,
         'attach_email': Icons.ATTACH_EMAIL,
-        'attachment': Icons.ATTACHMENT,
         'attachment': Icons.ATTACHMENT,
         'cloud': Icons.CLOUD,
         'cloud_circle': Icons.CLOUD_CIRCLE,
         'cloud_done': Icons.CLOUD_DONE,
         'cloud_download': Icons.CLOUD_DOWNLOAD,
-        'cloud_download': Icons.CLOUD_DOWNLOAD,
         'cloud_off': Icons.CLOUD_OFF,
         'cloud_queue': Icons.CLOUD_QUEUE,
         'cloud_sync': Icons.CLOUD_SYNC,
         'cloud_upload': Icons.CLOUD_UPLOAD,
-        'cloud_upload': Icons.CLOUD_UPLOAD,
         'create_new_folder': Icons.CREATE_NEW_FOLDER,
         'difference': Icons.DIFFERENCE,
         'download': Icons.DOWNLOAD,
-        'download': Icons.DOWNLOAD,
         'download_done': Icons.DOWNLOAD_DONE,
+        'download_for_offline': Icons.DOWNLOAD_FOR_OFFLINE,
+        'downloading': Icons.DOWNLOADING,
+        'drive_file_move': Icons.DRIVE_FILE_MOVE,
+        'drive_file_move_rtl': Icons.DRIVE_FILE_MOVE_RTL,
+        'drive_file_rename_outline': Icons.DRIVE_FILE_RENAME_OUTLINE,
     }
 
     TOGGLE: Dict[str, str] = {
@@ -2786,66 +2737,45 @@ class IconCategories:
         'airplanemode_on': Icons.AIRPLANEMODE_ON,
         'alarm_off': Icons.ALARM_OFF,
         'alarm_on': Icons.ALARM_ON,
-        'animation': Icons.ANIMATION,
-        'app_registration': Icons.APP_REGISTRATION,
-        'assistant_direction': Icons.ASSISTANT_DIRECTION,
-        'attractions': Icons.ATTRACTIONS,
-        'attribution': Icons.ATTRIBUTION,
-        'baby_changing_station': Icons.BABY_CHANGING_STATION,
-        'balcony': Icons.BALCONY,
         'batch_prediction': Icons.BATCH_PREDICTION,
-        'bedtime_off': Icons.BEDTIME_OFF,
-        'blur_off': Icons.BLUR_OFF,
-        'blur_on': Icons.BLUR_ON,
         'book_online': Icons.BOOK_ONLINE,
-        'border_horizontal': Icons.BORDER_HORIZONTAL,
         'calendar_month': Icons.CALENDAR_MONTH,
         'calendar_view_month': Icons.CALENDAR_VIEW_MONTH,
+        'check_box': Icons.CHECK_BOX,
+        'check_box_outline_blank': Icons.CHECK_BOX_OUTLINE_BLANK,
+        'code_off': Icons.CODE_OFF,
+        'coffee': Icons.COFFEE,
+        'coffee_maker': Icons.COFFEE_MAKER,
+        'confirmation_num': Icons.CONFIRMATION_NUM,
+        'contact_support': Icons.CONTACT_SUPPORT,
+        'contactless': Icons.CONTACTLESS,
+        'conveyor_belt': Icons.CONVEYOR_BELT,
+        'data_exploration': Icons.DATA_EXPLORATION,
+        'donut_large': Icons.DONUT_LARGE,
     }
 
     OTHER: Dict[str, str] = {
-        '10k': Icons._10K,
-        '10mp': Icons._10MP,
-        '11mp': Icons._11MP,
         '123': Icons._123,
-        '12mp': Icons._12MP,
-        '13mp': Icons._13MP,
-        '14mp': Icons._14MP,
-        '15mp': Icons._15MP,
-        '16mp': Icons._16MP,
-        '17mp': Icons._17MP,
-        '18_up_rating': Icons._18_UP_RATING,
-        '18mp': Icons._18MP,
-        '19mp': Icons._19MP,
-        '1k': Icons._1K,
-        '1k_plus': Icons._1K_PLUS,
-        '1x_mobiledata': Icons._1X_MOBILEDATA,
-        '20mp': Icons._20MP,
-        '21mp': Icons._21MP,
-        '22mp': Icons._22MP,
-        '23mp': Icons._23MP,
+        'abc': Icons.ABC,
+        'accessibility': Icons.ACCESSIBILITY,
+        'accessibility_new': Icons.ACCESSIBILITY_NEW,
+        'accessible': Icons.ACCESSIBLE,
+        'accessible_forward': Icons.ACCESSIBLE_FORWARD,
+        'adobe': Icons.ADOBE,
+        'ads_click': Icons.ADS_CLICK,
+        'alarm': Icons.ALARM,
+        'all_inbox': Icons.ALL_INBOX,
+        'all_out': Icons.ALL_OUT,
+        'amp_stories': Icons.AMP_STORIES,
+        'analytics': Icons.ANALYTICS,
+        'anchor': Icons.ANCHOR,
+        'android': Icons.ANDROID,
+        'api': Icons.API,
+        'app_blocking': Icons.APP_BLOCKING,
+        'apple': Icons.APPLE,
+        'aspect_ratio': Icons.ASPECT_RATIO,
+        'assessment': Icons.ASSESSMENT,
     }
 
 
-
-# Validation function for IDE
-def validate_icon_constant(icon_name: str) -> bool:
-    """
-    Validate that an icon constant exists.
-    
-    Args:
-        icon_name: The icon name to validate
-        
-    Returns:
-        True if the icon exists in Material Icons
-    """
-    from .icons import MaterialIcons
-    return MaterialIcons.is_valid_icon(icon_name)
-
-
-# Export commonly used icons for direct import
-__all__ = [
-    'Icons',
-    'IconCategories',
-    'validate_icon_constant',
-]
+__all__ = ['Icons', 'IconCategories']

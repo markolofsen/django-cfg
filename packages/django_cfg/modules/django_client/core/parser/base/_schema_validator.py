@@ -6,10 +6,9 @@ from __future__ import annotations
 
 import sys
 import traceback
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from ..models import ReferenceObject
+from ..models import ReferenceObject
+from ._errors import raise_if_errors
 
 
 class SchemaValidatorMixin:
@@ -33,8 +32,6 @@ class SchemaValidatorMixin:
         """
         if not self.spec.components or not self.spec.components.schemas:
             return
-
-        from ..models import ReferenceObject as _Ref
 
         schema_names = list(self.spec.components.schemas.keys())
         lowercase_map: dict[str, str] = {}
@@ -72,7 +69,7 @@ class SchemaValidatorMixin:
             lowercase_map[lowercase] = name
 
             schema = self.spec.components.schemas.get(name)
-            if schema and not isinstance(schema, _Ref):
+            if schema and not isinstance(schema, ReferenceObject):
                 title = getattr(schema, 'title', name)
                 description = getattr(schema, 'description', '')
 

@@ -238,6 +238,20 @@ class BaseCfgModule(ABC):
 
         return False
 
+    def is_frontend_monitor_enabled(self) -> bool:
+        """
+        Check if django-cfg Frontend Monitor is enabled.
+
+        Returns:
+            True if Frontend Monitor is enabled, False otherwise
+        """
+        config = self._get_config_key('frontend_monitor', None)
+
+        if config and hasattr(config, 'enabled'):
+            return config.enabled
+
+        return False
+
     def is_totp_enabled(self) -> bool:
         """
         Check if django-cfg TOTP/2FA is enabled.
