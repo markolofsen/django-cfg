@@ -1,0 +1,415 @@
+---
+title: Authentication System — Architecture
+description: End-to-end OTP + OAuth + 2FA authentication system. Backend internals, frontend integration, and security layers explained for developers.
+---
+
+import { Callout, Steps, Tabs } from 'nextra/components'
+
+# Authentication System — Architecture
+
+This document covers the full authentication stack in django-cfg: how the backend modules work, how abuse protection is layered, and how the frontend (`@djangocfg/api` + `@djangocfg/layouts`) plugs in out of the box.
+
+<Callout type="info">
+For configuration reference see [Authentication](/features/integrations/auth) and [OAuth](/features/integrations/oauth). This page is a developer-oriented deep-dive into how the system works internally.
+</Callout>
+
+---
+
+## System Overview
+
+```mermaid
+graph TB
+    subgraph Frontend["Frontend (@djangocfg/layouts + @djangocfg/api)"]
+        AL[AuthLayout]
+        API[useAuth / useAuthForm]
+        JWT[JWT token storage]
+    end
+
+    subgraph Backend["Backend (django-cfg accounts module)"]
+        direction TB
+        OTPView[OTPViewSet]
+        OAuthView[GitHubCallbackView]
+        OTPService[OTPService]
+        BF[Brute-force protection]
+        DB[(PostgreSQL)]
+        Cache[(Redis)]
+        Email[Email / Telegram]
+    end
+
+    AL --> API
+    API --> OTPView
+    API --> OAuthView
+    OTPView --> OTPService
+    OAuthView --> OTPService
+    OTPService --> BF
+    OTPService --> DB
+    OTPService --> Email
+    BF --> Cache
+    OTPService --> JWT
+    JWT --> API
+```
+
+---
+
+## OTP Authentication Flow
+
+The core authentication strategy: email → 6-digit code → JWT tokens.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant V as OTPViewSet
+    participant T as OTPRequestThrottle
+    participant S as OTPService
+    participant DB as PostgreSQL
+    participant E as Email
+
+    C->>V: POST /otp/request/ {identifier}
+    V->>V: is_ratelimited(IP, 10/min)?
+    V->>T: check_email(email)
+    T-->>V: allowed / cooldown / hourly_limit / daily_limit
+    V->>S: request_otp(email, source_url)
+    S->>DB: get_or_create CustomUser (active only)
+    S->>DB: reuse valid OTP or create new OTPSecret
+    S->>E: send OTP email
+    S->>T: record_sent(email)
+    V-->>C: 200 {message}
+
+    C->>V: POST /otp/verify/ {identifier, otp}
+    V->>V: is_ratelimited(IP, 20/min)?
+    V->>S: verify_otp(email, code)
+    S->>S: OTPVerifyThrottle.is_locked(email)?
+    S->>DB: OTPSecret.objects.filter(email, code, valid)
+    alt OTP invalid
+        S->>S: record_failure → maybe lock
+        V-->>C: 401 {error: "Authentication failed"}
+    else OTP valid
+        S->>DB: mark OTP as used
+        S->>S: record_success → clear lockout
+        V-->>C: 200 {access, refresh, user, requires_2fa}
+    end
+```
+
+### Key design decisions
+
+- **Anti-enumeration:** All failure paths return identical `HTTP 401 {"error": "Authentication failed"}` — wrong OTP, expired OTP, and unknown email are indistinguishable to the client.
+- **OTP reuse:** If a valid unexpired OTP exists for the email, a re-request returns the same code rather than generating a new one. This reduces SMTP load and avoids confusing users with multiple codes.
+- **Active-only lookup:** `OTPService` always queries `CustomUser.objects.filter(deleted_at__isnull=True)` — soft-deleted accounts cannot authenticate.
+
+---
+
+## OAuth (GitHub) Flow
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant V as GitHubCallbackView
+    participant GH as GitHub API
+    participant S as GitHubOAuthService
+    participant DB as PostgreSQL
+
+    C->>V: POST /oauth/github/authorize/
+    V-->>C: {authorization_url, state}
+
+    C->>GH: redirect user to GitHub
+    GH-->>C: redirect back ?code=...&state=...
+
+    C->>V: POST /oauth/github/callback/ {code, state}
+    V->>V: validate CSRF state (OAuthState table)
+    V->>GH: exchange code → access_token
+    V->>GH: GET /user (profile data)
+    V->>S: find or create CustomUser by email
+    V->>DB: create/update OAuthConnection
+    V-->>C: 200 {access, refresh, user, requires_2fa}
+```
+
+The callback response is identical in structure to `otp/verify/` — the frontend `useAuth` hook handles both transparently.
+
+---
+
+## 2FA Flow (TOTP)
+
+When both system-wide 2FA is enabled and the user has an active TOTP device:
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant V as OTPViewSet
+    participant TS as TOTPService
+
+    C->>V: POST /otp/verify/ {identifier, otp}
+    V-->>C: 200 {requires_2fa: true, session_id: "uuid", access: null}
+
+    Note over C: User opens authenticator app
+
+    C->>TS: POST /cfg/totp/verify/ {session_id, token}
+    TS->>TS: verify TOTP device token
+    TS-->>C: 200 {access, refresh, user}
+```
+
+`session_id` is a short-lived UUID stored in cache — it bridges the OTP verification and TOTP verification steps without issuing tokens prematurely.
+
+---
+
+## Brute-Force Protection Layers
+
+```mermaid
+graph LR
+    REQ[Request] --> L1
+
+    subgraph L1["Layer 1: IP Rate Limit (django-ratelimit)"]
+        IP1["/otp/request/ → 10/min"]
+        IP2["/otp/verify/ → 20/min"]
+        IP3["/oauth/callback/ → 10/min"]
+    end
+
+    L1 -->|pass| L2
+
+    subgraph L2["Layer 2: Per-Email Throttle (OTPRequestThrottle)"]
+        C1[Cooldown: 60s between resends]
+        C2[Hourly budget: 5 requests]
+        C3[Daily budget: 10 requests]
+    end
+
+    L2 -->|pass| L3
+
+    subgraph L3["Layer 3: Lockout (OTPVerifyThrottle)"]
+        F1[5 failed attempts → 15-min lockout]
+        F2[Success clears counter]
+    end
+
+    L3 -->|pass| SVC[OTPService]
+```
+
+All per-email state is stored in Redis using **SHA-256 hashed keys** — no PII in cache:
+
+```python
+key = f"otp:cooldown:{sha256(email.lower())[:16]}"
+# e.g. "otp:cooldown:b4c9a289323b21a0"
+```
+
+---
+
+## Soft Delete & Email Uniqueness
+
+`CustomUser` uses a **partial unique constraint** instead of a global `UNIQUE` on email:
+
+```sql
+-- Migration 0015
+CREATE UNIQUE INDEX unique_active_email
+ON django_cfg_accounts_customuser (email)
+WHERE deleted_at IS NULL;
+```
+
+This allows multiple deleted accounts to share the same email (historical archive) while preventing duplicate active accounts.
+
+```mermaid
+graph TD
+    REG["register user@example.com"] --> QUERY
+    QUERY["filter(email=X, deleted_at__isnull=True)"] --> EXISTS{found?}
+    EXISTS -->|yes| RETURN[return existing active user]
+    EXISTS -->|no| CREATE[create new CustomUser]
+    CREATE --> RETURN
+```
+
+Re-registering after deletion creates a **fresh account** — the deleted one is archived, not reactivated.
+
+---
+
+## Frontend Integration
+
+### `@djangocfg/api` — Authentication hooks
+
+The `@djangocfg/api` package provides a complete authentication client:
+
+```typescript
+import { useAuth, useAuthForm } from '@djangocfg/api/auth'
+
+// Full auth state
+const { user, isAuthenticated, logout } = useAuth()
+
+// Auth form with OTP + OAuth + 2FA steps
+const form = useAuthForm({
+  onSuccess: (user) => router.push('/dashboard'),
+  githubOAuthEnabled: true,
+})
+```
+
+Token management is automatic — access token refresh, rotation, and blacklist handling are transparent to the caller. Tokens are shared across all packages via a single storage layer.
+
+```mermaid
+graph LR
+    FORM[useAuthForm] --> STEP1[identifier step]
+    STEP1 --> STEP2[otp step]
+    STEP2 --> STEP3{requires_2fa?}
+    STEP3 -->|yes| STEP4[2fa step]
+    STEP3 -->|no| SUCCESS[success]
+    STEP4 --> SUCCESS
+```
+
+### `@djangocfg/layouts` — AuthLayout
+
+`AuthLayout` implements the full multi-step auth UI out of the box:
+
+```tsx
+import { AuthLayout } from '@djangocfg/layouts'
+
+export default function LoginPage() {
+  return (
+    <AuthLayout
+      githubOAuthEnabled={true}
+      redirectUrl="/dashboard"
+      onSuccess={(user) => console.log('logged in', user)}
+    />
+  )
+}
+```
+
+The layout automatically routes between steps based on server responses:
+
+```mermaid
+stateDiagram-v2
+    [*] --> identifier: initial render
+    identifier --> otp: email submitted
+    otp --> success: OTP valid, no 2FA
+    otp --> 2fa: OTP valid, 2FA required
+    otp --> 2fa_setup: OTP valid, 2FA setup prompted
+    2fa --> success: TOTP token valid
+    2fa_setup --> success: device enrolled
+    success --> [*]: auto-redirect
+```
+
+**Available steps** (rendered by `AuthContent` in `AuthLayout.tsx`):
+- `identifier` — email input
+- `otp` — 6-digit code input
+- `2fa` — TOTP authenticator code
+- `2fa-setup` — enroll a new TOTP device
+- `success` — confirmation screen with auto-redirect
+
+---
+
+## JWT Token Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as Django API
+    participant BL as Token Blacklist
+
+    C->>API: POST /otp/verify/ → {access, refresh}
+    Note over C: access TTL: 15min, refresh TTL: 7d
+
+    C->>API: GET /profile/ Authorization: Bearer {access}
+    API-->>C: 200 user data
+
+    Note over C: access token expires
+
+    C->>API: POST /token/refresh/ {refresh}
+    API->>BL: blacklist old refresh token
+    API-->>C: {access: new, refresh: new}
+
+    Note over C: both tokens rotated on every refresh
+```
+
+`ROTATE_REFRESH_TOKENS = True` and `BLACKLIST_AFTER_ROTATION = True` are enabled by default. Reusing a blacklisted refresh token signals theft — the token is rejected immediately.
+
+The `cleanup_jwt_blacklist` RQ job runs daily at 03:00 UTC to purge expired entries from the blacklist table.
+
+---
+
+## Data Model
+
+```mermaid
+erDiagram
+    CustomUser {
+        int id PK
+        string email "unique among active (partial index)"
+        string username
+        datetime deleted_at "null = active"
+        bool is_test_account
+        string language
+    }
+
+    OTPSecret {
+        int id PK
+        string email FK
+        string secret "6-digit code"
+        datetime expires_at "now + 10min"
+        bool is_used
+    }
+
+    OAuthConnection {
+        int id PK
+        int user_id FK
+        string provider "github"
+        string provider_user_id
+        string provider_email
+        string access_token
+        datetime last_login_at
+    }
+
+    RegistrationSource {
+        int id PK
+        string url
+        string name
+    }
+
+    UserRegistrationSource {
+        int id PK
+        int user_id FK
+        int source_id FK
+        bool first_registration
+    }
+
+    CustomUser ||--o{ OTPSecret : "email"
+    CustomUser ||--o{ OAuthConnection : "user"
+    CustomUser ||--o{ UserRegistrationSource : "user"
+    RegistrationSource ||--o{ UserRegistrationSource : "source"
+```
+
+---
+
+## Background Jobs (RQ)
+
+Auto-registered when `DjangoRQConfig.enabled = True`:
+
+| Job | Cron | Queue | Purpose |
+|-----|------|-------|---------|
+| `cleanup_expired_otps` | `*/10 * * * *` | low | Delete expired/used `OTPSecret` rows |
+| `cleanup_jwt_blacklist` | `0 3 * * *` | low | Flush expired JWT blacklist entries |
+
+Both jobs are idempotent and safe to run manually.
+
+---
+
+## Quick Reference
+
+### Backend entry points
+
+| Layer | File | Role |
+|-------|------|------|
+| Views | `accounts/views/otp.py` | OTP request + verify endpoints |
+| Views | `accounts/views/oauth.py` | GitHub OAuth endpoints |
+| Service | `accounts/services/otp_service.py` | Core auth logic |
+| Protection | `accounts/services/brute_force_service.py` | `OTPRequestThrottle`, `OTPVerifyThrottle` |
+| Cleanup | `accounts/services/cleanup_service.py` | RQ jobs |
+| Model | `accounts/models/user.py` | `CustomUser`, soft-delete |
+| Model | `accounts/models/auth.py` | `OTPSecret` |
+| Migration | `accounts/migrations/0015_*.py` | Partial unique email constraint |
+
+### Frontend entry points
+
+| Package | Import | Role |
+|---------|--------|------|
+| `@djangocfg/api` | `useAuth` | Auth state, logout |
+| `@djangocfg/api` | `useAuthForm` | OTP + OAuth + 2FA form flow |
+| `@djangocfg/api` | `useAuthGuard` | Route protection |
+| `@djangocfg/layouts` | `AuthLayout` | Complete auth UI (all steps) |
+| `@djangocfg/layouts` | `PrivateLayout` | Authenticated page wrapper |
+
+### Related docs
+
+- [Authentication configuration](/features/integrations/auth) — JWT settings, OTP config
+- [OAuth integration](/features/integrations/oauth) — GitHub OAuth setup
+- [Accounts app reference](/features/built-in-apps/user-management/accounts) — API endpoints, models
+- [2FA setup guide](/features/integrations/auth#two-factor-authentication) — TOTP configuration

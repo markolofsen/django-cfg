@@ -12,6 +12,7 @@ from django_cfg.utils import get_logger
 from ..models import CustomUser, OTPSecret
 from ..signals import notify_failed_otp_attempt
 from ..utils.notifications import AccountNotifications
+from .brute_force_service import OTPRequestThrottle, OTPVerifyThrottle
 
 logger = get_logger(__name__)
 
@@ -29,6 +30,12 @@ class OTPService:
         cleaned_email = email.strip().lower()
         if not cleaned_email:
             return False, "invalid_email"
+
+        # Check send throttle
+        allowed, reason, retry_after = OTPRequestThrottle.check_email(cleaned_email)
+        if not allowed:
+            logger.info(f"OTP request throttled for {cleaned_email}: {reason}, retry in {retry_after}s")
+            return False, reason  # reason: 'cooldown', 'hourly_limit', 'daily_limit'
 
         # Find or create user using the manager's register_user method
         try:
@@ -130,6 +137,7 @@ class OTPService:
                 logger.error(f"Failed to send Telegram OTP notification: {telegram_error}")
                 # Don't fail the OTP process if Telegram fails
 
+            OTPRequestThrottle.record_sent(cleaned_email)
             return True, "success"
         except Exception as e:
             logger.error(f"Failed to send OTP email: {e}")
@@ -152,6 +160,13 @@ class OTPService:
         if not cleaned_email or not cleaned_otp:
             return None
 
+        # Check verify lockout
+        locked, _ = OTPVerifyThrottle.is_locked(cleaned_email)
+        if locked:
+            logger.warning(f"OTP verify blocked - account locked: {cleaned_email}")
+            notify_failed_otp_attempt(cleaned_email, reason="Account locked due to too many failed attempts")
+            return None
+
         # Development mode bypass - accept any OTP
         try:
             config = get_current_config()
@@ -159,8 +174,8 @@ class OTPService:
             if config and config.is_development:
                 logger.info(f"[DEV MODE] Bypassing OTP verification for {cleaned_email}")
 
-                # Try to find user by email first (allows testing specific accounts)
-                user = CustomUser.objects.filter(email=cleaned_email).first()
+                # Try to find active user by email first (allows testing specific accounts)
+                user = CustomUser.objects.filter(email=cleaned_email, deleted_at__isnull=True).first()
 
                 # If email not found, use first superuser or regular user (convenience login)
                 if not user:
@@ -206,7 +221,7 @@ class OTPService:
         # Test account bypass (for App Store review, API testing, etc.)
         # If user is marked as test account, accept any OTP code
         try:
-            user = CustomUser.objects.filter(email=cleaned_email).first()
+            user = CustomUser.objects.filter(email=cleaned_email, deleted_at__isnull=True).first()
 
             # Check if user is deleted/deactivated
             if user and not user.is_active:
@@ -254,6 +269,10 @@ class OTPService:
             if not otp_secret or not otp_secret.is_valid:
                 logger.warning(f"Invalid OTP for {cleaned_email}")
 
+                just_locked, _ = OTPVerifyThrottle.record_failure(cleaned_email)
+                if just_locked:
+                    logger.warning(f"OTP brute-force lockout triggered for {cleaned_email}")
+
                 # Send Telegram notification for failed OTP attempt
                 try:
                     notify_failed_otp_attempt(cleaned_email, reason="Invalid or expired OTP")
@@ -265,9 +284,9 @@ class OTPService:
             # Mark OTP as used
             otp_secret.mark_used()
 
-            # Get user
+            # Get active user
             try:
-                user = CustomUser.objects.get(email=cleaned_email)
+                user = CustomUser.objects.get(email=cleaned_email, deleted_at__isnull=True)
 
                 # Check if user is deleted/deactivated
                 if not user.is_active:
@@ -300,6 +319,7 @@ class OTPService:
                 except Exception as telegram_error:
                     logger.error(f"Failed to send Telegram OTP verification notification: {telegram_error}")
 
+                OTPVerifyThrottle.record_success(cleaned_email)
                 logger.info(f"OTP verified for {cleaned_email}")
                 return user
             except CustomUser.DoesNotExist:

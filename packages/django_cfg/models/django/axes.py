@@ -91,11 +91,12 @@ class AxesConfig(BaseModel):
 
     ipware_meta_precedence_order: List[str] = Field(
         default_factory=lambda: [
-            'HTTP_X_FORWARDED_FOR',
-            'HTTP_X_REAL_IP',
-            'REMOTE_ADDR',
+            'HTTP_CF_CONNECTING_IP',   # Cloudflare (most trusted)
+            'HTTP_X_FORWARDED_FOR',    # Standard proxy header
+            'HTTP_X_REAL_IP',          # Alternative proxy header
+            'REMOTE_ADDR',             # Direct connection fallback
         ],
-        description="Order of headers to extract real IP from proxy"
+        description="Order of headers to extract real IP. Cloudflare header is checked first for accurate IP behind CF proxy."
     )
 
     # === Whitelist/Blacklist ===

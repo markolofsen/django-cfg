@@ -7,6 +7,8 @@ REST API endpoints for OAuth authentication flow.
 import asyncio
 import logging
 
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -49,7 +51,7 @@ class OAuthProvidersView(APIView):
         summary="List OAuth providers",
         description="Get list of available OAuth providers for authentication.",
     )
-    def get(self, request):
+    def get(self, request):  # noqa: ARG002
         providers = []
 
         if GitHubOAuthService.is_enabled():
@@ -78,6 +80,7 @@ class OAuthProvidersView(APIView):
         description="Generate GitHub OAuth authorization URL. Redirect user to this URL to start authentication.",
     )
 )
+@method_decorator(ratelimit(key='ip', rate='20/m', block=False), name='post')
 class GitHubAuthorizeView(APIView):
     """
     Start GitHub OAuth flow.
@@ -91,6 +94,9 @@ class GitHubAuthorizeView(APIView):
     authentication_classes = []
 
     def post(self, request):
+        if getattr(request, 'limited', False):
+            return Response({"error": "Too many requests"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
         serializer = OAuthAuthorizeRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -154,6 +160,7 @@ class GitHubAuthorizeView(APIView):
         description="Exchange authorization code for JWT tokens. Call this after GitHub redirects back with code.",
     )
 )
+@method_decorator(ratelimit(key='ip', rate='10/m', block=False), name='post')
 class GitHubCallbackView(APIView):
     """
     Handle GitHub OAuth callback.
@@ -166,6 +173,9 @@ class GitHubCallbackView(APIView):
     authentication_classes = []
 
     def post(self, request):
+        if getattr(request, 'limited', False):
+            return Response({"error": "Too many requests"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
         serializer = OAuthCallbackRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -263,7 +273,7 @@ class GitHubCallbackView(APIView):
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
                 'user': {
-                    'id': user.id,
+                    'id': user.pk,
                     'email': user.email,
                     'username': user.username,
                     'first_name': user.first_name,

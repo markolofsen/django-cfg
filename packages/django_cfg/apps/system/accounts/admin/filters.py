@@ -20,23 +20,23 @@ class UserStatusFilter(admin.SimpleListFilter):
     def lookups(self, request, model_admin):
         return (
             ("active", "✅ Active Users"),
-            ("inactive", "❌ Inactive Users"),
+            ("deleted", "🗑️ Deleted (soft)"),
+            ("inactive", "❌ Inactive (non-deleted)"),
             ("staff", "⚙️ Staff Members"),
             ("superuser", "👑 Superusers"),
-            ("regular", "👤 Regular Users"),
         )
 
     def queryset(self, request, queryset):
         if self.value() == "active":
-            return queryset.filter(is_active=True, is_staff=False, is_superuser=False)
+            return queryset.filter(is_active=True, deleted_at__isnull=True)
+        elif self.value() == "deleted":
+            return queryset.filter(deleted_at__isnull=False)
         elif self.value() == "inactive":
-            return queryset.filter(is_active=False)
+            return queryset.filter(is_active=False, deleted_at__isnull=True)
         elif self.value() == "staff":
             return queryset.filter(is_staff=True, is_superuser=False)
         elif self.value() == "superuser":
             return queryset.filter(is_superuser=True)
-        elif self.value() == "regular":
-            return queryset.filter(is_active=True, is_staff=False, is_superuser=False)
         return queryset
 
 

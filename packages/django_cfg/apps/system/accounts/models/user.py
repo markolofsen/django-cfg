@@ -2,11 +2,11 @@
 User model and related functionality.
 """
 
-import time
 from typing import List, Optional
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
 
 from django_cfg.modules.django_cleanup import delete_file
@@ -18,7 +18,7 @@ from .base import user_avatar_path
 class CustomUser(AbstractUser):
     """Simplified user model for OTP-only authentication."""
 
-    email = models.EmailField(unique=True)
+    email = models.EmailField()
 
     # Profile fields
     first_name = models.CharField(max_length=50, blank=True)
@@ -187,17 +187,16 @@ class CustomUser(AbstractUser):
         """
         Soft delete the account.
 
+        Email is preserved intact — uniqueness is enforced only among active accounts
+        via a partial unique constraint (unique_active_email). Multiple deleted accounts
+        may share the same email address (historical archive).
+
         This will:
         1. Deactivate account (is_active = False)
         2. Anonymize personal data (GDPR compliance)
-        3. Mark email as deleted (frees up email for re-registration)
-        4. Set deleted_at timestamp
-        5. Delete avatar file
+        3. Set deleted_at timestamp
+        4. Delete avatar file
         """
-        # Store original email in special format for audit
-        unix_timestamp = int(time.time())
-        original_email = self.email
-
         # 1. Deactivate
         self.is_active = False
 
@@ -208,44 +207,34 @@ class CustomUser(AbstractUser):
         self.company = ""
         self.position = ""
 
-        # 3. Mark email as deleted (preserves original for audit)
-        self.email = f"deleted__{unix_timestamp}__{original_email}"
-
-        # 4. Set deletion timestamp
+        # 3. Set deletion timestamp
         self.deleted_at = timezone.now()
 
-        # 5. Delete avatar file (using django_storage module)
+        # 4. Delete avatar file (using django_storage module)
         delete_file(self.avatar)
 
         self.save()
 
-    def restore(self, new_email: Optional[str] = None) -> None:
+    def restore(self) -> None:
         """
         Restore a soft-deleted account.
 
-        Args:
-            new_email: New email to use. If not provided, tries to restore original.
-                       Required if original email is now taken by another user.
+        Raises ValueError if the email is already taken by another active account.
+        In that case, manually update self.email before calling restore(), or
+        create a new account instead.
         """
         if not self.is_deleted:
             return
 
-        # Extract original email from deleted format
-        # Format: deleted__{timestamp}__{original_email}
-        if new_email:
-            restored_email = new_email
-        else:
-            parts = self.email.split("__", 2)
-            if len(parts) == 3:
-                restored_email = parts[2]
-            else:
-                raise ValueError("Cannot restore: original email not found. Provide new_email.")
+        # Check if email is available among active accounts
+        if CustomUser.objects.filter(
+            email=self.email, deleted_at__isnull=True
+        ).exclude(pk=self.pk).exists():
+            raise ValueError(
+                f"Email {self.email} is already taken by an active account. "
+                "Update self.email before restoring, or create a new account."
+            )
 
-        # Check if email is available
-        if CustomUser.objects.filter(email=restored_email).exclude(pk=self.pk).exists():
-            raise ValueError(f"Email {restored_email} is already in use. Provide a different email.")
-
-        self.email = restored_email
         self.is_active = True
         self.deleted_at = None
         self.save()
@@ -254,3 +243,10 @@ class CustomUser(AbstractUser):
         app_label = 'django_cfg_accounts'
         verbose_name = "User"
         verbose_name_plural = "Users"
+        constraints = [
+            UniqueConstraint(
+                fields=["email"],
+                condition=Q(deleted_at__isnull=True),
+                name="unique_active_email",
+            )
+        ]

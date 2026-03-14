@@ -70,22 +70,27 @@ class UserManager(UserManager):
             if not username:
                 username = self._generate_unique_username()
 
-            # Set default values
-            defaults = {
-                "username": username,
-                "is_active": True,
-                "date_joined": timezone.now(),
-                **extra_fields,
-            }
-
             logger.info(
-                f"Attempting to get_or_create user with email: {email}, username: {username}"
+                f"Attempting to register user with email: {email}, username: {username}"
             )
 
-            # Create or get user using self.model instead of importing CustomUser
-            user, created = self.model.objects.get_or_create(
-                email=email, defaults=defaults
-            )
+            # Look up only active (non-deleted) accounts.
+            # Deleted accounts are archived — re-registration creates a fresh account.
+            user = self.model.objects.filter(
+                email=email, deleted_at__isnull=True
+            ).first()
+
+            if user is not None:
+                created = False
+            else:
+                user = self.model.objects.create_user(
+                    email=email,
+                    username=username,
+                    is_active=True,
+                    date_joined=timezone.now(),
+                    **extra_fields,
+                )
+                created = True
 
             # Handle source tracking
             if source_url:

@@ -2,6 +2,7 @@ import logging
 import traceback
 
 from django.contrib.auth import get_user_model
+from django_ratelimit.core import is_ratelimited
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -24,6 +25,11 @@ from ..services import OTPService
 logger = logging.getLogger(__name__)
 
 
+def _is_ip_limited(request, group: str, rate: str) -> bool:
+    """Check IP-based rate limit using django-ratelimit's core function."""
+    return is_ratelimited(request, group=group, key='ip', rate=rate, increment=True)
+
+
 class OTPViewSet(viewsets.GenericViewSet):
     """OTP authentication ViewSet with nested router support."""
 
@@ -43,12 +49,16 @@ class OTPViewSet(viewsets.GenericViewSet):
         responses={
             200: OTPRequestResponseSerializer,
             400: OTPErrorResponseSerializer,
+            429: OTPErrorResponseSerializer,
             500: OTPErrorResponseSerializer,
         },
     )
     @action(detail=False, methods=["post"], url_path="request", url_name="request")
     def request_otp(self, request):
         """Request OTP code to email or phone."""
+        if _is_ip_limited(request, group='otp_request_ip', rate='10/m'):
+            return Response({"error": "Too many requests"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
         serializer = OTPRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -101,6 +111,16 @@ class OTPViewSet(viewsets.GenericViewSet):
                     {"error": "Failed to create user account"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
+            elif error_type == "cooldown":
+                return Response(
+                    {"error": "Please wait before requesting another OTP"},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            elif error_type in ("hourly_limit", "daily_limit"):
+                return Response(
+                    {"error": "Too many OTP requests. Please try again later."},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
             else:
                 logger.error(f"Unknown error type: {error_type} for identifier: {identifier}")
                 return Response(
@@ -112,8 +132,8 @@ class OTPViewSet(viewsets.GenericViewSet):
         request=OTPVerifySerializer,
         responses={
             200: OTPVerifyResponseSerializer,
-            400: OTPErrorResponseSerializer,
-            410: OTPErrorResponseSerializer,
+            401: OTPErrorResponseSerializer,
+            429: OTPErrorResponseSerializer,
         },
     )
     @action(detail=False, methods=["post"], url_path="verify", url_name="verify")
@@ -128,6 +148,9 @@ class OTPViewSet(viewsets.GenericViewSet):
         If user has no 2FA:
         - Returns JWT tokens and user data directly
         """
+        if _is_ip_limited(request, group='otp_verify_ip', rate='20/m'):
+            return Response({"error": "Too many requests"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
         serializer = OTPVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -183,24 +206,14 @@ class OTPViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_200_OK,
             )
         else:
-            # Check if user was deleted after OTP was sent
+            # Log the failure reason internally — response is always uniform (anti-enumeration)
             try:
-                User = get_user_model()
-                # For email identifiers, check by email; for phone, we'd need phone field
-                if '@' in identifier:
-                    User.objects.get(email=identifier)
-                else:
-                    # For phone numbers, we'd need to implement phone field lookup
-                    # For now, assume email-based lookup
-                    User.objects.get(email=identifier)
-                # User exists but OTP is invalid
-                return Response(
-                    {"error": "Invalid or expired OTP"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            except User.DoesNotExist:
-                # User was deleted after OTP was sent
-                return Response(
-                    {"error": "User account has been deleted"},
-                    status=status.HTTP_410_GONE,
-                )
+                UserModel = get_user_model()
+                UserModel.objects.get(email=identifier)
+                logger.warning(f"Invalid or expired OTP for identifier: {identifier}")
+            except Exception:
+                logger.warning(f"OTP verify attempt for deleted/non-existent user: {identifier}")
+            return Response(
+                {"error": "Authentication failed"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )

@@ -500,6 +500,7 @@ class DjangoRQConfig(BaseModel):
 
         Currently supports:
         - CurrencyConfig: currency rate update task
+        - Accounts: OTP cleanup (every 10 min), JWT blacklist flush (daily)
 
         Args:
             config: Current DjangoConfig instance
@@ -517,6 +518,13 @@ class DjangoRQConfig(BaseModel):
                     schedules.extend(currency_schedules)
             except Exception:
                 pass
+
+        # Accounts cleanup tasks (OTP expiry + JWT blacklist flush)
+        try:
+            from django_cfg.apps.system.accounts.services.cleanup_service import get_rq_schedules as accounts_schedules
+            schedules.extend(accounts_schedules())
+        except Exception:
+            pass
 
         return schedules
 

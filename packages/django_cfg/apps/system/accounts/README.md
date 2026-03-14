@@ -1,333 +1,211 @@
-# 🧩 Accounts Module Documentation
+# Accounts Module
 
-## 🎯 Goal
+Complete user authentication and management system built on `django-cfg`.
 
-Comprehensive Django accounts module with OTP authentication, user management, and registration source tracking. Optimized for LLM understanding and code generation.
-
----
-
-## 📖 Overview
-
-The accounts module provides a complete user authentication and management system with:
-- Custom User model with email-based authentication
-- OTP (One-Time Password) authentication system
-- Registration source tracking for analytics
-- Profile management with avatar support
-- Manager-based computed properties for performance
+- OTP (One-Time Password) email authentication
+- OAuth2 via GitHub
+- 2FA via TOTP (optional)
+- Per-email brute-force and abuse protection
+- Registration source tracking
+- JWT-based sessions (access + refresh tokens)
+- Soft-delete with GDPR anonymization and partial unique email constraint
 
 ---
 
-## 📦 Modules
+## Authentication Flows
 
-### @accounts/models
+### OTP Login
 
-**Purpose**: Core data models for user management and authentication.
-
-**Models**:
-- `CustomUser`: Extended AbstractUser with email as primary identifier
-- `OTPSecret`: One-time password secrets for authentication
-- `RegistrationSource`: Tracks where users register from
-- `UserRegistrationSource`: Links users to their registration sources
-
-**Dependencies**:
-- `django.contrib.auth.models.AbstractUser`
-- `django.db.models`
-- `django.utils.timezone`
-
-**Used in**:
-- All views and serializers
-- Admin interface
-- Services layer
-
----
-
-### @accounts/managers
-
-**Purpose**: Custom model managers with business logic and computed properties.
-
-**Managers**:
-- `UserManager`: Handles user creation, registration, and computed properties
-- `OTPSecretManager`: Manages OTP secret lifecycle
-
-**Key Methods**:
-- `register_user()`: Creates new users with source tracking
-- `get_full_name()`: Computes user's full name
-- `get_initials()`: Computes user's initials for avatar
-- `get_display_username()`: Formats username for display
-
-**Used in**:
-- Models for computed properties
-- Admin interface
-- Services layer
-
----
-
-### @accounts/services
-
-**Purpose**: Business logic layer for authentication and user operations.
-
-**Services**:
-- `OTPService`: Handles OTP generation, sending, and verification
-- `AuthEmailService`: Email notifications for authentication events
-
-**Key Methods**:
-- `request_otp()`: Generates and sends OTP
-- `verify_otp()`: Verifies OTP and authenticates user
-- `send_otp_email()`: Sends OTP via email
-
-**Used in**:
-- Views for authentication
-- API endpoints
-- Management commands
-
----
-
-### @accounts/serializers
-
-**Purpose**: DRF serializers for API data validation and transformation.
-
-**Serializers**:
-- `OTPRequestSerializer`: Validates OTP request data
-- `OTPVerifySerializer`: Validates OTP verification data
-- `UserProfileUpdateSerializer`: Handles profile updates
-- `RegistrationSourceSerializer`: Manages registration sources
-
-**Used in**:
-- API views
-- Admin interface
-- External integrations
-
----
-
-### @accounts/views
-
-**Purpose**: API endpoints for authentication and user management.
-
-**Views**:
-- `OTPRequestView`: Handles OTP requests
-- `OTPVerifyView`: Handles OTP verification
-- `ProfileUpdateView`: Manages profile updates
-- `UserSourcesView`: Lists user registration sources
-
-**Used in**:
-- URL routing
-- API documentation
-- Frontend integration
-
----
-
-## 🧾 APIs (ReadMe.LLM Format)
-
-````markdown
-%%README.LLM id=accounts%%
-
-## 🧭 Module Description
-
-Django accounts module with OTP authentication and user management. Provides complete user lifecycle management.
-
-## ✅ Rules
-
-- Always use CustomUser instead of Django's default User model
-- Use manager methods for computed properties (full_name, initials, display_username)
-- OTP secrets expire after 10 minutes
-- Registration sources are automatically tracked
-- All email operations are async
-
-## 🧪 Functions
-
-### CustomUser.objects.register_user(email: str, source_url: Optional[str] = None) -> Tuple[CustomUser, bool]
-
-**Creates or retrieves user with source tracking.**
-
-```python
-user, created = CustomUser.objects.register_user(
-    "user@example.com", 
-    source_url="https://my.djangocfg.com"
-)
+```
+POST /cfg/accounts/otp/request/   — send 6-digit code to email
+POST /cfg/accounts/otp/verify/    — exchange code for JWT tokens
 ```
 
-### CustomUser.objects.get_full_name(user: CustomUser) -> str
+### OAuth (GitHub)
 
-**Computes user's full name with fallbacks.**
-
-```python
-full_name = user.objects.get_full_name(user)  # "John Doe" or "john@example.com"
+```
+POST /cfg/accounts/oauth/github/authorize/   — get authorization URL
+POST /cfg/accounts/oauth/github/callback/    — exchange code → JWT tokens
+GET  /cfg/accounts/oauth/connections/        — list connected providers
+POST /cfg/accounts/oauth/disconnect/         — remove connection
 ```
 
-### OTPService.request_otp(email: str, source_url: Optional[str] = None) -> bool
+### Token management
 
-**Generates and sends OTP to user.**
-
-```python
-success = OTPService.request_otp("user@example.com")
+```
+POST /cfg/accounts/token/refresh/   — refresh access token
 ```
 
-### OTPService.verify_otp(email: str, otp_code: str, source_url: Optional[str] = None) -> Optional[CustomUser]
+---
 
-**Verifies OTP and returns authenticated user.**
+## Brute-Force & Abuse Protection
+
+All protection is in `services/brute_force_service.py` using Django's cache framework (Redis in production, locmem in tests).
+
+### OTP Request Throttle (`OTPRequestThrottle`)
+
+Prevents email bombing and SMTP exhaustion.
+
+| Protection | Default | Setting |
+|------------|---------|---------|
+| Resend cooldown | 60 s | `OTP_RESEND_COOLDOWN_SECONDS` |
+| Hourly limit per email | 5 | `OTP_HOURLY_LIMIT` |
+| Daily limit per email | 10 | `OTP_DAILY_LIMIT` |
+
+`check_email(email)` → `(allowed: bool, reason: str, retry_after: int)`
+`record_sent(email)` — call after successful OTP send.
+
+### OTP Verify Throttle (`OTPVerifyThrottle`)
+
+Prevents brute-forcing 6-digit OTP codes (10^6 space).
+
+| Protection | Default | Setting |
+|------------|---------|---------|
+| Max failed attempts | 5 | `OTP_MAX_VERIFY_ATTEMPTS` |
+| Lockout duration | 900 s (15 min) | `OTP_VERIFY_LOCKOUT_SECONDS` |
+
+`is_locked(email)` → `(locked: bool, retry_after: int)`
+`record_failure(email)` → `(just_locked: bool, remaining: int)`
+`record_success(email)` — clears both failure counter and lockout.
+
+### Cache Key Privacy
+
+All email addresses are SHA-256 hashed (first 16 hex chars) before use as cache keys — no PII in Redis.
 
 ```python
-user = OTPService.verify_otp("user@example.com", "123456")
+from django_cfg.apps.system.accounts.services.brute_force_service import _hash_identifier
+key = f"otp:cooldown:{_hash_identifier(email)}"
 ```
 
-%%END%%
-````
+### View-level Rate Limiting
+
+IP-based rate limits via `django-ratelimit` (returns 429 if exceeded):
+
+| Endpoint | IP limit |
+|----------|---------|
+| `POST otp/request/` | 10/min |
+| `POST otp/verify/` | 20/min |
+| `POST oauth/github/authorize/` | 20/min |
+| `POST oauth/github/callback/` | 10/min |
+
+### Anti-Enumeration
+
+All `verify_otp` failure paths return identical HTTP 401 + `{"error": "Authentication failed"}` regardless of whether the user exists or the OTP is wrong. Detailed reason is logged server-side only.
 
 ---
 
-## 🔁 Flows
+## Models
 
-### User Registration via OTP
+| Model | Purpose |
+|-------|---------|
+| `CustomUser` | Extended `AbstractUser` with email as primary identifier |
+| `OTPSecret` | 6-digit OTP with 10-minute TTL |
+| `RegistrationSource` | Tracks where users register from |
+| `UserRegistrationSource` | Links users to sources (M2M) |
+| `OAuthConnection` | Stores OAuth provider connections |
 
-1. User submits email → `OTPRequestView` receives request
-2. `OTPService.request_otp()` generates OTP secret
-3. Email sent via `AuthEmailService.send_otp_email()`
-4. User receives email with OTP code
-5. User submits OTP → `OTPVerifyView` processes verification
-6. `OTPService.verify_otp()` validates and creates user
-7. User is authenticated and redirected
+### Soft Delete
 
-**Modules**:
-- `@accounts/views.otp`
-- `@accounts/services.otp_service`
-- `@accounts/utils.auth_email_service`
-- `@accounts/managers.user_manager`
-
----
-
-### Profile Update Flow
-
-1. User submits profile data → `ProfileUpdateView` receives request
-2. `UserProfileUpdateSerializer` validates data
-3. User model updated with new information
-4. Avatar processed if provided
-5. Response includes updated user data
-
-**Modules**:
-- `@accounts/views.profile`
-- `@accounts/serializers.profile`
-- `@accounts/models.CustomUser`
-
----
-
-### Registration Source Tracking
-
-1. User registers from any source URL
-2. `UserManager.register_user()` creates/retrieves source
-3. `UserRegistrationSource` links user to source
-4. Analytics can track user acquisition channels
-5. Admin interface shows user registration sources
-
-**Modules**:
-- `@accounts/models.RegistrationSource`
-- `@accounts/models.UserRegistrationSource`
-- `@accounts/managers.user_manager`
-
----
-
-### Admin User Management
-
-1. Admin accesses Django admin interface
-2. `CustomUserAdmin` displays computed properties
-3. Manager methods provide formatted data
-4. Avatar fallback shows user initials
-5. Registration sources displayed in user detail
-
-**Modules**:
-- `@accounts/admin`
-- `@accounts/managers.user_manager`
-- `@accounts/models.CustomUser`
-
----
-
-## 🧠 Terms
-
-- **OTP (One-Time Password)**: Temporary authentication code sent via email
-- **Registration Source**: URL or platform where user registered from
-- **Computed Properties**: User data calculated by manager methods (full_name, initials, display_username)
-- **Avatar Fallback**: User initials displayed when no avatar image is available
-- **Source Tracking**: Automatic recording of where users register from for analytics
-- **Manager Methods**: Business logic moved from model properties to manager for better performance
-
----
-
-## 🔧 Configuration
-
-### Required Settings
+`CustomUser` supports soft-delete with GDPR anonymization. Email is **preserved intact** — uniqueness is enforced only among active accounts via a partial unique constraint.
 
 ```python
-# settings.py
-AUTH_USER_MODEL = 'accounts.CustomUser'
-OTP_EXPIRY_MINUTES = 10
-TELEGRAM_DISABLED = True  # For testing
+user.soft_delete()   # is_active=False, deleted_at=now(), clears name/phone/company
+user.restore()       # is_active=True, deleted_at=None — raises ValueError if email taken
+user.is_deleted      # property: deleted_at is not None
 ```
 
-### Dependencies
+Multiple deleted accounts may share the same email address (historical archive). Re-registration with a previously deleted email creates a **new** account — the archived one is untouched.
 
-```toml
-# pyproject.toml
-[tool.poetry.dependencies]
-django = "^5.2"
-djangorestframework = "^3.14"
-drf-spectacular = "^0.27"
-coolname = "^2.1"
-```
+**DB constraint:** `unique_active_email` — `UNIQUE(email) WHERE deleted_at IS NULL` (PostgreSQL partial index).
 
-### URL Configuration
+---
+
+## Services
+
+| Service | File | Purpose |
+|---------|------|---------|
+| `OTPService` | `services/otp_service.py` | OTP generate, send, verify (includes throttle checks) |
+| `OTPRequestThrottle` | `services/brute_force_service.py` | Request flood protection |
+| `OTPVerifyThrottle` | `services/brute_force_service.py` | Brute-force lockout |
+| `GitHubOAuthService` | `services/github_service.py` | GitHub OAuth flow |
+| `AccountNotifications` | `utils/notifications.py` | Email + Telegram notifications |
+| `cleanup_expired_otps` | `services/cleanup_service.py` | RQ: delete expired OTP secrets (every 10 min) |
+| `cleanup_jwt_blacklist` | `services/cleanup_service.py` | RQ: flush simplejwt blacklist (daily 03:00 UTC) |
+
+---
+
+## Configuration
 
 ```python
-# urls.py
-urlpatterns = [
-    path('auth/otp/request/', OTPRequestView.as_view()),
-    path('auth/otp/verify/', OTPVerifyView.as_view()),
-    path('profile/update/', ProfileUpdateView.as_view()),
+# Optional Django settings (all have defaults)
+OTP_RESEND_COOLDOWN_SECONDS = 60     # seconds between resend requests per email
+OTP_HOURLY_LIMIT = 5                 # max OTP sends per email per hour
+OTP_DAILY_LIMIT = 10                 # max OTP sends per email per day
+OTP_MAX_VERIFY_ATTEMPTS = 5          # failed attempts before lockout
+OTP_VERIFY_LOCKOUT_SECONDS = 900     # lockout duration (15 min)
+OTP_EXPIRY_MINUTES = 10              # OTP validity window
+```
+
+---
+
+## JWT Token Security
+
+Token rotation is enabled by default:
+
+- `ROTATE_REFRESH_TOKENS = True` — each `/token/refresh/` issues a new refresh token
+- `BLACKLIST_AFTER_ROTATION = True` — old token is immediately blacklisted
+- `rest_framework_simplejwt.token_blacklist` added to `INSTALLED_APPS` automatically
+
+---
+
+## Tests
+
+```bash
+# From solution/django
+uv run python manage.py test django_cfg.apps.system.accounts.tests
+```
+
+| File | Coverage |
+|------|---------|
+| `tests/test_brute_force.py` | 18 unit tests — `OTPRequestThrottle`, `OTPVerifyThrottle`, `_hash_identifier` (no Redis) |
+| `tests/test_views.py` | OTP endpoint tests, throttle integration, anti-enumeration checks |
+| `tests/test_oauth_views.py` | GitHub OAuth flow tests |
+
+All brute-force tests use `@override_settings(CACHES=LOCMEM_CACHE)` — no Redis dependency.
+Non-throttle test classes use `@override_settings(RATELIMIT_ENABLE=False)`.
+
+---
+
+## IP Spoofing Protection
+
+`AXES_IPWARE_META_PRECEDENCE_ORDER` trusts Cloudflare's `CF-Connecting-IP` header first:
+
+```python
+# models/django/axes.py
+ipware_meta_precedence_order = [
+    'HTTP_CF_CONNECTING_IP',   # Cloudflare (most trusted)
+    'HTTP_X_FORWARDED_FOR',
+    'HTTP_X_REAL_IP',
+    'REMOTE_ADDR',
 ]
 ```
 
 ---
 
-## 🧪 Testing
+## Cleanup Jobs (RQ)
 
-### Running Tests
+Registered automatically when RQ is enabled (`DjangoRQConfig.enabled=True`):
 
-```bash
-# Run all accounts tests
-python manage.py test src.accounts.tests
+| Job | Schedule | Queue | Purpose |
+|-----|----------|-------|---------|
+| `cleanup_expired_otps` | `*/10 * * * *` | low | Delete expired/used `OTPSecret` rows |
+| `cleanup_jwt_blacklist` | `0 3 * * *` | low | Flush expired `token_blacklist` entries |
 
-# Run specific test file
-python manage.py test src.accounts.tests.test_models
-
-# Run with pytest
-poetry run pytest src/accounts/tests/ -v
-```
-
-### Test Coverage
-
-- **Models**: User creation, computed properties, source tracking
-- **Services**: OTP generation, verification, email sending
-- **Serializers**: Data validation, transformation
-- **Views**: API endpoints, authentication flows
+Jobs owned by `services/cleanup_service.py::get_rq_schedules()`, loaded by `DjangoRQConfig._collect_module_schedules()`.
 
 ---
 
-## 🚀 Migration
+## See Also
 
-### Database Migrations
-
-```bash
-# Create migration
-python manage.py makemigrations accounts
-
-# Apply migration
-python manage.py migrate
-
-# Using pnpm
-pnpm migrate
-```
-
-### Model Changes
-
-- `Source` → `RegistrationSource` (renamed for clarity)
-- `UserSource` → `UserRegistrationSource` (renamed for clarity)
-- Computed properties moved to manager methods
-- Added app_label to all model Meta classes
+- [`@docs/README.md`](./@docs/README.md) — full API reference and integration guide
+- [`@docs/SECURITY.md`](./@docs/SECURITY.md) — brute-force protection internals

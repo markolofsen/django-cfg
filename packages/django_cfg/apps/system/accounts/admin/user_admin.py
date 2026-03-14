@@ -1,33 +1,31 @@
 """
-User Admin v2.0 - Hybrid Pydantic Approach
+User Admin v2.1 — Declarative Pydantic approach.
 
-Enhanced user management with Material Icons and clean declarative config.
-Note: Uses hybrid approach due to BaseUserAdmin requirement and standalone actions.
+Uses StatusBadgesField, FilterConfig (range_date), ActionConfig, StackedField
+from django_cfg.modules.django_admin for a clean, code-reduced admin.
 """
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.shortcuts import redirect
-from django.urls import reverse
+from django.contrib import messages
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from django_cfg.modules.django_admin import (
+    ActionConfig,
     AdminConfig,
     BadgeField,
+    BadgeRule,
     BooleanField,
     DateTimeField,
-    FieldsetConfig,
+    FilterConfig,
     Icons,
+    RowItem,
+    StackedField,
+    StatusBadgesField,
     UserField,
     computed_field,
 )
 from django_cfg.modules.django_admin.base import PydanticAdmin
-# TODO: Migrate standalone actions to new ActionConfig system
-# from django_cfg.modules.django_admin_old import (
-#     ActionVariant,
-#     StandaloneActionsMixin,
-#     standalone_action,
-# )
 
 from django_cfg.modules.base import BaseCfgModule
 
@@ -42,12 +40,46 @@ from .inlines import (
 from .resources import CustomUserResource
 
 
-# ===== User Admin =====
+# ===== Action handlers =====
+
+def restore_accounts_handler(modeladmin, request, queryset):
+    """Restore soft-deleted accounts."""
+    restored = 0
+    errors = []
+
+    for user in queryset.filter(deleted_at__isnull=False):
+        try:
+            user.restore()
+            restored += 1
+        except ValueError:
+            errors.append(
+                f"{user.email} — email is already taken by an active account. "
+                "Open the user record and change the email before restoring."
+            )
+
+    if restored:
+        modeladmin.message_user(request, f"Successfully restored {restored} account(s).")
+    for msg in errors:
+        modeladmin.message_user(request, msg, level=messages.ERROR)
+
+
+def soft_delete_accounts_handler(modeladmin, request, queryset):
+    """Soft delete selected accounts (skips superusers)."""
+    deleted = 0
+    for user in queryset.filter(deleted_at__isnull=True):
+        if user.is_superuser:
+            continue
+        user.soft_delete()
+        deleted += 1
+    modeladmin.message_user(request, f"Successfully deleted {deleted} account(s).")
+
+
+# ===== Config =====
 
 customuser_config = AdminConfig(
     model=CustomUser,
 
-    # Performance optimization
+    # Performance
     prefetch_related=["groups", "user_permissions"],
 
     # Import/Export
@@ -57,11 +89,9 @@ customuser_config = AdminConfig(
     # List display
     list_display=[
         "avatar",
-        "email",
-        "full_name",
-        "status",
+        "user_info",
+        "account_flags",
         "language",
-        "is_test_account",
         "twofa_status",
         "sources_count",
         "activity_count",
@@ -69,21 +99,71 @@ customuser_config = AdminConfig(
         "tickets_count",
         "last_login",
         "date_joined",
-        "deleted_at",
     ],
 
-    # Display fields with UI widgets
+    # Declarative display fields
     display_fields=[
         UserField(
             name="avatar",
             title="Avatar",
-            header=True
+            header=True,
         ),
-        BadgeField(
-            name="email",
-            title="Email",
-            variant="info",
-            icon=Icons.EMAIL
+        StackedField(
+            name="user_info",
+            title="User",
+            rows=[
+                RowItem(field="email", bold=True),
+                RowItem(field="full_name", muted=True, hide_if_empty=True),
+                RowItem(field="company", muted=True, hide_if_empty=True),
+            ],
+        ),
+        StatusBadgesField(
+            name="account_flags",
+            title="Status",
+            badge_rules=[
+                BadgeRule(
+                    condition_field="is_deleted",
+                    condition_value=True,
+                    label="Deleted",
+                    variant="danger",
+                    icon=Icons.DELETE,
+                ),
+                BadgeRule(
+                    condition_field="is_superuser",
+                    condition_value=True,
+                    label="Superuser",
+                    variant="danger",
+                    icon=Icons.ADMIN_PANEL_SETTINGS,
+                ),
+                BadgeRule(
+                    condition_field="is_staff",
+                    condition_value=True,
+                    label="Staff",
+                    variant="warning",
+                    icon=Icons.SETTINGS,
+                ),
+                BadgeRule(
+                    condition_field="is_test_account",
+                    condition_value=True,
+                    label="Test",
+                    variant="info",
+                    icon=Icons.SCIENCE,
+                ),
+                BadgeRule(
+                    condition_field="is_active",
+                    condition_value=True,
+                    label="Active",
+                    variant="success",
+                    icon=Icons.CHECK_CIRCLE,
+                ),
+                BadgeRule(
+                    condition_field="is_active",
+                    condition_value=False,
+                    label="Inactive",
+                    variant="secondary",
+                    icon=Icons.CANCEL,
+                ),
+            ],
         ),
         BooleanField(
             name="is_test_account",
@@ -92,17 +172,23 @@ customuser_config = AdminConfig(
         DateTimeField(
             name="last_login",
             title="Last Login",
-            ordering="last_login"
+            ordering="last_login",
+            show_relative=True,
         ),
         DateTimeField(
             name="date_joined",
             title="Joined",
-            ordering="date_joined"
+            ordering="date_joined",
         ),
     ],
 
-    # Filters and search
-    list_filter=[UserStatusFilter, "is_staff", "is_active", "is_test_account", "deleted_at", "date_joined"],
+    # Filters — UserStatusFilter covers deleted/active/staff/superuser;
+    # FilterConfig with range_date replaces the useless DateHierarchy on date_joined.
+    list_filter=[
+        UserStatusFilter,
+        FilterConfig(field="is_test_account", type="boolean"),
+        FilterConfig(field="date_joined", type="range_date"),
+    ],
     search_fields=["email", "first_name", "last_name"],
 
     # Readonly fields
@@ -110,28 +196,42 @@ customuser_config = AdminConfig(
 
     # Ordering
     ordering=["-date_joined"],
+
+    # Declarative actions
+    actions=[
+        ActionConfig(
+            name="restore_accounts",
+            description="Restore selected deleted accounts",
+            action_type="bulk",
+            variant="success",
+            icon=Icons.RESTORE,
+            handler=restore_accounts_handler,
+        ),
+        ActionConfig(
+            name="soft_delete_accounts",
+            description="Soft delete selected accounts",
+            action_type="bulk",
+            variant="danger",
+            icon=Icons.DELETE,
+            confirmation=True,
+            handler=soft_delete_accounts_handler,
+        ),
+    ],
 )
 
 
 @admin.register(CustomUser)
 class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
     """
-    User admin using hybrid Pydantic approach.
+    User admin — hybrid Pydantic approach.
 
-    Note: Extends BaseUserAdmin for Django user management functionality.
-    Uses PydanticAdmin for declarative config (import/export enabled via config).
-
-    Features:
-    - Clean declarative config
-    - Import/Export functionality (via import_export_enabled in config)
-    - Material Icons integration
-    - Dynamic inlines based on enabled apps
-
-    TODO: Migrate standalone actions to new ActionConfig system
+    Extends BaseUserAdmin for Django user management functionality.
+    Uses PydanticAdmin for declarative config (import/export, display fields,
+    StatusBadgesField, FilterConfig, ActionConfig).
     """
     config = customuser_config
 
-    # Forms loaded from unfold.forms
+    # Forms from unfold
     form = UserChangeForm
     add_form = UserCreationForm
     change_password_form = AdminPasswordChangeForm
@@ -190,8 +290,6 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
     def get_inlines(self, request, obj):
         """Get inlines based on enabled apps."""
         inlines = [UserRegistrationSourceInline, UserActivityInline]
-
-        # Add email log inline if newsletter app is enabled
         try:
             base_module = BaseCfgModule()
             if base_module.is_newsletter_enabled():
@@ -200,56 +298,18 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
                 inlines.append(UserSupportTicketsInline)
         except Exception:
             pass
-
         return inlines
 
-    # Custom display methods using decorators
+    # === Computed display methods ===
+
     @computed_field("Avatar")
     def avatar(self, obj):
-        """Enhanced avatar display with fallback initials."""
-        # Avatar is handled automatically by UserField in display_fields
-        # For custom avatar display, we would use self.html methods
-        # For now, return the user object and let the UserField handle it
+        """Handled by UserField — returns user object for display."""
         return obj.get_full_name() or obj.email
-
-    @computed_field("Full Name")
-    def full_name(self, obj):
-        """Full name display."""
-        full_name = obj.__class__.objects.get_full_name(obj)
-        if not full_name:
-            return self.html.badge("No name", variant="secondary", icon=Icons.PERSON)
-
-        return self.html.badge(full_name, variant="primary", icon=Icons.PERSON)
-
-    @computed_field("Status")
-    def status(self, obj):
-        """Enhanced status display with appropriate icons and colors."""
-        # Check deleted first (highest priority)
-        if obj.is_deleted:
-            return self.html.badge("Deleted", variant="danger", icon=Icons.DELETE)
-
-        if obj.is_superuser:
-            status = "Superuser"
-            icon = Icons.ADMIN_PANEL_SETTINGS
-            variant = "danger"
-        elif obj.is_staff:
-            status = "Staff"
-            icon = Icons.SETTINGS
-            variant = "warning"
-        elif obj.is_active:
-            status = "Active"
-            icon = Icons.CHECK_CIRCLE
-            variant = "success"
-        else:
-            status = "Inactive"
-            icon = Icons.CANCEL
-            variant = "secondary"
-
-        return self.html.badge(status, variant=variant, icon=icon)
 
     @computed_field("2FA")
     def twofa_status(self, obj):
-        """Display 2FA status with appropriate badge."""
+        """Display 2FA status."""
         if obj.has_2fa_enabled:
             return self.html.badge("2FA", variant="success", icon=Icons.VERIFIED_USER)
         elif obj.requires_2fa:
@@ -258,119 +318,64 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
 
     @computed_field("Sources")
     def sources_count(self, obj):
-        """Show count of registration sources for user."""
+        """Count of registration sources."""
         count = obj.user_registration_sources.count()
         if count == 0:
             return None
-
         return self.html.badge(
             f"{count} source{'s' if count != 1 else ''}",
             variant="info",
-            icon=Icons.SOURCE
+            icon=Icons.SOURCE,
         )
 
     @computed_field("Activities")
     def activity_count(self, obj):
-        """Show count of user activities."""
+        """Count of user activities."""
         count = obj.activities.count()
         if count == 0:
             return None
-
         return self.html.badge(
             f"{count} activit{'ies' if count != 1 else 'y'}",
             variant="info",
-            icon=Icons.HISTORY
+            icon=Icons.HISTORY,
         )
 
     @computed_field("Emails")
     def emails_count(self, obj):
-        """Show count of emails sent to user (if newsletter app is enabled)."""
-        from django.db.utils import ProgrammingError, OperationalError
-
+        """Count of emails (newsletter app)."""
+        from django.db.utils import OperationalError, ProgrammingError
         try:
             base_module = BaseCfgModule()
-
             if not base_module.is_newsletter_enabled():
                 return None
-
             from django_cfg.apps.business.newsletter.models import EmailLog
             count = EmailLog.objects.filter(user=obj).count()
             if count == 0:
                 return None
-
             return self.html.badge(
                 f"{count} email{'s' if count != 1 else ''}",
                 variant="success",
-                icon=Icons.EMAIL
+                icon=Icons.EMAIL,
             )
-        except (ProgrammingError, OperationalError):
-            # Table doesn't exist in database
-            return None
-        except (ImportError, Exception):
+        except (ProgrammingError, OperationalError, ImportError, Exception):
             return None
 
     @computed_field("Tickets")
     def tickets_count(self, obj):
-        """Show count of support tickets for user (if support app is enabled)."""
-        from django.db.utils import ProgrammingError, OperationalError
-
+        """Count of support tickets."""
+        from django.db.utils import OperationalError, ProgrammingError
         try:
             base_module = BaseCfgModule()
-
             if not base_module.is_support_enabled():
                 return None
-
             from django_cfg.apps.business.support.models import Ticket
             count = Ticket.objects.filter(user=obj).count()
             if count == 0:
                 return None
-
             return self.html.badge(
                 f"{count} ticket{'s' if count != 1 else ''}",
                 variant="warning",
-                icon=Icons.SUPPORT_AGENT
+                icon=Icons.SUPPORT_AGENT,
             )
-        except (ProgrammingError, OperationalError):
-            # Table doesn't exist in database
+        except (ProgrammingError, OperationalError, ImportError, Exception):
             return None
-        except (ImportError, Exception):
-            return None
-
-    # Admin actions
-    actions = ["restore_accounts", "soft_delete_accounts"]
-
-    @admin.action(description="Restore selected deleted accounts")
-    def restore_accounts(self, request, queryset):
-        """Restore soft-deleted accounts."""
-        restored = 0
-        errors = []
-
-        for user in queryset.filter(deleted_at__isnull=False):
-            try:
-                user.restore()
-                restored += 1
-            except ValueError as e:
-                errors.append(f"{user.email}: {str(e)}")
-
-        if restored:
-            self.message_user(request, f"Successfully restored {restored} account(s).")
-        if errors:
-            self.message_user(request, f"Errors: {'; '.join(errors)}", level="error")
-
-    @admin.action(description="Soft delete selected accounts")
-    def soft_delete_accounts(self, request, queryset):
-        """Soft delete selected accounts."""
-        deleted = 0
-
-        for user in queryset.filter(deleted_at__isnull=True):
-            # Don't allow deleting superusers via bulk action
-            if user.is_superuser:
-                continue
-            user.soft_delete()
-            deleted += 1
-
-        self.message_user(request, f"Successfully deleted {deleted} account(s).")
-
-    # TODO: Migrate standalone actions to new ActionConfig system
-    # Standalone actions (view_user_emails, view_user_tickets, export_user_data)
-    # temporarily disabled during migration from django_admin_old
