@@ -151,6 +151,36 @@ class SmartTestRunner(DiscoverRunner):
         model_checks_module._check_lazy_references = patched_check_lazy_references
         migrations_loader.MigrationLoader.check_consistent_history = patched_check
 
+        # 🔥 STEP 3: Patch DatabaseCreation.create_test_db to install extensions
+        # AFTER the empty DB is created (_create_test_db) but BEFORE migrate is called.
+        # Django flow: create_test_db() → _create_test_db() → [switch connection] → migrate()
+        # We wrap create_test_db so we can connect to the fresh DB and install extensions
+        # right between _create_test_db and the migrate call.
+        from django.db.backends.base.creation import BaseDatabaseCreation
+        original_create_test_db = BaseDatabaseCreation.create_test_db
+
+        runner_self = self
+
+        def patched_create_test_db(creation_self, verbosity=1, autoclobber=False, serialize=True, keepdb=False):
+            # First create the empty database structure (no migrate yet)
+            test_db_name = creation_self._create_test_db(verbosity, autoclobber, keepdb)
+            # Switch the connection to the new test database
+            creation_self.connection.settings_dict['NAME'] = test_db_name
+            creation_self.connection.close()
+            # NOW install extensions — before migrate runs
+            try:
+                runner_self._install_extensions_on(creation_self.connection)
+            except Exception as e:
+                if verbosity >= 2:
+                    sys.stderr.write(f"⚠️  Could not install extensions on {test_db_name}: {e}\n")
+            # Restore the NAME so create_test_db continues normally
+            creation_self.connection.settings_dict['NAME'] = test_db_name
+            creation_self.connection.close()
+            # Now call the original — it will re-create test db (skip if exists) and run migrate
+            return original_create_test_db(creation_self, verbosity=verbosity, autoclobber=True, serialize=serialize, keepdb=True)
+
+        BaseDatabaseCreation.create_test_db = patched_create_test_db
+
         try:
             # autoclobber=True: Django will silently drop and recreate the test DB
             # if it already exists. This is the safest fallback in case
@@ -161,8 +191,9 @@ class SmartTestRunner(DiscoverRunner):
             # Restore original methods
             migrations_loader.MigrationLoader.check_consistent_history = original_check
             model_checks_module._check_lazy_references = original_check_lazy_references
+            BaseDatabaseCreation.create_test_db = original_create_test_db
 
-        # 🔥 STEP 3: Install extensions AFTER database creation
+        # Legacy call kept for any connections that skipped the patch
         self._install_extensions()
 
         # CRITICAL: Force-close connections after extension installation.
@@ -324,6 +355,26 @@ class SmartTestRunner(DiscoverRunner):
             if self.verbosity >= 2:
                 self.log(f"⚠️  Could not remove old test database {test_db_name}: {e}")
 
+    def _install_extensions_on(self, connection) -> None:
+        """Install PostgreSQL extensions on a specific connection."""
+        db_engine = connection.settings_dict.get('ENGINE', '')
+        if 'postgresql' not in db_engine.lower():
+            return
+        manager = PostgreSQLExtensionManager()
+        try:
+            needs_pgvector = manager.check_if_pgvector_needed()
+            if needs_pgvector:
+                with connection.cursor() as cursor:
+                    cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+                    cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
+                    cursor.execute("CREATE EXTENSION IF NOT EXISTS unaccent;")
+                alias = connection.alias
+                if self.verbosity >= 1:
+                    self.log(f"✅ Installed PostgreSQL extensions for test database '{alias}'")
+        except Exception as e:
+            if self.verbosity >= 2:
+                self.log(f"⚠️  Could not install extensions for {connection.alias}: {e}")
+
     def _install_extensions(self):
         """
         Automatic installation of PostgreSQL extensions in test database.
@@ -333,34 +384,7 @@ class SmartTestRunner(DiscoverRunner):
         - Type 'vector' does not exist errors
         """
         for alias in connections:
-            connection = connections[alias]
-            db_engine = connection.settings_dict.get('ENGINE', '')
-
-            # Only work with PostgreSQL
-            if 'postgresql' not in db_engine.lower():
-                continue
-
-            # Use existing PostgreSQLExtensionManager
-            manager = PostgreSQLExtensionManager()
-
-            try:
-                # 🔥 Check if extensions are needed
-                needs_pgvector = manager.check_if_pgvector_needed()
-
-                if needs_pgvector:
-                    # Install extensions
-                    with connection.cursor() as cursor:
-                        cursor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-                        cursor.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm;")
-                        cursor.execute("CREATE EXTENSION IF NOT EXISTS unaccent;")
-
-                    if self.verbosity >= 1:
-                        self.log(f"✅ Installed PostgreSQL extensions for test database '{alias}'")
-
-            except Exception as e:
-                # Log error but don't fail - extensions may not be needed
-                if self.verbosity >= 2:
-                    self.log(f"⚠️  Could not install extensions for {alias}: {e}")
+            self._install_extensions_on(connections[alias])
 
     def _get_test_db_name(self, connection) -> str:
         """

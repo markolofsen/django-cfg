@@ -1,0 +1,82 @@
+{# Full TOON/JSON viewer for readonly_fields on change form.
+   Wraps in native <details>/<summary> (no JS needed for open/close).
+   Toggle and copy button use Alpine.js with localStorage mode persistence. #}
+{% if collapsible %}
+<details {% if default_open %}open{% endif %}
+         class="group border border-base-200 dark:border-base-700 rounded-lg overflow-hidden">
+  <summary class="flex items-center gap-2 px-3 py-2 cursor-pointer select-none text-sm font-medium
+                  hover:bg-base-50 dark:hover:bg-base-800 transition-colors">
+    <span class="material-symbols-outlined text-base transition-transform duration-150
+                 group-open:rotate-90">chevron_right</span>
+    <span>{{ label }}</span>
+    <span class="ml-auto text-xs text-base-400 font-normal tabular-nums">{{ line_count }} lines</span>
+  </summary>
+
+  <div x-data="toonViewerForm('{{ field_id }}', '{{ default_mode }}')"
+       class="border-t border-base-200 dark:border-base-700">
+{% else %}
+<div x-data="toonViewerForm('{{ field_id }}', '{{ default_mode }}')"
+     class="border border-base-200 dark:border-base-700 rounded-lg overflow-hidden">
+  <div class="flex items-center gap-2 px-3 py-2 bg-base-50 dark:bg-base-800 border-b border-base-200 dark:border-base-700">
+    <span class="text-sm font-medium">{{ label }}</span>
+    <span class="ml-auto text-xs text-base-400 tabular-nums">{{ line_count }} lines</span>
+  </div>
+{% endif %}
+
+    {# Toggle bar #}
+    <div class="flex items-center gap-2 px-3 py-2 bg-base-50 dark:bg-base-800">
+      <div class="flex rounded border border-base-200 dark:border-base-700 overflow-hidden text-xs leading-none">
+        <button @click.prevent="setMode('toon')"
+                :class="mode === 'toon' ? 'bg-primary-600 text-white' : 'text-base-500 hover:bg-base-100 dark:hover:bg-base-700'"
+                class="px-3 py-1.5 transition-colors">TOON</button>
+        <button @click.prevent="setMode('json')"
+                :class="mode === 'json' ? 'bg-primary-600 text-white' : 'text-base-500 hover:bg-base-100 dark:hover:bg-base-700'"
+                class="px-3 py-1.5 transition-colors">JSON</button>
+      </div>
+
+      {# Copy button #}
+      <button @click.prevent="copy()"
+              class="ml-auto flex items-center gap-1 text-xs text-base-500 hover:text-base-900 dark:hover:text-base-100 transition-colors">
+        <span class="material-symbols-outlined text-sm" x-text="copied ? 'check' : 'content_copy'"></span>
+        <span x-text="copied ? 'Copied' : 'Copy'"></span>
+      </button>
+    </div>
+
+    {# Content #}
+    <pre x-show="mode === 'toon'"
+         style="max-height: {{ max_height }}; overflow: auto;"
+         class="p-3 text-xs font-mono text-base-700 dark:text-base-300 whitespace-pre-wrap break-all leading-[1.4] bg-white dark:bg-base-950 m-0">{{ toon_text }}</pre>
+    <pre x-show="mode === 'json'"
+         x-cloak
+         style="max-height: {{ max_height }}; overflow: auto;"
+         class="p-3 text-xs font-mono text-base-700 dark:text-base-300 whitespace-pre-wrap break-all leading-[1.4] bg-white dark:bg-base-950 m-0">{{ json_text }}</pre>
+
+{% if collapsible %}
+  </div>
+</details>
+{% else %}
+</div>
+{% endif %}
+
+<script>
+  function toonViewerForm(fieldId, defaultMode) {
+    const STORAGE_KEY = 'django_admin_toon_mode'
+    return {
+      mode: localStorage.getItem(STORAGE_KEY) || defaultMode,
+      copied: false,
+      toonText: document.getElementById('toon-text-' + fieldId)?.textContent || '',
+      jsonText: document.getElementById('json-text-' + fieldId)?.textContent || '',
+      setMode(m) {
+        this.mode = m
+        localStorage.setItem(STORAGE_KEY, m)
+      },
+      copy() {
+        const el = this.$el.querySelector(this.mode === 'toon' ? '[x-show="mode === \'toon\'"]' : '[x-show="mode === \'json\'"]')
+        const text = el ? el.textContent : ''
+        navigator.clipboard.writeText(text).catch(() => {})
+        this.copied = true
+        setTimeout(() => { this.copied = false }, 2000)
+      },
+    }
+  }
+</script>

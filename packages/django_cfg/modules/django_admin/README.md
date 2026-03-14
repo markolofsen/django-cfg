@@ -225,6 +225,38 @@ MarkdownField(
 )
 ```
 
+### ToonField
+
+Renders JSON/dict fields as TOON (Token-Oriented Object Notation) with JSON fallback. Mode preference is persisted in `localStorage` across sessions.
+
+```python
+from django_cfg.modules.django_admin import ToonField
+
+# In list_display — compact preview with expand/collapse
+ToonField(name='metadata')
+ToonField(name='settings', preview_lines=5)
+
+# In readonly_fields — full collapsible block with JSON↔TOON toggle
+ToonField(
+    name='raw_data',
+    collapsible=True,
+    default_mode='toon',
+    label='Request payload',
+    max_height='32rem',
+)
+```
+
+**ToonField options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `collapsible` | `True` | Wrap in `<details>/<summary>` on change form |
+| `default_open` | `False` | Open the `<details>` block by default |
+| `default_mode` | `"toon"` | Initial mode — `"toon"` or `"json"` (persisted in localStorage) |
+| `preview_lines` | `3` | Visible lines in `list_display` before expand (1–20) |
+| `label` | `None` | Header label in `<details>` (falls back to `title` → `name`) |
+| `max_height` | `"24rem"` | CSS max-height of the content area |
+
 ### VideoField
 
 ```python
@@ -542,7 +574,7 @@ See [icons/constants.py](./icons/constants.py) for the full list.
 
 | Name | Type | Use Case |
 |------|------|----------|
-| `FieldConfigType` | Discriminated union of all 19 field types | `display_fields` annotation |
+| `FieldConfigType` | Discriminated union of all 20 field types | `display_fields` annotation |
 | `FilterSpec` | `str \| type \| tuple[str, type] \| FilterConfig` | `list_filter` annotation |
 | `FilterConfig` | Pydantic model | Declarative `list_filter` entry |
 | `FilterType` | `Literal[17 values]` | Valid `FilterConfig.type` keys |
@@ -561,6 +593,34 @@ apps/your_app/admin/
   model_admin.py     # AdminConfig + PydanticAdmin
   actions.py         # Action handlers
   resources.py       # Import/Export resources
+```
+
+**Module internals:**
+
+```
+modules/django_admin/
+  base/
+    pydantic_admin/
+      mixin.py                  # PydanticAdminMixin — core orchestrator
+      display_methods/          # Auto-generated display method factories
+        json_methods.py         # create_jsonfield_display_methods()
+        image_methods.py        # create_imagefield_display_methods()
+        markdown_methods.py     # create_markdownfield_display_methods()
+        toon_methods.py         # create_toonfield_display_methods()
+        fieldsets.py            # apply_replacements_to_fieldsets()
+  config/
+    field_config/               # All 20 FieldConfig subclasses
+    documentation/              # DocumentationConfig (dir/file/content modes)
+  utils/
+    displays/
+      geo/                      # CountryDisplay, CityDisplay, CoordinatesDisplay
+      stacked/                  # StackedDisplay + renderers (badge/text/datetime/money)
+      toon_display.py           # ToonDisplay (JSON↔TOON viewer)
+  widgets/
+    money/                      # MoneyFieldWidget, MoneyFieldFormField, rate utils
+    registry.py                 # WidgetRegistry — maps ui_widget → render handler
+  icons/
+    constants.py                # 2234 Material Design Icons
 ```
 
 ---

@@ -140,7 +140,7 @@ class InstalledAppsBuilder:
 
         # Frontend Monitor app (Sentry-like browser error collection)
         if self.config.frontend_monitor and self.config.frontend_monitor.enabled:
-            apps.append("django_cfg.apps.system.frontend_monitor")
+            apps.append("django_cfg.apps.system.monitor")
 
         return apps
 

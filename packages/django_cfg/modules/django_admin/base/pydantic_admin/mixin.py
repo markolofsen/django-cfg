@@ -14,6 +14,7 @@ from .display_methods import (
     create_imagefield_display_methods,
     create_jsonfield_display_methods,
     create_markdownfield_display_methods,
+    create_toonfield_display_methods,
     highlight_json,
 )
 from .flash import create_flash_display_method
@@ -151,6 +152,11 @@ class PydanticAdminMixin(ViewMixin):
             cls, cls.readonly_fields, config
         )
 
+        # Auto-create display methods for ToonField configs
+        cls.readonly_fields, toonfield_replacements = create_toonfield_display_methods(
+            cls, cls.readonly_fields, config
+        )
+
         # List display options
         # Rename list_display_links to match display method names (field -> field_display)
         if config.list_display_links:
@@ -180,6 +186,7 @@ class PydanticAdminMixin(ViewMixin):
             **jsonfield_replacements,
             **imagefield_replacements,
             **markdownfield_replacements,
+            **toonfield_replacements,
         }
 
         # Fieldsets - apply field replacements

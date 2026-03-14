@@ -139,6 +139,6 @@ if base_module.is_grpc_enabled():
 if base_module.is_geo_enabled():
     urlpatterns.append(path('cfg/geo/', include('django_cfg.apps.tools.geo.urls')))
 
-# Frontend Monitor app (Sentry-like browser error collection)
+# Monitor app (Sentry-like browser error collection)
 if base_module.is_frontend_monitor_enabled():
-    urlpatterns.append(path('cfg/frontend-monitor/', include('django_cfg.apps.system.frontend_monitor.urls')))
+    urlpatterns.append(path('cfg/monitor/', include('django_cfg.apps.system.monitor.urls')))

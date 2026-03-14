@@ -26,12 +26,15 @@ from .short_uuid import ShortUUIDField
 from .stacked import RowItem, StackedField
 from .status_badges import BadgeRule, StatusBadgesField
 from .text import TextField
+from .toon import ToonField
 from .user import UserField
 from .video import VideoField
 
 
 def _get_field_type(v: Any) -> str:
     """Discriminator function for FieldConfigType."""
+    if isinstance(v, ToonField):
+        return "toon"
     if isinstance(v, BadgeField):
         return "badge"
     if isinstance(v, CurrencyField):
@@ -96,6 +99,7 @@ FieldConfigType = Annotated[
         Annotated[VideoField, Tag("video")],
         Annotated[ForeignKeyField, Tag("foreignkey")],
         Annotated[StackedField, Tag("stacked")],
+        Annotated[ToonField, Tag("toon")],
         Annotated[FieldConfig, Tag("base")],
     ],
     Discriminator(_get_field_type),
@@ -125,4 +129,5 @@ __all__ = [
     "BadgeRule",
     "CounterBadgeField",
     "VideoField",
+    "ToonField",
 ]

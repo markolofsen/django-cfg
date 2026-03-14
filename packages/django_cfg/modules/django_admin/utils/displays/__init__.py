@@ -6,7 +6,10 @@ Provides display classes for various field types.
 
 from .avatar_display import AvatarDisplay
 from .counter_badge_display import CounterBadgeDisplay
-from .data_displays import BooleanDisplay, DateTimeDisplay, MoneyDisplay, UserDisplay
+from .boolean_display import BooleanDisplay
+from .datetime_display import DateTimeDisplay
+from .money_display import MoneyDisplay
+from .user_display import UserDisplay
 from .decimal_display import DecimalDisplay
 from .image_display import ImageDisplay
 from .image_preview import ImagePreviewDisplay
@@ -15,9 +18,10 @@ from .link_display import LinkDisplay
 from .short_uuid_display import ShortUUIDDisplay
 from .status_badges_display import StatusBadgesDisplay
 from .text_display import TextDisplay
-from .stacked_display import StackedDisplay
+from .stacked import StackedDisplay
 from .video_display import VideoDisplay
-from .geo_displays import CityDisplay, CoordinatesDisplay, CountryDisplay, LocationDisplay
+from .geo import CityDisplay, CoordinatesDisplay, CountryDisplay, LocationDisplay
+from .toon_display import ToonDisplay
 
 __all__ = [
     "UserDisplay",
@@ -36,6 +40,7 @@ __all__ = [
     "StackedDisplay",
     "TextDisplay",
     "VideoDisplay",
+    "ToonDisplay",
     # Geo displays
     "CountryDisplay",
     "CityDisplay",

@@ -1,0 +1,231 @@
+---
+title: Frontend SDK — @djangocfg/monitor
+description: Browser and server-side JavaScript SDK for sending events to the Django-CFG monitor backend. Covers install, configuration, network monitoring, manual capture, and Next.js server usage.
+sidebar_label: Frontend SDK
+keywords:
+  - djangocfg monitor sdk
+  - browser error tracking
+  - next.js monitoring
+  - frontend error capture
+---
+
+# Frontend SDK
+
+`@djangocfg/monitor` is the JavaScript counterpart to the Django monitor backend. It ships three entry points:
+
+| Entry | Import | Use |
+|---|---|---|
+| **Main** | `@djangocfg/monitor` | Types only — server-safe, no browser APIs |
+| **Client** | `@djangocfg/monitor/client` | Browser SDK (`"use client"`) |
+| **Server** | `@djangocfg/monitor/server` | Node.js / Edge Runtime |
+
+## Install
+
+```bash
+pnpm add @djangocfg/monitor
+```
+
+**Peer dependencies** (optional):
+
+| Package | Purpose |
+|---|---|
+| `consola` | Uses consola reporter instead of patching `console.*` |
+| `zustand` | Required for the client entry point event buffer |
+
+---
+
+## Client Usage
+
+### Initialize
+
+`MonitorProvider` is shipped by the package — drop it directly into `app/layout.tsx`:
+
+```tsx
+// app/layout.tsx
+import { MonitorProvider } from '@djangocfg/monitor/client'
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <MonitorProvider
+          project="my-app"
+          environment={process.env.NODE_ENV}
+          // baseUrl="https://api.myapp.com"  // default: same origin
+          // flushInterval={5000}
+          // debug={false}
+        />
+        {children}
+      </body>
+    </html>
+  )
+}
+```
+
+After that, the following are captured automatically:
+
+| Source | Mechanism |
+|---|---|
+| JS exceptions | `window.onerror` + `unhandledrejection` |
+| Console warnings / errors | consola reporter or `console.*` patch |
+| `@djangocfg/api` Zod failures | `zod-validation-error` CustomEvent |
+
+### Network Monitoring
+
+Wrap `fetch` calls with `monitoredFetch` to report non-2xx responses:
+
+```typescript
+import { monitoredFetch } from '@djangocfg/monitor/client'
+
+const response = await monitoredFetch('/api/orders', {
+  method: 'POST',
+  body: JSON.stringify(order),
+})
+```
+
+### Manual Event Capture
+
+```typescript
+import { FrontendMonitor } from '@djangocfg/monitor/client'
+import { EventType, EventLevel } from '@djangocfg/monitor'
+
+FrontendMonitor.capture({
+  event_type: EventType.JS_ERROR,
+  level: EventLevel.ERROR,
+  message: 'Payment failed',
+  url: window.location.href,
+  extra: { orderId: '123' },
+})
+```
+
+### Session ID
+
+Each browser gets an anonymous UUID stored in `localStorage` + cookie (`fm_session_id`). On login it is linked to the authenticated user:
+
+```typescript
+import { getSessionId } from '@djangocfg/monitor/client'
+
+const sessionId = getSessionId()
+```
+
+---
+
+## Configuration Reference — Client
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `project` | `string` | `''` | Project name sent with every event |
+| `environment` | `string` | `''` | `production` / `staging` / `development` |
+| `baseUrl` | `string` | `''` | Backend base URL (same origin by default) |
+| `flushInterval` | `number` | `5000` | Buffer flush interval (ms) |
+| `maxBufferSize` | `number` | `20` | Max buffered events before immediate flush |
+| `captureJsErrors` | `boolean` | `true` | `window.onerror` + unhandled rejections |
+| `captureConsole` | `boolean` | `true` | `console.warn` / `console.error` interception |
+| `debug` | `boolean` | `false` | Log init info to console |
+
+---
+
+## Server Usage (Next.js)
+
+Use `@djangocfg/monitor/server` in Route Handlers and Server Components. It has no browser dependencies.
+
+### Configure Once
+
+```typescript
+// lib/monitor.ts
+import { serverMonitor } from '@djangocfg/monitor/server'
+
+serverMonitor.configure({
+  project: process.env.PROJECT_NAME ?? 'my-app',
+  environment: process.env.NODE_ENV,
+  baseUrl: 'https://api.myapp.com',  // required when backend is on a different origin
+})
+
+export { serverMonitor }
+```
+
+### Route Handler
+
+```typescript
+// app/api/orders/route.ts
+import { serverMonitor } from '@/lib/monitor'
+
+export async function POST(req: Request) {
+  try {
+    // ... handle request
+  } catch (err) {
+    await serverMonitor.captureError(err, { url: req.url })
+    return new Response('Internal Server Error', { status: 500 })
+  }
+}
+```
+
+### Network Error
+
+```typescript
+const response = await fetch(upstreamUrl)
+if (!response.ok) {
+  await serverMonitor.captureNetworkError(
+    response.status,
+    'GET',
+    upstreamUrl,
+    { pageUrl: req.url },
+  )
+}
+```
+
+### Arbitrary Event
+
+```typescript
+import { EventType, EventLevel } from '@djangocfg/monitor/server'
+
+await serverMonitor.capture({
+  event_type: EventType.WARNING,
+  level: EventLevel.WARN,
+  message: 'Rate limit approaching',
+  url: req.url,
+  extra: { remaining: 5 },
+})
+```
+
+---
+
+## Configuration Reference — Server
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `project` | `string` | `''` | Project name |
+| `environment` | `string` | `''` | Environment name |
+| `baseUrl` | `string` | `''` | Absolute URL required when backend is on a different origin |
+
+---
+
+## Zod Validation Integration
+
+`@djangocfg/api` dispatches a `zod-validation-error` CustomEvent whenever a response fails schema validation. The monitor client catches it automatically — no extra setup needed:
+
+```
+@djangocfg/api → Zod validation fails
+  → window CustomEvent('zod-validation-error', { detail })
+    → @djangocfg/monitor/client listens
+      → pushed to store → flushed to backend
+```
+
+---
+
+## Transport Details
+
+All delivery uses the generated API client (`monitorApi`) — no hardcoded URLs:
+
+- **Normal flush** → `monitorApi.monitor.ingestCreate(batch)` (standard `FetchAdapter`)
+- **Page unload flush** → `monitorApiBeacon` with `KeepAliveFetchAdapter` — `keepalive: true` ensures delivery after navigation
+
+---
+
+## See Also
+
+- **[Server-Side Capture](./server-capture)** — Django-side automatic and manual capture
+- **[Configuration](./configuration)** — Backend retention and rate limit settings
+
+TAGS: monitor, frontend-sdk, javascript, next.js, browser-errors
+DEPENDS_ON: [monitor/overview]

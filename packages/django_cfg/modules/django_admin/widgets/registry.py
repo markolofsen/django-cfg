@@ -7,8 +7,10 @@ Maps ui_widget names to display utilities.
 import logging
 from typing import Any, Callable, ClassVar, Dict, Optional
 
+from django.utils.safestring import SafeString
+
 # Type for widget handler functions
-WidgetHandler = Callable[[Any, str, Dict[str, Any] | None], Any]
+WidgetHandler = Callable[[Any, str, Optional[Dict[str, Any]]], SafeString]
 
 from ..models import (
     DateTimeDisplayConfig,
@@ -123,14 +125,14 @@ WidgetRegistry.register(
 )
 
 
-def _render_money_field(obj, field, cfg):
+def _render_money_field(obj: Any, field: str, cfg: Optional[Dict[str, Any]]) -> SafeString:
     """
     Render MoneyField with compact display format.
 
     Uses MoneyFieldWidget.format_readonly() for consistent display
     in list view and readonly forms.
     """
-    from .money_widget import MoneyFieldWidget
+    from .money.widget import MoneyFieldWidget
 
     field_names = cfg.get('field_names', {}) if cfg else {}
     target_currency = cfg.get('target_currency', 'USD') if cfg else 'USD'
@@ -305,7 +307,7 @@ WidgetRegistry.register(
 
 
 # Geo widgets
-def _render_country_field(obj, field, cfg):
+def _render_country_field(obj: Any, field: str, cfg: Optional[Dict[str, Any]]) -> SafeString:
     """Render CountryField with flag emoji."""
     from .location_widget import CountrySelectWidget
 
@@ -314,7 +316,7 @@ def _render_country_field(obj, field, cfg):
     return widget.format_readonly(code)
 
 
-def _render_city_field(obj, field, cfg):
+def _render_city_field(obj: Any, field: str, cfg: Optional[Dict[str, Any]]) -> SafeString:
     """Render CityField with location display."""
     from .location_widget import CitySelectWidget
 
@@ -323,7 +325,7 @@ def _render_city_field(obj, field, cfg):
     return widget.format_readonly(city_id)
 
 
-def _render_location_field(obj, field, cfg):
+def _render_location_field(obj: Any, field: str, cfg: Optional[Dict[str, Any]]) -> SafeString:
     """Render LocationField with full location hierarchy."""
     from .location_widget import CitySelectWidget
 
@@ -338,3 +340,11 @@ def _render_location_field(obj, field, cfg):
 WidgetRegistry.register("country", _render_country_field)
 WidgetRegistry.register("city", _render_city_field)
 WidgetRegistry.register("location", _render_location_field)
+
+# TOON/JSON viewer widget
+from ..utils.displays import ToonDisplay
+
+WidgetRegistry.register(
+    "toon_viewer",
+    lambda obj, field, cfg: ToonDisplay.from_field(obj, field, cfg)
+)

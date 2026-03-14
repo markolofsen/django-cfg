@@ -6,7 +6,7 @@ navigation and theming support.
 """
 
 from .models import *
-from .navigation import NavigationManager, get_navigation_manager
+from .navigation import NavigationManager, get_navigation_manager, NavBuilder
 from .system_monitor import SystemMonitor
 from .tailwind import get_css_variables, get_unfold_colors
 
@@ -23,6 +23,7 @@ def get_system_monitor() -> SystemMonitor:
 __all__ = [
     'NavigationManager',
     'get_navigation_manager',
+    'NavBuilder',
     'SystemMonitor',
     'get_system_monitor',
     'get_unfold_colors',

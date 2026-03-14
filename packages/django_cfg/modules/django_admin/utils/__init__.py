@@ -36,6 +36,7 @@ from .displays import (
     StackedDisplay,
     StatusBadgesDisplay,
     TextDisplay,
+    ToonDisplay,
     UserDisplay,
     VideoDisplay,
 )
@@ -74,6 +75,7 @@ __all__ = [
     "ShortUUIDDisplay",
     "StackedDisplay",
     "TextDisplay",
+    "ToonDisplay",
     "VideoDisplay",
     # Badge utilities
     "StatusBadge",

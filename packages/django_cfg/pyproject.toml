@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "1.7.69"
+version = "1.7.71"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -130,6 +130,7 @@ dependencies = [
     # Rendering & Formatting
     "jinja2>=3.1.6,<4.0.0",
     "Pygments>=2.19.0,<3.0",
+    "json-toon>=1.0.2,<2.0",
     
     # Logging
     "python-json-logger>=3.3.0,<4.0",

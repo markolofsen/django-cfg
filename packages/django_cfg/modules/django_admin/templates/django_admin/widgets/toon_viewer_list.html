@@ -1,0 +1,66 @@
+{# Compact TOON/JSON viewer for list_display cells.
+   Collapsed: shows preview_lines of TOON.
+   Expanded:  full text + JSON↔TOON toggle + close button.
+   Mode is persisted in localStorage under key 'django_admin_toon_mode'. #}
+<div x-data="toonViewerList('{{ field_id }}', '{{ default_mode }}')"
+     class="min-w-[180px] max-w-[300px] text-left">
+
+  {# --- Collapsed preview --- #}
+  {% if has_more %}
+  <div x-show="!expanded">
+    <pre class="text-xs font-mono text-base-600 dark:text-base-400 whitespace-pre-wrap break-all leading-4 cursor-pointer hover:text-base-900 dark:hover:text-base-100 transition-colors"
+         @click.stop="expanded = true"
+         title="Click to expand">{{ preview }}</pre>
+    <button @click.stop="expanded = true"
+            class="mt-0.5 text-[10px] text-primary-500 hover:text-primary-700 leading-none">
+      ▼ expand
+    </button>
+  </div>
+  {% else %}
+  <pre class="text-xs font-mono text-base-600 dark:text-base-400 whitespace-pre-wrap break-all leading-4">{{ preview }}</pre>
+  {% endif %}
+
+  {# --- Expanded full view --- #}
+  {% if has_more %}
+  <div x-show="expanded" x-cloak class="space-y-1">
+
+    {# Toggle bar #}
+    <div class="flex items-center gap-1">
+      <div class="flex rounded border border-base-200 dark:border-base-700 overflow-hidden text-[10px] leading-none">
+        <button @click.stop="setMode('toon')"
+                :class="mode === 'toon' ? 'bg-primary-600 text-white' : 'text-base-500 hover:bg-base-100 dark:hover:bg-base-700'"
+                class="px-2 py-1 transition-colors">TOON</button>
+        <button @click.stop="setMode('json')"
+                :class="mode === 'json' ? 'bg-primary-600 text-white' : 'text-base-500 hover:bg-base-100 dark:hover:bg-base-700'"
+                class="px-2 py-1 transition-colors">JSON</button>
+      </div>
+      <button @click.stop="expanded = false"
+              class="ml-auto text-[10px] text-base-400 hover:text-base-700 dark:hover:text-base-200 leading-none">
+        ✕
+      </button>
+    </div>
+
+    {# Content #}
+    <pre x-show="mode === 'toon'"
+         class="text-xs font-mono text-base-700 dark:text-base-300 whitespace-pre-wrap break-all leading-4 max-h-64 overflow-auto bg-base-50 dark:bg-base-900 rounded p-1.5">{{ toon_text }}</pre>
+    <pre x-show="mode === 'json'"
+         x-cloak
+         class="text-xs font-mono text-base-700 dark:text-base-300 whitespace-pre-wrap break-all leading-4 max-h-64 overflow-auto bg-base-50 dark:bg-base-900 rounded p-1.5">{{ json_text }}</pre>
+
+  </div>
+  {% endif %}
+</div>
+
+<script>
+  function toonViewerList(fieldId, defaultMode) {
+    const STORAGE_KEY = 'django_admin_toon_mode'
+    return {
+      expanded: false,
+      mode: localStorage.getItem(STORAGE_KEY) || defaultMode,
+      setMode(m) {
+        this.mode = m
+        localStorage.setItem(STORAGE_KEY, m)
+      },
+    }
+  }
+</script>

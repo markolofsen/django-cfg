@@ -38,9 +38,12 @@ from .filter_config import FilterConfig  # noqa: E402
 
 FilterSpec: TypeAlias = str | type | tuple[str, type] | FilterConfig
 
+# TypeAlias for Django ORM annotation values (Aggregate, Expression, F, Q, Value, etc.)
+DjangoAnnotation: TypeAlias = Any
+
 from .action_config import ActionConfig
 from .background_task_config import BackgroundTaskConfig
-from .documentation_config import DocumentationConfig
+from .documentation import DocumentationConfig
 from .field_config import FieldConfig, FieldConfigType
 from .fieldset_config import FieldsetConfig
 from .resource_config import ResourceConfig
@@ -123,7 +126,7 @@ class AdminConfig(BaseModel):
         default_factory=list,
         description="Fields for prefetch_related()"
     )
-    annotations: Dict[str, Any] = Field(
+    annotations: Dict[str, DjangoAnnotation] = Field(
         default_factory=dict,
         description="Query annotations (e.g., Count, Sum, etc.)"
     )

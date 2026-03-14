@@ -46,16 +46,18 @@ class NavigationItem(BaseModel):
         return self.resolved_link
 
     def to_dict(self) -> dict:
-        """
-        Convert to dictionary for Unfold admin.
-
-        Note: This is used by dashboard.py which uses direct paths.
-        For URL names, resolution happens in UnfoldConfig.get_navigation() callable.
-        """
+        """Convert to dictionary for Unfold admin."""
+        from django.urls import reverse_lazy, NoReverseMatch
+        link = self.link
+        if link and not link.startswith(("/", "http")):
+            try:
+                link = str(reverse_lazy(link))
+            except NoReverseMatch:
+                pass
         return {
             "title": self.title,
             "icon": self.icon,
-            "link": self.get_link_for_unfold(),
+            "link": link,
             "badge": self.badge,
             "permission": self.permission,
         }

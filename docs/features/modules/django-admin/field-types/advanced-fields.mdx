@@ -1,6 +1,6 @@
 ---
 title: Advanced Field Types
-description: Advanced field types for Django Admin including StackedField for composite columns, StatusBadgesField for multiple conditional badges and CounterBadgeField for counter displays.
+description: Advanced field types for Django Admin including StackedField for composite columns, StatusBadgesField for multiple conditional badges, CounterBadgeField for counter displays, and ToonField for JSON/TOON viewer.
 sidebar_label: Advanced Fields
 sidebar_position: 5
 ---
@@ -505,6 +505,105 @@ CounterBadgeField automatically:
 Previously you needed `@computed_field` with `format_html()` to wrap a badge in a link. Now it's fully declarative!
 
 </Callout>
+
+## ToonField
+
+Renders JSON/dict fields as **TOON** (Token-Oriented Object Notation) with a JSON fallback. Provides a compact list preview and a full collapsible viewer on the change form.
+
+The user's preferred mode (TOON or JSON) is saved in `localStorage` and remembered across all admin pages.
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | `str` | *required* | Field name |
+| `title` | `str \| None` | `None` | Column header title |
+| `collapsible` | `bool` | `True` | Wrap the change-form viewer in `<details>/<summary>` |
+| `default_open` | `bool` | `False` | Open the collapsible block by default |
+| `default_mode` | `"toon" \| "json"` | `"toon"` | Initial display mode (persisted in localStorage) |
+| `preview_lines` | `int` | `3` | Lines visible in `list_display` before expand (1–20) |
+| `label` | `str \| None` | `None` | Header label in `<details>` (falls back to `title` → `name`) |
+| `max_height` | `str` | `"24rem"` | CSS max-height of the content area |
+
+### Basic Usage
+
+```python
+from django_cfg.modules.django_admin import ToonField
+
+# In list_display — compact preview with expand/collapse
+ToonField(name='metadata')
+ToonField(name='settings', preview_lines=5)
+
+# In readonly_fields — full collapsible block with JSON↔TOON toggle
+ToonField(
+    name='raw_data',
+    collapsible=True,
+    default_mode='toon',
+    label='Request payload',
+    max_height='32rem',
+)
+```
+
+### Examples
+
+### API Request / Response Payload
+
+```python
+display_fields=[
+    ToonField(
+        name='request_payload',
+        title='Request',
+        collapsible=True,
+        default_open=True,
+        default_mode='toon',
+    ),
+    ToonField(
+        name='response_payload',
+        title='Response',
+        collapsible=True,
+        default_mode='json',
+    ),
+]
+```
+
+### Compact Config Preview in List
+
+```python
+config = AdminConfig(
+    model=Integration,
+    list_display=['name', 'status', 'config_preview'],
+    display_fields=[
+        ToonField(name='config_preview', title='Config', preview_lines=4),
+    ],
+)
+```
+
+**Renders as:** First 4 lines of the TOON representation with an expand button.
+
+### JSON Metadata with Custom Label
+
+```python
+ToonField(
+    name='extra_data',
+    label='Extra metadata',
+    collapsible=True,
+    default_open=False,
+    max_height='20rem',
+)
+```
+
+
+<Callout type="info">
+**TOON Format**
+TOON (Token-Oriented Object Notation) is an indentation-based, token-efficient alternative to JSON. It removes quotes, braces and colons — making deeply nested data much easier to scan visually.
+</Callout>
+
+<Callout type="info">
+**Mode Persistence**
+The viewer remembers the last chosen mode (TOON vs JSON) in `localStorage` under the key `django_admin_toon_mode`. One preference applies across all ToonField instances.
+</Callout>
+
+---
 
 ## MarkdownField
 

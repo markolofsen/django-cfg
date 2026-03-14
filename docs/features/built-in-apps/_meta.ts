@@ -4,5 +4,6 @@ export default {
   'user-management': 'User Management',
   'ai-knowledge': 'AI & Knowledge',
   'payments': 'Universal Payments',
-  'operations': 'Operations'
+  'operations': 'Operations',
+  'monitor': 'Monitor'
 }

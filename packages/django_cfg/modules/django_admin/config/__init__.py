@@ -5,7 +5,7 @@ Configuration models for declarative Django Admin.
 from .action_config import ActionConfig
 from .admin_config import AdminConfig
 from .background_task_config import BackgroundTaskConfig
-from .documentation_config import DocumentationConfig, DocumentationSection
+from .documentation import DocumentationConfig, DocumentationSection
 from .field_config import (
     AvatarField,
     BadgeField,
@@ -28,6 +28,7 @@ from .field_config import (
     StackedField,
     StatusBadgesField,
     TextField,
+    ToonField,
     UserField,
     VideoField,
 )
@@ -67,6 +68,7 @@ __all__ = [
     "StackedField",
     "StatusBadgesField",
     "TextField",
+    "ToonField",
     "UserField",
     "VideoField",
     # Widget Configs (for AdminConfig.widgets - form fields)

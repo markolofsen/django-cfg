@@ -43,10 +43,10 @@ def __getattr__(name):
         from .json_editor_widget import JSONEditorWidget
         return JSONEditorWidget
     elif name == "MoneyFieldWidget":
-        from .money_widget import MoneyFieldWidget
+        from .money.widget import MoneyFieldWidget
         return MoneyFieldWidget
     elif name == "MoneyFieldFormField":
-        from .money_widget import MoneyFieldFormField
+        from .money.form_field import MoneyFieldFormField
         return MoneyFieldFormField
     elif name == "CountrySelectWidget":
         from .location_widget import CountrySelectWidget

@@ -1,0 +1,175 @@
+---
+title: Monitor Configuration
+description: All configuration options for the Django-CFG Monitor — retention policies, slow query threshold, rate limits, Telegram spike alerts, and the monitor DB alias.
+sidebar_label: Configuration
+keywords:
+  - django monitor config
+  - frontend monitor settings
+  - slow query threshold
+  - telegram error alerts
+  - monitor retention
+---
+
+# Monitor Configuration
+
+All monitor settings are defined via `FrontendMonitorConfig` (a Pydantic model). All fields have sensible defaults — no configuration is required to get started.
+
+## Full Reference
+
+```python
+from django_cfg.models.django.frontend_monitor import FrontendMonitorConfig
+
+frontend_monitor = FrontendMonitorConfig(
+    # --- Server capture ---
+    server_capture_enabled=True,          # enable server-side capture
+    monitor_db_alias="monitor",           # separate DB alias for ServerEvent writes
+    slow_query_threshold_ms=500,          # ms; 0 = disable slow query capture
+    server_events_retention_days=90,      # resolved ServerEvent TTL (days)
+    server_capture_ignore_loggers=[],     # logger name prefixes to skip
+
+    # --- Frontend events ---
+    retention_days=90,                    # FrontendEvent TTL (days)
+    max_events_per_session_per_hour=200,  # rate limit per session
+
+    # --- Telegram alerts ---
+    telegram_alerts_enabled=False,
+    spike_threshold=10,                   # errors/minute to trigger alert
+)
+```
+
+---
+
+## Options
+
+### `server_capture_enabled`
+
+**Default:** `True`
+
+Enables all automatic server-side capture hooks (HTTP 500, logging handler, slow queries, RQ failures, OOM kills). Set to `False` to disable entirely.
+
+### `monitor_db_alias`
+
+**Default:** `"monitor"`
+
+Database alias used for all `ServerEvent` writes.
+
+<Callout type="warning">
+Required when `ATOMIC_REQUESTS=True`. Without a separate alias, the main DB transaction rolls back on HTTP 500 and the error record is lost.
+</Callout>
+
+```python
+# cfg.py
+databases = {
+    "default": DatabaseConfig.from_url(...),
+    "monitor": DatabaseConfig.from_url(..., conn_max_age=0),
+}
+```
+
+If you only have one database and don't use `ATOMIC_REQUESTS`, you can set this to `"default"`.
+
+### `slow_query_threshold_ms`
+
+**Default:** `500`
+
+Queries taking longer than this value (in milliseconds) are captured as `SLOW_QUERY` server events. Set to `0` to disable slow query capture.
+
+### `server_events_retention_days`
+
+**Default:** `90`
+
+Resolved `ServerEvent` records older than this are deleted by `monitor_cleanup`. **Open (unresolved) events are never deleted.**
+
+Set to `0` to keep all server events indefinitely.
+
+### `server_capture_ignore_loggers`
+
+**Default:** `[]`
+
+List of logger name prefixes to skip in the `MonitorHandler`. Useful to suppress high-volume internal loggers:
+
+```python
+server_capture_ignore_loggers=["django.security", "django.request"],
+```
+
+### `retention_days`
+
+**Default:** `90`
+
+`FrontendEvent` (browser events) older than this are deleted by `monitor_cleanup`.
+
+Set to `0` to keep all frontend events indefinitely.
+
+### `max_events_per_session_per_hour`
+
+**Default:** `200`
+
+Rate limit applied per anonymous session when ingesting browser events. Requests exceeding this are accepted with `202` but silently dropped.
+
+### `telegram_alerts_enabled`
+
+**Default:** `False`
+
+Enables Telegram spike notifications. When enabled, an alert is sent whenever the error rate exceeds `spike_threshold` errors per minute.
+
+### `spike_threshold`
+
+**Default:** `10`
+
+Errors per minute that trigger a Telegram alert. Only relevant when `telegram_alerts_enabled=True`.
+
+---
+
+## Cleanup Command
+
+Retention policies are enforced by a management command:
+
+```bash
+# Delete records older than configured retention
+python manage.py monitor_cleanup
+
+# Override retention for this run
+python manage.py monitor_cleanup --days 30
+
+# Preview without deleting
+python manage.py monitor_cleanup --dry-run
+
+# Verbose output with cutoff timestamps
+python manage.py monitor_cleanup --dry-run --verbose
+```
+
+Schedule this command via cron or Django-RQ to run daily.
+
+<Callout type="info">
+Open (unresolved) `ServerEvent` records are **never deleted**, regardless of age or `--days` flag.
+</Callout>
+
+---
+
+## Ingest API
+
+Browser events are submitted to:
+
+```
+POST /cfg/monitor/ingest/
+Content-Type: application/json
+```
+
+| Parameter | Value |
+|---|---|
+| Authentication | Not required |
+| Rate limit | 100 requests / minute per IP |
+| Max batch size | 50 events |
+| Success response | `202 Accepted` |
+
+The `@djangocfg/monitor` SDK handles batching and delivery automatically.
+
+---
+
+## See Also
+
+- **[Overview](./overview)** — What gets tracked
+- **[Server-Side Capture](./server-capture)** — Automatic capture paths and `capture` API
+- **[Frontend SDK](./frontend-sdk)** — Browser and server JS SDK
+
+TAGS: monitor, configuration, retention, slow-query, telegram-alerts
+DEPENDS_ON: [monitor/overview]
