@@ -204,11 +204,11 @@ sequenceDiagram
 
 ### 1. Installation
 
-Django-RQ is **already included** in django-cfg! No need to install separately.
+Django-RQ is **already included** in django-cfg via the `rq` optional dependency group. Enable it:
 
 ```bash
-# Only if you need rq-scheduler for cron-like scheduling
-pip install rq-scheduler
+pip install "django-cfg[rq]"
+# Installs: django-rq>=4.0.0, rq>=2.7.0, rq-scheduler>=0.14.0, redis>=5.0
 ```
 
 ### 2. Configuration

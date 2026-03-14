@@ -333,6 +333,7 @@ def register_schedules_from_config():
                                 "timeout": schedule_config.timeout,
                                 "result_ttl": schedule_config.result_ttl,
                                 "id": job_id,
+                                "description": schedule_config.description,
                             }
                             # Only pass repeat if explicitly set (not None)
                             if schedule_config.repeat is not None:
@@ -342,11 +343,11 @@ def register_schedules_from_config():
                         logger.info(f"✓ Registered cron schedule: {func_path} ({schedule_config.cron}) -> queue={target_queue}")
 
                     elif schedule_config.interval:
-                        from datetime import datetime
-                        # For interval schedules, repeat=None means infinite repetition in rq-scheduler
-                        # If schedule_config.repeat is set, use it; otherwise omit for infinite
+                        from datetime import datetime, timezone
+                        # rq-scheduler: when 'repeat' is absent from job.meta, the job runs indefinitely.
+                        # Only set repeat if it has an explicit finite value.
                         schedule_kwargs = {
-                            "scheduled_time": datetime.utcnow(),  # Start immediately
+                            "scheduled_time": datetime.now(timezone.utc).replace(tzinfo=None),  # Start immediately (naive UTC)
                             "func": func,
                             "args": schedule_config.args,
                             "kwargs": schedule_config.kwargs,
@@ -355,11 +356,10 @@ def register_schedules_from_config():
                             "timeout": schedule_config.timeout,
                             "result_ttl": schedule_config.result_ttl,
                             "id": job_id,
+                            "description": schedule_config.description,
                         }
-                        # IMPORTANT: Always pass repeat parameter explicitly
-                        # rq-scheduler defaults to repeat=1 (run once) if not specified
-                        # We need repeat=None for infinite repetition
-                        schedule_kwargs["repeat"] = schedule_config.repeat  # None = infinite
+                        if schedule_config.repeat is not None:
+                            schedule_kwargs["repeat"] = schedule_config.repeat
 
                         job = scheduler.schedule(**schedule_kwargs)
 
@@ -386,6 +386,7 @@ def register_schedules_from_config():
                             timeout=schedule_config.timeout,
                             result_ttl=schedule_config.result_ttl,
                             id=job_id,
+                            description=schedule_config.description,
                         )
                         logger.info(f"✓ Registered one-time schedule: {func_path} (at {schedule_config.scheduled_time}) -> queue={target_queue}")
 

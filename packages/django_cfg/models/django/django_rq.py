@@ -345,6 +345,17 @@ class DjangoRQConfig(BaseModel):
         description="Enable Prometheus metrics at /django-rq/metrics/",
     )
 
+    # Django-RQ v4 commit mode
+    commit_mode: str = Field(
+        default="auto",
+        description=(
+            "Django-RQ commit mode: "
+            "'auto' — enqueue immediately (v3 default behaviour), "
+            "'on_db_commit' — enqueue after DB transaction commits (v4 default), "
+            "'request_finished' — enqueue at end of HTTP request."
+        ),
+    )
+
     # Automatic cleanup configuration
     enable_auto_cleanup: bool = Field(
         default=True,
@@ -366,6 +377,14 @@ class DjangoRQConfig(BaseModel):
         default_factory=list,
         description="Scheduled jobs for rq-scheduler (cron-style, interval, or one-time)",
     )
+
+    @field_validator("commit_mode")
+    @classmethod
+    def validate_commit_mode(cls, v: str) -> str:
+        valid = ("auto", "on_db_commit", "request_finished")
+        if v not in valid:
+            raise ValueError(f"commit_mode must be one of {valid}")
+        return v
 
     @field_validator("queues")
     @classmethod
@@ -548,6 +567,7 @@ class DjangoRQConfig(BaseModel):
             rq_queues[queue_config.queue] = queue_config.to_django_rq_format(redis_url=redis_url)
 
         settings["RQ_QUEUES"] = rq_queues
+        settings["RQ"] = {"COMMIT_MODE": self.commit_mode}
         settings["RQ_SHOW_ADMIN_LINK"] = self.show_admin_link
 
         if self.exception_handlers:

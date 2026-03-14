@@ -22,6 +22,8 @@ class JobStatus(str, Enum):
     DEFERRED = "deferred"
     SCHEDULED = "scheduled"
     CANCELED = "canceled"
+    CREATED = "created"
+    STOPPED = "stopped"
 
 
 class RQJobModel(BaseModel):

@@ -173,6 +173,21 @@ class ScheduleViewSet(AdminAPIMixin, viewsets.GenericViewSet):
 
             queue_name = data['queue_name']
 
+            # Validate and import the callable before scheduling.
+            # Passing raw strings to rq 2.x scheduler methods is unreliable;
+            # a bad import path should fail immediately with a 400, not at execution time.
+            import importlib
+            func_path = data['func']
+            try:
+                _module_path, _func_name = func_path.rsplit('.', 1)
+                _module = importlib.import_module(_module_path)
+                func = getattr(_module, _func_name)
+            except (ImportError, AttributeError, ValueError) as e:
+                return Response(
+                    {"error": f"Cannot import function '{func_path}': {e}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             try:
                 scheduler = django_rq.get_scheduler(queue_name)
             except ImproperlyConfigured as e:
@@ -182,9 +197,9 @@ class ScheduleViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                     status=status.HTTP_501_NOT_IMPLEMENTED,
                 )
 
-            # Prepare job kwargs
+            # Shared kwargs for schedule() and cron() — these methods use id/result_ttl/description.
             job_kwargs = {
-                'func': data['func'],
+                'func': func,
                 'args': data.get('args', []),
                 'kwargs': data.get('kwargs', {}),
                 'queue_name': queue_name,
@@ -202,13 +217,27 @@ class ScheduleViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             if data.get('description'):
                 job_kwargs['description'] = data['description']
 
+            if data.get('job_id'):
+                job_kwargs['id'] = data['job_id']
+
             # Schedule based on method
             if data.get('scheduled_time'):
-                # One-time schedule at specific time
+                # One-time schedule at specific time.
+                # enqueue_at uses different param names: job_id, job_result_ttl, job_description.
                 scheduled_time = data['scheduled_time']
                 if scheduled_time.tzinfo is None:
                     scheduled_time = scheduled_time.replace(tzinfo=timezone.utc)
-                job = scheduler.enqueue_at(scheduled_time, **job_kwargs)
+                job = scheduler.enqueue_at(
+                    scheduled_time,
+                    func,                                        # positional: the callable
+                    *data.get('args', []),                      # positional spread
+                    queue_name=queue_name,
+                    timeout=data.get('timeout'),
+                    job_result_ttl=data.get('result_ttl'),
+                    job_id=data.get('job_id'),
+                    job_description=data.get('description'),
+                    **data.get('kwargs', {}),                   # function keyword args
+                )
                 schedule_type = "one-time"
 
             elif data.get('interval'):
@@ -300,8 +329,8 @@ class ScheduleViewSet(AdminAPIMixin, viewsets.GenericViewSet):
                     # Try to fetch job
                     job = Job.fetch(pk, connection=queue.connection)
 
-                    # Check if it's a scheduled job
-                    if job and job.id in [j.id for j in scheduler.get_jobs()]:
+                    # Check if it's a scheduled job (O(1) zscore via __contains__)
+                    if job and job in scheduler:
                         job_data = {
                             "id": job.id,
                             "func": job.func_name,

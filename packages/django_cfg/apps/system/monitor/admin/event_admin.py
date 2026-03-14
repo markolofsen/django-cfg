@@ -29,6 +29,7 @@ event_admin_config = AdminConfig(
         "user",
         "project_name",
         "environment",
+        "build_id",
         "created_at",
     ],
 
@@ -72,11 +73,12 @@ event_admin_config = AdminConfig(
                 "development": "info",
             },
         ),
+        TextField(name="build_id", title="Build", truncate=12),
         DateTimeField(name="created_at", title="Time", show_relative=True),
     ],
 
-    list_filter=["event_type", "level", "environment", "device_type", "browser"],
-    search_fields=["message", "url", "ip_address", "fingerprint", "http_url"],
+    list_filter=["event_type", "level", "environment", "project_name", "device_type", "browser"],
+    search_fields=["message", "url", "ip_address", "fingerprint", "http_url", "build_id"],
     ordering=["-created_at"],
     date_hierarchy="created_at",
 
@@ -85,7 +87,7 @@ event_admin_config = AdminConfig(
         "http_status", "http_method", "http_url",
         "user_agent", "ip_address", "device_type", "os", "browser",
         "fingerprint", "user", "anonymous_session", "extra",
-        "project_name", "environment", "created_at",
+        "project_name", "environment", "build_id", "created_at",
     ],
 
     fieldsets=[
@@ -95,7 +97,7 @@ event_admin_config = AdminConfig(
         ),
         FieldsetConfig(
             title="Page",
-            fields=["url", "project_name", "environment"],
+            fields=["url", "project_name", "environment", "build_id"],
         ),
         FieldsetConfig(
             title="Network",

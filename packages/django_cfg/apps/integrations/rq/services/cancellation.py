@@ -27,6 +27,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from rq.job import JobStatus
+
 if TYPE_CHECKING:
     from rq.job import Job
 
@@ -59,13 +61,13 @@ def request_cancellation(job_id: str) -> bool:
 
         status = job.get_status()
 
-        if status == "queued":
+        if status == JobStatus.QUEUED:
             # Job not started yet - cancel directly
             job.cancel()
             logger.info(f"Job {job_id} cancelled (was queued)")
             return True
 
-        elif status == "started":
+        elif status == JobStatus.STARTED:
             # Job is running - set cancellation flag
             _set_cancel_flag(job_id, queue.connection)
             logger.info(f"Cancellation requested for running job {job_id}")
@@ -102,7 +104,7 @@ def force_stop_job(job_id: str) -> bool:
         if not job:
             return False
 
-        if job.get_status() != "started":
+        if job.get_status() != JobStatus.STARTED:
             return False
 
         send_stop_job_command(queue.connection, job_id)

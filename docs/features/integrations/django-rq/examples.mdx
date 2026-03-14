@@ -59,7 +59,7 @@ queue = django_rq.get_queue('default')
 job = queue.enqueue('apps.myapp.tasks.say_hello', name="Alice")
 
 # Get result
-print(job.result)  # "Hello, Alice!"
+print(job.return_value())  # "Hello, Alice!"
 ```
 
 ### Task with Type Hints

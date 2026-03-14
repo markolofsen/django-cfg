@@ -57,6 +57,9 @@ class DatabaseSettingsGenerator:
         if not self.config.databases:
             return settings
 
+        # 🔥 AUTO-CREATE monitor database if monitor app is enabled
+        self._ensure_monitor_database()
+
         # Convert database configurations
         django_databases = {}
         for alias, db_config in self.config.databases.items():
@@ -182,6 +185,66 @@ class DatabaseSettingsGenerator:
             })
 
         return test_settings
+
+    def _ensure_monitor_database(self) -> None:
+        """
+        Auto-create monitor database alias if monitor app is enabled.
+
+        The monitor app (django_cfg.apps.system.monitor) requires a separate
+        database alias to prevent ATOMIC_REQUESTS rollback from losing error records.
+
+        This method automatically creates the monitor database alias by copying
+        the 'default' database configuration with conn_max_age=0 (no pooling).
+
+        Why no pooling?
+        - ServerEvent.record() uses get_or_create with F() expressions
+        - Connection pooling can cause stale connection state
+        - Fresh connections ensure transaction isolation
+        """
+        # Check if monitor app is enabled
+        if not (self.config.frontend_monitor and self.config.frontend_monitor.enabled):
+            return
+
+        monitor_alias = getattr(self.config.frontend_monitor, 'monitor_db_alias', 'monitor')
+
+        # Skip if monitor database already exists
+        if monitor_alias in self.config.databases:
+            return
+
+        # Skip if 'default' database doesn't exist (nothing to copy from)
+        if 'default' not in self.config.databases:
+            logger.warning(
+                f"Monitor app is enabled but cannot auto-create '{monitor_alias}' database: "
+                f"'default' database not found. Please configure databases manually."
+            )
+            return
+
+        # Create monitor database by copying default with conn_max_age=0
+        from django_cfg.models import DatabaseConfig
+
+        default_db = self.config.databases['default']
+
+        # Clone default database config with no connection pooling
+        monitor_db = DatabaseConfig(
+            engine=default_db.engine,
+            name=default_db.name,
+            user=default_db.user,
+            password=default_db.password,
+            host=default_db.host,
+            port=default_db.port,
+            conn_max_age=0,  # CRITICAL: no pooling for monitor DB
+            options=default_db.options.copy() if default_db.options else {},
+            # Add routing rule for monitor app
+            apps=['django_cfg_monitor'],
+        )
+
+        # Add to config.databases (mutate in place - safe in settings generation)
+        self.config.databases[monitor_alias] = monitor_db
+
+        logger.info(
+            f"Auto-created '{monitor_alias}' database alias for monitor app "
+            f"(same as 'default' but with conn_max_age=0)"
+        )
 
 
 __all__ = ["DatabaseSettingsGenerator"]

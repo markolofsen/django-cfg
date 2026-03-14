@@ -219,7 +219,7 @@ class DirectCentrifugoClient:
                     f"Failed to connect to Centrifugo: {e}",
                     wrapper_url=self.api_url,
                 )
-                logger.warning(
+                logger.debug(
                     f"Connection attempt {attempt + 1}/{self.max_retries} failed: {e}"
                 )
 
@@ -237,13 +237,8 @@ class DirectCentrifugoClient:
 
         # All retries failed
         if last_error:
-            # Log helpful hint for connection errors (likely Docker issue on macOS)
             if isinstance(last_error, CentrifugoConnectionError):
-                logger.error(
-                    f"Centrifugo connection failed after {self.max_retries} attempts. "
-                    "If running locally with Docker, try restarting Docker Desktop:\n"
-                    '  osascript -e \'quit app "Docker Desktop"\' && sleep 2 && open -a "Docker Desktop"'
-                )
+                logger.warning(f"Centrifugo unavailable after {self.max_retries} attempt(s): {last_error}")
             raise last_error
         else:
             raise CentrifugoPublishError(

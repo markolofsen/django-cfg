@@ -2,6 +2,7 @@
 Core ingest service — validates, deduplicates, and persists frontend events.
 """
 
+import json
 import logging
 from datetime import timedelta
 from typing import Any
@@ -90,8 +91,8 @@ class IngestService:
                 session_id=session_id,
                 defaults={
                     "ip_address": ip_address,
-                    "user_agent": user_agent,
-                    "fingerprint": fingerprint,
+                    "user_agent": user_agent[:500] if user_agent else "",
+                    "fingerprint": fingerprint[:64] if fingerprint else "",
                     "user": user if user and user.is_authenticated else None,
                 },
             )
@@ -131,15 +132,27 @@ class IngestService:
         ).count()
         return count >= max_per_hour
 
+    @staticmethod
+    def _safe_extra(extra: Any) -> dict:
+        """Drop extra payload if it's too large to store (> 64 KB serialized)."""
+        if not extra or not isinstance(extra, dict):
+            return {}
+        try:
+            if len(json.dumps(extra)) > 65536:
+                return {"_truncated": True}
+        except (TypeError, ValueError):
+            return {}
+        return extra
+
     def _save_event(self, data: dict, ip_address: str, session, user) -> "FrontendEvent":
         from django_cfg.apps.system.monitor.models import FrontendEvent
 
-        ua = data.get("user_agent", "")
-        return FrontendEvent.objects.create(
+        ua = (data.get("user_agent", "") or "")[:500]
+        event = FrontendEvent.objects.create(
             event_type=data.get("event_type", FrontendEvent.EventType.INFO),
             level=data.get("level", FrontendEvent.Level.INFO),
-            message=data.get("message", ""),
-            stack_trace=data.get("stack_trace", ""),
+            message=(data.get("message", "") or "")[:5000],
+            stack_trace=(data.get("stack_trace", "") or "")[:10000],
             url=data.get("url", ""),
             http_status=data.get("http_status"),
             http_method=data.get("http_method", ""),
@@ -152,10 +165,13 @@ class IngestService:
             fingerprint=data.get("fingerprint", ""),
             user=user if user and user.is_authenticated else None,
             anonymous_session=session,
-            extra=data.get("extra", {}),
+            extra=self._safe_extra(data.get("extra")),
             project_name=data.get("project_name", ""),
             environment=data.get("environment", ""),
+            build_id=data.get("build_id", ""),
         )
+
+        return event
 
     @staticmethod
     def _device_type(ua: str) -> str:

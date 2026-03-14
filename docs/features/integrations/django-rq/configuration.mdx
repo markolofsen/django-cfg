@@ -151,6 +151,7 @@ Main configuration model for Django-RQ:
 | `schedules` | `List[RQScheduleConfig]` | `[]` | Scheduled job configurations |
 | `show_admin_link` | `bool` | `True` | Show Django-RQ link in admin |
 | `prometheus_enabled` | `bool` | `True` | Enable Prometheus metrics |
+| `commit_mode` | `str` | `"auto"` | When to enqueue jobs relative to DB transactions (v4+) |
 | `enable_auto_cleanup` | `bool` | `True` | Enable automatic cleanup of old jobs |
 | `cleanup_max_age_days` | `int` | `7` | Maximum age in days before cleanup |
 | `exception_handlers` | `List[str]` | `[]` | Exception handler function paths |
@@ -728,6 +729,32 @@ django_rq: DjangoRQConfig = DjangoRQConfig(
 )
 ```
 
+### Commit Mode (django-rq v4+)
+
+Django-RQ v4 introduced `COMMIT_MODE` that controls when jobs are enqueued relative to database transactions.
+
+```python
+django_rq: DjangoRQConfig = DjangoRQConfig(
+    enabled=True,
+    redis_db=0,
+    commit_mode="auto",  # Default: enqueue immediately (v3-compatible behaviour)
+)
+```
+
+| Value | Behaviour | When to use |
+|-------|-----------|-------------|
+| `"auto"` | Enqueue immediately (default) | Compatible with django-rq v3 behaviour |
+| `"on_db_commit"` | Enqueue only after DB transaction commits | Prevents jobs from running if the transaction rolls back |
+| `"request_finished"` | Enqueue at end of HTTP request | Useful for batching multiple enqueues per request |
+
+:::tip Recommended
+Use `"on_db_commit"` in production to avoid jobs running against data that was never committed to the database.
+:::
+
+:::note v4 default
+django-rq v4 ships with `COMMIT_MODE = "on_db_commit"` as its own default. django-cfg explicitly sets `"auto"` to preserve backward-compatible v3 behaviour unless you opt in.
+:::
+
 ### API Token Authentication
 
 Secure API endpoints with token:
@@ -1168,6 +1195,7 @@ DjangoRQConfig(redis_db=16, ...)  # Error: must be <= 15
 - [Monitoring](./monitoring) - Monitoring and management
 
 ### Reference
-- [Django-RQ Docs](https://github.com/rq/django-rq) - Official documentation
-- [RQ Docs](https://python-rq.org/) - Core RQ documentation
-- [RQ Scheduler](https://github.com/rq/rq-scheduler) - Scheduler documentation
+- [Django-RQ Docs](https://github.com/rq/django-rq) - Official documentation (v4+)
+- [RQ Docs](https://python-rq.org/) - Core RQ documentation (v2.7+)
+- [RQ Scheduler](https://github.com/rq/rq-scheduler) - Scheduler documentation (v0.14+)
+- [RQ Changelog](https://github.com/rq/rq/blob/master/CHANGES.md) - Breaking changes in RQ 2.x

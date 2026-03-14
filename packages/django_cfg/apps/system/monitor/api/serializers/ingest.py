@@ -21,7 +21,7 @@ class FrontendEventIngestSerializer(serializers.Serializer):
         required=False,
     )
     stack_trace = serializers.CharField(
-        max_length=20000, required=False, allow_blank=True, default=""
+        max_length=10000, required=False, allow_blank=True, default=""
     )
     url = serializers.CharField(max_length=2000, required=False, allow_blank=True, default="")
     fingerprint = serializers.CharField(
@@ -58,7 +58,9 @@ class FrontendEventIngestSerializer(serializers.Serializer):
     environment = serializers.CharField(
         max_length=20, required=False, allow_blank=True, default=""
     )
-
+    build_id = serializers.CharField(
+        max_length=100, required=False, allow_blank=True, default=""
+    )
     def validate_http_status(self, value):
         if value is not None and not (100 <= value <= 599):
             raise serializers.ValidationError("http_status must be between 100 and 599")

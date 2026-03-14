@@ -135,6 +135,14 @@ class FrontendEvent(models.Model):
         help_text="Arbitrary extra data from the client",
     )
 
+    build_id = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Next.js BUILD_ID — links event to the exact deploy for source map deminification",
+    )
+
     project_name = models.CharField(
         max_length=100,
         blank=True,

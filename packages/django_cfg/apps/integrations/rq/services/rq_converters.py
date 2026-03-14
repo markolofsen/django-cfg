@@ -10,8 +10,19 @@ from typing import Optional
 
 from rq import Queue, Worker
 from rq.job import Job
+from rq.job import JobStatus as RQJobStatus
 
 from .models import RQJobModel, RQQueueModel, RQWorkerModel, JobStatus, WorkerState
+
+
+def _get_exc_info(job: Job) -> Optional[str]:
+    try:
+        result = job.latest_result()
+        if result is not None:
+            return result.exc_string
+    except Exception:
+        pass
+    return None
 
 
 def job_to_model(job: Job, queue_name: Optional[str] = None) -> RQJobModel:
@@ -32,13 +43,15 @@ def job_to_model(job: Job, queue_name: Optional[str] = None) -> RQJobModel:
     # Map RQ status to JobStatus enum
     rq_status = job.get_status()
     status_map = {
-        'queued': JobStatus.QUEUED,
-        'started': JobStatus.STARTED,
-        'finished': JobStatus.FINISHED,
-        'failed': JobStatus.FAILED,
-        'deferred': JobStatus.DEFERRED,
-        'scheduled': JobStatus.SCHEDULED,
-        'canceled': JobStatus.CANCELED,
+        RQJobStatus.QUEUED: JobStatus.QUEUED,
+        RQJobStatus.STARTED: JobStatus.STARTED,
+        RQJobStatus.FINISHED: JobStatus.FINISHED,
+        RQJobStatus.FAILED: JobStatus.FAILED,
+        RQJobStatus.DEFERRED: JobStatus.DEFERRED,
+        RQJobStatus.SCHEDULED: JobStatus.SCHEDULED,
+        RQJobStatus.CANCELED: JobStatus.CANCELED,
+        RQJobStatus.CREATED: JobStatus.CREATED,
+        RQJobStatus.STOPPED: JobStatus.STOPPED,
     }
     status = status_map.get(rq_status, JobStatus.QUEUED)
 
@@ -49,12 +62,13 @@ def job_to_model(job: Job, queue_name: Optional[str] = None) -> RQJobModel:
 
     # Serialize result to JSON string if available
     result_json = None
-    if job.result is not None:
+    result_value = job.return_value()
+    if result_value is not None:
         try:
-            result_json = json.dumps(job.result)
+            result_json = json.dumps(result_value)
         except (TypeError, ValueError):
             # If result is not JSON serializable, convert to string
-            result_json = json.dumps(str(job.result))
+            result_json = json.dumps(str(result_value))
 
     # Get dependency IDs as comma-separated string
     dependency_ids = ""
@@ -75,7 +89,7 @@ def job_to_model(job: Job, queue_name: Optional[str] = None) -> RQJobModel:
         result_ttl=job.result_ttl,
         failure_ttl=job.failure_ttl,
         result_json=result_json,
-        exc_info=job.exc_info,
+        exc_info=_get_exc_info(job),
         args_json=args_json,
         kwargs_json=kwargs_json,
         meta_json=meta_json,

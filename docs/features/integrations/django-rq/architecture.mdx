@@ -469,6 +469,8 @@ classDiagram
         DEFERRED
         SCHEDULED
         CANCELED
+        CREATED
+        STOPPED
     }
 
     class WorkerState {
@@ -537,7 +539,7 @@ graph LR
     end
 
     subgraph "Result Access"
-        Poll[Polling<br/>job.result]
+        Poll[Polling<br/>job.return_value()]
         Webhook[Webhook<br/>on_success]
         DB[Database<br/>TaskLog]
         Signal[Django Signal<br/>job_finished]
