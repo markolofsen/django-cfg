@@ -1,0 +1,105 @@
+---
+title: Monitor Configuration
+description: Configuration options for django_monitor — slow query threshold, Telegram alerts, retention cleanup.
+sidebar_label: Configuration
+keywords:
+  - django_monitor config
+  - slow query threshold
+  - telegram error alerts
+  - monitor retention
+---
+
+# Monitor Configuration
+
+`django_monitor` is configured through `CloudflareConfig` in `django_cf` — there is no separate `MonitorConfig`. Monitor-specific options live on `CloudflareConfig`:
+
+```python
+from django_cfg import CloudflareConfig
+
+class MyConfig(DjangoConfig):
+    cloudflare: CloudflareConfig = CloudflareConfig(
+        enabled=True,
+        account_id="${CF_ACCOUNT_ID}",
+        api_token="${CF_API_TOKEN}",
+        d1_database_id="${CF_D1_DATABASE_ID}",
+
+        # Monitor-relevant options:
+        telegram_alerts_enabled=True,   # notify on UNHANDLED_EXCEPTION / RQ_FAILURE / SLOW_QUERY (>5s)
+    )
+```
+
+<Callout type="info">
+Unlike the old built-in Monitor app, there is no `FrontendMonitorConfig`, no `monitor_db_alias`, and no separate database required. All events go to D1.
+</Callout>
+
+---
+
+## Options
+
+### `telegram_alerts_enabled`
+
+**Default:** `False`
+
+Sends a Telegram message when a critical server event occurs:
+
+| Event type | Alert condition |
+|---|---|
+| `UNHANDLED_EXCEPTION` | every new occurrence |
+| `RQ_FAILURE` | every new occurrence |
+| `SLOW_QUERY` | queries > 5 seconds |
+
+Requires `TelegramConfig` to be configured in `DjangoConfig` (bot token + chat ID).
+
+---
+
+## Slow Query Threshold
+
+The slow query capture hook fires when a query exceeds a threshold. This threshold is **hardcoded at 500 ms** in the current version of `django_monitor`.
+
+Telegram alerts for slow queries fire only at **> 5 s**.
+
+---
+
+## Retention & Cleanup
+
+D1 storage is not automatically pruned — use the management command:
+
+```bash
+# Delete resolved server events older than 90 days (default)
+python manage.py monitor_cleanup
+
+# Custom retention
+python manage.py monitor_cleanup --days 30
+
+# Preview without deleting
+python manage.py monitor_cleanup --dry-run
+```
+
+<Callout type="info">
+**Open (unresolved) server events are never deleted**, regardless of age or `--days` value.
+</Callout>
+
+Frontend events are also pruned by `monitor_cleanup`. Schedule it via cron or Django-RQ to run daily.
+
+---
+
+## Schema Initialization
+
+The `server_events` and `frontend_events` tables in D1 are created automatically on **first use** (lazy `_ensure_schema()`). No manual migration step needed.
+
+To verify the schema is in place:
+
+```bash
+python manage.py monitor_status
+```
+
+---
+
+## See Also
+
+- **[Overview](./overview)** — Architecture and quick start
+- **[Cloudflare D1 Configuration](../django-cf/configuration)** — Credentials and module-level settings
+- **[Management Commands](./management-commands)** — `monitor_status`, `monitor_cleanup`
+
+TAGS: django_monitor, configuration, slow-query, telegram-alerts
+DEPENDS_ON: [django-monitor/overview]

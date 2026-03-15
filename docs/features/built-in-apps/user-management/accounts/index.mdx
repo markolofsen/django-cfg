@@ -1,0 +1,93 @@
+---
+title: Accounts App
+description: Production-ready authentication and user management — OTP login, JWT tokens, 2FA, OAuth, brute-force protection, and user profiles.
+keywords:
+  - django-cfg accounts
+  - otp authentication
+  - user management
+  - @djangocfg/api
+  - AuthLayout
+---
+
+# Accounts App
+
+The **Accounts** app is the authentication backbone of every Django-CFG project — passwordless login, tokens, social auth, and abuse protection, zero boilerplate.
+
+---
+
+## Full Stack Picture
+
+```mermaid
+flowchart LR
+    subgraph Frontend["Next.js"]
+        AL["AuthLayout\n(@djangocfg/layouts)"]
+        H["@djangocfg/api/auth\nuseAuth · useAuthForm\nuseGithubAuth · useTwoFactor"]
+    end
+
+    subgraph Backend["Django"]
+        OTP["/cfg/accounts/otp/*"]
+        OAUTH["/cfg/accounts/oauth/*"]
+        PROF["/cfg/accounts/profile/*"]
+        TFA["/cfg/2fa/*"]
+        BF["Brute-Force Protection"]
+        JWT["JWT Rotation + Blacklist"]
+    end
+
+    AL --> H
+    H -->|"JWT"| OTP & OAUTH & PROF & TFA
+    OTP --> BF & JWT
+    OAUTH --> JWT
+```
+
+---
+
+## What's Included
+
+| Feature | Description |
+|---|---|
+| **OTP Login** | Passwordless email — 6-digit codes, 10-min expiry |
+| **JWT Tokens** | Access + refresh with rotation and blacklist |
+| **2FA (TOTP)** | Google Auth, Authy, any TOTP app |
+| **OAuth** | GitHub social login |
+| **Brute-force protection** | 4-layer defense — IP rate limits, per-email throttle, lockout |
+| **Email validation** | 5-layer pipeline: syntax → TLD → specials → disposable blocklist → MX |
+| **Soft delete** | GDPR-safe account archive |
+| **Cleanup jobs** | RQ tasks for expired OTPs and JWT blacklist |
+
+---
+
+## Enable
+
+```python
+from django_cfg import DjangoConfig, JWTConfig
+
+class MyConfig(DjangoConfig):
+    enable_accounts = True
+    jwt = JWTConfig(
+        access_token_lifetime_hours=24,
+        refresh_token_lifetime_days=30,
+    )
+```
+
+---
+
+<Cards>
+  <Card title="Frontend Integration" href="./frontend">
+    AuthLayout, useAuth / useAuthForm hooks, middleware
+  </Card>
+  <Card title="OTP & Brute-Force" href="./otp">
+    Auth flow, throttle layers, anti-enumeration
+  </Card>
+  <Card title="JWT" href="./jwt">
+    Token lifetimes, rotation, blacklist
+  </Card>
+  <Card title="Two-Factor Auth" href="./two-factor">
+    TOTP setup, enforcement, backup codes
+  </Card>
+  <Card title="OAuth (GitHub)" href="./oauth">
+    Social login, account linking, CSRF protection
+  </Card>
+</Cards>
+
+TAGS: accounts, otp, jwt, 2fa, oauth, authentication
+DEPENDS_ON: [frontend, otp, jwt, two-factor, oauth]

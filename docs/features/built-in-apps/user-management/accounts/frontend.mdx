@@ -1,0 +1,297 @@
+---
+title: Frontend Integration
+description: How to integrate the Accounts app with @djangocfg/api and @djangocfg/layouts — AuthLayout, auth hooks, server middleware, and SWR data fetching.
+sidebar_label: Frontend Integration
+keywords:
+  - "@djangocfg/api"
+  - "@djangocfg/layouts"
+  - AuthLayout
+  - useAuth
+  - useAuthForm
+  - auth middleware
+---
+
+# Frontend Integration
+
+Two packages cover the full frontend auth stack:
+
+| Package | What it provides |
+|---|---|
+| `@djangocfg/api` | Type-safe API client, hooks, JWT management, server middleware |
+| `@djangocfg/layouts` | `AuthLayout` — drop-in multi-step auth UI |
+
+---
+
+## AuthLayout
+
+The fastest path — a complete authentication UI from `@djangocfg/layouts`. One component, all steps handled.
+
+```tsx
+// app/auth/page.tsx
+import { AuthLayout } from '@djangocfg/layouts'
+
+export default function LoginPage() {
+  return (
+    <AuthLayout
+      redirectUrl="/dashboard"
+      enableGithubAuth={true}
+      termsUrl="/terms"
+      privacyUrl="/privacy"
+    />
+  )
+}
+```
+
+### Auth steps
+
+```
+identifier  →  otp  →  [2fa]  →  [2fa-setup]  →  success → redirect
+```
+
+`2fa` and `2fa-setup` steps appear automatically if 2FA is enabled for the user.
+
+### Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `redirectUrl` | `string` | `/dashboard` | Where to go after success |
+| `sourceUrl` | `string` | — | App URL for analytics / OTP emails |
+| `enableGithubAuth` | `boolean` | `false` | Show GitHub OAuth button |
+| `enablePhoneAuth` | `boolean` | `false` | Allow phone number input |
+| `enable2FASetup` | `boolean` | `true` | Prompt 2FA setup after first login |
+| `logoUrl` | `string` | — | Logo on the success screen |
+| `termsUrl` | `string` | — | Terms of service link |
+| `privacyUrl` | `string` | — | Privacy policy link |
+| `supportUrl` | `string` | — | Support page link |
+| `children` | `ReactNode` | — | Custom header — rendered on `identifier` step only |
+
+### Callbacks
+
+```tsx
+<AuthLayout
+  onIdentifierSuccess={(identifier) => console.log('OTP sent to', identifier)}
+  onOTPSuccess={() => console.log('verified')}
+  onOAuthSuccess={(user, isNewUser, provider) => console.log(provider, user)}
+  onError={(message) => console.error(message)}
+/>
+```
+
+### Accessing step state from child components
+
+```tsx
+import { useAuthFormContext } from '@djangocfg/layouts'
+
+const { step, identifier, isLoading } = useAuthFormContext()
+```
+
+---
+
+## AuthProvider
+
+`AuthProvider` from `@djangocfg/api/auth` manages tokens, user state, and auto-refresh. Required for all auth hooks.
+
+When using `@djangocfg/layouts`, `AuthProvider` is already included inside `AppLayout` / `BaseApp` — no manual setup needed.
+
+For standalone usage:
+
+```tsx
+// app/layout.tsx
+import { AuthProvider } from '@djangocfg/api/auth'
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>
+        <AuthProvider config={{ routes: { auth: '/auth', defaultCallback: '/dashboard' } }}>
+          {children}
+        </AuthProvider>
+      </body>
+    </html>
+  )
+}
+```
+
+---
+
+## Auth Hooks
+
+### `useAuth` — user state and OTP methods
+
+```tsx
+'use client'
+import { useAuth } from '@djangocfg/api/auth'
+
+const { user, isAuthenticated, isLoading, requestOTP, verifyOTP, logout } = useAuth()
+```
+
+| Value | Type | Description |
+|---|---|---|
+| `user` | `UserProfile \| null` | Current user |
+| `isAuthenticated` | `boolean` | — |
+| `isLoading` | `boolean` | Initial auth check in progress |
+| `requestOTP` | `fn` | Send OTP to email |
+| `verifyOTP` | `fn` | Verify code → stores JWT |
+| `logout` | `fn` | Clears tokens |
+
+### `useAuthGuard` — route protection
+
+```tsx
+'use client'
+import { useAuthGuard } from '@djangocfg/api/auth'
+
+const { isAllowed } = useAuthGuard({ redirectTo: '/auth', requireAuth: true })
+if (!isAllowed) return null
+```
+
+### `useAuthForm` — multi-step form state
+
+```tsx
+'use client'
+import { useAuthForm } from '@djangocfg/api/auth'
+
+const {
+  step,                      // 'identifier' | 'otp' | '2fa' | '2fa-setup' | 'success'
+  identifier, setIdentifier,
+  otp, setOtp,
+  isLoading, error,
+  isRateLimited, rateLimitLabel,   // countdown string e.g. "1:30"
+  handleIdentifierSubmit,
+  handleOTPSubmit,
+  handleResendOTP,
+  handleBackToIdentifier,
+} = useAuthForm({
+  sourceUrl: window.location.origin,
+  redirectUrl: '/dashboard',
+  requireTermsAcceptance: false,
+  onIdentifierSuccess: (id) => {},
+  onOTPSuccess: () => {},
+  onError: (msg) => {},
+})
+```
+
+### `useGithubAuth` — OAuth
+
+```tsx
+'use client'
+import { useGithubAuth } from '@djangocfg/api/auth'
+
+const { startGithubAuth, isLoading, error } = useGithubAuth({
+  sourceUrl: window.location.origin,
+})
+// startGithubAuth() → redirects to GitHub
+```
+
+OAuth callback is handled automatically by `AuthLayout`.
+
+### `useTwoFactor` — verify TOTP during login
+
+```tsx
+'use client'
+import { useTwoFactor } from '@djangocfg/api/auth'
+
+const { verify, isLoading, error } = useTwoFactor({
+  sessionId,
+  onSuccess: (user) => {},
+  redirectUrl: '/dashboard',
+})
+```
+
+### `useTwoFactorSetup` — enable/disable 2FA for authenticated users
+
+```tsx
+'use client'
+import { useTwoFactorSetup } from '@djangocfg/api/auth'
+
+const { qrCode, secret, isEnabled, startSetup, verifySetup, disable } = useTwoFactorSetup({
+  onSetupComplete: () => {},
+  onDisabled: () => {},
+})
+```
+
+### `useTwoFactorStatus` — check and manage 2FA status
+
+```tsx
+'use client'
+import { useTwoFactorStatus } from '@djangocfg/api/auth'
+
+const { has2FAEnabled, devices, fetchStatus, disable2FA } = useTwoFactorStatus()
+```
+
+---
+
+## Server Components & SWR Hooks
+
+### Server component (fetcher)
+
+```typescript
+import { Fetchers, api } from '@djangocfg/api'
+
+export default async function ProfilePage() {
+  const profile = await Fetchers.getAccountsProfileRetrieve(api)
+  return <div>{profile.email}</div>
+}
+```
+
+### Client hook (SWR)
+
+```tsx
+'use client'
+import { useAccountsProfileRetrieve } from '@djangocfg/api/hooks'
+
+const { data: profile, isLoading, mutate } = useAccountsProfileRetrieve()
+```
+
+---
+
+## Server Middleware
+
+Proxies `/media/*` and `/api/*` to the Django backend, forwarding cookies and auth headers automatically:
+
+```typescript
+// middleware.ts
+import { proxyMiddleware } from '@djangocfg/api/auth/server'
+import { NextRequest } from 'next/server'
+
+export function middleware(request: NextRequest) {
+  return proxyMiddleware(request)
+}
+
+export const config = {
+  matcher: ['/media/:path*', '/api/:path*'],
+}
+```
+
+---
+
+## Analytics Events
+
+Auth events are tracked automatically when analytics is configured in `AppLayout`:
+
+| Event | Trigger |
+|---|---|
+| `AUTH_LOGIN_SUCCESS` | OTP verify or OAuth success |
+| `AUTH_LOGOUT` | `logout()` called |
+| `AUTH_OAUTH_START` / `_SUCCESS` / `_FAIL` | GitHub OAuth flow |
+| `AUTH_2FA_SETUP_COMPLETE` | 2FA enabled |
+| `AUTH_2FA_VERIFY_SUCCESS` / `_FAIL` | 2FA code verification |
+
+---
+
+## Environment Variables
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_GITHUB_CLIENT_ID=Iv1.abc123  # OAuth only
+```
+
+---
+
+## See Also
+
+- **[OTP & Brute-Force Protection](./otp)** — throttle layers, anti-enumeration
+- **[OAuth (GitHub)](./oauth)** — backend setup and account linking
+- **[Two-Factor Auth](./two-factor)** — TOTP enforcement and backup codes
+- **[JWT Configuration](./jwt)** — token lifetimes, rotation
+
+TAGS: accounts, frontend, AuthLayout, useAuth, useAuthForm, @djangocfg/api, @djangocfg/layouts
+DEPENDS_ON: [accounts/index]

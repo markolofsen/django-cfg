@@ -1,0 +1,227 @@
+---
+title: Serializers
+sidebar_position: 6
+keywords:
+  - django serializers
+  - drf serializers
+  - django-cfg serializers
+description: Serializer patterns for Django-CFG apps. Naming conventions, action-specific serializers, nested fields, wrapper responses, and validation patterns.
+---
+
+# Serializers
+
+Serializers handle validation, field mapping, and output formatting. Each action should have its own serializer tailored to what it needs.
+
+## Naming Convention
+
+```
+{Model}{Action}Serializer
+```
+
+| Name | Purpose |
+|------|---------|
+| `AgentListSerializer` | Lightweight fields for list views |
+| `AgentDetailSerializer` | Full fields for retrieve |
+| `AgentCreateSerializer` | Input validation for create |
+| `AgentUpdateSerializer` | Input validation for update |
+| `AgentStatusSerializer` | Custom action input/output |
+
+Real file from **agents** (stockapis-trader) — `views/serializers/agent_serializers.py` has 4 serializer classes.
+
+## List vs Detail
+
+**List** — minimal fields, fast queries:
+
+```python
+class AgentListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Agent
+        fields = [
+            "id", "agent_id", "exchange", "symbol",
+            "market_type", "is_active", "created_at",
+        ]
+        read_only_fields = fields
+```
+
+**Detail** — full fields, may include nested objects:
+
+```python
+class AgentDetailSerializer(serializers.ModelSerializer):
+    memory_blocks = CoreMemoryBlockSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Agent
+        fields = [
+            "id", "agent_id", "exchange", "symbol", "market_type",
+            "is_active", "config", "memory_blocks", "created_at", "updated_at",
+        ]
+        read_only_fields = fields
+```
+
+## Create Serializer
+
+Only include writable fields:
+
+```python
+class AgentCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Agent
+        fields = ["agent_id", "exchange", "symbol", "market_type", "config"]
+```
+
+## Read-Only for API Generation
+
+Mark all fields as read-only in response serializers to prevent TypeScript type splitting:
+
+```python
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "email", "name", "avatar", "created_at"]
+        read_only_fields = fields  # Prevents Readable/Writable split
+```
+
+<Callout type="info">
+Without `read_only_fields = fields`, the TypeScript generator may create both `UserDetailReadable` and `UserDetailWritable` types, breaking references to the base `UserDetail` type. See the [DRF Guide](/docs/features/drf-guide/drf-viewsets) for details.
+</Callout>
+
+## Nested Serializers
+
+For FK/M2M relations in read responses:
+
+```python
+class DownloadRequestDetailSerializer(serializers.ModelSerializer):
+    symbol = SymbolNestedSerializer(read_only=True)
+    segments = DownloadSegmentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = DownloadRequest
+        fields = ["id", "symbol", "data_type", "status", "segments", "created_at"]
+        read_only_fields = fields
+```
+
+From **cryptodb_driver** (stockapis) — the detail view includes both the parent symbol and all child segments.
+
+### Lightweight nested serializer
+
+Create a focused serializer for nested display — don't reuse the full serializer:
+
+```python
+class SymbolNestedSerializer(serializers.ModelSerializer):
+    """Minimal symbol info for embedding in other responses."""
+    class Meta:
+        model = Symbol
+        fields = ["id", "symbol", "exchange", "market_type"]
+        read_only_fields = fields
+```
+
+## Source Attribute
+
+Map model relationships to flat output fields:
+
+```python
+class ActivitySerializer(serializers.ModelSerializer):
+    workspace_name = serializers.CharField(source="workspace.name", read_only=True)
+    user_email = serializers.CharField(source="user.email", read_only=True)
+
+    class Meta:
+        model = Activity
+        fields = [
+            "id", "workspace_name", "user_email",
+            "type", "action", "details", "created_at",
+        ]
+        read_only_fields = fields
+```
+
+From **activity** (cmdop) — flattens workspace and user references into readable strings.
+
+## Computed Fields
+
+For model properties that aren't DB fields:
+
+```python
+class DownloadRequestSerializer(serializers.ModelSerializer):
+    status = serializers.CharField(read_only=True)          # @property
+    progress_percent = serializers.FloatField(read_only=True)  # @property
+    total_records = serializers.IntegerField(
+        source="total_records_ingested", read_only=True
+    )
+
+    class Meta:
+        model = DownloadRequest
+        fields = ["id", "data_type", "status", "progress_percent", "total_records"]
+        read_only_fields = fields
+```
+
+## Wrapper Response Serializer
+
+For custom action responses that don't map to a model:
+
+```python
+class SymbolsByExchangeMarketResponseSerializer(serializers.Serializer):
+    """Not tied to a model — just defines the response shape."""
+    exchange = serializers.CharField()
+    market_type = serializers.CharField()
+    count = serializers.IntegerField()
+    symbols = SymbolListSerializer(many=True)
+```
+
+From **symbols** (stockapis) — used in `@extend_schema(responses={200: ...})` to document the custom response shape.
+
+## One-Time Display Serializer
+
+For data that should only be shown once (like raw API keys):
+
+```python
+class APIKeyCreatedSerializer(serializers.ModelSerializer):
+    raw_key = serializers.CharField(read_only=True)  # Only in creation response
+
+    class Meta:
+        model = APIKey
+        fields = ["id", "name", "prefix", "raw_key", "created_at"]
+        read_only_fields = fields
+```
+
+From **api_keys** (stockapis) — the ViewSet returns this serializer only from `create()`, not from `retrieve()`.
+
+## Validation
+
+### Field-level validation
+
+```python
+class SyncRequestSerializer(serializers.Serializer):
+    exchange = serializers.ChoiceField(
+        choices=["binance", "bybit", "okx"],
+        required=False,
+    )
+    market_type = serializers.ChoiceField(
+        choices=["spot", "linear", "inverse"],
+        required=False,
+    )
+```
+
+### Object-level validation
+
+```python
+class DownloadRequestCreateSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        if attrs["from_date"] > attrs["to_date"]:
+            raise serializers.ValidationError({
+                "from_date": "from_date must be before to_date"
+            })
+        return attrs
+```
+
+## File Organization
+
+One file per domain, named `{model_name}_serializers.py`:
+
+```
+views/serializers/
+├── __init__.py
+├── agent_serializers.py       # All Agent-related serializers
+├── memory_serializers.py      # All Memory-related serializers
+└── summary_serializers.py     # All Summary-related serializers
+```
+
+When the app has many models, each serializer file covers one model with all its variants (List, Detail, Create, Update).

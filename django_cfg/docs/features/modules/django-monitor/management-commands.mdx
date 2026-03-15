@@ -1,0 +1,80 @@
+---
+title: Management Commands
+description: monitor_status and monitor_cleanup — check monitor health and prune old events from Cloudflare D1.
+sidebar_label: Management Commands
+keywords:
+  - monitor_status
+  - monitor_cleanup
+  - django_monitor commands
+---
+
+# Management Commands
+
+## `monitor_status`
+
+Check whether `django_monitor` is active and connected to D1:
+
+```bash
+python manage.py monitor_status
+```
+
+Outputs:
+- Whether `django_cf` is configured and `is_ready()`
+- Whether the `server_events` and `frontend_events` tables exist in D1
+- Count of open (unresolved) server events
+- Count of frontend events in the last 24 hours
+
+---
+
+## `monitor_cleanup`
+
+Deletes old events from D1 to manage storage:
+
+```bash
+# Delete resolved server events and all frontend events older than 90 days (default)
+python manage.py monitor_cleanup
+
+# Custom retention
+python manage.py monitor_cleanup --days 30
+
+# Preview without deleting
+python manage.py monitor_cleanup --dry-run
+
+# Verbose output with cutoff timestamps
+python manage.py monitor_cleanup --dry-run --verbose
+```
+
+### What gets deleted
+
+| Table | Condition |
+|---|---|
+| `server_events` | `is_resolved=1` AND `last_seen < cutoff` |
+| `frontend_events` | `created_at < cutoff` |
+
+<Callout type="info">
+**Open (unresolved) server events are never deleted**, regardless of `--days` or age.
+</Callout>
+
+### Scheduling
+
+Run daily via cron or a Django-RQ scheduled task:
+
+```python
+# djangoconfig.py — in RQScheduleConfig
+RQScheduleConfig(
+    func="django.core.management.call_command",
+    args=["monitor_cleanup"],
+    cron="0 3 * * *",  # 03:00 UTC every day
+    description="Prune old monitor events",
+)
+```
+
+---
+
+## See Also
+
+- **[Configuration](./configuration)** — Retention defaults
+- **[Overview](./overview)** — Architecture
+
+TAGS: django_monitor, management-commands, monitor_cleanup, monitor_status
+DEPENDS_ON: [django-monitor/overview]

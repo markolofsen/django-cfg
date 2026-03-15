@@ -1,0 +1,309 @@
+---
+title: LocationField
+description: Django model fields for geographic data - LocationField, CountryField, CityField with auto-properties and admin widgets.
+sidebar_label: Fields
+sidebar_position: 2
+keywords:
+  - django location field
+  - django city field
+  - django country field
+  - geo field
+---
+
+# Geographic Fields
+
+Django-CFG provides specialized model fields for geographic data with automatic property resolution and admin integration.
+
+## LocationField
+
+The primary field for storing location references. Stores a city ID and provides auto-properties for accessing related data.
+
+### Basic Usage
+
+```python
+from django.db import models
+from django_cfg.apps.tools.geo.fields import LocationField
+
+class Property(models.Model):
+    geo = LocationField(
+        null=True,
+        blank=True,
+        verbose_name="Location",
+        help_text="Select city from geo database",
+    )
+```
+
+### Auto-Properties
+
+LocationField automatically creates these properties on your model:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `geo` | `int \| None` | City ID |
+| `geo_display` | `str` | "City, State, Country" |
+| `geo_city` | `CityDTO \| None` | Full city data |
+| `geo_state` | `StateDTO \| None` | State/region data |
+| `geo_country` | `CountryDTO \| None` | Country data |
+| `geo_coordinates` | `tuple \| None` | (latitude, longitude) |
+| `geo_flag` | `str` | Country flag emoji |
+
+### Example
+
+```python
+property = Property.objects.get(id=1)
+
+# Raw value
+property.geo  # 56263
+
+# Display string
+property.geo_display  # "Denpasar, Bali, ID"
+
+# City details
+city = property.geo_city
+city.name       # "Denpasar"
+city.latitude   # -8.6500
+city.longitude  # 115.2167
+
+# State details
+state = property.geo_state
+state.name  # "Bali"
+state.iso2  # "BA"
+
+# Country details
+country = property.geo_country
+country.name   # "Indonesia"
+country.iso2   # "ID"
+country.emoji  # "🇮🇩"
+
+# Coordinates tuple
+property.geo_coordinates  # (-8.6500, 115.2167)
+
+# Flag emoji
+property.geo_flag  # "🇮🇩"
+```
+
+### Caching
+
+All auto-properties use GeoDatabase's LRU cache. Multiple accesses don't trigger extra queries:
+
+```python
+# First access - cache miss, queries database
+display = property.geo_display
+
+# Subsequent accesses - cache hit
+flag = property.geo_flag        # No query
+coords = property.geo_coordinates  # No query
+```
+
+### Admin Widget
+
+LocationField automatically uses LocationFieldWidget in Django admin:
+
+- **Autocomplete** - Type-ahead city search
+- **Map** - Click to select location
+- **Display** - Shows flag, city, state, country
+
+```python
+# In admin, the widget is auto-applied
+# No extra configuration needed
+```
+
+---
+
+## CountryField
+
+Field for storing country reference by ISO2 code.
+
+```python
+from django_cfg.apps.tools.geo.fields import CountryField
+
+class Organization(models.Model):
+    country = CountryField(
+        null=True,
+        blank=True,
+        verbose_name="Country",
+    )
+```
+
+### Auto-Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `country` | `str \| None` | ISO2 code ("US", "KR") |
+| `country_name` | `str` | Full country name |
+| `country_flag` | `str` | Flag emoji |
+| `country_data` | `CountryDTO \| None` | Full country data |
+
+### Example
+
+```python
+org = Organization.objects.get(id=1)
+
+org.country       # "KR"
+org.country_name  # "South Korea"
+org.country_flag  # "🇰🇷"
+org.country_data  # CountryDTO(name="South Korea", iso2="KR", ...)
+```
+
+---
+
+## CityField
+
+Field for storing city reference by ID.
+
+```python
+from django_cfg.apps.tools.geo.fields import CityField
+
+class Branch(models.Model):
+    city = CityField(
+        null=True,
+        blank=True,
+        verbose_name="City",
+    )
+```
+
+### Auto-Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `city` | `int \| None` | City ID |
+| `city_name` | `str` | City name |
+| `city_data` | `CityDTO \| None` | Full city data |
+
+---
+
+## Form Widgets
+
+### LocationFieldWidget
+
+Full-featured widget with map, autocomplete, and geocoding.
+
+```python
+from django_cfg.apps.tools.geo.widgets import LocationFieldWidget
+
+class PropertyForm(forms.ModelForm):
+    class Meta:
+        model = Property
+        fields = ['geo']
+        widgets = {
+            'geo': LocationFieldWidget(attrs={
+                'data-placeholder': 'Search for a city...',
+            }),
+        }
+```
+
+**Features:**
+- Autocomplete search (Photon API)
+- Interactive map (click to select)
+- Reverse geocoding (coordinates → city)
+- Flag display
+- Mobile-friendly
+
+### Select2 Widgets
+
+Simpler Select2-based widgets for basic use cases:
+
+```python
+from django_cfg.apps.tools.geo.widgets import (
+    CountrySelect2Widget,
+    CitySelect2Widget,
+)
+
+class SimpleForm(forms.ModelForm):
+    class Meta:
+        widgets = {
+            'country': CountrySelect2Widget(),
+            'city': CitySelect2Widget(),
+        }
+```
+
+---
+
+## Migration Example
+
+When adding LocationField to existing model:
+
+```python
+# migrations/0002_add_geo_field.py
+from django.db import migrations
+from django_cfg.apps.tools.geo.fields import LocationField
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ('myapp', '0001_initial'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='property',
+            name='geo',
+            field=LocationField(blank=True, null=True),
+        ),
+    ]
+```
+
+### Populate from Coordinates
+
+After adding the field, populate from existing coordinates:
+
+```python
+# management command or script
+from django_cfg.apps.tools.geo.services import resolve_city_from_coordinates
+
+for prop in Property.objects.filter(geo__isnull=True, latitude__isnull=False):
+    city_id = resolve_city_from_coordinates(
+        float(prop.latitude),
+        float(prop.longitude),
+        radius_km=50,
+    )
+    if city_id:
+        prop.geo = city_id
+        prop.save(update_fields=['geo'])
+```
+
+---
+
+## Best Practices
+
+### DO: Use LocationField for Primary Location
+
+```python
+class Property(models.Model):
+    # GOOD - Single source of truth
+    geo = LocationField()
+
+    # Keep coordinates for precise location
+    latitude = models.DecimalField(...)
+    longitude = models.DecimalField(...)
+```
+
+### DON'T: Store Location as Text
+
+```python
+class Property(models.Model):
+    # BAD - No standardization, hard to query
+    location = models.CharField(max_length=100)
+```
+
+### DO: Auto-Populate on Ingestion
+
+```python
+def create_property(data):
+    property = Property.objects.create(
+        latitude=data['lat'],
+        longitude=data['lng'],
+        geo=resolve_city_from_coordinates(
+            data['lat'],
+            data['lng'],
+            radius_km=50,
+        ),
+    )
+```
+
+---
+
+## See Also
+
+- [Services Reference](./services) - GeoDatabase and geocoding
+- [Models Reference](./models) - DTOs and data structures
+- [Overview](./overview) - Architecture and quick start

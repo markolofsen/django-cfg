@@ -1,0 +1,227 @@
+---
+title: Pagination
+sidebar_position: 9
+keywords:
+  - drf pagination openapi
+  - drf-spectacular pagination
+  - viewset action pagination
+  - api client pagination
+description: Pagination patterns for DRF ViewSet actions and their effect on generated TypeScript clients. How to control paginated vs unpaginated responses.
+---
+
+# Pagination
+
+DRF pagination affects how the OpenAPI schema is generated and what TypeScript types your clients receive. Understanding when pagination is applied helps avoid type mismatches.
+
+## How Pagination Works with Generation
+
+### Default behavior
+
+DRF ViewSets inherit `pagination_class` from `REST_FRAMEWORK` settings or the ViewSet itself. When drf-spectacular detects `many=True` in responses, it wraps the schema in a paginated response:
+
+```yaml
+# Paginated response schema (default for list actions)
+PaginatedUserList:
+  type: object
+  properties:
+    count:
+      type: integer
+    next:
+      type: string
+      nullable: true
+    previous:
+      type: string
+      nullable: true
+    results:
+      type: array
+      items:
+        $ref: '#/components/schemas/User'
+```
+
+**Generated TypeScript:**
+
+```typescript
+interface PaginatedUserList {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: User[];
+}
+```
+
+### When pagination applies
+
+| Action | Paginated | Why |
+|--------|-----------|-----|
+| `list` (ViewSet) | Yes | Inherits ViewSet pagination |
+| `@action` with `many=True` | Yes | Inherits ViewSet pagination |
+| `@action` with `pagination_class=None` | No | Explicitly disabled |
+| `retrieve` | No | Single object |
+| `create` / `update` / `destroy` | No | Single object |
+
+## Patterns
+
+### Standard paginated list
+
+For large collections where frontend needs page controls:
+
+```python
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    # pagination_class inherited from REST_FRAMEWORK settings
+
+    # list() is automatically paginated
+```
+
+**Frontend usage:**
+
+```typescript
+const { data } = useUsersList(api, { page: 1 });
+// data.count → 150
+// data.next → "/api/users/?page=2"
+// data.results → User[]
+```
+
+### Custom action with pagination
+
+When a custom action should be paginated:
+
+```python
+@extend_schema(
+    responses={200: UserSerializer(many=True)},
+    tags=["users"],
+)
+@action(detail=False, methods=['get'])
+def active(self, request):
+    """List active users (paginated)."""
+    queryset = self.filter_queryset(
+        User.objects.filter(is_active=True)
+    )
+    page = self.paginate_queryset(queryset)
+    if page is not None:
+        serializer = UserSerializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+    serializer = UserSerializer(queryset, many=True)
+    return Response(serializer.data)
+```
+
+### Custom action without pagination
+
+For small fixed lists (see [Array Responses](./drf-array-responses)):
+
+```python
+@extend_schema(
+    responses={200: StatusSerializer(many=True)},
+    tags=["users"],
+)
+@action(
+    detail=False,
+    methods=['get'],
+    pagination_class=None,  # ← No pagination
+)
+def statuses(self, request):
+    """List available statuses (not paginated)."""
+    statuses = [
+        {"key": "active", "label": "Active"},
+        {"key": "inactive", "label": "Inactive"},
+    ]
+    serializer = StatusSerializer(statuses, many=True)
+    return Response(serializer.data)
+```
+
+## Custom Pagination Classes
+
+### Per-ViewSet pagination
+
+```python
+from rest_framework.pagination import PageNumberPagination
+
+class LargeResultsPagination(PageNumberPagination):
+    page_size = 100
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    pagination_class = LargeResultsPagination
+```
+
+### Per-action pagination
+
+```python
+class SmallPagePagination(PageNumberPagination):
+    page_size = 10
+
+class DashboardViewSet(viewsets.GenericViewSet):
+    serializer_class = DashboardSerializer
+
+    @extend_schema(
+        responses={200: NotificationSerializer(many=True)},
+        tags=["dashboard"],
+    )
+    @action(
+        detail=False,
+        methods=['get'],
+        pagination_class=SmallPagePagination,
+    )
+    def recent_notifications(self, request):
+        queryset = Notification.objects.filter(user=request.user)[:10]
+        page = self.paginate_queryset(queryset)
+        serializer = NotificationSerializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+```
+
+## Common Issues
+
+### Action returns array but schema says paginated
+
+**Problem:** Frontend gets `"expected object, received array"`.
+
+**Cause:** `pagination_class` inherited from ViewSet but action returns `Response(serializer.data)` without `self.get_paginated_response()`.
+
+**Fix:** Add `pagination_class=None` to the `@action` decorator:
+
+```python
+@action(detail=False, methods=['get'], pagination_class=None)
+def my_list(self, request):
+    ...
+```
+
+### Schema says array but action paginates
+
+**Problem:** Frontend gets an object with `count`/`results` but expects an array.
+
+**Cause:** Action uses `self.paginate_queryset()` but has `pagination_class=None`.
+
+**Fix:** Remove `pagination_class=None` from the `@action` decorator so the schema matches the actual response.
+
+### Inconsistent pagination across actions
+
+**Problem:** Some actions in a ViewSet are paginated, others aren't, causing confusion.
+
+**Fix:** Be explicit about pagination on every `@action`:
+
+```python
+class ItemViewSet(viewsets.GenericViewSet):
+    serializer_class = ItemSerializer
+
+    # Explicitly paginated
+    @extend_schema(responses={200: ItemSerializer(many=True)}, tags=["items"])
+    @action(detail=False, methods=['get'])  # Inherits ViewSet pagination
+    def all_items(self, request):
+        ...
+
+    # Explicitly not paginated
+    @extend_schema(responses={200: ItemSerializer(many=True)}, tags=["items"])
+    @action(detail=False, methods=['get'], pagination_class=None)
+    def featured(self, request):
+        ...
+```
+
+## Next Steps
+
+- **[DRF ViewSets & Serializers](./drf-viewsets)** — General ViewSet patterns
+- **[Array Responses](./drf-array-responses)** — Returning arrays from `@action` methods
+- **[Nested Serializers](./drf-nested-serializers)** — Handling `allOf` and nested types

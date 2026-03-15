@@ -31,6 +31,9 @@ from django_cfg import (
     AxesConfig,
     StorageConfig,
     CurrencyConfig,
+    FrontendMonitorConfig,
+    StreamlitAdminConfig,
+    CloudflareConfig,
     # Services
     EmailConfig,
     TelegramConfig,
@@ -60,8 +63,6 @@ from django_cfg import (
     ConstanceConfig,
     ConstanceField,
 )
-from django_cfg.modules.streamlit_admin import StreamlitAdminConfig
-
 from .environment import env
 
 
@@ -365,7 +366,29 @@ class DjangoCfgConfig(DjangoConfig):
         auto_start=True,
         public_url="https://st.democfg.com" if not env.debug else None,
     )
-    
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                        CLOUDFLARE D1                                     ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    cloudflare: Optional[CloudflareConfig] = CloudflareConfig(
+        enabled=bool(env.cloudflare.account_id),
+        account_id=env.cloudflare.account_id,
+        api_token=env.cloudflare.api_token,
+        d1_database_id=env.cloudflare.d1_database_id,
+        telegram_alerts_enabled=bool(env.telegram.bot_token),
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                       FRONTEND MONITORING                                ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    frontend_monitor: FrontendMonitorConfig = FrontendMonitorConfig(
+        enabled=True,
+        retention_days=90,
+        telegram_alerts_enabled=True,
+    )
+
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                          CURRENCY & MONEY                                ║
     # ╚══════════════════════════════════════════════════════════════════════════╝

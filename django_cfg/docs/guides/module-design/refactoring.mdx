@@ -1,0 +1,259 @@
+---
+title: Refactoring Checklist
+sidebar_position: 10
+keywords:
+  - python refactoring
+  - code refactoring checklist
+  - python migration
+  - refactoring process
+description: Step-by-step refactoring process for Python modules. 8 phases from analysis to final validation, commit strategy, and rollback plan.
+---
+
+# Refactoring Checklist
+
+8 phases, each with a clear checklist. Commit after every phase. Zero regressions.
+
+## Phase 0: Pre-Refactoring Analysis
+
+```bash
+# Measure current state
+wc -l src/**/*.py                    # Line counts
+grep -r "Dict\[str" src/             # Raw dict usage
+grep -r "Any" src/                   # Any type usage
+grep -r "except:" src/               # Bare excepts
+pytest --cov=src --cov-report=term   # Current coverage
+```
+
+Create refactoring plan:
+
+- [ ] List all files to modify
+- [ ] Identify breaking changes
+- [ ] Define success criteria
+- [ ] Create feature branch
+
+```bash
+git checkout -b refactor/module-name
+```
+
+## Phase 1: Extract Models (Pydantic v2)
+
+Find all `dict` usages and replace with Pydantic models:
+
+```python
+# BEFORE
+def process(data: dict) -> dict:
+    return {"status": "ok", "result": data["value"]}
+
+# AFTER
+class ProcessInput(BaseModel):
+    value: str
+    count: int = Field(ge=0)
+
+class ProcessOutput(BaseModel):
+    status: str
+    result: str
+
+def process(data: ProcessInput) -> ProcessOutput:
+    return ProcessOutput(status="ok", result=data.value)
+```
+
+**Checklist:**
+- [ ] No `dict` in function signatures
+- [ ] No `Dict[str, Any]` anywhere
+- [ ] No `Any` type annotations
+- [ ] `model_validate()` not `parse_obj()`
+- [ ] `model_dump()` not `dict()`
+- [ ] `@field_validator` not `@validator`
+- [ ] Field constraints defined
+
+## Phase 2: Extract Exceptions
+
+```python
+# BEFORE
+try:
+    result = api_call()
+except Exception as e:
+    return {"error": str(e)}
+
+# AFTER
+try:
+    result = api_call()
+except httpx.HTTPStatusError as e:
+    raise NetworkError(f"API call failed: {e}") from e
+```
+
+**Checklist:**
+- [ ] No bare `except:`
+- [ ] No generic `except Exception:` without re-raise
+- [ ] All exceptions inherit from base
+- [ ] Exception chaining with `from e`
+- [ ] Error codes defined
+
+## Phase 3: Decompose Large Modules
+
+```
+large_module.py (800 lines)
+├── Validation (150 lines) → validators/user.py
+├── Repository (200 lines) → repositories/user.py
+├── Service (250 lines)    → services/user.py
+├── Helpers (100 lines)    → utils/helpers.py
+└── Constants (100 lines)  → _constants.py
+```
+
+Extract one group at a time → run tests → commit → repeat.
+
+**Checklist:**
+- [ ] All files < 500 lines
+- [ ] All classes < 200 lines
+- [ ] All functions < 20 lines
+- [ ] No circular imports
+- [ ] Public API in `__init__.py`
+
+## Phase 4: Dependency Injection
+
+```python
+# BEFORE — hidden dependencies
+class UserService:
+    def __init__(self):
+        self.db = get_database()
+        self.cache = get_cache()
+
+# AFTER — explicit injection
+class UserService:
+    def __init__(self, db: DatabaseProtocol, cache: CacheProtocol) -> None:
+        self._db = db
+        self._cache = cache
+```
+
+**Checklist:**
+- [ ] No global state in classes
+- [ ] Dependencies via constructor
+- [ ] Protocols defined for abstractions
+- [ ] Testable with mocks
+
+## Phase 5: Async Conversion
+
+```python
+# BEFORE — blocking
+async def process():
+    response = requests.get(url)     # BLOCKING!
+    data = json.load(open(path))     # BLOCKING!
+
+# AFTER — async
+async def process():
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+    async with aiofiles.open(path) as f:
+        data = json.loads(await f.read())
+```
+
+**Checklist:**
+- [ ] All I/O operations async
+- [ ] No blocking calls in async
+- [ ] Sync wrappers provided
+- [ ] Connection pooling
+- [ ] Proper timeout handling
+
+## Phase 6: Testing
+
+Write missing tests for every public function:
+
+```python
+@pytest.mark.asyncio
+async def test_get_user_success(mock_repo, service):
+    mock_repo.find_by_id.return_value = sample_user
+    result = await service.get_user(1)
+    assert result == sample_user
+
+@pytest.mark.asyncio
+async def test_get_user_not_found(mock_repo, service):
+    mock_repo.find_by_id.return_value = None
+    with pytest.raises(NotFoundError):
+        await service.get_user(999)
+```
+
+**Checklist:**
+- [ ] Coverage >= 95%
+- [ ] Error cases tested
+- [ ] Async tests with pytest-asyncio
+- [ ] No flaky tests
+
+## Phase 7: Documentation
+
+```python
+def create_user(self, data: UserCreate) -> User:
+    """Create a new user.
+
+    Args:
+        data: User creation data.
+
+    Returns:
+        Created user with assigned ID.
+
+    Raises:
+        ValidationError: If data fails validation.
+        ConflictError: If email exists.
+    """
+```
+
+**Checklist:**
+- [ ] All public functions have docstrings
+- [ ] Args, Returns, Raises documented
+- [ ] Module docstrings explain purpose
+- [ ] README updated if API changed
+
+## Phase 8: Final Validation
+
+```bash
+# Format
+black src/ tests/
+isort src/ tests/
+
+# Lint
+flake8 src/ tests/
+mypy src/ --strict
+
+# Test
+pytest --cov=src --cov-fail-under=95
+
+# Security
+bandit -r src/
+```
+
+**Final Checklist:**
+- [ ] No `dict`, `Any`, bare `except:`
+- [ ] Functions < 20, Classes < 200, Files < 500
+- [ ] mypy --strict passes
+- [ ] Coverage >= 95%
+- [ ] All I/O async with pooling
+
+## Commit Strategy
+
+Atomic commits per phase:
+
+```bash
+git commit -m "refactor(models): extract Pydantic v2 models"
+git commit -m "refactor(exceptions): implement exception hierarchy"
+git commit -m "refactor(services): decompose with DI"
+git commit -m "refactor(async): convert I/O to async"
+git commit -m "test: add tests for refactored module"
+git commit -m "docs: update docstrings and README"
+```
+
+## Rollback Plan
+
+```python
+# Feature flag for gradual migration
+if config.use_new_models:
+    return new_process(NewInput.model_validate(data))
+else:
+    return legacy_process(data)
+```
+
+## Rules
+
+1. **Branch per refactor** — never refactor on main
+2. **One phase at a time** — commit after each phase
+3. **Tests pass after every commit** — no regressions
+4. **Measure before and after** — line counts, coverage, performance
+5. **Feature flags for risky changes** — gradual rollout

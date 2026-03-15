@@ -1,0 +1,44 @@
+---
+title: Module Design Guide
+description: Python module and package design patterns. Architecture, data models, async, error handling, testing, DI, resilience, and performance.
+---
+
+# Module Design Guide
+
+Universal rules for designing Python modules and packages. Not framework-specific — applies to any Python project.
+
+<Cards>
+  <Card title="Module Architecture" href="./architecture">
+    Directory structure, layered architecture, size limits, public API facade
+  </Card>
+  <Card title="Pydantic v2 Models" href="./pydantic-models">
+    Data models, validation, serialization, configuration, migration from v1
+  </Card>
+  <Card title="Async & Concurrency" href="./async-patterns">
+    Async/await, gather, semaphores, dual API, streaming, graceful shutdown
+  </Card>
+  <Card title="Error Handling" href="./error-handling">
+    Exception hierarchy, error codes, recovery patterns, structured logging
+  </Card>
+  <Card title="Testing" href="./testing">
+    pytest setup, unit/integration/performance tests, mocking, factories
+  </Card>
+  <Card title="Dependency Injection" href="./dependency-injection">
+    Protocols, constructor injection, factories, containers, testability
+  </Card>
+  <Card title="Resilience Patterns" href="./resilience">
+    Circuit breaker, retry with backoff, timeout, bulkhead, rate limiting
+  </Card>
+  <Card title="Code Style" href="./code-style">
+    Naming, type annotations, formatting, docstrings, tooling
+  </Card>
+  <Card title="Performance" href="./performance">
+    Async optimization, memory, caching, database, profiling
+  </Card>
+  <Card title="Refactoring Checklist" href="./refactoring">
+    8-phase refactoring process, commit strategy, rollback plan
+  </Card>
+  <Card title="Quick Reference" href="./quick-reference">
+    Cheat sheets, templates, size limits, anti-pattern mapping
+  </Card>
+</Cards>

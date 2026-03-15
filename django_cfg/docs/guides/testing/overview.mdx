@@ -1,0 +1,183 @@
+---
+title: Testing Overview
+description: Zero-config test database management in Django-CFG. Automatic cleanup, PostgreSQL extension installation, and smart migration handling out of the box.
+keywords:
+  - django testing
+  - test database
+  - SmartTestRunner
+  - zero config testing
+  - pgvector test
+  - CI/CD django tests
+---
+
+import { Callout, Tabs } from 'nextra/components'
+
+# Testing Overview
+
+Django-CFG provides **zero-configuration** test database management. No setup needed — everything works automatically.
+
+## What You Get
+
+| Feature | What it does |
+|---------|-------------|
+| **Auto cleanup** | Removes stale test databases before each run — no `EOFError` in CI |
+| **Extension auto-install** | Installs `pgvector`, `pg_trgm`, `unaccent` by scanning your migrations |
+| **Smart migration handling** | Detects and fixes inconsistent migration history automatically |
+| **Dual runners** | `SmartTestRunner` for PostgreSQL, `FastTestRunner` for SQLite in-memory |
+| **Automatic TEST settings** | Generates `DATABASES[...]['TEST']` config for every database |
+
+## Quick Start
+
+```bash
+python manage.py test
+```
+
+That's it. Django-CFG automatically:
+
+1. Detects you're running tests
+2. Removes the old test database (no confirmation prompt)
+3. Creates a fresh test database
+4. Installs required PostgreSQL extensions
+5. Applies all migrations in correct order
+6. Runs your tests
+7. Cleans up afterward
+
+## Configuration
+
+No changes needed to your `config.py`:
+
+```python
+# config.py — nothing extra required
+class MyConfig(DjangoConfig):
+    project_name = "myapp"
+    databases = {
+        "default": DatabaseConfig.from_url("postgresql://user:pass@localhost/myapp")
+    }
+```
+
+Behind the scenes Django-CFG generates the following automatically:
+
+```python
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "myapp",
+        # ... connection settings ...
+        "TEST": {
+            "NAME": "test_myapp",
+            "TEMPLATE": "template0",
+            "CHARSET": "UTF8",
+            "CREATE_DB": True,
+            "MIGRATE": True,
+        }
+    }
+}
+
+TEST_RUNNER = "django_cfg.testing.runners.SmartTestRunner"
+```
+
+## Fast Tests with SQLite
+
+Switch all databases to SQLite in-memory for unit tests — no PostgreSQL needed:
+
+```bash
+python manage.py test --testrunner=django_cfg.testing.runners.FastTestRunner
+```
+
+<Callout type="info">
+FastTestRunner is ~10× faster but cannot use PostgreSQL-specific features like `pgvector` or raw SQL with `uuid` fields. Use it for pure business logic tests.
+</Callout>
+
+## Problems Solved
+
+### EOFError in CI
+
+**Before:**
+```
+Got an error creating the test database: database "test_myapp" already exists
+Type 'yes' if you would like to try deleting the test database, or 'no' to cancel:
+EOFError  ← no stdin in CI
+```
+
+**After:**
+```
+Removed old test database: test_myapp
+Creating test database for alias 'default'...
+```
+
+### Missing PostgreSQL Extensions
+
+**Before:**
+```
+django.db.utils.ProgrammingError: type "vector" does not exist
+```
+
+**After:**
+```
+Installed PostgreSQL extensions for test database 'default'
+```
+
+### Inconsistent Migration History
+
+**Before:**
+```
+InconsistentMigrationHistory: ai_chat.0001_initial applied before
+workspaces.0002_alter_workspacemember_options
+```
+
+**After:**
+```
+Removed old test database: test_myapp   ← fresh start, correct order
+Running migrations... OK
+```
+
+## CI/CD Integration
+
+<Tabs items={['GitHub Actions', 'GitLab CI', 'Docker']}>
+<Tabs.Tab>
+```yaml
+- name: Run Tests
+  run: python manage.py test
+  # No extra configuration needed — SmartTestRunner handles everything
+```
+</Tabs.Tab>
+<Tabs.Tab>
+```yaml
+test:
+  script:
+    - python manage.py test
+```
+</Tabs.Tab>
+<Tabs.Tab>
+```dockerfile
+RUN python manage.py test
+```
+</Tabs.Tab>
+</Tabs>
+
+## Troubleshooting
+
+**Extensions not installing?** Check that `pgvector` is available on the system:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install postgresql-15-pgvector
+
+# macOS
+brew install pgvector
+```
+
+**Need more output?**
+
+```bash
+python manage.py test --verbosity=2
+```
+
+## See Also
+
+- [Test Runners](./test-runners) — `SmartTestRunner`, `FastTestRunner`, `MigrationManager` API
+- [test_db Command](./test-db-command) — CLI for manual database management
+- [Migration Internals](./migration-internals) — deep-dive into what can go wrong
+
+TAGS: testing, test database, zero config, CI/CD, pgvector, SmartTestRunner
+DEPENDS_ON: [test-runners, test-db-command]

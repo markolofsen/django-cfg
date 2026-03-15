@@ -1,0 +1,128 @@
+---
+title: django_cf Configuration
+description: All CloudflareConfig fields, environment variables, and validation rules for the django_cf module.
+sidebar_label: Configuration
+keywords:
+  - cloudflare config
+  - django_cf settings
+  - d1 credentials
+  - telegram alerts
+---
+
+# Configuration
+
+All settings are defined via `CloudflareConfig` — a Pydantic v2 model that validates credentials at startup.
+
+## Full Reference
+
+```python
+from django_cfg import CloudflareConfig
+
+class MyConfig(DjangoConfig):
+    cloudflare: CloudflareConfig = CloudflareConfig(
+        enabled=True,
+        account_id="${CF_ACCOUNT_ID}",
+        api_token="${CF_API_TOKEN}",
+        d1_database_id="${CF_D1_DATABASE_ID}",
+        sync_users=True,               # sync CustomUser on post_save
+        sync_batch_size=500,           # rows per batch in bulk sync
+        telegram_alerts_enabled=False, # Telegram on critical monitor events
+    )
+```
+
+---
+
+## Fields
+
+### `enabled`
+
+**Default:** `False`
+
+Enables the entire module. When `False`, no signals are connected and `is_ready()` returns `False`. All dependent modules (e.g. `django_monitor`) silently no-op.
+
+### `account_id`
+
+**Required when `enabled=True`**
+
+Your Cloudflare Account ID. Found in the Cloudflare dashboard → right sidebar.
+
+```bash
+CF_ACCOUNT_ID=abc123...
+```
+
+### `api_token`
+
+**Required when `enabled=True`**
+
+API token with **D1:Edit** permission. Create at Cloudflare dashboard → My Profile → API Tokens.
+
+```bash
+CF_API_TOKEN=your-token
+```
+
+### `d1_database_id`
+
+**Required when `enabled=True`**
+
+UUID of the D1 database to use. Found in Cloudflare dashboard → Workers & Pages → D1.
+
+```bash
+CF_D1_DATABASE_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+### `sync_users`
+
+**Default:** `True`
+
+When enabled, a `post_save` signal on `CustomUser` triggers an RQ task that upserts the user into the D1 `users` table.
+
+Set to `False` to disable automatic user sync (manual sync via `cf_sync_users` still works).
+
+### `sync_batch_size`
+
+**Default:** `500` (range: 1–2000)
+
+Number of users per batch when running `full_sync_users()` (bulk sync command).
+
+### `telegram_alerts_enabled`
+
+**Default:** `False`
+
+Enables Telegram notifications from `django_monitor` for critical events:
+- `UNHANDLED_EXCEPTION`
+- `RQ_FAILURE`
+- `SLOW_QUERY` (threshold > 5s)
+
+Requires `TelegramConfig` to also be configured in `DjangoConfig`.
+
+---
+
+## Startup Validation
+
+If `enabled=True` but any of `account_id`, `api_token`, or `d1_database_id` is empty, Django will **fail at startup** with a descriptive error:
+
+```
+ValueError: django_cf: enabled=True but missing required fields: ['api_token'].
+Set via env vars CF_ACCOUNT_ID / CF_API_TOKEN / CF_D1_DATABASE_ID.
+```
+
+---
+
+## Checking Status
+
+```bash
+python manage.py cf_status
+```
+
+Outputs whether the module is ready, credentials are set, and the last sync timestamp.
+
+---
+
+## See Also
+
+- **[Overview](./overview)** — Architecture and quick start
+- **[User Sync](./user-sync)** — Sync flow details
+- **[Monitor Configuration](../django-monitor/configuration)** — Monitor-specific settings
+
+TAGS: django_cf, configuration, cloudflare-d1, credentials
+DEPENDS_ON: [django-cf/overview]

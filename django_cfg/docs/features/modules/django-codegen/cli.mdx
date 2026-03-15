@@ -1,0 +1,169 @@
+---
+title: CLI Commands
+sidebar_position: 3
+keywords:
+  - cli
+  - commands
+  - generate
+  - gen
+description: CLI commands for django_codegen module.
+---
+
+# CLI Commands
+
+The `django_codegen` module provides the `gen` management command for client generation.
+It reads your project's `generation.py` and generates all configured targets.
+
+---
+
+## Basic Usage
+
+```bash
+# Generate all configured targets (all languages)
+python manage.py gen
+```
+
+---
+
+## Platform Selection
+
+```bash
+# TypeScript only
+python manage.py gen --ts
+
+# Python only
+python manage.py gen --py
+
+# Go only
+python manage.py gen --go
+
+# Swift only
+python manage.py gen --swift
+```
+
+Multiple flags combine — only the selected languages are generated:
+
+```bash
+# TypeScript and Python, skip Go/Swift
+python manage.py gen --ts --py
+```
+
+---
+
+## Target Filtering
+
+Filter by the `type` field defined in your `Target` config:
+
+```bash
+# Only admin targets
+python manage.py gen --target admin
+
+# Only packages targets
+python manage.py gen --target packages
+
+# Only auto-discovered extensions
+python manage.py gen --target extensions
+
+# Combined with language
+python manage.py gen --ts --target admin
+```
+
+### List Configured Targets
+
+```bash
+python manage.py gen --list-targets
+```
+
+Output:
+```
+OpenAPI targets:
+
+  typescript:
+    [admin] frontend/apps/admin/app/_lib/api/generated
+         groups: cfg_*, profiles
+    [packages] frontend/packages/api/src/generated
+         groups: cfg_accounts, cfg_totp
+
+  extensions (auto-discovered from frontend/extensions):
+    [ext_support] frontend/extensions/ext-support/src/api/generated
+    [ext_leads] frontend/extensions/ext-leads/src/api/generated
+```
+
+---
+
+## Group Filtering
+
+```bash
+# Specific groups only
+python manage.py gen --groups profiles catalog
+
+# Single group
+python manage.py gen --groups cfg_accounts
+
+# Specific group in specific target
+python manage.py gen --target extensions --groups ext_support
+```
+
+---
+
+## Dry Run
+
+```bash
+# Preview what would be generated without writing files
+python manage.py gen --dry-run
+```
+
+---
+
+## Common Workflows
+
+### Development
+
+```bash
+# Quick TypeScript regeneration after API change
+python manage.py gen --ts
+
+# Full regeneration
+python manage.py gen
+
+# Check config before running
+python manage.py gen --list-targets
+python manage.py gen --dry-run
+```
+
+### CI/CD
+
+```bash
+python manage.py gen --dry-run  # validate
+python manage.py gen            # generate
+```
+
+---
+
+## Makefile Integration
+
+```makefile
+api:
+	python manage.py gen
+
+api-ts:
+	python manage.py gen --ts
+
+api-list:
+	python manage.py gen --list-targets
+```
+
+---
+
+## All Flags
+
+| Flag | Description |
+|------|-------------|
+| `--ts` | TypeScript only |
+| `--py` | Python only |
+| `--go` | Go only |
+| `--swift` | Swift only |
+| `--target TYPE` | Filter by target type (`admin`, `packages`, `extensions`, `parsers`, `sdk`, `web`) |
+| `--groups GROUP ...` | Generate specific groups only |
+| `--dry-run` | Preview without writing files |
+| `--list-targets` | Show all configured targets and exit |

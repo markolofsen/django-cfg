@@ -1,0 +1,311 @@
+---
+title: Code Style
+sidebar_position: 8
+keywords:
+  - python code style
+  - python naming conventions
+  - python type annotations
+  - python formatting
+description: Code style guide for Python modules. Naming conventions, type annotations, formatting, docstrings, function and class guidelines, and tooling.
+---
+
+# Code Style
+
+Consistent naming, complete type annotations, auto-formatting, and Google-style docstrings.
+
+## Naming Conventions
+
+### Variables and Functions
+
+```python
+# snake_case — descriptive names
+user_profile = get_user_profile(user_id)
+validated_input = validate_and_transform(raw_input)
+is_active: bool = check_status(account)
+
+# Boolean prefixes: is_, has_, can_, should_
+is_valid: bool
+has_permission: bool
+can_edit: bool
+should_retry: bool
+```
+
+### Classes
+
+```python
+class UserService:        # PascalCase, noun + role
+class AsyncUserService:   # Async prefix for async variant
+class BaseRepository:     # Base prefix for base classes
+class UserRepository:     # Implementation name
+
+# Suffixes indicate purpose
+class UserValidator:      # Validation
+class UserFactory:        # Object creation
+class UserHandler:        # Event/request handling
+```
+
+### Constants and Enums
+
+```python
+# SCREAMING_SNAKE_CASE for constants
+MAX_RETRIES: int = 3
+DEFAULT_TIMEOUT: int = 30
+API_BASE_URL: str = "https://api.example.com"
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    USER = "user"
+    GUEST = "guest"
+```
+
+### Private vs Public
+
+```python
+class UserService:
+    def get_user(self):          # Public API
+        ...
+
+    def _fetch_from_cache(self): # Private implementation
+        ...
+
+# Module-level private
+_internal_cache: dict = {}
+
+def _helper_function() -> None:
+    ...
+```
+
+## Type Annotations
+
+### Modern Syntax (Python 3.10+)
+
+```python
+# Use | instead of Union
+def get_user(user_id: int) -> User | None: ...
+
+# Use built-in types instead of typing imports
+def process(items: list[Item]) -> dict[str, Item]: ...
+
+# Complete annotations on all parameters and returns
+def process_users(
+    users: list[User],
+    filter_fn: Callable[[User], bool],
+    max_results: int = 100,
+) -> list[ProcessedUser]:
+    ...
+
+# Class attributes typed
+class UserService:
+    _config: Config
+    _cache: dict[int, User]
+    _client: httpx.Client | None
+
+    def __init__(self, config: Config) -> None:
+        self._config = config
+        self._cache = {}
+        self._client = None
+```
+
+## Formatting
+
+### Black (88 chars)
+
+```toml
+# pyproject.toml
+[tool.black]
+line-length = 88
+target-version = ['py310']
+```
+
+### Code Patterns
+
+```python
+# Function arguments — one per line
+def create_user(
+    name: str,
+    email: str,
+    role: UserRole = UserRole.USER,
+    metadata: dict[str, str] | None = None,
+) -> User:
+    ...
+
+# Method chaining — align at dot
+result = (
+    QueryBuilder()
+    .select("id", "name")
+    .from_table("users")
+    .where("active", True)
+    .limit(100)
+    .execute()
+)
+
+# Conditions — align logically
+if (
+    user.is_active
+    and user.has_permission("admin")
+    and not user.is_suspended
+):
+    perform_action(user)
+```
+
+### Import Organization (isort)
+
+```python
+# 1. Standard library
+import asyncio
+import logging
+from datetime import datetime
+
+# 2. Third-party
+import httpx
+from pydantic import BaseModel, Field
+
+# 3. Local
+from .models import User
+from .services import UserService
+```
+
+```toml
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["src"]
+```
+
+## Documentation
+
+### Google-Style Docstrings
+
+```python
+def create_user(self, data: UserCreate, validate: bool = True) -> User:
+    """Create a new user.
+
+    Args:
+        data: User creation data including name and email.
+        validate: Whether to run validation rules.
+
+    Returns:
+        The created user with assigned ID.
+
+    Raises:
+        ValidationError: If data fails validation.
+        ConflictError: If email already exists.
+    """
+```
+
+### Inline Comments
+
+```python
+# GOOD — explain why, not what
+# Rate limit: max 10 requests per second per user
+if request_count > 10:
+    await asyncio.sleep(1)
+
+# BAD — stating the obvious
+# Increment counter
+counter += 1
+```
+
+## Function Guidelines
+
+### Max 20 Lines
+
+```python
+# BAD — monolithic function
+def process_everything(data):
+    # 50+ lines of validation, transformation, persistence
+    ...
+
+# GOOD — composed functions
+def process_data(data: InputModel) -> ProcessedModel:
+    validated = validate(data)
+    transformed = transform(validated)
+    return persist(transformed)
+```
+
+### Guard Clauses
+
+```python
+# BAD — deeply nested
+def process_order(order):
+    if order:
+        if order.items:
+            if order.customer:
+                # actual logic
+                ...
+
+# GOOD — guard clauses, flat logic
+def process_order(order: Order) -> ProcessedOrder:
+    if not order:
+        raise ValidationError("Order required")
+    if not order.items:
+        raise ValidationError("Order must have items")
+    if not order.customer:
+        raise ValidationError("Order must have customer")
+
+    return _execute_processing(order)
+```
+
+## Class Guidelines
+
+### Max 200 Lines, Composition Over Inheritance
+
+```python
+# BAD — deep inheritance
+class UserCachedAuthService(CachedService, AuthService, BaseService): ...
+
+# GOOD — composition
+class UserService:
+    def __init__(
+        self,
+        auth: Authenticator,
+        cache: Cache,
+        repo: UserRepository,
+    ):
+        self._auth = auth
+        self._cache = cache
+        self._repo = repo
+```
+
+### `__slots__` for Data Classes
+
+```python
+class UserData:
+    __slots__ = ("id", "name", "email")
+
+    def __init__(self, id: int, name: str, email: str):
+        self.id = id
+        self.name = name
+        self.email = email
+# ~100 bytes per instance vs ~300 without __slots__
+```
+
+## Tooling
+
+```toml
+# pyproject.toml
+[tool.mypy]
+python_version = "3.10"
+strict = true
+disallow_untyped_defs = true
+warn_return_any = true
+
+[tool.flake8]
+max-line-length = 88
+max-complexity = 10
+extend-ignore = ["E203", "W503"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "venv"]
+```
+
+## Rules
+
+1. **snake_case** for variables/functions, **PascalCase** for classes, **SCREAMING_SNAKE** for constants
+2. **Complete type annotations** — every parameter, every return, no `Any`
+3. **Black + isort** — auto-format, no debates
+4. **Functions < 20 lines** — split when exceeded
+5. **Classes < 200 lines** — extract when exceeded
+6. **Guard clauses** — early returns, flat logic
+7. **Composition over inheritance** — inject dependencies
+8. **Google-style docstrings** — on all public functions

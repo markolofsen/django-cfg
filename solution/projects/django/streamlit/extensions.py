@@ -15,7 +15,6 @@ Usage:
 """
 
 import streamlit as st
-# Import from core.registry (relative to streamlit_admin module context)
 from core.registry import page_registry
 
 
@@ -23,7 +22,6 @@ from core.registry import page_registry
 # Register Custom Menu Groups
 # =============================================================================
 
-# Register a custom group for project-specific pages
 page_registry.register_group("Project", icon="briefcase", order=50)
 
 
@@ -59,14 +57,3 @@ def render_reports_page():
 
     if st.button("Generate Report"):
         st.success(f"Generating {report_type}...")
-
-
-# =============================================================================
-# Example: Top-level page (no group)
-# =============================================================================
-
-# @page_registry.register("Quick Actions", icon="lightning", order=5)
-# def render_quick_actions():
-#     st.title("Quick Actions")
-#     if st.button("Sync Data"):
-#         st.toast("Syncing...")

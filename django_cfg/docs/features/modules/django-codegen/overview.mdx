@@ -1,0 +1,311 @@
+---
+title: Overview
+sidebar_position: 1
+keywords:
+  - code generation
+  - api client
+  - typescript
+  - python
+  - openapi
+  - multi-target
+description: Unified code generation module for API clients, supporting multiple platforms and targets with automatic extension discovery.
+---
+
+# Django Codegen
+
+**Unified code generation module for multi-platform API clients.**
+
+The `django_codegen` module provides a declarative configuration system for generating API clients across multiple platforms (TypeScript, Python, Go, Swift) with support for multiple targets and automatic extension discovery.
+
+## Key Features
+
+- **Multi-Platform** — TypeScript, Python, Go, Swift, Protocol Buffers
+- **Multi-Target** — Generate different clients for admin, web, SDK, extensions
+- **Group Filtering** — Include specific API groups per target with wildcard support
+- **Extension Auto-Discovery** — Automatically find and generate clients for extension packages
+- **Typed Configuration** — Pydantic v2 models with full type safety
+
+---
+
+## Quick Start
+
+### 1. Create Configuration
+
+```python
+# generation.py
+from pathlib import Path
+
+from django_cfg.modules.django_codegen import (
+    Config,
+    OpenAPI,
+    Target,
+    ExtensionTarget,
+    Language,
+    TargetType,
+)
+
+ROOT = Path(__file__).parent
+FRONTEND = ROOT.parent / "frontend"
+
+config = Config(
+    openapi=OpenAPI(
+        targets=[
+            Target(
+                lang=Language.TYPESCRIPT,
+                type=TargetType.ADMIN,
+                path=FRONTEND / "apps" / "admin" / "app" / "_lib" / "api" / "generated",
+                groups=["cfg_*", "profiles"],
+            ),
+        ],
+
+        # Auto-discover extensions
+        extensions=ExtensionTarget(
+            lang=Language.TYPESCRIPT,
+            frontend_path=FRONTEND / "extensions",
+            package_pattern="ext-{name}",
+            output_pattern="src/api/generated",
+            group_prefix="ext_",
+        ),
+    ),
+)
+```
+
+### 2. Run Generation
+
+```bash
+# All platforms
+python manage.py gen
+
+# TypeScript only
+python manage.py gen --ts
+
+# Specific target
+python manage.py gen --target admin
+
+# Specific groups
+python manage.py gen --groups profiles catalog
+```
+
+---
+
+## Architecture
+
+```
+django_codegen/
+├── __init__.py           # Public API exports
+├── config.py             # Pydantic configuration models
+├── runner.py             # Generation orchestrator
+├── apps.py               # Django app config
+└── management/
+    └── commands/
+        └── gen.py        # Management command
+```
+
+---
+
+## Configuration Models
+
+### Platform (Language)
+
+Supported generation platforms:
+
+| Platform | Description |
+|----------|-------------|
+| `TYPESCRIPT` | TypeScript/JavaScript clients |
+| `PYTHON` | Python clients with httpx |
+| `GO` | Go clients |
+| `SWIFT` | Swift clients (OpenAPI Runtime) |
+| `SWIFT_CODABLE` | Swift Codable types (simple) |
+| `PROTO` | Protocol Buffers / gRPC |
+
+### TargetType
+
+Predefined target types:
+
+| Type | Description |
+|------|-------------|
+| `ADMIN` | Admin panel clients |
+| `WEB` | Public web app clients |
+| `PACKAGES` | Shared package clients |
+| `EXTENSIONS` | Extension module clients |
+| `PARSERS` | Parser/scraper clients |
+| `SDK` | SDK distribution |
+
+### Target
+
+Single generation target configuration:
+
+```python
+Target(
+    lang=Language.TYPESCRIPT,      # Platform
+    type=TargetType.ADMIN,         # Target type
+    path=Path("frontend/api"),     # Output path
+    groups=["cfg_*", "profiles"],  # API groups to include
+    post_build="pnpm build",       # Optional post-build command
+)
+```
+
+### ExtensionTarget
+
+Auto-discover extension packages:
+
+```python
+ExtensionTarget(
+    lang=Language.TYPESCRIPT,
+    frontend_path=Path("frontend/extensions"),
+    package_pattern="ext-{name}",      # ext-support, ext-leads
+    output_pattern="src/api/generated",
+    group_prefix="ext_",               # Maps to ext_support, ext_leads
+)
+```
+
+**How it works:**
+
+1. Scans `frontend_path` for directories matching pattern
+2. Extracts name from directory (e.g., `ext-support` → `support`)
+3. Maps to Django API group with prefix (e.g., `ext_support`)
+4. Generates client to `{package}/{output_pattern}`
+
+---
+
+## Group Wildcards
+
+Groups support wildcard patterns:
+
+```python
+groups=["cfg_*"]        # All groups starting with cfg_
+groups=["*_admin"]      # All groups ending with _admin
+groups=["profiles"]     # Exact match
+groups=["cfg_*", "profiles", "catalog"]  # Mixed
+```
+
+---
+
+## Multiple Targets Example
+
+```python
+config = Config(
+    openapi=OpenAPI(
+        targets=[
+            # Admin panel - all cfg_* groups + profiles
+            Target(
+                lang=Language.TYPESCRIPT,
+                type=TargetType.ADMIN,
+                path=FRONTEND / "apps/admin/api/generated",
+                groups=["cfg_*", "profiles"],
+            ),
+
+            # Public web - only public APIs
+            Target(
+                lang=Language.TYPESCRIPT,
+                type=TargetType.WEB,
+                path=FRONTEND / "apps/web/api/generated",
+                groups=["catalog", "products", "cart"],
+            ),
+
+            # Python parsers
+            Target(
+                lang=Language.PYTHON,
+                type=TargetType.PARSERS,
+                path=ROOT / "parsers/api/generated",
+                groups=["normalizer", "scraper"],
+            ),
+        ],
+
+        # Auto-discover extensions
+        extensions=ExtensionTarget(
+            frontend_path=FRONTEND / "extensions",
+        ),
+    ),
+)
+```
+
+---
+
+## Streamlit Integration
+
+Generate Python clients for Streamlit admin:
+
+```bash
+python manage.py gen --streamlit
+```
+
+This copies generated Python clients to the Streamlit app's `api/generated/` directory.
+
+---
+
+## Centrifugo Support
+
+Generate Centrifugo RPC clients:
+
+```python
+from django_cfg.modules.django_codegen import Config, Centrifugo, Target
+
+config = Config(
+    centrifugo=Centrifugo(
+        targets=[
+            Target(
+                lang=Language.TYPESCRIPT,
+                type=TargetType.WEB,
+                path=FRONTEND / "packages/centrifugo/generated",
+                groups=["notifications", "chat"],
+            ),
+        ],
+    ),
+)
+```
+
+---
+
+## ORM Generation
+
+Generate FastAPI/SQLModel models from Django models:
+
+```python
+from django_cfg.modules.django_codegen import Config, ORM, ORMTarget, ORMGenerator
+
+config = Config(
+    orm=ORM(
+        targets=[
+            ORMTarget(
+                output=Path("fastapi_server/src/orm"),
+                generator=ORMGenerator.FASTAPI,
+                apps=["profiles", "catalog"],
+            ),
+        ],
+        include_crud=True,
+        async_mode=True,
+    ),
+)
+```
+
+---
+
+## Programmatic Usage
+
+```python
+from django_cfg.modules.django_codegen import (
+    run,
+    run_with_options,
+    GeneratorOptions,
+    Platform,
+)
+
+# Simple run
+run(config)
+
+# With typed options
+options = GeneratorOptions(
+    platforms={Platform.TYPESCRIPT, Platform.PYTHON},
+    groups=["profiles", "catalog"],
+    verbose=True,
+)
+run_with_options(config, options)
+```
+
+---
+
+## Next Steps
+
+- **[Configuration](./configuration)** — Detailed configuration reference
+- **[CLI Commands](./cli)** — All available commands and options

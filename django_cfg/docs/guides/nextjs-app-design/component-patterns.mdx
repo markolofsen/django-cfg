@@ -1,0 +1,258 @@
+---
+title: Component Patterns
+sidebar_position: 5
+keywords:
+  - usememo
+  - useCallback
+  - component structure
+  - decomposition
+  - prop drilling
+  - type safety
+description: useMemo data preparation rule, component structure order, context over props, decomposition patterns, and type safety conventions.
+---
+
+# Component Patterns
+
+Zero-tolerance rules and standard patterns for React components in django-cfg apps.
+
+<Callout type="info">
+For Context architecture see [State Management](./state-management). For UI component library see [UI Components recipe](./recipes/ui-components).
+</Callout>
+
+## The useMemo Data Preparation Rule
+
+**Never transform data in JSX. Always use `useMemo`.**
+
+This is the top zero-tolerance rule across all projects.
+
+```typescript
+// WRONG — logic in JSX
+{users?.filter(u => u.active)?.map(u => <div>{u.name}</div>)}
+
+// CORRECT — prepare data first
+const activeUsers = useMemo(() => {
+  if (!users) return [];
+  return users
+    .filter(user => user.active)
+    .map(user => ({
+      ...user,
+      displayName: `${user.firstName} ${user.lastName}`,
+      statusText: user.isActive ? 'Active' : 'Inactive',
+    }));
+}, [users]);
+
+{activeUsers.map(user => <div key={user.id}>{user.displayName}</div>)}
+```
+
+### Multiple useMemo for Different Concerns
+
+```typescript
+// Filtered data
+const filteredOrders = useMemo(() => { ... }, [orders, filters]);
+
+// Stats computed from filtered data
+const stats = useMemo(() => ({
+  total: filteredOrders.length,
+  totalValue: filteredOrders.reduce((sum, o) => sum + o.total, 0),
+}), [filteredOrders]);
+
+// Chart data
+const chartData = useMemo(() =>
+  filteredOrders.map(o => ({ date: o.date, value: o.total })),
+[filteredOrders]);
+```
+
+## Component Structure Order
+
+Every component follows this internal order:
+
+```typescript
+// 1. Imports
+import { useMemo, useCallback } from 'react';
+
+// 2. Types
+interface UserCardProps { user: User; onSelect: (id: string) => void; }
+
+// 3. Helper functions (OUTSIDE component — pure, testable)
+function formatUserRole(role: UserRole): string { ... }
+function getUserStatusColor(status: string): string { ... }
+
+// 4. Component body
+export function UserCard({ user, onSelect }: UserCardProps) {
+  // 4a. Hooks (state, context, custom)
+  const { isAdmin } = useAuth();
+
+  // 4b. useMemo for derived data
+  const displayData = useMemo(() => ({
+    name: `${user.first} ${user.last}`,
+    roleLabel: formatUserRole(user.role),
+    statusColor: getUserStatusColor(user.status),
+  }), [user]);
+
+  // 4c. useCallback for event handlers
+  const handleSelect = useCallback(() => {
+    onSelect(user.id);
+  }, [user.id, onSelect]);
+
+  // 4d. Early returns (loading, error, empty)
+  if (!user) return null;
+
+  // 4e. Main render
+  return (
+    <Card onClick={handleSelect}>
+      <span className={displayData.statusColor}>{displayData.name}</span>
+      <Badge>{displayData.roleLabel}</Badge>
+    </Card>
+  );
+}
+```
+
+## Context Over Props
+
+No prop drilling. Components access context directly:
+
+```typescript
+// WRONG — prop drilling
+<Layout user={user}>
+  <Sidebar user={user}>
+    <UserMenu user={user} />
+  </Sidebar>
+</Layout>
+
+// CORRECT — components access context directly
+<AuthProvider>
+  <Layout>
+    <Sidebar>
+      <UserMenu /> {/* calls useAuth() internally */}
+    </Sidebar>
+  </Layout>
+</AuthProvider>
+```
+
+## useCallback for Event Handlers
+
+All event handlers use `useCallback`:
+
+```typescript
+// WRONG
+<Button onClick={() => handleClick(id)}>Click</Button>
+
+// CORRECT
+const handleButtonClick = useCallback(() => {
+  handleClick(id);
+}, [id, handleClick]);
+<Button onClick={handleButtonClick}>Click</Button>
+```
+
+## Component Decomposition Patterns
+
+### Page → View → Features
+
+```
+page.tsx (Server)
+  → generateMetadata()
+  → SSR data fetch
+  → renders <FeatureView initialData={...} />
+
+FeatureView.tsx ('use client')
+  → receives data props
+  → wraps with providers if needed
+  → composes feature components
+
+Feature components
+  → consume context directly
+  → each has single responsibility
+```
+
+### Flat Composition
+
+When no sub-contexts are needed, use a flat layout:
+
+```typescript
+// VehicleDetailView.tsx
+<div>
+  <VehicleBreadcrumb />
+  <VehicleGallery />
+  <VehicleHeader />
+  <VehicleSpecs />
+  <VehicleDescription />
+  <VehicleFeatures />
+</div>
+```
+
+### Dialog Wrapper Pattern
+
+Separate dialog state (open/close) from content logic:
+
+```typescript
+// EditDialog.tsx — handles open/close
+export function EditDialog({ open, onOpenChange }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <EditForm onSuccess={() => onOpenChange(false)} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// EditForm.tsx — handles actual editing logic
+export function EditForm({ onSuccess }) {
+  const form = useForm();
+  // ... form logic only, no dialog concerns
+}
+```
+
+### State Machine for Complex Flows
+
+```typescript
+type TransferState = 'idle' | 'initiating' | 'uploading' | 'streaming' | 'completed' | 'failed' | 'cancelled';
+
+// Render with switch
+switch (state) {
+  case 'idle': return <StartButton />;
+  case 'uploading': return <ProgressBar percent={progress} />;
+  case 'completed': return <SuccessMessage />;
+  case 'failed': return <RetryButton />;
+}
+```
+
+### Dual Layout Support
+
+Support `grid` and `list` layouts via a prop:
+
+```typescript
+interface VehicleCardProps {
+  vehicle: VehicleList;
+  layout: 'grid' | 'list';
+}
+
+export function VehicleCard({ vehicle, layout }: VehicleCardProps) {
+  if (layout === 'list') return <ListLayout vehicle={vehicle} />;
+  return <GridLayout vehicle={vehicle} />;
+}
+```
+
+## Self-Contained Feature Modules
+
+Features with separate backend modules can be fully self-contained:
+
+```
+private/payments/src/
+├── api/generated/ext_payments/    # Own generated API
+├── contexts/WalletContext.tsx      # Own context
+├── contexts/types.ts              # Own type re-exports
+├── components/                    # Own components
+└── hooks/                         # Own hooks
+```
+
+Does not share `_lib/api/` or `_lib/contexts/`. See [Extensions recipe](./recipes/extensions) for the extension pattern.
+
+## Rules
+
+1. Never transform, filter, or sort data in JSX — always use `useMemo` for data preparation
+2. Follow the component structure order: imports → types → helpers → hooks → useMemo → useCallback → early returns → render
+3. Use context over props — no prop drilling through intermediate components
+4. Wrap all event handlers in `useCallback` with explicit dependency arrays
+5. Helper functions go outside the component body — pure, testable, no hooks
+6. No `any` types — all props typed with interfaces, types imported from context `types.ts`

@@ -1,0 +1,479 @@
+---
+title: Usage Patterns
+description: Practical usage patterns for FastAPI ORM Generator. FastAPI integration, custom queries, transactions, relationships, and testing.
+sidebar_label: Usage
+sidebar_position: 4
+keywords:
+  - fastapi integration
+  - sqlmodel usage
+  - async crud
+  - repository pattern
+---
+
+# Usage Patterns
+
+Practical examples for integrating generated ORM code with FastAPI applications.
+
+## FastAPI Application Setup
+
+```python
+# main.py
+from fastapi import FastAPI, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from orm import get_session, init_db
+from orm.users.models import User
+from orm.users.schemas import UserCreate, UserRead, UserUpdate
+from orm.users.crud import UserRepository
+
+app = FastAPI(title="My API")
+
+@app.on_event("startup")
+async def startup():
+    """Initialize database on startup."""
+    await init_db()
+```
+
+## Basic CRUD Endpoints
+
+### List with Pagination
+
+```python
+@app.get("/users", response_model=list[UserRead])
+async def list_users(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    session: AsyncSession = Depends(get_session),
+):
+    """List all users with pagination."""
+    return await UserRepository.get_all(session, skip=skip, limit=limit)
+```
+
+### Get by ID
+
+```python
+@app.get("/users/{user_id}", response_model=UserRead)
+async def get_user(
+    user_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    """Get user by ID."""
+    user = await UserRepository.get_by_id(session, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+```
+
+### Create
+
+```python
+@app.post("/users", response_model=UserRead, status_code=201)
+async def create_user(
+    data: UserCreate,
+    session: AsyncSession = Depends(get_session),
+):
+    """Create a new user."""
+    user = User(**data.model_dump())
+    return await UserRepository.create(session, user)
+```
+
+### Update
+
+```python
+@app.patch("/users/{user_id}", response_model=UserRead)
+async def update_user(
+    user_id: int,
+    data: UserUpdate,
+    session: AsyncSession = Depends(get_session),
+):
+    """Update user by ID."""
+    user = await UserRepository.update(
+        session,
+        user_id,
+        data.model_dump(exclude_unset=True),
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+```
+
+### Delete
+
+```python
+@app.delete("/users/{user_id}", status_code=204)
+async def delete_user(
+    user_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    """Delete user by ID."""
+    deleted = await UserRepository.delete(session, user_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="User not found")
+```
+
+## Custom Repository Methods
+
+Extend generated repositories without modifying them:
+
+```python
+# orm/users/custom_repository.py
+from sqlalchemy import select, or_
+from sqlalchemy.ext.asyncio import AsyncSession
+from .models import User
+from .crud import UserRepository as BaseRepository
+
+class UserRepository(BaseRepository):
+    """Extended User repository with custom methods."""
+
+    @staticmethod
+    async def get_by_email(
+        session: AsyncSession,
+        email: str,
+    ) -> User | None:
+        """Get user by email."""
+        statement = select(User).where(User.email == email)
+        result = await session.execute(statement)
+        return result.scalars().first()
+
+    @staticmethod
+    async def get_active_users(
+        session: AsyncSession,
+        limit: int = 100,
+    ) -> list[User]:
+        """Get only active users."""
+        statement = (
+            select(User)
+            .where(User.is_active == True)
+            .limit(limit)
+        )
+        result = await session.execute(statement)
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def search(
+        session: AsyncSession,
+        query: str,
+    ) -> list[User]:
+        """Search users by email or username."""
+        statement = select(User).where(
+            or_(
+                User.email.ilike(f"%{query}%"),
+                User.username.ilike(f"%{query}%"),
+            )
+        )
+        result = await session.execute(statement)
+        return list(result.scalars().all())
+```
+
+## Filtering and Sorting
+
+```python
+from sqlalchemy import select, desc, asc
+from orm.products.models import Product
+
+async def get_products_filtered(
+    session: AsyncSession,
+    category: str | None = None,
+    min_price: float | None = None,
+    max_price: float | None = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+    skip: int = 0,
+    limit: int = 100,
+) -> list[Product]:
+    """Get products with filters and sorting."""
+    statement = select(Product)
+
+    # Apply filters
+    if category:
+        statement = statement.where(Product.category == category)
+    if min_price is not None:
+        statement = statement.where(Product.price >= min_price)
+    if max_price is not None:
+        statement = statement.where(Product.price <= max_price)
+
+    # Apply sorting
+    if hasattr(Product, sort_by):
+        order_func = desc if sort_order == "desc" else asc
+        statement = statement.order_by(order_func(getattr(Product, sort_by)))
+
+    # Apply pagination
+    statement = statement.offset(skip).limit(limit)
+
+    result = await session.execute(statement)
+    return list(result.scalars().all())
+```
+
+## Transactions
+
+```python
+from orm import get_session
+from orm.orders.models import Order, OrderItem
+from orm.products.models import Product
+
+async def create_order_with_items(
+    session: AsyncSession,
+    user_id: int,
+    items: list[dict],
+) -> Order:
+    """Create order with items in a transaction."""
+    async with session.begin():
+        # Create order
+        order = Order(user_id=user_id, status="pending")
+        session.add(order)
+        await session.flush()  # Get order.id
+
+        total = 0
+        for item in items:
+            # Get product and check stock
+            product = await session.get(Product, item["product_id"])
+            if not product or product.stock < item["quantity"]:
+                raise ValueError(f"Insufficient stock for product {item['product_id']}")
+
+            # Create order item
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=product.id,
+                quantity=item["quantity"],
+                price=product.price,
+            )
+            session.add(order_item)
+
+            # Update stock
+            product.stock -= item["quantity"]
+            total += product.price * item["quantity"]
+
+        order.total = total
+        # Commit happens automatically at end of `begin()` block
+
+    return order
+```
+
+## Eager Loading Relationships
+
+```python
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload, joinedload
+from orm.users.models import User
+
+async def get_user_with_profile(
+    session: AsyncSession,
+    user_id: int,
+) -> User | None:
+    """Eagerly load user with profile."""
+    statement = (
+        select(User)
+        .options(selectinload(User.profile))
+        .where(User.id == user_id)
+    )
+    result = await session.execute(statement)
+    return result.scalars().first()
+
+async def get_users_with_posts(
+    session: AsyncSession,
+    limit: int = 100,
+) -> list[User]:
+    """Get users with their posts (avoid N+1)."""
+    statement = (
+        select(User)
+        .options(selectinload(User.posts))
+        .limit(limit)
+    )
+    result = await session.execute(statement)
+    return list(result.scalars().all())
+```
+
+## Bulk Operations
+
+```python
+from sqlalchemy import update, delete
+from orm.users.models import User
+
+async def deactivate_inactive_users(
+    session: AsyncSession,
+    days: int = 90,
+) -> int:
+    """Bulk deactivate users inactive for N days."""
+    from datetime import datetime, timedelta
+
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    statement = (
+        update(User)
+        .where(User.last_login < cutoff)
+        .where(User.is_active == True)
+        .values(is_active=False)
+    )
+    result = await session.execute(statement)
+    await session.commit()
+    return result.rowcount
+
+async def delete_unverified_users(
+    session: AsyncSession,
+) -> int:
+    """Bulk delete unverified users."""
+    statement = (
+        delete(User)
+        .where(User.is_verified == False)
+    )
+    result = await session.execute(statement)
+    await session.commit()
+    return result.rowcount
+```
+
+## Testing
+
+### Test Fixtures
+
+```python
+# tests/conftest.py
+import pytest
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from sqlmodel import SQLModel
+
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+@pytest.fixture
+async def engine():
+    """Create test database engine."""
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    yield engine
+
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+
+    await engine.dispose()
+
+@pytest.fixture
+async def session(engine):
+    """Create test database session."""
+    factory = sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    async with factory() as session:
+        yield session
+```
+
+### Repository Tests
+
+```python
+# tests/test_users.py
+import pytest
+from orm.users.models import User
+from orm.users.crud import UserRepository
+
+@pytest.mark.asyncio
+async def test_create_user(session):
+    user = User(
+        email="test@example.com",
+        username="testuser",
+        is_active=True,
+    )
+    created = await UserRepository.create(session, user)
+
+    assert created.id is not None
+    assert created.email == "test@example.com"
+
+@pytest.mark.asyncio
+async def test_get_user_by_id(session):
+    # Create
+    user = User(email="test@example.com", username="testuser")
+    await UserRepository.create(session, user)
+
+    # Get
+    found = await UserRepository.get_by_id(session, user.id)
+
+    assert found is not None
+    assert found.email == "test@example.com"
+
+@pytest.mark.asyncio
+async def test_update_user(session):
+    user = User(email="test@example.com", username="testuser")
+    await UserRepository.create(session, user)
+
+    updated = await UserRepository.update(
+        session,
+        user.id,
+        {"email": "new@example.com"},
+    )
+
+    assert updated.email == "new@example.com"
+
+@pytest.mark.asyncio
+async def test_delete_user(session):
+    user = User(email="test@example.com", username="testuser")
+    await UserRepository.create(session, user)
+
+    deleted = await UserRepository.delete(session, user.id)
+
+    assert deleted is True
+    assert await UserRepository.get_by_id(session, user.id) is None
+
+@pytest.mark.asyncio
+async def test_count_users(session):
+    for i in range(5):
+        user = User(email=f"test{i}@example.com", username=f"user{i}")
+        await UserRepository.create(session, user)
+
+    count = await UserRepository.count(session)
+
+    assert count == 5
+```
+
+## Environment Configuration
+
+```bash
+# .env
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/mydb
+
+# For sync mode
+DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
+```
+
+## Project Structure
+
+Recommended FastAPI project structure with generated ORM:
+
+```
+myproject/
+├── django/                 # Django project (source of truth)
+│   ├── apps/
+│   │   ├── users/
+│   │   │   └── models.py   # Django models
+│   │   └── products/
+│   │       └── models.py
+│   └── manage.py
+└── fastapi/                # FastAPI project
+    └── src/
+        ├── main.py         # FastAPI app
+        ├── api/
+        │   ├── users.py    # User endpoints
+        │   └── products.py # Product endpoints
+        └── orm/            # Generated ORM (don't edit!)
+            ├── __init__.py
+            ├── database.py
+            ├── users/
+            └── products/
+```
+
+## Regeneration Workflow
+
+After Django model changes:
+
+```bash
+# In Django project
+python manage.py generate_fastapi --output-dir=../fastapi/src/orm/
+
+# Or with Makefile
+make orm
+```
+
+TAGS: fastapi, integration, testing, transactions, queries
+DEPENDS_ON: [overview, configuration, generated-code]

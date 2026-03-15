@@ -1,0 +1,202 @@
+---
+title: Background Tasks
+sidebar_position: 9
+keywords:
+  - django background tasks
+  - django-rq
+  - dramatiq django
+  - django-cfg tasks
+description: Background task patterns for Django-CFG apps. Function-based tasks, enqueue from ViewSets, task orchestration folder, and best practices.
+---
+
+# Background Tasks
+
+Long-running operations — API syncs, data processing, report generation — run as background tasks using RQ (django-rq) or Dramatiq.
+
+## Function-Based Tasks
+
+Tasks must be plain functions (picklable). Use lazy imports for Django models:
+
+```python
+# tasks.py
+
+def sync_all_symbols_task():
+    """Sync symbols from all exchanges."""
+    from .services.sync_service import sync_symbols
+
+    results = sync_symbols()
+    return {
+        "status": "completed",
+        "synced": sum(r.total for r in results),
+        "errors": sum(len(r.errors) for r in results),
+    }
+
+
+def sync_exchange_task(exchange: str):
+    """Sync symbols for a specific exchange."""
+    from .services.sync_service import SyncService
+
+    service = SyncService()
+    results = []
+    for market_type in ["spot", "linear", "inverse"]:
+        result = service.sync(exchange, market_type)
+        results.append(result)
+    return {"exchange": exchange, "total": sum(r.total for r in results)}
+
+
+def sync_market_task(exchange: str, market_type: str):
+    """Sync symbols for a specific exchange + market type."""
+    from .services.sync_service import SyncService
+
+    service = SyncService()
+    result = service.sync(exchange, market_type)
+    return {
+        "exchange": exchange,
+        "market_type": market_type,
+        "created": result.created,
+        "updated": result.updated,
+    }
+```
+
+From **symbols** (stockapis) — three granularity levels: all, per-exchange, per-market.
+
+<Callout type="warning">
+**Always import Django models inside the task function**, not at module level. Task modules are imported during worker startup when Django may not be fully initialized.
+</Callout>
+
+## Enqueue from ViewSet
+
+Trigger tasks from API endpoints:
+
+```python
+from django_rq import enqueue
+
+@extend_schema(
+    summary="Sync symbols from exchanges",
+    request=SyncRequestSerializer,
+    responses={200: SyncResponseSerializer},
+)
+@action(detail=False, methods=["post"])
+def sync(self, request):
+    serializer = SyncRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    exchange = serializer.validated_data.get("exchange")
+
+    if exchange:
+        job = enqueue(sync_exchange_task, exchange, job_timeout="10m")
+    else:
+        job = enqueue(sync_all_symbols_task, job_timeout="30m")
+
+    return Response({
+        "status": "queued",
+        "job_id": job.id,
+    })
+```
+
+### Enqueue options
+
+```python
+job = enqueue(
+    my_task,
+    arg1, arg2,
+    job_timeout="10m",      # Max execution time
+    result_ttl=3600,        # Keep result for 1 hour
+    queue="default",        # Queue name
+)
+```
+
+## Task Orchestration Folder
+
+When a domain has multiple related tasks, use a `tasks/` directory:
+
+```
+tasks/
+├── __init__.py
+├── process_request.py       # Main orchestrator
+├── download_daily.py        # Worker: download one day
+├── download_monthly.py      # Worker: download one month
+├── availability.py          # Check data availability
+├── export_data.py           # Export completed data
+└── exceptions.py            # Task-specific exceptions
+```
+
+From **cryptodb_driver** (stockapis) — 5 task files, each focused on one operation.
+
+### Orchestrator pattern
+
+The main task creates child tasks:
+
+```python
+# tasks/process_request.py
+
+def process_download_request(request_id: int):
+    """Main orchestrator — creates segment tasks."""
+    from ..models import DownloadRequest
+    from ..services.date_range_splitter import split_range
+    from .download_daily import download_daily_segment
+
+    request = DownloadRequest.objects.get(id=request_id)
+    segments = split_range(request.from_date, request.to_date, request.granularity)
+
+    for segment in segments:
+        # Create DB record for tracking
+        db_segment = request.segments.create(
+            from_date=segment.start,
+            to_date=segment.end,
+            status="pending",
+        )
+        # Enqueue child task
+        enqueue(download_daily_segment, db_segment.id, job_timeout="5m")
+```
+
+## Return Values
+
+Tasks must return serializable data (dict, list, string, number):
+
+```python
+# ✅ Correct — serializable return
+def my_task():
+    return {"status": "done", "count": 42}
+
+# ❌ Wrong — QuerySet is not serializable
+def my_task():
+    return MyModel.objects.all()
+
+# ❌ Wrong — model instance is not serializable
+def my_task():
+    return MyModel.objects.first()
+```
+
+## Management Command Integration
+
+Tasks can also be called from management commands:
+
+```python
+# management/commands/sync_symbols.py
+
+from django.core.management.base import BaseCommand
+from ...services.sync_service import sync_symbols
+
+
+class Command(BaseCommand):
+    help = "Sync symbols from exchanges"
+
+    def add_arguments(self, parser):
+        parser.add_argument("--exchange", type=str, help="Specific exchange")
+
+    def handle(self, *args, **options):
+        results = sync_symbols(exchange=options.get("exchange"))
+        for r in results:
+            self.stdout.write(f"{r.exchange}/{r.market_type}: {r.total} symbols")
+```
+
+## Rules
+
+1. **Function-based, not class-based** — tasks must be picklable for RQ/Dramatiq
+2. **Lazy imports** — import Django models and services inside the function body
+3. **Return serializable data** — dicts, lists, primitives only
+4. **Set `job_timeout`** — always specify a timeout to prevent zombie tasks
+5. **One responsibility per task** — use orchestrator pattern for multi-step operations
+6. **Idempotent when possible** — tasks may be retried on failure
+7. **Log progress** — use `logger.info()` for tracking in task workers

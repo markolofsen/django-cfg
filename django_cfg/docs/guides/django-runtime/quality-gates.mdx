@@ -1,0 +1,310 @@
+---
+title: Quality Gates
+sidebar_position: 4
+keywords:
+  - django quality gates
+  - django monitoring
+  - prometheus django
+  - code review django
+  - production checklist
+description: Quality gates for Django projects — Foundation, Production, and Enterprise levels with zero-tolerance violations, automated checks, and Prometheus monitoring.
+---
+
+# Quality Gates
+
+Three-level quality gate system for Django projects. Each level builds on the previous — pass Foundation before targeting Production.
+
+## Quality Levels
+
+### Foundation (Required for All Code)
+
+| Check | Requirement | Tool |
+|-------|-------------|------|
+| Type annotations | 100% coverage | `mypy --strict` |
+| No `Any` / raw `dict` | 0 instances | `grep` + `mypy` |
+| Pydantic v2 models | All data structures | Manual review |
+| Custom exceptions | Exception hierarchy | Manual review |
+| No mutable defaults | 0 instances (`=[]`, `={}`) | `grep` |
+| No global state | 0 module-level mutable vars | `grep` |
+
+### Production (Required for Deployment)
+
+| Check | Requirement | Tool |
+|-------|-------------|------|
+| Test coverage | >= 95% | `pytest --cov-fail-under=95` |
+| Function length | < 20 lines | `flake8` |
+| Cyclomatic complexity | < 10 | `flake8 --max-complexity=10` |
+| Async correctness | No sync ORM in async | `grep` + runtime checks |
+| Resource cleanup | Context managers for I/O | Manual review |
+| Security audit | 0 findings | `bandit` |
+
+### Enterprise (Recommended for High-Load)
+
+| Check | Requirement | Tool |
+|-------|-------------|------|
+| Performance benchmarks | API < 200ms p95 | `pytest-benchmark` |
+| Memory usage | < 100MB per worker | `psutil` monitoring |
+| Error rate | < 1% in production | Prometheus |
+| Documentation | 100% public API | `interrogate` |
+| Monitoring | Metrics + alerts configured | Prometheus + Grafana |
+
+## Django-Specific Zero-Tolerance Violations
+
+These patterns are **forbidden** in Django projects and must be fixed before merge:
+
+### Sync ORM in Async Context
+
+```python
+# FORBIDDEN: sync ORM call inside async function
+async def bad_view(request):
+    user = User.objects.get(id=1)  # SynchronousOnlyOperation at runtime
+
+# REQUIRED: use a-prefixed method
+async def good_view(request):
+    user = await User.objects.aget(id=1)
+```
+
+### Missing transaction.atomic for Multi-Step Writes
+
+```python
+# FORBIDDEN: multiple writes without transaction
+def bad_transfer(from_id: int, to_id: int, amount: Decimal):
+    Account.objects.filter(id=from_id).update(balance=F("balance") - amount)
+    Account.objects.filter(id=to_id).update(balance=F("balance") + amount)
+    # If second update fails, data is inconsistent
+
+# REQUIRED: wrap in transaction
+from django.db import transaction
+
+def good_transfer(from_id: int, to_id: int, amount: Decimal):
+    with transaction.atomic():
+        Account.objects.filter(id=from_id).update(balance=F("balance") - amount)
+        Account.objects.filter(id=to_id).update(balance=F("balance") + amount)
+```
+
+### Missing select_related / prefetch_related
+
+```python
+# FORBIDDEN: N+1 query pattern
+def bad_list_books():
+    books = Book.objects.all()
+    for book in books:
+        print(book.author.name)  # N extra queries
+
+# REQUIRED: eager loading
+def good_list_books():
+    books = Book.objects.select_related("author").all()
+    for book in books:
+        print(book.author.name)  # 1 query total
+```
+
+### Unvalidated User Input in ORM Queries
+
+```python
+# FORBIDDEN: raw user input in extra/raw
+def bad_search(query: str):
+    return Book.objects.extra(where=[f"title LIKE '%{query}%'"])
+
+# REQUIRED: parameterized queries
+def good_search(query: str):
+    return Book.objects.filter(title__icontains=query)
+```
+
+## Automated Checks
+
+### Pre-commit Configuration
+
+```bash
+# Type checking (Foundation)
+mypy . --strict --show-error-codes
+
+# Code quality (Foundation + Production)
+black . --check
+isort . --check-only
+flake8 . --max-complexity=10 --max-line-length=88
+
+# Security (Production)
+bandit -r src/ -f json
+
+# Test coverage (Production)
+pytest --cov=src --cov-fail-under=95 --maxfail=1
+```
+
+### Django-Specific grep Checks
+
+```bash
+# Detect sync ORM in async functions (zero-tolerance)
+# Look for .objects. calls without await/a-prefix in async def blocks
+grep -rn "async def" src/ | while read line; do
+  file=$(echo "$line" | cut -d: -f1)
+  grep -n "\.objects\.\(get\|filter\|create\|update\|delete\|all\|count\|exists\)(" "$file" \
+    | grep -v "await" | grep -v "\.a\(get\|filter\|create\|update\|delete\|all\|count\|exists\)("
+done
+
+# Detect missing transaction.atomic for bulk writes
+grep -rn "\.update(" src/ | grep -v "transaction" | grep -v "test"
+
+# Detect N+1 candidates: all() without select/prefetch
+grep -rn "\.objects\.all()" src/ | grep -v "select_related\|prefetch_related"
+
+# Pydantic v1 leftovers
+grep -rn "\.parse_obj\|\.dict()\|@validator\b" src/
+```
+
+### CI Pipeline
+
+```yaml
+# .github/workflows/quality.yml
+name: Quality Gates
+on: [push, pull_request]
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e .[dev]
+      - run: mypy . --strict
+      - run: black --check .
+      - run: isort --check-only .
+
+  production:
+    needs: foundation
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_DB: test, POSTGRES_PASSWORD: test }
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e .[dev]
+      - run: pytest --cov=src --cov-fail-under=95
+      - run: bandit -r src/
+      - run: flake8 . --max-complexity=10
+```
+
+## Prometheus Monitoring
+
+Instrument Django middleware to collect metrics for Enterprise-level monitoring.
+
+### Metrics Middleware
+
+```python
+import time
+from prometheus_client import Counter, Histogram, Gauge
+
+REQUEST_COUNT = Counter(
+    "django_http_requests_total",
+    "Total HTTP requests",
+    ["method", "endpoint", "status"],
+)
+REQUEST_DURATION = Histogram(
+    "django_http_request_duration_seconds",
+    "HTTP request duration",
+    ["method", "endpoint"],
+)
+ACTIVE_REQUESTS = Gauge(
+    "django_http_active_requests",
+    "Currently active HTTP requests",
+)
+
+
+class PrometheusMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        ACTIVE_REQUESTS.inc()
+        start = time.perf_counter()
+
+        response = self.get_response(request)
+
+        duration = time.perf_counter() - start
+        endpoint = self._get_endpoint(request)
+
+        REQUEST_COUNT.labels(
+            method=request.method,
+            endpoint=endpoint,
+            status=response.status_code,
+        ).inc()
+        REQUEST_DURATION.labels(
+            method=request.method,
+            endpoint=endpoint,
+        ).observe(duration)
+        ACTIVE_REQUESTS.dec()
+
+        return response
+
+    def _get_endpoint(self, request) -> str:
+        if request.resolver_match:
+            return request.resolver_match.route
+        return "unknown"
+```
+
+### Async Middleware Variant
+
+```python
+class AsyncPrometheusMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    async def __call__(self, request):
+        ACTIVE_REQUESTS.inc()
+        start = time.perf_counter()
+
+        response = await self.get_response(request)
+
+        duration = time.perf_counter() - start
+        endpoint = self._get_endpoint(request)
+
+        REQUEST_COUNT.labels(
+            method=request.method,
+            endpoint=endpoint,
+            status=response.status_code,
+        ).inc()
+        REQUEST_DURATION.labels(
+            method=request.method,
+            endpoint=endpoint,
+        ).observe(duration)
+        ACTIVE_REQUESTS.dec()
+
+        return response
+```
+
+Register in settings:
+
+```python
+MIDDLEWARE = [
+    "project.middleware.PrometheusMiddleware",  # First — to capture all requests
+    # ... other middleware
+]
+```
+
+## Code Review Checklist
+
+Before approving a Django PR, verify:
+
+- [ ] No sync ORM calls in `async def` functions
+- [ ] Multi-step writes wrapped in `transaction.atomic()`
+- [ ] QuerySets use `select_related` / `prefetch_related` where needed
+- [ ] No raw SQL — use ORM or parameterized `cursor.execute()`
+- [ ] Async views use `a`-prefixed ORM methods
+- [ ] WebSocket consumers clean up groups in `disconnect()`
+- [ ] `settings.py` has no hardcoded secrets
+- [ ] Migrations are included and reversible
+- [ ] New endpoints have corresponding tests
+- [ ] `mypy --strict` passes with no new errors
+
+## Rules
+
+1. Pass Foundation checks before deploying any code to staging
+2. Pass Production checks before deploying to production
+3. Fix zero-tolerance violations (sync ORM in async, missing transactions) immediately — no exceptions
+4. Run Django-specific grep checks in CI alongside standard linting
+5. Add Prometheus middleware early — retrofitting monitoring is harder than starting with it
+6. Review checklist items are blocking — any unchecked item blocks merge

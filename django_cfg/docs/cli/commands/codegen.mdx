@@ -1,0 +1,282 @@
+---
+title: Code Generation
+description: Generate type-safe API clients for TypeScript, Python, Go, and Swift from your Django project using generation.py config file.
+sidebar_label: Code Generation
+sidebar_position: 4
+keywords:
+  - django-cfg codegen
+  - generation.py
+  - api client generation
+  - typescript client
+  - centrifugo client
+---
+
+# Code Generation (`make gen`)
+
+Django-CFG provides a unified code generation system that produces type-safe API clients for multiple platforms directly from your Django project. All generation is configured via a single `generation.py` file at the project root.
+
+## Quick Start
+
+```bash
+make gen           # generate all targets
+make gen-ts        # TypeScript only
+make gen-py        # Python only
+make gen-go        # Go only
+make gen-web       # web targets only
+make gen-dry       # dry run (preview, no files written)
+make gen-list      # list all configured targets
+```
+
+Or directly:
+
+```bash
+python manage.py gen
+python manage.py gen --ts
+python manage.py gen --target sdk
+python manage.py gen --dry-run
+```
+
+## `generation.py` Config File
+
+Place `generation.py` at your Django project root (next to `manage.py`). It exports a single `config` object:
+
+```python
+from pathlib import Path
+from django_cfg.modules.django_codegen import (
+    Config, OpenAPI, Centrifugo, Target, Language, TargetType,
+)
+
+ROOT = Path(__file__).parent
+FRONTEND = ROOT.parent / "frontend"
+
+# Named path constants for readability
+MY_APP     = FRONTEND / "apps" / "my" / "app"
+MY_API     = MY_APP / "_lib" / "api" / "generated"
+MY_WS      = MY_APP / "_ws" / "generated"
+
+config = Config(
+    openapi=OpenAPI(targets=[...]),
+    centrifugo=Centrifugo(targets=[...]),
+)
+```
+
+**Convention:** define named path constants before `config` — this makes it easy to see all output locations at a glance and avoid repetitive `/ "apps" / "my" / ...` chains in every `Target`.
+
+## OpenAPI Clients
+
+Generated from DRF ViewSets via `drf-spectacular`. Each `Target` maps a set of API groups to an output directory.
+
+```python
+openapi=OpenAPI(
+    targets=[
+        # Web frontend
+        Target(
+            lang=Language.TYPESCRIPT,
+            type=TargetType.WEB,
+            path=MY_API,
+            groups=["profiles", "workspaces", "machines"],
+        ),
+        # TypeScript SDK package
+        Target(
+            lang=Language.TYPESCRIPT,
+            type=TargetType.SDK,
+            path=FRONTEND / "sdk" / "core" / "src" / "api" / "generated",
+            groups=["machines", "workspaces"],
+        ),
+        # Python SDK
+        Target(
+            lang=Language.PYTHON,
+            type=TargetType.SDK,
+            path=PACKAGES / "my_sdk" / "src" / "my_sdk" / "api" / "generated",
+            groups=["machines"],
+        ),
+        # Go CLI
+        Target(
+            lang=Language.GO,
+            type="cli",
+            path=SOFTWARE / "my_go" / "pkg" / "api" / "generated",
+            groups=["system", "machines"],
+        ),
+        # Swift iOS
+        Target(
+            lang=Language.SWIFT_CODABLE,
+            type="mobile",
+            path=SOFTWARE / "MyApp" / "Sources" / "API" / "Generated",
+            groups=["profiles", "machines"],
+        ),
+    ],
+    go_module="github.com/myorg/myapp/pkg/api/generated",  # optional
+),
+```
+
+### API Groups
+
+Groups correspond to Django apps registered in `openapi_client` config (in `api/config.py`):
+
+```python
+openapi_client=OpenAPIClientConfig(
+    groups=[
+        OpenAPIGroupConfig(name="profiles", apps=["apps.profiles"]),
+        OpenAPIGroupConfig(name="machines", apps=["apps.machines"]),
+    ],
+)
+```
+
+Wildcard patterns are supported: `"cfg_*"` matches all groups starting with `cfg_`.
+
+### Auto-discovered Extensions
+
+For projects with extension packages, use `ExtensionTarget` to auto-discover them:
+
+```python
+from django_cfg.modules.django_codegen import ExtensionTarget
+
+openapi=OpenAPI(
+    targets=[...],
+    extensions=ExtensionTarget(
+        lang=Language.TYPESCRIPT,
+        frontend_path=FRONTEND / "extensions",
+        package_pattern="ext-{name}",
+        output_pattern="src/api/generated",
+        group_prefix="ext_",
+    ),
+),
+```
+
+This scans `frontend/extensions/ext-*/` and maps each to the `ext_{name}` API group automatically.
+
+## Centrifugo WebSocket Clients
+
+Generated from channel definitions registered via `@centrifugo_channel` decorator. Output goes to `app/_ws/generated/` by convention.
+
+```python
+centrifugo=Centrifugo(
+    targets=[
+        Target(
+            lang=Language.TYPESCRIPT,
+            type=TargetType.WEB,
+            path=MY_WS,
+            groups=["terminal", "ai_chat"],
+        ),
+    ],
+),
+```
+
+Generated files include:
+- `types.ts` — TypeScript interfaces for all channel event types
+- `client.ts` — typed API wrapper with one method per RPC endpoint
+- `rpc-client.ts` — base WebSocket RPC client
+- `subscriptions.ts` — typed subscription helpers
+- `index.ts` — barrel export
+
+### Registering Channels
+
+Channels must be registered in your Django app before generation:
+
+```python
+# apps/terminal/channels.py
+from django_cfg.apps.integrations.centrifugo.decorators import centrifugo_channel
+from apps.terminal.models.events import TerminalEvent
+
+centrifugo_channel(
+    name="terminal",
+    pattern="terminal:session:{session_id}",
+    event_type=TerminalEvent,
+)
+```
+
+And imported in `apps.py`:
+
+```python
+class TerminalConfig(AppConfig):
+    def ready(self):
+        import apps.terminal.channels  # noqa
+```
+
+## `Target` Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `lang` | `Language` / `Platform` | Target language: `TYPESCRIPT`, `PYTHON`, `GO`, `SWIFT_CODABLE` |
+| `type` | `TargetType` / `str` | Target category: `WEB`, `SDK`, `ADMIN`, `PACKAGES`, or custom string like `"mobile"`, `"cli"` |
+| `path` | `Path` | Absolute output directory |
+| `groups` | `list[str]` | API groups to include. Supports `"cfg_*"` wildcards for OpenAPI |
+| `post_build` | `str \| None` | Optional shell command to run after copy, e.g. `"pnpm build"` |
+
+## `Config` Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `openapi` | `OpenAPI \| None` | OpenAPI REST client generation config |
+| `centrifugo` | `Centrifugo \| None` | Centrifugo WebSocket client generation config |
+| `sdk` | `SDK \| None` | SDK packages config |
+| `orm` | `ORM \| None` | Django → FastAPI/SQLModel ORM generation |
+
+## CLI Flags
+
+| Flag | Description |
+|------|-------------|
+| `--ts` | TypeScript targets only |
+| `--py` | Python targets only |
+| `--go` | Go targets only |
+| `--swift` | Swift targets only |
+| `--target <type>` | Filter by target type (`web`, `sdk`, `admin`, etc.) |
+| `--groups <g1> <g2>` | Filter to specific groups |
+| `--dry-run` | Preview what would be generated, no files written |
+| `--list-targets` | Print all configured targets and exit |
+| `--verbose` | Verbose output |
+
+## Real-World Example
+
+Full `generation.py` from a multi-platform project:
+
+```python
+from pathlib import Path
+from django_cfg.modules.django_codegen import (
+    Config, OpenAPI, Centrifugo, Target, Language, TargetType,
+)
+
+ROOT = Path(__file__).parent
+FRONTEND = ROOT.parent / "frontend"
+SOFTWARE = ROOT.parent.parent / "software"
+
+MY_APP  = FRONTEND / "apps" / "my" / "app"
+MY_API  = MY_APP / "_lib" / "api" / "generated"
+MY_WS   = MY_APP / "_ws" / "generated"
+
+DOCS_API    = FRONTEND / "apps" / "docs" / "app" / "_lib" / "api" / "generated"
+SDK_CORE    = FRONTEND / "sdk" / "core" / "src" / "api" / "generated"
+MOBILE_API  = SOFTWARE / "MyMobile" / "Sources" / "API" / "Generated"
+GO_API      = SOFTWARE / "my_go" / "pkg" / "api" / "generated"
+PY_SDK      = SOFTWARE / "my_sdk" / "python" / "src" / "my_sdk" / "api" / "generated"
+
+config = Config(
+    centrifugo=Centrifugo(
+        targets=[
+            Target(
+                lang=Language.TYPESCRIPT,
+                type=TargetType.WEB,
+                path=MY_WS,
+                groups=["terminal", "ai_chat"],
+            ),
+        ],
+    ),
+    openapi=OpenAPI(
+        go_module="github.com/myorg/myapp/pkg/api/generated",
+        targets=[
+            Target(lang=Language.TYPESCRIPT, type=TargetType.WEB,  path=MY_API,    groups=["profiles", "workspaces", "machines"]),
+            Target(lang=Language.TYPESCRIPT, type=TargetType.WEB,  path=DOCS_API,  groups=["site", "reviews"]),
+            Target(lang=Language.TYPESCRIPT, type=TargetType.SDK,  path=SDK_CORE,  groups=["machines", "workspaces"]),
+            Target(lang=Language.SWIFT_CODABLE, type="mobile",     path=MOBILE_API, groups=["profiles", "machines"]),
+            Target(lang=Language.GO,         type="cli",           path=GO_API,    groups=["system", "machines"]),
+            Target(lang=Language.PYTHON,     type=TargetType.SDK,  path=PY_SDK,    groups=["machines"]),
+        ],
+    ),
+)
+```
+
+## See Also
+
+- [Centrifugo Integration](/features/built-in-apps/centrifugo) — setting up WebSocket channels
+- [App Design / Serializers](/guides/app-design/serializers) — how API groups are defined
+- [CLI Overview](/cli/commands/overview) — all available commands

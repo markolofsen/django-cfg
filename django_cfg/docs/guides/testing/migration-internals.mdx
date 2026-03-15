@@ -1,0 +1,228 @@
+---
+title: Migration Internals
+description: Deep-dive into how Django creates test databases and the root causes of "No migrations to apply", "column does not exist", and StateApps failures.
+keywords:
+  - django test database internals
+  - no migrations to apply
+  - StateApps ValueError
+  - InconsistentMigrationHistory
+  - SmartTestRunner internals
+  - django migration debugging
+---
+
+import { Callout } from 'nextra/components'
+
+# Migration Internals
+
+Research notes from debugging `SmartTestRunner` and the "No migrations to apply" / "column does not exist" failures. Useful when the automatic fixes don't work and you need to understand what's happening.
+
+## How Django Creates a Test Database
+
+```
+DiscoverRunner.setup_databases()
+  → DatabaseCreation.create_test_db()
+      → _create_test_db()
+          → _nodb_cursor()     # temporary connection to postgres (NAME=None)
+          → CREATE DATABASE test_myapp WITH ENCODING ... TEMPLATE template0
+      → connection.close()
+      → settings_dict["NAME"] = "test_myapp"   # switch name in-process
+      → call_command("migrate", run_syncdb=True)
+          → MigrationExecutor(connection)
+              → MigrationLoader(connection)
+                  → recorder.applied_migrations()   # reads django_migrations
+                  → build_graph()
+          → plan = executor.migration_plan(leaf_nodes)
+          → executor.migrate(plan)
+      → serialize_db_to_string()   # dumps data for TransactionTestCase reset
+```
+
+---
+
+## Root Cause 1: Connection stuck on wrong database
+
+### What happens
+
+`SmartTestRunner._cleanup_old_test_databases()` temporarily points the connection at `postgres` to drop the test database, then restores the original name:
+
+```python
+connection.settings_dict['NAME'] = 'postgres'
+connection.close()
+# ... drop test database ...
+connection.settings_dict['NAME'] = 'myapp'   # restore
+connection.close()
+```
+
+Django's `DatabaseWrapper` is **lazy** — it does not reconnect when `settings_dict['NAME']` changes. It only calls `connect()` when `self.connection is None`. After `_cleanup_old_test_databases()`, the physical psycopg connection may still be open to `postgres`.
+
+Result: `MigrationLoader` reads `django_migrations` from `postgres` (which may have records from other projects), sees all migrations as applied, produces an empty plan → "No migrations to apply" → zero tables created.
+
+### The fix
+
+Force-close all connections **after** cleanup and **before** `super().setup_databases()`:
+
+```python
+self._cleanup_old_test_databases()
+
+# Force reconnect to the correct database on next cursor() call
+for alias in connections:
+    connections[alias].close()
+
+old_config = super().setup_databases(autoclobber=True, **kwargs)
+```
+
+Also pass `autoclobber=True` so Django silently drops and recreates if the test DB still exists after a failed cleanup.
+
+---
+
+## Root Cause 2: `StateApps.__init__` raises ValueError
+
+### What triggers it
+
+During `executor.migrate()`, for each migration Django builds a `ProjectState` and accesses `state.apps` (a `@cached_property`). This calls `StateApps(real_apps, models)`.
+
+`StateApps.__init__` sequence:
+1. `super().__init__(app_configs)` → `Apps.populate()`, sets `self.ready = True`
+2. `self.render_multiple([...])` → registers all migration-state models
+3. Local import + validation:
+   ```python
+   from django.core.checks.model_checks import _check_lazy_references
+   errors = _check_lazy_references(self, ignore=ignore)
+   if errors:
+       raise ValueError(...)
+   ```
+
+Step 3 raises `ValueError: "field X ... but app 'Y' isn't installed"` for FK references to apps that aren't in the migration state snapshot (e.g. `ogimage`, `sdk_keys`).
+
+### Why wrapping `StateApps.__init__` doesn't work
+
+```python
+# This approach fails
+def patched_init(self, real_apps, models, ignore_swappable=False):
+    try:
+        original_init(self, real_apps, models, ignore_swappable)
+    except ValueError as e:
+        if "isn't installed" in str(e):
+            return   # ← WRONG
+```
+
+`StateApps()` is accessed via `@cached_property`. When the constructor raises (even if the wrapper catches it), `@cached_property` **does not cache the result** — it only caches successful returns. Every subsequent `state.apps` access re-calls `StateApps()`, hits the error again. The executor falls back to treating all migrations as applied → empty plan.
+
+### Why patching `_check_lazy_references` works
+
+`_check_lazy_references` is imported **locally inside `__init__`** on every call:
+```python
+from django.core.checks.model_checks import _check_lazy_references
+```
+
+This `from ... import` resolves fresh from the module namespace each call. Replacing the attribute on the module object **does** work:
+
+```python
+import django.core.checks.model_checks as model_checks_module
+
+original = model_checks_module._check_lazy_references
+
+def patched(apps, ignore=None):
+    errors = original(apps, ignore=ignore)
+    # Filter out "app isn't installed" errors from migration state snapshots
+    return [e for e in errors if "isn't installed" not in getattr(e, "msg", "")]
+
+model_checks_module._check_lazy_references = patched
+# ... run setup_databases() ...
+model_checks_module._check_lazy_references = original
+```
+
+`StateApps.__init__` completes without exception → `@cached_property` caches the result → executor works normally → full migration plan → all tables created.
+
+---
+
+## Root Cause 3: Stale test database with wrong schema
+
+If `test_myapp` already exists from a previous `--keepdb` run or a failed teardown:
+
+- `SmartTestRunner._cleanup_old_test_databases()` should DROP it
+- If the DROP fails silently (caught by broad `except Exception`), Django sees the existing DB
+- With `autoclobber=False` (default), Django prompts → `EOFError` in CI
+- With `autoclobber=True`, Django silently drops and recreates
+
+**Bad state pattern:** stale `test_myapp` has `django_migrations` with all entries, but `projects_project` was created via `syncdb` (wrong path) without FK columns. This happens when `StateApps` failures cause the executor to fall back to syncdb for apps it thinks are "unmigrated".
+
+---
+
+## Root Cause 4: `serialize_db_to_string` fails after broken migrations
+
+After `migrate` runs, Django calls `serialize_db_to_string()` which iterates all models and dumps their data to JSON. If any table is missing a column:
+
+```
+django.db.utils.ProgrammingError: column projects_project.sdk_api_key_id does not exist
+```
+
+This surfaces as `setup_databases()` crashing — misleading because it looks like a test failure but is actually a test DB setup problem. If you see this, the migration plan was likely empty (see Root Cause 1).
+
+---
+
+## Root Cause 5: Cannot cast integer to uuid
+
+Separate issue. Migration `llm_models.0019_rename...` tries `ALTER COLUMN "id" TYPE uuid USING "id"::uuid` on a table where `id` is an integer (auto-field from `0018`). PostgreSQL cannot cast `integer → uuid` directly.
+
+**Fix:** squash `0018` + `0019` into a single migration that creates the table with a `uuid` primary key from the start, or add an explicit DROP + recreate step in `0019`.
+
+---
+
+## Debugging Checklist
+
+### "No migrations to apply" on a fresh test DB
+
+1. Check which physical database the connection is on:
+   ```sql
+   SELECT current_database();
+   ```
+   Expected: `test_myapp`. If you see `postgres` — Root Cause 1.
+
+2. Check applied migration count. If `len(applied_migrations) > 0` on a fresh DB → reading from the wrong database.
+
+3. Check for stale test DB:
+   ```bash
+   psql -c "SELECT datname FROM pg_database WHERE datname='test_myapp';"
+   ```
+
+4. Manual fix:
+   ```bash
+   psql -c "DROP DATABASE IF EXISTS test_myapp;"
+   python manage.py test
+   ```
+
+5. Verify `StateApps` patch is firing — add temporary `sys.stderr.write` inside `patched_check_lazy_references`.
+
+### "column X does not exist"
+
+1. Check if `django_migrations` table exists in the test DB
+2. Check if the table has the expected columns
+3. If table exists but columns are missing → syncdb created it instead of the migration (→ migration plan was empty → Root Cause 1)
+
+---
+
+## Key Files in Django Source
+
+| File | Role |
+|------|------|
+| `testing/runners.py` | `SmartTestRunner` — the runner being fixed |
+| `django/db/migrations/state.py` | `StateApps.__init__`, local import of `_check_lazy_references` |
+| `django/db/migrations/executor.py` | `MigrationExecutor.migrate()`, `migration_plan()` |
+| `django/db/migrations/loader.py` | `MigrationLoader.build_graph()`, `applied_migrations` |
+| `django/db/migrations/recorder.py` | `MigrationRecorder.applied_migrations()`, `has_table()` |
+| `django/db/backends/base/creation.py` | `create_test_db()`, `serialize_db_to_string()` |
+| `django/db/backends/base/base.py` | `_nodb_cursor()` — separate temp connection to `postgres` |
+| `django/core/checks/model_checks.py` | `_check_lazy_references()` — target of the patch |
+
+<Callout type="info">
+These notes describe the internal Django behavior as of Django 4.2–5.x. The specific code paths may change in future Django versions.
+</Callout>
+
+## See Also
+
+- [Test Runners](./test-runners) — `SmartTestRunner` and `MigrationManager` API
+- [test_db Command](./test-db-command) — CLI for manual cleanup and inspection
+- [Overview](./overview) — quick start
+
+TAGS: migration internals, StateApps, no migrations to apply, InconsistentMigrationHistory, django test database internals
+DEPENDS_ON: [test-runners, test-db-command]

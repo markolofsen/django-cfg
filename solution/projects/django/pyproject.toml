@@ -40,8 +40,6 @@ dependencies = [
     "django-cfg[full]",
     # pydantic-ai is pulled by django-cfg automatically
 
-    # Image handling for user avatars and product images
-    "Pillow>=10.0.0,<11.0",
     # Fake data generation
     "faker>=37.5.3,<38.0",
     # Markdown support

@@ -1,0 +1,66 @@
+---
+title: Payments Extension
+description: Cryptocurrency payment system via extensions. NowPayments integration with user balances and withdrawals.
+sidebar_label: Payments
+sidebar_position: 1
+---
+
+# Payments Extension
+
+Payments is an **extension** that provides cryptocurrency payment processing via NowPayments.
+
+## Enable Payments
+
+Create the extension folder and config:
+
+```bash
+mkdir -p extensions/apps/payments
+```
+
+```python
+# extensions/apps/payments/__cfg__.py
+from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+
+class PaymentsSettings(BasePaymentsSettings):
+    enabled: bool = True
+    nowpayments_api_key: str = "your_api_key"
+    nowpayments_ipn_secret: str = "your_secret"
+    nowpayments_sandbox: bool = True  # False for production
+
+settings = PaymentsSettings()
+```
+
+Run migrations:
+```bash
+python manage.py migrate
+```
+
+## Disable Payments
+
+Either:
+- Don't create the `extensions/apps/payments/` folder
+- Or set `enabled: bool = False`
+
+## Features
+
+- NowPayments integration (300+ cryptocurrencies)
+- User balance tracking
+- Manual withdrawal approval
+- Admin interface for all operations
+
+## Models
+
+```python
+from django_cfg.apps.payments.models import (
+    Payment,           # Crypto deposits
+    Currency,          # Supported currencies
+    UserBalance,       # User balances
+    Transaction,       # Immutable transaction history
+    WithdrawalRequest  # Withdrawal requests
+)
+```
+
+## See Also
+
+- [Extensions Overview](/docs/extensions) — How extensions work
+- [Migration Guide](/docs/extensions/migration-guide) — Migrate from old config

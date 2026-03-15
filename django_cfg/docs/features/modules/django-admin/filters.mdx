@@ -1,0 +1,431 @@
+---
+title: Filters Guide
+description: Declarative filter configuration for Django Admin using FilterConfig — dropdowns, autocomplete, range, date, and custom filters with Unfold UI.
+sidebar_label: Filters
+sidebar_position: 6
+keywords:
+  - django admin filters
+  - FilterConfig
+  - list_filter
+  - unfold filters
+  - dropdown filter
+  - autocomplete filter
+  - range filter
+  - declarative filters
+---
+
+# Filters Guide
+
+Django Admin v2.0 supports a declarative `FilterConfig` API that maps directly to Unfold's
+filter components — no boilerplate, no manual class definitions for common patterns.
+
+## Two Styles, One Field
+
+`list_filter` accepts both the new declarative style and the classic raw style.
+Mix them freely — they resolve to the same Django format under the hood.
+
+```python
+from django_cfg.modules.django_admin import AdminConfig, FilterConfig
+
+config = AdminConfig(
+    model=Payment,
+    list_filter=[
+        # Declarative — new
+        FilterConfig(field='status',     type='choices_dropdown'),
+        FilterConfig(field='created_at', type='range_date'),
+        FilterConfig(field='amount',     type='range_numeric'),
+        FilterConfig(field='user',       type='autocomplete'),
+
+        # Raw — still works
+        'currency',
+        MyCustomFilter,
+        ('is_test', BooleanRadioFilter),
+    ],
+)
+```
+
+---
+
+## FilterConfig Reference
+
+```python
+from django_cfg.modules.django_admin import FilterConfig
+
+FilterConfig(
+    field='status',          # Model field name
+    type='choices_dropdown', # One of 17 FilterType values (see table below)
+    title=None,              # Custom sidebar label (SimpleListFilter types only)
+    filter_class=None,       # Raw filter class — bypasses type lookup
+)
+```
+
+### FilterType values
+
+| `type` | Unfold class | Django base | Use case |
+|--------|-------------|-------------|----------|
+| `choices_dropdown` | `ChoicesDropdownFilter` | FieldListFilter | Field with `choices=` — single select |
+| `choices_dropdown_multiple` | `MultipleChoicesDropdownFilter` | FieldListFilter | Field with `choices=` — multi-select |
+| `choices_checkbox` | `ChoicesCheckboxFilter` | FieldListFilter | Field choices as checkboxes |
+| `choices_radio` | `ChoicesRadioFilter` | FieldListFilter | Field choices as radio buttons |
+| `boolean` | `BooleanRadioFilter` | FieldListFilter | `BooleanField` — Yes / No |
+| `related_dropdown` | `RelatedDropdownFilter` | FieldListFilter | `ForeignKey` — single select |
+| `related_dropdown_multiple` | `MultipleRelatedDropdownFilter` | FieldListFilter | `ForeignKey` — multi-select |
+| `related_checkbox` | `RelatedCheckboxFilter` | FieldListFilter | `ForeignKey` — checkboxes |
+| `autocomplete` | `AutocompleteSelectFilter` | FieldListFilter | `ForeignKey` with search input |
+| `autocomplete_multiple` | `AutocompleteSelectMultipleFilter` | FieldListFilter | Same — multi-select |
+| `range_numeric` | `RangeNumericFilter` | FieldListFilter | Numeric from / to inputs |
+| `slider` | `SliderNumericFilter` | FieldListFilter | Numeric slider (auto min/max) |
+| `range_date` | `RangeDateFilter` | FieldListFilter | `DateField` from / to |
+| `range_datetime` | `RangeDateTimeFilter` | FieldListFilter | `DateTimeField` from / to |
+| `text` | `FieldTextFilter` | FieldListFilter | Text search (`icontains`) |
+| `dropdown` | `DropdownFilter` | SimpleListFilter | Custom queryset — dropdown UI |
+| `dropdown_multiple` | `MultipleDropdownFilter` | SimpleListFilter | Custom queryset — multi dropdown |
+
+<Callout type="info">
+`FieldListFilter`-based types are bound to a model field automatically.
+`SimpleListFilter`-based types (`dropdown`, `dropdown_multiple`) need you to subclass them
+and implement `lookups()` and `queryset()` — use `filter_class` for those.
+</Callout>
+
+---
+
+## Examples by Use Case
+
+### Status / Choice field
+
+```python
+from django_cfg.modules.django_admin import AdminConfig, FilterConfig
+
+config = AdminConfig(
+    model=Order,
+    list_filter=[
+        FilterConfig(field='status', type='choices_dropdown'),
+    ],
+)
+```
+
+Works with any `CharField` / `IntegerField` that has `choices=` defined on the model.
+
+### ForeignKey — dropdown
+
+```python
+config = AdminConfig(
+    model=Order,
+    list_filter=[
+        FilterConfig(field='customer', type='related_dropdown'),
+        FilterConfig(field='warehouse', type='related_dropdown'),
+    ],
+)
+```
+
+### ForeignKey — autocomplete (search)
+
+```python
+config = AdminConfig(
+    model=Order,
+    list_filter=[
+        FilterConfig(field='customer', type='autocomplete'),
+    ],
+)
+```
+
+<Callout type="warning">
+`autocomplete` and `autocomplete_multiple` require the **related model's admin** to define
+`search_fields`. Without it Django raises `AttributeError` at runtime.
+</Callout>
+
+```python
+# Required: the related admin must have search_fields
+@admin.register(Customer)
+class CustomerAdmin(PydanticAdmin):
+    config = AdminConfig(
+        model=Customer,
+        search_fields=['name', 'email'],  # ← required
+        ...
+    )
+```
+
+### Numeric range
+
+```python
+config = AdminConfig(
+    model=Transaction,
+    list_filter=[
+        FilterConfig(field='amount', type='range_numeric'),
+    ],
+)
+```
+
+Renders two inputs: **From** and **To**. Works with `IntegerField`, `DecimalField`, `FloatField`.
+
+### Numeric slider
+
+```python
+config = AdminConfig(
+    model=Product,
+    list_filter=[
+        FilterConfig(field='price', type='slider'),
+    ],
+)
+```
+
+Auto-calculates min/max from the queryset. Renders a drag handle slider.
+
+### Date range
+
+```python
+config = AdminConfig(
+    model=Order,
+    list_filter=[
+        FilterConfig(field='created_at', type='range_date'),
+        FilterConfig(field='shipped_at', type='range_datetime'),
+    ],
+)
+```
+
+### Boolean field
+
+```python
+config = AdminConfig(
+    model=User,
+    list_filter=[
+        FilterConfig(field='is_active', type='boolean'),
+        FilterConfig(field='is_staff',  type='boolean'),
+    ],
+)
+```
+
+Renders horizontal Yes / No radio buttons.
+
+### Text search in sidebar
+
+```python
+config = AdminConfig(
+    model=Product,
+    list_filter=[
+        FilterConfig(field='name', type='text'),
+    ],
+)
+```
+
+Adds a text input filter using `icontains` lookup.
+
+### Multi-select checkboxes
+
+```python
+config = AdminConfig(
+    model=Order,
+    list_filter=[
+        FilterConfig(field='status',   type='choices_checkbox'),
+        FilterConfig(field='category', type='related_checkbox'),
+    ],
+)
+```
+
+---
+
+## Custom filter class
+
+For business-logic filters (custom `queryset()`, dynamic choices), pass the class directly
+via `filter_class`:
+
+```python
+from django.contrib import admin
+
+class RecentOrdersFilter(admin.SimpleListFilter):
+    title = 'time range'
+    parameter_name = 'range'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('24h', 'Last 24 hours'),
+            ('7d',  'Last 7 days'),
+            ('30d', 'Last 30 days'),
+        ]
+
+    def queryset(self, request, queryset):
+        from datetime import timedelta
+        from django.utils import timezone
+        now = timezone.now()
+        if self.value() == '24h':
+            return queryset.filter(created_at__gte=now - timedelta(hours=24))
+        if self.value() == '7d':
+            return queryset.filter(created_at__gte=now - timedelta(days=7))
+        if self.value() == '30d':
+            return queryset.filter(created_at__gte=now - timedelta(days=30))
+        return queryset
+
+config = AdminConfig(
+    model=Order,
+    list_filter=[
+        FilterConfig(field='range', filter_class=RecentOrdersFilter),
+        # Or just pass the class directly — both work:
+        # RecentOrdersFilter,
+    ],
+)
+```
+
+When `filter_class` is a `SimpleListFilter` subclass it is returned as-is.
+When it is a `FieldListFilter` subclass it is returned as `('field', FilterClass)`.
+
+---
+
+## Simple string filters
+
+Django auto-detects the filter type from the model field:
+
+```python
+config = AdminConfig(
+    model=Order,
+    list_filter=['status', 'created_at', 'is_active', 'customer'],
+)
+```
+
+| Field type | Auto-detected filter |
+|-----------|---------------------|
+| `BooleanField` | Yes / No / All |
+| `CharField` with `choices` | Choice filter |
+| `ForeignKey` | Related object list |
+| `DateField` / `DateTimeField` | Date drill-down |
+| `IntegerField` | Exact value |
+
+---
+
+## Facet counts
+
+Show the number of matching records next to each filter option:
+
+```python
+config = AdminConfig(
+    model=Order,
+    show_facets=True,
+    list_filter=[
+        FilterConfig(field='status', type='choices_dropdown'),
+    ],
+)
+```
+
+<Callout type="info">
+Requires Django 5.0+ and `SHOW_FACETS = ShowFacets.ALLOW` in `UNFOLD` settings or
+`django.contrib.admin.ShowFacets.ALWAYS` in `AdminSite`.
+</Callout>
+
+---
+
+## Date hierarchy
+
+For date-based drill-down navigation above the list:
+
+```python
+config = AdminConfig(
+    model=Order,
+    date_hierarchy='created_at',
+    list_filter=[
+        FilterConfig(field='status', type='choices_dropdown'),
+    ],
+)
+```
+
+---
+
+## Complete example
+
+```python
+from django.contrib import admin
+from django_cfg.modules.django_admin import (
+    AdminConfig,
+    BadgeField,
+    CurrencyField,
+    DateTimeField,
+    FilterConfig,
+    UserField,
+    Icons,
+)
+from django_cfg.modules.django_admin.base import PydanticAdmin
+
+config = AdminConfig(
+    model=Payment,
+
+    list_display=['id', 'user', 'amount', 'status', 'created_at'],
+
+    display_fields=[
+        BadgeField(
+            name='status',
+            label_map={
+                'pending':    'warning',
+                'processing': 'info',
+                'completed':  'success',
+                'failed':     'danger',
+            },
+        ),
+        UserField(name='user', header=True),
+        CurrencyField(name='amount', currency='USD', precision=2),
+        DateTimeField(name='created_at', show_relative=True),
+    ],
+
+    list_filter=[
+        FilterConfig(field='status',     type='choices_dropdown'),
+        FilterConfig(field='created_at', type='range_date'),
+        FilterConfig(field='amount',     type='range_numeric'),
+        FilterConfig(field='user',       type='autocomplete'),
+        'currency',
+    ],
+
+    show_facets=True,
+    date_hierarchy='created_at',
+
+    search_fields=['id', 'user__email'],
+    select_related=['user', 'currency'],
+    ordering=['-created_at'],
+)
+
+
+@admin.register(Payment)
+class PaymentAdmin(PydanticAdmin):
+    config = config
+```
+
+---
+
+## Performance tips
+
+**Index filtered fields** — every field in `list_filter` should have a DB index:
+
+```python
+class Payment(models.Model):
+    status     = models.CharField(choices=STATUS_CHOICES, db_index=True)
+    created_at = models.DateTimeField(db_index=True)
+    amount     = models.DecimalField(...)
+```
+
+**Prefer autocomplete over dropdown for large FK tables:**
+
+```python
+# ❌ Loads all customers into the dropdown
+FilterConfig(field='customer', type='related_dropdown')
+
+# ✅ Lazy search — fast even with millions of records
+FilterConfig(field='customer', type='autocomplete')
+```
+
+**Use `select_related` to avoid N+1 on FK filter options:**
+
+```python
+config = AdminConfig(
+    model=Order,
+    select_related=['customer', 'warehouse'],
+    list_filter=[
+        FilterConfig(field='customer', type='related_dropdown'),
+    ],
+)
+```
+
+---
+
+## Next Steps
+
+- **[Configuration](./configuration)** — Complete `AdminConfig` reference
+- **[Examples](./examples)** — Real-world admin examples
+- **[API Reference](./api-reference)** — `FilterConfig` API docs
+
+TAGS: filters, list_filter, FilterConfig, FilterType, dropdown, autocomplete, range, unfold

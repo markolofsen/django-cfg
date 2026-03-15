@@ -1,0 +1,216 @@
+---
+title: State Management
+sidebar_position: 4
+keywords:
+  - react context
+  - zustand
+  - url state
+  - provider composition
+  - usesearchparams
+description: Context architecture with standard templates, provider composition, URL-first filter state, and guidelines for choosing between Context, Zustand, and URL state.
+---
+
+# State Management
+
+Start with Context + SWR. Add Zustand only when you have complex client-only state with frequent updates, undo/redo, or cross-component synchronization.
+
+<Callout type="info">
+For Zustand store patterns, persistence, and undo/redo see [Zustand recipe](./recipes/zustand). For generated SWR hooks see [Data Layer](./data-layer).
+</Callout>
+
+## The State Management Spectrum
+
+| App | Primary State | Zustand? | Contexts | URL State |
+|-----|--------------|----------|----------|-----------|
+| carapis/my | SWR + Context | No | 7 contexts | URL-first filters |
+| cmdop/my | SWR + Context | No | 9 contexts | No |
+| cmdop/docs | SWR + Context | No | 2 contexts | No |
+| gptkino/studio | SWR + Context + Zustand | 15 stores | 20+ contexts | No |
+
+## Context Architecture
+
+### Standard Context Template
+
+Every context follows this exact pattern:
+
+```typescript
+'use client';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+
+interface MachinesContextType {
+  machines: Machine[];
+  isLoading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+  createMachine: (data: CreateMachineRequest) => Promise<Machine>;
+  deleteMachine: (id: string) => Promise<void>;
+}
+
+const MachinesContext = createContext<MachinesContextType | undefined>(undefined);
+
+export function MachinesProvider({ children }: { children: ReactNode }) {
+  // 1. SWR query
+  const { data, error, isLoading, mutate } = useMachinesMachinesList(params, client);
+
+  // 2. Derived data with useMemo
+  const machines = useMemo(() => data?.results ?? [], [data]);
+
+  // 3. Mutation hooks
+  const createMutation = useCreateMachinesMachinesCreate();
+
+  // 4. Stable action callbacks
+  const createMachine = useCallback(async (data) => {
+    const result = await createMutation(data, client);
+    await mutate();  // SWR revalidation
+    return result;
+  }, [createMutation, mutate]);
+
+  // 5. Memoized context value
+  const value = useMemo(() => ({
+    machines, isLoading, error: error?.message ?? null,
+    refresh: () => mutate(), createMachine, deleteMachine,
+  }), [machines, isLoading, error, mutate, createMachine, deleteMachine]);
+
+  return <MachinesContext.Provider value={value}>{children}</MachinesContext.Provider>;
+}
+
+// 6. Guard hook
+export function useMachines(): MachinesContextType {
+  const context = useContext(MachinesContext);
+  if (!context) throw new Error('useMachines must be used within MachinesProvider');
+  return context;
+}
+```
+
+The six steps: SWR query, `useMemo` derived data, mutation hooks, `useCallback` actions, memoized value, and a guard hook that throws if used outside the provider.
+
+### Provider Composition
+
+Small apps use manual nesting in a layout or `AppProvider`:
+
+```typescript
+// AppProvider.tsx (cmdop/my — 9 providers)
+export function AppProvider({ children }) {
+  return (
+    <WorkspacesProvider>
+      <MachinesProvider>
+        <PersonalMachineProvider>
+          <SchedulesProvider>
+            <SkillsProvider>
+              <ActivityProvider>
+                <SystemProvider>
+                  <BalanceProvider>
+                    <TerminalProvider>
+                      {children}
+                    </TerminalProvider>
+                  </BalanceProvider>
+                </SystemProvider>
+              </ActivityProvider>
+            </SkillsProvider>
+          </SchedulesProvider>
+        </PersonalMachineProvider>
+      </MachinesProvider>
+    </WorkspacesProvider>
+  );
+}
+```
+
+Large apps use `composeProviders()` to avoid deep nesting:
+
+```typescript
+export function composeProviders(providers: ProviderEntry[]): React.FC<{ children: ReactNode }> {
+  return function ComposedProviders({ children }) {
+    return providers.reduceRight<ReactNode>((acc, entry) => {
+      if (Array.isArray(entry)) {
+        const [Provider, props] = entry;
+        return <Provider {...props}>{acc}</Provider>;
+      }
+      return <entry>{acc}</entry>;
+    }, children);
+  };
+}
+
+// Usage: split into API layer + UI layer
+const APIProviders = composeProviders(createAPIProviders(projectId));
+const UIProviders = composeProviders(UI_PROVIDERS);
+```
+
+### Context Decomposition
+
+Each context has a single responsibility. No god-contexts:
+
+```
+CatalogProvider
+  └── FiltersProvider        (URL state → API params)
+        └── VehiclesProvider (SWR data fetching + initialData hydration)
+              └── FavoritesProvider  (localStorage, max 100)
+                    └── RecentlyViewedProvider  (localStorage, max 20)
+```
+
+## URL-First Filter State
+
+Filters live in URL search params. No Zustand, no `useState` for filters:
+
+```typescript
+// FiltersContext.tsx
+const searchParams = useSearchParams();
+const [isPending, startTransition] = useTransition();
+
+const filters = useMemo(() => parseURLFilters(searchParams), [searchParams]);
+
+const setFilter = useCallback(<K extends keyof FilterState>(
+  key: K, value: FilterState[K]
+) => {
+  const newFilters = { ...filters, [key]: value };
+  if (key !== 'page') newFilters.page = 1;  // Reset page on filter change
+  startTransition(() => {
+    router.push(buildURLFromFilters(newFilters));
+  });
+}, [filters, router]);
+```
+
+Benefits: shareable URLs, browser back/forward works, SSR-compatible.
+
+## When to Use What
+
+| Tool | When | Example |
+|------|------|---------|
+| SWR + Context | Server data with CRUD actions | Vehicles list, machines, workspaces |
+| URL state (`useSearchParams`) | Filters, pagination, sorting | Catalog filters, search queries |
+| `useLocalStorage` | Persistent local preferences | Favorites, recently viewed, workspace ID |
+| Zustand | Complex client-only state, high-frequency updates | Video editor, canvas, timeline |
+| Event bus | Cross-component dialog triggers | Open dialog from unrelated component |
+
+## localStorage-Backed State
+
+For persistent local preferences without Zustand:
+
+```typescript
+// Uses useLocalStorage from @djangocfg/ui-core/hooks
+const [favorites, setFavorites] = useLocalStorage<string[]>('favorites', []);
+const [recentlyViewed, setRecentlyViewed] = useLocalStorage<ViewedItem[]>('recently_viewed', []);
+const [currentWorkspaceId, setCurrentWorkspaceId] = useLocalStorage<string | null>('workspace_id', null);
+```
+
+## Event Bus
+
+For decoupled dialog communication between unrelated components:
+
+```typescript
+// _lib/events/machines.ts
+import { events } from '@djangocfg/ui-core/hooks';
+export const emitOpenMachineInfoDialog = (payload) =>
+  events.publish({ type: 'OPEN_MACHINE_INFO_DIALOG', payload });
+
+// In the dialog host component:
+events.subscribe('OPEN_MACHINE_INFO_DIALOG', (payload) => setOpen(true));
+```
+
+## Rules
+
+1. Start with Context + SWR — add Zustand only when you need complex client-only state with frequent updates or undo/redo
+2. Follow the 6-step context template: SWR query → `useMemo` → mutation hooks → `useCallback` actions → memoized value → guard hook
+3. Use `composeProviders()` when you have more than ~10 providers to avoid deep nesting
+4. Filters live in URL search params (`useSearchParams`) — never in `useState` or Zustand
+5. Each context has a single responsibility — decompose into a provider chain instead of creating a god-context
+6. Use `useLocalStorage` for persistent client preferences — only reach for Zustand `persist` when you also need middleware (devtools, undo)

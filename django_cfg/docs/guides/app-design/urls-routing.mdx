@@ -1,0 +1,177 @@
+---
+title: URL Routing
+sidebar_position: 7
+keywords:
+  - django urls
+  - drf router
+  - django-cfg routing
+  - nested router
+description: URL routing patterns for Django-CFG apps. DefaultRouter setup, path-parameter actions, nested routers, and URL naming conventions.
+---
+
+# URL Routing
+
+Every app has a single `urls.py` with a `DefaultRouter`. ViewSet actions generate URL patterns automatically.
+
+## Basic Router Setup
+
+```python
+# urls.py
+
+from rest_framework.routers import DefaultRouter
+from .views.api.agent_viewsets import AgentViewSet
+from .views.api.memory_viewsets import MemoryViewSet
+from .views.api.summary_viewsets import TradingSummaryViewSet
+
+router = DefaultRouter()
+router.register("agents", AgentViewSet, basename="agents")
+router.register("memory", MemoryViewSet, basename="memory")
+router.register("summaries", TradingSummaryViewSet, basename="summaries")
+
+urlpatterns = router.urls
+```
+
+From **agents** (stockapis-trader) — three ViewSets in one router.
+
+This generates:
+
+```
+/agents/                    → list, create
+/agents/{pk}/               → retrieve, update, destroy
+/agents/{agent_id}/status/  → @action(detail=True)
+/memory/                    → list, create
+/memory/search/             → @action(detail=False)
+/summaries/                 → list
+```
+
+## App URL Registration
+
+Apps are registered in the central URL config:
+
+```python
+# django_cfg/apps/urls.py
+urlpatterns = [
+    path('cfg/agents/', include('django_cfg.apps.trading.agents.urls')),
+    path('cfg/market/', include('django_cfg.apps.trading.market.urls')),
+]
+```
+
+## Multiple Resources in One Router
+
+When an app has several related resources, register them all in one router:
+
+```python
+# urls.py
+
+router = DefaultRouter()
+router.register("decisions", TradeDecisionViewSet, basename="decisions")
+router.register("tool-executions", ToolExecutionViewSet, basename="tool-executions")
+router.register("ledger", NumericalLedgerViewSet, basename="ledger")
+router.register("transitions", FSMTransitionViewSet, basename="transitions")
+
+urlpatterns = router.urls
+```
+
+From **trading** (stockapis-trader) — 4 resources under one app.
+
+## Path-Parameter Actions
+
+For hierarchical URL patterns within a single ViewSet:
+
+```python
+@action(
+    detail=False,
+    methods=["get"],
+    url_path="(?P<exchange>[^/]+)/(?P<market_type>[^/]+)/symbols",
+    pagination_class=None,
+)
+def by_exchange_market(self, request, exchange, market_type):
+    symbols = Symbol.objects.filter(
+        exchange=exchange,
+        market_type=market_type,
+        status="active",
+    )
+    return Response(SymbolListSerializer(symbols, many=True).data)
+```
+
+From **symbols** (stockapis) — generates `/symbols/binance/linear/symbols`.
+
+Another example from the same ViewSet:
+
+```python
+@action(
+    detail=False,
+    methods=["get"],
+    url_path="(?P<exchange>[^/]+)/(?P<market_type>[^/]+)/quote-assets",
+)
+def quote_assets(self, request, exchange, market_type):
+    assets = Symbol.objects.filter(
+        exchange=exchange, market_type=market_type
+    ).values("quote_asset").annotate(count=Count("id"))
+    return Response(QuoteAssetsResponseSerializer({"assets": assets}).data)
+```
+
+Generates `/symbols/bybit/spot/quote-assets`.
+
+## Custom Lookup Fields
+
+When the URL should use a human-readable slug instead of the numeric PK:
+
+```python
+class AgentViewSet(viewsets.ModelViewSet):
+    lookup_field = "agent_id"  # Instead of "pk"
+    queryset = Agent.objects.all()
+```
+
+Generates `/agents/{agent_id}/` instead of `/agents/{pk}/`.
+
+```python
+class SkillViewSet(viewsets.ModelViewSet):
+    lookup_field = "slug"
+    queryset = Skill.objects.all()
+```
+
+Generates `/skills/{slug}/` instead of `/skills/{pk}/`.
+
+## Nested Routers
+
+For parent-child relationships use `drf-nested-routers`:
+
+```python
+from rest_framework_nested.routers import NestedDefaultRouter
+
+router = DefaultRouter()
+router.register("workspaces", WorkspaceViewSet, basename="workspaces")
+
+# Nested: /workspaces/{workspace_pk}/members/
+workspaces_router = NestedDefaultRouter(router, "workspaces", lookup="workspace")
+workspaces_router.register("members", WorkspaceMemberViewSet, basename="workspace-members")
+
+urlpatterns = router.urls + workspaces_router.urls
+```
+
+## URL Naming Conventions
+
+| Pattern | Example |
+|---------|---------|
+| Resource name | `router.register("symbols", ...)` — plural, kebab-case |
+| Basename | `basename="symbols"` — matches resource name |
+| Action url_path | `url_path="sync"` — lowercase verb or noun |
+| Nested path params | `(?P<exchange>[^/]+)` — snake_case param name |
+
+## Single Router Per App
+
+Each app should have exactly one `urls.py` with one `DefaultRouter`:
+
+```python
+# ✅ Correct — one router
+router = DefaultRouter()
+router.register("keys", APIKeyViewSet, basename="api-key")
+urlpatterns = router.urls
+
+# ❌ Wrong — multiple routers in one app
+router1 = DefaultRouter()
+router2 = DefaultRouter()
+```
+
+If your app has resources that belong to different URL prefixes, consider splitting into separate apps.

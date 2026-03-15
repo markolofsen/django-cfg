@@ -1,0 +1,283 @@
+---
+title: Performance
+sidebar_position: 9
+keywords:
+  - python performance
+  - async optimization
+  - python caching
+  - memory optimization
+description: Performance optimization for Python modules. Async patterns, memory efficiency, caching strategies, database optimization, and profiling.
+---
+
+# Performance
+
+Async for I/O, generators for large data, cache hot paths, batch database operations.
+
+## Performance Targets
+
+| Metric | Target |
+|--------|--------|
+| API response (p95) | < 200ms |
+| DB query (simple) | < 50ms |
+| DB query (complex) | < 500ms |
+| Cache hit | < 5ms |
+| Throughput per worker | > 100 req/s |
+| Memory base footprint | < 100MB |
+
+## Async Optimization
+
+### Concurrent I/O
+
+```python
+# GOOD — parallel execution
+async def fetch_all(user_ids: list[int]) -> list[User]:
+    tasks = [fetch_user(uid) for uid in user_ids]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    return [r for r in results if not isinstance(r, Exception)]
+
+# BAD — sequential, N times slower
+async def fetch_all_slow(user_ids: list[int]) -> list[User]:
+    users = []
+    for uid in user_ids:
+        user = await fetch_user(uid)  # Waits for each!
+        users.append(user)
+    return users
+```
+
+### Rate-Limited Concurrency
+
+```python
+class RateLimitedClient:
+    def __init__(self, max_concurrent: int = 10):
+        self._semaphore = asyncio.Semaphore(max_concurrent)
+
+    async def fetch(self, url: str) -> dict:
+        async with self._semaphore:
+            async with httpx.AsyncClient() as client:
+                return (await client.get(url)).json()
+
+    async def fetch_many(self, urls: list[str]) -> list[dict]:
+        tasks = [self.fetch(url) for url in urls]
+        return await asyncio.gather(*tasks, return_exceptions=True)
+```
+
+### Connection Pooling
+
+```python
+class ConnectionPool:
+    async def startup(self) -> None:
+        self._http = httpx.AsyncClient(
+            limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
+            timeout=httpx.Timeout(30.0, connect=5.0),
+        )
+        self._db = await asyncpg.create_pool(
+            self._dsn, min_size=5, max_size=20,
+        )
+
+    async def shutdown(self) -> None:
+        if self._http:
+            await self._http.aclose()
+        if self._db:
+            await self._db.close()
+```
+
+## Memory Optimization
+
+### Generators for Large Data
+
+```python
+# GOOD — processes line by line, constant memory
+def process_large_file(path: Path) -> Generator[dict, None, None]:
+    with open(path) as f:
+        for line in f:
+            yield json.loads(line)
+
+def process_in_batches(items: Iterator[T], batch_size: int = 100) -> Generator[list[T], None, None]:
+    batch = []
+    for item in items:
+        batch.append(item)
+        if len(batch) >= batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
+
+# BAD — loads entire file into memory
+def process_bad(path: Path) -> list[dict]:
+    with open(path) as f:
+        return [json.loads(line) for line in f]  # Memory bomb!
+```
+
+### `__slots__`
+
+```python
+# Without __slots__: ~300 bytes per instance
+class RegularUser:
+    def __init__(self, id: int, name: str, email: str):
+        self.id = id
+        self.name = name
+        self.email = email
+
+# With __slots__: ~100 bytes per instance
+class OptimizedUser:
+    __slots__ = ("id", "name", "email")
+
+    def __init__(self, id: int, name: str, email: str):
+        self.id = id
+        self.name = name
+        self.email = email
+
+# For 1M instances: 300MB vs 100MB
+```
+
+## Caching
+
+### LRU Cache
+
+```python
+from functools import lru_cache
+
+@lru_cache(maxsize=1000)
+def expensive_computation(input_value: str) -> int:
+    return complex_calculation(input_value)
+```
+
+### Time-Based Cache
+
+```python
+class TimedCache:
+    def __init__(self, ttl_seconds: int = 300):
+        self._cache: dict[str, tuple[Any, float]] = {}
+        self._ttl = ttl_seconds
+
+    def get(self, key: str) -> Any | None:
+        if key in self._cache:
+            value, timestamp = self._cache[key]
+            if time.time() - timestamp < self._ttl:
+                return value
+            del self._cache[key]
+        return None
+
+    def set(self, key: str, value: Any) -> None:
+        self._cache[key] = (value, time.time())
+```
+
+### Async Cache with Lock
+
+```python
+class AsyncCache:
+    def __init__(self, ttl_seconds: int = 300):
+        self._cache: dict[str, tuple[Any, float]] = {}
+        self._locks: dict[str, asyncio.Lock] = {}
+        self._ttl = ttl_seconds
+
+    async def get_or_fetch(self, key: str, fetch_func: Callable) -> Any:
+        # Fast path — no lock
+        cached = self._get_valid(key)
+        if cached is not None:
+            return cached
+
+        # Slow path — lock per key
+        if key not in self._locks:
+            self._locks[key] = asyncio.Lock()
+        async with self._locks[key]:
+            cached = self._get_valid(key)  # Double-check
+            if cached is not None:
+                return cached
+            value = await fetch_func()
+            self._cache[key] = (value, time.time())
+            return value
+```
+
+## Database Optimization
+
+### Batch Operations
+
+```python
+# GOOD — single transaction for N rows
+async def save_batch(users: list[User]) -> None:
+    async with db.transaction() as conn:
+        await conn.executemany(
+            "INSERT INTO users (name, email) VALUES ($1, $2)",
+            [(u.name, u.email) for u in users],
+        )
+
+# BAD — N individual queries
+async def save_slow(users: list[User]) -> None:
+    for user in users:
+        await db.execute("INSERT INTO users (name, email) VALUES ($1, $2)", user.name, user.email)
+```
+
+### Keyset Pagination
+
+```python
+# GOOD — efficient, constant time regardless of page
+async def get_page(after_id: int | None = None, limit: int = 100) -> list[User]:
+    if after_id:
+        rows = await db.fetch(
+            "SELECT * FROM users WHERE id > $1 ORDER BY id LIMIT $2", after_id, limit,
+        )
+    else:
+        rows = await db.fetch("SELECT * FROM users ORDER BY id LIMIT $1", limit)
+    return [User.model_validate(dict(r)) for r in rows]
+
+# BAD — offset pagination, slow for large offsets
+async def get_page_slow(page: int, per_page: int) -> list[User]:
+    rows = await db.fetch(
+        "SELECT * FROM users LIMIT $1 OFFSET $2", per_page, (page - 1) * per_page,
+    )  # Scans all offset rows!
+```
+
+## Profiling
+
+```python
+def profile_performance(func):
+    """Decorator — logs execution time."""
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        try:
+            return await func(*args, **kwargs)
+        finally:
+            elapsed = (time.perf_counter() - start) * 1000
+            logger.debug(f"{func.__name__} took {elapsed:.2f}ms")
+    return wrapper
+
+class UserService:
+    @profile_performance
+    async def get_user(self, user_id: int) -> User:
+        return await self._repo.find_by_id(user_id)
+```
+
+## Anti-Patterns
+
+```python
+# BAD — N+1 queries
+for order_id in order_ids:
+    order = await fetch_order(order_id)
+    order.items = await fetch_items(order_id)  # N extra queries!
+
+# GOOD — batch loading
+orders = await fetch_orders_batch(order_ids)
+all_items = await fetch_items_for_orders(order_ids)  # 1 query
+
+# BAD — string concatenation in loop
+query = ""
+for id in ids:
+    query += str(id) + ","  # O(n^2)!
+
+# GOOD — join
+id_list = ",".join(str(id) for id in ids)
+```
+
+## Rules
+
+1. **Async for all I/O** — never block the event loop
+2. **Generators for large data** — don't load everything into memory
+3. **`__slots__` for many instances** — 3x memory reduction
+4. **Cache hot paths** — LRU for pure functions, TTL for external data
+5. **Batch DB operations** — one query for N rows, not N queries
+6. **Keyset pagination** — never use OFFSET for large datasets
+7. **Profile before optimizing** — measure, don't guess
+8. **Connection pooling** — reuse HTTP and DB connections

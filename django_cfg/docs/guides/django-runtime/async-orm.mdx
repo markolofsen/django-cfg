@@ -1,0 +1,255 @@
+---
+title: Async ORM
+sidebar_position: 1
+keywords:
+  - django async orm
+  - async queryset
+  - sync_to_async
+  - async_to_sync
+  - asgi django
+description: Django async ORM operations — a-prefixed methods, async for iteration, context detection, sync/async bridges, and common runtime errors.
+---
+
+# Async ORM
+
+Django 5.x async ORM for non-blocking database access in ASGI applications.
+
+<Callout type="info">
+For generic Python async patterns (gather, semaphores, streaming) see [Async & Concurrency](../module-design/async-patterns).
+</Callout>
+
+## When to Use Async ORM
+
+Use async ORM when **all three** conditions are met:
+
+1. Application runs under **ASGI** server (Uvicorn, Daphne)
+2. Views or services are declared `async def`
+3. Database backend supports async (PostgreSQL recommended)
+
+If you run under WSGI (Gunicorn with sync workers), stick with synchronous ORM — async methods add overhead without benefit.
+
+## Async Methods Reference
+
+Every sync ORM method has an `a`-prefixed async counterpart:
+
+| Sync | Async | Returns |
+|------|-------|---------|
+| `objects.get()` | `objects.aget()` | `Model` |
+| `objects.create()` | `objects.acreate()` | `Model` |
+| `objects.update()` | `objects.aupdate()` | `int` (rows affected) |
+| `objects.delete()` | `objects.adelete()` | `tuple` (count, details) |
+| `objects.count()` | `objects.acount()` | `int` |
+| `objects.exists()` | `objects.aexists()` | `bool` |
+| `objects.all()` | `objects.aall()` | `QuerySet` |
+| `objects.filter().first()` | `objects.filter().afirst()` | `Model \| None` |
+| `object.save()` | `object.asave()` | `None` |
+| `object.delete()` | `object.adelete()` | `tuple` |
+
+### Single Object Operations
+
+```python
+# Retrieve
+book = await Book.objects.aget(id=1)
+
+# Create
+book = await Book.objects.acreate(
+    title="Async Python",
+    author="Developer",
+)
+
+# Update (returns rows affected)
+count = await Book.objects.filter(
+    author="Developer"
+).aupdate(is_published=True)
+
+# Delete
+deleted_count, details = await Book.objects.filter(
+    is_published=False
+).adelete()
+
+# Check existence
+has_books = await Book.objects.filter(author="Developer").aexists()
+total = await Book.objects.acount()
+```
+
+### Async Iteration
+
+Use `async for` to iterate over QuerySets without blocking:
+
+```python
+async def get_published_titles() -> list[str]:
+    titles = []
+    async for book in Book.objects.filter(is_published=True).order_by("title"):
+        titles.append(book.title)
+    return titles
+```
+
+Async comprehensions also work:
+
+```python
+titles = [
+    book.title
+    async for book in Book.objects.filter(is_published=True)
+]
+```
+
+## Context Detection
+
+Detect the current execution context at runtime to choose the right ORM variant:
+
+```python
+import asyncio
+
+def is_async_context() -> bool:
+    """Check if code is running inside an async event loop."""
+    try:
+        asyncio.get_running_loop()
+        return True
+    except RuntimeError:
+        return False
+```
+
+Use in services that must work in both WSGI and ASGI:
+
+```python
+async def get_or_create_book(title: str, author: str) -> Book:
+    if is_async_context():
+        book, created = await Book.objects.aget_or_create(
+            title=title, defaults={"author": author}
+        )
+    else:
+        book, created = Book.objects.get_or_create(
+            title=title, defaults={"author": author}
+        )
+    return book
+```
+
+## Sync / Async Bridges
+
+### sync_to_async
+
+Wraps a synchronous callable so it can be `await`-ed in async code. Required when calling sync ORM from async context:
+
+```python
+from asgiref.sync import sync_to_async
+
+# Wrap a sync function
+@sync_to_async
+def get_user_sync(user_id: int) -> User:
+    return User.objects.select_related("profile").get(id=user_id)
+
+# Call from async code
+async def async_view(request):
+    user = await get_user_sync(request.user.id)
+    return JsonResponse({"name": user.profile.name})
+```
+
+**`thread_sensitive` parameter:**
+
+| Value | Behavior | When to use |
+|-------|----------|-------------|
+| `True` (default) | Runs in the main thread | Django ORM, most Django internals |
+| `False` | Runs in a new thread | CPU-bound work, third-party libs without thread affinity |
+
+```python
+# Default: thread_sensitive=True — safe for Django ORM
+sync_get = sync_to_async(User.objects.get)
+
+# Explicit: thread_sensitive=False — for CPU-bound work
+@sync_to_async(thread_sensitive=False)
+def heavy_computation(data: list[float]) -> float:
+    return sum(x ** 2 for x in data)
+```
+
+### async_to_sync
+
+Wraps an async callable so it can be called from synchronous code:
+
+```python
+from asgiref.sync import async_to_sync
+
+async def send_notification(user_id: int, message: str) -> None:
+    await NotificationService.asend(user_id=user_id, message=message)
+
+# Call from sync code (e.g., management command, Celery task)
+sync_send = async_to_sync(send_notification)
+sync_send(user_id=42, message="Hello")
+```
+
+## Common Errors
+
+### SynchronousOnlyOperation
+
+**Error:** `django.core.exceptions.SynchronousOnlyOperation: You cannot call this from an async context - use a thread or sync_to_async`
+
+**Cause:** Calling sync ORM methods inside an `async def` function.
+
+```python
+# Wrong
+async def bad_view(request):
+    user = User.objects.get(id=1)  # raises SynchronousOnlyOperation
+
+# Fix option 1: use a-prefixed method
+async def good_view(request):
+    user = await User.objects.aget(id=1)
+
+# Fix option 2: wrap with sync_to_async
+async def good_view_alt(request):
+    get_user = sync_to_async(User.objects.get)
+    user = await get_user(id=1)
+```
+
+### Event Loop is Closed
+
+**Error:** `RuntimeError: Event loop is closed`
+
+**Cause:** Reusing a closed event loop in a thread. Common in Celery tasks or management commands.
+
+```python
+import asyncio
+
+def run_async_in_thread(coro):
+    """Create a fresh event loop for thread execution."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+# Usage in Celery task
+@app.task
+def sync_task():
+    result = run_async_in_thread(async_operation())
+    return result
+```
+
+### HTTPTransport Async Context
+
+**Error:** `'HTTPTransport' object has no attribute '__aenter__'`
+
+**Cause:** Using `httpx.Client` (sync) in an async context instead of `httpx.AsyncClient`.
+
+```python
+import httpx
+
+# Wrong
+async def bad_fetch():
+    client = httpx.Client()  # sync client, no __aenter__
+    async with client:  # fails
+        pass
+
+# Correct
+async def good_fetch(url: str) -> dict:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        return response.json()
+```
+
+## Rules
+
+1. Always use `a`-prefixed methods (`aget`, `acreate`, `aupdate`, `adelete`) in `async def` functions
+2. Use `async for` for QuerySet iteration — never call `list()` on an async QuerySet
+3. Set `thread_sensitive=True` (default) when wrapping Django ORM with `sync_to_async`
+4. Create a fresh event loop with `asyncio.new_event_loop()` when running async code in threads
+5. Use `httpx.AsyncClient` — never `httpx.Client` — in async contexts
+6. Require ASGI server (Uvicorn or Daphne) and async-compatible database backend for async ORM

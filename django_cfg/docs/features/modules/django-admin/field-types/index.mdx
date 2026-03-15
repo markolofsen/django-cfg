@@ -1,0 +1,264 @@
+---
+title: Field Types Overview
+description: Overview of all Django Admin field types - choose the right field for your data.
+sidebar_label: Field Types
+sidebar_position: 1
+keywords:
+  - django admin fields
+  - field types
+  - declarative admin
+---
+
+# Field Types Overview
+
+Django Admin provides specialized field types that automatically handle formatting, display, and rendering. This guide helps you choose the right field type for your data.
+
+## Quick Reference
+
+| Field Type | Purpose | Use Case | Documentation |
+|------------|---------|----------|---------------|
+| **BadgeField** | Colored badges with icons | Status, categories, tags | [→ Basic Fields](./basic-fields#badgefield) |
+| **BooleanField** | Boolean indicators | Active/inactive, flags | [→ Basic Fields](./basic-fields#booleanfield) |
+| **TextField** | Text with truncation | Descriptions, content | [→ Basic Fields](./basic-fields#textfield) |
+| **AvatarField** | User avatars with fallback | Profile pictures, user identity | [→ Display Fields](./display-fields#avatarfield) |
+| **UserField** | User display with avatar | Authors, assignees | [→ Display Fields](./display-fields#userfield) |
+| **ForeignKeyField** | Related object display with admin link | Machine, workspace, category | [→ Display Fields](./display-fields#foreignkeyfield) |
+| **LinkField** | Text with external link | Usernames, external resources | [→ Display Fields](./display-fields#linkfield) |
+| **ImageField** | Images with captions | QR codes, photos | [→ Display Fields](./display-fields#imagefield) |
+| **ImagePreviewField** | Image preview with modal | Photos, thumbnails | [→ Display Fields](./display-fields#imagepreviewfield) |
+| **VideoField** | Video thumbnail with platform detection | YouTube, Vimeo | [→ Display Fields](./display-fields#videofield) |
+| **CurrencyField** | Formatted currency | Prices, totals, balances | [→ Formatting Fields](./formatting-fields#currencyfield) |
+| **DateTimeField** | Formatted dates/times | Created, updated, published | [→ Formatting Fields](./formatting-fields#datetimefield) |
+| **ShortUUIDField** | Shortened UUIDs | Primary keys, identifiers | [→ Formatting Fields](./formatting-fields#shortuuidfield) |
+| **StackedField** | Composite column | Combine multiple fields in one column | [→ Advanced Fields](./advanced-fields#stackedfield-composite-column) |
+| **StatusBadgesField** | Multiple conditional badges | User flags, permissions | [→ Advanced Fields](./advanced-fields#statusbadgesfield) |
+| **CounterBadgeField** | Counter badge with link | Message counts, view counts | [→ Advanced Fields](./advanced-fields#counterbadgefield) |
+| **MarkdownField** | Markdown content rendering | Documentation, rich text | [→ Advanced Fields](./advanced-fields#markdownfield) |
+
+## Categories
+
+### Basic Fields
+Simple fields for common data types: badges, booleans, and text.
+
+**[→ See Basic Fields Documentation](./basic-fields)**
+
+- **BadgeField** - Display values as colored badges
+- **BooleanField** - Boolean indicators with icons
+- **TextField** - Text with optional truncation
+
+### Display Fields
+Rich display fields for complex UI elements: avatars, users, foreign keys, links, and images.
+
+**[→ See Display Fields Documentation](./display-fields)**
+
+- **AvatarField** - User avatars with initials fallback
+- **UserField** - User display with avatar
+- **ForeignKeyField** - Related object display with admin link
+- **LinkField** - Text with clickable link
+- **ImageField** - Images with captions
+- **ImagePreviewField** - Image preview with modal zoom/pan
+- **VideoField** - Video thumbnails (YouTube, Vimeo, direct)
+
+### Formatting Fields
+Fields that format numbers, dates, and identifiers.
+
+**[→ See Formatting Fields Documentation](./formatting-fields)**
+
+- **CurrencyField** - Formatted currency amounts
+- **DateTimeField** - Formatted dates with relative time
+- **ShortUUIDField** - Shortened UUIDs with tooltip
+
+### Advanced Fields
+Complex fields with conditional logic, composite layouts, and special behaviors.
+
+**[→ See Advanced Fields Documentation](./advanced-fields)**
+
+- **StackedField** - Composite column combining multiple fields
+- **StatusBadgesField** - Multiple conditional badges
+- **CounterBadgeField** - Counter badge with optional link
+- **MarkdownField** - Markdown content rendering
+
+## Choosing the Right Field
+
+### For Compact Admin Lists (Composite Columns)
+```python
+# Combine multiple fields in one column
+StackedField(
+    name='vehicle_info',
+    title='Vehicle',
+    rows=[
+        RowItem(field='display_name', bold=True, truncate=30),
+        [RowItem(field='year'), RowItem(field='mileage', suffix=' km')],
+        RowItem(field='fuel_type', widget='badge', label_map={'electric': 'success'}),
+    ],
+)
+```
+
+### For Status/Categories
+```python
+# Single status with colors
+BadgeField(name="status", label_map={"active": "success", "inactive": "secondary"})
+
+# Multiple status flags
+StatusBadgesField(
+    name="user_flags",
+    badge_rules=[
+        BadgeRule(condition_field="is_verified", label="Verified", variant="success"),
+        BadgeRule(condition_field="is_premium", label="Premium", variant="warning"),
+    ]
+)
+```
+
+### For User Display
+```python
+# Avatar with initials fallback
+AvatarField(
+    name="first_name",
+    photo_field="photo_file",
+    name_field="display_name",
+    initials_field="first_name"
+)
+
+# Simple user display
+UserField(name="author", header=True)
+```
+
+### For Numbers
+```python
+# Money
+CurrencyField(name="price", currency="USD", precision=2)
+
+# Counts with links
+CounterBadgeField(
+    name="messages_badge",
+    count_field="messages_count",
+    link_url_template="/admin/app/message/?user__id={obj.id}"
+)
+```
+
+### For Dates
+```python
+# Relative time ("2 hours ago")
+DateTimeField(name="created_at", show_relative=True)
+
+# Custom format
+DateTimeField(name="published_at", format="%B %d, %Y")
+```
+
+## Common Patterns
+
+### E-commerce Admin
+```python
+from django_cfg.modules.django_admin import (
+    AdminConfig,
+    AvatarField,
+    BadgeField,
+    CurrencyField,
+    DateTimeField,
+)
+
+config = AdminConfig(
+    model=Order,
+    display_fields=[
+        AvatarField(name="user", ...),  # Customer avatar
+        CurrencyField(name="total", currency="USD"),  # Order total
+        BadgeField(name="status", label_map={...}),  # Order status
+        DateTimeField(name="created_at", show_relative=True),  # When ordered
+    ]
+)
+```
+
+### User Management Admin
+```python
+display_fields=[
+    AvatarField(name="first_name", ...),  # User avatar
+    StatusBadgesField(name="flags", badge_rules=[...]),  # User flags
+    CounterBadgeField(name="posts", count_field="post_count"),  # Post count
+    DateTimeField(name="last_login", show_relative=True),  # Last seen
+]
+```
+
+### Content Management Admin
+```python
+display_fields=[
+    ImagePreviewField(name="thumbnail", thumbnail_max_width=100),  # Clickable thumbnail with modal
+    LinkField(name="title", link_field="url"),  # Article title with link
+    BadgeField(name="status", ...),  # Publication status
+    UserField(name="author", header=True),  # Article author
+]
+```
+
+### Real Estate / Vehicle Listings Admin
+```python
+# Compact list with StackedField - reduces 15+ columns to 6
+config = AdminConfig(
+    model=Property,
+    list_display=['main_photo', 'source_info', 'property_info', 'pricing_info', 'status_info', 'created_at'],
+    display_fields=[
+        ImagePreviewField(name='main_photo_url', thumbnail_max_width=70, zoom_enabled=True),
+        StackedField(name='source_info', rows=[
+            RowItem(field='source__name', bold=True),
+            RowItem(field='listing_id', monospace=True, muted=True, truncate=10),
+        ]),
+        StackedField(name='property_info', rows=[
+            RowItem(field='title', bold=True, truncate=35),
+            [RowItem(field='listing_type', widget='badge'), RowItem(field='property_type__name', muted=True)],
+            RowItem(field='location__name', icon='location_on', muted=True),
+        ]),
+        StackedField(name='pricing_info', rows=[
+            RowItem(field='price', widget='money_field', bold=True),
+            [RowItem(field='bedrooms', suffix=' bed'), RowItem(field='bathrooms', suffix=' bath')],
+        ]),
+        StackedField(name='status_info', rows=[[
+            RowItem(field='status', widget='badge', label_map={'active': 'success', 'sold': 'danger'}),
+            RowItem(field='is_normalized', widget='badge', label_map={True: 'success'}, true_label='AI'),
+        ]]),
+        DateTimeField(name='created_at', show_relative=True),
+    ],
+)
+```
+
+## Important Notes
+
+
+<Callout type="warning">
+**Field Name Must Be Real**
+The `name` parameter in field configs **MUST** be a real model field, not a virtual field or `@property`.
+
+**❌ Wrong:**
+```python
+AvatarField(name="user_avatar", ...)  # Virtual field
+```
+
+**✅ Correct:**
+```python
+AvatarField(name="first_name", ...)  # Real CharField
+```
+
+</Callout>
+
+
+<Callout type="info">
+**Use select_related**
+For fields that reference related models (UserField, AvatarField with ForeignKey), always use `select_related` to avoid N+1 queries:
+
+```python
+config = AdminConfig(
+    model=Order,
+    select_related=["user", "product"],  # Important!
+    display_fields=[
+        UserField(name="user", ...),
+    ]
+)
+```
+
+</Callout>
+
+## Next Steps
+
+- **[Basic Fields](./basic-fields)** - BadgeField, BooleanField, TextField
+- **[Display Fields](./display-fields)** - AvatarField, UserField, LinkField, ImageField
+- **[Formatting Fields](./formatting-fields)** - CurrencyField, DateTimeField, ShortUUIDField
+- **[Advanced Fields](./advanced-fields)** - StatusBadgesField, CounterBadgeField, MarkdownField
+- **[Examples](./display-fields)** - Real-world usage examples
+- **[API Reference](../api-reference)** - Complete API documentation

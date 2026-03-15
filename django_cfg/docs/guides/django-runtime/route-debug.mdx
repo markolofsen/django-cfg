@@ -1,0 +1,122 @@
+---
+title: Route Debug Middleware
+description: Diagnose 404 errors and misconfigured URL routers in Django with RouteDebugMiddleware. Logs request path, HTTP method, referer, and candidate URL patterns.
+sidebar_label: Route Debug
+sidebar_position: 5
+keywords:
+  - django 404 debugging
+  - url router misconfiguration
+  - drf nested router debug
+  - route debug middleware
+  - django-cfg middleware
+---
+
+# Route Debug Middleware
+
+`RouteDebugMiddleware` intercepts 404 responses in `DEBUG` mode and logs detailed context — the request path, HTTP method, referer, and URL patterns that partially matched. This makes it easy to diagnose router misconfiguration where routes end up under the wrong API group prefix.
+
+## When to Use
+
+The most common symptom is a 404 that "shouldn't" happen:
+
+```
+GET /api/projects/123/characters/  →  404 Not Found
+```
+
+...when the route actually lives at:
+
+```
+/api/scenes/projects/123/characters/
+```
+
+This happens with nested DRF routers where one router's routes leak into another group's prefix. Without this middleware you only see the 404 — the middleware shows *which patterns almost matched*.
+
+## Enabling
+
+Auto-enabled by django-cfg when `DEBUG=True`. You can also add it manually:
+
+```python
+# config.py
+MIDDLEWARE = [
+    ...
+    "django_cfg.middleware.route_debug.RouteDebugMiddleware",
+    ...
+]
+```
+
+Or via django-cfg config:
+
+```python
+from django_cfg import DjangoConfig
+
+class MyConfig(DjangoConfig):
+    debug_log_404: bool = True  # default True when DEBUG=True
+```
+
+## Log Output
+
+When a 404 occurs in DEBUG mode, the middleware writes to the `django_cfg.debug_404` logger:
+
+```
+WARNING django_cfg.debug_404:
+404 GET /api/projects/123/characters/
+  Referer: http://localhost:3000/projects/123
+  Partial matches (3 patterns share prefix):
+    api/projects/<pk>/                →  project-detail
+    api/projects/<pk>/members/        →  project-members
+    api/scenes/projects/<pk>/characters/  →  character-list
+```
+
+The last line reveals the actual route — the router leaked the path into the wrong group prefix.
+
+## Log Configuration
+
+To see output, configure the logger in your settings:
+
+```python
+LOGGING = {
+    "version": 1,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "loggers": {
+        "django_cfg.debug_404": {
+            "handlers": ["console"],
+            "level": "WARNING",
+        },
+    },
+}
+```
+
+## How It Works
+
+The middleware uses a two-pass approach:
+
+1. **Response hook** — checks `response.status_code == 404` after the view runs
+2. **Exception hook** — catches `Http404` raised directly by views
+3. **Pattern scan** — flattens the entire URL resolver tree and finds patterns whose first 2 path segments overlap with the 404 path
+
+```python
+# Pseudocode
+path_parts = path.split("/")  # ["api", "projects", "123", "characters"]
+for pattern, view_name in all_url_patterns:
+    pattern_parts = pattern.split("/")  # strip regex groups
+    if path_parts[:2] == pattern_parts[:2]:  # share first 2 segments
+        candidates.append((pattern, view_name))
+```
+
+Up to 10 candidates are logged.
+
+## Disabling
+
+The middleware is a no-op when `DEBUG=False` — safe to leave in `MIDDLEWARE` for production deploys.
+
+To disable in development:
+
+```python
+class MyConfig(DjangoConfig):
+    debug_log_404: bool = False
+```
+
+TAGS: middleware, debugging, 404, url-routing, drf
+DEPENDS_ON: [async-orm]

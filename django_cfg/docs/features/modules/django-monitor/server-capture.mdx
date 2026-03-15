@@ -1,0 +1,139 @@
+---
+title: Server-Side Capture
+description: Automatic capture hooks and the manual capture API in django_monitor — HTTP 500s, logging, slow queries, RQ failures.
+sidebar_label: Server-Side Capture
+keywords:
+  - django error capture
+  - server monitoring
+  - slow query monitoring
+  - rq job failure
+  - django logging handler
+---
+
+# Server-Side Capture
+
+All automatic hooks are connected by `DjangoMonitorConfig.ready()` at startup. They are **fire-and-forget** — no hook ever raises or blocks the calling code.
+
+---
+
+## Automatic Hooks
+
+### HTTP 500 — `got_request_exception`
+
+Unhandled exceptions that produce a 500 response are captured via Django's `got_request_exception` signal. The request URL, HTTP method, and status code are attached automatically.
+
+**Event type:** `UNHANDLED_EXCEPTION`
+
+### Logging Handler
+
+`_MonitorLoggingHandler` is installed into the root logger at startup. It captures:
+
+| Log record | Event type |
+|---|---|
+| `ERROR` / `CRITICAL` with `exc_info` | `UNHANDLED_EXCEPTION` |
+| `ERROR` / `CRITICAL` without exception | `LOG_ERROR` |
+
+A **thread-local reentrancy guard** (`in_emit`) prevents infinite recursion if the D1 push itself logs.
+
+### Slow Queries — `execute_wrapper`
+
+A database cursor wrapper is registered on every new connection via `connection_created`. Queries exceeding **500 ms** are captured.
+
+**Event type:** `SLOW_QUERY`
+
+Telegram alerts fire only for queries > 5 s.
+
+### RQ Job Failures
+
+The module registers `rq_exception_handler` as a global RQ exception handler. Point your workers to it:
+
+```python
+# rq worker startup
+from django_cfg.modules.django_monitor.capture import rq_exception_handler
+
+Worker(queues, exception_handlers=[rq_exception_handler])
+```
+
+Or configure it via Django-RQ settings — the handler is importable by dotted path:
+
+```python
+# settings (via django_cfg)
+RQ_QUEUES = {
+    "default": {
+        ...
+        "EXCEPTION_HANDLERS": ["django_cfg.modules.django_monitor.capture.rq_exception_handler"],
+    }
+}
+```
+
+**Event type:** `RQ_FAILURE`
+
+---
+
+## Deduplication
+
+Server events are **deduplicated by fingerprint**:
+
+```
+fingerprint = sha256("{exception_type}::{module}::{func_name}")[:16]
+```
+
+Line numbers are excluded — the same bug deduplicates across refactors and deploys. Repeated occurrences increment `occurrence_count` on the existing D1 row.
+
+---
+
+## Manual Capture API
+
+### `capture_exception(exc)`
+
+```python
+from django_cfg.modules.django_monitor import capture_exception
+
+try:
+    process_payment(order)
+except Exception as e:
+    capture_exception(e, url="/api/orders/", http_method="POST")
+```
+
+Builds a fingerprint from the exception class, module, and innermost frame. Captures traceback as `stack_trace`.
+
+**Event type:** `SERVER_ERROR`
+
+### `capture_message(message)`
+
+```python
+from django_cfg.modules.django_monitor import capture_message
+
+capture_message(
+    "payment gateway slow",
+    level="warning",
+    extra={"latency_ms": 3200, "order_id": 42},
+)
+```
+
+Fingerprint is derived from the message text (first 100 chars).
+
+**Event type:** `LOG_ERROR`
+
+---
+
+## Safety Guarantees
+
+| Risk | Mitigation |
+|---|---|
+| Capture raises during startup | All model imports are lazy (inside functions) |
+| `MonitorHandler` infinite recursion | Thread-local `in_emit` guard |
+| Slow query wrapper capturing itself | Thread-local `in_wrapper` guard |
+| D1 request failure breaks the app | Every capture path wrapped in `try/except` |
+| Double hook registration in tests | `dispatch_uid` on signals, attribute check on connections |
+
+---
+
+## See Also
+
+- **[Configuration](./configuration)** — Slow query threshold, Telegram alerts
+- **[Management Commands](./management-commands)** — Check status, clean up old events
+- **[Frontend SDK](./frontend-sdk)** — Browser event capture
+
+TAGS: django_monitor, server-capture, slow-query, rq, logging
+DEPENDS_ON: [django-monitor/overview]

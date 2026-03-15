@@ -1,0 +1,192 @@
+---
+title: OG Image Module
+description: On-the-fly Open Graph image generation for django-cfg. Renders PNG images with PicTex, caches them on disk — no database, no models.
+sidebar_label: Overview
+sidebar_position: 1
+keywords:
+  - django-cfg og image
+  - open graph image generation
+  - django ogimage
+  - pictex og
+---
+
+# OG Image Module
+
+On-the-fly Open Graph image generation for django-cfg. Renders PNG images using **PicTex**, caches them in `MEDIA_ROOT/ogimage/`.
+
+No database, no models, no migrations — pure library.
+
+## How it works
+
+```
+GET /og/<b64params>/
+  → decode base64 → OGImageParams
+  → check MEDIA_ROOT/ogimage/<key[:2]>/<key[2:4]>/<key>.png
+  → HIT  → FileResponse (instant)
+  → MISS → render(params) → save → FileResponse
+```
+
+The cache key is a **SHA256[:40]** of the stable params (everything except `page_url`). Same params always produce the same file — no redundant renders. Files are stored in a two-level sharded layout (like Git objects) to avoid inode limits on large deployments.
+
+## Setup
+
+### URLs
+
+URLs are registered automatically via `add_django_cfg_urls()`:
+
+```python
+# project/urls.py
+from django_cfg import add_django_cfg_urls
+
+urlpatterns = add_django_cfg_urls(urlpatterns)
+# exposes: GET /og/<b64params>/  (name: og-render)
+```
+
+Media serving is also handled automatically — no extra configuration needed.
+
+### Renderer
+
+Uses **PicTex** (`pictex>=2.1.0`) — available in `djangocfg[full]`. PicTex supports gradients, RTL text shaping (Arabic, Hebrew), and CJK fonts.
+
+## Quick start
+
+### With a preset
+
+```python
+from django_cfg.modules.django_ogimage import get_or_create_og_url, DARK_BLUE
+
+# Returns /media/ogimage/.../....png — renders on first call, instant on subsequent
+url = get_or_create_og_url(DARK_BLUE.to_params(title="My Page", description="..."))
+
+# Absolute URL
+url = get_or_create_og_url(DARK_BLUE.to_params(title="My Page"), request=request)
+```
+
+### By preset name
+
+```python
+from django_cfg.modules.django_ogimage import get_or_create_og_url, get_preset
+
+url = get_or_create_og_url(get_preset("dark_blue").to_params(title="My Page"))
+```
+
+### With branding — logo / site name / layout
+
+```python
+from django_cfg.modules.django_ogimage import get_branded_og_url, DARK_BLUE, HERO
+
+params = DARK_BLUE.to_params(title="My Page", description="Subtitle")
+
+# Site name only
+url = get_branded_og_url(params, site_name="Acme Corp")
+
+# Built-in Material icon + site name
+url = get_branded_og_url(params, icon="dashboard", site_name="Acme Corp")
+
+# External logo file + custom layout + absolute URL
+url = get_branded_og_url(
+    params,
+    logo_url="/path/to/logo.png",
+    site_name="Acme Corp",
+    layout=HERO,
+    request=request,
+)
+```
+
+`get_branded_og_url` has its own combined cache key — identical inputs never re-render.
+
+### In a DRF serializer
+
+```python
+from django_cfg.modules.django_ogimage import get_branded_og_url, get_preset
+
+class ArticleSerializer(serializers.ModelSerializer):
+    og_image_url = serializers.SerializerMethodField()
+
+    def get_og_image_url(self, obj):
+        params = get_preset("dark_blue").to_params(
+            title=obj.title,
+            description=obj.excerpt,
+        )
+        return get_branded_og_url(
+            params,
+            site_name="My Site",
+            request=self.context.get("request"),
+        )
+```
+
+### Typed utility function
+
+```python
+from django_cfg.modules.django_ogimage import get_or_create_og_url, get_preset, OGImagePreset
+
+def render_og(title: str, preset: str | OGImagePreset = "dark_blue") -> str:
+    if isinstance(preset, str):
+        preset = get_preset(preset)  # raises ValueError for unknown names
+    return get_or_create_og_url(preset.to_params(title=title))
+
+render_og("Hello")                  # uses dark_blue
+render_og("Hello", "light_warm")    # by name
+render_og("Hello", DARK_BLUE)       # by object
+```
+
+### Build a shareable render URL
+
+Instead of returning the media file path directly, you can build a URL pointing to the render endpoint. The browser will hit `/og/<b64params>/` and get the PNG:
+
+```python
+from django_cfg.modules.django_ogimage import OGImageParams, build_og_url
+
+params = OGImageParams(title="My Page", description="...", style="dark")
+url = build_og_url(params, request=request)
+# → https://example.com/og/eyJ0aXRsZSI6...
+```
+
+### Render PNG directly (no HTTP)
+
+```python
+from django_cfg.modules.django_ogimage import render, OGImageParams
+
+png_bytes = render(OGImageParams(title="Hello", style="light"))
+```
+
+## OGImageParams fields
+
+| Field | Default | Description |
+|---|---|---|
+| `title` | required | Main heading text (max 300 chars) |
+| `description` | `""` | Subtitle / body text (max 600 chars) |
+| `locale` | `"en"` | BCP 47 locale — selects font |
+| `style` | `"dark"` | `dark` or `light` |
+| `bg_color` | `"#1a1a2e"` | Background color (hex) |
+| `bg_color2` | `"#16213e"` | Gradient / secondary background (hex) |
+| `text_color` | `"#ffffff"` | Text color (hex) |
+| `accent_color` | `"#3b82f6"` | Accent / highlight color (hex) |
+| `size` | `"1200x630"` | Output dimensions |
+| `page_url` | `""` | Source URL — excluded from cache key |
+
+## Supported sizes
+
+`1200x630` (default) · `1200x600` · `800x418` · `1200x1200`
+
+## Supported locales
+
+Fonts are **not bundled** with the package — they are downloaded on first use and cached in `~/.cache/django_cfg/fonts/`. At Django startup all fonts begin downloading in background threads so they're ready before the first request.
+
+| Locale | Font | Download size |
+|---|---|---|
+| `en`, `*` | Inter (variable TTF) | ~350 KB |
+| `ko` | Noto Sans KR | ~3.5 MB |
+| `ja` | Noto Sans JP | ~4.2 MB |
+| `zh` | Noto Sans SC | ~6.5 MB |
+| `ar` | Noto Sans Arabic (RTL) | ~300 KB |
+| `he` | Noto Sans Hebrew (RTL) | ~200 KB |
+
+If a font download fails the module falls back to a system font silently — no exception is raised. Override the cache directory with `DJANGO_CFG_FONTS_DIR`.
+
+## Related
+
+- [Presets](./presets) — built-in color schemes and `build_preset()`
+- [Layouts](./layouts) — layout presets (DEFAULT, HERO, ARTICLE, MINIMAL)
+- [Branding & Icons](./branding) — `get_branded_og_url`, logo, built-in icons
+- [Configuration](./configuration) — environment variables

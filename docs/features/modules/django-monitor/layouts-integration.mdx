@@ -1,0 +1,177 @@
+---
+title: "@djangocfg/layouts Integration"
+description: How @djangocfg/layouts wires MonitorProvider, the debug panel, and error tracking — zero-config monitoring for any Next.js app.
+sidebar_label: "@djangocfg/layouts"
+keywords:
+  - "@djangocfg/layouts"
+  - monitor integration
+  - appLayout monitor
+  - baseapp monitor
+  - debug panel
+---
+
+# `@djangocfg/layouts` Integration
+
+`@djangocfg/layouts` is the recommended way to use the monitor in a Next.js app. Drop in `AppLayout` or `BaseApp` and monitoring, the debug panel, and error tracking are all wired up automatically.
+
+---
+
+## What `AppLayout` / `BaseApp` provide
+
+```mermaid
+flowchart TD
+    AppLayout["AppLayout or BaseApp\n(project='my-app')"]
+
+    AppLayout --> TP["ThemeProvider"]
+    AppLayout --> AP["AuthProvider + AuthDialog"]
+    AppLayout --> MP["MonitorProvider\n(@djangocfg/monitor/client)"]
+    AppLayout --> DB["DebugButton\n(@djangocfg/debuger)"]
+    AppLayout --> ET["ErrorTrackingProvider\n(Zod / CORS / network)"]
+    AppLayout --> EB["ErrorBoundary"]
+    AppLayout --> CP["CentrifugoProvider"]
+
+    MP -->|"auto-bridge\n(no config)"| DB
+    MP -->|"POST /cfg/monitor/ingest/"| D1["D1 frontend_events"]
+```
+
+The `project` prop flows through to both `MonitorProvider` and the debug panel title automatically.
+
+---
+
+## Minimum Setup
+
+```tsx
+// app/layout.tsx
+import { AppLayout } from '@djangocfg/layouts'
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <AppLayout
+          project="my-app"
+          auth={{ apiUrl: process.env.NEXT_PUBLIC_API_URL }}
+          theme={{ defaultTheme: 'dark', storageKey: 'theme' }}
+          publicLayout={{ component: PublicLayout, enabledPath: ['/', '/about'] }}
+          privateLayout={{ component: DashboardLayout, enabledPath: '/dashboard' }}
+        >
+          {children}
+        </AppLayout>
+      </body>
+    </html>
+  )
+}
+```
+
+That's it. Monitor is live — JS errors, unhandled rejections, and console errors flow to D1.
+
+---
+
+## Overriding Monitor Defaults
+
+```tsx
+<AppLayout
+  project="my-app"
+  monitor={{
+    baseUrl: 'https://api.example.com',   // if backend is on a different origin
+    captureConsole: false,                // disable console interception
+    flushInterval: 10000,                 // flush every 10s
+  }}
+>
+```
+
+All `MonitorConfig` options are accepted. `project` and `environment` come from the top-level `project` prop by default.
+
+---
+
+## Debug Panel
+
+`@djangocfg/layouts` includes `@djangocfg/debuger`'s `DebugButton` automatically. The monitor bridges its event store into the panel's **Logs** tab — no extra config.
+
+Open with: **`Cmd+D`** or `?debug=1` in the URL.
+
+```tsx
+// Add custom tabs (e.g. Zustand store viewer)
+import type { CustomDebugTab } from '@djangocfg/debuger'
+
+const myTabs: CustomDebugTab[] = [
+  { id: 'store', label: 'Stores', icon: Database, panel: StoreTab },
+]
+
+<AppLayout debug={{ panel: { tabs: myTabs } }}>
+```
+
+To disable:
+
+```tsx
+<AppLayout debug={{ enabled: false }}>
+```
+
+---
+
+## `noLayoutPaths` — Fullscreen Pages
+
+Providers (auth, monitor, theme) remain active. Only the layout wrapper is skipped:
+
+```tsx
+<AppLayout
+  noLayoutPaths={['/private/terminal', '/embed']}
+  // auth pages (/auth/*) are always fullscreen — no extra config
+>
+```
+
+---
+
+## Error Tracking
+
+Two mechanisms work in parallel:
+
+| Mechanism | What it catches | Where |
+|---|---|---|
+| `MonitorProvider` | JS errors, unhandled rejections, console | D1 `frontend_events` |
+| `ErrorTrackingProvider` | Zod validation, CORS, API errors | in-app error state |
+
+```tsx
+// Emit from any component
+import { useErrorEmitter, emitRuntimeError } from '@djangocfg/layouts'
+
+const { emitError } = useErrorEmitter('PaymentForm')
+emitError('Payment failed', error)
+
+// Outside React
+emitRuntimeError('PaymentService', 'Gateway timeout', error)
+```
+
+---
+
+## CSS Setup
+
+Add to `globals.css` **before** `@import "tailwindcss"`:
+
+```css
+@import "@djangocfg/ui-nextjs/styles";
+@import "@djangocfg/layouts/styles";
+@import "@djangocfg/ui-tools/styles";
+@import "@djangocfg/debuger/styles";
+@import "tailwindcss";
+```
+
+---
+
+## Package Reference
+
+| Package | Role |
+|---|---|
+| `@djangocfg/layouts` | Smart layout router + all providers |
+| `@djangocfg/monitor` | Monitor types + SDK |
+| `@djangocfg/debuger` | Debug panel (auto-bridges monitor) |
+
+---
+
+## See Also
+
+- **[Frontend SDK](./frontend-sdk)** — Standalone `MonitorProvider`, `withMonitor`, `window.monitor`
+- **[Overview](./overview)** — Full stack picture (Django + D1 + browser)
+
+TAGS: django_monitor, layouts, debuger, next.js, appLayout
+DEPENDS_ON: [django-monitor/frontend-sdk]

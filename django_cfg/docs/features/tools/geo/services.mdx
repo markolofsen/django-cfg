@@ -1,0 +1,337 @@
+---
+title: Geo Services
+description: GeoDatabase, geocoding services, and utility functions for geographic data in Django-CFG.
+sidebar_label: Services
+sidebar_position: 3
+keywords:
+  - django geo database
+  - geocoding
+  - city search
+  - coordinate resolution
+---
+
+# Geo Services
+
+Service layer for geographic data access, geocoding, and coordinate-based city resolution.
+
+## GeoDatabase
+
+PostgreSQL-based geographic database with LRU caching. Use the singleton instance for best performance.
+
+```python
+from django_cfg.apps.tools.geo.services import get_geo_db
+
+db = get_geo_db()  # Singleton with caching
+```
+
+### get_country(code)
+
+Get country by ISO2 code. **Cached (LRU 300)**.
+
+```python
+country = db.get_country("KR")
+# CountryDTO(id=116, name="South Korea", iso2="KR", emoji="🇰🇷")
+
+country = db.get_country("XX")
+# None
+```
+
+### search_countries(term, limit)
+
+Search countries by name or ISO code.
+
+```python
+results = db.search_countries("korea", limit=5)
+# [CountryDTO(name="South Korea"), CountryDTO(name="North Korea")]
+```
+
+### get_city(city_id)
+
+Get city by ID. **Cached (LRU 5000)**.
+
+```python
+city = db.get_city(1835848)
+# CityDTO(id=1835848, name="Seoul", latitude=37.5665, longitude=126.978)
+```
+
+### search_cities(term, country_code, limit)
+
+Smart multi-word search with relevance ranking.
+
+```python
+# Single word
+cities = db.search_cities("bali", limit=10)
+
+# Multi-word (city + context)
+cities = db.search_cities("seminyak bali indonesia", limit=10)
+# Ranks "Seminyak, Bali, Indonesia" higher
+
+# With country filter
+cities = db.search_cities("seoul", country_code="KR", limit=10)
+```
+
+**Relevance ranking:**
+1. Context match (country/state matches other words)
+2. Exact name match
+3. Name starts with term
+4. Name contains term
+
+### get_nearby_cities(lat, lng, radius_km, limit)
+
+Find cities within radius using geodesic distance.
+
+```python
+nearby = db.get_nearby_cities(
+    latitude=-8.6908,
+    longitude=115.1688,
+    radius_km=50,
+    limit=10
+)
+
+for result in nearby:
+    print(f"{result.city.name}: {result.distance_km:.1f} km")
+# Denpasar: 2.3 km
+# Kuta: 5.1 km
+# Sanur: 8.7 km
+```
+
+### get_statistics()
+
+Get database statistics.
+
+```python
+stats = db.get_statistics()
+# {"countries": 250, "states": 5084, "cities": 150853}
+```
+
+---
+
+## resolve_city_from_coordinates()
+
+**Most important utility** - finds nearest city from coordinates.
+
+```python
+from django_cfg.apps.tools.geo.services import resolve_city_from_coordinates
+
+# Find nearest city within default radius (50km)
+city_id = resolve_city_from_coordinates(-8.6908, 115.1688)
+# 56263 (Denpasar)
+
+# Custom radius
+city_id = resolve_city_from_coordinates(-8.6908, 115.1688, radius_km=100)
+
+# No city found (middle of ocean)
+city_id = resolve_city_from_coordinates(0.0, 0.0)
+# None
+```
+
+### Use in Data Ingestion
+
+```python
+from django_cfg.apps.tools.geo.services import resolve_city_from_coordinates
+
+def ingest_property(data):
+    """Auto-populate geo field from coordinates."""
+    geo = None
+
+    if data.get('latitude') and data.get('longitude'):
+        geo = resolve_city_from_coordinates(
+            float(data['latitude']),
+            float(data['longitude']),
+            radius_km=50,
+        )
+
+    return Property.objects.create(
+        latitude=data.get('latitude'),
+        longitude=data.get('longitude'),
+        geo=geo,
+        # ... other fields
+    )
+```
+
+### Use with LLM-Estimated Coordinates
+
+```python
+# LLM can estimate coordinates from location names
+# Even approximate coordinates work with 50km radius
+
+# LLM extracts: "Villa in Seminyak, Bali"
+# LLM estimates: lat=-8.691, lng=115.168
+
+city_id = resolve_city_from_coordinates(-8.691, 115.168)
+# Still finds Denpasar/Seminyak area
+```
+
+---
+
+## GeocodingService
+
+Geocoding and reverse geocoding with caching.
+
+```python
+from django_cfg.apps.tools.geo.services import get_geocoding_service
+
+service = get_geocoding_service()
+```
+
+### geocode(address)
+
+Convert address to coordinates.
+
+```python
+result = service.geocode("Seoul, South Korea")
+# GeocodingResult(
+#     latitude=37.5665,
+#     longitude=126.978,
+#     display_name="Seoul, South Korea",
+#     confidence=1.0,
+# )
+```
+
+### reverse_geocode(lat, lng)
+
+Convert coordinates to address.
+
+```python
+result = service.reverse_geocode(37.5665, 126.978)
+# ReverseGeocodingResult(
+#     display_name="Seoul, South Korea",
+#     city_id=1835848,
+#     city_name="Seoul",
+# )
+```
+
+### autocomplete(query, limit)
+
+Fast autocomplete using Photon API.
+
+```python
+results = service.autocomplete("bali indo", limit=5)
+# [AutocompleteResult(text="Bali, Indonesia", lat=-8.34, lng=115.09)]
+```
+
+---
+
+## Utility Functions
+
+```python
+from django_cfg.apps.tools.geo.services import (
+    format_location,
+    resolve_location,
+    parse_coordinates,
+    validate_coordinates,
+    coordinates_to_string,
+)
+```
+
+### format_location(city, country)
+
+Format location for display.
+
+```python
+format_location(city=city_dto, country=country_dto)
+# "Seoul, South Korea"
+
+format_location(city=city_dto, country=country_dto, include_flag=True)
+# "🇰🇷 Seoul, South Korea"
+```
+
+### resolve_location(city_id)
+
+Resolve full location hierarchy from city ID.
+
+```python
+location = resolve_location(1835848)
+# LocationDTO(
+#     city=CityDTO(name="Seoul"),
+#     state=StateDTO(name="Seoul"),
+#     country=CountryDTO(name="South Korea"),
+# )
+```
+
+### parse_coordinates(text)
+
+Parse coordinates from string.
+
+```python
+parse_coordinates("37.5665, 126.978")  # (37.5665, 126.978)
+parse_coordinates("(37.5665, 126.978)")  # (37.5665, 126.978)
+parse_coordinates("invalid")  # None
+```
+
+### validate_coordinates(lat, lng)
+
+Check if coordinates are valid.
+
+```python
+validate_coordinates(37.5665, 126.978)  # True
+validate_coordinates(91.0, 0.0)         # False (lat > 90)
+```
+
+---
+
+## Caching
+
+### GeoDatabase Cache
+
+LRU in-memory cache for fast repeated lookups:
+
+| Data | Cache Size | TTL |
+|------|------------|-----|
+| Countries | 300 | Session |
+| States | 1000 | Session |
+| Cities | 5000 | Session |
+
+### Geocoding Cache
+
+Django cache (Redis/Memcached) for API responses:
+
+| Operation | TTL |
+|-----------|-----|
+| geocode | 30 days |
+| reverse_geocode | 7 days |
+| autocomplete | 1 hour |
+
+---
+
+## Best Practices
+
+### DO: Use Singleton
+
+```python
+# GOOD - Uses cached singleton
+db = get_geo_db()
+service = get_geocoding_service()
+```
+
+### DON'T: Create New Instances
+
+```python
+# BAD - No caching benefit
+db = GeoDatabase()
+```
+
+### DO: Batch Operations
+
+```python
+# GOOD - Cache warms up
+db = get_geo_db()
+for prop in properties:
+    city = db.get_city(prop.geo)  # Cached after first call
+```
+
+### DON'T: N+1 Queries
+
+```python
+# BAD - Direct ORM
+for prop in properties:
+    city = City.objects.get(id=prop.geo)
+```
+
+---
+
+## See Also
+
+- [LocationField](./fields) - Model field integration
+- [Models Reference](./models) - DTOs and data structures
+- [Overview](./overview) - Architecture and quick start

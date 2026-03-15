@@ -1,0 +1,162 @@
+---
+title: D1Q — SQL Factory
+description: How to define D1 tables and generate type-safe SQL with D1Q, D1Table, D1Column, and D1Index.
+sidebar_label: D1Q — SQL Factory
+keywords:
+  - D1Q
+  - d1 sql factory
+  - cloudflare d1 schema
+  - django_cf d1 table
+---
+
+# D1Q — SQL Factory
+
+`D1Q` is the single source of truth for all D1 SQL in django_cfg. You define a table once using `D1Table`, then call `D1Q` methods to get `(sql, params)` tuples — no raw SQL strings anywhere.
+
+---
+
+## Defining a Table
+
+```python
+from django_cfg.modules.django_cf.core.d1_query import D1Column, D1Index, D1Q, D1Table
+
+MY_TABLE = D1Table(
+    name="my_records",
+    columns=[
+        D1Column("id",         "TEXT", primary_key=True),
+        D1Column("api_url",    "TEXT", not_null=True),
+        D1Column("status",     "TEXT", not_null=True, default="'pending'"),
+        D1Column("created_at", "TEXT", not_null=True),
+        D1Column("updated_at", "TEXT", not_null=True),
+    ],
+    pk=["id", "api_url"],           # composite primary key
+    upsert_update=["status", "updated_at"],  # columns updated on conflict
+    indexes=[
+        D1Index("idx_my_records_status", ["api_url", "status"]),
+    ],
+)
+```
+
+### `D1Column` fields
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `str` | Column name |
+| `type` | `str` | SQLite type: `TEXT`, `INTEGER`, `REAL`, `BLOB` |
+| `primary_key` | `bool` | Part of the primary key |
+| `not_null` | `bool` | `NOT NULL` constraint |
+| `default` | `str \| None` | SQL default expression (e.g. `"'pending'"`, `"0"`) |
+
+### `D1Index` fields
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `str` | Index name |
+| `columns` | `list[str]` | Columns to index |
+| `unique` | `bool` | `UNIQUE` index |
+
+---
+
+## DDL Methods
+
+```python
+# CREATE TABLE IF NOT EXISTS ...
+create_sql = D1Q.create_table(MY_TABLE)
+
+# CREATE INDEX IF NOT EXISTS ... (one per index defined)
+index_sqls: list[str] = D1Q.create_indexes(MY_TABLE)
+```
+
+Combine them in `_get_schema_statements()` when subclassing `BaseD1Service`:
+
+```python
+def _get_schema_statements(self) -> list[str]:
+    return [
+        D1Q.create_table(MY_TABLE),
+        *D1Q.create_indexes(MY_TABLE),
+    ]
+```
+
+---
+
+## DML Methods
+
+All DML methods accept a Pydantic model instance (or any object with matching attributes) and return `(sql: str, params: list)`.
+
+### `upsert`
+
+Insert or update on conflict using `upsert_update` columns:
+
+```python
+sql, params = D1Q.upsert(MY_TABLE, my_model_instance)
+```
+
+### `upsert_increment`
+
+Upsert and atomically increment a counter column on conflict:
+
+```python
+sql, params = D1Q.upsert_increment(
+    MY_TABLE,
+    my_model_instance,
+    increment_col="occurrence_count",
+)
+```
+
+Used by `MonitorSyncService` to deduplicate server events.
+
+### `insert_ignore`
+
+Insert only if the row does not already exist:
+
+```python
+sql, params = D1Q.insert_ignore(MY_TABLE, my_model_instance)
+```
+
+Used by `MonitorSyncService` for frontend events (append-only).
+
+### `delete_where`
+
+Delete rows matching an exact dict of column values:
+
+```python
+sql, params = D1Q.delete_where(MY_TABLE, {"api_url": url, "is_resolved": "1"})
+```
+
+### `delete_where_raw`
+
+Delete with a raw SQL WHERE clause (use sparingly):
+
+```python
+sql, params = D1Q.delete_where_raw(MY_TABLE, "created_at < ?", [cutoff_iso])
+```
+
+---
+
+## Executing Queries
+
+All queries are executed via `CloudflareD1Client`:
+
+```python
+from django_cfg.modules.django_cf.core import BaseD1Service
+
+class MyService(BaseD1Service):
+    def _get_schema_statements(self) -> list[str]:
+        return [D1Q.create_table(MY_TABLE), *D1Q.create_indexes(MY_TABLE)]
+
+    def upsert_record(self, data: MyModel) -> None:
+        self._ensure_schema()
+        sql, params = D1Q.upsert(MY_TABLE, data)
+        self._get_client().query(sql, params)
+```
+
+---
+
+## See Also
+
+- **[Overview](./overview)** — Architecture and BaseD1Service
+- **[User Sync](./user-sync)** — Real-world D1Q usage in UserSyncService
+- **[Monitor — Server Capture](../django-monitor/server-capture)** — `upsert_increment` and `insert_ignore` in action
+
+TAGS: D1Q, d1-table, sql-factory, django_cf
+DEPENDS_ON: [django-cf/overview]

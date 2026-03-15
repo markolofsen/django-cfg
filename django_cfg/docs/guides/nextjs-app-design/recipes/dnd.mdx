@@ -1,0 +1,103 @@
+---
+title: Drag & Drop
+sidebar_position: 4
+keywords:
+  - dnd-kit
+  - drag and drop
+  - sortable
+  - reorder
+description: "@dnd-kit sortable setup — DndContext, SortableContext, useSortable hook, and arrayMove utility."
+---
+
+# Drag & Drop
+
+Drag and drop uses `@dnd-kit` for sortable lists (timeline reordering, storyboard arrangement).
+
+## Basic Sortable Setup
+
+```typescript
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+```
+
+## Sortable List
+
+```typescript
+function SortableList({ items, onReorder }) {
+  const handleDragEnd = useCallback((event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = items.findIndex(i => i.id === active.id);
+    const newIndex = items.findIndex(i => i.id === over.id);
+    onReorder(arrayMove(items, oldIndex, newIndex));
+  }, [items, onReorder]);
+
+  return (
+    <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext
+        items={items.map(i => i.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        {items.map(item => (
+          <SortableItem key={item.id} item={item} />
+        ))}
+      </SortableContext>
+    </DndContext>
+  );
+}
+```
+
+## Sortable Item
+
+```typescript
+function SortableItem({ item }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {item.name}
+    </div>
+  );
+}
+```
+
+The `CSS.Transform.toString` utility converts the dnd-kit transform object into a CSS transform string.
+
+## Horizontal Sorting
+
+For horizontal lists (storyboard frames), use `horizontalListSortingStrategy`:
+
+```typescript
+<SortableContext
+  items={frames.map(f => f.id)}
+  strategy={horizontalListSortingStrategy}
+>
+  {frames.map(frame => <SortableFrame key={frame.id} frame={frame} />)}
+</SortableContext>
+```
+
+## Rules
+
+1. Pass `items` as an array of IDs to `SortableContext`, not full objects
+2. Use `arrayMove` from `@dnd-kit/sortable` for reordering — never mutate the array directly
+3. Use `CSS.Transform.toString` for the style transform — do not construct CSS strings manually
+4. Choose the strategy that matches your layout: `verticalListSortingStrategy` or `horizontalListSortingStrategy`
+5. Guard `handleDragEnd` with `if (!over || active.id === over.id) return` to avoid no-op reorders

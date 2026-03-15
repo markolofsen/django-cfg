@@ -12,7 +12,8 @@
 .PHONY: help install install-local env test commit kill-ports kill-grpc kill-all dev dev-ngrok asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api api-ws gen gen-ts gen-py gen-admin gen-dry gen-list claude
 
 # Python from virtual environment (uv)
-PYTHON := uv run python
+UV := $(shell which uv || echo $(HOME)/.local/bin/uv)
+PYTHON := $(UV) run python
 # Path to local django-cfg for development
 DJANGO_CFG_LOCAL := $(HOME)/djangocfg
 
@@ -46,12 +47,12 @@ help:
 
 install:
 	@echo "Installing dependencies (PyPI django-cfg)..."
-	uv sync --no-sources
+	$(UV) sync --no-sources
 	@echo "Installed django-cfg from PyPI"
 	@echo "To use local django-cfg: make install-local"
 
 install-local:
-	@uv sync
+	@$(UV) sync
 	@bash $(HOME)/djangocfg/scripts/install_local_djangocfg.sh --venv .venv
 	@echo ""
 	@echo "✅ Local django-cfg installed (editable mode)"

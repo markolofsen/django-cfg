@@ -1,0 +1,153 @@
+---
+title: OG Image Branding & Icons
+description: Add a logo, site name, or built-in Material icon to any OG image with get_branded_og_url. Includes disk caching and SVG rasterization.
+sidebar_label: Branding & Icons
+sidebar_position: 4
+keywords:
+  - django-cfg og image branding
+  - ogimage logo icon
+  - get_branded_og_url
+  - material icons og image
+---
+
+# OG Image Branding & Icons
+
+`get_branded_og_url` is a higher-level helper that renders an OG image with a **logo**, **site name**, and/or a **built-in Material icon** overlaid at the position defined by the active layout preset.
+
+## Basic usage
+
+```python
+from django_cfg.modules.django_ogimage import get_branded_og_url, DARK_BLUE
+
+params = DARK_BLUE.to_params(title="My Page", description="Subtitle")
+
+# Site name only
+url = get_branded_og_url(params, site_name="Acme Corp")
+# → /media/ogimage/ab/cd/abcdef....png
+```
+
+## Parameters
+
+```python
+def get_branded_og_url(
+    params: OGImageParams,
+    *,
+    logo_url: str = "",       # path or URL to PNG/SVG logo file
+    icon: str = "",           # built-in icon name (e.g. "dashboard")
+    site_name: str = "",      # text label next to logo
+    layout: OGLayoutPreset = DEFAULT,
+    request=None,             # Django request — returns absolute URL if provided
+) -> str: ...
+```
+
+**Priority:** `logo_url` takes precedence over `icon`. If both are empty, only the `site_name` text is rendered.
+
+## With a built-in icon
+
+50 top Material Design icons are bundled as SVG files and automatically rasterized at render time:
+
+```python
+from django_cfg.modules.django_ogimage import get_branded_og_url, DARK_BLUE, list_icons
+
+# See all available icon names
+icons = list_icons()
+# ["account_circle", "add", "arrow_back", "dashboard", "email", "home", "settings", ...]
+
+url = get_branded_og_url(
+    DARK_BLUE.to_params(title="Dashboard"),
+    icon="dashboard",
+    site_name="Acme",
+)
+```
+
+Passing an unknown icon name raises `ValueError`:
+
+```python
+get_branded_og_url(params, icon="nonexistent")
+# ValueError: Icon 'nonexistent' not found. Available: account_circle, add, ...
+```
+
+## With an external logo
+
+Pass a file path to any PNG or SVG file. SVG files are automatically rasterized via `skia.SVGDOM`:
+
+```python
+url = get_branded_og_url(
+    params,
+    logo_url="/srv/media/logo.svg",
+    site_name="Acme Corp",
+)
+```
+
+## With a layout
+
+```python
+from django_cfg.modules.django_ogimage import HERO, ARTICLE
+
+# Brand in top-left (HERO layout)
+url = get_branded_og_url(params, icon="dashboard", site_name="Acme", layout=HERO)
+
+# Brand in top-left, no accent bar (ARTICLE layout)
+url = get_branded_og_url(params, site_name="Acme Docs", layout=ARTICLE)
+```
+
+See [Layouts](./layouts) for all available layout presets.
+
+## Absolute URL
+
+```python
+url = get_branded_og_url(params, site_name="Acme", request=request)
+# → https://example.com/media/ogimage/ab/cd/abcdef....png
+```
+
+## Caching
+
+`get_branded_og_url` has its own combined cache key:
+
+```
+SHA256[:40](compute_cache_key(params) + json(logo_url, site_name, layout.name))
+```
+
+The second call with identical inputs skips rendering entirely and returns the cached file URL immediately.
+
+## Built-in icon registry
+
+```python
+from django_cfg.modules.django_ogimage import list_icons, get_icon_path
+
+# All available icon names (sorted)
+icons = list_icons()
+
+# Path to a specific SVG file
+path = get_icon_path("home")      # → Path(.../core/assets/icons/home.svg)
+path = get_icon_path("missing")   # → ValueError
+```
+
+### Available icons
+
+10 icons curated for SaaS product OG images:
+
+| Icon | Use case |
+|---|---|
+| `dashboard` | Overview / home page |
+| `analytics` | Metrics, reports, insights |
+| `people` | Team, users, collaboration |
+| `payments` | Billing, subscriptions, pricing |
+| `security` | Access control, compliance |
+| `rocket_launch` | Onboarding, launch, getting started |
+| `support_agent` | Support, help center |
+| `cloud` | Infrastructure, hosting, cloud services |
+| `verified` | Trust, verification, quality |
+| `auto_awesome` | AI features, automation, highlights |
+
+To refresh the set, run `update_icons.py` — it downloads the curated set from Google Fonts and bakes them into the package:
+
+```bash
+python src/django_cfg/modules/django_ogimage/scripts/update_icons.py
+```
+
+## Related
+
+- [Layouts](./layouts) — layout presets that control brand position
+- [Presets](./presets) — color scheme presets
+- [Overview](./overview) — quick start

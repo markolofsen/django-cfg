@@ -1,0 +1,271 @@
+---
+title: Testing
+sidebar_position: 10
+keywords:
+  - django testing
+  - django-cfg testing
+  - pytest django
+  - django test patterns
+description: Testing patterns for Django-CFG apps. What to test, test directory structure, factories, fixtures, and the check_endpoints command.
+---
+
+# Testing
+
+Test models and services. Skip view tests — use `check_endpoints` instead.
+
+## What to Test
+
+| Layer | Test? | Why |
+|-------|-------|-----|
+| **Models** | Yes | Constraints, validations, properties, methods |
+| **Services** | Yes | Critical business logic |
+| **Managers** | Yes | Complex query methods |
+| **Serializers** | No | Covered by integration and `check_endpoints` |
+| **ViewSets** | No | Covered by `check_endpoints` |
+| **Admin** | No | Visual — test manually |
+
+## Directory Structure
+
+```
+tests/
+├── __init__.py
+├── conftest.py            # pytest fixtures
+├── factories.py           # Model factories
+├── test_models.py         # Model constraints, properties, methods
+├── test_services.py       # Service layer business logic
+└── test_managers.py       # Complex manager queries (if needed)
+```
+
+## Test Execution
+
+```bash
+# From the solution/django directory
+cd solution/django
+
+# Run tests for a specific app
+poetry run python manage.py test django_cfg.apps.my_app.tests
+
+# Run with pytest
+poetry run pytest apps/my_app/tests/
+
+# Run specific test file
+poetry run pytest apps/my_app/tests/test_services.py
+
+# Run specific test
+poetry run pytest apps/my_app/tests/test_services.py::TestSyncService::test_sync_creates_symbols
+```
+
+## Model Tests
+
+Test constraints, properties, and methods:
+
+```python
+# tests/test_models.py
+
+from django.test import TestCase
+from django.db import IntegrityError
+from ..models import APIKey
+
+
+class TestAPIKey(TestCase):
+    def test_create_key_returns_raw_key(self):
+        """create_key() returns (instance, raw_key) tuple."""
+        key, raw = APIKey.create_key(user=self.user, name="Test Key")
+        self.assertIsNotNone(raw)
+        self.assertTrue(raw.startswith("sk_"))
+
+    def test_raw_key_not_stored(self):
+        """Raw key is hashed, not stored in DB."""
+        key, raw = APIKey.create_key(user=self.user, name="Test Key")
+        key.refresh_from_db()
+        self.assertNotEqual(key.hashed_key, raw)
+
+    def test_is_valid_active_not_expired(self):
+        """is_valid returns True for active, non-expired key."""
+        key, _ = APIKey.create_key(user=self.user, name="Test Key")
+        self.assertTrue(key.is_valid)
+
+    def test_is_valid_false_when_inactive(self):
+        """is_valid returns False when deactivated."""
+        key, _ = APIKey.create_key(user=self.user, name="Test Key")
+        key.is_active = False
+        key.save()
+        self.assertFalse(key.is_valid)
+
+    def test_unique_constraint_prevents_duplicates(self):
+        """Unique constraint on (exchange, symbol, market_type)."""
+        Symbol.objects.create(exchange="binance", symbol="BTCUSDT", market_type="linear")
+        with self.assertRaises(IntegrityError):
+            Symbol.objects.create(exchange="binance", symbol="BTCUSDT", market_type="linear")
+```
+
+## Service Tests
+
+Test business logic with mocked dependencies:
+
+```python
+# tests/test_services.py
+
+from django.test import TestCase
+from unittest.mock import patch, MagicMock
+from ..services.sync_service import SyncService, SyncResult
+
+
+class TestSyncService(TestCase):
+    def setUp(self):
+        self.service = SyncService()
+
+    @patch.object(SyncService, '_fetch_from_exchange')
+    def test_sync_creates_new_symbols(self, mock_fetch):
+        """sync() creates symbols returned by exchange API."""
+        mock_fetch.return_value = [
+            {"symbol": "BTCUSDT", "base_asset": "BTC", "quote_asset": "USDT"},
+            {"symbol": "ETHUSDT", "base_asset": "ETH", "quote_asset": "USDT"},
+        ]
+        result = self.service.sync("binance", "linear")
+
+        self.assertIsInstance(result, SyncResult)
+        self.assertEqual(result.created, 2)
+        self.assertEqual(result.exchange, "binance")
+
+    @patch.object(SyncService, '_fetch_from_exchange')
+    def test_sync_updates_existing_symbols(self, mock_fetch):
+        """sync() updates existing symbols instead of creating duplicates."""
+        Symbol.objects.create(exchange="binance", symbol="BTCUSDT", market_type="linear")
+        mock_fetch.return_value = [
+            {"symbol": "BTCUSDT", "base_asset": "BTC", "quote_asset": "USDT"},
+        ]
+        result = self.service.sync("binance", "linear")
+
+        self.assertEqual(result.created, 0)
+        self.assertEqual(result.updated, 1)
+
+    def test_sync_all_covers_all_exchanges(self):
+        """sync_all() calls sync for every enabled exchange/market."""
+        with patch.object(self.service, 'sync') as mock_sync:
+            mock_sync.return_value = SyncResult("x", "y", 0, 0, 0, 0, [])
+            results = self.service.sync_all()
+            self.assertGreater(mock_sync.call_count, 0)
+```
+
+## Manager Tests
+
+Test complex queries:
+
+```python
+# tests/test_managers.py
+
+from django.test import TestCase
+from django.utils import timezone
+from datetime import timedelta
+from ..models import Machine
+
+
+class TestMachineManager(TestCase):
+    def setUp(self):
+        self.online = Machine.objects.create(
+            hostname="mac-1", status="online",
+            last_seen=timezone.now(),
+            workspace=self.workspace,
+        )
+        self.stale = Machine.objects.create(
+            hostname="mac-2", status="online",
+            last_seen=timezone.now() - timedelta(minutes=30),
+            workspace=self.workspace,
+        )
+
+    def test_online_filters_by_status(self):
+        result = Machine.objects.online()
+        self.assertEqual(result.count(), 2)
+
+    def test_recently_seen_filters_by_time(self):
+        result = Machine.objects.recently_seen(minutes=5)
+        self.assertEqual(result.count(), 1)
+        self.assertEqual(result.first(), self.online)
+
+    def test_stale_finds_old_heartbeats(self):
+        result = Machine.objects.stale(minutes=10)
+        self.assertEqual(result.count(), 1)
+        self.assertEqual(result.first(), self.stale)
+```
+
+## Factories
+
+Use factories for clean test data:
+
+```python
+# tests/factories.py
+
+import factory
+from django.contrib.auth import get_user_model
+from ..models import Agent
+
+User = get_user_model()
+
+
+class UserFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = User
+
+    email = factory.Sequence(lambda n: f"user{n}@example.com")
+    username = factory.Sequence(lambda n: f"user{n}")
+
+
+class AgentFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = Agent
+
+    agent_id = factory.Sequence(lambda n: f"agent-{n}")
+    exchange = "binance"
+    symbol = "BTCUSDT"
+    market_type = "linear"
+    is_active = True
+```
+
+## Fixtures (conftest.py)
+
+```python
+# tests/conftest.py
+
+import pytest
+from .factories import UserFactory, AgentFactory
+
+
+@pytest.fixture
+def user():
+    return UserFactory()
+
+
+@pytest.fixture
+def agent(user):
+    return AgentFactory()
+
+
+@pytest.fixture
+def active_agents():
+    return AgentFactory.create_batch(5, is_active=True)
+```
+
+## check_endpoints Command
+
+Instead of writing API endpoint tests, use the built-in `check_endpoints` command:
+
+```bash
+python manage.py check_endpoints
+```
+
+This validates:
+- All registered URL patterns resolve
+- ViewSets have proper serializer classes
+- OpenAPI schema generates without errors
+- Authentication requirements are consistent
+
+## Rules
+
+1. **Test models and services** — skip views and serializers
+2. **Use factories** — don't create test data manually in every test
+3. **Mock external calls** — `@patch` services that call APIs
+4. **Test edge cases** — expired keys, deleted users, empty results
+5. **Keep tests fast** — avoid database-heavy setup, use `setUp` efficiently
+6. **One assertion concept per test** — test name should describe what's tested
+7. **Max 400 lines per test file, 150 per test class** — split when exceeded

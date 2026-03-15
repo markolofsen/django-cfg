@@ -1,0 +1,269 @@
+---
+title: Geo Models
+description: Country, State, City models and DTOs in Django-CFG Geo Tool.
+sidebar_label: Models
+sidebar_position: 4
+keywords:
+  - django country model
+  - django city model
+  - geo dto
+---
+
+# Geo Models
+
+Data models and DTOs for geographic data.
+
+## Database Models
+
+### Country
+
+250 countries with metadata.
+
+```python
+class Country(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=100)
+    iso2 = models.CharField(max_length=2, unique=True)  # "KR", "US"
+    iso3 = models.CharField(max_length=3, null=True)    # "KOR", "USA"
+    phonecode = models.CharField(max_length=20)         # "+82", "+1"
+    capital = models.CharField(max_length=100)          # "Seoul"
+    currency = models.CharField(max_length=10)          # "KRW"
+    currency_name = models.CharField(max_length=100)    # "Won"
+    currency_symbol = models.CharField(max_length=10)   # "₩"
+    region = models.CharField(max_length=50)            # "Asia"
+    subregion = models.CharField(max_length=50)         # "Eastern Asia"
+    emoji = models.CharField(max_length=10)             # "🇰🇷"
+    latitude = models.DecimalField(...)
+    longitude = models.DecimalField(...)
+    is_active = models.BooleanField(default=True)
+```
+
+### State
+
+5,000+ states/regions/provinces.
+
+```python
+class State(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=100)        # "California", "Bali"
+    country = models.ForeignKey(Country)
+    iso2 = models.CharField(max_length=10)         # "CA", "BA"
+    type = models.CharField(max_length=50)         # "state", "province"
+    latitude = models.DecimalField(...)
+    longitude = models.DecimalField(...)
+    is_active = models.BooleanField(default=True)
+```
+
+### City
+
+150,000+ cities worldwide.
+
+```python
+class City(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=100)
+    state = models.ForeignKey(State, null=True)
+    country = models.ForeignKey(Country)
+    latitude = models.DecimalField(max_digits=10, decimal_places=7)
+    longitude = models.DecimalField(max_digits=10, decimal_places=7)
+    is_active = models.BooleanField(default=True)
+```
+
+---
+
+## DTOs (Data Transfer Objects)
+
+Services return Pydantic DTOs for type safety and serialization.
+
+### CountryDTO
+
+```python
+class CountryDTO(BaseModel):
+    id: int
+    name: str
+    iso2: str
+    iso3: str | None
+    phonecode: str | None
+    capital: str | None
+    currency: str | None
+    currency_name: str | None
+    currency_symbol: str | None
+    region: str | None
+    subregion: str | None
+    emoji: str | None
+    latitude: float | None
+    longitude: float | None
+```
+
+**Example:**
+
+```python
+country = db.get_country("KR")
+country.name         # "South Korea"
+country.iso2         # "KR"
+country.emoji        # "🇰🇷"
+country.currency     # "KRW"
+country.region       # "Asia"
+```
+
+### StateDTO
+
+```python
+class StateDTO(BaseModel):
+    id: int
+    name: str
+    country_id: int
+    country_iso2: str | None
+    iso2: str | None
+    type: str | None
+    latitude: float | None
+    longitude: float | None
+```
+
+**Example:**
+
+```python
+state = db.get_state(1416)
+state.name          # "California"
+state.iso2          # "CA"
+state.country_iso2  # "US"
+state.type          # "state"
+```
+
+### CityDTO
+
+```python
+class CityDTO(BaseModel):
+    id: int
+    name: str
+    state_id: int | None
+    state_name: str | None
+    country_id: int
+    country_iso2: str | None
+    latitude: float
+    longitude: float
+```
+
+**Example:**
+
+```python
+city = db.get_city(1835848)
+city.name         # "Seoul"
+city.state_name   # "Seoul"
+city.country_iso2 # "KR"
+city.latitude     # 37.5665
+city.longitude    # 126.978
+```
+
+### LocationDTO
+
+Full location hierarchy.
+
+```python
+class LocationDTO(BaseModel):
+    city: CityDTO | None
+    state: StateDTO | None
+    country: CountryDTO | None
+    latitude: float | None
+    longitude: float | None
+```
+
+**Example:**
+
+```python
+location = resolve_location(1835848)
+location.city.name      # "Seoul"
+location.state.name     # "Seoul"
+location.country.name   # "South Korea"
+location.country.emoji  # "🇰🇷"
+```
+
+### NearbyResult
+
+City with distance from search point.
+
+```python
+class NearbyResult(BaseModel):
+    city: CityDTO
+    distance_km: float
+```
+
+**Example:**
+
+```python
+nearby = db.get_nearby_cities(-8.6908, 115.1688, radius_km=50)
+for result in nearby:
+    print(f"{result.city.name}: {result.distance_km:.1f} km")
+# Denpasar: 2.3 km
+# Kuta: 5.1 km
+```
+
+---
+
+## Data Population
+
+### Management Command
+
+```bash
+# First-time population (downloads from GitHub)
+python manage.py geo_populate
+
+# Force re-download
+python manage.py geo_populate --force
+
+# Clear cached files
+python manage.py geo_populate --clear-cache
+```
+
+### Data Source
+
+Data from [dr5hn/countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database):
+
+| File | Size | Records |
+|------|------|---------|
+| countries.json | ~330 KB | 250 |
+| states.json | ~4.4 MB | 5,000+ |
+| cities.json | ~133 MB | 150,000+ |
+
+Files are downloaded on demand, not bundled with package.
+
+---
+
+## Querying Models Directly
+
+While services are preferred, you can query models directly:
+
+```python
+from django_cfg.apps.tools.geo.models import Country, State, City
+
+# Get country
+korea = Country.objects.get(iso2="KR")
+
+# Get states in country
+states = State.objects.filter(country=korea)
+
+# Get cities in state
+cities = City.objects.filter(state__name="California")
+
+# Nearby cities (without PostGIS)
+from django.db.models import F
+from django.db.models.functions import Power, Sqrt
+
+# Approximate distance (not geodesic)
+cities = City.objects.annotate(
+    distance=Sqrt(
+        Power(F('latitude') - 37.5665, 2) +
+        Power(F('longitude') - 126.978, 2)
+    )
+).order_by('distance')[:10]
+```
+
+**Note:** Use GeoDatabase services for caching and proper geodesic distance calculations.
+
+---
+
+## See Also
+
+- [Services Reference](./services) - GeoDatabase and utilities
+- [LocationField](./fields) - Model field integration
+- [Overview](./overview) - Architecture and quick start

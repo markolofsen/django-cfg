@@ -230,6 +230,19 @@ class EnvironmentMode(BaseSettings):
     )
 
 
+class CloudflareEnvConfig(BaseSettings):
+    """Cloudflare D1 integration configuration."""
+
+    account_id: str = Field(default="", description="Cloudflare Account ID")
+    api_token: str = Field(default="", description="Cloudflare API token (D1:Edit permission)")
+    d1_database_id: str = Field(default="", description="D1 database UUID")
+
+    model_config = SettingsConfigDict(
+        env_prefix="CLOUDFLARE__",
+        env_nested_delimiter="__",
+    )
+
+
 class EnvironmentConfig(BaseSettings):
     """
     Complete environment configuration with automatic ENV and .env loading.
@@ -260,6 +273,7 @@ class EnvironmentConfig(BaseSettings):
     env: EnvironmentMode = Field(default_factory=EnvironmentMode)
     centrifugo: CentrifugoConfig = Field(default_factory=CentrifugoConfig)
     github_oauth: GitHubOAuthEnvConfig = Field(default_factory=GitHubOAuthEnvConfig)
+    cloudflare: CloudflareEnvConfig = Field(default_factory=CloudflareEnvConfig)
 
     # gRPC Configuration
     grpc_url: Optional[str] = Field(

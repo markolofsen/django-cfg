@@ -1,0 +1,136 @@
+---
+title: UI Components
+sidebar_position: 6
+keywords:
+  - ui-core
+  - ui-nextjs
+  - component library
+  - radix
+  - pagination
+  - sidebar
+description: "@djangocfg UI package hierarchy — 136 components, import patterns, DRF pagination integration, and sidebar system."
+---
+
+# UI Components
+
+The UI layer is split into four packages built on Radix primitives and Tailwind CSS v4.
+
+<Callout type="info">
+For Tailwind v4 migration details and CSS config see [Tailwind v4 recipe](./tailwind-v4).
+</Callout>
+
+## Package Hierarchy
+
+```
+@djangocfg/ui-core          Pure React (133 components, Radix + Tailwind v4)
+  └── @djangocfg/ui-nextjs   Next.js extensions (Link, Sidebar, Pagination, SSR)
+  └── @djangocfg/ui-tools    Heavy tools, lazy-loaded (maps, mermaid, code, video, audio)
+  └── @djangocfg/layouts     App layouts (Public, Private, Auth, Admin, Dashboard)
+```
+
+<Callout type="warning">
+In Next.js apps always import from `@djangocfg/ui-nextjs`, not `@djangocfg/ui-core` directly. `ui-nextjs` re-exports everything from `ui-core` plus Next.js-specific components.
+</Callout>
+
+## Component Categories
+
+| Category | Count | Examples |
+|----------|-------|---------|
+| Forms | 23 | Button, Input, Select, Combobox, MultiSelect, Switch, Slider, PhoneInput |
+| Layout | 14 | Card, Sidebar, ScrollArea, Resizable, Skeleton, Separator |
+| Navigation | 6 | Breadcrumb, Tabs, Pagination, NavigationMenu |
+| Overlay | 9 | Dialog, Sheet, Drawer, Popover, Tooltip, DropdownMenu |
+| Feedback | 4 | Alert, Badge, Progress, Toaster (sonner) |
+| Data Display | 9 | Table, Accordion, Calendar, DatePicker, SSRPagination |
+| Interactive | 3 | Command (cmdk), Toggle, ToggleGroup |
+| Charts | 7 | ChartContainer + recharts (Area, Bar, Line, Pie, Donut, Radial) |
+| Animations | 8 | AnimatedBackground (aurora, mesh-gradient, floating-orbs, etc.) |
+| Hooks | 15 | useDebounce, useHotkey, useLocalStorage, useMediaQuery, useIsMobile |
+| Blocks | 8 | Hero, CTASection, FeatureSection, StatsSection (marketing) |
+| Layouts | 11 | AppLayout, AdminLayout, AuthDialog, AIChatWidget, PwaProvider |
+
+## Import Patterns
+
+```typescript
+// Components
+import { Button, Card, Badge, Dialog } from '@djangocfg/ui-nextjs';
+import { Sidebar, SidebarProvider, useSidebar } from '@djangocfg/ui-nextjs';
+
+// Hooks
+import { useDebounce, useHotkey, useLocalStorage } from '@djangocfg/ui-nextjs';
+import { useQueryParams } from '@djangocfg/ui-nextjs/hooks';
+
+// Blocks (marketing)
+import { Hero, CTASection } from '@djangocfg/ui-nextjs/blocks';
+
+// Animations
+import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
+
+// Layouts
+import { AppLayout, AdminLayout, AuthDialog } from '@djangocfg/layouts';
+import { AIChatWidget, AIChatProvider } from '@djangocfg/layouts/snippets';
+
+// Heavy tools (lazy-loaded)
+import { LazyMermaid, LazyPrettyCode, LazyJsonTree } from '@djangocfg/ui-tools';
+import { GalleryCompact } from '@djangocfg/ui-tools/gallery';
+```
+
+## DRF Pagination
+
+Integrate DRF paginated responses with the pagination component:
+
+```typescript
+import { SSRPagination, useDRFPagination } from '@djangocfg/ui-nextjs';
+
+const { page, pageSize, setPage, setPageSize, paginationInfo } = useDRFPagination({
+  total: data?.count ?? 0,
+  defaultPageSize: 20,
+});
+
+<SSRPagination
+  currentPage={page}
+  totalPages={paginationInfo.totalPages}
+  onPageChange={setPage}
+/>
+```
+
+`useDRFPagination` converts DRF's `count` field into page info and provides setter functions.
+
+## Sidebar System
+
+Full sidebar with 17 exports for building navigation:
+
+```typescript
+<SidebarProvider>
+  <Sidebar>
+    <SidebarHeader>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton>Dashboard</SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarHeader>
+    <SidebarContent>
+      <SidebarGroup>
+        <SidebarGroupLabel>Main</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton>Catalog</SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    </SidebarContent>
+    <SidebarFooter>...</SidebarFooter>
+  </Sidebar>
+</SidebarProvider>
+```
+
+## Rules
+
+1. Import from `@djangocfg/ui-nextjs` in Next.js apps — never from `@djangocfg/ui-core` directly
+2. Use `@djangocfg/ui-tools` for heavy components (maps, code, mermaid) — they are lazy-loaded
+3. Use `@djangocfg/layouts` for app-level layouts (AppLayout, AdminLayout, AuthDialog)
+4. Use `useDRFPagination` to convert DRF `count` responses into page state — do not compute pages manually
+5. Wrap sidebar navigation with `SidebarProvider` — use `useSidebar()` for programmatic open/close

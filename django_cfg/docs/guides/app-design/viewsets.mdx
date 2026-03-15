@@ -1,0 +1,297 @@
+---
+title: ViewSets & Actions
+sidebar_position: 5
+keywords:
+  - django viewsets
+  - drf viewsets
+  - django-cfg viewsets
+  - drf action decorator
+description: ViewSet patterns for Django-CFG apps. GenericViewSet + @action, selective mixins, dynamic permissions, query optimization, and drf-spectacular integration.
+---
+
+# ViewSets & Actions
+
+ViewSets handle HTTP requests — they validate input, call services, and return serialized responses. No business logic belongs here.
+
+## Default Pattern: GenericViewSet + @action
+
+The standard django-cfg pattern uses `GenericViewSet` with explicit `@action` methods:
+
+```python
+from drf_spectacular.utils import extend_schema
+from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+
+@extend_schema(tags=["Dashboard"])
+class DashboardViewSet(viewsets.GenericViewSet):
+    serializer_class = DashboardSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(summary="Get overview", responses={200: DashboardSerializer})
+    @action(detail=False, methods=["get"])
+    def overview(self, request):
+        data = DashboardService.get_overview(request.user)
+        return Response(data)
+```
+
+## Choosing the Right Base
+
+| Base class | When to use | Example |
+|-----------|------------|---------|
+| `GenericViewSet` | Custom actions only, no standard CRUD | Dashboard, stats endpoints |
+| `ModelViewSet` | Full CRUD (list, create, retrieve, update, delete) | Agents, machines |
+| `ReadOnlyModelViewSet` | Read-only (list + retrieve) | Symbols catalog |
+| Selective mixins | Partial CRUD (e.g. list + create, no update/delete) | Market snapshots, trade decisions |
+| `ViewSet` | No model at all, pure logic | Site statistics |
+
+### Selective mixins example
+
+```python
+from rest_framework import mixins, viewsets
+
+class MarketSnapshotViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,  # No retrieve, update, delete
+):
+    queryset = MarketSnapshot.objects.all()
+    serializer_class = MarketSnapshotSerializer
+```
+
+From **market** (stockapis-trader) — snapshots are append-only, never updated or deleted.
+
+### Restricting HTTP methods
+
+```python
+class APIKeyViewSet(viewsets.ModelViewSet):
+    http_method_names = ["get", "post", "delete"]  # No PUT/PATCH
+```
+
+From **api_keys** (stockapis) — keys can be created and revoked but never edited.
+
+## Serializer Switching
+
+Every ViewSet with multiple actions should implement `get_serializer_class()`:
+
+```python
+class AgentViewSet(viewsets.ModelViewSet):
+    serializer_class = AgentDetailSerializer  # Default fallback
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return AgentListSerializer
+        if self.action == "create":
+            return AgentCreateSerializer
+        if self.action == "status":
+            return AgentStatusSerializer
+        return AgentDetailSerializer
+```
+
+From **agents** (stockapis-trader) — 4 different serializers for 4 different actions.
+
+## Query Optimization
+
+Always filter by user scope and add `select_related` / `prefetch_related`:
+
+```python
+def get_queryset(self):
+    user = self.request.user
+    qs = Machine.objects.filter(
+        workspace__members=user
+    ).select_related(
+        "workspace"
+    ).prefetch_related(
+        "sessions"
+    ).distinct()
+
+    # Additional filters from query params
+    workspace = self.request.query_params.get("workspace")
+    if workspace:
+        qs = qs.filter(workspace_id=workspace)
+
+    status = self.request.query_params.get("status")
+    if status:
+        qs = qs.filter(status=status)
+
+    return qs
+```
+
+From **machines** (cmdop) — filters by workspace membership, then applies optional query param filters.
+
+<Callout type="warning">
+Always use `.distinct()` when filtering through M2M relationships to avoid duplicate results.
+</Callout>
+
+## Custom @action Patterns
+
+### Detail action (operates on one object)
+
+```python
+@extend_schema(
+    summary="Close a trade decision",
+    request=DecisionCloseSerializer,
+    responses={200: TradeDecisionDetailSerializer},
+)
+@action(detail=True, methods=["post"])
+def close(self, request, pk=None):
+    decision = self.get_object()
+    serializer = DecisionCloseSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    decision.exit_price = serializer.validated_data["exit_price"]
+    decision.pnl = serializer.validated_data["pnl"]
+    decision.save(update_fields=["exit_price", "pnl"])
+    return Response(TradeDecisionDetailSerializer(decision).data)
+```
+
+From **trading** (stockapis-trader).
+
+### List action with aggregation
+
+```python
+@extend_schema(
+    summary="Get decision statistics",
+    responses={200: DecisionStatsSerializer},
+    parameters=[OpenApiParameter("agent", str, description="Agent ID")],
+)
+@action(detail=False, methods=["get"])
+def stats(self, request):
+    agent_id = request.query_params.get("agent")
+    if not agent_id:
+        return Response({"error": "agent parameter required"}, status=400)
+    result = StatsService.get_decision_stats(agent_id)
+    return Response(DecisionStatsSerializer(result).data)
+```
+
+### Action that triggers a background task
+
+```python
+@extend_schema(
+    summary="Sync symbols from exchanges",
+    request=SyncRequestSerializer,
+    responses={200: SyncResponseSerializer},
+)
+@action(detail=False, methods=["post"])
+def sync(self, request):
+    serializer = SyncRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    job = enqueue(
+        sync_all_symbols_task,
+        serializer.validated_data.get("exchange"),
+        job_timeout="10m",
+    )
+    return Response({"status": "queued", "job_id": job.id})
+```
+
+From **symbols** (stockapis) — enqueues an RQ job and returns the job ID.
+
+### Action with path parameters
+
+```python
+@extend_schema(summary="Get symbols by exchange and market type")
+@action(
+    detail=False,
+    methods=["get"],
+    url_path="(?P<exchange>[^/]+)/(?P<market_type>[^/]+)/symbols",
+    pagination_class=None,
+)
+def by_exchange_market(self, request, exchange, market_type):
+    symbols = Symbol.objects.filter(
+        exchange=exchange, market_type=market_type, status="active"
+    )
+    serializer = SymbolListSerializer(symbols, many=True)
+    return Response({
+        "exchange": exchange,
+        "market_type": market_type,
+        "count": symbols.count(),
+        "symbols": serializer.data,
+    })
+```
+
+From **symbols** (stockapis) — generates URL `/symbols/binance/linear/symbols`.
+
+## Dynamic Permissions
+
+When list/retrieve should be public but create/update requires auth:
+
+```python
+class SkillViewSet(viewsets.ModelViewSet):
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+```
+
+From **skills** (cmdop) — marketplace browsing is public, publishing requires login.
+
+## Filter Backends
+
+Standard setup for searchable, filterable, sortable endpoints:
+
+```python
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+
+class SymbolViewSet(viewsets.ReadOnlyModelViewSet):
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ["exchange", "market_type", "status", "contract_type"]
+    search_fields = ["symbol", "base_asset", "quote_asset"]
+    ordering_fields = ["symbol", "created_at", "volume"]
+    ordering = ["-created_at"]  # Default ordering
+```
+
+## drf-spectacular Decorators
+
+### Class-level for standard CRUD
+
+```python
+from drf_spectacular.utils import extend_schema, extend_schema_view
+
+@extend_schema(tags=["Agents"])
+@extend_schema_view(
+    list=extend_schema(summary="List agents"),
+    retrieve=extend_schema(summary="Get agent details"),
+    create=extend_schema(summary="Create agent"),
+)
+class AgentViewSet(viewsets.ModelViewSet):
+    ...
+```
+
+### Method-level for custom actions
+
+```python
+@extend_schema(
+    summary="List available commands",
+    responses={200: CommandSerializer(many=True)},
+    tags=["Commands"],
+)
+@action(detail=False, methods=["get"], pagination_class=None)
+def available(self, request):
+    ...
+```
+
+<Callout type="warning">
+`@extend_schema` must come **before** `@action` — wrong order causes incorrect tags and operationIds.
+</Callout>
+
+## Stateless ViewSet (No Model)
+
+For endpoints backed only by a service:
+
+```python
+class SkillsStatsViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        summary="Public skills statistics",
+        responses={200: SkillsStatsSerializer},
+        tags=["Site"],
+    )
+    @action(detail=False, methods=["get"])
+    def skills_stats(self, request):
+        data = StatsService.get_skills_stats()
+        return Response(data)
+```
+
+From **site** (cmdop) — no model, no queryset, just a service call.

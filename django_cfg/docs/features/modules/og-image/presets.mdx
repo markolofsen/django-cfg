@@ -1,0 +1,148 @@
+---
+title: OG Image Presets
+description: Built-in color schemes for OG image generation. Frozen pydantic models with validated hex colors.
+sidebar_label: Presets
+sidebar_position: 2
+keywords:
+  - django-cfg og image presets
+  - ogimage color scheme
+  - build_preset
+---
+
+# OG Image Presets
+
+Presets are frozen pydantic v2 models (`OGImagePreset`) that bundle a complete set of visual parameters — background, gradient, text, and accent colors.
+
+## Built-in presets
+
+### Dark
+
+| Name | Preview | bg_color | bg_color2 | accent_color |
+|---|---|---|---|---|
+| `dark` | deep navy | `#1a1a2e` | `#16213e` | `#3b82f6` |
+| `dark_blue` | midnight blue | `#0f172a` | `#1e3a5f` | `#38bdf8` |
+| `dark_purple` | purple | `#1e1b4b` | `#312e81` | `#a78bfa` |
+| `dark_green` | forest | `#052e16` | `#14532d` | `#4ade80` |
+| `dark_rose` | rose | `#1c0a15` | `#4c0519` | `#fb7185` |
+
+### Light
+
+| Name | Preview | bg_color | bg_color2 | accent_color |
+|---|---|---|---|---|
+| `light` | white | `#ffffff` | `#f9fafb` | `#3b82f6` |
+| `light_gray` | light gray | `#f9fafb` | `#f3f4f6` | `#6366f1` |
+| `light_warm` | warm white | `#fffbeb` | `#fef3c7` | `#f59e0b` |
+| `light_green` | soft green | `#f0fdf4` | `#dcfce7` | `#16a34a` |
+
+## Usage
+
+### By object (import directly)
+
+```python
+from django_cfg.modules.django_ogimage import DARK_BLUE, get_or_create_og_url
+
+url = get_or_create_og_url(DARK_BLUE.to_params(title="Hello", description="World"))
+```
+
+### By name (string)
+
+```python
+from django_cfg.modules.django_ogimage import get_preset, get_or_create_og_url
+
+preset = get_preset("dark_blue")   # raises ValueError if name is unknown
+url = get_or_create_og_url(preset.to_params(title="Hello"))
+```
+
+### Registry — all presets as dict
+
+```python
+from django_cfg.modules.django_ogimage import ALL
+
+# {"dark": DARK, "dark_blue": DARK_BLUE, ...}
+for name, preset in ALL.items():
+    print(name, preset.bg_color)
+```
+
+## OGImagePreset methods
+
+### `.to_params(title, description="", locale="en")`
+
+Creates an `OGImageParams` instance from the preset + content fields.
+
+```python
+params = DARK_BLUE.to_params(title="My Page", description="Subtitle", locale="ko")
+url = get_or_create_og_url(params, request=request)
+```
+
+### `.as_dict()`
+
+Returns visual fields only (excludes `name`) — safe to spread into `OGImageParams`:
+
+```python
+from django_cfg.modules.django_ogimage import OGImageParams, DARK_BLUE
+
+params = OGImageParams(title="Hello", **DARK_BLUE.as_dict())
+```
+
+## Custom presets
+
+Use `build_preset()` to create a one-off preset programmatically:
+
+```python
+from django_cfg.modules.django_ogimage import build_preset, get_or_create_og_url
+
+MY_BRAND = build_preset(
+    name="brand",
+    primary_color="#0f0c29",
+    secondary_color="#302b63",
+    accent_color="#e91e63",
+    style="dark",         # auto sets text_color="#ffffff"
+    # style="light"       # auto sets text_color="#111827"
+    # text_color="#cccccc"  # explicit override
+    # size="1200x1200"    # optional, default "1200x630"
+)
+
+url = get_or_create_og_url(MY_BRAND.to_params(title="My Brand Page"))
+```
+
+`build_preset()` signature:
+
+```python
+def build_preset(
+    name: str,
+    primary_color: str,       # bg_color
+    secondary_color: str,     # bg_color2
+    accent_color: str,
+    style: Literal["dark", "light"] = "dark",
+    text_color: str | None = None,   # auto from style if None
+    size: Literal["1200x630", "1200x600", "800x418", "1200x1200"] = "1200x630",
+) -> OGImagePreset: ...
+```
+
+## Validation
+
+All hex colors are validated at construction time. Invalid values raise a `ValidationError`:
+
+```python
+from django_cfg.modules.django_ogimage.presets import OGImagePreset
+
+# OK — 3-char and 6-char hex both accepted, lowercased automatically
+p = OGImagePreset(name="t", bg_color="#FFF", bg_color2="#000000", ...)
+
+# Raises ValidationError
+p = OGImagePreset(name="t", bg_color="red", ...)       # no #
+p = OGImagePreset(name="t", bg_color="#12345", ...)    # wrong length
+```
+
+Presets are **frozen** — mutation raises an error:
+
+```python
+DARK_BLUE.name = "hacked"  # raises ValidationError (pydantic frozen model)
+```
+
+## Related
+
+- [Overview](./overview) — quick start
+- [Layouts](./layouts) — layout presets (DEFAULT, HERO, ARTICLE, MINIMAL)
+- [Branding & Icons](./branding) — logo, icons, `get_branded_og_url`
+- [Configuration](./configuration) — environment variables

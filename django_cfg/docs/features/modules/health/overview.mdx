@@ -1,0 +1,271 @@
+---
+title: Health Check Module
+description: Django-CFG health check endpoints for monitoring database, cache, system resources, and configuration status.
+sidebar_label: Overview
+sidebar_position: 1
+keywords:
+  - django-cfg health
+  - django health check
+  - health monitoring
+---
+
+# Health Check Module
+
+Django-CFG includes a **health check system** that provides monitoring of your application's critical components including databases, cache, system resources, and configuration status.
+
+## Features
+
+- **Database Connectivity** - Multi-database connection monitoring with response times
+- **Cache Availability** - Redis and cache backend testing
+- **System Resources** - CPU, memory, disk usage monitoring (requires `psutil`)
+- **Configuration Validation** - Django-CFG configuration status
+
+## Quick Start
+
+### Add Health Check URLs
+
+```python
+# urls.py
+from django.urls import path
+from django_cfg.modules.django_health.service import HealthCheckView, SimpleHealthView
+
+urlpatterns = [
+    path('health/', HealthCheckView.as_view(), name='health_check'),
+    path('health/simple/', SimpleHealthView.as_view(), name='simple_health'),
+]
+
+# Or use the built-in URL patterns
+from django_cfg.modules.django_health.service import get_health_urls
+
+urlpatterns += get_health_urls()
+```
+
+### Response Format
+
+**GET /health/** - Comprehensive health check:
+
+```json
+{
+    "status": "healthy",
+    "timestamp": "2025-01-15T10:30:00.123456",
+    "checks": {
+        "database": {
+            "status": "healthy",
+            "databases": {
+                "default": {
+                    "status": "healthy",
+                    "response_time_ms": 2.34,
+                    "engine": "django.db.backends.postgresql"
+                }
+            }
+        },
+        "cache": {
+            "status": "healthy",
+            "response_time_ms": 0.45,
+            "backend": "django_redis.cache.RedisCache"
+        },
+        "system": {
+            "status": "healthy",
+            "cpu": {
+                "usage_percent": 45.2,
+                "status": "healthy"
+            },
+            "memory": {
+                "usage_percent": 62.8,
+                "total_gb": 16.0,
+                "available_gb": 5.95,
+                "status": "healthy"
+            },
+            "disk": {
+                "usage_percent": 78.1,
+                "total_gb": 500.0,
+                "free_gb": 109.5,
+                "status": "healthy"
+            },
+            "load_average": {
+                "1min": 1.23,
+                "5min": 1.45,
+                "15min": 1.67
+            }
+        },
+        "configuration": {
+            "status": "healthy",
+            "django_cfg": {
+                "version": "1.3.13",
+                "debug": false,
+                "environment": "production",
+                "project_name": "My Project"
+            }
+        }
+    }
+}
+```
+
+**GET /health/simple/** - Simple OK response:
+
+```json
+{
+    "status": "ok",
+    "timestamp": "2025-01-15T10:30:00.123456"
+}
+```
+
+## Status Values
+
+The health check returns one of three statuses:
+
+| Status | Description |
+|--------|-------------|
+| `healthy` | All checks passed |
+| `degraded` | Some checks have warnings (e.g., high CPU) |
+| `unhealthy` | At least one check failed |
+
+## Component Thresholds
+
+System resource thresholds that trigger warnings:
+
+| Resource | Warning Threshold |
+|----------|------------------|
+| CPU | > 80% |
+| Memory | > 80% |
+| Disk | > 80% |
+
+## Views Reference
+
+### HealthCheckView
+
+Comprehensive health check that validates:
+
+- **Database** - Tests connection to all configured databases with `SELECT 1`
+- **Cache** - Tests cache read/write operations
+- **System** - CPU, memory, disk usage (requires `psutil`)
+- **Configuration** - Django-CFG settings validation
+
+```python
+from django_cfg.modules.django_health.service import HealthCheckView
+
+# Add to URLconf
+path('health/', HealthCheckView.as_view(), name='health_check'),
+```
+
+### SimpleHealthView
+
+Lightweight health check that just returns OK. Useful for load balancer probes.
+
+```python
+from django_cfg.modules.django_health.service import SimpleHealthView
+
+path('health/simple/', SimpleHealthView.as_view(), name='simple_health'),
+```
+
+### get_health_urls()
+
+Convenience function to get all health check URL patterns:
+
+```python
+from django_cfg.modules.django_health.service import get_health_urls
+
+# Returns URL patterns for:
+# - /health/ -> HealthCheckView
+# - /health/simple/ -> SimpleHealthView
+urlpatterns += get_health_urls()
+```
+
+## Extending Health Checks
+
+Create a custom view by subclassing `HealthCheckView`:
+
+```python
+from django_cfg.modules.django_health.service import HealthCheckView
+from django.http import JsonResponse
+
+class CustomHealthView(HealthCheckView):
+    """Custom health check with additional checks"""
+
+    def get(self, request):
+        # Get base health data
+        response = super().get(request)
+        health_data = response.json() if hasattr(response, 'json') else {}
+
+        # Add custom checks
+        health_data["checks"]["custom_service"] = self._check_custom_service()
+
+        return JsonResponse(health_data)
+
+    def _check_custom_service(self):
+        """Check external service"""
+        try:
+            import requests
+            response = requests.get('https://api.example.com/health', timeout=5)
+            return {
+                "status": "healthy" if response.ok else "error",
+                "response_time_ms": response.elapsed.total_seconds() * 1000
+            }
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+```
+
+## Docker/Kubernetes Integration
+
+Use the simple health endpoint for container probes:
+
+```yaml
+# docker-compose.yml
+services:
+  web:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/simple/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+```
+
+```yaml
+# kubernetes deployment
+livenessProbe:
+  httpGet:
+    path: /health/simple/
+    port: 8000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health/
+    port: 8000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+```
+
+## Testing
+
+```python
+from django.test import TestCase, Client
+
+class HealthCheckTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_health_check_returns_200(self):
+        """Test health check endpoint returns 200"""
+        response = self.client.get('/health/')
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn('status', data)
+        self.assertIn('checks', data)
+        self.assertIn('database', data['checks'])
+
+    def test_simple_health_check(self):
+        """Test simple health endpoint"""
+        response = self.client.get('/health/simple/')
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data['status'], 'ok')
+```
+
+## Related Documentation
+
+- [**Configuration Guide**](/docs/fundamentals/configuration) - DjangoConfig setup
+- [**Deployment Guide**](/docs/guides/docker/overview) - Docker health checks

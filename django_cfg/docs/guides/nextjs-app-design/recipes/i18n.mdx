@@ -1,0 +1,344 @@
+---
+title: Internationalization
+sidebar_position: 3
+keywords:
+  - i18n
+  - next-intl
+  - localization
+  - translations
+  - llm translation
+description: Dual provider i18n architecture — 17 built-in locales, namespace isolation, typed hooks, 6 consumption patterns, and LLM-powered translation CLI.
+---
+
+# Internationalization
+
+Two layers work together: `@djangocfg/i18n` provides core translations and tooling, `@djangocfg/nextjs/i18n` bridges next-intl with the django-cfg provider.
+
+## Architecture Overview
+
+```
+@djangocfg/i18n              — Core: React context, hooks, 17 locales, LLM-powered CLI
+@djangocfg/nextjs/i18n       — Bridge: wraps next-intl + @djangocfg/i18n into dual provider
+App i18n/                    — App-specific: translations under dedicated namespace
+```
+
+The dual `I18nProvider` wraps both `NextIntlClientProvider` (from next-intl) and `DjangoCfgI18nProvider` (from `@djangocfg/i18n`).
+
+## 17 Built-in Locales
+
+`@djangocfg/i18n` ships with translations for all UI, layout, API, and tools namespaces:
+
+| Locale | Language | Native base translations? |
+|--------|----------|--------------------------|
+| `en` | English | Yes (source locale) |
+| `ru` | Russian | Yes |
+| `ko` | Korean | Yes |
+| `ja` | Japanese | Fallback to en |
+| `de` | German | Fallback to en |
+| `fr` | French | Fallback to en |
+| `zh` | Chinese | Fallback to en |
+| `it` | Italian | Fallback to en |
+| `es` | Spanish | Fallback to en |
+| `nl` | Dutch | Fallback to en |
+| `ar` | Arabic | Fallback to en |
+| `tr` | Turkish | Fallback to en |
+| `pt-BR` | Portuguese (Brazil) | Fallback to en |
+| `pl` | Polish | Fallback to en |
+| `sv` | Swedish | Fallback to en |
+| `no` | Norwegian | Fallback to en |
+| `da` | Danish | Fallback to en |
+
+Base namespaces: `ui.*`, `layouts.*`, `api.*`, `centrifugo.*`, `tools.*`.
+
+## Namespace Isolation
+
+Each app registers a dedicated namespace for its own translations:
+
+| App | Namespace | Translation file |
+|-----|-----------|-----------------|
+| carapis/my | `app` | `i18n/locales/en.ts` |
+| gptkino/studio | `studio` | `i18n/locales/en.ts` |
+| cmdop/my | `app` | `i18n/locales/en.ts` |
+
+Base and app translations never overlap — they are merged under separate keys.
+
+## Setup: i18n/request.ts
+
+The single merge point for all translations per locale:
+
+```typescript
+// i18n/request.ts
+import { en as baseEn, ru as baseRu, ko as baseKo } from '@djangocfg/i18n/locales';
+import { mergeTranslations } from '@djangocfg/i18n/utils';
+import { en as appEn, ru as appRu, ko as appKo, ja as appJa } from './locales';
+
+type AppMessages = { app: AppTranslations };
+
+const locales = {
+  en: mergeTranslations<AppMessages>(baseEn, { app: appEn }),
+  ru: mergeTranslations<AppMessages>(baseRu, { app: appRu }),
+  ko: mergeTranslations<AppMessages>(baseKo, { app: appKo }),
+  // For locales without native base translations — fallback to baseEn
+  ja: mergeTranslations<AppMessages>(baseEn, { app: appJa }),
+  de: mergeTranslations<AppMessages>(baseEn, { app: appDe }),
+  // ... all 17 locales
+};
+
+export default getRequestConfig(async ({ requestLocale }) => {
+  let locale = await requestLocale;
+  if (!locale || !(locale in locales)) locale = 'en';
+  return { locale, messages: locales[locale], timeZone: 'UTC' };
+});
+```
+
+## Setup: Root Layout
+
+```typescript
+// app/[locale]/layout.tsx
+import { I18nProvider } from '@djangocfg/nextjs/i18n/client';
+import { routing, generateLocaleParams } from '@djangocfg/nextjs/i18n/routing';
+import { getMessages } from 'next-intl/server';
+
+export function generateStaticParams() {
+  return generateLocaleParams();
+}
+
+export default async function LocaleLayout({ children, params }) {
+  const { locale } = await params;
+  if (!routing.locales.includes(locale)) notFound();
+  const messages = await getMessages();
+
+  return (
+    <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'} suppressHydrationWarning>
+      <body>
+        <I18nProvider locale={locale} messages={messages}>
+          <AppLayout>{children}</AppLayout>
+        </I18nProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+Set `dir="rtl"` for Arabic locale.
+
+## Setup: Middleware
+
+```typescript
+// middleware.ts
+export { proxy as default, config } from '@djangocfg/nextjs/i18n/proxy';
+```
+
+Handles locale prefix routing (`/en/catalog`, `/ru/catalog`). Default `localePrefix: 'as-needed'` omits the default locale from the URL.
+
+## Setup: next.config.ts
+
+```typescript
+import createNextIntlPlugin from 'next-intl/plugin';
+const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+export default withNextIntl(config);
+```
+
+## App Translation Types
+
+Define typed translations in `i18n/locales/en.ts`:
+
+```typescript
+export interface AppTranslations {
+  nav: {
+    home: string;
+    catalog: string;
+    pricing: string;
+    contact: string;
+    signIn: string;
+    signOut: string;
+  };
+  catalog: {
+    title: string;
+    subtitle: string;
+    showing: string;  // '{count} of {total}'
+    noResults: string;
+  };
+  common: {
+    loading: string;
+    error: string;
+    retry: string;
+    save: string;
+    cancel: string;
+    selected: string;  // '{count} selected'
+  };
+}
+
+export const en: AppTranslations = {
+  nav: { home: 'Home', catalog: 'Catalog', ... },
+  catalog: { title: 'Vehicle Catalog', showing: '{count} of {total}', ... },
+  common: { loading: 'Loading...', selected: '{count} selected', ... },
+};
+```
+
+Interpolation uses `{placeholder}` syntax.
+
+## Consuming Translations
+
+### Pattern 1: useAppT() — most common
+
+```typescript
+import { useAppT } from '@i18n';
+
+function OnboardingBanner() {
+  const t = useAppT();
+  return <h1>{t('onboarding.banner.title')}</h1>;
+}
+```
+
+### Pattern 2: useAppTranslations() — base + app
+
+```typescript
+import { useAppTranslations } from '@i18n';
+
+function FormPage() {
+  const { t, app } = useAppTranslations();
+  return (
+    <div>
+      <h1>{app('catalog.title')}</h1>
+      <Button>{t('ui.form.save')}</Button>  {/* from base */}
+    </div>
+  );
+}
+```
+
+### Pattern 3: Enum → translation key map
+
+```typescript
+const roleKeys: Record<UserRole, string> = {
+  [UserRole.DEALER]: 'onboarding.roles.dealer',
+  [UserRole.RESELLER]: 'onboarding.roles.reseller',
+  [UserRole.PERSONAL]: 'onboarding.roles.personal',
+};
+
+const options = useMemo(() =>
+  Object.values(UserRole).map(role => ({
+    label: t(roleKeys[role]),
+    value: role,
+  })),
+[t]);
+```
+
+### Pattern 4: Route labels in layouts
+
+```typescript
+import { useRouteLabel } from '@i18n';
+
+function Sidebar({ routes }) {
+  const tRoute = useRouteLabel();
+  return routes.map(route => (
+    <SidebarItem key={route.path} label={tRoute(route.metadata.label)} />
+  ));
+}
+```
+
+### Pattern 5: Locale switching
+
+```typescript
+import { useLocaleSwitcher } from '@djangocfg/nextjs/i18n/client';
+
+function LanguagePicker() {
+  const { locale, locales, changeLocale } = useLocaleSwitcher();
+  return (
+    <Select value={locale} onValueChange={changeLocale}>
+      {locales.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+    </Select>
+  );
+}
+```
+
+`changeLocale` sets the `NEXT_LOCALE` cookie and performs a hard navigation.
+
+### Pattern 6: Server Components
+
+```typescript
+// page.tsx (Server Component)
+import { getTranslations } from 'next-intl/server';
+
+export async function generateMetadata() {
+  const t = await getTranslations('app.catalog');
+  return { title: t('meta.title'), description: t('meta.description') };
+}
+```
+
+## LLM-Powered Translation CLI
+
+All apps have identical scripts in `package.json`:
+
+```json
+{
+  "i18n:check":     "i18n check -d ./i18n/locales",
+  "i18n:sync":      "i18n sync -d ./i18n/locales",
+  "i18n:translate": "i18n translate -d ./i18n/locales",
+  "i18n:list":      "i18n list -d ./i18n/locales"
+}
+```
+
+### Commands
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `check` | Report missing keys across locales | `pnpm i18n:check` |
+| `sync` | Add `[TODO]` placeholders for missing keys | `pnpm i18n:sync` |
+| `sync --translate` | Auto-translate missing keys via LLM | `pnpm i18n:sync --translate` |
+| `translate` | Translate text or full locale file | `pnpm i18n:translate ru` |
+| `list` | List all translation keys | `pnpm i18n:list -v` |
+| `add` | Add a new key to all locales | `pnpm i18n:add "tools.tour.next" '{"en":"Next","ru":"..."}'` |
+
+### LLM Provider Priority
+
+```
+1. SDKROUTER_API_KEY (preferred — cost-optimized proxy)
+2. OPENAI_API_KEY
+3. ANTHROPIC_API_KEY
+4. Built-in test key (development only)
+```
+
+### Batch Translation Workflow
+
+```bash
+# 1. Check what's missing
+pnpm i18n:check
+
+# 2. Auto-translate all missing keys for specific locales
+pnpm i18n:sync --translate --to ru,ko
+
+# 3. Or translate a single locale file entirely
+pnpm i18n:translate ru
+
+# 4. Verify
+pnpm i18n:check
+```
+
+## Extension Translations
+
+Extensions register their own namespace via `createRequestConfig`:
+
+```typescript
+// i18n/request.ts — with extension translations
+import { createRequestConfig } from '@djangocfg/nextjs/i18n/request';
+
+export default createRequestConfig({
+  locales: { en: localeEn, ru: localeRu },
+  extensions: [
+    { namespace: 'payments', locales: paymentsLocales },
+    { namespace: 'support', locales: supportLocales },
+  ],
+});
+```
+
+Extension translations are merged under their namespace key, isolated from base and app translations.
+
+## Rules
+
+1. Import translation hooks from `@i18n`, never from `next-intl` directly
+2. App translations live under a single namespace (`app` or `studio`) — never add keys to base namespaces
+3. Use `{placeholder}` syntax for interpolation — `'{count} of {total}'`, `'© {year} AppName'`
+4. Locales without native base translations fall back to `baseEn` in `i18n/request.ts`
+5. Run `pnpm i18n:check` before committing to catch missing translation keys
+6. Set `dir="rtl"` on `<html>` for the Arabic locale

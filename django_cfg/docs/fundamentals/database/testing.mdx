@@ -1,0 +1,671 @@
+---
+title: Test Database Management
+description: Zero-configuration test database management with automatic setup, cleanup, and migration fixes.
+sidebar_label: Testing
+sidebar_position: 6
+keywords:
+  - django test database
+  - test runner
+  - smart test runner
+  - postgresql test database
+  - migration testing
+  - pytest django
+---
+
+# Test Database Management
+
+Django-CFG provides **zero-configuration test database management** that automatically handles database creation, cleanup, and migration issues.
+
+## Overview
+
+Testing Django applications with multiple databases or PostgreSQL extensions can be challenging. Django-CFG solves these problems automatically:
+
+- ✅ **Automatic test database cleanup** - No more EOFError prompts in CI/CD
+- ✅ **PostgreSQL extension installation** - Auto-installs pgvector, pg_trgm, unaccent
+- ✅ **Migration consistency fixes** - Automatically handles migration order issues
+- ✅ **CustomUser out of the box** - AUTH_USER_MODEL pre-configured
+- ✅ **Zero configuration** - Works out of the box, no setup required
+- ✅ **Fast testing** - SQLite in-memory option for unit tests
+- ✅ **pytest support** - Works seamlessly with pytest-django
+
+## Django Test vs Pytest
+
+Django-CFG supports both testing approaches:
+
+| Feature | `python manage.py test` | `pytest` |
+|---------|------------------------|----------|
+| Test Runner | SmartTestRunner | pytest-django |
+| DB Setup | Automatic via SmartTestRunner | Automatic via pytest-django |
+| Extensions | Auto-installed | Auto-installed (first run) |
+| Speed | Fast with `--keepdb` | Fast with `--reuse-db` |
+| Recommended | Integration tests | Unit tests, TDD |
+
+**Important:** SmartTestRunner is used by Django's test command. pytest-django manages its own test database independently.
+
+## SmartTestRunner
+
+The default test runner that automatically handles all test database complexities.
+
+### Automatic Configuration
+
+Django-CFG automatically configures SmartTestRunner in your settings:
+
+```python
+# Auto-generated in settings.py
+TEST_RUNNER = 'django_cfg.testing.runners.SmartTestRunner'
+```
+
+No manual configuration needed - it just works!
+
+### Features
+
+**1. Automatic Database Cleanup**
+
+Removes old test databases without prompting (fixes CI/CD EOFError):
+
+```bash
+# Old behavior (fails in CI):
+python manage.py test
+# Type 'yes' to destroy the 'test_mydb' database? [y/N]
+# ^ Hangs in CI/CD pipelines
+
+# SmartTestRunner behavior:
+python manage.py test
+# Automatically removes old test database
+# Tests run immediately
+```
+
+**2. PostgreSQL Extension Installation**
+
+Automatically installs required extensions in test databases:
+
+```python
+# In your models.py
+from pgvector.django import VectorField
+
+class Document(models.Model):
+    embedding = VectorField(dimensions=1536)  # Requires pgvector extension
+```
+
+```bash
+# SmartTestRunner automatically:
+# 1. Detects pgvector usage
+# 2. Creates test database
+# 3. Installs: vector, pg_trgm, unaccent extensions
+# 4. Runs migrations
+# 5. Executes tests
+```
+
+**3. Migration Consistency Fixes**
+
+Django-CFG automatically configures CustomUser from the box:
+
+```python
+# Django-CFG automatically sets (no configuration needed):
+AUTH_USER_MODEL = "django_cfg_accounts.CustomUser"
+
+# SmartTestRunner handles any migration order issues:
+# 1. Detects inconsistent migration history
+# 2. Removes problematic migration records
+# 3. Reapplies migrations in correct order
+# 4. Tests run successfully
+```
+
+**Zero configuration required** - CustomUser is a core django-cfg feature!
+
+### Usage
+
+Simply run your tests normally:
+
+```bash
+# Standard Django test command
+python manage.py test
+
+# With specific app
+python manage.py test apps.trading
+
+# With verbosity
+python manage.py test --verbosity=2
+
+# Keep test database
+python manage.py test --keepdb
+```
+
+SmartTestRunner works transparently with all standard Django test options.
+
+### Console Output
+
+SmartTestRunner provides clear feedback during test setup:
+
+```bash
+$ python manage.py test
+
+Creating test database for alias 'default'...
+Removed old test database: test_crypto_platform
+Installed PostgreSQL extensions for test database 'default'
+Running migrations...
+Operations to perform:
+  Apply all migrations: admin, auth, contenttypes, sessions, accounts, trading, wallet
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying accounts.0001_initial... OK
+  Applying admin.0001_initial... OK
+  ...
+System check identified no issues (0 silenced).
+..................................................
+----------------------------------------------------------------------
+Ran 50 tests in 2.34s
+
+OK
+Destroying test database for alias 'default'...
+```
+
+## Pytest Integration
+
+pytest-django works out of the box with django-cfg projects.
+
+### Setup
+
+Install pytest-django (already included in django-cfg dependencies):
+
+```bash
+pip install pytest-django
+```
+
+Create `pytest.ini` in your project root:
+
+```ini
+[pytest]
+DJANGO_SETTINGS_MODULE = api.settings
+python_files = tests.py test_*.py *_tests.py
+python_classes = Test*
+python_functions = test_*
+
+# Default options
+addopts = -v --tb=short
+
+# Markers
+markers =
+    e2e: marks tests as e2e (deselect with '-m "not e2e"')
+    slow: marks tests as slow (deselect with '-m "not slow"')
+```
+
+### Writing Tests
+
+Use standard pytest-django fixtures:
+
+```python
+# tests/test_models.py
+import pytest
+from myapp.models import Order
+
+# Mark all tests in this file as needing database
+pytestmark = pytest.mark.django_db
+
+
+class TestOrder:
+    def test_create_order(self, db):
+        """Test creating an order."""
+        order = Order.objects.create(
+            amount=100.00,
+            status="pending"
+        )
+        assert order.id is not None
+        assert order.status == "pending"
+
+    def test_order_total(self):
+        """Test order total calculation."""
+        order = Order(amount=100.00, tax=10.00)
+        assert order.total == 110.00
+```
+
+### Common Fixtures
+
+Create reusable fixtures in `conftest.py`:
+
+```python
+# conftest.py
+import pytest
+
+
+@pytest.fixture
+def user_profile(db):
+    """
+    Create a test user with profile.
+
+    Note: If your app has a post_save signal that creates profiles,
+    just return user.profile instead of creating it manually.
+    """
+    from django.contrib.auth import get_user_model
+    import uuid
+
+    User = get_user_model()
+    unique_id = uuid.uuid4().hex[:8]
+    user = User.objects.create_user(
+        username=f"testuser_{unique_id}",
+        email=f"test_{unique_id}@example.com",
+        password="testpass123",
+    )
+    # If profile is auto-created via signal:
+    return user.profile
+
+    # If profile needs manual creation:
+    # from myapp.models import UserProfile
+    # return UserProfile.objects.create(user=user)
+
+
+@pytest.fixture
+def api_client():
+    """Create a DRF APIClient for testing API endpoints."""
+    from rest_framework.test import APIClient
+    return APIClient()
+
+
+@pytest.fixture
+def authenticated_client(api_client, user_profile):
+    """Create an authenticated API client."""
+    api_client.force_authenticate(user=user_profile.user)
+    return api_client
+```
+
+### Mocking External Services
+
+When testing tasks that use external services (like RQ queues), mock them:
+
+```python
+# tests/test_tasks.py
+import pytest
+from unittest.mock import patch, MagicMock
+
+pytestmark = pytest.mark.django_db(transaction=True)
+
+
+@pytest.fixture
+def mock_rq_queue():
+    """Mock django_rq.get_queue to return a mock queue."""
+    mock_queue = MagicMock()
+    mock_job = MagicMock()
+    mock_job.id = "test-job-id"
+    mock_queue.enqueue.return_value = mock_job
+
+    with patch("django_rq.get_queue", return_value=mock_queue):
+        yield mock_queue
+
+
+class TestDownloadTask:
+    def test_process_request(self, user_profile, mock_rq_queue):
+        """Test that task enqueues jobs correctly."""
+        from myapp.models import DownloadRequest
+        from myapp.tasks import process_download_request
+
+        request = DownloadRequest.objects.create(
+            user=user_profile.user,
+            url="https://example.com/data.csv"
+        )
+
+        # Reset mock after signal-triggered enqueue (if any)
+        mock_rq_queue.enqueue.reset_mock()
+
+        result = process_download_request(request.id)
+
+        assert result["status"] == "success"
+        assert mock_rq_queue.enqueue.call_count == 1
+```
+
+### Running Pytest
+
+```bash
+# Run all tests
+pytest
+
+# Run specific file
+pytest tests/test_models.py
+
+# Run with coverage
+pytest --cov=myapp
+
+# Reuse test database (faster)
+pytest --reuse-db
+
+# Run in parallel
+pytest -n 4
+```
+
+## FastTestRunner
+
+For **ultra-fast unit tests** that don't require PostgreSQL features, use FastTestRunner with SQLite in-memory.
+
+### When to Use
+
+FastTestRunner is ideal for:
+
+- Unit tests that don't use database-specific features
+- CI/CD pipelines where speed is critical
+- Quick local test runs during development
+- Tests that don't require pgvector or other PostgreSQL extensions
+
+**Not suitable for:**
+
+- Integration tests requiring PostgreSQL features
+- Tests using vector fields or full-text search
+- Tests requiring specific database behaviors
+
+### Usage
+
+**Option 1: Command line flag**
+
+```bash
+python manage.py test --testrunner=django_cfg.testing.runners.FastTestRunner
+```
+
+**Option 2: Environment variable**
+
+```bash
+# .env.test
+TEST_RUNNER=django_cfg.testing.runners.FastTestRunner
+
+# Run tests
+python manage.py test
+```
+
+**Option 3: Settings override**
+
+```python
+# settings_test.py
+from .settings import *
+
+TEST_RUNNER = 'django_cfg.testing.runners.FastTestRunner'
+```
+
+```bash
+python manage.py test --settings=api.settings_test
+```
+
+### Performance Comparison
+
+```bash
+# SmartTestRunner (PostgreSQL)
+$ time python manage.py test
+Ran 50 tests in 12.45s
+real    0m15.234s
+
+# FastTestRunner (SQLite in-memory)
+$ time python manage.py test --testrunner=django_cfg.testing.runners.FastTestRunner
+Switched to SQLite in-memory for fast testing
+Ran 50 tests in 2.34s
+real    0m3.456s
+```
+
+Up to **5x faster** for unit tests!
+
+## Test Database Configuration
+
+### Automatic TEST Settings
+
+Django-CFG automatically generates TEST configuration for all databases:
+
+```python
+# Auto-generated for PostgreSQL
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'mydb',
+        'HOST': 'localhost',
+        'PORT': 5432,
+        # Auto-generated TEST settings:
+        'TEST': {
+            'NAME': 'test_mydb',
+            'TEMPLATE': 'template0',  # Clean template
+            'CHARSET': 'UTF8',
+            'CREATE_DB': True,
+            'MIGRATE': True,
+        }
+    }
+}
+```
+
+### Custom Test Database Names
+
+Override test database names if needed:
+
+```python
+# api/config.py
+from django_cfg import DjangoConfig, DatabaseConfig
+
+class MyConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(
+            url=env.database.url,
+            test_name="custom_test_db"  # Custom test DB name
+        )
+    }
+```
+
+### Parallel Testing
+
+SmartTestRunner works with Django's parallel testing:
+
+```bash
+# Run tests in parallel (4 processes)
+python manage.py test --parallel 4
+
+# Each process gets its own test database:
+# test_mydb_1, test_mydb_2, test_mydb_3, test_mydb_4
+```
+
+SmartTestRunner automatically:
+- Creates all parallel test databases
+- Installs extensions in each
+- Cleans up all databases after tests
+
+## Manual Test Database Management
+
+Use the `test_db` command for manual database operations.
+
+### Basic Commands
+
+```bash
+# Show test database information
+python manage.py test_db info
+
+# Clean up old test databases
+python manage.py test_db cleanup
+
+# Reset test database (drop and recreate)
+python manage.py test_db reset
+
+# Check installed PostgreSQL extensions
+python manage.py test_db check-extensions
+```
+
+See [Test Database Command](/docs/cli/commands/testing-monitoring#test_db) for detailed documentation.
+
+## Troubleshooting
+
+### Test Database Not Cleaned Up
+
+**Problem:**
+```bash
+ERROR: database "test_mydb" already exists
+```
+
+**Solution:**
+
+```bash
+# Manual cleanup
+python manage.py test_db cleanup
+
+# Or force cleanup before tests
+python manage.py test_db cleanup --force
+
+# Then run tests
+python manage.py test
+```
+
+### IntegrityError with User Profiles
+
+**Problem:**
+```bash
+IntegrityError: duplicate key value violates unique constraint "profiles_userprofile_user_id_key"
+```
+
+**Cause:** Your app has a `post_save` signal that auto-creates profiles, but your test fixture also tries to create one.
+
+**Solution:**
+
+```python
+# Bad - creates duplicate profile
+@pytest.fixture
+def user_profile(db):
+    user = User.objects.create_user(...)
+    return UserProfile.objects.create(user=user)  # Signal already created one!
+
+# Good - use auto-created profile
+@pytest.fixture
+def user_profile(db):
+    user = User.objects.create_user(...)
+    return user.profile  # Return the signal-created profile
+```
+
+### Extension Installation Fails
+
+**Problem:**
+```bash
+ERROR: type "vector" does not exist
+```
+
+**Solution:**
+
+1. **Check PostgreSQL extensions are installed:**
+```bash
+# Ubuntu/Debian
+sudo apt-get install postgresql-15-pgvector
+
+# macOS
+brew install pgvector
+```
+
+2. **Verify extension availability:**
+```sql
+-- In PostgreSQL
+SELECT * FROM pg_available_extensions WHERE name IN ('vector', 'pg_trgm', 'unaccent');
+```
+
+3. **Manual installation in test DB:**
+```bash
+python manage.py test_db reset
+python manage.py test_db check-extensions
+```
+
+### Slow Test Database Creation
+
+**Problem:**
+```bash
+Test database creation takes too long
+```
+
+**Solutions:**
+
+**1. Use --keepdb flag (Django) or --reuse-db (pytest):**
+```bash
+# Django
+python manage.py test --keepdb
+
+# pytest
+pytest --reuse-db
+```
+
+**2. Use FastTestRunner for unit tests:**
+```bash
+python manage.py test --testrunner=django_cfg.testing.runners.FastTestRunner
+```
+
+**3. Use factories instead of fixtures:**
+```python
+import factory
+
+class UserFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = User
+
+    email = factory.Faker('email')
+    username = factory.Sequence(lambda n: f'user{n}')
+```
+
+## Best Practices
+
+### 1. Use Appropriate Test Runner
+
+- **Django tests** → SmartTestRunner (default)
+- **pytest** → pytest-django (handles DB automatically)
+- **Fast unit tests** → FastTestRunner
+
+### 2. Keep Test Database Between Runs
+
+```bash
+# Django
+python manage.py test --keepdb
+
+# pytest
+pytest --reuse-db
+```
+
+### 3. Separate Unit and Integration Tests
+
+```python
+# pytest markers
+@pytest.mark.unit
+def test_calculation():
+    assert calculate(1, 2) == 3
+
+@pytest.mark.integration
+def test_api_endpoint(client, db):
+    response = client.get('/api/users/')
+    assert response.status_code == 200
+```
+
+```bash
+# Run only unit tests (fast)
+pytest -m unit
+
+# Run only integration tests
+pytest -m integration
+```
+
+### 4. Mock External Dependencies
+
+Always mock external services in tests:
+
+```python
+@pytest.fixture
+def mock_rq_queue():
+    with patch("django_rq.get_queue") as mock:
+        mock_queue = MagicMock()
+        mock.return_value = mock_queue
+        yield mock_queue
+```
+
+### 5. Use Unique Identifiers
+
+Avoid test pollution with unique identifiers:
+
+```python
+@pytest.fixture
+def user_profile(db):
+    import uuid
+    unique_id = uuid.uuid4().hex[:8]
+    user = User.objects.create_user(
+        username=f"testuser_{unique_id}",
+        email=f"test_{unique_id}@example.com",
+    )
+    return user.profile
+```
+
+## See Also
+
+- [**Test Database Command**](/docs/cli/commands/testing-monitoring#test_db) - Manual database management
+- [**Database Overview**](../) - Database setup guide
+
+---
+
+**Zero-configuration testing - it just works!** 🧪✅

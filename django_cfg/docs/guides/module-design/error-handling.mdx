@@ -1,0 +1,325 @@
+---
+title: Error Handling
+sidebar_position: 4
+keywords:
+  - python exceptions
+  - error handling patterns
+  - exception hierarchy
+  - error recovery
+description: Error handling patterns for Python modules. Exception hierarchy, error codes, handler decorators, retry with backoff, fallback, and structured logging.
+---
+
+# Error Handling
+
+No silent failures. Every error is specific, includes context, and suggests a fix.
+
+## Core Principles
+
+1. **No silent failures** — always propagate or log errors
+2. **Specific exceptions** — no bare `except:`
+3. **Context preservation** — chain exceptions with `from`
+4. **Actionable messages** — include suggestions for resolution
+5. **Structured errors** — use error codes for programmatic handling
+
+## Exception Hierarchy
+
+### Base Exception
+
+Every library has one root exception. All others inherit from it:
+
+```python
+# exceptions/types.py
+
+class LibraryError(Exception):
+    """Base exception for all library errors."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        error_code: str | None = None,
+        status_code: int | None = None,
+        suggestion: str | None = None,
+        details: dict | None = None,
+        original_error: Exception | None = None,
+    ) -> None:
+        self.message = message
+        self.error_code = error_code
+        self.status_code = status_code
+        self.suggestion = suggestion
+        self.details = details or {}
+        self.original_error = original_error
+        super().__init__(message)
+
+    def __str__(self) -> str:
+        parts = [self.message]
+        if self.error_code:
+            parts.insert(0, f"[{self.error_code}]")
+        if self.suggestion:
+            parts.append(f"Suggestion: {self.suggestion}")
+        return " ".join(parts)
+
+    def to_dict(self) -> dict:
+        return {
+            "error": True,
+            "message": self.message,
+            "error_code": self.error_code,
+            "status_code": self.status_code,
+            "suggestion": self.suggestion,
+            "details": self.details,
+        }
+```
+
+### Specific Exceptions
+
+```python
+class ValidationError(LibraryError):
+    def __init__(self, message: str, field: str | None = None, **kwargs) -> None:
+        super().__init__(message, error_code="VALIDATION_ERROR", status_code=400, **kwargs)
+        self.field = field
+
+class AuthenticationError(LibraryError):
+    def __init__(self, message: str = "Authentication failed", **kwargs) -> None:
+        super().__init__(
+            message, error_code="AUTH_ERROR", status_code=401,
+            suggestion="Verify your API key is correct and active", **kwargs,
+        )
+
+class NotFoundError(LibraryError):
+    def __init__(self, resource_type: str, resource_id: str, **kwargs) -> None:
+        super().__init__(
+            f"{resource_type} '{resource_id}' not found",
+            error_code="NOT_FOUND", status_code=404, **kwargs,
+        )
+
+class NetworkError(LibraryError):
+    def __init__(self, message: str, url: str | None = None, **kwargs) -> None:
+        super().__init__(
+            message, error_code="NETWORK_ERROR",
+            suggestion="Check your network connection", **kwargs,
+        )
+
+class TimeoutError(LibraryError):
+    def __init__(self, message: str = "Operation timed out", **kwargs) -> None:
+        super().__init__(
+            message, error_code="TIMEOUT_ERROR",
+            suggestion="Try increasing the timeout or retry later", **kwargs,
+        )
+
+class RateLimitError(LibraryError):
+    def __init__(self, retry_after: int | None = None, **kwargs) -> None:
+        suggestion = f"Retry after {retry_after} seconds" if retry_after else "Wait before retrying"
+        super().__init__(
+            "Rate limit exceeded", error_code="RATE_LIMIT_ERROR",
+            status_code=429, suggestion=suggestion, **kwargs,
+        )
+        self.retry_after = retry_after
+
+class ConflictError(LibraryError):
+    def __init__(self, message: str, **kwargs) -> None:
+        super().__init__(message, error_code="CONFLICT_ERROR", status_code=409, **kwargs)
+
+class ServiceUnavailableError(LibraryError):
+    def __init__(self, service_name: str, **kwargs) -> None:
+        super().__init__(
+            f"Service '{service_name}' is temporarily unavailable",
+            error_code="SERVICE_UNAVAILABLE", status_code=503, **kwargs,
+        )
+```
+
+## Status Code Mapping
+
+Map HTTP status codes to exception types for automatic conversion:
+
+```python
+# exceptions/mappings.py
+
+STATUS_CODE_MAP: dict[int, type[LibraryError]] = {
+    400: ValidationError,
+    401: AuthenticationError,
+    403: AuthorizationError,
+    404: NotFoundError,
+    409: ConflictError,
+    429: RateLimitError,
+    500: InternalError,
+    503: ServiceUnavailableError,
+}
+
+def get_exception_for_status(status_code: int, message: str, **kwargs) -> LibraryError:
+    exception_class = STATUS_CODE_MAP.get(status_code, LibraryError)
+    return exception_class(message, **kwargs)
+```
+
+## Error Handler Decorators
+
+### Sync Handler
+
+```python
+import functools
+
+def error_handler(func):
+    """Decorator for synchronous error handling."""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except LibraryError:
+            raise  # Re-raise our exceptions as-is
+        except httpx.HTTPStatusError as e:
+            raise get_exception_for_status(e.response.status_code, str(e)) from e
+        except httpx.ConnectError as e:
+            raise NetworkError(str(e)) from e
+        except httpx.TimeoutException as e:
+            raise TimeoutError("Request timed out") from e
+        except Exception as e:
+            logger.exception(f"Unexpected error in {func.__name__}")
+            raise LibraryError(f"Unexpected error: {e}") from e
+
+    return wrapper
+```
+
+### Async Handler
+
+```python
+def async_error_handler(func):
+    """Decorator for asynchronous error handling."""
+
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except LibraryError:
+            raise
+        except httpx.HTTPStatusError as e:
+            raise get_exception_for_status(e.response.status_code, str(e)) from e
+        except asyncio.TimeoutError as e:
+            raise TimeoutError("Request timed out") from e
+        except Exception as e:
+            logger.exception(f"Unexpected error in {func.__name__}")
+            raise LibraryError(f"Unexpected error: {e}") from e
+
+    return wrapper
+```
+
+### Usage
+
+```python
+class UserService:
+    @error_handler
+    def get_user(self, user_id: int) -> User:
+        response = self._client.get(f"/users/{user_id}")
+        response.raise_for_status()
+        return User.model_validate(response.json())
+
+    @async_error_handler
+    async def get_user_async(self, user_id: int) -> User:
+        response = await self._client.get(f"/users/{user_id}")
+        response.raise_for_status()
+        return User.model_validate(response.json())
+```
+
+## Recovery Patterns
+
+### Retry with Backoff
+
+```python
+import random
+
+async def retry_with_backoff(
+    func,
+    *args,
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 60.0,
+    retryable: tuple = (NetworkError, TimeoutError, ServiceUnavailableError),
+) -> Any:
+    last_exception = None
+
+    for attempt in range(max_retries + 1):
+        try:
+            return await func(*args)
+        except retryable as e:
+            last_exception = e
+            if attempt == max_retries:
+                break
+            delay = min(base_delay * (2 ** attempt), max_delay)
+            delay *= 1 + random.uniform(-0.1, 0.1)  # Jitter
+            logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay:.1f}s")
+            await asyncio.sleep(delay)
+
+    raise last_exception
+```
+
+### Fallback
+
+```python
+async def fetch_with_fallback(primary_func, fallback_func, *args):
+    try:
+        return await primary_func(*args)
+    except LibraryError as e:
+        logger.warning(f"Primary failed: {e}. Trying fallback.")
+        return await fallback_func(*args)
+```
+
+## Structured Logging
+
+```python
+SENSITIVE_FIELDS = {"api_key", "password", "token", "secret"}
+
+def sanitize_for_logging(data: dict) -> dict:
+    sanitized = {}
+    for key, value in data.items():
+        if any(s in key.lower() for s in SENSITIVE_FIELDS):
+            sanitized[key] = "***REDACTED***"
+        elif isinstance(value, dict):
+            sanitized[key] = sanitize_for_logging(value)
+        else:
+            sanitized[key] = value
+    return sanitized
+
+def log_error(logger, error: LibraryError, context: dict | None = None) -> None:
+    log_data = {
+        "error_code": error.error_code,
+        "message": error.message,
+        "details": error.details,
+        **(context or {}),
+    }
+    logger.error(f"[{error.error_code}] {error.message}", extra=sanitize_for_logging(log_data))
+```
+
+## Anti-Patterns
+
+```python
+# BAD — silent failure
+try:
+    risky_operation()
+except:
+    pass
+
+# BAD — losing context
+try:
+    process(data)
+except ValueError as e:
+    raise RuntimeError("Failed")  # Original error lost!
+
+# BAD — generic message
+raise Exception("Error")
+
+# GOOD — specific, chained, actionable
+try:
+    user = await fetch_user(user_id)
+except NetworkError as e:
+    raise ServiceUnavailableError("user-service", original_error=e) from e
+```
+
+## Rules
+
+1. **One base exception** — all library exceptions inherit from it
+2. **Error codes on every exception** — for programmatic handling
+3. **Chain with `from e`** — never lose the original exception
+4. **Actionable suggestions** — tell the user how to fix it
+5. **Decorator for handlers** — `@error_handler` and `@async_error_handler`
+6. **Sanitize before logging** — never log API keys, passwords, tokens
+7. **Retry transient errors** — NetworkError, TimeoutError, RateLimitError
+8. **No bare `except:`** — always specify the exception type

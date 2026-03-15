@@ -1,0 +1,157 @@
+---
+title: SSR & Hydration
+sidebar_position: 3
+keywords:
+  - ssr
+  - server components
+  - swr hydration
+  - initialdata
+  - force-dynamic
+  - generatemetadata
+description: Server Component data fetching with SWR initialData hydration, force-dynamic for auth pages, client-only rendering, and metadata generation.
+---
+
+# SSR & Hydration
+
+The dominant data pattern across all apps. Server Components fetch data and pass it as `initialData` to client wrappers. SWR then takes over for subsequent interactions.
+
+<Callout type="info">
+For generated API clients and SWR hooks see [Data Layer](./data-layer). For Context architecture see [State Management](./state-management).
+</Callout>
+
+## The initialData Hydration Pattern
+
+### Step 1: Server Component Fetches
+
+```typescript
+// app/[locale]/(pages)/catalog/page.tsx — Server Component
+import { createCatalogPublicClient } from '@lib/api/server';
+import { getCatalogPublicVehiclesList } from '@api/generated/catalog_public/_utils/fetchers';
+
+export default async function CatalogPage({ searchParams }) {
+  const client = createCatalogPublicClient();
+
+  const [vehicles, brands] = await Promise.all([
+    getCatalogPublicVehiclesList({ page: 1, page_size: 20 }, client).catch(() => null),
+    getCatalogPublicBrandsList(undefined, client).catch(() => []),
+  ]);
+
+  return (
+    <CatalogClientWrapper
+      initialVehicles={vehicles}
+      initialBrands={brands}
+    />
+  );
+}
+```
+
+Use `Promise.all` for parallel fetches and `.catch(() => null)` for graceful fallback when individual fetches fail.
+
+### Step 2: Client Component Hydrates
+
+```typescript
+// CatalogClientWrapper.tsx — 'use client'
+'use client';
+
+export function CatalogClientWrapper({ initialVehicles, initialBrands }) {
+  return (
+    <CatalogProvider>
+      <FiltersProvider>
+        <VehiclesProvider initialData={initialVehicles}>
+          <CatalogLayout />
+        </VehiclesProvider>
+      </FiltersProvider>
+    </CatalogProvider>
+  );
+}
+```
+
+### Step 3: SWR Takes Over
+
+```typescript
+// VehiclesContext.tsx
+const { data: swrData, isLoading } = useCatalogPublicVehiclesList(apiParams, client);
+
+// Prefer SWR data over SSR initialData
+const vehicles = swrData ?? initialData;
+```
+
+SWR revalidates in the background. On first render the SSR data is shown immediately — no loading spinner.
+
+## force-dynamic for Auth-Dependent Pages
+
+Pages that depend on authenticated state or real-time data disable static generation:
+
+```typescript
+export const dynamic = 'force-dynamic';
+```
+
+Used in: dashboards, project editors, all private routes.
+
+## Client-Only Rendering
+
+For highly interactive pages (video editors, complex canvas), SSR is skipped entirely with a mounted-state gate:
+
+```typescript
+// ProjectEditorView.tsx
+const [mounted, setMounted] = useState(false);
+useEffect(() => { setMounted(true); }, []);
+if (!mounted) return <EditorLoader />;
+
+return <EditorLayout />;
+```
+
+Alternatively, use Next.js `dynamic` import with `ssr: false`:
+
+```typescript
+const EditorView = dynamic(() => import('./EditorView'), { ssr: false });
+```
+
+## Static Generation for Locale Segments
+
+Only locale parameters are statically generated — content pages use SSR:
+
+```typescript
+export function generateStaticParams() {
+  return LOCALES.map((locale) => ({ locale }));
+}
+```
+
+## Metadata Generation
+
+Server Components handle Next.js metadata via `generateMetadata`:
+
+```typescript
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const t = await getTranslations('catalog');
+  return generateAppMetadata({
+    title: t('meta.title'),
+    description: t('meta.description'),
+  });
+}
+```
+
+The `generateAppMetadata` helper from `@core/metadata` adds OG images, canonical URLs, and other defaults.
+
+## Data Shape Adaptation
+
+When SSR-fetched data has a different shape than what components expect, adapt with `useMemo`:
+
+```typescript
+// SavedView.tsx — adapt VehicleDetail to VehicleList shape
+const listItem = useMemo(() => ({
+  ...data,
+  main_photo_url: data.photos[0]?.url ?? null,
+  photos_count: data.photos.length,
+  source: { id: data.source.id, code: data.source.code, name: data.source.name },
+}), [data]);
+```
+
+## Rules
+
+1. Server Components fetch data and pass it as `initialData` props — never fetch data inside client components directly
+2. Use `Promise.all` with `.catch(() => null)` for parallel SSR fetches with graceful fallback
+3. SWR takes over after hydration — prefer `swrData ?? initialData` to show SSR data immediately
+4. Set `export const dynamic = 'force-dynamic'` on auth-dependent and real-time pages
+5. Use `dynamic(() => import(...), { ssr: false })` or a mounted-state gate for client-only editors
+6. Data shape mismatches between server and client are resolved with `useMemo` in the view component

@@ -1,0 +1,276 @@
+---
+title: Dependency Injection
+sidebar_position: 6
+keywords:
+  - python dependency injection
+  - python protocols
+  - DI patterns
+  - testable code
+description: Dependency injection patterns for Python modules. Protocols, constructor injection, factories, containers, testability, and anti-patterns.
+---
+
+# Dependency Injection
+
+All dependencies are explicit. Pass them via constructor, define interfaces with Protocols.
+
+## Core Principles
+
+1. **Explicit dependencies** — all dependencies passed via constructor
+2. **Protocols over implementations** — depend on interfaces
+3. **No global state** — avoid module-level mutable state
+4. **Configuration as dependency** — inject config objects
+5. **Lazy initialization** — create expensive resources on demand
+
+## Constructor Injection
+
+### Define Protocols
+
+```python
+from typing import Protocol
+
+class UserRepositoryProtocol(Protocol):
+    async def find_by_id(self, user_id: int) -> User | None: ...
+    async def save(self, user: User) -> User: ...
+    async def delete(self, user_id: int) -> bool: ...
+
+class CacheProtocol(Protocol):
+    async def get(self, key: str) -> Any | None: ...
+    async def set(self, key: str, value: Any, ttl: int = 300) -> None: ...
+    async def delete(self, key: str) -> None: ...
+```
+
+### Inject Dependencies
+
+```python
+class UserService:
+    __slots__ = ("_config", "_repository", "_cache")
+
+    def __init__(
+        self,
+        config: Config,
+        repository: UserRepositoryProtocol,
+        cache: CacheProtocol | None = None,
+    ) -> None:
+        self._config = config
+        self._repository = repository
+        self._cache = cache
+
+    async def get_user(self, user_id: int) -> User | None:
+        if self._cache:
+            cached = await self._cache.get(f"user:{user_id}")
+            if cached:
+                return User.model_validate(cached)
+
+        user = await self._repository.find_by_id(user_id)
+
+        if user and self._cache:
+            await self._cache.set(f"user:{user_id}", user.model_dump())
+
+        return user
+```
+
+## Factory Pattern
+
+```python
+class ServiceFactory:
+    def __init__(self, config: Config):
+        self._config = config
+        self._repository: UserRepositoryProtocol | None = None
+        self._cache: CacheProtocol | None = None
+
+    def set_repository(self, repo: UserRepositoryProtocol) -> "ServiceFactory":
+        self._repository = repo
+        return self
+
+    def set_cache(self, cache: CacheProtocol) -> "ServiceFactory":
+        self._cache = cache
+        return self
+
+    def create_user_service(self) -> UserService:
+        if self._repository is None:
+            raise ValueError("Repository not configured")
+        return UserService(
+            config=self._config,
+            repository=self._repository,
+            cache=self._cache,
+        )
+
+# Usage
+factory = (
+    ServiceFactory(config)
+    .set_repository(PostgresUserRepository(db_pool))
+    .set_cache(RedisCache(redis_client))
+)
+user_service = factory.create_user_service()
+```
+
+## Protocol Definitions
+
+### Repository Protocols
+
+```python
+from typing import Protocol, TypeVar, Generic
+
+T = TypeVar("T")
+ID = TypeVar("ID")
+
+class ReadRepository(Protocol[T, ID]):
+    async def find_by_id(self, id: ID) -> T | None: ...
+    async def find_all(self) -> list[T]: ...
+    async def exists(self, id: ID) -> bool: ...
+
+class WriteRepository(Protocol[T, ID]):
+    async def save(self, entity: T) -> T: ...
+    async def delete(self, id: ID) -> bool: ...
+
+class Repository(ReadRepository[T, ID], WriteRepository[T, ID], Protocol):
+    """Full CRUD repository."""
+    pass
+```
+
+### Domain-Specific Protocols
+
+```python
+class UserRepository(Repository[User, int], Protocol):
+    async def find_by_email(self, email: str) -> User | None: ...
+    async def find_by_role(self, role: UserRole) -> list[User]: ...
+
+class AuthServiceProtocol(Protocol):
+    async def authenticate(self, credentials: Credentials) -> AuthToken: ...
+    async def validate_token(self, token: str) -> User | None: ...
+    async def revoke_token(self, token: str) -> None: ...
+```
+
+## Simple DI Container
+
+```python
+class Container:
+    def __init__(self):
+        self._factories: dict[type, Callable] = {}
+        self._singletons: dict[type, Any] = {}
+        self._singleton_types: set[type] = set()
+
+    def register(self, interface: type, factory: Callable, singleton: bool = False) -> None:
+        self._factories[interface] = factory
+        if singleton:
+            self._singleton_types.add(interface)
+
+    def resolve(self, interface: type):
+        if interface not in self._factories:
+            raise KeyError(f"No factory registered for {interface}")
+        if interface in self._singletons:
+            return self._singletons[interface]
+
+        instance = self._factories[interface]()
+        if interface in self._singleton_types:
+            self._singletons[interface] = instance
+        return instance
+
+# Usage
+container = Container()
+container.register(Config, lambda: Config(), singleton=True)
+container.register(
+    UserRepositoryProtocol,
+    lambda: PostgresUserRepository(container.resolve(Config).database_url),
+    singleton=True,
+)
+container.register(
+    UserService,
+    lambda: UserService(
+        config=container.resolve(Config),
+        repository=container.resolve(UserRepositoryProtocol),
+    ),
+)
+```
+
+## Testability
+
+### Mock Injection
+
+```python
+@pytest.fixture
+def mock_repository() -> AsyncMock:
+    repo = AsyncMock(spec=UserRepositoryProtocol)
+    repo.find_by_id.return_value = None
+    return repo
+
+@pytest.fixture
+def user_service(test_config, mock_repository) -> UserService:
+    return UserService(config=test_config, repository=mock_repository)
+
+class TestUserService:
+    @pytest.mark.asyncio
+    async def test_cache_hit(self, user_service, mock_cache, mock_repository):
+        mock_cache.get.return_value = {"id": 1, "name": "Cached"}
+
+        result = await user_service.get_user(1)
+
+        assert result.name == "Cached"
+        mock_repository.find_by_id.assert_not_called()
+```
+
+### In-Memory Test Double
+
+```python
+class InMemoryUserRepository:
+    """In-memory repository for testing."""
+
+    def __init__(self):
+        self._users: dict[int, User] = {}
+        self._next_id = 1
+
+    async def find_by_id(self, user_id: int) -> User | None:
+        return self._users.get(user_id)
+
+    async def save(self, user: User) -> User:
+        if user.id is None:
+            user = user.model_copy(update={"id": self._next_id})
+            self._next_id += 1
+        self._users[user.id] = user
+        return user
+
+    async def delete(self, user_id: int) -> bool:
+        return self._users.pop(user_id, None) is not None
+```
+
+## Anti-Patterns
+
+```python
+# BAD — hidden dependencies
+class UserService:
+    def __init__(self):
+        self.db = get_database()      # Hidden!
+        self.cache = get_cache()      # Global state!
+
+# BAD — module-level singleton
+DATABASE = Database()  # Global mutable state!
+
+# BAD — service locator
+class UserService:
+    def __init__(self, container: Container):
+        self.db = container.resolve(Database)  # Hard to test!
+
+# GOOD — explicit constructor injection
+class UserService:
+    def __init__(self, db: DatabaseProtocol, cache: CacheProtocol) -> None:
+        self._db = db
+        self._cache = cache
+
+    @classmethod
+    def create(cls, config: Config) -> "UserService":
+        """Factory for production setup."""
+        return cls(
+            db=PostgresDatabase(config.database_url),
+            cache=RedisCache(config.redis_url),
+        )
+```
+
+## Rules
+
+1. **All dependencies via constructor** — no hidden creation inside `__init__`
+2. **Protocols for abstractions** — `Protocol` not `ABC` for structural typing
+3. **No global mutable state** — config singleton with `reset_config()` for testing
+4. **Factory methods for production** — `@classmethod create()` wires real implementations
+5. **Lazy initialization** — `@property` for expensive resources
+6. **Easy to test** — swap any dependency with a mock or in-memory double
+7. **No service locator** — pass specific dependencies, not the container

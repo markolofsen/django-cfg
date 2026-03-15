@@ -1,0 +1,26 @@
+---
+title: Django Runtime Guide
+description: Django-specific runtime patterns. Async ORM, Channels WebSocket, ASGI configuration, Django testing, and production quality gates.
+---
+
+# Django Runtime Guide
+
+Runtime patterns specific to Django — async ORM, Channels, ASGI, and production quality standards. For generic Python patterns see [Module Design Guide](../../guides/module-design), for Django app structure see [App Design Guide](../app-design).
+
+<Cards>
+  <Card title="Async ORM" href="./async-orm">
+    Django async ORM with a-prefixed methods, async for iteration, sync_to_async bridges, and common pitfalls
+  </Card>
+  <Card title="Channels & ASGI" href="./channels-asgi">
+    ASGI setup, AsyncWebsocketConsumer lifecycle, channel groups, authentication, and URL routing
+  </Card>
+  <Card title="Django Testing" href="./django-testing">
+    pytest.mark.django_db for async, AsyncClient, WebsocketCommunicator, and sync_to_async test patterns
+  </Card>
+  <Card title="Quality Gates" href="./quality-gates">
+    Foundation, Production, and Enterprise quality levels with Django-specific checks and Prometheus monitoring
+  </Card>
+  <Card title="Route Debug" href="./route-debug">
+    Diagnose 404 errors from misconfigured DRF routers — logs partial URL pattern matches in DEBUG mode
+  </Card>
+</Cards>
