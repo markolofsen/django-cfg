@@ -52,8 +52,11 @@ SERVER_EVENTS_TABLE = D1Table(
 FRONTEND_EVENTS_TABLE = D1Table(
     name="frontend_events",
     columns=[
-        D1Column("id",          "TEXT",    not_null=True),
+        # PK changed from (id, api_url) → (fingerprint, api_url) for error dedup.
+        # id kept as plain TEXT (last seen UUID — not unique PK).
+        D1Column("fingerprint", "TEXT",    not_null=True),
         D1Column("api_url",     "TEXT",    not_null=True),
+        D1Column("id",          "TEXT",    not_null=True, default="''"),
         D1Column("event_type",  "TEXT",    not_null=True),
         D1Column("level",       "TEXT",    not_null=True),
         D1Column("message",     "TEXT",    not_null=True, default="''"),
@@ -67,21 +70,23 @@ FRONTEND_EVENTS_TABLE = D1Table(
         D1Column("device_type", "TEXT",    not_null=True, default="''"),
         D1Column("os",          "TEXT",    not_null=True, default="''"),
         D1Column("browser",     "TEXT",    not_null=True, default="''"),
-        D1Column("fingerprint", "TEXT",    not_null=True, default="''"),
         D1Column("user_id",     "TEXT",    not_null=False),
         D1Column("extra",       "TEXT",    not_null=True, default="'{}'"),
         D1Column("build_id",    "TEXT",    not_null=True, default="''"),
         D1Column("environment", "TEXT",    not_null=True, default="''"),
-        D1Column("created_at",  "TEXT",    not_null=True),
+        D1Column("occurrence_count", "INTEGER", not_null=True, default="1"),
+        D1Column("first_seen",  "TEXT",    not_null=True),
+        D1Column("last_seen",   "TEXT",    not_null=True),
     ],
-    pk=["id", "api_url"],
+    pk=["fingerprint", "api_url"],
     indexes=[
-        D1Index("idx_fe_api_url",     ("api_url", "created_at")),
-        D1Index("idx_fe_fingerprint", ("fingerprint", "api_url", "created_at")),
-        D1Index("idx_fe_type",        ("event_type", "api_url", "created_at")),
-        D1Index("idx_fe_user",        ("user_id", "api_url")),
+        D1Index("idx_fe_api_url",  ("api_url", "last_seen")),
+        D1Index("idx_fe_type",     ("event_type", "api_url", "last_seen")),
+        D1Index("idx_fe_user",     ("user_id", "api_url")),
     ],
-    # INSERT OR IGNORE — no upsert_update needed
+    # upsert_increment on (fingerprint, api_url) — error-type events deduplicated.
+    # Append-only types (PAGE_VIEW, PERFORMANCE) use a synthetic per-event fingerprint.
+    upsert_update=["message", "stack_trace", "last_seen", "id"],
 )
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -203,7 +203,7 @@ class OTPViewSet(viewsets.GenericViewSet):
             # Log the failure reason internally — response is always uniform (anti-enumeration)
             try:
                 UserModel = get_user_model()
-                UserModel.objects.get(email=identifier)
+                UserModel.objects.filter(email__iexact=identifier).first()
                 logger.warning(f"Invalid or expired OTP for identifier: {identifier}")
             except Exception:
                 logger.warning(f"OTP verify attempt for deleted/non-existent user: {identifier}")

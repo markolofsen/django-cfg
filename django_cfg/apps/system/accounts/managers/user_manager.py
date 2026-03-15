@@ -150,8 +150,9 @@ class UserManager(UserManager):
 
             # Look up only active (non-deleted) accounts.
             # Deleted accounts are archived — re-registration creates a fresh account.
+            # Use iexact to guard against any case inconsistencies in stored emails.
             user = self.model.objects.filter(
-                email=email, deleted_at__isnull=True
+                email__iexact=email, deleted_at__isnull=True
             ).first()
 
             if user is not None:

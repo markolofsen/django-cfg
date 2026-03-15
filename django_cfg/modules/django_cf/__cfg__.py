@@ -48,6 +48,15 @@ class CloudflareConfig(BaseModuleSettings):
         default=False,
         description="Send Telegram alerts on UNHANDLED_EXCEPTION / RQ_FAILURE / SLOW_QUERY (>5s)",
     )
+    telegram_batch_interval_sec: int = Field(
+        default=60,
+        ge=10,
+        description="Seconds between batched Telegram alert flushes (min 10)",
+    )
+    telegram_alert_on_new: bool = Field(
+        default=True,
+        description="Flush immediately when a new fingerprint appears (first occurrence)",
+    )
 
     # ── Validation ───────────────────────────────────────────────────────────
 

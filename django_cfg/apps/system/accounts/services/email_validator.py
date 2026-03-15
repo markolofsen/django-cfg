@@ -143,7 +143,7 @@ def validate_email_address(
     if check_deliverability:
         try:
             info2 = validate_email(normalized, check_deliverability=True)
-            normalized = info2.normalized
+            normalized = info2.normalized.lower()
         except Exception as exc:
             raise EmailValidationError(
                 "The email domain does not appear to accept mail.",

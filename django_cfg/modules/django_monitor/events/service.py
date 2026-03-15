@@ -62,21 +62,42 @@ class MonitorSyncService(BaseD1Service):
                 original_error=exc,
             ) from exc
 
-        notify_server_event(data.event_type, data.message, {})
+        notify_server_event(
+            data.event_type,
+            data.message,
+            {},
+            fingerprint=data.fingerprint,
+            api_url=data.api_url,
+        )
 
     def push_frontend_event(self, event: Any) -> None:
-        """Insert a FrontendEvent into D1 (INSERT OR IGNORE — safe on retry)."""
+        """Upsert a single FrontendEvent into D1. Prefer push_frontend_events_batch for multiple."""
+        self.push_frontend_events_batch([event])
+
+    def push_frontend_events_batch(self, events: list[Any]) -> None:
+        """Upsert multiple FrontendEvents in a single SQL statement (one HTTP request).
+
+        Error-type events increment occurrence_count on conflict.
+        Append-only types (PAGE_VIEW, PERFORMANCE) have a UUID fingerprint
+        so they always create new rows.
+        """
+        if not events:
+            return
         self._ensure_schema()
-        sql, params = D1Q.insert_ignore(FRONTEND_EVENTS_TABLE, event)
+        sql, params = D1Q.upsert_increment_batch(
+            FRONTEND_EVENTS_TABLE,
+            events,
+            increment_col="occurrence_count",
+        )
         try:
             result = self._get_client().execute(sql, params)
             logger.debug(
-                "django_monitor: frontend_event %s inserted (%.1fms)",
-                event.id, result.duration_ms,
+                "django_monitor: frontend_events batch=%d (%.1fms)",
+                len(events), result.duration_ms,
             )
         except Exception as exc:
             raise MonitorSyncError(
-                f"django_monitor: push_frontend_event failed: {exc}",
+                f"django_monitor: push_frontend_events_batch failed: {exc}",
                 original_error=exc,
             ) from exc
 

@@ -258,6 +258,61 @@ class D1Q:
         return sql, values
 
     @classmethod
+    def upsert_increment_batch(
+        cls,
+        table: D1Table,
+        rows: list[Any],
+        increment_col: str,
+        reset_cols: dict[str, str] | None = None,
+    ) -> tuple[str, list[str]]:
+        """Multi-row INSERT … ON CONFLICT … DO UPDATE SET … — one SQL, one HTTP request.
+
+        Generates a single statement with N rows in VALUES:
+            INSERT INTO t (c1, c2, ...) VALUES (?,?,...), (?,?,...), ...
+            ON CONFLICT(...) DO UPDATE SET ...
+
+        Parameters
+        ----------
+        rows:
+            List of Pydantic models, dataclasses, or dicts — one per row.
+        increment_col:
+            Column to increment on conflict (``col = col + 1``).
+        reset_cols:
+            Dict of ``{col: literal_value}`` to reset on conflict.
+        """
+        if not rows:
+            raise ValueError("upsert_increment_batch: rows must not be empty")
+        if not table.upsert_update:
+            raise ValueError(
+                f"D1Q.upsert_increment_batch: table '{table.name}' has no upsert_update columns defined"
+            )
+
+        cols = table.column_names
+        col_list = ", ".join(cols)
+        conflict = ", ".join(table._conflict_target())
+        row_placeholder = f"({', '.join('?' * len(cols))})"
+
+        all_values: list[str] = []
+        value_rows: list[str] = []
+        for row in rows:
+            all_values.extend(cls._extract(table, row))
+            value_rows.append(row_placeholder)
+
+        update_parts = [f"{col} = excluded.{col}" for col in table.upsert_update]
+        update_parts.append(f"{increment_col} = {table.name}.{increment_col} + 1")
+        for col, val in (reset_cols or {}).items():
+            update_parts.append(f"{col} = {val}")
+
+        updates = ",\n    ".join(update_parts)
+        sql = (
+            f"INSERT INTO {table.name} ({col_list})\n"
+            f"VALUES {', '.join(value_rows)}\n"
+            f"ON CONFLICT({conflict}) DO UPDATE SET\n"
+            f"    {updates}"
+        )
+        return sql, all_values
+
+    @classmethod
     def insert_ignore(cls, table: D1Table, data: Any) -> tuple[str, list[str]]:
         """INSERT OR IGNORE INTO … — idempotent, silently skips duplicates."""
         values = cls._extract(table, data)

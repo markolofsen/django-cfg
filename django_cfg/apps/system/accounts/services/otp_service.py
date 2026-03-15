@@ -84,7 +84,7 @@ class OTPService:
 
         # Check for existing active OTP
         existing_otp = OTPSecret.objects.filter(
-            email=cleaned_email, is_used=False, expires_at__gt=timezone.now()
+            email__iexact=cleaned_email, is_used=False, expires_at__gt=timezone.now()
         ).first()
 
         if existing_otp and existing_otp.is_valid:
@@ -92,7 +92,7 @@ class OTPService:
             logger.info(f"Reusing active OTP for {cleaned_email}")
         else:
             # Invalidate old OTPs
-            OTPSecret.objects.filter(email=cleaned_email, is_used=False).update(
+            OTPSecret.objects.filter(email__iexact=cleaned_email, is_used=False).update(
                 is_used=True
             )
 
@@ -195,7 +195,7 @@ class OTPService:
                 logger.info(f"[DEV MODE] Bypassing OTP verification for {cleaned_email}")
 
                 # Try to find active user by email first (allows testing specific accounts)
-                user = CustomUser.objects.filter(email=cleaned_email, deleted_at__isnull=True).first()
+                user = CustomUser.objects.filter(email__iexact=cleaned_email, deleted_at__isnull=True).first()
 
                 # If email not found, use first superuser or regular user (convenience login)
                 if not user:
@@ -241,7 +241,7 @@ class OTPService:
         # Test account bypass (for App Store review, API testing, etc.)
         # If user is marked as test account, accept any OTP code
         try:
-            user = CustomUser.objects.filter(email=cleaned_email, deleted_at__isnull=True).first()
+            user = CustomUser.objects.filter(email__iexact=cleaned_email, deleted_at__isnull=True).first()
 
             # Check if user is deleted/deactivated
             if user and not user.is_active:
@@ -280,7 +280,7 @@ class OTPService:
 
         try:
             otp_secret = OTPSecret.objects.filter(
-                email=cleaned_email,
+                email__iexact=cleaned_email,
                 secret=cleaned_otp,
                 is_used=False,
                 expires_at__gt=timezone.now(),
@@ -306,7 +306,7 @@ class OTPService:
 
             # Get active user
             try:
-                user = CustomUser.objects.get(email=cleaned_email, deleted_at__isnull=True)
+                user = CustomUser.objects.filter(email__iexact=cleaned_email, deleted_at__isnull=True).first()
 
                 # Check if user is deleted/deactivated
                 if not user.is_active:

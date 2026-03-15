@@ -64,11 +64,11 @@ class MonitorIngestViewSet(viewsets.GenericViewSet):
             user_id = str(request.user.pk)
 
         events = serializer.validated_data["events"]
-        self._forward_to_d1(events, ip_address, user_id)
+        self._forward_to_d1(request, events, ip_address, user_id)
 
         return Response(status=status.HTTP_202_ACCEPTED)
 
-    def _forward_to_d1(self, events: list[dict], ip_address: str, user_id: str | None) -> None:
+    def _forward_to_d1(self, request, events: list[dict], ip_address: str, user_id: str | None) -> None:
         """Forward validated events to D1 via django_monitor capture."""
         from django_cfg.modules.django_monitor import is_enabled, get_service
         from django_cfg.modules.django_monitor.events.types import FrontendEventSyncData
@@ -77,20 +77,26 @@ class MonitorIngestViewSet(viewsets.GenericViewSet):
             return
 
         try:
-            from django_cfg import get_current_config
-            cfg = get_current_config()
-            api_url = cfg.api_url if cfg else ""
-        except Exception:
-            api_url = ""
-
-        try:
             service = get_service()
         except Exception:
             return
 
+        try:
+            api_url = service._get_api_url()
+        except Exception:
+            # Fallback: infer from the incoming request host when config not available
+            scheme = "https" if request.is_secure() else "http"
+            api_url = f"{scheme}://{request.get_host()}"
+
+        batch: list = []
         for ev in events:
             try:
-                data = FrontendEventSyncData.from_ingest(ev, api_url, ip_address, user_id)
-                service.push_frontend_event(data)
+                batch.append(FrontendEventSyncData.from_ingest(ev, api_url, ip_address, user_id))
             except Exception:
-                logger.exception("django_monitor: failed to forward frontend event to D1")
+                logger.exception("django_monitor: failed to build FrontendEventSyncData")
+
+        if batch:
+            try:
+                service.push_frontend_events_batch(batch)
+            except Exception:
+                logger.exception("django_monitor: failed to push frontend events batch to D1")

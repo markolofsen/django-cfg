@@ -90,7 +90,7 @@ def cleanup_d1_events(
 
     try:
         r = client.execute(
-            "DELETE FROM frontend_events WHERE created_at < datetime('now', ? || ' days')",
+            "DELETE FROM frontend_events WHERE last_seen < datetime('now', ? || ' days')",
             [f"-{frontend_events_days}"],
         )
         result["frontend_events_deleted"] = getattr(r, "rows_written", None)

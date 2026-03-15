@@ -12,7 +12,16 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from cloudflare import Cloudflare
+from cloudflare import (
+    Cloudflare,
+    BadRequestError,
+    AuthenticationError,
+    PermissionDeniedError,
+    RateLimitError,
+    APIConnectionError,
+    APITimeoutError,
+    APIStatusError,
+)
 
 from ..exceptions import CloudflareConfigError, CloudflareQueryError
 from .types import D1QueryResult
@@ -62,13 +71,31 @@ class CloudflareD1Client:
             return result
         except CloudflareQueryError:
             raise
+        except BadRequestError as exc:
+            # D1 SQL errors — 400 with SQLITE_ERROR code
+            # Gracefully handle missing schema (table/column not yet created)
+            msg = str(exc)
+            if "no such table" in msg or "no such column" in msg:
+                logger.debug("django_cf: D1 schema not ready — %s", msg)
+                return D1QueryResult()
+            raise CloudflareQueryError(f"D1 bad request: {exc}", sql=sql) from exc
+        except AuthenticationError as exc:
+            raise CloudflareConfigError(f"D1 authentication failed — check api_token: {exc}") from exc
+        except PermissionDeniedError as exc:
+            raise CloudflareConfigError(f"D1 permission denied — check account_id/database_id: {exc}") from exc
+        except RateLimitError as exc:
+            raise CloudflareQueryError(f"D1 rate limit exceeded: {exc}", sql=sql) from exc
+        except (APIConnectionError, APITimeoutError) as exc:
+            raise CloudflareQueryError(f"D1 connection error: {exc}", sql=sql) from exc
+        except APIStatusError as exc:
+            raise CloudflareQueryError(f"D1 API error {exc.status_code}: {exc}", sql=sql) from exc
         except Exception as exc:
             raise CloudflareQueryError(f"D1 execute failed: {exc}", sql=sql) from exc
 
     def execute_batch(self, statements: list[dict[str, Any]]) -> list[D1QueryResult]:
         """Execute multiple statements sequentially.
 
-        D1 SDK does not support native batch — sends requests one by one.
+        The installed SDK version does not support native batch with per-statement params.
         Each item: {"sql": "...", "params": [...]}
         """
         return [self.execute(s["sql"], s.get("params")) for s in statements]

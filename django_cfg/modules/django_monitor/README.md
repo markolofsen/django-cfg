@@ -48,13 +48,13 @@ All capture paths are fire-and-forget — they never raise, never break the call
 
 **Server events use upsert-increment.** The same error (same fingerprint = `sha256[:16]` of `exc_type::module::func`) increments `occurrence_count` and resets `is_resolved=0`, enabling regression detection.
 
-**Frontend events use `INSERT OR IGNORE`.** Append-only, idempotent on retry.
+**Frontend events use upsert-increment.** Same fingerprint (= `sha256[:64]` — client-generated or server-side fallback) increments `occurrence_count` and updates `last_seen`. Events without a client fingerprint (`NETWORK_ERROR`, zod validation) get a server-side sha256 fallback. `PAGE_VIEW` / `PERFORMANCE` get a UUID fingerprint → always append-only.
 
 **SQL normalization in slow query capture.** Literals and numbers are replaced with `?` before fingerprinting so `WHERE id = 1` and `WHERE id = 2` map to the same event.
 
 **Thread-local reentrancy guard in `log_handler.py`.** Prevents infinite recursion when httpx (used by the D1 HTTP client) logs at ERROR level during D1 API calls.
 
-**Telegram notifications via `notify.py`.** Routes to `django_telegram.send_error` / `send_warning`. Controlled by `CloudflareConfig.telegram_alerts_enabled`.
+**Telegram notifications via `notify.py`.** Batched: events accumulate in `_AlertBatch` (in-memory, thread-safe), flushed every `telegram_batch_interval_sec` seconds (default 60s). New fingerprints flush immediately when `telegram_alert_on_new=True`. Controlled by `CloudflareConfig.telegram_alerts_enabled`.
 
 **RQ exception handler returns `True`** to allow fallthrough to subsequent handlers (e.g. Sentry).
 

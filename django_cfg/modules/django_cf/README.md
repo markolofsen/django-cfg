@@ -50,10 +50,12 @@ class MyConfig(DjangoConfig):
         sync_server_events=True,
         sync_frontend_events=False,
         telegram_alerts_enabled=False,
+        telegram_batch_interval_sec=60,   # seconds between batched flushes
+        telegram_alert_on_new=True,       # flush immediately on new fingerprint
     )
 ```
 
-`telegram_alerts_enabled` controls Telegram notifications for critical events.
+`telegram_alerts_enabled` controls Telegram notifications for critical events. Alerts are batched — multiple occurrences of the same fingerprint are collapsed into one message.
 
 ## Public API
 
@@ -85,10 +87,14 @@ MY_TABLE = D1Table(
 create_sql = D1Q.create_table(MY_TABLE)
 index_sqls = D1Q.create_indexes(MY_TABLE)
 
-# DML
+# DML — single row
 sql, params = D1Q.upsert(MY_TABLE, my_pydantic_model)
 sql, params = D1Q.insert_ignore(MY_TABLE, my_pydantic_model)
+sql, params = D1Q.upsert_increment(MY_TABLE, my_pydantic_model, increment_col="count")
 sql, params = D1Q.delete_where(MY_TABLE, {"api_url": url, "is_resolved": "1"})
+
+# DML — batch (multi-row VALUES in one SQL → one HTTP request)
+sql, params = D1Q.upsert_increment_batch(MY_TABLE, list_of_models, increment_col="count")
 ```
 
 Subclass `BaseD1Service` and implement `_get_schema_statements()` to wire DDL auto-migration on first use.
