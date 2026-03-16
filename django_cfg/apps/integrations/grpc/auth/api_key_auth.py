@@ -15,6 +15,7 @@ import grpc
 import grpc.aio
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import close_old_connections
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +193,9 @@ class ApiKeyAuthInterceptor(grpc.aio.ServerInterceptor):
                     f"Traceback:\n{traceback.format_exc()}"
                 )
                 return None, None
+
+        # Close stale DB connections before async ORM query
+        close_old_connections()
 
         # Validate API key using secure hash-based method
         try:
