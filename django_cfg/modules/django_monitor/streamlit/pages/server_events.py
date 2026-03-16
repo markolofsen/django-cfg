@@ -2,28 +2,11 @@
 django_monitor — Server Events triage dashboard.
 
 Registered via auto_register() as: Monitor / Server Events.
-
-## Selection flow
-
-1. Events load into AgGrid (SELECTION_CHANGED mode, single row)
-2. Clicking a row → AgGrid returns selected_rows → session_state["srv_selected_fp"]
-3. Detail panel renders below: stack trace, metadata, action buttons
-4. "Mark resolved" / "Reopen" buttons set srv_dialog_action → st.rerun()
-5. Module-level @st.dialog fires → D1 UPDATE → st.rerun() refreshes the table
 """
 
 from __future__ import annotations
 
 import streamlit as st  # noqa: E402  (module-level needed for @st.dialog)
-
-
-def _resolve_api_url(selected_project: str, projects: list[dict]) -> str | None:
-    if selected_project == "All":
-        return None
-    for p in projects:
-        if p.get("project_name") == selected_project:
-            return p.get("api_url")
-    return None
 
 
 # ── True module-level dialogs (query via session_state["srv_query"]) ──────────
@@ -79,49 +62,39 @@ def _reopen_dialog() -> None:
 # ── Main page ─────────────────────────────────────────────────────────────────
 
 def render_server_events() -> None:
-    import pandas as pd
     import streamlit_antd_components as sac
     import streamlit_shadcn_ui as ui
-    from streamlit_autorefresh import st_autorefresh
-    from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode, DataReturnMode, JsCode
+    from st_aggrid import JsCode
 
     from ..services.d1_query import D1MonitorQuery
-    from ._utils import time_ago, TYPE_COLOR
+    from ._utils import (
+        time_ago,
+        aggrid_default_builder, aggrid_render, aggrid_get_selected_row,
+        chip_filter, project_selectbox, live_toggle,
+    )
 
     st.title("Server Events")
 
     query = D1MonitorQuery()
-    st.session_state["srv_query"] = query  # dialogs read this
+    st.session_state["srv_query"] = query
 
     # ── Filters ───────────────────────────────────────────────────────────────
-    col_live, col1, col2, col3 = st.columns([1, 2, 2, 2])
+    col_live, col1, col2, col3 = st.columns([1, 1, 2, 2])
     with col_live:
-        live_mode = st.toggle("Live", value=False, help="Auto-refresh every 30s")
-    if live_mode:
-        st_autorefresh(interval=30_000, debounce=True, key="srv_autorefresh")
+        live_toggle(key="srv_live", interval_ms=30_000)
     with col1:
         show_resolved = st.checkbox("Show resolved", value=False)
     with col2:
         projects = query.get_projects()
-        project_names = ["All"] + [p["project_name"] for p in projects]
-        selected_project = st.selectbox("Project", project_names, key="srv_project")
+        api_url = project_selectbox(projects, key="srv_project")
     with col3:
-        limit = st.selectbox("Show last", [50, 100, 250, 500], index=1, key="srv_limit")
-
-    api_url = _resolve_api_url(selected_project, projects)
+        limit = st.selectbox("Show last", [50, 100, 250, 500], index=1, key="srv_limit") or 100
 
     # ── Event type chips ──────────────────────────────────────────────────────
-    event_type_options = [
-        "All", "SERVER_ERROR", "LOG_ERROR", "SLOW_QUERY",
-        "RQ_FAILURE", "OOM_KILL", "UNHANDLED_EXCEPTION",
-    ]
-    selected_type_idx = sac.chip(
-        items=event_type_options, index=0, size="sm",
-        radius="md", variant="outline", color="blue", key="srv_type_chip",
-    )
-    selected_type = (
-        event_type_options[selected_type_idx] if isinstance(selected_type_idx, int)
-        else (selected_type_idx if isinstance(selected_type_idx, str) else "All")
+    selected_type = chip_filter(
+        ["All", "SERVER_ERROR", "LOG_ERROR", "SLOW_QUERY",
+         "RQ_FAILURE", "OOM_KILL", "UNHANDLED_EXCEPTION"],
+        key="srv_type_chip",
     )
 
     # ── Metric cards ──────────────────────────────────────────────────────────
@@ -154,14 +127,14 @@ def render_server_events() -> None:
         )
         return
 
-    # ── Build DataFrame from typed objects ────────────────────────────────────
+    # ── DataFrame ─────────────────────────────────────────────────────────────
+    import pandas as pd
     df = pd.DataFrame([e.to_display_dict() for e in events])
     df["ago"] = df["last_seen"].apply(time_ago)
 
-    # fingerprint → event index map for selection lookup
     fp_to_event = {e.fingerprint: e for e in events}
 
-    # ── AgGrid (SELECTION_CHANGED — click row → detail) ───────────────────────
+    # ── AgGrid ────────────────────────────────────────────────────────────────
     row_class_rules = {
         "ag-row-error":    JsCode("function(p){return p.data.level==='error'&&p.data.status==='🔴 open';}"),
         "ag-row-warning":  JsCode("function(p){return p.data.level==='warning';}"),
@@ -172,10 +145,9 @@ def render_server_events() -> None:
         ".ag-row-warning":  {"background-color": "rgba(255,160,0,0.08) !important"},
         ".ag-row-resolved": {"opacity": "0.45"},
     }
+
     display_cols = ["status", "event_type", "level", "message", "module", "count", "ago"]
-    gb = GridOptionsBuilder.from_dataframe(df[display_cols])
-    gb.configure_default_column(resizable=True, sortable=True, filter=True, min_width=80)
-    gb.configure_selection("single", use_checkbox=False, pre_selected_rows=[])
+    gb = aggrid_default_builder(df[display_cols])
     gb.configure_column("status",     header_name="Status",    width=120, pinned="left")
     gb.configure_column("event_type", header_name="Type",      width=160)
     gb.configure_column("level",      header_name="Level",     width=90)
@@ -183,31 +155,13 @@ def render_server_events() -> None:
     gb.configure_column("module",     header_name="Module",    flex=1)
     gb.configure_column("count",      header_name="#",         width=60, type=["numericColumn"])
     gb.configure_column("ago",        header_name="Last seen", width=110)
-    gb.configure_grid_options(rowHeight=36, suppressMovableColumns=True, rowClassRules=row_class_rules)
+    gb.configure_grid_options(rowClassRules=row_class_rules)
 
-    grid_response = AgGrid(
-        df[display_cols],
-        gridOptions=gb.build(),
-        height=min(420, 60 + len(df) * 37),
-        update_mode=GridUpdateMode.SELECTION_CHANGED,
-        data_return_mode=DataReturnMode.AS_INPUT,
-        allow_unsafe_jscode=True,
-        theme="alpine",
-        custom_css=custom_css,
-        use_container_width=True,
-        key="srv_grid",
-    )
+    grid_response = aggrid_render(df[display_cols], gb, key="srv_grid", custom_css=custom_css)
 
-    # ── Selection: grid click takes priority, session_state persists across reruns
-    selected_rows = grid_response.get("selected_rows")
-    if selected_rows is not None and len(selected_rows) > 0:
-        # AgGrid returns a DataFrame or list depending on version
-        if hasattr(selected_rows, "iloc"):
-            row = selected_rows.iloc[0].to_dict()
-        else:
-            row = selected_rows[0]
-        # Match by message+type (display_cols don't include fingerprint)
-        # Find the matching event in our typed list
+    # ── Selection ─────────────────────────────────────────────────────────────
+    row = aggrid_get_selected_row(grid_response)
+    if row:
         msg = row.get("message", "")
         etype = row.get("event_type", "")
         for e in events:
@@ -216,19 +170,15 @@ def render_server_events() -> None:
                 break
 
     selected_fp = st.session_state.get("srv_selected_fp")
-
-    # ── Detail ────────────────────────────────────────────────────────────────
     if selected_fp and selected_fp in fp_to_event:
         _render_event_detail(fp_to_event[selected_fp])
     elif selected_fp:
-        # fingerprint from previous load, not in current filter — clear it
         st.session_state["srv_selected_fp"] = None
 
 
 def _render_event_detail(event) -> None:
-    import json
     import streamlit_antd_components as sac
-    from ._utils import time_ago, TYPE_COLOR
+    from ._utils import TYPE_COLOR, time_ago, render_extra_json
 
     is_resolved = event.is_resolved
     fp = event.fingerprint
@@ -237,7 +187,6 @@ def _render_event_detail(event) -> None:
 
     sac.divider(label="Event detail", icon="info-circle", size="xs", color="gray")
 
-    # ── Action buttons ────────────────────────────────────────────────────────
     action_col, step_col, _ = st.columns([2, 3, 3])
     with action_col:
         if not is_resolved:
@@ -258,21 +207,17 @@ def _render_event_detail(event) -> None:
             color="green" if is_resolved else "red",
         )
 
-    # ── Fire dialog if action pending ─────────────────────────────────────────
     action = st.session_state.get("srv_dialog_action")
     if action:
-        kind = action[0]
-        if kind == "resolve":
+        if action[0] == "resolve":
             _resolve_dialog()
         else:
             _reopen_dialog()
 
-    # ── Event header ──────────────────────────────────────────────────────────
     type_color = TYPE_COLOR.get(event.event_type, "blue")
     sac.tags([event.event_type, event.level], color=type_color)
     st.subheader(message[:120])
 
-    # ── Body ──────────────────────────────────────────────────────────────────
     col1, col2 = st.columns([3, 2])
     with col1:
         st.caption("Stack trace")
@@ -291,10 +236,4 @@ def _render_event_detail(event) -> None:
             "last_seen":    time_ago(event.last_seen),
         }.items() if v}
         st.json(details)
-
-        if event.extra and event.extra != "{}":
-            st.caption("Extra")
-            try:
-                st.json(json.loads(event.extra))
-            except Exception:
-                st.text(event.extra)
+        render_extra_json(event.extra)

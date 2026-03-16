@@ -6,7 +6,7 @@ Core Django environment settings with Pydantic 2.
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List
 
 from pydantic import Field, computed_field, field_validator
 
@@ -136,8 +136,8 @@ class EnvironmentConfig(BaseConfig):
     @computed_field
     @property
     def static_dir(self) -> Path:
-        """Static files directory."""
-        return self.base_dir / "static"
+        """Collected static files directory (STATIC_ROOT = BASE_DIR/staticfiles)."""
+        return self.base_dir / "staticfiles"
 
     @computed_field
     @property
@@ -181,98 +181,3 @@ class EnvironmentConfig(BaseConfig):
 
         return True
 
-    def to_django_settings(self) -> Dict[str, Any]:
-        """Convert to Django settings with smart defaults."""
-        return {
-            # Core Django settings
-            "DEBUG": self.debug,
-            "SECRET_KEY": self.secret_key,
-            "ALLOWED_HOSTS": self.allowed_hosts,
-            # Paths
-            "BASE_DIR": self.base_dir,
-            # URL and WSGI/ASGI configuration
-            "ROOT_URLCONF": "api.urls",
-            "WSGI_APPLICATION": "api.wsgi.application",
-            "ASGI_APPLICATION": "api.asgi.application",
-            # Static files configuration
-            "STATIC_URL": "/static/",
-            "STATIC_ROOT": self.static_dir,
-            "STATICFILES_STORAGE": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-            "WHITENOISE_USE_FINDERS": True,
-            "WHITENOISE_AUTOREFRESH": self.debug,
-            "WHITENOISE_MAX_AGE": 31536000,  # 1 year
-            # Media files configuration
-            "MEDIA_URL": "/media/",
-            "MEDIA_ROOT": self.media_dir,
-            # Basic Django apps (can be extended by other configs)
-            "INSTALLED_APPS": [
-                "django.contrib.admin",
-                "django.contrib.auth",
-                "django.contrib.contenttypes",
-                "django.contrib.sessions",
-                "django.contrib.messages",
-                "django.contrib.staticfiles",
-                "django.contrib.humanize",
-                "django.contrib.sites",
-                "django.contrib.sitemaps",
-            ],
-            # User model
-            "AUTH_USER_MODEL": self.auth_user_model,
-            # Basic middleware (can be extended by other configs)
-            "MIDDLEWARE": [
-                "django.middleware.security.SecurityMiddleware",
-                "whitenoise.middleware.WhiteNoiseMiddleware",
-                "django.contrib.sessions.middleware.SessionMiddleware",
-                "django.middleware.common.CommonMiddleware",
-                "django.middleware.csrf.CsrfViewMiddleware",
-                "django.contrib.auth.middleware.AuthenticationMiddleware",
-                "django.contrib.messages.middleware.MessageMiddleware",
-                "django.middleware.clickjacking.XFrameOptionsMiddleware",
-            ],
-            # Templates configuration
-            "TEMPLATES": [
-                {
-                    "BACKEND": "django.template.backends.django.DjangoTemplates",
-                    "DIRS": [self.templates_dir],
-                    "APP_DIRS": True,
-                    "OPTIONS": {
-                        "context_processors": [
-                            "django.template.context_processors.debug",
-                            "django.template.context_processors.request",
-                            "django.contrib.auth.context_processors.auth",
-                            "django.contrib.messages.context_processors.messages",
-                        ],
-                    },
-                },
-            ],
-            # Auth configuration
-            "AUTH_PASSWORD_VALIDATORS": (
-                []
-                if self.debug
-                else [
-                    {
-                        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-                    },
-                    {
-                        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-                        "OPTIONS": {"min_length": 8},
-                    },
-                    {
-                        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-                    },
-                    {
-                        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-                    },
-                ]
-            ),
-            # Internationalization
-            "LANGUAGE_CODE": "en-us",
-            "TIME_ZONE": "UTC",
-            "USE_I18N": True,
-            "USE_L10N": True,
-            "USE_TZ": True,
-            # Miscellaneous
-            "DEFAULT_AUTO_FIELD": "django.db.models.BigAutoField",
-            "DATA_UPLOAD_MAX_NUMBER_FIELDS": 10000,
-            "SITE_ID": 1,
-        }

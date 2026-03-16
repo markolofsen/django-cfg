@@ -76,9 +76,16 @@ class StaticFilesGenerator:
         # Only include STATICFILES_DIRS entries that exist on disk.
         # Django staticfiles.W004 fires for non-existent directories.
         static_dir = base_dir / "static"
+        static_root = base_dir / "staticfiles"
+        media_root = base_dir / "media"
+
+        # Ensure directories exist so WhiteNoise doesn't warn at startup
+        static_root.mkdir(parents=True, exist_ok=True)
+        media_root.mkdir(parents=True, exist_ok=True)
+
         settings.update({
-            "STATIC_ROOT": base_dir / "staticfiles",
-            "MEDIA_ROOT": base_dir / "media",
+            "STATIC_ROOT": static_root,
+            "MEDIA_ROOT": media_root,
             "STATICFILES_DIRS": [static_dir] if static_dir.exists() else [],
         })
 

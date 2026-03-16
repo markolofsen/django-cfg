@@ -11,6 +11,7 @@ Pages registered:
     Monitor / Overview        — combined KPIs, health banner, top errors, 24h charts
     Monitor / Server Events   — triage dashboard: chip filters, AgGrid, row colours, resolve
     Monitor / Frontend Events — chip filters, 3 charts, AgGrid, detail panel
+    Monitor / Users           — users synced from Django via django_cf, search + detail panel
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ def auto_register() -> None:
     from .pages.overview import render_overview
     from .pages.server_events import render_server_events
     from .pages.frontend_events import render_frontend_events
+    from .pages.users import render_users
 
     page_registry.register_page(
         name="Summary",
@@ -55,6 +57,13 @@ def auto_register() -> None:
         icon="web",
         group="Monitor",
         order=20,
+    )
+    page_registry.register_page(
+        name="Users",
+        render_func=render_users,
+        icon="people",
+        group="Monitor",
+        order=30,
     )
     _registered = True
 

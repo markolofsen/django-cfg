@@ -97,6 +97,25 @@ sql, params = D1Q.delete_where(MY_TABLE, {"api_url": url, "is_resolved": "1"})
 sql, params = D1Q.upsert_increment_batch(MY_TABLE, list_of_models, increment_col="count")
 ```
 
+## Cleanup / Delete
+
+`CloudflareD1Client` exposes high-level cleanup methods — no raw SQL strings needed in calling code:
+
+```python
+client = get_service()._get_client()
+
+# Delete rows matching a condition (e.g. TTL cleanup)
+client.delete(MY_TABLE, "last_seen < datetime('now', ? || ' days')", ["-30"])
+
+# Delete rows matching multiple conditions
+client.delete(MY_TABLE, "is_resolved = 1 AND last_seen < datetime('now', ? || ' days')", ["-90"])
+
+# Truncate entire table
+client.truncate(MY_TABLE)
+```
+
+Both methods use `D1Q.delete_where_raw` internally and go through the same typed error handling as `execute()`.
+
 Subclass `BaseD1Service` and implement `_get_schema_statements()` to wire DDL auto-migration on first use.
 
 ## Errors

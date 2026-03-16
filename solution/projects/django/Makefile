@@ -11,9 +11,10 @@
 
 .PHONY: help install install-local env test commit kill-ports kill-grpc kill-all dev dev-ngrok asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api api-ws gen gen-ts gen-py gen-admin gen-dry gen-list claude
 
-# Python from virtual environment (uv)
+# uv binary
 UV := $(shell which uv || echo $(HOME)/.local/bin/uv)
-PYTHON := $(UV) run python
+# Python from virtual environment — direct path avoids uv run which auto-syncs and reverts editable installs
+PYTHON := .venv/bin/python
 # Path to local django-cfg for development
 DJANGO_CFG_LOCAL := $(HOME)/djangocfg
 
@@ -54,6 +55,9 @@ install:
 install-local:
 	@$(UV) sync
 	@bash $(HOME)/djangocfg/scripts/install_local_djangocfg.sh --venv .venv
+	@# uv copies files into site-packages even for editable installs — remove so .pth takes effect
+	@SITE=$$(.venv/bin/python -c "import sysconfig; print(sysconfig.get_path('purelib'))") && \
+		rm -rf "$$SITE/django_cfg"
 	@echo ""
 	@echo "✅ Local django-cfg installed (editable mode)"
 	@echo "📍 Changes in $(DJANGO_CFG_LOCAL) will be immediately reflected"

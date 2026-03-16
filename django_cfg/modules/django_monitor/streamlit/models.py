@@ -100,7 +100,7 @@ class FrontendEvent:
     environment: str
     build_id: str
     extra: str
-    created_at: str
+    last_seen: str
 
     @classmethod
     def from_dict(cls, row: dict[str, Any]) -> "FrontendEvent":
@@ -122,7 +122,7 @@ class FrontendEvent:
             environment=_str(row.get("environment")),
             build_id=_str(row.get("build_id")),
             extra=_str(row.get("extra", "{}")),
-            created_at=_str(row.get("created_at")),
+            last_seen=_str(row.get("last_seen")),
         )
 
     def to_display_dict(self) -> dict[str, Any]:
@@ -136,7 +136,7 @@ class FrontendEvent:
             "device_type": self.device_type,
             "ip_address": self.ip_address,
             "url": self.url,
-            "created_at": self.created_at,
+            "last_seen": self.last_seen,
         }
 
 
@@ -184,10 +184,78 @@ class CombinedStats:
     fe_network_errors_24h: int
 
 
+@dataclass(slots=True)
+class D1User:
+    id: str
+    api_url: str
+    email: str
+    first_name: str
+    last_name: str
+    phone: str
+    company: str
+    position: str
+    is_active: bool
+    date_joined: str
+    updated_at: str
+    synced_at: str
+
+    @classmethod
+    def from_dict(cls, row: dict[str, Any]) -> "D1User":
+        return cls(
+            id=_str(row.get("id")),
+            api_url=_str(row.get("api_url")),
+            email=_str(row.get("email")),
+            first_name=_str(row.get("first_name")),
+            last_name=_str(row.get("last_name")),
+            phone=_str(row.get("phone")),
+            company=_str(row.get("company")),
+            position=_str(row.get("position")),
+            is_active=_bool_flag(row.get("is_active", 1)),
+            date_joined=_str(row.get("date_joined")),
+            updated_at=_str(row.get("updated_at")),
+            synced_at=_str(row.get("synced_at")),
+        )
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip() or self.email
+
+    def to_display_dict(self) -> dict[str, Any]:
+        return {
+            "status": "✅ active" if self.is_active else "⛔ inactive",
+            "email": self.email,
+            "name": self.full_name,
+            "company": self.company,
+            "position": self.position,
+            "phone": self.phone,
+            "date_joined": self.date_joined[:10] if self.date_joined else "",
+            "synced_at": self.synced_at[:16] if self.synced_at else "",
+        }
+
+
+@dataclass(slots=True)
+class D1UserStats:
+    total: int
+    active: int
+    inactive: int
+    projects: int
+
+    @classmethod
+    def from_rows(cls, stats_row: dict[str, Any], projects_count: int) -> "D1UserStats":
+        return cls(
+            total=_int(stats_row.get("total")),
+            active=_int(stats_row.get("active")),
+            inactive=_int(stats_row.get("inactive")),
+            projects=projects_count,
+        )
+
+
 __all__ = [
     "ServerEvent",
     "FrontendEvent",
     "ServerEventStats",
     "FrontendEventStats",
     "CombinedStats",
+    "D1User",
+    "D1UserStats",
 ]

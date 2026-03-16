@@ -14,21 +14,15 @@ def render_overview() -> None:
     import streamlit as st
     import streamlit_antd_components as sac
     import streamlit_shadcn_ui as ui
-    from streamlit_autorefresh import st_autorefresh
-
     from ..services.d1_query import D1MonitorQuery
-    from ._utils import time_ago, TYPE_COLOR
+    from ._utils import time_ago, TYPE_COLOR, plotly_dark_layout, live_toggle
 
     st.title("Monitor Overview")
 
     query = D1MonitorQuery()
 
     # ── Live toggle ───────────────────────────────────────────────────────────
-    live_col, _ = st.columns([1, 5])
-    with live_col:
-        live_mode = st.toggle("Live", value=False, help="Auto-refresh every 60s")
-    if live_mode:
-        st_autorefresh(interval=60_000, debounce=True, key="ov_autorefresh")
+    live_toggle(key="ov_live", interval_ms=60_000)
 
     # ── Combined stats (1 round-trip) ─────────────────────────────────────────
     try:
@@ -94,16 +88,7 @@ def render_overview() -> None:
                     color_discrete_sequence=["#0070F3"],
                     labels={"period": "", "count": ""},
                 )
-                fig.update_layout(
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#EDEDED",
-                    margin=dict(l=0, r=0, t=30, b=0),
-                    height=200,
-                )
-                fig.update_xaxes(showgrid=False, tickangle=-30)
-                fig.update_yaxes(gridcolor="rgba(255,255,255,0.08)")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(plotly_dark_layout(fig, height=200), use_container_width=True)
             else:
                 sac.result(label="No frontend events", status="empty")
         except Exception:
@@ -122,14 +107,8 @@ def render_overview() -> None:
                     hole=0.45,
                     color_discrete_sequence=palette,
                 )
-                fig2.update_layout(
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#EDEDED",
-                    margin=dict(l=0, r=0, t=30, b=0),
-                    height=200,
-                    legend=dict(orientation="v", x=1.0, y=0.5, font=dict(size=10)),
-                )
+                plotly_dark_layout(fig2, height=200)
+                fig2.update_layout(legend=dict(orientation="v", x=1.0, y=0.5, font=dict(size=10)))
                 fig2.update_traces(textposition="inside", textinfo="percent")
                 st.plotly_chart(fig2, use_container_width=True)
         except Exception:

@@ -37,7 +37,9 @@ if [ "${DJANGO_CREATE_ADMIN:-true}" = "true" ]; then
     --last-name User 2>&1 | grep -E "(✅|❌|already exists)" || true
 fi
 
-# Note: collectstatic not needed - using whitenoise for static files
+# Collect static files (required by WhiteNoise CompressedManifestStaticFilesStorage in production)
+echo "Collecting static files..."
+python manage.py collectstatic --noinput --clear 2>&1 | tail -5
 
 # Execute the command passed to the script
 exec "$@"

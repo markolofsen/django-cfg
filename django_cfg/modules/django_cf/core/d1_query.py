@@ -1,7 +1,7 @@
 """
 django_cf.core.d1_query — D1 SQL factory.
 
-Single source of truth for all D1 DML/DDL.
+Single source of truth for all D1 DML/DDL/SELECT.
 
 Concepts
 --------
@@ -37,9 +37,26 @@ Usage
         client.execute(sql)
 
     # DML
-    sql, params = D1Q.upsert(PROJECTS_TABLE, data)       # INSERT … ON CONFLICT … DO UPDATE
+    sql, params = D1Q.upsert(PROJECTS_TABLE, data)        # INSERT … ON CONFLICT … DO UPDATE
     sql, params = D1Q.insert_ignore(PROJECTS_TABLE, data) # INSERT OR IGNORE …
     sql, params = D1Q.delete_where(PROJECTS_TABLE, {"is_resolved": "1", "api_url": url})
+
+    # SELECT — typed queries, no raw SQL needed in service layer
+    sql, params = D1Q.select(PROJECTS_TABLE, order_by="project_name")
+    sql, params = D1Q.select(SERVER_EVENTS_TABLE,
+                             conditions={"is_resolved": "0", "api_url": url},
+                             order_by="last_seen DESC", limit=100)
+    sql, params = D1Q.select_raw(FRONTEND_EVENTS_TABLE,
+                                 where_clause="created_at >= datetime('now', ? || ' hours')",
+                                 params=["-24"], order_by="created_at DESC", limit=200)
+    sql, params = D1Q.aggregate(SERVER_EVENTS_TABLE, expressions=[
+        "SUM(CASE WHEN is_resolved = 0 THEN 1 ELSE 0 END) as open_errors",
+        "SUM(occurrence_count) as total_occurrences",
+    ])
+    sql, params = D1Q.group_by(FRONTEND_EVENTS_TABLE, select_expr="event_type, COUNT(*) as count",
+                               group_by="event_type", order_by="count DESC",
+                               where_clause="created_at >= datetime('now', ? || ' hours')",
+                               params=["-24"])
 """
 
 from __future__ import annotations
@@ -358,6 +375,136 @@ class D1Q:
         sql = f"DELETE FROM {table.name} WHERE {where_clause}"
         return sql, params
 
+    # ── SELECT ────────────────────────────────────────────────────────────────
+
+    @classmethod
+    def select(
+        cls,
+        table: D1Table,
+        *,
+        conditions: dict[str, Any] | None = None,
+        columns: list[str] | None = None,
+        order_by: str | None = None,
+        limit: int | None = None,
+    ) -> tuple[str, list[str]]:
+        """SELECT … FROM … WHERE col = ? AND … ORDER BY … LIMIT …
+
+        Parameters
+        ----------
+        conditions:
+            Equality conditions: ``{"col": value, ...}``.
+            Values become ``?`` params (injection-safe).
+            For non-equality expressions use ``select_raw``.
+        columns:
+            Columns to select.  Defaults to ``*``.
+        order_by:
+            Raw ORDER BY expression, e.g. ``"last_seen DESC"``.
+        limit:
+            LIMIT N.  Omitted if None.
+        """
+        col_expr = ", ".join(columns) if columns else "*"
+        sql = f"SELECT {col_expr} FROM {table.name}"
+        params: list[str] = []
+
+        if conditions:
+            where_parts = [f"{col} = ?" for col in conditions]
+            params = [str(v) for v in conditions.values()]
+            sql += " WHERE " + " AND ".join(where_parts)
+
+        if order_by:
+            sql += f" ORDER BY {order_by}"
+        if limit is not None:
+            sql += f" LIMIT {limit}"
+
+        return sql, params
+
+    @classmethod
+    def select_raw(
+        cls,
+        table: D1Table,
+        *,
+        where_clause: str | None = None,
+        params: list[str] | None = None,
+        columns: list[str] | None = None,
+        order_by: str | None = None,
+        limit: int | None = None,
+    ) -> tuple[str, list[str]]:
+        """SELECT with a raw WHERE clause for SQL expressions.
+
+        Use when conditions include functions/operators that cannot
+        be expressed as simple equality, e.g.:
+            ``where_clause="created_at >= datetime('now', ? || ' hours')"``
+            ``params=["-24"]``
+        """
+        col_expr = ", ".join(columns) if columns else "*"
+        sql = f"SELECT {col_expr} FROM {table.name}"
+        safe_params: list[str] = list(params or [])
+
+        if where_clause:
+            sql += f" WHERE {where_clause}"
+        if order_by:
+            sql += f" ORDER BY {order_by}"
+        if limit is not None:
+            sql += f" LIMIT {limit}"
+
+        return sql, safe_params
+
+    @classmethod
+    def aggregate(
+        cls,
+        table: D1Table,
+        expressions: list[str],
+        *,
+        where_clause: str | None = None,
+        params: list[str] | None = None,
+    ) -> tuple[str, list[str]]:
+        """SELECT <expressions> FROM … [WHERE …]
+
+        For aggregate / stats queries.  ``expressions`` is a list of
+        raw SQL select expressions, e.g.:
+            ``["COUNT(*) as total",
+               "SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active"]``
+        """
+        expr_block = ",\n    ".join(expressions)
+        sql = f"SELECT\n    {expr_block}\nFROM {table.name}"
+        safe_params: list[str] = list(params or [])
+
+        if where_clause:
+            sql += f"\nWHERE {where_clause}"
+
+        return sql, safe_params
+
+    @classmethod
+    def group_by(
+        cls,
+        table: D1Table,
+        *,
+        select_expr: str,
+        group_by: str,
+        where_clause: str | None = None,
+        params: list[str] | None = None,
+        order_by: str | None = None,
+        limit: int | None = None,
+    ) -> tuple[str, list[str]]:
+        """SELECT <select_expr> FROM … [WHERE …] GROUP BY … [ORDER BY …] [LIMIT …]
+
+        For breakdown / timeline queries, e.g.:
+            ``select_expr="event_type, COUNT(*) as count"``
+            ``group_by="event_type"``
+        """
+        sql = f"SELECT {select_expr} FROM {table.name}"
+        safe_params: list[str] = list(params or [])
+
+        if where_clause:
+            sql += f" WHERE {where_clause}"
+        sql += f" GROUP BY {group_by}"
+        if order_by:
+            sql += f" ORDER BY {order_by}"
+        if limit is not None:
+            sql += f" LIMIT {limit}"
+
+        return sql, safe_params
+
     # ── Internal ──────────────────────────────────────────────────────────────
 
     @classmethod
@@ -383,3 +530,4 @@ class D1Q:
 
 
 __all__ = ["D1Column", "D1Index", "D1Table", "D1Q"]
+

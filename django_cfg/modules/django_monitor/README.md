@@ -89,7 +89,20 @@ capture_message("Suspicious login attempt", level="warning", extra={"ip": ip})
 
 ## Cleanup
 
-`cleanup_d1_events()` is an RQ task that removes resolved server events older than N days and trims old frontend events. Schedule it via `RQScheduleConfig` in your config.
+`cleanup_d1_events()` is an RQ task that removes resolved server events older than N days and trims old frontend events. Internally uses `client.delete(TABLE, where_clause, params)` from `CloudflareD1Client` — no raw SQL strings in task code.
+
+Schedule via `RQScheduleConfig` in your config:
+
+```python
+from django_cfg.modules.django_monitor.events.tasks import cleanup_d1_events
+
+RQScheduleConfig(
+    func="django_cfg.modules.django_monitor.events.tasks.cleanup_d1_events",
+    cron="0 3 * * *",   # daily at 3am
+    kwargs={"server_events_days": 90, "frontend_events_days": 30},
+    description="Trim old D1 monitor events",
+)
+```
 
 ## Errors
 

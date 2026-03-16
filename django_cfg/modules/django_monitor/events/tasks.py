@@ -71,15 +71,16 @@ def cleanup_d1_events(
     Returns dict with counts of deleted rows (best-effort, D1 may not return affected rows).
     """
     from django_cfg.modules.django_monitor import get_service
+    from .schema import SERVER_EVENTS_TABLE, FRONTEND_EVENTS_TABLE
 
     svc = get_service()
     client = svc._get_client()
     result = {}
 
     try:
-        r = client.execute(
-            "DELETE FROM server_events WHERE is_resolved = 1 "
-            "AND last_seen < datetime('now', ? || ' days')",
+        r = client.delete(
+            SERVER_EVENTS_TABLE,
+            "is_resolved = 1 AND last_seen < datetime('now', ? || ' days')",
             [f"-{server_events_days}"],
         )
         result["server_events_deleted"] = getattr(r, "rows_written", None)
@@ -89,8 +90,9 @@ def cleanup_d1_events(
         result["server_events_error"] = str(exc)
 
     try:
-        r = client.execute(
-            "DELETE FROM frontend_events WHERE last_seen < datetime('now', ? || ' days')",
+        r = client.delete(
+            FRONTEND_EVENTS_TABLE,
+            "last_seen < datetime('now', ? || ' days')",
             [f"-{frontend_events_days}"],
         )
         result["frontend_events_deleted"] = getattr(r, "rows_written", None)

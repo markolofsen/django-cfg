@@ -100,5 +100,25 @@ class CloudflareD1Client:
         """
         return [self.execute(s["sql"], s.get("params")) for s in statements]
 
+    def delete(self, table: "D1Table", where_clause: str, params: list[str] | None = None) -> D1QueryResult:  # type: ignore[name-defined]
+        """DELETE FROM <table> WHERE <where_clause>.
+
+        High-level cleanup method — builds SQL via D1Q and executes it.
+
+        Example:
+            client.delete(SERVER_EVENTS_TABLE, "is_resolved = 1 AND last_seen < datetime('now', ? || ' days')", ["-90"])
+        """
+        from .d1_query import D1Q
+        sql, built_params = D1Q.delete_where_raw(table, where_clause, params or [])
+        return self.execute(sql, built_params)
+
+    def truncate(self, table: "D1Table") -> D1QueryResult:  # type: ignore[name-defined]
+        """DELETE all rows from <table> (no WHERE clause).
+
+        Example:
+            client.truncate(SERVER_EVENTS_TABLE)
+        """
+        return self.execute(f"DELETE FROM {table.name}")
+
 
 __all__ = ["CloudflareD1Client"]
