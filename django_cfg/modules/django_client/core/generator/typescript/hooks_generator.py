@@ -16,11 +16,15 @@ Architecture:
 
 from __future__ import annotations
 
+import logging
+
 from jinja2 import Environment
 
 from ...ir import IRContext, IROperationObject
 from ..base import BaseGenerator, GeneratedFile
 from .naming import operation_to_method_name
+
+logger = logging.getLogger(__name__)
 
 _CFG_PREFIXES = ['django_cfg_', 'cfg_']
 
@@ -77,6 +81,10 @@ class HooksGenerator:
         # Get SWR key
         swr_key = self._generate_swr_key(operation)
 
+        # Determine if hook needs conditional fetching (path params that might be empty/null)
+        has_path_params = bool(operation.path_parameters)
+        path_param_names = [p.name for p in operation.path_parameters] if has_path_params else []
+
         # Render template
         template = self.jinja_env.get_template('hooks/query_hook.ts.jinja')
         return template.render(
@@ -86,7 +94,9 @@ class HooksGenerator:
             func_params=param_info['func_params'],
             fetcher_params=param_info['fetcher_params'],
             response_type=response_type,
-            swr_key=swr_key
+            swr_key=swr_key,
+            has_path_params=has_path_params,
+            path_param_names=path_param_names,
         )
 
     def generate_mutation_hook(self, operation: IROperationObject) -> str:
@@ -119,6 +129,21 @@ class HooksGenerator:
 
         # Get revalidation keys
         revalidation_keys = self._get_revalidation_keys(operation)
+
+        # Warn if request body schema name contains "Response" — strong sign of missing @extend_schema(request=...)
+        # e.g. "BotResponseRequest" means DRF Spectacular used the response serializer as request body fallback
+        if operation.request_body and operation.request_body.schema_name:
+            req_schema = operation.request_body.schema_name
+            if "Response" in req_schema:
+                logger.warning(
+                    "⚠️  %s %s — request body schema '%s' contains 'Response' which likely means "
+                    "@extend_schema(request=...) is missing on the ViewSet action. "
+                    "Add @extend_schema(request=None) if no body needed, "
+                    "or @extend_schema(request=YourInputSerializer) for the correct input type.",
+                    operation.http_method,
+                    operation.path,
+                    req_schema,
+                )
 
         # Render template
         template = self.jinja_env.get_template('hooks/mutation_hook.ts.jinja')

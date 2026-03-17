@@ -12,8 +12,9 @@ client?: API
 {%- endif %}
 ): ReturnType<typeof useSWR<{{ response_type }}>> {
   return useSWR<{{ response_type }}>(
-    {{ swr_key }},
-{% if fetcher_params %}    () => Fetchers.{{ fetcher_name }}({{ fetcher_params }}, client)
+{% if has_path_params %}    {{ path_param_names | join(' && ') }} ? {{ swr_key }} : null,
+{% else %}    {{ swr_key }},
+{% endif %}{% if fetcher_params %}    () => Fetchers.{{ fetcher_name }}({{ fetcher_params }}, client)
 {% else %}    () => Fetchers.{{ fetcher_name }}(client)
 {% endif %}  )
 }
