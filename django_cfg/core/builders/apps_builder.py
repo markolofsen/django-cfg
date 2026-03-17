@@ -122,10 +122,10 @@ class InstalledAppsBuilder:
 
         # Integrations (enabled via config)
         if self.config.centrifugo and self.config.centrifugo.enabled:
-            apps.append("django_cfg.apps.integrations.centrifugo")
+            apps.append("django_cfg.modules.django_centrifugo")
 
-        if self.config.grpc and self.config.grpc.enabled:
-            apps.append("django_cfg.apps.integrations.grpc")
+        if hasattr(self.config, "grpc_module") and self.config.grpc_module and self.config.grpc_module.enabled:
+            apps.append("django_cfg.modules.django_grpc")
 
         if self.config.crypto_fields and self.config.crypto_fields.enabled:
             apps.append("django_crypto_fields.apps.AppConfig")
@@ -181,10 +181,10 @@ class InstalledAppsBuilder:
         apps = []
 
         # Add Django-RQ if enabled
-        # IMPORTANT: django_cfg.apps.integrations.rq MUST come before django_rq
+        # IMPORTANT: django_cfg.modules.django_rq MUST come before django_rq
         # so that django-cfg's rqscheduler command overrides django-rq's version
         if hasattr(self.config, "django_rq") and self.config.django_rq and self.config.django_rq.enabled:
-            apps.append("django_cfg.apps.integrations.rq")  # Django-CFG monitoring & API (must be first!)
+            apps.append("django_cfg.modules.django_rq")  # Django-CFG RQ metrics module (must be first!)
             apps.append("django_rq")  # Core django-rq package
 
         # Add DRF Tailwind theme module (uses Tailwind via CDN)

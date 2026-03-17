@@ -20,7 +20,7 @@ from pydantic import Field, field_validator, model_validator
 from django_cfg.models.base import BaseConfig
 
 # Import TLSConfig from centralized configs
-from django_cfg.apps.integrations.grpc.configs.tls import TLSConfig
+from django_cfg.modules.django_grpc.config.tls import TLSConfig
 
 
 class GRPCKeepaliveConfig(BaseConfig):
@@ -28,13 +28,6 @@ class GRPCKeepaliveConfig(BaseConfig):
     gRPC HTTP/2 keepalive configuration.
 
     Controls HTTP/2 PING frames for connection health and dead connection detection.
-    These settings should match between client and server for optimal behavior.
-
-    Recommended settings for long-lived bidirectional streaming:
-    - time_ms: 10000 (10s) - fast dead connection detection
-    - timeout_ms: 5000 (5s) - quick ping acknowledgment
-    - permit_without_calls: True - maintain idle connections
-    - max_pings_without_data: 0 - unlimited pings for streaming
 
     Example:
         >>> config = GRPCKeepaliveConfig(
@@ -129,12 +122,6 @@ class GRPCConnectionLimitsConfig(BaseConfig):
     gRPC connection limits configuration.
 
     Controls connection lifecycle for server-side connection management.
-
-    Example:
-        >>> config = GRPCConnectionLimitsConfig(
-        ...     max_connection_idle_ms=7200000,  # 2 hours
-        ...     max_connection_age_ms=0,  # Unlimited (for streaming)
-        ... )
     """
 
     max_connection_idle_ms: int = Field(

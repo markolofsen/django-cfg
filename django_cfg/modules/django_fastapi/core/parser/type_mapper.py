@@ -63,6 +63,9 @@ DJANGO_TO_PYTHON: dict[str, str] = {
     "CITextField": "str",
     "HStoreField": "dict[str, str]",
 
+    # pgvector
+    "VectorField": "list[float]",
+
     # Relations (ID column type)
     "ForeignKey": "int",
     "OneToOneField": "int",
@@ -238,6 +241,14 @@ class TypeMapper:
         if django_type == "BinaryField":
             self._imports.add(("sqlalchemy", "LargeBinary"))
             return "Column(LargeBinary)"
+
+        # pgvector VectorField
+        if django_type == "VectorField":
+            self._imports.add(("pgvector.sqlalchemy", "Vector"))
+            dims = getattr(field, "vector_dimensions", None)
+            if dims:
+                return f"Column(Vector({dims}))"
+            return "Column(Vector())"
 
         # UUID field with native PostgreSQL type
         # Use PGUUID alias to avoid conflict with Python's uuid.UUID

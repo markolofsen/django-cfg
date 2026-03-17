@@ -195,17 +195,14 @@ class BaseCfgModule(ABC):
 
     def is_grpc_enabled(self) -> bool:
         """
-        Check if django-cfg gRPC is enabled.
+        Check if django-cfg gRPC module is enabled.
 
         Returns:
-            True if gRPC is enabled, False otherwise
+            True if grpc_module is configured and enabled, False otherwise
         """
-        grpc_config = self._get_config_key('grpc', None)
-
-        # Check if grpc config exists and is enabled
-        if grpc_config and hasattr(grpc_config, 'enabled'):
-            return grpc_config.enabled
-
+        grpc_module = self._get_config_key('grpc_module', None)
+        if grpc_module and hasattr(grpc_module, 'enabled'):
+            return grpc_module.enabled
         return False
 
     def is_currency_enabled(self) -> bool:

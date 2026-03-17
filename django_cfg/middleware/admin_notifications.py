@@ -203,7 +203,7 @@ try:
         except Exception as e:
             logger.error(f"Failed to send lockout notification: {e}")
 
-except ImportError:
+except Exception:  # axes.conf reads settings at import time — silenced until django.setup() runs
     # Django-Axes not installed - skip failed login monitoring
     logger.info("Django-Axes not installed - failed login notifications disabled")
 

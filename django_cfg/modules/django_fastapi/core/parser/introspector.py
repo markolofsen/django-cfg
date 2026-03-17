@@ -270,6 +270,12 @@ class DjangoModelParser:
             if field_type == 'JSONField':
                 parsed.is_json = True
 
+            # Handle pgvector VectorField
+            if field_type == 'VectorField':
+                parsed.is_vector = True
+                parsed.vector_dimensions = getattr(field, 'dimensions', None)
+                parsed.django_type = 'VectorField'
+
             return parsed
 
         except Exception as e:

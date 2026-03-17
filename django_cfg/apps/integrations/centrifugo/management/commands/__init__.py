@@ -1,1 +1,0 @@
-"""Centrifugo management commands."""

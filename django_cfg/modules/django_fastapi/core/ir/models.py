@@ -67,6 +67,10 @@ class ParsedField:
     array_base_type: Optional[str] = None
     is_json: bool = False
 
+    # pgvector-specific
+    is_vector: bool = False
+    vector_dimensions: Optional[int] = None
+
     # Auto timestamps
     auto_now: bool = False
     auto_now_add: bool = False

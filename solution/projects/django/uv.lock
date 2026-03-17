@@ -936,7 +936,7 @@ wheels = [
 
 [[package]]
 name = "django-cfg"
-version = "1.7.80"
+version = "1.7.87"
 source = { editable = "../../../../../../../../../../djangocfg" }
 dependencies = [
     { name = "adrf" },

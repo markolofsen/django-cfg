@@ -14,11 +14,9 @@ from django_cfg.modules.base import BaseCfgModule
 from django_cfg.modules.django_unfold.models.navigation import NavigationSection
 from django_cfg.modules.django_unfold.navigation.sections import (
     build_accounts_section,
-    build_centrifugo_section,
     build_currency_section,
     build_dashboard_section,
     build_geo_section,
-    build_grpc_section,
     build_totp_section,
 )
 
@@ -49,12 +47,6 @@ class NavigationManager(BaseCfgModule):
         sections: List[NavigationSection] = []
 
         sections.append(build_dashboard_section())
-
-        if self.is_centrifugo_enabled():
-            sections.append(build_centrifugo_section())
-
-        if self.is_grpc_enabled():
-            sections.append(build_grpc_section())
 
         if self.is_currency_enabled():
             sections.append(build_currency_section())

@@ -36,13 +36,10 @@ def get_enabled_cfg_apps() -> List[str]:
 
     # Integration apps
     if base_module.is_centrifugo_enabled():
-        enabled_apps.append("django_cfg.apps.integrations.centrifugo")
+        enabled_apps.append("django_cfg.modules.django_centrifugo")
 
     if base_module.should_enable_rq():
-        enabled_apps.append("django_cfg.apps.integrations.rq")
-
-    if base_module.is_grpc_enabled():
-        enabled_apps.append("django_cfg.apps.integrations.grpc")
+        enabled_apps.append("django_cfg.modules.django_rq")
 
     return enabled_apps
 
@@ -126,14 +123,9 @@ except Exception:
 base_module = BaseCfgModule()
 
 # Integration apps (conditional based on config)
-if base_module.is_centrifugo_enabled():
-    urlpatterns.append(path('cfg/centrifugo/', include('django_cfg.apps.integrations.centrifugo.urls')))
+# django_centrifugo has no REST API — replaced by Streamlit dashboard reading D1 directly
 
-if base_module.should_enable_rq():
-    urlpatterns.append(path('cfg/rq/', include('django_cfg.apps.integrations.rq.urls')))
 
-if base_module.is_grpc_enabled():
-    urlpatterns.append(path('cfg/grpc/', include('django_cfg.apps.integrations.grpc.urls')))
 
 # Geo app (countries, states, cities)
 if base_module.is_geo_enabled():

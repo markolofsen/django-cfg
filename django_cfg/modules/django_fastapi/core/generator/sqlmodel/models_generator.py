@@ -418,16 +418,22 @@ class SQLModelGenerator(BaseGenerator):
         if self._needs_desc_import:
             sa_imports.add("desc")
 
+        pgvector_imports = []
+
         for module, name in self.type_mapper.imports:
             if module == "sqlalchemy":
                 sa_imports.add(name)
             elif module == "sqlalchemy.dialects.postgresql":
                 sa_pg_imports.append(name)
+            elif module == "pgvector.sqlalchemy":
+                pgvector_imports.append(name)
 
         if sa_imports:
             lines.append(f"from sqlalchemy import {', '.join(sorted(sa_imports))}")
         if sa_pg_imports:
             lines.append(f"from sqlalchemy.dialects.postgresql import {', '.join(sorted(set(sa_pg_imports)))}")
+        if pgvector_imports:
+            lines.append(f"from pgvector.sqlalchemy import {', '.join(sorted(set(pgvector_imports)))}")
 
         # Enum imports from enums.py (same app)
         if self._enum_classes_used:

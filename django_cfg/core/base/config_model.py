@@ -8,12 +8,21 @@ This module contains ONLY the data model definition:
 - NO business logic (moved to builders and services)
 """
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
 
-from django_cfg.apps.integrations.centrifugo.services.client.config import DjangoCfgCentrifugoConfig
+try:
+    from django_cfg.modules.django_grpc.__cfg__ import DjangoGrpcModuleConfig  # noqa: F401
+except ImportError:
+    DjangoGrpcModuleConfig = None  # type: ignore[assignment,misc]
+if TYPE_CHECKING:
+    from django_cfg.modules.django_grpc.__cfg__ import DjangoGrpcModuleConfig
+
+from django_cfg.modules.django_centrifugo.services.client.config import DjangoCfgCentrifugoConfig
 from ...models import (
     ApiKeys,
     AxesConfig,
@@ -35,7 +44,10 @@ from ...models import (
     UnfoldConfig,
 )
 from ..encryption.config import EncryptionConfig
-from ...models.api.grpc import GRPCConfig
+try:
+    from ...models.api.grpc import GRPCConfig  # noqa: F401  (needed for Pydantic forward-ref resolution)
+except ImportError:
+    GRPCConfig = None  # type: ignore[assignment,misc]
 from ...models.ngrok import NgrokConfig
 from ...modules.streamlit_admin import StreamlitAdminConfig
 from ...modules.django_cf import CloudflareConfig
@@ -338,6 +350,11 @@ class DjangoConfig(BaseModel):
     grpc: Optional[GRPCConfig] = Field(
         default=None,
         description="gRPC server configuration",
+    )
+
+    grpc_module: Optional["DjangoGrpcModuleConfig"] = Field(
+        default=None,
+        description="New D1-backed gRPC module configuration",
     )
 
     api_keys: Optional[ApiKeys] = Field(
@@ -736,3 +753,10 @@ class DjangoConfig(BaseModel):
 
 
 __all__ = ["DjangoConfig"]
+
+# Rebuild after optional imports are resolved
+# grpc_module uses a forward-ref string; grpc uses try/except import above
+try:
+    DjangoConfig.model_rebuild()
+except Exception:
+    pass

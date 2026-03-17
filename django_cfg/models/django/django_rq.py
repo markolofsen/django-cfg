@@ -412,7 +412,7 @@ class DjangoRQConfig(BaseModel):
         """Cross-field validation and dependency checking."""
         # Check dependencies if enabled
         if self.enabled:
-            from django_cfg.apps.integrations.rq._cfg import require_rq_feature
+            from django_cfg.modules.django_rq._deps import require_rq_feature
 
             require_rq_feature()
 
@@ -436,7 +436,7 @@ class DjangoRQConfig(BaseModel):
         if self.enable_auto_cleanup:
             # Daily cleanup of old jobs
             cleanup_jobs_schedule = RQScheduleConfig(
-                func="django_cfg.apps.integrations.rq.tasks.maintenance.cleanup_old_jobs",
+                func="django_cfg.modules.django_rq.tasks.maintenance.cleanup_old_jobs",
                 interval=86400,  # Once per day
                 queue="default",
                 kwargs={
@@ -448,7 +448,7 @@ class DjangoRQConfig(BaseModel):
 
             # Weekly cleanup of orphaned keys
             cleanup_orphaned_schedule = RQScheduleConfig(
-                func="django_cfg.apps.integrations.rq.tasks.maintenance.cleanup_orphaned_job_keys",
+                func="django_cfg.modules.django_rq.tasks.maintenance.cleanup_orphaned_job_keys",
                 interval=604800,  # Once per week
                 queue="default",
                 kwargs={"dry_run": False},
@@ -465,7 +465,7 @@ class DjangoRQConfig(BaseModel):
 
             if config and config.is_development:
                 demo_heartbeat_schedule = RQScheduleConfig(
-                    func="django_cfg.apps.integrations.rq.tasks.demo_tasks.demo_scheduler_heartbeat",
+                    func="django_cfg.modules.django_rq.tasks.demo_tasks.demo_scheduler_heartbeat",
                     interval=60,  # Every minute
                     queue="default",
                     description="RQ Scheduler Heartbeat (demo - development only)",
@@ -523,6 +523,21 @@ class DjangoRQConfig(BaseModel):
         try:
             from django_cfg.apps.system.accounts.services.cleanup_service import get_rq_schedules as accounts_schedules
             schedules.extend(accounts_schedules())
+        except Exception:
+            pass
+
+        # django_rq D1 cleanup (daily at 3am)
+        try:
+            from django_cfg.modules.django_rq import is_enabled
+            if is_enabled():
+                from django_cfg.modules.django_rq.__cfg__ import settings as rq_module_settings
+                schedules.append(RQScheduleConfig(
+                    func="django_cfg.modules.django_rq.events.tasks.cleanup_old_rq_events",
+                    cron="0 3 * * *",
+                    queue="default",
+                    kwargs={"days": rq_module_settings.retention_days},
+                    description="Cleanup old RQ job events from D1",
+                ))
         except Exception:
             pass
 

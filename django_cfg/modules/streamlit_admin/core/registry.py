@@ -29,6 +29,9 @@ logger = logging.getLogger("django_cfg.streamlit_admin.registry")
 # Modules that provide Streamlit pages — auto-registered before project extensions.py
 _BUILTIN_STREAMLIT_MODULES = [
     "django_cfg.modules.django_monitor.streamlit",
+    "django_cfg.modules.django_rq.streamlit",
+    "django_cfg.modules.django_centrifugo.streamlit",
+    "django_cfg.modules.django_grpc.streamlit",
 ]
 
 

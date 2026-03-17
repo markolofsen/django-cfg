@@ -117,6 +117,55 @@ class GRPCService(BaseService):
 
         return self._safe_call("get_recent_errors", fetch, [])
 
+    def get_timeline(self) -> list[dict]:
+        """Get request timeline data."""
+
+        def fetch() -> list[dict]:
+            data = self.api.cfg_grpc_monitoring.grpc_monitor_timeline_retrieve()
+            if hasattr(data, "timeline"):
+                return [
+                    {
+                        "timestamp": p.timestamp,
+                        "total": p.total or 0,
+                        "successful": p.successful or 0,
+                        "errors": p.errors or 0,
+                        "avg_duration_ms": p.avg_duration_ms or 0.0,
+                    }
+                    for p in data.timeline
+                ]
+            return []
+
+        return self._safe_call("get_timeline", fetch, [])
+
+    def get_recent_requests(
+        self,
+        service_name: str | None = None,
+        status: str | None = None,
+        limit: int = 50,
+    ) -> list[dict]:
+        """Get recent requests with optional filters."""
+
+        def fetch() -> list[dict]:
+            kwargs: dict = {"page_size": limit}
+            if service_name:
+                kwargs["service"] = service_name
+            if status:
+                kwargs["status"] = status
+            paginated = self.api.cfg_grpc_monitoring.grpc_monitor_requests_list(**kwargs)
+            return [
+                {
+                    "service_name": r.service_name,
+                    "method_name": r.method_name,
+                    "status": r.status,
+                    "duration_ms": r.duration_ms,
+                    "grpc_status_code": r.grpc_status_code or "",
+                    "created_at": r.created_at,
+                }
+                for r in paginated.results
+            ]
+
+        return self._safe_call("get_recent_requests", fetch, [])
+
     def get_overview_stats(self) -> dict:
         """Get overview statistics."""
 
