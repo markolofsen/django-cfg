@@ -281,8 +281,9 @@ class Command(BaseCommand):
 
     async def _add_health_check(self):
         try:
-            from grpc_health.v1 import health, health_pb2, health_pb2_grpc
-            servicer = health.HealthServicer()
+            from grpc_health.v1 import health_pb2, health_pb2_grpc
+            from grpc_health.v1.health import aio
+            servicer = aio.HealthServicer()
             servicer.set("", health_pb2.HealthCheckResponse.SERVING)
             health_pb2_grpc.add_HealthServicer_to_server(servicer, self.server)
             # Store reference so shutdown can flip to NOT_SERVING before draining.

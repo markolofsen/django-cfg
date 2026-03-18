@@ -1,6 +1,6 @@
 <div align="center">
 
-![Django-CFG](https://raw.githubusercontent.com/markolofsen/assets/main/libs/django_cfg.webp)
+![Django-CFG](https://raw.githubusercontent.com/markolofsen/assets/main/libs/djangocfg/django-cfg.webp)
 
 # Django-CFG
 
