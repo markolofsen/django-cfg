@@ -104,6 +104,17 @@ RQScheduleConfig(
 )
 ```
 
+## Querying Events via CLI
+
+Query `server_events` and `frontend_events` from the terminal using `d1_logs` (a `django_cf` management command):
+
+```bash
+uv run python manage.py d1_logs server_events --level error --since 1h
+uv run python manage.py d1_logs frontend_events --search "TypeError"
+```
+
+See the [django_cf d1-logs guide](../django_cf/@docs/d1-logs.md) for all options.
+
 ## Errors
 
 | Exception | When |

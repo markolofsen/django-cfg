@@ -118,6 +118,17 @@ Both methods use `D1Q.delete_where_raw` internally and go through the same typed
 
 Subclass `BaseD1Service` and implement `_get_schema_statements()` to wire DDL auto-migration on first use.
 
+## d1_logs — Cross-Module Log Viewer
+
+Query any D1 table from the CLI — server errors, gRPC requests, RQ jobs, frontend events, and more. One command covers all 9 tables across `django_monitor`, `django_grpc`, `django_rq`, and `django_cf`.
+
+```bash
+uv run python manage.py d1_logs server_events --level error --since 1h
+uv run python manage.py d1_logs --stats
+```
+
+See [@docs/d1-logs.md](./@docs/d1-logs.md) for full documentation.
+
 ## Errors
 
 All exceptions inherit from `CloudflareError`.

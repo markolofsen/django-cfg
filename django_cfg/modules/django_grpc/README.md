@@ -234,6 +234,7 @@ auto_register()
 | `create_grpc_d1_schema` | Create / migrate D1 tables (idempotent) |
 | `compile_proto` | Compile `.proto` files to Python |
 | `generate_protos` | Generate `.proto` files from Django apps |
+| `d1_logs` *(cross-module)* | Query `grpc_request_logs` / `grpc_server_status` — see [d1-logs guide](../django_cf/@docs/d1-logs.md) |
 
 ---
 

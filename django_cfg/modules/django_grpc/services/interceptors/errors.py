@@ -13,6 +13,10 @@ from typing import Any, Callable
 
 import grpc
 import grpc.aio
+try:
+    from grpc._cython.cygrpc import AbortError as _AbortError
+except ImportError:
+    _AbortError = None  # type: ignore[assignment,misc]
 from django.core.exceptions import (
     ObjectDoesNotExist,
     PermissionDenied,
@@ -48,6 +52,12 @@ def _resolve_error(error: Exception) -> tuple[grpc.StatusCode, str] | None:
     """
     if isinstance(error, grpc.RpcError):
         return None  # caller will re-raise directly
+
+    # AbortError is raised by context.abort() in grpc.aio handlers.
+    # It does NOT inherit from grpc.RpcError, but calling abort() again
+    # causes UsageError("Abort already called!"). Must re-raise as-is.
+    if _AbortError is not None and isinstance(error, _AbortError):
+        return None
 
     for exc_type, (code, template) in _ERROR_MAPPINGS.items():
         if isinstance(error, exc_type):
