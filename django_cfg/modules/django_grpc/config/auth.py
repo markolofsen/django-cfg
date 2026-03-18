@@ -45,6 +45,15 @@ class GrpcAuthConfig(BaseModel):
         description="Session token TTL in seconds (default 24h, max 7d)",
     )
 
+    interceptor_class: str = Field(
+        default="",
+        description=(
+            "Import path to a custom grpc.aio.ServerInterceptor class that replaces "
+            "the built-in JWTAuthInterceptor. Use when the application has its own "
+            "auth scheme (e.g., API keys, CLI tokens). Empty = use built-in JWT."
+        ),
+    )
+
     @model_validator(mode="after")
     def _auto_generate_internal_secret(self) -> "GrpcAuthConfig":
         """Auto-generate internal_secret per-process if not explicitly set."""

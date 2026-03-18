@@ -59,30 +59,42 @@ def build_interceptors(config: Any | None = None) -> list:
     # Error handler (grpc.aio.ServerInterceptor — no request_iterator wrapping)
     interceptors.append(ErrorHandlingInterceptor())
 
-    # A4: always register JWTAuthInterceptor so that valid tokens always set user context,
-    # even when require_auth=False. The interceptor passes anonymous requests through when
-    # require_auth=False, but still populates _grpc_user_var for valid tokens.
-    require_auth = cfg.auth.require_auth if cfg else False
-    public_methods: set[str] = set(cfg.auth.public_methods) if cfg else set()
+    # Auth interceptor: custom class or built-in JWT.
+    # Custom interceptor replaces JWT entirely (e.g., API key / CLI token auth).
+    custom_interceptor_class = cfg.auth.interceptor_class if cfg else ""
+    if custom_interceptor_class:
+        import importlib
+        module_path, class_name = custom_interceptor_class.rsplit(".", 1)
+        mod = importlib.import_module(module_path)
+        interceptor_cls = getattr(mod, class_name)
+        interceptors.append(interceptor_cls())
+        _logger.info("Auth interceptor: %s (custom)", class_name)
+    else:
+        # A4: always register JWTAuthInterceptor so that valid tokens always set user context,
+        # even when require_auth=False. The interceptor passes anonymous requests through when
+        # require_auth=False, but still populates _grpc_user_var for valid tokens.
+        require_auth = cfg.auth.require_auth if cfg else False
+        public_methods: set[str] = set(cfg.auth.public_methods) if cfg else set()
 
-    from ..auth.jwt_auth import JWTAuthInterceptor
-    interceptors.append(JWTAuthInterceptor(
-        require_auth=require_auth,
-        public_methods=public_methods,
-    ))
+        from ..auth.jwt_auth import JWTAuthInterceptor
+        interceptors.append(JWTAuthInterceptor(
+            require_auth=require_auth,
+            public_methods=public_methods,
+        ))
 
-    # Observability (always last — reads auth context set by JWTAuthInterceptor)
+    # Observability (always last — reads auth context set by auth interceptor)
     enable_request_logging = cfg.persistence.log_requests if cfg else True
     interceptors.append(ObservabilityInterceptor(
         enable_request_logging=enable_request_logging,
     ))
 
-    # Sanity check: auth must come before observability (ContextVar must be set first)
-    jwt_indices = [i for i, x in enumerate(interceptors) if type(x).__name__ == "JWTAuthInterceptor"]
+    # Sanity check: auth interceptor must come before observability
+    auth_names = {"JWTAuthInterceptor", "AuthInterceptor", "CLITokenAuthInterceptor"}
+    auth_indices = [i for i, x in enumerate(interceptors) if type(x).__name__ in auth_names]
     obs_indices = [i for i, x in enumerate(interceptors) if type(x).__name__ == "ObservabilityInterceptor"]
-    if jwt_indices and obs_indices:
-        assert jwt_indices[-1] < obs_indices[0], (
-            "JWTAuthInterceptor must be registered before ObservabilityInterceptor"
+    if auth_indices and obs_indices:
+        assert auth_indices[-1] < obs_indices[0], (
+            "Auth interceptor must be registered before ObservabilityInterceptor"
         )
 
     return interceptors
