@@ -34,6 +34,7 @@ KNOWN_TABLES = (
     "rq_job_events",
     "rq_worker_heartbeats",
     "centrifugo_logs",
+    "log_events",
     "users",
     "projects",
 )
@@ -47,6 +48,7 @@ _DEFAULT_ORDER: dict[str, str] = {
     "rq_job_events":       "created_at DESC",
     "rq_worker_heartbeats": "heartbeat_at DESC",
     "centrifugo_logs":     "created_at DESC",
+    "log_events":          "last_seen DESC",
     "users":               "updated_at DESC",
     "projects":            "synced_at DESC",
 }
@@ -60,6 +62,7 @@ _TIME_COLUMN: dict[str, str] = {
     "rq_job_events":       "created_at",
     "rq_worker_heartbeats": "heartbeat_at",
     "centrifugo_logs":     "created_at",
+    "log_events":          "last_seen",
     "users":               "updated_at",
     "projects":            "synced_at",
 }
@@ -73,6 +76,7 @@ _SEARCH_COLUMNS: dict[str, list[str]] = {
     "rq_job_events":       ["error_message", "func_name"],
     "rq_worker_heartbeats": ["worker_name"],
     "centrifugo_logs":     ["message"],
+    "log_events":          ["message", "stack_trace", "logger_name"],
     "users":               ["email", "first_name", "last_name"],
     "projects":            ["project_name", "api_url"],
 }
@@ -89,7 +93,8 @@ class D1LogQuery(BaseModel):
         "server_events", "frontend_events",
         "grpc_request_logs", "grpc_server_status",
         "rq_job_events", "rq_worker_heartbeats",
-        "centrifugo_logs", "users", "projects",
+        "centrifugo_logs", "log_events",
+        "users", "projects",
     ]
     limit: int = Field(default=50, ge=1, le=500)
     level: str | None = Field(default=None, description="Filter by level (error, warning, info)")

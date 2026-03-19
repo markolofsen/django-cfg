@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.0.9"
+__version__ = "2.0.11"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -98,6 +98,7 @@ from .models.django.environment import EnvironmentConfig
 from .models.django.axes import AxesConfig
 from .models.django.crypto_fields import CryptoFieldsConfig
 from .models.django.django_rq import DjangoRQConfig, RQQueueConfig, RQScheduleConfig
+from .modules.django_logging.__cfg__ import DjangoLoggingConfig
 from .models.django.currency import CurrencyConfig
 from .models.django.geo import GeoConfig
 from .models.django.frontend_monitor import FrontendMonitorConfig
@@ -335,6 +336,7 @@ __all__ = [
     # Django models
     "EnvironmentConfig", "AxesConfig", "CryptoFieldsConfig",
     "DjangoRQConfig", "RQQueueConfig", "RQScheduleConfig",
+    "DjangoLoggingConfig",
     "CurrencyConfig", "GeoConfig", "FrontendMonitorConfig",
     "ConstanceConfig", "ConstanceField", "StorageConfig", "OpenAPIClientConfig",
     "EmailConfig", "TelegramConfig",

@@ -248,6 +248,11 @@ class SecurityBuilder:
             internal_services = self._get_internal_service_names()
             allowed_hosts.extend(internal_services)
 
+            # Auto-detect all internal hostnames from config URLs
+            for hostname in self._get_all_internal_hostnames():
+                if hostname not in allowed_hosts:
+                    allowed_hosts.append(hostname)
+
             # Allow Docker/Kubernetes health checks
             # Use regex for private IPs (RFC 1918)
             allowed_hosts.extend([
@@ -307,6 +312,60 @@ class SecurityBuilder:
 
         # Deduplicate while preserving order
         return list(dict.fromkeys(service_names))
+
+    def _get_all_internal_hostnames(self) -> List[str]:
+        """
+        Scan entire DjangoConfig for URL fields and extract internal hostnames.
+
+        Walks all config attributes recursively, finds string values that look
+        like URLs (http://...), extracts hostnames, and returns those that are
+        Docker/K8s internal names (no dots = not a real domain).
+
+        Also includes own container hostname and HOSTNAME env var.
+        """
+        import os
+        import socket
+
+        hostnames: set[str] = set()
+
+        # Own container hostname
+        try:
+            own = socket.gethostname()
+            if own:
+                hostnames.add(own)
+        except Exception:
+            pass
+        env_host = os.environ.get("HOSTNAME", "")
+        if env_host:
+            hostnames.add(env_host)
+
+        # Scan all config fields for URLs with internal hostnames
+        self._scan_config_for_internal_hosts(self.config, hostnames, depth=0)
+
+        return [h for h in hostnames if h]
+
+    def _scan_config_for_internal_hosts(self, obj: object, out: set, depth: int) -> None:
+        """Recursively scan config object for URL strings with internal hostnames."""
+        if depth > 5:
+            return
+
+        # Get dict of fields (Pydantic model or plain object)
+        fields: dict = {}
+        if hasattr(obj, 'model_dump'):
+            try:
+                fields = obj.model_dump()
+            except Exception:
+                pass
+        elif hasattr(obj, '__dict__'):
+            fields = {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
+
+        for key, value in fields.items():
+            if isinstance(value, str) and ('://' in value or ':' in value):
+                hostname = self._extract_hostname_from_url(value, allow_no_protocol=True)
+                if hostname and self._is_internal_service_name(hostname):
+                    out.add(hostname)
+            elif hasattr(value, '__dict__') or hasattr(value, 'model_dump'):
+                self._scan_config_for_internal_hosts(value, out, depth + 1)
 
     def _extract_hostname_from_url(self, url: str, allow_no_protocol: bool = False) -> str:
         """
