@@ -32,6 +32,7 @@ _BUILTIN_STREAMLIT_MODULES = [
     "django_cfg.modules.django_rq.streamlit",
     "django_cfg.modules.django_centrifugo.streamlit",
     "django_cfg.modules.django_grpc.streamlit",
+    "django_cfg.modules.django_logging.streamlit",
 ]
 
 

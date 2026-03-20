@@ -5,7 +5,6 @@ Manages application groups and URL pattern generation.
 """
 
 import importlib
-import importlib.util
 import logging
 import sys
 from types import ModuleType
@@ -297,35 +296,42 @@ class GroupManager:
         """
         Build URL patterns for custom user apps.
 
-        Uses find_spec() to check for urls.py without triggering imports,
-        then tries eager include(). On circular import, falls back to a
-        deferred include that resolves lazily on first HTTP request.
+        Discovers urls.py and urls_*.py files using find_spec() without
+        triggering imports. On circular import, falls back to a deferred
+        include that resolves lazily on first HTTP request.
+
+        Convention (same as extensions):
+        - urls.py      -> /{prefix}/{app}/       (main API)
+        - urls_public.py -> /{prefix}/{app}/public/ (public API)
+        - urls_admin.py  -> /{prefix}/{app}/admin/  (admin API)
+        - urls_<name>.py -> /{prefix}/{app}/<name>/ (custom suffix)
         """
+        from .discovery import discover_app_url_modules
+
         api_prefix = getattr(self.config, 'api_prefix', '').strip('/')
         patterns = []
 
         for app_name in apps:
-            urls_mod = f"{app_name}.urls"
-            try:
-                spec = importlib.util.find_spec(urls_mod)
-            except (ModuleNotFoundError, ValueError):
-                spec = None
+            app_basename = app_name.split('.')[-1]
+            base_url_path = f"{api_prefix}/{app_basename}" if api_prefix else app_basename
 
-            if spec is None:
-                logger.debug(f"App '{app_name}' has no urls.py - skipping")
+            url_modules = discover_app_url_modules(app_name)
+
+            if not url_modules:
+                logger.debug(f"App '{app_name}' has no urls*.py - skipping")
                 continue
 
-            app_basename = app_name.split('.')[-1]
-            url_path = f"{api_prefix}/{app_basename}/" if api_prefix else f"{app_basename}/"
+            for urls_mod, suffix in url_modules:
+                url_path = f"{base_url_path}/{suffix}/" if suffix else f"{base_url_path}/"
 
-            try:
-                patterns.append(path(url_path, include(urls_mod)))
-            except ImportError as e:
-                if "circular import" in str(e) or "partially initialized" in str(e):
-                    logger.warning(f"Circular import for '{urls_mod}', using deferred include")
-                    patterns.append(path(url_path, _deferred_include(urls_mod)))
-                else:
-                    logger.error(f"Failed to include '{urls_mod}': {e}", exc_info=True)
+                try:
+                    patterns.append(path(url_path, include(urls_mod)))
+                except ImportError as e:
+                    if "circular import" in str(e) or "partially initialized" in str(e):
+                        logger.warning(f"Circular import for '{urls_mod}', using deferred include")
+                        patterns.append(path(url_path, _deferred_include(urls_mod)))
+                    else:
+                        logger.error(f"Failed to include '{urls_mod}': {e}", exc_info=True)
 
         return patterns
 
