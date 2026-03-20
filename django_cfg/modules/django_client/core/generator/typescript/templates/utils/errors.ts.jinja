@@ -78,6 +78,11 @@ export class APIError extends Error {
       return Array.isArray(details.detail) ? details.detail.join(', ') : String(details.detail);
     }
 
+    // Check for "error" field (common in custom DRF views)
+    if (details.error) {
+      return String(details.error);
+    }
+
     // Check for "message" field
     if (details.message) {
       return String(details.message);
