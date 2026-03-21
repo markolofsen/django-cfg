@@ -44,9 +44,9 @@ Each extension has a `__cfg__.py` file. The `settings = ...` line enables it:
 
 ```python
 # extensions/apps/leads/__cfg__.py
-from django_cfg.extensions.configs.apps.leads import BaseLeadsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class LeadsSettings(BaseLeadsSettings):
+class LeadsSettings(BaseExtensionSettings):
     # Customize settings
     telegram_enabled: bool = True
     email_notifications: bool = True
@@ -135,9 +135,9 @@ Each extension in `extensions/apps/` has a `__cfg__.py` file:
 
 ```python
 # extensions/apps/leads/__cfg__.py
-from django_cfg.extensions.configs.apps.leads import BaseLeadsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class LeadsSettings(BaseLeadsSettings):
+class LeadsSettings(BaseExtensionSettings):
     telegram_enabled: bool = True
     email_enabled: bool = True
 
@@ -146,9 +146,9 @@ settings = LeadsSettings()
 
 ```python
 # extensions/apps/knowbase/__cfg__.py
-from django_cfg.extensions.configs.apps.knowbase import BaseKnowbaseSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class KnowbaseSettings(BaseKnowbaseSettings):
+class KnowbaseSettings(BaseExtensionSettings):
     llm_provider: str = "openai"
     embedding_model: str = "text-embedding-3-small"
 
@@ -157,9 +157,9 @@ settings = KnowbaseSettings()
 
 ```python
 # extensions/apps/payments/__cfg__.py
-from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     crypto_api_key: str = env.payments.api_key
     stripe_enabled: bool = True
 
@@ -239,9 +239,9 @@ Extensions follow automatic URL routing:
 
 ```python
 # extensions/apps/leads/__cfg__.py
-from django_cfg.extensions.configs.apps.leads import BaseLeadsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class LeadsSettings(BaseLeadsSettings):
+class LeadsSettings(BaseExtensionSettings):
     # Override default values
     telegram_enabled: bool = True
     telegram_bot_token: str = env.telegram.bot_token
@@ -360,7 +360,7 @@ Disable unused extensions by commenting out settings:
 
 ```python
 # extensions/apps/agents/__cfg__.py
-# class AgentsSettings(BaseAgentsSettings):
+# class AgentsSettings(BaseExtensionSettings):
 #     ...
 # settings = AgentsSettings()  # Commented = disabled
 ```

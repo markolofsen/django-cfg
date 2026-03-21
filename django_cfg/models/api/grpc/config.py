@@ -642,7 +642,6 @@ class GRPCConfig(BaseConfig):
             "support",
             "knowbase",
             "agents",
-            "payments",
             "leads",
         ],
         description="Django-CFG apps to expose via gRPC (if auto_register_apps=True)",

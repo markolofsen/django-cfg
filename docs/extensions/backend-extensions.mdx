@@ -66,9 +66,9 @@ To enable the **Payments** extension, edit its config file:
 
 ```python
 # extensions/apps/payments/__cfg__.py
-from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     # Override default settings
     enabled: bool = True
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
@@ -112,9 +112,9 @@ extensions/apps/payments/
 The `__cfg__.py` file looks like this:
 
 ```python
-from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     # Your project-specific settings here
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
 
@@ -136,7 +136,7 @@ settings = PaymentsSettings()
 #### Pattern 2: Environment Variables
 
 ```python
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     # Load from environment
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
     crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
@@ -151,7 +151,7 @@ PAYMENTS_API_KEYS__CRYPTO_WEBHOOK_SECRET=your-secret
 #### Pattern 3: Override Defaults
 
 ```python
-class LeadsSettings(BaseLeadsSettings):
+class LeadsSettings(BaseExtensionSettings):
     # Override base settings
     telegram_enabled: bool = False  # Disable Telegram notifications
     email_enabled: bool = True      # Keep email enabled
@@ -160,7 +160,7 @@ class LeadsSettings(BaseLeadsSettings):
 #### Pattern 4: Feature Flags
 
 ```python
-class SupportSettings(BaseSupportSettings):
+class SupportSettings(BaseExtensionSettings):
     # Toggle features
     ticket_auto_assign: bool = True
     live_chat_enabled: bool = False
@@ -208,7 +208,7 @@ Extensions load settings from environment variables:
 
 **1. Define in `__cfg__.py`:**
 ```python
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
 ```
 
@@ -235,7 +235,7 @@ Use different settings per environment:
 # extensions/apps/payments/__cfg__.py
 import os
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     # Production: use real API
     # Development: use sandbox
     crypto_api_key: str = (
@@ -382,7 +382,7 @@ If you need to change the prefix, it's configured in extension settings (advance
 ✅ **Good:**
 ```python
 # extensions/apps/payments/__cfg__.py
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     crypto_api_key: str = env.payments.api_key
 ```
 
@@ -409,14 +409,14 @@ api_key: str = "hardcoded-secret-key"  # Never do this!
 
 ```python
 # If not using Telegram notifications
-class LeadsSettings(BaseLeadsSettings):
+class LeadsSettings(BaseExtensionSettings):
     telegram_enabled: bool = False  # Disable unused features
 ```
 
 ### 4. **Document Your Customizations**
 
 ```python
-class SupportSettings(BaseSupportSettings):
+class SupportSettings(BaseExtensionSettings):
     # Custom: We use 48-hour SLA instead of 24
     sla_hours: int = 48
 
@@ -465,7 +465,7 @@ class SupportSettings(BaseSupportSettings):
 
 2. Configure notifications:
    ```python
-   class LeadsSettings(BaseLeadsSettings):
+   class LeadsSettings(BaseExtensionSettings):
        email_enabled: bool = True
        telegram_enabled: bool = True  # Get Telegram alerts
    ```
@@ -488,7 +488,7 @@ class SupportSettings(BaseSupportSettings):
 
 2. Configure SLA tracking:
    ```python
-   class SupportSettings(BaseSupportSettings):
+   class SupportSettings(BaseExtensionSettings):
        sla_tracking_enabled: bool = True
        sla_hours: int = 24
        ticket_auto_assign: bool = True
@@ -533,7 +533,7 @@ settings = SupportSettings()
 
 Or set `enabled = False`:
 ```python
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     enabled: bool = False
 ```
 

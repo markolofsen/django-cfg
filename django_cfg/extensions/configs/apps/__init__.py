@@ -11,15 +11,7 @@ from .base import (
     NavigationItem,
     NavigationSection,
 )
-from .agents import BaseAgentsSettings
-from .backup import BaseBackupSettings
 from .currency import BaseCurrencySettings
-from .knowbase import BaseKnowbaseSettings
-from .leads import BaseLeadsSettings
-from .maintenance import BaseMaintenanceSettings
-from .newsletter import BaseNewsletterSettings
-from .payments import BasePaymentsSettings
-from .support import BaseSupportSettings
 
 __all__ = [
     "APP_LABEL_PREFIX",
@@ -27,13 +19,5 @@ __all__ = [
     "ExtensionScheduleConfig",
     "NavigationItem",
     "NavigationSection",
-    "BaseAgentsSettings",
-    "BaseBackupSettings",
     "BaseCurrencySettings",
-    "BaseKnowbaseSettings",
-    "BaseLeadsSettings",
-    "BaseMaintenanceSettings",
-    "BaseNewsletterSettings",
-    "BasePaymentsSettings",
-    "BaseSupportSettings",
 ]

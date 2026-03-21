@@ -8,6 +8,5 @@ export default {
   'centrifugo': 'Centrifugo WebSocket',
   'grpc': 'gRPC Integration',
   'ngrok': 'Ngrok Integration',
-  'database-backup': 'Database Backup',
   'patterns': 'Integration Patterns'
 }

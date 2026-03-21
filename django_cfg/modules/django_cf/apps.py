@@ -20,6 +20,10 @@ class DjangoCfConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self) -> None:
+        # Suppress noisy httpx INFO logs (Cloudflare SDK uses httpx internally)
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("httpcore").setLevel(logging.WARNING)
+
         self._connect_user_signals()
         self._connect_monitor_capture()
 

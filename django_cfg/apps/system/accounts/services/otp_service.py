@@ -165,7 +165,7 @@ class OTPService:
 
     @staticmethod
     def verify_otp(
-        email: str, otp_code: str, source_url: Optional[str] = None
+        email: str, otp_code: str, source_url: Optional[str] = None, ip_address: Optional[str] = None
     ) -> Optional[CustomUser]:
         """Verify OTP and return user if valid."""
         print(f"[OTP PRINT TEST] verify_otp called for email: {email}")
@@ -184,7 +184,7 @@ class OTPService:
         locked, _ = OTPVerifyThrottle.is_locked(cleaned_email)
         if locked:
             logger.warning(f"OTP verify blocked - account locked: {cleaned_email}")
-            notify_failed_otp_attempt(cleaned_email, reason="Account locked due to too many failed attempts")
+            notify_failed_otp_attempt(cleaned_email, ip_address=ip_address, reason="Account locked due to too many failed attempts")
             return None
 
         # Development mode bypass - accept any OTP
@@ -246,7 +246,7 @@ class OTPService:
             # Check if user is deleted/deactivated
             if user and not user.is_active:
                 logger.warning(f"[DELETED ACCOUNT] OTP attempt for deleted account: {cleaned_email}")
-                notify_failed_otp_attempt(cleaned_email, reason="Account is deleted or deactivated")
+                notify_failed_otp_attempt(cleaned_email, ip_address=ip_address, reason="Account is deleted or deactivated")
                 return None
 
             if user and user.is_test_account:
@@ -295,7 +295,7 @@ class OTPService:
 
                 # Send Telegram notification for failed OTP attempt
                 try:
-                    notify_failed_otp_attempt(cleaned_email, reason="Invalid or expired OTP")
+                    notify_failed_otp_attempt(cleaned_email, ip_address=ip_address, reason="Invalid or expired OTP")
                 except Exception as e:
                     logger.error(f"Failed to send failed OTP notification: {e}")
 
@@ -311,7 +311,7 @@ class OTPService:
                 # Check if user is deleted/deactivated
                 if not user.is_active:
                     logger.warning(f"[DELETED ACCOUNT] OTP verified but account is deleted: {cleaned_email}")
-                    notify_failed_otp_attempt(cleaned_email, reason="Account is deleted or deactivated")
+                    notify_failed_otp_attempt(cleaned_email, ip_address=ip_address, reason="Account is deleted or deactivated")
                     return None
 
                 # Link user to source if provided (for existing users logging in from new sources)

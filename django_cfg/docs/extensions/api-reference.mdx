@@ -28,7 +28,7 @@ All extensions support these base settings:
 Enable or disable the extension.
 
 ```python
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     enabled: bool = True  # Extension active
 ```
 
@@ -48,7 +48,7 @@ enabled: bool = False
 Show extension in Django admin interface.
 
 ```python
-class SupportSettings(BaseSupportSettings):
+class SupportSettings(BaseExtensionSettings):
     admin_enabled: bool = True  # Shows in admin sidebar
 ```
 
@@ -67,9 +67,9 @@ admin_enabled: bool = False
 **File:** `extensions/apps/payments/__cfg__.py`
 
 ```python
-from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     # Crypto Payment API Configuration
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
     crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
@@ -94,9 +94,9 @@ PAYMENTS_API_KEYS__CRYPTO_WEBHOOK_SECRET=your-secret
 **File:** `extensions/apps/leads/__cfg__.py`
 
 ```python
-from django_cfg.extensions.configs.apps.leads import BaseLeadsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class LeadsSettings(BaseLeadsSettings):
+class LeadsSettings(BaseExtensionSettings):
     # Notification settings
     telegram_enabled: bool = True
     email_enabled: bool = True
@@ -132,9 +132,9 @@ LEADS__NOTIFICATION_EMAIL=leads@yourcompany.com
 **File:** `extensions/apps/support/__cfg__.py`
 
 ```python
-from django_cfg.extensions.configs.apps.support import BaseSupportSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class SupportSettings(BaseSupportSettings):
+class SupportSettings(BaseExtensionSettings):
     # Ticket management
     ticket_auto_assign: bool = True
     sla_tracking_enabled: bool = True
@@ -164,9 +164,9 @@ settings = SupportSettings()
 **File:** `extensions/apps/newsletter/__cfg__.py`
 
 ```python
-from django_cfg.extensions.configs.apps.newsletter import BaseNewsletterSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class NewsletterSettings(BaseNewsletterSettings):
+class NewsletterSettings(BaseExtensionSettings):
     # Default settings
     from_email: str = "newsletter@yourcompany.com"
     from_name: str = "Your Company Newsletter"
@@ -241,7 +241,7 @@ NEWSLETTER__FROM_NAME=Your Company Newsletter
 # extensions/apps/payments/__cfg__.py
 from core.environment import env
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     # Auto-loads from ENV > .env > defaults
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
 ```
@@ -256,7 +256,7 @@ Extensions support feature flags for toggling functionality:
 
 ```python
 # extensions/apps/support/__cfg__.py
-class SupportSettings(BaseSupportSettings):
+class SupportSettings(BaseExtensionSettings):
     # Core features
     ticket_system_enabled: bool = True        # ✅ Enabled
     live_chat_enabled: bool = False           # ❌ Disabled
@@ -274,7 +274,7 @@ Toggle features per environment:
 ```python
 import os
 
-class SupportSettings(BaseSupportSettings):
+class SupportSettings(BaseExtensionSettings):
     # Enable live chat only in production
     live_chat_enabled: bool = (
         os.getenv('ENVIRONMENT') == 'production'
@@ -331,7 +331,7 @@ Extensions with `admin_enabled: bool = True` automatically appear in admin sideb
 The extension's navigation is defined in its base settings (you don't need to configure this):
 
 ```python
-# This is defined in BasePaymentsSettings (you inherit it)
+# This is defined in BaseExtensionSettings (you inherit it)
 navigation = NavigationSection(
     title="Payments",
     icon=Icons.PAYMENT,
@@ -350,7 +350,7 @@ navigation = NavigationSection(
 To hide an extension from admin navigation:
 
 ```python
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     admin_enabled: bool = False  # Won't show in sidebar
 ```
 
@@ -361,7 +361,7 @@ class PaymentsSettings(BasePaymentsSettings):
 ### Pattern 1: API Keys from Environment
 
 ```python
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     # Load from .env
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
 
@@ -374,7 +374,7 @@ class PaymentsSettings(BasePaymentsSettings):
 ```python
 import os
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     # Production vs Development
     crypto_api_key: str = (
         env.payments.prod_key
@@ -389,7 +389,7 @@ class PaymentsSettings(BasePaymentsSettings):
 ### Pattern 3: Feature Toggles
 
 ```python
-class SupportSettings(BaseSupportSettings):
+class SupportSettings(BaseExtensionSettings):
     # Enable/disable features
     live_chat: bool = False          # Coming soon
     ticket_system: bool = True       # Production ready
@@ -402,7 +402,7 @@ class SupportSettings(BaseSupportSettings):
 ```python
 from pydantic import field_validator
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     sla_hours: int = 24
 
     @field_validator('sla_hours')
@@ -454,7 +454,7 @@ cat .env | grep PAYMENTS
 **Solution:**
 ```python
 # Provide defaults or make optional
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     # With default
     api_timeout: int = 30
 
@@ -499,7 +499,7 @@ class PaymentsSettings(BasePaymentsSettings):
 **Pro Tip: Documentation in Code**
 Each extension's base settings class has detailed docstrings. Check the source code for complete field documentation:
 ```python
-from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
-help(BasePaymentsSettings)
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
+help(BaseExtensionSettings)
 ```
 </Callout>

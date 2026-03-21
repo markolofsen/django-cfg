@@ -159,15 +159,6 @@ class BaseCfgModule(ABC):
         extensions = self._get_discovered_extensions()
         return any(ext.name == name and ext.is_valid for ext in extensions)
 
-    # === Extension check properties (auto-discovered from extensions/apps/) ===
-    is_support_enabled = property(lambda self: self.is_extension_enabled("support"))
-    is_newsletter_enabled = property(lambda self: self.is_extension_enabled("newsletter"))
-    is_leads_enabled = property(lambda self: self.is_extension_enabled("leads"))
-    is_agents_enabled = property(lambda self: self.is_extension_enabled("agents"))
-    is_knowbase_enabled = property(lambda self: self.is_extension_enabled("knowbase"))
-    is_payments_enabled = property(lambda self: self.is_extension_enabled("payments"))
-    is_maintenance_enabled = property(lambda self: self.is_extension_enabled("maintenance"))
-    is_backup_enabled = property(lambda self: self.is_extension_enabled("backup"))
 
     def should_enable_rq(self) -> bool:
         """

@@ -23,10 +23,6 @@ from django_cfg import (
     set_current_config,
     # Infrastructure
     DatabaseConfig,
-    BackupConfig,
-    BackupStorageConfig,
-    BackupScheduleConfig,
-    BackupRetentionConfig,
     ApiKeys,
     AxesConfig,
     StorageConfig,
@@ -126,29 +122,6 @@ class DjangoCfgConfig(DjangoConfig):
             conn_health_checks=False,
         ),
     }
-
-    # Database backup configuration
-    backup: Optional[BackupConfig] = BackupConfig(
-        enabled=True,
-        storage=BackupStorageConfig(
-            backend="local",
-            local_path="backups/",
-        ),
-        schedule=BackupScheduleConfig(
-            enabled=True,
-            cron="0 2 * * *",  # Daily at 2 AM
-            queue="default",
-        ),
-        retention=BackupRetentionConfig(
-            enabled=True,
-            keep_daily=7,
-            keep_weekly=4,
-            keep_monthly=3,
-        ),
-        compression="gzip",
-        notify_on_failure=True,
-        notify_on_success=False,
-    )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                               CACHE                                      ║

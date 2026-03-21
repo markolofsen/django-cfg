@@ -30,7 +30,7 @@ def get_extension_constance_fields() -> List["ConstanceField"]:
         ```python
         from django_cfg.models.django.constance import ConstanceField
 
-        class KnowbaseSettings(BaseKnowbaseSettings):
+        class MyExtSettings(BaseExtensionSettings):
             constance_fields = [
                 ConstanceField(
                     name="KNOWBASE_DEFAULT_MODEL",

@@ -21,8 +21,8 @@ class BaseExtensionSettings(BaseModel):
     Subclasses define defaults, users can override in __cfg__.py.
 
     Example:
-        class BaseLeadsSettings(BaseExtensionSettings):
-            name: str = "leads"
+        class MyExtSettings(BaseExtensionSettings):
+            name: str = "myext"
             telegram_enabled: bool = True
             ...
     """
@@ -197,11 +197,11 @@ class BaseExtensionSettings(BaseModel):
 
         Example (dynamic):
             ```python
-            class PaymentsSettings(BasePaymentsSettings):
+            class MyExtensionSettings(BaseExtensionSettings):
                 def get_middleware_classes(self):
                     middleware = super().get_middleware_classes()
                     if self.enabled:
-                        middleware.append("extensions.apps.payments.middleware.PaymentMiddleware")
+                        middleware.append("extensions.apps.myext.middleware.MyMiddleware")
                     return middleware
             ```
         """

@@ -56,8 +56,11 @@ class MiddlewareBuilder:
             >>> "corsheaders.middleware.CorsMiddleware" in middleware
             True
         """
-        # Start with default middleware (already includes CorsMiddleware)
-        middleware = list(DEFAULT_MIDDLEWARE)
+        # Real IP must be first — fixes REMOTE_ADDR behind proxies
+        middleware = ['django_cfg.middleware.real_ip.RealIPMiddleware']
+
+        # Default middleware (includes CorsMiddleware)
+        middleware.extend(DEFAULT_MIDDLEWARE)
 
         # Add django-cfg feature-specific middleware
         feature_middleware = self._get_feature_middleware()

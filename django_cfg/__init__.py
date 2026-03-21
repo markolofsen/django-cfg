@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.0.16"
+__version__ = "2.0.19"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -73,13 +73,6 @@ from .models.infrastructure.database import DatabaseConfig
 from .models.infrastructure.cache import CacheConfig
 from .models.infrastructure.security import SecurityConfig
 from .models.infrastructure.logging import LoggingConfig
-from .models.infrastructure.backup import (
-    BackupConfig,
-    BackupStorageConfig,
-    BackupScheduleConfig,
-    BackupRetentionConfig,
-    BackupDatabaseConfig,
-)
 
 # ---------------------------------------------------------------------------
 # [GROUP 3] API models
@@ -327,8 +320,6 @@ __all__ = [
     "get_ticket_url", "get_otp_url",
     # infrastructure
     "DatabaseConfig", "CacheConfig", "SecurityConfig", "LoggingConfig",
-    "BackupConfig", "BackupStorageConfig", "BackupScheduleConfig",
-    "BackupRetentionConfig", "BackupDatabaseConfig",
     # API
     "DRFConfig", "SpectacularConfig", "SwaggerUISettings", "RedocUISettings",
     "JWTConfig", "GitHubOAuthConfig", "OAuthConfig", "LimitsConfig",

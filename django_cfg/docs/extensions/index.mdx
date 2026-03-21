@@ -71,9 +71,9 @@ class MyProjectConfig(DjangoConfig):
 
 ```python
 # extensions/apps/payments/__cfg__.py - Self-contained ✅
-from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     enabled: bool = True
     crypto_api_key: str = env.payments.api_key
 
@@ -424,10 +424,10 @@ settings = CRMSettings()
 
 ```python
 # extensions/apps/backup/__cfg__.py
-from django_cfg.extensions.configs.apps.backup import BaseBackupSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 from django_cfg.extensions.types import ExtensionScheduleConfig
 
-class BackupSettings(BaseBackupSettings):
+class BackupSettings(BaseExtensionSettings):
     schedules = [
         ExtensionScheduleConfig(
             func="extensions.apps.backup.tasks.daily_backup",

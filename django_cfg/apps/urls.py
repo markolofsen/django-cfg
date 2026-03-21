@@ -93,7 +93,7 @@ def get_default_cfg_group():
         name="cfg",
         apps=get_enabled_cfg_apps(),
         title="Django-CFG API",
-        description="Authentication (OTP), Support, Newsletter, Leads, Knowledge Base, AI Agents, Tasks, Payments, Centrifugo, gRPC, Dashboard",
+        description="Authentication (OTP), Support, Newsletter, Leads, Knowledge Base, AI Agents, Tasks, Centrifugo, gRPC, Dashboard",
         version="1.0.0",
     )
 

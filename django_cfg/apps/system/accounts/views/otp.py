@@ -31,6 +31,8 @@ def _is_ip_limited(request, group: str, rate: str) -> bool:
     return is_ratelimited(request, group=group, key='ip', rate=rate, increment=True)
 
 
+
+
 class OTPViewSet(viewsets.GenericViewSet):
     """OTP authentication ViewSet with nested router support."""
 
@@ -162,7 +164,8 @@ class OTPViewSet(viewsets.GenericViewSet):
         otp: str = serializer.validated_data["otp"]  # type: ignore[index]
         source_url: str | None = serializer.validated_data.get("source_url")  # type: ignore[union-attr]
 
-        user = OTPService.verify_otp(identifier, otp, source_url)
+        ip_address = request.META.get('REMOTE_ADDR', 'Unknown')
+        user = OTPService.verify_otp(identifier, otp, source_url, ip_address=ip_address)
 
         if user:
             # Check if 2FA is enabled system-wide AND user has TOTP device

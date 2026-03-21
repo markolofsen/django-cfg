@@ -141,9 +141,9 @@ class MyProjectConfig(DjangoConfig):
 **After (create extensions/apps/payments/__cfg__.py):**
 ```python
 # extensions/apps/payments/__cfg__.py
-from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     # Move settings here
     enabled: bool = True
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
@@ -344,9 +344,9 @@ class MyProjectConfig(DjangoConfig):
 
 ```python
 # extensions/apps/payments/__cfg__.py (NEW)
-from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class PaymentsSettings(BasePaymentsSettings):
+class PaymentsSettings(BaseExtensionSettings):
     enabled: bool = True
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
     crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
@@ -356,9 +356,9 @@ settings = PaymentsSettings()
 
 ```python
 # extensions/apps/leads/__cfg__.py (NEW)
-from django_cfg.extensions.configs.apps.leads import BaseLeadsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class LeadsSettings(BaseLeadsSettings):
+class LeadsSettings(BaseExtensionSettings):
     telegram_enabled: bool = True
     email_enabled: bool = True
     telegram_bot_token: str = env.telegram.bot_token
@@ -369,9 +369,9 @@ settings = LeadsSettings()
 
 ```python
 # extensions/apps/support/__cfg__.py (NEW)
-from django_cfg.extensions.configs.apps.support import BaseSupportSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class SupportSettings(BaseSupportSettings):
+class SupportSettings(BaseExtensionSettings):
     ticket_auto_assign: bool = True
     sla_hours: int = 24
     sla_tracking_enabled: bool = True
@@ -506,7 +506,7 @@ Use this checklist for each extension you migrate:
 2. **Check base class:**
    ```python
    # Must inherit from Base{Extension}Settings
-   class PaymentsSettings(BasePaymentsSettings):  # ✅ Correct
+   class PaymentsSettings(BaseExtensionSettings):  # ✅ Correct
    ```
 
 3. **Clear Python cache:**
@@ -588,7 +588,7 @@ class MyProjectConfig(DjangoConfig):
 
 ```python
 # extensions/apps/support/__cfg__.py
-class SupportSettings(BaseSupportSettings):
+class SupportSettings(BaseExtensionSettings):
     # Custom: We use 48-hour SLA (not default 24)
     sla_hours: int = 48
 

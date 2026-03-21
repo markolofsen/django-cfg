@@ -12,7 +12,7 @@ Organized by category:
 - services/ - External services (email, telegram, ngrok)
 - tasks/ - Task/worker configurations
 
-Note: Payments configuration is now handled via extensions (extensions/apps/payments/__cfg__.py)
+Note: Extension configs are handled in extensions/apps/<name>/__cfg__.py
 """
 
 # Base classes
@@ -48,13 +48,6 @@ from .django.openapi import OpenAPIClientConfig
 from .infrastructure.cache import CacheConfig
 
 # Infrastructure
-from .infrastructure.backup import (
-    BackupConfig,
-    BackupDatabaseConfig,
-    BackupRetentionConfig,
-    BackupScheduleConfig,
-    BackupStorageConfig,
-)
 from .infrastructure.database import DatabaseConfig
 from .infrastructure.logging import LoggingConfig
 from .infrastructure.security import SecurityConfig
@@ -74,11 +67,6 @@ __all__ = [
     "BaseSettings",
     "BaseCfgAutoModule",
     # Infrastructure
-    "BackupConfig",
-    "BackupDatabaseConfig",
-    "BackupRetentionConfig",
-    "BackupScheduleConfig",
-    "BackupStorageConfig",
     "CacheConfig",
     "DatabaseConfig",
     "LoggingConfig",

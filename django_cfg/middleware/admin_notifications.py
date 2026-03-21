@@ -24,34 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_client_ip(request):
-    """
-    Extract real client IP address from request.
-
-    Handles proxy scenarios (Cloudflare, nginx, traefik) by checking headers
-    in order of precedence. Matches the order used in AxesConfig.
-
-    Args:
-        request: Django HttpRequest object
-
-    Returns:
-        str: Client IP address or 'Unknown' if not found
-    """
-    # Header precedence order (matches AxesConfig defaults)
-    headers = [
-        'HTTP_CF_CONNECTING_IP',     # Cloudflare real IP
-        'HTTP_X_FORWARDED_FOR',      # Nginx/Traefik proxy
-        'HTTP_X_REAL_IP',            # Alternative proxy header
-        'REMOTE_ADDR',               # Direct connection
-    ]
-
-    for header in headers:
-        value = request.META.get(header)
-        if value:
-            # X-Forwarded-For can contain multiple IPs (client, proxy1, proxy2)
-            # Take the first one (real client IP)
-            return value.split(',')[0].strip()
-
-    return 'Unknown'
+    """Get client IP — REMOTE_ADDR is already fixed by RealIPMiddleware."""
+    return request.META.get('REMOTE_ADDR', 'Unknown')
 
 
 # === SUCCESSFUL ADMIN LOGINS ===

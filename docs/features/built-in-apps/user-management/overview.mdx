@@ -82,9 +82,9 @@ user = service.register_user(
 
 ```python
 # extensions/apps/leads/__cfg__.py
-from django_cfg.extensions.configs.apps.leads import BaseLeadsSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class LeadsSettings(BaseLeadsSettings):
+class LeadsSettings(BaseExtensionSettings):
     telegram_enabled: bool = True
     telegram_bot_token: str = env.telegram.bot_token
     email_notifications: bool = True
@@ -122,9 +122,9 @@ lead = Lead.objects.create(
 
 ```python
 # extensions/apps/support/__cfg__.py
-from django_cfg.extensions.configs.apps.support import BaseSupportSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class SupportSettings(BaseSupportSettings):
+class SupportSettings(BaseExtensionSettings):
     auto_assign: bool = True
     sla_response_hours: int = 24
     enable_live_chat: bool = True
@@ -162,9 +162,9 @@ ticket = Ticket.objects.create(
 
 ```python
 # extensions/apps/newsletter/__cfg__.py
-from django_cfg.extensions.configs.apps.newsletter import BaseNewsletterSettings
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-class NewsletterSettings(BaseNewsletterSettings):
+class NewsletterSettings(BaseExtensionSettings):
     default_from_email: str = "newsletter@example.com"
     unsubscribe_page: str = "/unsubscribe"
 

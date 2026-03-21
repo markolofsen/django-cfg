@@ -6,12 +6,12 @@ Extensions are placed in extensions/ folder and work as-is.
 
 Usage:
     # In your extension's __cfg__.py:
-    from django_cfg.extensions.configs.apps.leads import BaseLeadsSettings
+    from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
-    class LeadsSettings(BaseLeadsSettings):
-        telegram_enabled: bool = False  # override defaults
+    class MyExtSettings(BaseExtensionSettings):
+        name: str = "myext"
 
-    settings = LeadsSettings()
+    settings = MyExtSettings()
 
 Project Structure:
     your_project/
