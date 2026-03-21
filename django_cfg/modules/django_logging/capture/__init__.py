@@ -14,6 +14,9 @@ def connect_capture() -> None:
     DjangoLoggingConfig needed in project config. Can be disabled
     with d1_enabled=False if DjangoLoggingConfig is present.
 
+    Skipped in test environment (IS_TEST=true) to avoid pushing
+    test log records to D1.
+
     Called from AppConfig.ready(). Safe to call multiple times.
     """
     global _connected
@@ -22,6 +25,10 @@ def connect_capture() -> None:
     _connected = True
 
     try:
+        import sys
+        if "test" in sys.argv:
+            return
+
         from django_cfg.modules.django_cf import is_ready
 
         if not is_ready():

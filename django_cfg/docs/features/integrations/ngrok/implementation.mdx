@@ -166,16 +166,16 @@ from django_cfg.modules.django_ngrok import get_webhook_url
 
 # Different webhooks for different providers
 stripe_webhook = get_webhook_url("/webhooks/stripe/")
-nowpayments_webhook = get_webhook_url("/webhooks/nowpayments/")
+crypto_webhook = get_webhook_url("/webhooks/crypto/")
 telegram_webhook = get_webhook_url("/webhooks/telegram/")
 
 print(f"Stripe: {stripe_webhook}")
-print(f"NowPayments: {nowpayments_webhook}")
+print(f"Crypto: {crypto_webhook}")
 print(f"Telegram: {telegram_webhook}")
 
 # Output (if ngrok active):
 # Stripe: https://abc123.ngrok.io/webhooks/stripe/
-# NowPayments: https://abc123.ngrok.io/webhooks/nowpayments/
+# Crypto: https://abc123.ngrok.io/webhooks/crypto/
 # Telegram: https://abc123.ngrok.io/webhooks/telegram/
 ```
 
@@ -459,7 +459,6 @@ else:
 - [**Production Config**](/docs/guides/production-config) - Production webhook setup
 
 **Related Features:**
-- [**Payments App**](/docs/features/built-in-apps/payments/overview) - Payment webhooks
 - [**Background Tasks**](../django-rq/overview) - Async webhook processing
 - [**Integrations Overview**](./overview) - All integrations
 

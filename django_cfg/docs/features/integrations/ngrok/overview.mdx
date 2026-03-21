@@ -17,7 +17,7 @@ Built-in ngrok integration in Django-CFG for automatic creation of public tunnel
 
 ### Problem: Webhooks Don't Work Locally
 
-When you develop integration with external services (Stripe, NowPayments, Telegram, etc.), these services send webhooks to your server. But your local `localhost:8000` is not accessible from the internet!
+When you develop integration with external services (Stripe, Telegram, etc.), these services send webhooks to your server. But your local `localhost:8000` is not accessible from the internet!
 
 **Traditional Solution:**
 ```
@@ -157,7 +157,7 @@ def create_payment(request):
     # Automatically get webhook URL
     webhook_url = get_webhook_url("/api/payments/webhook/")
 
-    # Pass to Stripe/NowPayments/etc
+    # Pass to Stripe/payment providers
     payment = stripe.PaymentIntent.create(
         amount=1000,
         currency="usd",
@@ -186,7 +186,7 @@ def create_payment(request):
 **Core Documentation:**
 - **[Configuration](./configuration)** - Complete NgrokConfig reference and settings
 - **[Implementation](./implementation)** - Getting tunnel URLs and management commands
-- **[Webhook Examples](./webhook-examples)** - Integration with Stripe, NowPayments, Telegram
+- **[Webhook Examples](./webhook-examples)** - Integration with Stripe, Telegram
 - **[Payments Panel](./payments-panel)** - Built-in webhook administration panel
 - **[Troubleshooting](./troubleshooting)** - Best practices and common issues
 
@@ -206,9 +206,6 @@ def create_payment(request):
 ### Related Features
 
 **Payment Integrations:**
-- **[Payments App](/docs/features/built-in-apps/payments/overview)** - Payment webhook processing
-- **[Payments Configuration](/docs/features/built-in-apps/payments/overview)** - Payment provider setup
-- **[Payment Examples](/docs/features/built-in-apps/payments/overview)** - Real-world payment flows
 
 **Background Processing:**
 - **[Django-RQ Integration](../django-rq/overview)** - Process webhooks asynchronously

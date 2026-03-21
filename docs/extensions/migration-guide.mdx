@@ -33,8 +33,8 @@ If your `DjangoConfig` has extension-specific fields like `payments`, `leads`, `
 class MyProjectConfig(DjangoConfig):
     # Payments
     payments: PaymentsConfig = PaymentsConfig(
-        nowpayments_api_key="...",
-        nowpayments_ipn_secret="...",
+        crypto_api_key="...",
+        crypto_webhook_secret="...",
         enabled=True
     )
 
@@ -74,8 +74,8 @@ class MyProjectConfig(DjangoConfig):
 ```python
 # extensions/apps/payments/__cfg__.py - Self-contained ✅
 settings = PaymentsSettings(
-    nowpayments_api_key=env.payments.api_key,
-    nowpayments_ipn_secret=env.payments.secret,
+    crypto_api_key=env.payments.api_key,
+    crypto_webhook_secret=env.payments.secret,
 )
 ```
 
@@ -132,8 +132,8 @@ For each extension, create a `__cfg__.py` file:
 ```python
 class MyProjectConfig(DjangoConfig):
     payments: PaymentsConfig = PaymentsConfig(
-        nowpayments_api_key="your-api-key",
-        nowpayments_ipn_secret="your-secret",
+        crypto_api_key="your-api-key",
+        crypto_webhook_secret="your-secret",
         enabled=True
     )
 ```
@@ -146,8 +146,8 @@ from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
 class PaymentsSettings(BasePaymentsSettings):
     # Move settings here
     enabled: bool = True
-    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
-    nowpayments_ipn_secret: str = env.payments_api_keys.nowpayments_ipn_secret
+    crypto_api_key: str = env.payments_api_keys.crypto_api_key
+    crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
 
 # This line enables the extension!
 settings = PaymentsSettings()
@@ -162,21 +162,21 @@ Update your `.env` file to match new structure:
 **Before:**
 ```bash
 # Old flat structure
-NOWPAYMENTS_API_KEY=your-key
-NOWPAYMENTS_IPN_SECRET=your-secret
+CRYPTO_API_KEY=your-key
+CRYPTO_WEBHOOK_SECRET=your-secret
 ```
 
 **After:**
 ```bash
 # New nested structure (double underscores)
-PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-key
-PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret
+PAYMENTS_API_KEYS__CRYPTO_API_KEY=your-key
+PAYMENTS_API_KEYS__CRYPTO_WEBHOOK_SECRET=your-secret
 ```
 
 <Callout type="tip">
 **Nested ENV Variables**
 Use `__` (double underscore) for nesting:
-- `PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY` → `payments_api_keys.nowpayments_api_key`
+- `PAYMENTS_API_KEYS__CRYPTO_API_KEY` → `payments_api_keys.crypto_api_key`
 </Callout>
 
 ---
@@ -238,7 +238,7 @@ python manage.py shell
 >>> from extensions.apps.payments.__cfg__ import settings
 >>> settings.enabled
 True
->>> settings.nowpayments_api_key
+>>> settings.crypto_api_key
 'your-api-key'
 ```
 
@@ -290,8 +290,8 @@ class MyProjectConfig(DjangoConfig):
 
     # Extension configs (to be migrated)
     payments: PaymentsConfig = PaymentsConfig(
-        nowpayments_api_key=env.nowpayments_api_key,
-        nowpayments_ipn_secret=env.nowpayments_ipn_secret,
+        crypto_api_key=env.crypto_api_key,
+        crypto_webhook_secret=env.crypto_webhook_secret,
         enabled=True
     )
 
@@ -348,8 +348,8 @@ from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
 
 class PaymentsSettings(BasePaymentsSettings):
     enabled: bool = True
-    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
-    nowpayments_ipn_secret: str = env.payments_api_keys.nowpayments_ipn_secret
+    crypto_api_key: str = env.payments_api_keys.crypto_api_key
+    crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
 
 settings = PaymentsSettings()
 ```
@@ -449,10 +449,10 @@ Use this checklist for each extension you migrate:
 1. **Check nesting syntax:**
    ```bash
    # ✅ Correct
-   PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=key
+   PAYMENTS_API_KEYS__CRYPTO_API_KEY=key
 
    # ❌ Wrong
-   PAYMENTS.API_KEYS.NOWPAYMENTS_API_KEY=key
+   PAYMENTS.API_KEYS.CRYPTO_API_KEY=key
    ```
 
 2. **Verify .env location:**
@@ -500,7 +500,7 @@ Use this checklist for each extension you migrate:
 1. **Verify settings loaded:**
    ```python
    from extensions.apps.payments.__cfg__ import settings
-   print(settings.nowpayments_api_key)  # Should show key
+   print(settings.crypto_api_key)  # Should show key
    ```
 
 2. **Check base class:**

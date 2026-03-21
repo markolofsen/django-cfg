@@ -21,9 +21,18 @@ _connected: bool = False
 
 
 def connect_capture() -> None:
-    """Register all capture hooks. Idempotent — safe to call multiple times."""
+    """Register all capture hooks. Idempotent — safe to call multiple times.
+
+    Skipped when running tests (``manage.py test``) to avoid pushing
+    test events to D1/Telegram.
+    """
     global _connected
     if _connected:
+        return
+
+    import sys
+    if "test" in sys.argv:
+        _connected = True
         return
 
     from .request import connect_request_exception_signal

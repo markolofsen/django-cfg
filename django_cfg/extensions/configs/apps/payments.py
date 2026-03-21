@@ -6,8 +6,7 @@ Users extend this class in their extension's __cfg__.py:
     from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
 
     class PaymentsSettings(BasePaymentsSettings):
-        nowpayments_api_key = "your-api-key"
-        nowpayments_ipn_secret = "your-ipn-secret"
+        pass
 
     settings = PaymentsSettings()
 """
@@ -39,62 +38,11 @@ class BasePaymentsSettings(BaseExtensionSettings):
     url_namespace: str = "payments"
 
     # === Payments Configuration ===
-    # These fields replace DjangoConfig.payments
 
     enabled: bool = Field(
         default=True,
         description="Enable payments system"
     )
-
-    # NowPayments provider settings
-    nowpayments_api_key: str = Field(
-        default="",
-        description="NowPayments API key"
-    )
-
-    nowpayments_ipn_secret: str = Field(
-        default="",
-        description="NowPayments IPN secret (for webhook validation)"
-    )
-
-    nowpayments_sandbox: bool = Field(
-        default=False,
-        description="Use sandbox API for testing"
-    )
-
-    nowpayments_enabled: bool = Field(
-        default=True,
-        description="Whether NowPayments is enabled"
-    )
-
-    @computed_field
-    @property
-    def nowpayments_api_url(self) -> str:
-        """Get API base URL based on sandbox mode."""
-        if self.nowpayments_sandbox:
-            return "https://api-sandbox.nowpayments.io/v1/"
-        return "https://api.nowpayments.io/v1/"
-
-    @computed_field
-    @property
-    def nowpayments_is_configured(self) -> bool:
-        """Check if NowPayments is properly configured."""
-        return bool(self.nowpayments_api_key and self.nowpayments_api_key.strip())
-
-    @computed_field
-    @property
-    def active_providers(self) -> List[str]:
-        """Get list of active provider names."""
-        providers = []
-        if self.nowpayments_enabled and self.nowpayments_is_configured:
-            providers.append("nowpayments")
-        return providers
-
-    @computed_field
-    @property
-    def is_configured(self) -> bool:
-        """Check if at least one provider is configured."""
-        return bool(self.active_providers)
 
     # === Admin Navigation ===
     navigation: NavigationSection = Field(

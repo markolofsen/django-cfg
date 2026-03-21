@@ -31,7 +31,7 @@ Think of them like **WordPress plugins** or **VS Code extensions** - install onc
 Your Django-CFG project comes with several built-in extensions:
 
 **Business Features:**
-- `payments` - Payment processing (NowPayments, Stripe)
+- `payments` - Payment processing (Stripe, crypto providers)
 - `leads` - Lead management and contact forms
 - `support` - Support ticket system
 - `newsletter` - Email campaigns
@@ -71,8 +71,8 @@ from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
 class PaymentsSettings(BasePaymentsSettings):
     # Override default settings
     enabled: bool = True
-    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
-    nowpayments_ipn_secret: str = env.payments_api_keys.nowpayments_ipn_secret
+    crypto_api_key: str = env.payments_api_keys.crypto_api_key
+    crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
 
 # This line enables the extension! ✨
 settings = PaymentsSettings()
@@ -116,7 +116,7 @@ from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
 
 class PaymentsSettings(BasePaymentsSettings):
     # Your project-specific settings here
-    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+    crypto_api_key: str = env.payments_api_keys.crypto_api_key
 
 settings = PaymentsSettings()  # Enable extension
 ```
@@ -138,14 +138,14 @@ settings = PaymentsSettings()
 ```python
 class PaymentsSettings(BasePaymentsSettings):
     # Load from environment
-    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
-    nowpayments_ipn_secret: str = env.payments_api_keys.nowpayments_ipn_secret
+    crypto_api_key: str = env.payments_api_keys.crypto_api_key
+    crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
 ```
 
 Then in your `.env`:
 ```bash
-PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-api-key
-PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret
+PAYMENTS_API_KEYS__CRYPTO_API_KEY=your-api-key
+PAYMENTS_API_KEYS__CRYPTO_WEBHOOK_SECRET=your-secret
 ```
 
 #### Pattern 3: Override Defaults
@@ -195,7 +195,7 @@ from extensions.apps.payments.__cfg__ import settings
 
 if settings.enabled:
     # Use payments extension
-    api_key = settings.nowpayments_api_key
+    api_key = settings.crypto_api_key
 ```
 
 ---
@@ -209,21 +209,21 @@ Extensions load settings from environment variables:
 **1. Define in `__cfg__.py`:**
 ```python
 class PaymentsSettings(BasePaymentsSettings):
-    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+    crypto_api_key: str = env.payments_api_keys.crypto_api_key
 ```
 
 **2. Set in `.env`:**
 ```bash
-# Nested structure: payments_api_keys.nowpayments_api_key
-PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-key-here
-PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret-here
+# Nested structure: payments_api_keys.crypto_api_key
+PAYMENTS_API_KEYS__CRYPTO_API_KEY=your-key-here
+PAYMENTS_API_KEYS__CRYPTO_WEBHOOK_SECRET=your-secret-here
 ```
 
 **3. Verify it works:**
 ```bash
 python manage.py shell
 >>> from extensions.apps.payments.__cfg__ import settings
->>> settings.nowpayments_api_key
+>>> settings.crypto_api_key
 'your-key-here'
 ```
 
@@ -238,7 +238,7 @@ import os
 class PaymentsSettings(BasePaymentsSettings):
     # Production: use real API
     # Development: use sandbox
-    nowpayments_api_key: str = (
+    crypto_api_key: str = (
         env.payments.prod_key
         if os.getenv('ENVIRONMENT') == 'production'
         else env.payments.sandbox_key
@@ -317,8 +317,8 @@ class PaymentsSettings(BasePaymentsSettings):
 2. **Check variable naming:**
    ```bash
    # Use double underscores for nesting
-   PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=key  # ✅ Correct
-   PAYMENTS_API_KEYS.NOWPAYMENTS_API_KEY=key   # ❌ Wrong
+   PAYMENTS_API_KEYS__CRYPTO_API_KEY=key  # ✅ Correct
+   PAYMENTS_API_KEYS.CRYPTO_API_KEY=key   # ❌ Wrong
    ```
 
 3. **Reload environment:**
@@ -383,7 +383,7 @@ If you need to change the prefix, it's configured in extension settings (advance
 ```python
 # extensions/apps/payments/__cfg__.py
 class PaymentsSettings(BasePaymentsSettings):
-    nowpayments_api_key: str = env.payments.api_key
+    crypto_api_key: str = env.payments.api_key
 ```
 
 ❌ **Bad:**
@@ -443,8 +443,8 @@ class SupportSettings(BaseSupportSettings):
 2. Configure API keys:
    ```bash
    # .env
-   PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-key
-   PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret
+   PAYMENTS_API_KEYS__CRYPTO_API_KEY=your-key
+   PAYMENTS_API_KEYS__CRYPTO_WEBHOOK_SECRET=your-secret
    ```
 
 3. Done! Use at `/cfg/payments/`

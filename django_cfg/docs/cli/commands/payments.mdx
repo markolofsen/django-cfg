@@ -118,7 +118,7 @@ python manage.py manage_providers list
 
 # Add crypto provider
 python manage.py manage_providers add \
-  --name NowPayments \
+  --name CryptAPI \
   --type crypto
 
 # Add fiat provider
@@ -156,7 +156,7 @@ python manage.py test_providers [OPTIONS]
 python manage.py test_providers
 
 # Test specific provider
-python manage.py test_providers --provider nowpayments
+python manage.py test_providers --provider cryptapi
 
 # Test Stripe
 python manage.py test_providers --provider stripe
@@ -166,7 +166,7 @@ python manage.py test_providers --provider stripe
 ```
 🚀 Testing payment providers...
 
-✅ NowPayments - Connection successful
+✅ CryptAPI - Connection successful
   API Status: Active
   Supported currencies: 150+
 
@@ -276,7 +276,7 @@ python manage.py manage_currencies add --code ETH --name Ethereum
 python manage.py manage_currencies add --code USDT --name Tether --network TRC20
 
 # 2. Add providers
-python manage.py manage_providers add --name NowPayments --type crypto
+python manage.py manage_providers add --name CryptAPI --type crypto
 python manage.py manage_providers add --name Stripe --type fiat
 
 # 3. Test providers
@@ -299,7 +299,7 @@ python manage.py manage_currencies add \
 python manage.py manage_currencies list
 
 # 3. Test payment flow
-python manage.py test_providers --provider nowpayments
+python manage.py test_providers --provider cryptapi
 ```
 
 ### Production Maintenance
@@ -329,7 +329,7 @@ class MyConfig(DjangoConfig):
     enable_payments: bool = True
 
     # Provider API keys
-    nowpayments_api_key: str = env.payments.nowpayments_key
+    cryptapi_api_key: str = env.payments.cryptapi_key
     stripe_api_key: str = env.payments.stripe_key
 ```
 
@@ -338,7 +338,7 @@ class MyConfig(DjangoConfig):
 ```yaml
 # config.dev.yaml
 payments:
-  nowpayments_key: "your_nowpayments_api_key"
+  cryptapi_key: "your_cryptapi_api_key"
   stripe_key: "sk_test_..."
 ```
 
@@ -365,7 +365,6 @@ payments:
 ## Related Documentation
 
 - **[Quick Reference](./quick-reference)** - Fast command lookup
-- **[Payments App Guide](/docs/features/built-in-apps/payments/overview)** - Complete documentation
 - **[Currency Module](/docs/features/modules/currency/overview)** - Currency conversion
 
 ---

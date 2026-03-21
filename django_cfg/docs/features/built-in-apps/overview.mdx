@@ -104,12 +104,11 @@ Universal payment processing with multiple providers.
 
 | Extension | Description | Location |
 |-----------|-------------|----------|
-| **Payments** | NowPayments, Stripe, subscriptions | `extensions/apps/payments/` |
+| **Payments** | Stripe, crypto providers, subscriptions | `extensions/apps/payments/` |
 | **Currency** | Multi-currency support, exchange rates | `extensions/apps/currency/` |
 
 **Use Cases:** SaaS billing, e-commerce, subscription services.
 
-[**Explore Payments →**](../built-in-apps/payments/overview)
 
 ---
 
@@ -161,7 +160,7 @@ settings = KnowbaseSettings()
 from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
 
 class PaymentsSettings(BasePaymentsSettings):
-    nowpayments_api_key: str = env.payments.api_key
+    crypto_api_key: str = env.payments.api_key
     stripe_enabled: bool = True
 
 settings = PaymentsSettings()

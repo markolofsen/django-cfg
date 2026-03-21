@@ -19,7 +19,7 @@ The Webhook Admin Panel provides:
 
 ✅ **Real-time Ngrok Status** - See if tunnel is active
 ✅ **Automatic URL Display** - Current public ngrok URL
-✅ **Per-Provider Webhook URLs** - URLs for Stripe, NowPayments, Telegram, etc.
+✅ **Per-Provider Webhook URLs** - URLs for Stripe, Telegram, etc.
 ✅ **Webhook Events Log** - History of all received webhooks
 ✅ **Testing Tools** - Test webhook endpoints directly
 
@@ -216,9 +216,6 @@ from django_cfg.apps.payments.services.integrations import get_webhook_url_for_p
 stripe_webhook = get_webhook_url_for_provider("stripe")
 # "https://abc123.ngrok.io/api/webhooks/stripe/"
 
-nowpayments_webhook = get_webhook_url_for_provider("nowpayments")
-# "https://abc123.ngrok.io/api/webhooks/nowpayments/"
-
 telegram_webhook = get_webhook_url_for_provider("telegram")
 # "https://abc123.ngrok.io/api/webhooks/telegram/"
 ```
@@ -246,7 +243,6 @@ webhook_urls = get_all_webhook_urls()
 # Returns:
 # {
 #     "stripe": "https://abc123.ngrok.io/api/webhooks/stripe/",
-#     "nowpayments": "https://abc123.ngrok.io/api/webhooks/nowpayments/",
 #     "telegram": "https://abc123.ngrok.io/api/webhooks/telegram/",
 # }
 
@@ -274,8 +270,8 @@ def get_webhook_url_for_provider(provider: str) -> str:
 from django_cfg.apps.payments.services.integrations import get_webhook_url_for_provider
 
 # Automatically correct URL!
-nowpayments_webhook = get_webhook_url_for_provider("nowpayments")
-# "https://abc123.ngrok.io/api/webhooks/nowpayments/"
+crypto_webhook = get_webhook_url_for_provider("crypto")
+# "https://abc123.ngrok.io/api/webhooks/crypto/"
 ```
 
 ### Webhook Event Logging
@@ -315,7 +311,7 @@ ngrok: NgrokConfig = NgrokConfig(
 
 # Webhook URLs will be:
 # https://abc123.ngrok.io/webhooks/stripe/
-# https://abc123.ngrok.io/webhooks/nowpayments/
+# https://abc123.ngrok.io/webhooks/crypto/
 # https://abc123.ngrok.io/webhooks/telegram/
 ```
 
@@ -329,13 +325,13 @@ from . import webhook_views
 urlpatterns = [
     # Custom webhook paths
     path('webhooks/stripe/', webhook_views.stripe_webhook),
-    path('webhooks/crypto/', webhook_views.nowpayments_webhook),  # Custom!
+    path('webhooks/crypto/', webhook_views.crypto_webhook),  # Custom!
     path('webhooks/bot/', webhook_views.telegram_webhook),  # Custom!
 ]
 
 # Panel will show:
 # - Stripe: https://abc123.ngrok.io/webhooks/stripe/
-# - NowPayments: https://abc123.ngrok.io/webhooks/crypto/
+# - Crypto: https://abc123.ngrok.io/webhooks/crypto/
 # - Telegram: https://abc123.ngrok.io/webhooks/bot/
 ```
 
@@ -360,11 +356,11 @@ class MyConfig(DjangoConfig):
 
 # 4. Copy webhook URLs from panel
 # Stripe: https://abc123.ngrok.io/api/webhooks/stripe/
-# NowPayments: https://abc123.ngrok.io/api/webhooks/nowpayments/
+# Crypto: https://abc123.ngrok.io/api/webhooks/crypto/
 
 # 5. Configure webhooks in external services
 # - Stripe Dashboard: Set webhook URL
-# - NowPayments API: Set IPN callback URL
+# - Crypto provider: Set IPN callback URL
 # - Telegram: Set bot webhook
 
 # 6. Test webhooks locally
@@ -523,5 +519,4 @@ python manage.py runserver_ngrok
 
 ## See Also
 
-- [Payments App](/docs/features/built-in-apps/payments/overview) - Complete payments documentation
 - [Built-in Apps](/docs/features/built-in-apps/overview) - All built-in applications

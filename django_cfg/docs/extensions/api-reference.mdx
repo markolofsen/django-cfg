@@ -70,9 +70,9 @@ admin_enabled: bool = False
 from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
 
 class PaymentsSettings(BasePaymentsSettings):
-    # NowPayments API Configuration
-    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
-    nowpayments_ipn_secret: str = env.payments_api_keys.nowpayments_ipn_secret
+    # Crypto Payment API Configuration
+    crypto_api_key: str = env.payments_api_keys.crypto_api_key
+    crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
 
     # Feature flags
     enabled: bool = True
@@ -83,8 +83,8 @@ settings = PaymentsSettings()
 
 **Environment Variables:**
 ```bash
-PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-api-key
-PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret
+PAYMENTS_API_KEYS__CRYPTO_API_KEY=your-api-key
+PAYMENTS_API_KEYS__CRYPTO_WEBHOOK_SECRET=your-secret
 ```
 
 ---
@@ -200,7 +200,7 @@ Extension settings load from environment variables using **nested structure with
 **Examples:**
 ```bash
 # Payments
-PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=key
+PAYMENTS_API_KEYS__CRYPTO_API_KEY=key
 
 # Leads
 LEADS__NOTIFICATION_EMAIL=email@company.com
@@ -220,8 +220,8 @@ Create a `.env` file in your project root:
 # .env
 
 # Payments Extension
-PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY=your-nowpayments-key
-PAYMENTS_API_KEYS__NOWPAYMENTS_IPN_SECRET=your-secret
+PAYMENTS_API_KEYS__CRYPTO_API_KEY=your-crypto-api-key
+PAYMENTS_API_KEYS__CRYPTO_WEBHOOK_SECRET=your-secret
 
 # Leads Extension
 TELEGRAM__BOT_TOKEN=your-telegram-bot-token
@@ -243,7 +243,7 @@ from core.environment import env
 
 class PaymentsSettings(BasePaymentsSettings):
     # Auto-loads from ENV > .env > defaults
-    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+    crypto_api_key: str = env.payments_api_keys.crypto_api_key
 ```
 
 ---
@@ -363,7 +363,7 @@ class PaymentsSettings(BasePaymentsSettings):
 ```python
 class PaymentsSettings(BasePaymentsSettings):
     # Load from .env
-    nowpayments_api_key: str = env.payments_api_keys.nowpayments_api_key
+    crypto_api_key: str = env.payments_api_keys.crypto_api_key
 
     # With fallback
     backup_api_key: str = env.payments.backup_key or "default-key"
@@ -376,7 +376,7 @@ import os
 
 class PaymentsSettings(BasePaymentsSettings):
     # Production vs Development
-    nowpayments_api_key: str = (
+    crypto_api_key: str = (
         env.payments.prod_key
         if os.getenv('ENVIRONMENT') == 'production'
         else env.payments.sandbox_key
@@ -428,7 +428,7 @@ python manage.py runserver
 # 2. Verify in shell
 python manage.py shell
 >>> from extensions.apps.payments.__cfg__ import settings
->>> settings.nowpayments_api_key
+>>> settings.crypto_api_key
 'your-expected-key'
 ```
 
@@ -470,7 +470,7 @@ class PaymentsSettings(BasePaymentsSettings):
 
 | Extension | Key Settings | Environment Variables |
 |-----------|-------------|----------------------|
-| **Payments** | `nowpayments_api_key` | `PAYMENTS_API_KEYS__NOWPAYMENTS_API_KEY` |
+| **Payments** | `crypto_api_key` | `PAYMENTS_API_KEYS__CRYPTO_API_KEY` |
 | **Leads** | `telegram_enabled`, `email_enabled` | `TELEGRAM__BOT_TOKEN`, `LEADS__NOTIFICATION_EMAIL` |
 | **Support** | `sla_hours`, `ticket_auto_assign` | `SUPPORT__SLA_HOURS` |
 | **Newsletter** | `from_email`, `from_name` | `NEWSLETTER__FROM_EMAIL` |

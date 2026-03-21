@@ -22,8 +22,8 @@ Extensions are **modular Django applications** that configure and register thems
 class MyProjectConfig(DjangoConfig):
     # Payment processing config
     payments: PaymentsConfig = PaymentsConfig(
-        nowpayments_api_key="...",
-        nowpayments_ipn_secret="...",
+        crypto_api_key="...",
+        crypto_webhook_secret="...",
         enabled=True
     )
 
@@ -75,7 +75,7 @@ from django_cfg.extensions.configs.apps.payments import BasePaymentsSettings
 
 class PaymentsSettings(BasePaymentsSettings):
     enabled: bool = True
-    nowpayments_api_key: str = env.payments.api_key
+    crypto_api_key: str = env.payments.api_key
 
 settings = PaymentsSettings()  # This line enables the extension!
 ```
@@ -109,7 +109,7 @@ Django-CFG supports two types of extensions:
 Full Django applications with models, views, and database migrations.
 
 **Examples:**
-- `payments` - Payment processing (NowPayments, Stripe)
+- `payments` - Payment processing (Stripe, crypto providers)
 - `leads` - Lead management and contact forms
 - `support` - Support ticket system
 - `newsletter` - Email campaign management
