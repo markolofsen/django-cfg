@@ -17,6 +17,7 @@ from django_cfg.modules.django_cf.core.d1_query import D1Q
 from ..capture.notify import notify_server_event
 from ..exceptions import MonitorConfigError, MonitorSyncError
 from .schema import MONITOR_SCHEMA_STATEMENTS, SERVER_EVENTS_TABLE, FRONTEND_EVENTS_TABLE
+from .migrations import apply_migrations
 from .types import ServerEventSyncData
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,11 @@ class MonitorSyncService(BaseD1Service):
 
     def _get_schema_statements(self) -> list[str]:
         return MONITOR_SCHEMA_STATEMENTS
+
+    def _ensure_schema(self) -> None:
+        """Run CREATE TABLE + ALTER TABLE migrations idempotently."""
+        super()._ensure_schema()
+        apply_migrations(self._get_client())
 
     # ─────────────────────────────────────────────────────────────────────────
     # Public interface

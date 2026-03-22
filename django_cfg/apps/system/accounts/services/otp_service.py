@@ -42,10 +42,8 @@ class OTPService:
             return OTPRequestResult(success=False, error_code="invalid_email")
 
         # Deep email validation: syntax + disposable blocklist + MX check.
-        # Serializer already ran the cheap checks (no DNS); here we add MX
-        # so invalid domains like gmail.com1 are caught before user creation.
         try:
-            cleaned_email = validate_email_address(cleaned_email, check_deliverability=True)
+            cleaned_email = validate_email_address(cleaned_email)
         except EmailValidationError as exc:
             logger.info(f"OTP request rejected — invalid email {cleaned_email!r}: {exc}")
             return OTPRequestResult(success=False, error_code=exc.error_code)

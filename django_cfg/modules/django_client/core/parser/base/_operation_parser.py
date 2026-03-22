@@ -164,6 +164,7 @@ class OperationParserMixin:
                                 is_array = True
                                 if isinstance(media_type.schema_.items, ReferenceObject):
                                     items_schema_name = media_type.schema_.items.ref_name
+                                    schema_name = items_schema_name
                     break
 
             ir_responses[status_code] = IRResponseObject(

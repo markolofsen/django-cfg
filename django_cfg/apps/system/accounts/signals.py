@@ -6,7 +6,7 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save, pre_save
-from django.dispatch import receiver
+from django.dispatch import Signal, receiver
 from django.utils import timezone
 
 from django_cfg.modules.django_telegram import DjangoTelegram, MessagePriority
@@ -15,6 +15,11 @@ from .utils.notifications import AccountNotifications
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+# Custom signal fired after successful authentication (JWT issued).
+# Provides: user, request
+user_authenticated = Signal()
 
 
 # @receiver(post_save, sender=User)
@@ -144,6 +149,16 @@ def send_security_telegram_alert(title: str, user_email: str, details: dict):
         logger.warning("django_cfg DjangoTelegram not available for security alerts")
     except Exception as e:
         logger.error(f"Failed to send security Telegram alert: {e}")
+
+
+@receiver(user_authenticated)
+def handle_login_alert(sender, user, request, **kwargs):
+    """Send Apple-style login alert email on successful authentication."""
+    try:
+        from .services.login_alert_service import send_login_alert
+        send_login_alert(user, request)
+    except Exception as e:
+        logger.error(f"Failed to send login alert for {getattr(user, 'email', '?')}: {e}")
 
 
 # Helper function to notify about failed OTP attempts

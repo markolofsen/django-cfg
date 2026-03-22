@@ -279,6 +279,8 @@ class HooksGenerator:
             if status_code in operation.responses:
                 response = operation.responses[status_code]
                 if response.schema_name:
+                    if response.is_array:
+                        return f"{response.schema_name}[]"
                     return response.schema_name
 
         # No response or void

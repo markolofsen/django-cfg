@@ -129,6 +129,13 @@ class VerifyViewSet(viewsets.GenericViewSet):
                 "username": user.username,
             }
 
+        # Fire auth signal (login alert, activity logging, etc.)
+        try:
+            from django_cfg.apps.system.accounts.signals import user_authenticated
+            user_authenticated.send(sender=self.__class__, user=user, request=request)
+        except ImportError:
+            pass
+
         logger.info(f"Successful 2FA verification for user {user.email}, session {session.id}")
 
         return Response(
@@ -208,6 +215,13 @@ class VerifyViewSet(viewsets.GenericViewSet):
                 "email": user.email,
                 "username": user.username,
             }
+
+        # Fire auth signal (login alert, activity logging, etc.)
+        try:
+            from django_cfg.apps.system.accounts.signals import user_authenticated
+            user_authenticated.send(sender=self.__class__, user=user, request=request)
+        except ImportError:
+            pass
 
         logger.info(
             f"Successful backup code verification for user {user.email}, "

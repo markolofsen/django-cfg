@@ -62,7 +62,7 @@ class FetchersGenerator:
         )
 
         # Get response type and schema
-        response_type, response_schema = self._get_response_info(operation)
+        response_type, response_schema, response_is_array = self._get_response_info(operation)
 
         # Get API client call
         api_call = self._get_api_call(operation)
@@ -71,12 +71,17 @@ class FetchersGenerator:
 
         # Render template
         template = self.jinja_env.get_template('fetchers/function.ts.jinja')
+        response_validation = response_schema
+        if response_is_array and response_schema:
+            response_validation = f"{response_schema}.array()"
+
         return template.render(
             operation=operation,
             func_name=func_name,
             func_params=params_structure.func_signature,
             response_type=response_type,
             response_schema=response_schema,
+            response_validation=response_validation,
             api_call=api_call_instance,
             api_call_params=params_structure.api_call_args
         )
@@ -126,35 +131,27 @@ class FetchersGenerator:
     # REMOVED: _get_params_type - replaced by ParamsBuilder
     # REMOVED: _map_param_type - moved to ParamsBuilder
 
-    def _get_response_info(self, operation: IROperationObject) -> tuple[str, str | None]:
+    def _get_response_info(self, operation: IROperationObject) -> tuple[str, str | None, bool]:
         """
-        Get response type and schema name.
+        Get response type, schema name, and array flag.
 
         Returns:
-            (response_type, response_schema_name)
-
-        Examples:
-            ("PaginatedUser", "PaginatedUserSchema")
-            ("User", "UserSchema")
-            ("BotConfigSchema", "BotConfigSchemaSchema")  # handles names ending with "Schema"
-            ("void", None)
+            (response_type, response_schema_name, is_array)
         """
-        # Get 2xx response
         for status_code in [200, 201, 202, 204]:
             if status_code in operation.responses:
                 response = operation.responses[status_code]
                 if response.schema_name:
                     schema_name = response.schema_name
-                    # Always add "Schema" suffix for Zod schema name
-                    # The schema generator always adds "Schema" suffix to create the constant name
-                    # e.g., "Bot" -> "BotSchema", "BotConfigSchema" -> "BotConfigSchemaSchema"
-                    return (schema_name, f"{schema_name}Schema")
+                    zod_schema = f"{schema_name}Schema"
+                    if response.is_array:
+                        return (f"{schema_name}[]", zod_schema, True)
+                    return (schema_name, zod_schema, False)
 
-        # No response or void
         if 204 in operation.responses or operation.http_method == "DELETE":
-            return ("void", None)
+            return ("void", None, False)
 
-        return ("any", None)
+        return ("any", None, False)
 
     def _get_api_call(self, operation: IROperationObject) -> str:
         """
@@ -204,7 +201,7 @@ class FetchersGenerator:
             fetchers.append(fetcher_code)
 
             # Collect schema names
-            _, response_schema = self._get_response_info(operation)
+            _, response_schema, _ = self._get_response_info(operation)
             if response_schema:
                 # response_schema has "Schema" suffix added (e.g., "BotConfigSchemaSchema")
                 # Remove the last "Schema" suffix to get the original name (e.g., "BotConfigSchema")

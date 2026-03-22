@@ -75,7 +75,7 @@ class CloudflareD1Client:
             # D1 SQL errors — 400 with SQLITE_ERROR code
             # Gracefully handle missing schema (table/column not yet created)
             msg = str(exc)
-            if "no such table" in msg or "no such column" in msg:
+            if "no such table" in msg or "no such column" in msg or "has no column named" in msg:
                 logger.debug("django_cf: D1 schema not ready — %s", msg)
                 return D1QueryResult()
             raise CloudflareQueryError(f"D1 bad request: {exc}", sql=sql) from exc

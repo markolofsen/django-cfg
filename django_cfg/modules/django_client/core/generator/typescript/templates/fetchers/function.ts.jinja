@@ -18,7 +18,7 @@ export async function {{ func_name }}(
 {% endif %}
 {% if response_schema %}
   try {
-    return {{ response_schema }}.parse(response)
+    return {{ response_validation }}.parse(response)
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');

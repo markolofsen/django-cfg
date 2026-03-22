@@ -73,13 +73,22 @@ class DjangoTelegram(BaseCfgModule):
 
     @property
     def project_prefix(self) -> str:
-        """Get project name prefix for messages."""
+        """Get project name prefix for messages, including env mode.
+
+        Format: [ProjectName dev] or [ProjectName prod]
+        """
         if self._disable_prefix:
             return ""
         try:
             config = self.config
-            if config and hasattr(config, "project_name") and config.project_name:
-                return f"[{config.project_name}] "
+            if config and config.project_name:
+                if config.is_development:
+                    env = " dev"
+                elif config.is_test:
+                    env = " test"
+                else:
+                    env = ""
+                return f"[{config.project_name}{env}] "
         except Exception:
             pass
         return ""

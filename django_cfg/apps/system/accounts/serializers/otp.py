@@ -32,7 +32,7 @@ class OTPRequestSerializer(serializers.Serializer):
             # Syntax + suspicious patterns + disposable blocklist.
             # MX check disabled here (sync serializer) — DNS is checked in OTPService
             # on first OTP request so invalid domains are caught before user creation.
-            return validate_email_address(value, check_deliverability=False)
+            return validate_email_address(value)
         except EmailValidationError as exc:
             raise serializers.ValidationError(str(exc)) from exc
 
@@ -58,7 +58,7 @@ class OTPVerifySerializer(serializers.Serializer):
     def validate_identifier(self, value):
         """Validate and normalize email address."""
         try:
-            return validate_email_address(value, check_deliverability=False)
+            return validate_email_address(value)
         except EmailValidationError as exc:
             raise serializers.ValidationError(str(exc)) from exc
 

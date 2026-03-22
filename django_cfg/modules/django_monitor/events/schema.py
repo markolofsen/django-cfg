@@ -100,10 +100,11 @@ MONITOR_SCHEMA_STATEMENTS: list[str] = [
     *D1Q.create_indexes(FRONTEND_EVENTS_TABLE),
 ]
 
-
 def ensure_monitor_schema(client: "CloudflareD1Client") -> None:  # type: ignore[name-defined]
-    """Run all CREATE TABLE / CREATE INDEX statements idempotently."""
+    """Run CREATE TABLE + ALTER TABLE migrations idempotently."""
     from ..exceptions import MonitorSyncError
+    from .migrations import apply_migrations
+
     for sql in MONITOR_SCHEMA_STATEMENTS:
         try:
             client.execute(sql)
@@ -111,6 +112,8 @@ def ensure_monitor_schema(client: "CloudflareD1Client") -> None:  # type: ignore
             raise MonitorSyncError(
                 f"django_monitor: schema migration failed: {exc}"
             ) from exc
+
+    apply_migrations(client)
 
 
 __all__ = [

@@ -20,7 +20,7 @@ class UserActivity(models.Model):
 
     # Related objects (generic foreign key could be used here)
     object_id = models.PositiveIntegerField(null=True, blank=True)
-    object_type = models.CharField(max_length=50, blank=True)
+    object_type = models.CharField(max_length=50, blank=True, default="")
 
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -191,6 +191,11 @@ class OTPViewSet(viewsets.GenericViewSet):
 
             # No 2FA - generate tokens directly
             refresh = RefreshToken.for_user(user)
+
+            # Fire auth signal (login alert, activity logging, etc.)
+            from ..signals import user_authenticated
+            user_authenticated.send(sender=self.__class__, user=user, request=request)
+
             return Response(
                 {
                     "requires_2fa": False,
