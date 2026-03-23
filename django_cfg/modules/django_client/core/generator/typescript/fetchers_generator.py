@@ -69,6 +69,9 @@ class FetchersGenerator:
         # Replace API. with api. for instance method
         api_call_instance = api_call.replace("API.", "api.")
 
+        # Check for multi-response schemas
+        multi_schemas = getattr(operation, '_multi_response_schemas', None)
+
         # Render template
         template = self.jinja_env.get_template('fetchers/function.ts.jinja')
         response_validation = response_schema
@@ -82,6 +85,7 @@ class FetchersGenerator:
             response_type=response_type,
             response_schema=response_schema,
             response_validation=response_validation,
+            multi_response_schemas=multi_schemas,
             api_call=api_call_instance,
             api_call_params=params_structure.api_call_args
         )
@@ -135,18 +139,47 @@ class FetchersGenerator:
         """
         Get response type, schema name, and array flag.
 
+        Supports multi-response endpoints (e.g., 201 Document | 202 ArchiveBulkCreateResponse).
+        When multiple 2xx responses have different schemas, returns union type and
+        sets `_multi_response_schemas` on the operation for template use.
+
         Returns:
             (response_type, response_schema_name, is_array)
         """
-        for status_code in [200, 201, 202, 204]:
+        # Collect all 2xx responses with schemas
+        success_schemas: list[tuple[int, str, bool]] = []  # (status, schema_name, is_array)
+        for status_code in [200, 201, 202]:
             if status_code in operation.responses:
                 response = operation.responses[status_code]
                 if response.schema_name:
-                    schema_name = response.schema_name
-                    zod_schema = f"{schema_name}Schema"
-                    if response.is_array:
-                        return (f"{schema_name}[]", zod_schema, True)
-                    return (schema_name, zod_schema, False)
+                    success_schemas.append((status_code, response.schema_name, response.is_array))
+
+        # Single response — standard behavior
+        if len(success_schemas) == 1:
+            _, schema_name, is_array = success_schemas[0]
+            zod_schema = f"{schema_name}Schema"
+            if is_array:
+                return (f"{schema_name}[]", zod_schema, True)
+            return (schema_name, zod_schema, False)
+
+        # Multiple responses — union type, try-parse each
+        if len(success_schemas) > 1:
+            # Deduplicate schema names
+            unique_schemas = list(dict.fromkeys(s[1] for s in success_schemas))
+            if len(unique_schemas) == 1:
+                # Same schema for all status codes
+                schema_name = unique_schemas[0]
+                return (schema_name, f"{schema_name}Schema", False)
+
+            # Different schemas — generate union
+            type_union = " | ".join(unique_schemas)
+            # Store multi-response info for template
+            operation._multi_response_schemas = [
+                {"name": name, "schema": f"{name}Schema"}
+                for name in unique_schemas
+            ]
+            # Return first schema as primary (for backwards compat), but type is union
+            return (type_union, None, False)
 
         if 204 in operation.responses or operation.http_method == "DELETE":
             return ("void", None, False)
@@ -203,14 +236,17 @@ class FetchersGenerator:
             # Collect schema names
             _, response_schema, _ = self._get_response_info(operation)
             if response_schema:
-                # response_schema has "Schema" suffix added (e.g., "BotConfigSchemaSchema")
-                # Remove the last "Schema" suffix to get the original name (e.g., "BotConfigSchema")
-                # This is used in the import template: import { {{ schema_name }}Schema, ... }
                 if response_schema.endswith("Schema"):
-                    schema_name = response_schema[:-6]  # Remove last 6 chars ("Schema")
+                    schema_name = response_schema[:-6]
                 else:
                     schema_name = response_schema
                 schema_names.add(schema_name)
+
+            # Collect multi-response schemas (if any)
+            multi_schemas = getattr(operation, '_multi_response_schemas', None)
+            if multi_schemas:
+                for ms in multi_schemas:
+                    schema_names.add(ms["name"])
 
             # Add request body schemas (only if they exist as components)
             if operation.request_body and operation.request_body.schema_name:

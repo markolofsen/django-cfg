@@ -16,7 +16,19 @@ export async function {{ func_name }}(
 {% else %}
   const response = await {{ api_call }}()
 {% endif %}
-{% if response_schema %}
+{% if multi_response_schemas %}
+  // Multi-response endpoint — try each schema
+{% for schema in multi_response_schemas %}
+  try {
+    return {{ schema.schema }}.parse(response) as {{ response_type }}
+  } catch { /* try next schema */ }
+{% endfor %}
+
+  // None matched — log and return raw response
+  consola.warn('{{ func_name }}: response did not match any expected schema')
+  consola.warn('Response data:', response)
+  return response as {{ response_type }}
+{% elif response_schema %}
   try {
     return {{ response_validation }}.parse(response)
   } catch (error) {
