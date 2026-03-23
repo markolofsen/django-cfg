@@ -60,6 +60,21 @@ def cleanup_old_rq_events(days: int = 30) -> dict:
 # Convenience: .delay() shim — works with or without django-rq installed
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _get_delayable_function(module_name: str, qualname: str):
+    """
+    Helper for unpickling _Delayable instances.
+
+    Returns the original wrapped function by importing it from its module.
+    """
+    import importlib
+    module = importlib.import_module(module_name)
+    parts = qualname.split('.')
+    obj = module
+    for part in parts:
+        obj = getattr(obj, part)
+    return obj
+
+
 class _Delayable:
     """Wraps a callable and adds a .delay() method for RQ enqueue with sync fallback."""
 
@@ -67,6 +82,8 @@ class _Delayable:
         self._fn = fn
         self.__name__ = fn.__name__
         self.__doc__ = fn.__doc__
+        self.__module__ = fn.__module__
+        self.__qualname__ = fn.__qualname__
 
     def __call__(self, *args, **kwargs):
         return self._fn(*args, **kwargs)
@@ -77,6 +94,13 @@ class _Delayable:
             django_rq.get_queue("default").enqueue(self._fn, *args, **kwargs)
         except Exception:
             self._fn(*args, **kwargs)
+
+    def __reduce__(self):
+        """Make _Delayable picklable by returning the wrapped function's module path."""
+        return (
+            _get_delayable_function,
+            (self.__module__, self.__qualname__),
+        )
 
 
 cleanup_old_rq_events = _Delayable(cleanup_old_rq_events)
