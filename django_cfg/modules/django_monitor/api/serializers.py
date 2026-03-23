@@ -50,6 +50,6 @@ class IngestBatchSerializer(serializers.Serializer):
 
     events = serializers.ListField(
         child=FrontendEventIngestSerializer(),
-        max_length=50,
+        max_length=25,
         min_length=1,
     )

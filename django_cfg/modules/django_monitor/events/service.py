@@ -80,32 +80,42 @@ class MonitorSyncService(BaseD1Service):
         """Upsert a single FrontendEvent into D1. Prefer push_frontend_events_batch for multiple."""
         self.push_frontend_events_batch([event])
 
+    # D1 (SQLite) limits bound parameters per query.
+    # frontend_events has ~20 columns → max ~25 rows per statement to stay under 500 params.
+    _BATCH_CHUNK_SIZE = 25
+
     def push_frontend_events_batch(self, events: list[Any]) -> None:
-        """Upsert multiple FrontendEvents in a single SQL statement (one HTTP request).
+        """Upsert multiple FrontendEvents to D1 in chunked batches.
 
         Error-type events increment occurrence_count on conflict.
         Append-only types (PAGE_VIEW, PERFORMANCE) have a UUID fingerprint
         so they always create new rows.
+
+        Automatically splits into chunks to stay within D1's SQL variable limit.
         """
         if not events:
             return
         self._ensure_schema()
-        sql, params = D1Q.upsert_increment_batch(
-            FRONTEND_EVENTS_TABLE,
-            events,
-            increment_col="occurrence_count",
-        )
-        try:
-            result = self._get_client().execute(sql, params)
-            logger.debug(
-                "django_monitor: frontend_events batch=%d (%.1fms)",
-                len(events), result.duration_ms,
+        client = self._get_client()
+
+        for i in range(0, len(events), self._BATCH_CHUNK_SIZE):
+            chunk = events[i : i + self._BATCH_CHUNK_SIZE]
+            sql, params = D1Q.upsert_increment_batch(
+                FRONTEND_EVENTS_TABLE,
+                chunk,
+                increment_col="occurrence_count",
             )
-        except Exception as exc:
-            raise MonitorSyncError(
-                f"django_monitor: push_frontend_events_batch failed: {exc}",
-                original_error=exc,
-            ) from exc
+            try:
+                result = client.execute(sql, params)
+                logger.debug(
+                    "django_monitor: frontend_events chunk=%d/%d (%.1fms)",
+                    len(chunk), len(events), result.duration_ms,
+                )
+            except Exception as exc:
+                raise MonitorSyncError(
+                    f"django_monitor: push_frontend_events_batch failed: {exc}",
+                    original_error=exc,
+                ) from exc
 
 
 __all__ = ["MonitorSyncService"]

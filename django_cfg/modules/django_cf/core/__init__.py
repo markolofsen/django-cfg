@@ -11,6 +11,7 @@ from .client import CloudflareD1Client
 from .d1_query import D1Column, D1Index, D1Q, D1Table
 from .service import BaseD1Service
 from .types import D1QueryResult
+from .usage import usage_tracker
 
 __all__ = [
     "CloudflareD1Client",
@@ -20,4 +21,5 @@ __all__ = [
     "D1Column",
     "D1Index",
     "D1Table",
+    "usage_tracker",
 ]

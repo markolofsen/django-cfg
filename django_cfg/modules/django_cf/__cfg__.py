@@ -14,11 +14,29 @@ Add to djangoconfig.py:
         )
 """
 
+from enum import Enum
 from typing import Annotated
 
 from pydantic import Field, model_validator
 
 from django_cfg.extensions.configs.modules import BaseModuleSettings
+
+
+class D1Plan(str, Enum):
+    """Cloudflare D1 billing plan — determines daily usage limits."""
+
+    FREE = "free"        # 5M reads, 100K writes per day
+    PAID = "paid"        # unlimited (no enforcement)
+
+    @property
+    def read_limit(self) -> int:
+        """Max rows read per day (0 = unlimited)."""
+        return {self.FREE: 5_000_000, self.PAID: 0}[self]
+
+    @property
+    def write_limit(self) -> int:
+        """Max rows written per day (0 = unlimited)."""
+        return {self.FREE: 100_000, self.PAID: 0}[self]
 
 
 class CloudflareConfig(BaseModuleSettings):
@@ -41,6 +59,19 @@ class CloudflareConfig(BaseModuleSettings):
         description="Sync CustomUser to D1 on every save event",
     )
     sync_batch_size: Annotated[int, Field(default=500, ge=1, le=2000)] = 500
+
+    # ── D1 plan & limits ──────────────────────────────────────────────────────
+
+    d1_plan: D1Plan = Field(
+        default=D1Plan.FREE,
+        description="D1 billing plan: 'free' (5M reads, 100K writes/day) or 'paid' (unlimited)",
+    )
+    d1_limit_warn_pct: int = Field(
+        default=80,
+        ge=0,
+        le=100,
+        description="Log WARNING when daily usage exceeds this % (0 = disabled). Ignored on paid plan.",
+    )
 
     # ── Alerting ─────────────────────────────────────────────────────────────
 

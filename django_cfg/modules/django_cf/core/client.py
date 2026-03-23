@@ -25,14 +25,39 @@ from cloudflare import (
 
 from ..exceptions import CloudflareConfigError, CloudflareQueryError
 from .types import D1QueryResult
+from .usage import usage_tracker
 
 logger = logging.getLogger(__name__)
+
+# SQL prefixes that indicate a write operation
+_WRITE_PREFIXES = ("INSERT", "UPDATE", "DELETE", "ALTER", "DROP", "CREATE")
+
+
+def _is_write(sql: str) -> bool:
+    """Check if SQL statement is a write operation."""
+    s = sql.strip().upper()
+    return any(s.startswith(p) for p in _WRITE_PREFIXES)
 
 
 class CloudflareD1Client:
     """Synchronous D1 client backed by the official cloudflare SDK."""
 
     __slots__ = ("_account_id", "_database_id", "_sdk")
+
+    @staticmethod
+    def _get_limits() -> tuple[int, int, int]:
+        """Return (read_limit, write_limit, warn_pct) from CloudflareConfig.
+
+        Reads limits from d1_plan enum. Falls back to free-plan defaults.
+        """
+        try:
+            from django_cfg.modules.django_cf import _get_config
+            config = _get_config()
+            if config:
+                return (config.d1_plan.read_limit, config.d1_plan.write_limit, config.d1_limit_warn_pct)
+        except Exception:
+            pass
+        return (5_000_000, 100_000, 80)  # free plan defaults
 
     def __init__(
         self,
@@ -55,7 +80,23 @@ class CloudflareD1Client:
         self._sdk = Cloudflare(api_token=api_token)
 
     def execute(self, sql: str, params: list[str] | None = None) -> D1QueryResult:
-        """Execute a single SQL statement. Returns typed D1QueryResult."""
+        """Execute a single SQL statement. Returns typed D1QueryResult.
+
+        Tracks daily reads/writes via usage_tracker. Skips execution
+        when the configured daily limit is exceeded (returns empty result).
+        """
+        # Check daily limits before executing
+        write = _is_write(sql)
+        limits = self._get_limits()
+        if write:
+            if not usage_tracker.check_write_limit(limits[1], limits[2]):
+                logger.warning("django_cf: D1 daily WRITE limit reached (%d) — query skipped", limits[1])
+                return D1QueryResult()
+        else:
+            if not usage_tracker.check_read_limit(limits[0], limits[2]):
+                logger.warning("django_cf: D1 daily READ limit reached (%d) — query skipped", limits[0])
+                return D1QueryResult()
+
         try:
             pages = list(self._sdk.d1.database.query(
                 database_id=self._database_id,
@@ -68,6 +109,13 @@ class CloudflareD1Client:
             result = D1QueryResult.from_sdk_page(pages[0])
             if not result.success:
                 raise CloudflareQueryError("D1 query returned success=False", sql=sql)
+
+            # Record usage after successful execution
+            if write:
+                usage_tracker.record_write(max(result.rows_written, 1))
+            else:
+                usage_tracker.record_read(max(result.rows_read, 1))
+
             return result
         except CloudflareQueryError:
             raise

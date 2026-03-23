@@ -3,8 +3,8 @@ django_monitor.api.views — Frontend ingest ViewSet.
 
 POST /cfg/monitor/ingest/
 - No authentication (anonymous visitors send events too)
-- Rate limited by IP: 100/minute
-- Accepts batch of up to 50 events
+- Rate limited by IP: 60/minute
+- Accepts batch of up to 25 events
 - Returns 202 Accepted
 """
 
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 
+from django_ratelimit.core import is_ratelimited
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -54,6 +55,10 @@ class MonitorIngestViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=["post"], url_path="ingest")
     def ingest(self, request):
         """Accept a batch of frontend events and forward to D1."""
+        # IP throttle: 60 ingest calls/minute — prevents runaway SDK loops
+        if is_ratelimited(request, group="monitor_ingest", key="ip", rate="60/m", increment=True):
+            return Response(status=status.HTTP_429_TOO_MANY_REQUESTS)
+
         serializer = IngestBatchSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
