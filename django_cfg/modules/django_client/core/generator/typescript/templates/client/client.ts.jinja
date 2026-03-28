@@ -177,6 +177,14 @@ export class APIClient {
     // Your API uses JWT/Token authentication (no CSRF required)
 {% endif %}
 
+    // Add Authorization header from tokenGetter (Bearer token / API key)
+    if (!headers['Authorization']) {
+      const token = this.getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+
     // Log request
     if (this.logger) {
       this.logger.logRequest({
@@ -498,6 +506,14 @@ export class APIClient {
     // CSRF not needed - SessionAuthentication not enabled in DRF config
     // Your API uses JWT/Token authentication (no CSRF required)
 {% endif %}
+
+    // Add Authorization header from tokenGetter (Bearer token / API key)
+    if (!headers['Authorization']) {
+      const token = this.getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
 
     // Log request
     if (this.logger) {

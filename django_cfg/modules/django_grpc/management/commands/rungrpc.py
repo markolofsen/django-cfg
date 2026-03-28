@@ -206,6 +206,9 @@ class Command(BaseCommand):
 
         await self.server.start()
 
+        # Reap zombie child processes (PID 1 in Docker doesn't do this)
+        self._setup_zombie_reaper()
+
         # Register running status in D1 so health-check reflects reality
         _d1_status_row = None
         try:
@@ -267,6 +270,40 @@ class Command(BaseCommand):
                 except Exception:
                     pass
             self.stdout.write(self.style.SUCCESS("Server stopped."))
+
+    @staticmethod
+    def _setup_zombie_reaper() -> None:
+        """Install SIGCHLD handler to reap zombie child processes.
+
+        When running as PID 1 inside Docker (without tini/dumb-init),
+        child processes that exit become zombies because PID 1 doesn't
+        call wait() by default. This handler reaps them automatically.
+
+        Uses asyncio-safe signal handling (loop.add_signal_handler) to avoid
+        interrupting the event loop. Falls back to signal.signal() if no
+        running loop (e.g., sync context).
+
+        Safe to call even with tini — double-reaping is a no-op.
+        """
+        import os
+        import signal
+
+        def _reap_children():
+            """Non-blocking reap of all finished child processes."""
+            while True:
+                try:
+                    pid, _ = os.waitpid(-1, os.WNOHANG)
+                    if pid == 0:
+                        break
+                except ChildProcessError:
+                    break
+
+        try:
+            loop = asyncio.get_running_loop()
+            loop.add_signal_handler(signal.SIGCHLD, _reap_children)
+        except RuntimeError:
+            # No running event loop — use traditional signal handler
+            signal.signal(signal.SIGCHLD, lambda s, f: _reap_children())
 
     async def _register_services(self) -> tuple[int, list[str]]:
         try:
