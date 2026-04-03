@@ -66,6 +66,10 @@ DJANGO_TO_PYTHON: dict[str, str] = {
     # pgvector
     "VectorField": "list[float]",
 
+    # django_cfg currency fields
+    "MoneyField": "Decimal",
+    "CurrencyField": "str",
+
     # Relations (ID column type)
     "ForeignKey": "int",
     "OneToOneField": "int",
@@ -230,8 +234,8 @@ class TypeMapper:
             self._imports.add(("sqlalchemy", "Text"))
             return "Column(Text)"
 
-        # Decimal field
-        if django_type == "DecimalField":
+        # Decimal field / MoneyField
+        if django_type in ("DecimalField", "MoneyField"):
             self._imports.add(("sqlalchemy", "Numeric"))
             precision = field.max_digits or 10
             scale = field.decimal_places or 2

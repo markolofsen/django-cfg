@@ -21,12 +21,16 @@ Fast reference guide for all Django-CFG management commands. Perfect for quick l
 | Migrate databases | `python manage.py migrate_all` | Run migrations on all databases |
 | Run server | `cli runserver` | Start enhanced development server |
 | Create superuser | `cli superuser --email admin@test.com` | Create admin user |
-| Validate config | `python manage.py validate_config` | Check configuration validity |
+| Check settings | `python manage.py check_settings` | Comprehensive diagnostics |
 | Check endpoints | `python manage.py check_endpoints` | Test all API endpoints |
 | Show URLs | `cli show-urls` | List all registered URLs |
 | Test email | `cli test-email --to admin@test.com` | Send test email |
-| Maintenance on | `python manage.py maintenance enable` | Enable maintenance mode |
 | Start worker | `rearq main:rearq worker` | Start background task worker |
+| Start gRPC server | `python manage.py rungrpc` | Start async gRPC server |
+| D1 status | `python manage.py cf_status` | Check Cloudflare D1 connection |
+| Streamlit admin | `python manage.py run_streamlit` | Start Streamlit admin server |
+| RQ stats | `python manage.py rqstats` | Show queue statistics |
+| LLM balance | `python manage.py check_llm_balance` | Check API credit balance |
 
 ## 🚀 Project Setup
 
@@ -37,8 +41,8 @@ django-cfg create-project my_project
 # Show Django-CFG info
 django-cfg info --verbose
 
-# Validate configuration
-python manage.py validate_config --check-connections
+# Check settings
+python manage.py check_settings --verbose
 
 # Show current configuration
 python manage.py show_config --format yaml
@@ -83,8 +87,8 @@ cli superuser --email admin@example.com
 python manage.py createsuperuser
 
 # Test OTP authentication
-python manage.py test_otp --email user@test.com
-python manage.py test_otp --phone "+1234567890"
+python manage.py otp_test --email user@test.com
+python manage.py otp_test --phone "+1234567890"
 ```
 
 ## 🧪 Testing & Monitoring
@@ -110,85 +114,6 @@ cli test-email --to admin@test.com
 
 # Test Telegram
 cli test-telegram --message "Hello!"
-
-# Test payment providers
-python manage.py test_providers
-
-# Test newsletter
-python manage.py test_newsletter --email test@test.com
-```
-
-## 🤖 AI Agents
-
-```bash
-# List available templates
-python manage.py create_agent --list
-
-# Load all templates
-python manage.py create_agent --load-all
-
-# Create custom agent
-python manage.py create_agent "analyzer" \
-  "Analyze content for sentiment and topics" \
-  --category content --public
-
-# Show orchestrator status
-python manage.py orchestrator_status --detailed
-
-# Agent stats for last 48 hours
-python manage.py orchestrator_status --agents --recent 48
-```
-
-## 📚 Knowledge Base
-
-```bash
-# Setup Knowledge Base (first time)
-python manage.py setup_knowbase
-
-# Show statistics
-python manage.py knowbase_stats
-
-# Detailed stats as JSON
-python manage.py knowbase_stats --detailed --format json
-```
-
-## 🔧 Maintenance Mode
-
-```bash
-# Enable maintenance mode
-python manage.py maintenance enable
-
-# Enable with Cloudflare sync
-python manage.py maintenance enable --cloudflare
-
-# Disable maintenance mode
-python manage.py maintenance disable
-
-# Check status
-python manage.py maintenance status
-
-# Sync with Cloudflare
-python manage.py sync_cloudflare --enable
-python manage.py sync_cloudflare --disable
-```
-
-## 💳 Payments Management
-
-```bash
-# Currency operations
-python manage.py currency_stats
-python manage.py manage_currencies list
-python manage.py manage_currencies add --code BTC --name Bitcoin
-
-# Provider management
-python manage.py manage_providers list
-python manage.py manage_providers add --name CryptAPI --type crypto
-
-# Process pending payments
-python manage.py process_pending_payments --limit 100
-
-# Cleanup old data
-python manage.py cleanup_expired_data --days 30
 ```
 
 ## 🔄 Background Tasks (Django-RQ)
@@ -206,11 +131,23 @@ rearq main:rearq server
 # Start worker with specific queues
 rearq main:rearq worker --queues default,high,low
 
-# Show task status
-python manage.py task_status
-
 # Test task processing
 python manage.py test_tasks
+
+# Start RQ worker
+python manage.py rqworker
+
+# Start RQ worker pool (multiple workers)
+python manage.py rqworker_pool
+
+# Start RQ scheduler
+python manage.py rqscheduler
+
+# Show queue statistics
+python manage.py rqstats
+
+# Clean stale job locks
+python manage.py rq_cleanup_locks
 ```
 
 ## 🌐 URLs & Routing
@@ -251,23 +188,100 @@ python manage.py check_settings --verbose
 python manage.py clear_constance
 ```
 
-## 📊 Statistics & Monitoring
+## 🌐 gRPC / Communication
 
 ```bash
-# Support tickets
-python manage.py support_stats --format json
+# Start async gRPC server
+python manage.py rungrpc
 
-# Newsletter campaigns
-python manage.py newsletter_stats --subscribers
+# Compile .proto files
+python manage.py compile_proto
 
-# Lead conversion
-python manage.py leads_stats --funnel
+# Generate proto definitions from Django models
+python manage.py generate_protos
 
-# Orchestrator metrics
-python manage.py orchestrator_status --detailed
+# Create D1 schema tables for gRPC
+python manage.py create_grpc_d1_schema
+```
 
-# Knowledge base metrics
-python manage.py knowbase_stats --detailed
+## ☁️ Cloudflare D1
+
+```bash
+# Show D1 connection status
+python manage.py cf_status
+
+# Sync Django users to D1
+python manage.py cf_sync_users
+
+# View D1 operation logs
+python manage.py d1_logs
+
+# Create D1 schema for RQ events
+python manage.py create_rq_d1_schema
+
+# Create D1 schema for Centrifugo logs
+python manage.py create_centrifugo_d1_schema
+```
+
+## 📡 Centrifugo
+
+```bash
+# Generate typed Centrifugo clients (Python, TS, Go, Swift)
+python manage.py generate_centrifugo_clients
+```
+
+## 🖥️ Streamlit Admin
+
+```bash
+# Scaffold a new Streamlit admin app
+python manage.py create_streamlit_app
+
+# Start Streamlit admin server
+python manage.py run_streamlit
+
+# Generate Streamlit pages from models
+python manage.py gen_streamlit
+```
+
+## ⚙️ Code Generation
+
+```bash
+# Generate FastAPI/SQLModel code from Django models
+python manage.py generate_fastapi
+
+# Generate standalone API client
+python manage.py generate_client
+```
+
+## 📊 LLM & Monitoring
+
+```bash
+# Check OpenAI/OpenRouter API balance
+python manage.py check_llm_balance
+
+# Clean old monitor events
+python manage.py monitor_cleanup
+```
+
+## 🤖 Telegram
+
+```bash
+# Start Telegram bot in polling mode
+python manage.py telegram_bot
+```
+
+## 🔑 Auth / OTP
+
+```bash
+# Reset OTP throttle for a user
+python manage.py otp_reset_throttle
+```
+
+## 🌍 Geo
+
+```bash
+# Populate geo/timezone data
+python manage.py geo_populate
 ```
 
 ## ⏰ Cron Jobs
@@ -275,17 +289,8 @@ python manage.py knowbase_stats --detailed
 Commonly used commands in cron:
 
 ```bash
-# Process pending payments every 5 minutes
-*/5 * * * * cd /path/to/project && python manage.py process_pending_payments
-
-# Process scheduled maintenance every 5 minutes
-*/5 * * * * cd /path/to/project && python manage.py process_scheduled_maintenance
-
-# Cleanup expired data daily at 3 AM
-0 3 * * * cd /path/to/project && python manage.py cleanup_expired_data
-
-# Update currency rates every hour
-0 * * * * cd /path/to/project && python manage.py update_currency_rates
+# Health check every 5 minutes
+*/5 * * * * cd /path/to/project && python manage.py check_endpoints --json > /var/log/health.json
 ```
 
 ## 🔗 Command Chaining
@@ -300,15 +305,14 @@ poetry install && \
 poetry run python manage.py migrate && \
 poetry run python manage.py createsuperuser
 
-# Validate and migrate
-python manage.py validate_config && \
+# Check and migrate
+python manage.py check_settings && \
 python manage.py migrate_all
 
 # Deploy workflow
-python manage.py validate_config --check-connections && \
+python manage.py check_settings --verbose && \
 python manage.py migrate_all && \
-python manage.py collectstatic --noinput && \
-python manage.py test_email --to admin@example.com
+python manage.py collectstatic --noinput
 
 # Development startup
 python manage.py migrate_all && \
@@ -319,16 +323,20 @@ python manage.py runserver_ngrok
 
 | Category | Command Count | Main Purpose |
 |----------|--------------|--------------|
-| **Core** | 8 | Project setup, configuration, validation |
+| **Core** | 7 | Project setup, configuration, validation |
 | **Database** | 3 | Migrations, database management |
-| **AI Agents** | 2 | Agent creation, orchestrator management |
-| **Knowledge Base** | 2 | Vector search setup, statistics |
-| **Maintenance** | 3 | Maintenance mode, Cloudflare sync |
-| **Payments** | 6 | Currency, provider, payment management |
-| **Accounts** | 1 | OTP authentication testing |
-| **Background Tasks** | 4 | Django-RQ worker management |
+| **Testing** | 4 | Endpoint health, email, telegram, OTP |
+| **Background Tasks** | 9 | Django-RQ workers, scheduler, stats |
 | **Development** | 8 | Server, ngrok, scripts, testing |
-| **Built-in Apps** | 4 | Support, newsletter, leads stats |
+| **gRPC** | 4 | gRPC server, proto compilation |
+| **Cloudflare D1** | 5 | D1 status, sync, logs, schemas |
+| **Centrifugo** | 3 | WebSocket clients, publishing |
+| **Streamlit** | 3 | Admin panel scaffolding, server |
+| **Code Generation** | 2 | FastAPI, API client generation |
+| **LLM & Monitoring** | 2 | API balance, event cleanup |
+| **Telegram** | 1 | Bot polling mode |
+| **Auth / OTP** | 1 | Throttle reset |
+| **Geo** | 1 | Timezone/geo data |
 
 ## 💡 Tips
 
@@ -342,17 +350,16 @@ poetry run cli runserver
 python manage.py runserver
 ```
 
-### Always Validate Before Deploy
+### Always Check Before Deploy
 
 ```bash
-poetry run cli validate-config --check-connections
+python manage.py check_settings --verbose
 ```
 
 ### Use Dry Run for Safety
 
 ```bash
 python manage.py migrate_all --dry-run
-python manage.py cleanup_expired_data --dry-run
 ```
 
 ### Test Integrations After Configuration
@@ -365,12 +372,9 @@ poetry run cli test-telegram --message "Deploy successful"
 ## 🔍 Find More Information
 
 - **[Core Commands](./core-commands)** - Project setup, configuration
-- **[AI Agents](./ai-agents)** - Agent management commands
-- **[Knowledge Base](./knowbase)** - Vector search commands
-- **[Maintenance](./maintenance)** - Maintenance mode commands
-- **[Payments](./payments)** - Payment management commands
-- **[Background Tasks](/docs/features/integrations/django-rq/overview)** - Django-RQ commands
+- **[Background Tasks](/docs/features/modules/django-rq/overview)** - Django-RQ commands
 - **[Development](./development)** - Development tools
+- **[Commands Overview](./overview)** - Full categorized list of all 50+ commands
 
 ---
 

@@ -16,27 +16,46 @@ This is a practical guide for **configuring** extensions, not for building them.
 
 ---
 
-## Core Extension Settings
+## Extension Base Classes
 
-All extensions support these base settings:
+Django-CFG provides two base settings classes for different extension types.
 
-### enabled
+### BaseExtensionSettings (App Extensions)
 
-**Type:** `bool`
-**Default:** `True`
+For Django app extensions in `extensions/apps/`. These are full Django apps with models, views, and URL routing. To disable an app extension, comment out or remove the `settings = ...` line in `__cfg__.py`.
 
-Enable or disable the extension.
+**Fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `admin_enabled` | `bool` | `True` | Show in admin interface |
+| `middleware_classes` | `list[str]` | `[]` | Middleware classes to add to MIDDLEWARE |
+| `navigation` | `Optional[NavigationSection]` | `None` | Admin navigation section |
+| `constance_fields` | `list[ConstanceField]` | `[]` | Dynamic settings via django-constance |
+| `schedules` | `list[RQScheduleConfig]` | `[]` | RQ scheduled tasks |
+| `url_prefix` | `Optional[str]` | `None` | URL path segment override |
+| `url_namespace` | `Optional[str]` | `None` | Django URL namespace |
+
+### BaseModuleSettings (Module Extensions)
+
+For utility module extensions in `extensions/modules/`. These are non-app Python modules without models or URL routing.
+
+**Fields:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable or disable the module |
 
 ```python
-class PaymentsSettings(BaseExtensionSettings):
-    enabled: bool = True  # Extension active
+from django_cfg.extensions.configs.modules import BaseModuleSettings
+
+class MyUtilitySettings(BaseModuleSettings):
+    enabled: bool = True  # Module active
 ```
 
-**Usage:**
-```python
-# Disable temporarily
-enabled: bool = False
-```
+<Callout type="warning">
+The `enabled` field only exists on `BaseModuleSettings`. App extensions (`BaseExtensionSettings`) do not have this field -- disable them by removing the `settings` object.
+</Callout>
 
 ---
 
@@ -45,7 +64,7 @@ enabled: bool = False
 **Type:** `bool`
 **Default:** `True`
 
-Show extension in Django admin interface.
+Show app extension in Django admin interface. Only available on `BaseExtensionSettings`.
 
 ```python
 class SupportSettings(BaseExtensionSettings):
@@ -74,8 +93,7 @@ class PaymentsSettings(BaseExtensionSettings):
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
     crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
 
-    # Feature flags
-    enabled: bool = True
+    # Admin integration
     admin_enabled: bool = True
 
 settings = PaymentsSettings()
@@ -294,7 +312,16 @@ Extensions auto-register URLs, but you can verify the patterns:
 
 ### Default URL Patterns
 
-Extensions are available at `/cfg/{extension-name}/`:
+Extensions auto-register URLs based on `urls*.py` files found in the extension directory:
+
+| URL File | Mounted At | Description |
+|----------|-----------|-------------|
+| `urls.py` | `/cfg/{name}/` | Main API endpoints |
+| `urls_admin.py` | `/cfg/{name}/admin/` | Admin API endpoints |
+| `urls_system.py` | `/cfg/{name}/system/` | System API endpoints |
+| `urls_<custom>.py` | `/cfg/{name}/<custom>/` | Custom endpoint groups |
+
+**Examples by extension:**
 
 | Extension | URL Pattern | Example |
 |-----------|-------------|---------|
@@ -302,6 +329,8 @@ Extensions are available at `/cfg/{extension-name}/`:
 | Leads | `/cfg/leads/` | `http://localhost:8000/cfg/leads/api/` |
 | Support | `/cfg/support/` | `http://localhost:8000/cfg/support/api/` |
 | Newsletter | `/cfg/newsletter/` | `http://localhost:8000/cfg/newsletter/api/` |
+
+You can override the path segment with `url_prefix` or the namespace with `url_namespace` in your extension settings.
 
 ### Testing URLs
 
@@ -475,13 +504,20 @@ class PaymentsSettings(BaseExtensionSettings):
 | **Support** | `sla_hours`, `ticket_auto_assign` | `SUPPORT__SLA_HOURS` |
 | **Newsletter** | `from_email`, `from_name` | `NEWSLETTER__FROM_EMAIL` |
 
-### All Extensions Support
+### All App Extensions Support
 
-- ✅ `enabled: bool` - Enable/disable extension
 - ✅ `admin_enabled: bool` - Show in admin
+- ✅ `middleware_classes`, `navigation`, `constance_fields`, `schedules` - Advanced integration
+- ✅ `url_prefix`, `url_namespace` - URL customization
 - ✅ Environment variable loading
 - ✅ Type validation with Pydantic
-- ✅ Auto-discovery and registration
+- ✅ Auto-discovery and registration (via `__cfg__.py` or legacy `__manifest__.py`)
+
+### Module Extensions Support
+
+- ✅ `enabled: bool` - Enable/disable module
+- ✅ Environment variable loading
+- ✅ Type validation with Pydantic
 
 ---
 

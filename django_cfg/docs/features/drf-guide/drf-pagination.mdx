@@ -26,11 +26,21 @@ PaginatedUserList:
   properties:
     count:
       type: integer
-    next:
-      type: string
+    page:
+      type: integer
+    pages:
+      type: integer
+    page_size:
+      type: integer
+    has_next:
+      type: boolean
+    has_previous:
+      type: boolean
+    next_page:
+      type: integer
       nullable: true
-    previous:
-      type: string
+    previous_page:
+      type: integer
       nullable: true
     results:
       type: array
@@ -43,8 +53,13 @@ PaginatedUserList:
 ```typescript
 interface PaginatedUserList {
   count: number;
-  next: string | null;
-  previous: string | null;
+  page: number;
+  pages: number;
+  page_size: number;
+  has_next: boolean;
+  has_previous: boolean;
+  next_page: number | null;
+  previous_page: number | null;
   results: User[];
 }
 ```
@@ -79,7 +94,13 @@ class UserViewSet(viewsets.ModelViewSet):
 ```typescript
 const { data } = useUsersList(api, { page: 1 });
 // data.count → 150
-// data.next → "/api/users/?page=2"
+// data.page → 1
+// data.pages → 15
+// data.page_size → 10
+// data.has_next → true
+// data.has_previous → false
+// data.next_page → 2
+// data.previous_page → null
 // data.results → User[]
 ```
 
@@ -172,6 +193,73 @@ class DashboardViewSet(viewsets.GenericViewSet):
         serializer = NotificationSerializer(page, many=True)
         return self.get_paginated_response(serializer.data)
 ```
+
+## Built-in Pagination Classes
+
+Django-CFG provides several pre-configured pagination classes that you can use directly:
+
+### DefaultPagination
+
+The default pagination class used by Django-CFG. Configured via `REST_FRAMEWORK` settings in your Django-CFG configuration.
+
+```python
+from django_cfg.pagination import DefaultPagination
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    pagination_class = DefaultPagination  # or omit — this is the default
+```
+
+### LargePagination
+
+Returns **100 items per page**. Useful for admin dashboards or bulk data views:
+
+```python
+from django_cfg.pagination import LargePagination
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    pagination_class = LargePagination
+```
+
+### SmallPagination
+
+Returns **10 items per page**. Ideal for mobile-first APIs or sidebar widgets:
+
+```python
+from django_cfg.pagination import SmallPagination
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerializer
+    pagination_class = SmallPagination
+```
+
+### NoPagination
+
+Disables pagination entirely. Use for endpoints that return small, fixed-size collections:
+
+```python
+from django_cfg.pagination import NoPagination
+
+class StatusViewSet(viewsets.GenericViewSet):
+    serializer_class = StatusSerializer
+    pagination_class = NoPagination
+
+    def list(self, request):
+        statuses = [{"key": "active"}, {"key": "inactive"}]
+        serializer = self.get_serializer(statuses, many=True)
+        return Response(serializer.data)
+```
+
+| Class | Page Size | Use Case |
+|-------|-----------|----------|
+| `DefaultPagination` | Configured in settings | General-purpose lists |
+| `LargePagination` | 100 | Admin dashboards, bulk exports |
+| `SmallPagination` | 10 | Mobile APIs, widgets, sidebars |
+| `NoPagination` | N/A (disabled) | Small fixed collections |
 
 ## Common Issues
 

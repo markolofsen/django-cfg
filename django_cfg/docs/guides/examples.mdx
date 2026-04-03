@@ -29,45 +29,33 @@ Complete walkthrough of a production-ready Django-CFG project with all features:
 
 ---
 
-## 🤖 AI Agents Examples
-
-Real-world examples of building intelligent workflows with Django-CFG AI agents.
-
-### **[AI Agents Examples](../../ai-agents/examples)**
-- Document processing agents
-- Customer support automation
-- Data analysis workflows
-- Business process automation
-
-**Use cases**: Content generation, automated support, data processing
-
 ---
 
 ## 💱 Currency Conversion Examples
 
 Examples showing multi-currency support across different industries.
 
-### **[E-commerce Applications](../../features/modules/currency/overview)**
+### **[E-commerce Applications](../../features/modules/django-currency/overview)**
 - Multi-currency product catalogs
 - Shopping cart with currency conversion
 - Dynamic pricing
 
-### **[Financial Applications](../../features/modules/currency/overview)**
+### **[Financial Applications](../../features/modules/django-currency/overview)**
 - Crypto portfolio tracking
 - Investment returns calculator
 - Multi-asset tracking
 
-### **[Import/Export Business](../../features/modules/currency/overview)**
+### **[Import/Export Business](../../features/modules/django-currency/overview)**
 - Vehicle import cost calculator
 - Global pricing strategies
 - International shipping costs
 
-### **[Gaming & Entertainment](../../features/modules/currency/overview)**
+### **[Gaming & Entertainment](../../features/modules/django-currency/overview)**
 - In-game currency exchange
 - Regional pricing for game items
 - Optimal purchase calculator
 
-### **[Business Intelligence](../../features/modules/currency/overview)**
+### **[Business Intelligence](../../features/modules/django-currency/overview)**
 - Multi-currency revenue analytics
 - Cross-border sales analysis
 - Currency exposure reporting
@@ -80,7 +68,7 @@ Examples showing multi-currency support across different industries.
 
 Production-ready background task processing with ReArq.
 
-### **[ReArq Examples](../../features/integrations/django-rq/overview)**
+### **[ReArq Examples](../../features/modules/django-rq/overview)**
 - Email campaign processing
 - Document processing pipelines
 - Data synchronization
@@ -248,19 +236,6 @@ class MyConfig(DjangoConfig):
 
 Production-ready built-in applications.
 
-### Support Ticket System
-```python
-# config.py
-enable_support: bool = True  # Complete ticketing system!
-
-# Automatically provides:
-# - Ticket management
-# - Modern chat interface
-# - Email notifications
-# - Admin dashboard
-# - REST API endpoints
-```
-
 ### User Management with OTP
 ```python
 enable_accounts: bool = True  # Advanced user management!
@@ -270,17 +245,6 @@ enable_accounts: bool = True  # Advanced user management!
 # - User profiles
 # - Activity tracking
 # - Security audit logs
-```
-
-### Newsletter System
-```python
-enable_newsletter: bool = True  # Email marketing!
-
-# Automatically provides:
-# - Newsletter campaigns
-# - Subscriber management
-# - Email tracking (opens, clicks)
-# - Analytics dashboard
 ```
 
 **See**: [Built-in Apps Documentation](../../features/built-in-apps/overview)
@@ -315,9 +279,8 @@ stripe_webhook = get_webhook_url("/api/webhooks/stripe/")
 ```
 
 **See**:
-- [Ngrok Integration Overview](../../features/integrations/ngrok/overview)
-- [Webhook Examples](../../features/integrations/ngrok/webhook-examples)
-- [Webhook Admin Panel](../../features/integrations/ngrok/payments-panel)
+- [Ngrok Integration Overview](../../features/modules/django-ngrok/overview)
+- [Webhook Examples](../../features/modules/django-ngrok/webhook-examples)
 
 ---
 
@@ -362,14 +325,11 @@ user = OTPService.verify_email_otp("user@example.com", "123456")
 
 **Building E-commerce?**
 
-**Need AI Automation?**
-→ Check [AI Agents Examples](../../ai-agents/examples)
-
 **Setting up Background Tasks?**
-→ Explore [ReArq Examples](../../features/integrations/django-rq/overview)
+→ Explore [ReArq Examples](../../features/modules/django-rq/overview)
 
 **Testing Webhooks?**
-→ Learn [Ngrok Integration](../../features/integrations/ngrok/overview)
+→ Learn [Ngrok Integration](../../features/modules/django-ngrok/overview)
 
 ---
 

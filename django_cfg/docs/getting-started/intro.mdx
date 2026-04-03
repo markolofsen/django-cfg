@@ -38,7 +38,7 @@ Django-CFG is a configuration framework for Django that replaces traditional set
 
 **Save Development Time:**
 - ✅ **50% less time** debugging configuration issues
-- ✅ **Zero-config** built-in apps (support, user management, payments)
+- ✅ **Zero-config** built-in apps (user management, background tasks)
 - ✅ **Instant setup** for common integrations (Redis, PostgreSQL, Email)
 - ✅ **90% boilerplate reduction** compared to traditional Django
 
@@ -71,7 +71,7 @@ Configuration Debugging:           Hours per issue
 With Django-CFG:                   Instant (fails at startup)
 
 Third-party Apps Needed:           8-10 packages
-Django-CFG Built-in Apps:          9 production-ready apps
+Django-CFG Built-in:               Production-ready modules
 ```
 
 ---
@@ -220,7 +220,6 @@ class MyConfig(DjangoConfig):
     )
 
     # Built-in apps - enable with boolean flags
-    enable_support: bool = True      # Support ticket system
     enable_accounts: bool = True     # Extended user management
 
 # settings.py - just 2 lines
@@ -286,8 +285,7 @@ class ECommerceConfig(DjangoConfig):
     # Auto Redis cache - just set redis_url! ✨
     redis_url: str = f"redis://{env.redis.host}:6379/0"
 
-    enable_support: bool = True  # Customer support tickets
-    enable_newsletter: bool = True  # Marketing campaigns
+    enable_accounts: bool = True  # Extended user management
 ```
 
 **Result:** 15 lines vs 80+ lines. Type-safe. Zero database routing bugs.
@@ -324,7 +322,6 @@ class SaaSConfig(DjangoConfig):
     )
 
     enable_accounts: bool = True  # User management with OTP
-    enable_agents: bool = True  # AI-powered customer support
 ```
 
 **Result:** One config file for all environments. Automatic environment detection. No settings file sprawl.
@@ -363,10 +360,6 @@ class APIServiceConfig(DjangoConfig):
         use_tls=True,
     )
 
-    # AI-powered features built-in
-    enable_agents: bool = True  # AI agent orchestration
-    enable_knowbase: bool = True  # AI knowledge base
-
     # Background tasks for async processing
     task: TaskConfig = TaskConfig(
         broker_url=f"redis://{env.redis.host}:6379/0",
@@ -381,13 +374,13 @@ class APIServiceConfig(DjangoConfig):
     )
 ```
 
-**Result:** All integrations type-safe and validated. 40 lines vs 150+. Built-in AI agents. Auto-generated API docs.
+**Result:** All integrations type-safe and validated. 40 lines vs 150+. Auto-generated API docs.
 
 ### 4. Startup MVP (Rapid Development)
 
-**Challenge:** Build and deploy in 1 day. Support tickets, user auth, payments, email notifications.
+**Challenge:** Build and deploy in 1 day. User auth, email notifications, background tasks.
 
-**Traditional Django:** Install 8-10 packages, configure each one, wire everything together, write custom user model, build support system.
+**Traditional Django:** Install 8-10 packages, configure each one, wire everything together, write custom user model.
 
 **With Django-CFG:**
 ```python
@@ -406,10 +399,7 @@ class MVPConfig(DjangoConfig):
     }
 
     # Enable built-in production features
-    enable_support: bool = True      # Support ticket system (Django app)
     enable_accounts: bool = True     # Extended user management with OTP
-    enable_newsletter: bool = True   # Email campaigns
-    enable_leads: bool = True        # Lead collection forms
 
     # Email notifications
     email: EmailConfig = EmailConfig(
@@ -546,7 +536,7 @@ globals().update(config.get_all_settings())
 <Callout type="success">
 **New in Django-CFG 2.0: Extensions Architecture**
 
-Your `DjangoConfig` can be even simpler with the new **modular extensions system**! Instead of configuring everything in one file, extensions like payments, leads, and support now configure themselves automatically.
+Your `DjangoConfig` can be even simpler with the new **modular extensions system**! Instead of configuring everything in one file, extensions now configure themselves automatically.
 
 ```python
 # Modern approach - extensions auto-discovered!
@@ -709,13 +699,9 @@ Enable via boolean flags in your config:
 
 ```python
 class MyConfig(DjangoConfig):
-    enable_support: bool = True      # Support ticket system
     enable_accounts: bool = True     # Extended user management with OTP
-    enable_newsletter: bool = False  # Email campaigns
-    enable_leads: bool = False       # Lead collection
-    enable_agents: bool = False      # AI agents framework
-    enable_knowbase: bool = False    # AI-powered knowledge base
-    enable_maintenance: bool = False # Multi-site maintenance mode
+    enable_pool_cleanup: bool = False # Database connection pool cleanup
+    enable_drf_tailwind: bool = False # Tailwind CSS for DRF views
 ```
 
 ### Integrations
@@ -769,10 +755,9 @@ graph TB
 
 ### Need Specific Features?
 
-- [Database Configuration](../../fundamentals/configuration) - Multiple databases, routing
-- [Caching Setup](../../fundamentals/configuration) - Redis, in-memory, database caching
-- [Background Tasks](../../features/integrations/django-rq/overview) - Async task processing
-- [AI Agents](../../ai-agents/introduction) - Build AI-powered workflows
+- [Database Configuration](../../configuration) - Multiple databases, routing
+- [Caching Setup](../../configuration) - Redis, in-memory, database caching
+- [Background Tasks](../../features/modules/django-rq/overview) - Async task processing
 
 ## Resources
 

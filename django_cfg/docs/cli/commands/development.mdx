@@ -116,12 +116,12 @@ python manage.py test_telegram --message "Test" --chat-id "-1001234567890"
 
 ---
 
-### `test_otp`
+### `otp_test`
 
 Test OTP authentication system.
 
 ```bash
-python manage.py test_otp [OPTIONS]
+python manage.py otp_test [OPTIONS]
 ```
 
 | Option | Type | Description |
@@ -132,7 +132,7 @@ python manage.py test_otp [OPTIONS]
 
 ```bash
 # Test email OTP
-python manage.py test_otp --email user@example.com
+python manage.py otp_test --email user@example.com
 ```
 
 ---
@@ -329,7 +329,7 @@ python manage.py test_email --to admin@test.com
 python manage.py test_telegram --message "Deploy test"
 
 # 3. Test OTP system
-python manage.py test_otp --email user@test.com
+python manage.py otp_test --email user@test.com
 
 # 4. Run unit tests
 python manage.py test
@@ -385,5 +385,5 @@ python manage.py shell -c "from myapp.models import User; print(User.objects.cou
 ## See Also
 
 - [Quick Reference](./quick-reference)
-- [Ngrok Integration](/docs/features/integrations/ngrok/overview)
+- [Ngrok Integration](/docs/features/modules/django-ngrok/overview)
 - [Core Commands](./core-commands)

@@ -68,9 +68,6 @@ from django_cfg import DjangoConfig
 from .environment import env
 
 class MyProjectConfig(DjangoConfig):
-    enable_agents: bool = True  # Enable AI agents app
-    enable_knowbase: bool = True  # Enable knowledge base
-
     # API keys from environment (type-safe!)
     api_keys: dict[str, str] = {
         "openai": env.api_keys.openai,
@@ -174,8 +171,6 @@ class LLMSettings(BaseModel):
 from .environment import env
 
 class MyProjectConfig(DjangoConfig):
-    enable_agents: bool = True
-
     # Extract API keys from provider configs
     api_keys: dict[str, str] = {
         name: provider.api_key
@@ -234,8 +229,6 @@ import os
 from django_cfg import DjangoConfig
 
 class ProductionConfig(DjangoConfig):
-    enable_agents: bool = True
-
     # Fail fast if keys missing
     api_keys: dict[str, str] = {
         "openai": os.environ["OPENAI_API_KEY"],  # Will raise if missing
@@ -303,22 +296,8 @@ class AIIntegrationTest(TestCase):
 
 ### AI Features & Integration
 
-**AI Agents Framework:**
-- [**AI Agents Introduction**](../../ai-agents/introduction) - Complete agent framework overview
-- [**Creating Agents**](../../ai-agents/creating-agents) - Build custom AI agents
-- [**Agent Toolsets**](../../ai-agents/toolsets) - Define agent tools and capabilities
-- [**Orchestration**](../../ai-agents/orchestration) - Multi-agent workflows
-- [**Django Integration**](../../ai-agents/django-integration) - Django-specific agent features
-- [**AI Examples**](../../ai-agents/examples) - Real-world AI agent examples
-
-**Knowledge Base & RAG:**
-- [**Knowledge Base Overview**](../../features/built-in-apps/ai-knowledge/overview) - Semantic search and RAG
-- [**Knowledge Base Setup**](../../features/built-in-apps/ai-knowledge/knowbase-setup) - Getting started
-- [**Data Integration**](../../features/built-in-apps/ai-knowledge/knowbase-data-integration) - Ingest documents
-- [**Chat & Search**](../../features/built-in-apps/ai-knowledge/knowbase-chat-search) - Query interface
-
 **LLM Module:**
-- [**LLM Module Overview**](../../features/modules/llm/overview) - Multi-provider LLM integration
+- [**LLM Module Overview**](../../features/modules/django-llm/overview) - Multi-provider LLM integration
 
 ### Configuration & Setup
 
@@ -328,18 +307,16 @@ class AIIntegrationTest(TestCase):
 - [**First Project**](../../getting-started/first-project) - Quick start tutorial
 
 **Advanced Configuration:**
-- [**Environment Variables**](../../fundamentals/configuration/environment) - Secure API key management
-- [**Environment Detection**](../../fundamentals/configuration/environment) - Environment-based AI config
-- [**Type-Safe Configuration**](../../fundamentals/core/type-safety) - AI config validation
+- [**Environment Variables**](../../configuration/environment) - Secure API key management
+- [**Environment Detection**](../../configuration/environment) - Environment-based AI config
+- [**Type-Safe Configuration**](../../core/type-safety) - AI config validation
 
 ### Background Processing & Tools
 
 **Task Processing:**
-- [**ReArq Integration**](../../features/integrations/django-rq/overview) - Async AI processing
-- [**Background Tasks**](../../features/built-in-apps/operations/tasks) - Task queue for AI jobs
+- [**ReArq Integration**](../../features/modules/django-rq/overview) - Async AI processing
 
 **CLI & Management:**
-- [**AI Agent Commands**](../../cli/commands/ai-agents) - Manage agents via CLI
 - [**CLI Tools**](../../cli/introduction) - Command-line interface
 - [**Troubleshooting**](./troubleshooting) - Common AI integration issues
 

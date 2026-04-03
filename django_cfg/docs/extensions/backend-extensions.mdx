@@ -70,7 +70,6 @@ from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
 class PaymentsSettings(BaseExtensionSettings):
     # Override default settings
-    enabled: bool = True
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
     crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
 
@@ -108,6 +107,8 @@ extensions/apps/payments/
 ├── views.py
 └── ...
 ```
+
+The scanner supports both `__cfg__.py` (preferred) and `__manifest__.py` (legacy) for configuration. Extensions are loaded in dependency order using topological sorting. Each settings class must implement `to_manifest()` for the scanner.
 
 The `__cfg__.py` file looks like this:
 
@@ -169,16 +170,63 @@ class SupportSettings(BaseExtensionSettings):
 
 ---
 
+## Extension Types
+
+Django-CFG has two kinds of extensions, each with its own base settings class:
+
+### App Extensions (BaseExtensionSettings)
+
+For Django app extensions that live in `extensions/apps/`. These are full Django apps with models, views, and URL routing.
+
+```python
+from django_cfg.extensions.configs.apps import BaseExtensionSettings
+
+class PaymentsSettings(BaseExtensionSettings):
+    admin_enabled: bool = True
+    api_key: str = env.payments.api_key
+```
+
+**Key fields on BaseExtensionSettings:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `admin_enabled` | `bool` | Show in admin interface |
+| `middleware_classes` | `list[str]` | Middleware classes to add to MIDDLEWARE |
+| `navigation` | `Optional[NavigationSection]` | Admin navigation section |
+| `constance_fields` | `list[ConstanceField]` | Dynamic settings via django-constance |
+| `schedules` | `list[RQScheduleConfig]` | RQ scheduled tasks |
+| `url_prefix` | `Optional[str]` | URL path segment override |
+| `url_namespace` | `Optional[str]` | Django URL namespace |
+
+<Callout type="warning">
+`BaseExtensionSettings` does **not** have an `enabled` field. To disable an app extension, comment out or remove the `settings = ...` line in `__cfg__.py`.
+</Callout>
+
+### Module Extensions (BaseModuleSettings)
+
+For utility module extensions that live in `extensions/modules/`. These are non-app Python modules (no models or URLs).
+
+```python
+from django_cfg.extensions.configs.modules import BaseModuleSettings
+
+class MyUtilitySettings(BaseModuleSettings):
+    enabled: bool = True  # Can be toggled on/off
+    some_option: str = "default"
+```
+
+The key difference: `BaseModuleSettings` has an `enabled: bool = True` field that lets you toggle the module on or off without removing the settings object.
+
+---
+
 ## Extension Configuration Reference
 
 ### Core Settings
 
-Every extension supports these settings:
+App extensions support these settings:
 
 ```python
 class MyExtensionSettings(BaseExtensionSettings):
     # Core settings
-    enabled: bool = True              # Enable/disable extension
     admin_enabled: bool = True        # Show in admin interface
 
     # Your custom settings
@@ -333,18 +381,19 @@ class PaymentsSettings(BaseExtensionSettings):
 
 **Problem:** Extension URLs conflict with your app's URLs
 
-**Solution:** Extensions use `/cfg/` prefix by default:
+**Solution:** Extensions use `/cfg/` prefix by default. Each extension can have multiple URL files, each mounted at a different sub-path:
 
 ```
-/cfg/payments/      ← Extension URLs
-/cfg/leads/         ← Extension URLs
-/cfg/support/       ← Extension URLs
+/cfg/payments/          ← urls.py (main API)
+/cfg/payments/admin/    ← urls_admin.py (admin API)
+/cfg/payments/system/   ← urls_system.py (system API)
+/cfg/payments/<custom>/ ← urls_<custom>.py (custom endpoints)
 
-/api/               ← Your app URLs (no conflict)
-/admin/             ← Django admin (no conflict)
+/api/                   ← Your app URLs (no conflict)
+/admin/                 ← Django admin (no conflict)
 ```
 
-If you need to change the prefix, it's configured in extension settings (advanced use case).
+You can override the path segment using `url_prefix` in extension settings, or change the namespace with `url_namespace`.
 
 ---
 
@@ -525,15 +574,15 @@ settings = SupportSettings()
 
 ### Q: How do I disable an extension temporarily?
 
-**A:** Comment out the `settings` line:
+**A:** For app extensions, comment out the `settings` line:
 ```python
 # extensions/apps/payments/__cfg__.py
 # settings = PaymentsSettings()  # Disabled
 ```
 
-Or set `enabled = False`:
+For module extensions, set `enabled = False`:
 ```python
-class PaymentsSettings(BaseExtensionSettings):
+class MyModuleSettings(BaseModuleSettings):
     enabled: bool = False
 ```
 

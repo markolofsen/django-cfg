@@ -1,9 +1,9 @@
 export default {
   'index': { display: 'hidden' },
+  'modules': 'Modules',
   'built-in-apps': 'Bundled Extensions',
-  'modules': 'Auto-Configuring Modules',
-  'tools': 'Tools & Utilities',
   'integrations': 'Integrations',
+  'tools': 'Tools & Utilities',
   'api-generation': 'API Generation',
   'drf-guide': 'DRF Guide'
 }

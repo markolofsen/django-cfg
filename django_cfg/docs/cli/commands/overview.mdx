@@ -1,6 +1,6 @@
 ---
 title: Commands Overview
-description: Django-CFG CLI commands organized by category. Quick access to all 40+ management commands.
+description: Django-CFG CLI commands organized by category. Quick access to all management commands.
 sidebar_label: Overview
 sidebar_position: 1
 keywords:
@@ -12,7 +12,7 @@ keywords:
 
 # CLI Commands Overview
 
-Django-CFG provides **40+ management commands** for development, testing, monitoring, and production operations.
+Django-CFG provides management commands for development, testing, monitoring, and production operations.
 
 
 <Callout type="info">
@@ -40,8 +40,8 @@ cli runserver
 # Create superuser
 cli superuser --email admin@example.com
 
-# Show configuration
-python manage.py show_config
+# Check settings and diagnostics
+python manage.py check_settings
 ```
 
 **[View Quick Reference →](./quick-reference)**
@@ -60,8 +60,6 @@ cli test-email --to admin@test.com
 # Test Telegram
 cli test-telegram --message "Hello!"
 
-# Test payment providers
-python manage.py test_providers
 ```
 
 
@@ -105,23 +103,17 @@ python manage.py script my_script.py
 ### Production Operations
 
 ```bash
-# Validate configuration
-python manage.py validate_config --check-connections
+# Check settings and diagnostics
+python manage.py check_settings --verbose
 
 # Migrate all databases
 python manage.py migrate_all
 
-# Process pending payments (cron job)
-python manage.py process_pending_payments
-
-# Maintenance mode
-python manage.py maintenance enable --cloudflare
-
-# Cleanup expired data
-python manage.py cleanup_expired_data --days 30
+# Check endpoint health
+python manage.py check_endpoints
 ```
 
-**[View Payments →](./payments)** | **[View Maintenance →](./maintenance)**
+**[View Core Commands →](./core-commands)**
 
 
 ---
@@ -131,7 +123,7 @@ python manage.py cleanup_expired_data --days 30
 <details>
   <summary>
 
-### [🔧 Core Commands](./core-commands) — 8 commands
+### [🔧 Core Commands](./core-commands) — 7 commands
 
   </summary>
 
@@ -142,7 +134,6 @@ Project setup, configuration validation, and system checks.
 | `django-cfg create-project` | Create new Django project with full setup |
 | `django-cfg info` | Show installation and system information |
 | `show_config` | Display current configuration |
-| `validate_config` | Validate settings and connections |
 | `check_settings` | Comprehensive diagnostics |
 | `show_urls` | List all URL patterns |
 | `migrate_all` | Migrate all databases |
@@ -155,7 +146,7 @@ Project setup, configuration validation, and system checks.
 <details>
   <summary>
 
-### [🧪 Testing & Monitoring](./testing-monitoring) — 6 commands
+### [🧪 Testing & Monitoring](./testing-monitoring) — 4 commands
 
   </summary>
 
@@ -166,8 +157,7 @@ Health checks, endpoint validation, and service testing.
 | `check_endpoints` | **Production-ready endpoint health checker** |
 | `test_email` | Test email configuration |
 | `test_telegram` | Test Telegram bot |
-| `test_providers` | Test payment providers |
-| `test_otp` | Test OTP authentication |
+| `otp_test` | Test OTP authentication |
 
 
 <Callout type="info">
@@ -210,43 +200,7 @@ Development server and productivity tools.
 <details>
   <summary>
 
-### [🤖 AI Agents](./ai-agents) — 2 commands
-
-  </summary>
-
-AI agent management and orchestration.
-
-| Command | Description |
-|---------|-------------|
-| `create_agent` | Create agents from templates |
-| `orchestrator_status` | Show orchestrator statistics |
-
-**[Full Documentation →](./ai-agents)**
-
-</details>
-
-<details>
-  <summary>
-
-### [📚 Knowledge Base](./knowbase) — 2 commands
-
-  </summary>
-
-Vector search and knowledge management.
-
-| Command | Description |
-|---------|-------------|
-| `setup_knowbase` | Setup pgvector extension |
-| `knowbase_stats` | Show knowledge base statistics |
-
-**[Full Documentation →](./knowbase)**
-
-</details>
-
-<details>
-  <summary>
-
-### 📡 Centrifugo / WebSocket — 2 commands
+### 📡 Centrifugo / WebSocket — 3 commands
 
   </summary>
 
@@ -255,20 +209,21 @@ Real-time messaging and WebSocket RPC client generation.
 | Command | Description |
 |---------|-------------|
 | `centrifugo_publish` | Publish messages to Centrifugo channels for testing |
-| `generate_centrifugo_clients` | Generate type-safe WebSocket RPC clients (Python, TypeScript, Go) |
+| `generate_centrifugo_clients` | Generate type-safe WebSocket RPC clients (Python, TypeScript, Go, Swift) |
+| `create_centrifugo_d1_schema` | Create Cloudflare D1 schema for Centrifugo logs |
 
-**[Full Documentation →](/docs/features/integrations/centrifugo/cli-commands)**
+**[Full Documentation →](/docs/features/modules/django-centrifugo/cli-commands)**
 
 </details>
 
 <details>
   <summary>
 
-### 🔄 Background Tasks — Django-RQ Integration
+### 🔄 Background Tasks — Django-RQ — 9 commands
 
   </summary>
 
-Django-RQ worker management via native CLI.
+Django-RQ worker management, scheduling, and monitoring.
 
 | Command | Description |
 |---------|-------------|
@@ -276,49 +231,144 @@ Django-RQ worker management via native CLI.
 | `rearq main:rearq timer` | Start cron task scheduler |
 | `rearq main:rearq server` | Start monitoring server |
 | `test_tasks` | Test task processing |
+| `rqworker` | Start RQ worker process |
+| `rqworker_pool` | Start RQ worker pool (multiple workers) |
+| `rqscheduler` | Start RQ scheduler for cron/interval tasks |
+| `rqstats` | Show RQ queue statistics |
+| `rq_cleanup_locks` | Clean stale RQ job locks |
 
-**[Full Documentation →](/docs/features/integrations/django-rq/overview)**
-
-</details>
-
-<details>
-  <summary>
-
-### [🔧 Maintenance Mode](./maintenance) — 3 commands
-
-  </summary>
-
-Maintenance mode and Cloudflare integration.
-
-| Command | Description |
-|---------|-------------|
-| `maintenance` | Enable/disable maintenance mode |
-| `sync_cloudflare` | Sync with Cloudflare |
-| `process_scheduled_maintenance` | Process scheduled windows |
-
-**[Full Documentation →](./maintenance)**
+**[Full Documentation →](/docs/features/modules/django-rq/overview)**
 
 </details>
 
 <details>
   <summary>
 
-### [💳 Payments](./payments) — 6 commands
+### 🌐 gRPC / Communication — 4 commands
 
   </summary>
 
-Payment system management.
+gRPC server, protocol buffer compilation, and schema generation.
 
 | Command | Description |
 |---------|-------------|
-| `currency_stats` | Currency statistics |
-| `manage_currencies` | Manage currencies |
-| `manage_providers` | Manage payment providers |
-| `test_providers` | Test provider integrations |
-| `process_pending_payments` | Process pending payments |
-| `cleanup_expired_data` | Cleanup old payment data |
+| `rungrpc` | Start async gRPC server |
+| `compile_proto` | Compile .proto files to Python stubs |
+| `generate_protos` | Generate .proto definitions from Django models |
+| `create_grpc_d1_schema` | Create Cloudflare D1 schema tables for gRPC |
 
-**[Full Documentation →](./payments)**
+</details>
+
+<details>
+  <summary>
+
+### ☁️ Cloudflare D1 — 5 commands
+
+  </summary>
+
+Cloudflare D1 database integration, sync, and logging.
+
+| Command | Description |
+|---------|-------------|
+| `cf_status` | Show Cloudflare D1 connection status |
+| `cf_sync_users` | Sync Django users to D1 |
+| `d1_logs` | View D1 operation logs |
+| `create_rq_d1_schema` | Create D1 schema for RQ events |
+| `create_centrifugo_d1_schema` | Create D1 schema for Centrifugo logs |
+
+</details>
+
+<details>
+  <summary>
+
+### 🖥️ Streamlit Admin — 3 commands
+
+  </summary>
+
+Streamlit-based admin panel scaffolding and management.
+
+| Command | Description |
+|---------|-------------|
+| `create_streamlit_app` | Scaffold a new Streamlit admin app |
+| `run_streamlit` | Start Streamlit admin server |
+| `gen_streamlit` | Generate Streamlit pages from Django models |
+
+</details>
+
+<details>
+  <summary>
+
+### ⚙️ Code Generation — 2 commands
+
+  </summary>
+
+Generate code from Django models for other frameworks.
+
+| Command | Description |
+|---------|-------------|
+| `generate_fastapi` | Generate FastAPI/SQLModel code from Django models |
+| `generate_client` | Generate standalone API client |
+
+</details>
+
+<details>
+  <summary>
+
+### 📊 LLM & Monitoring — 2 commands
+
+  </summary>
+
+LLM balance checks and monitoring cleanup.
+
+| Command | Description |
+|---------|-------------|
+| `check_llm_balance` | Check OpenAI/OpenRouter API balance |
+| `monitor_cleanup` | Clean old monitor events |
+
+</details>
+
+<details>
+  <summary>
+
+### 🤖 Telegram — 1 command
+
+  </summary>
+
+Telegram bot management.
+
+| Command | Description |
+|---------|-------------|
+| `telegram_bot` | Start Telegram bot in polling mode |
+
+</details>
+
+<details>
+  <summary>
+
+### 🔑 Auth / OTP — 1 command
+
+  </summary>
+
+Authentication and OTP utilities.
+
+| Command | Description |
+|---------|-------------|
+| `otp_reset_throttle` | Reset OTP throttle for a user |
+
+</details>
+
+<details>
+  <summary>
+
+### 🌍 Geo — 1 command
+
+  </summary>
+
+Geographic and timezone data management.
+
+| Command | Description |
+|---------|-------------|
+| `geo_populate` | Populate geo/timezone data |
 
 </details>
 
@@ -333,8 +383,8 @@ Payment system management.
 django-cfg create-project "My Project"
 cd my_project
 
-# 2. Validate configuration
-python manage.py validate_config --check-connections
+# 2. Check settings
+python manage.py check_settings --verbose
 
 # 3. Migrate databases
 python manage.py migrate_all
@@ -352,15 +402,14 @@ cli runserver
 ### Pre-Deployment Checklist
 
 ```bash
-# 1. Validate configuration
-python manage.py validate_config --check-connections
+# 1. Check settings
+python manage.py check_settings --verbose
 
 # 2. Check endpoint health
 python manage.py check_endpoints
 
 # 3. Test integrations
 cli test-email --to admin@example.com
-python manage.py test_providers
 
 # 4. Run migrations
 python manage.py migrate_all
@@ -413,13 +462,10 @@ python manage.py runserver
 
 ```bash
 # Before deployment
-poetry run cli validate-config --check-connections
+python manage.py check_settings --verbose
 
 # Before migrations
 python manage.py migrate_all --dry-run
-
-# Before cleanup
-python manage.py cleanup_expired_data --dry-run
 ```
 
 ### Testing
@@ -433,9 +479,6 @@ cli test-email --to admin@test.com
 # Test messaging
 cli test-telegram --message "Deploy successful"
 
-# Test payments
-python manage.py test_providers
-
 # Test endpoints
 python manage.py check_endpoints
 ```
@@ -448,11 +491,8 @@ python manage.py check_endpoints
 # Endpoint health check
 curl http://localhost:8000/cfg/endpoints/ | jq
 
-# System stats
-python manage.py orchestrator_status --detailed
-
-# Currency stats
-python manage.py currency_stats --format json
+# Check all endpoints
+python manage.py check_endpoints --json
 ```
 
 
@@ -466,9 +506,10 @@ python manage.py currency_stats --format json
 | Set up a new project | **[Core Commands](./core-commands)** |
 | Monitor API health | **[Testing & Monitoring](./testing-monitoring)** |
 | Start development | **[Development Tools](./development)** |
-| Manage payments | **[Payments](./payments)** |
-| Use AI agents | **[AI Agents](./ai-agents)** |
-| Configure maintenance | **[Maintenance](./maintenance)** |
+| Run gRPC server | **gRPC / Communication** (above) |
+| Manage background tasks | **Background Tasks** (above) |
+| Use Cloudflare D1 | **Cloudflare D1** (above) |
+| Generate code | **Code Generation** (above) |
 
 ---
 
@@ -481,4 +522,4 @@ python manage.py currency_stats --format json
 
 </Callout>
 
-**40+ commands. One powerful CLI.** 🚀
+**One powerful CLI.**

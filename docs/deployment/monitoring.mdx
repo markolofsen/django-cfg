@@ -39,7 +39,7 @@ Django-CFG includes built-in health check endpoints for monitoring service statu
 Basic liveness probe for container orchestration:
 
 ```bash
-GET /health/simple/
+GET /cfg/health/quick/
 ```
 
 **Response:**
@@ -60,7 +60,7 @@ GET /health/simple/
 Detailed system status with metrics:
 
 ```bash
-GET /health/
+GET /cfg/health/
 ```
 
 **Response:**
@@ -219,7 +219,7 @@ services:
   django:
     image: your-django-app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/simple/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/quick/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -237,13 +237,13 @@ spec:
     image: your-django-app
     livenessProbe:
       httpGet:
-        path: /health/simple/
+        path: /cfg/health/quick/
         port: 8000
       initialDelaySeconds: 30
       periodSeconds: 10
     readinessProbe:
       httpGet:
-        path: /health/
+        path: /cfg/health/
         port: 8000
       initialDelaySeconds: 10
       periodSeconds: 5
@@ -262,7 +262,7 @@ Integrate with external monitoring services:
 - Pingdom
 - StatusCake
 
-Configure to check `/health/simple/` endpoint every 1-5 minutes.
+Configure to check `/cfg/health/quick/` endpoint every 1-5 minutes.
 
 **Error Tracking:**
 ```python
@@ -320,8 +320,8 @@ INSTALLED_APPS += ['django_prometheus']
 Before deploying to production:
 
 ### Health Checks
-- [ ] `/health/simple/` endpoint returns 200 OK
-- [ ] `/health/` shows all systems healthy
+- [ ] `/cfg/health/quick/` endpoint returns 200 OK
+- [ ] `/cfg/health/` shows all systems healthy
 - [ ] Database connectivity verified
 - [ ] Cache availability verified
 
@@ -371,7 +371,7 @@ python manage.py shell -c "from django.core.cache import cache; print(cache.get(
 
 **CPU usage > 90%:**
 - Check for infinite loops
-- Review ReArq worker count
+- Review Django-RQ worker count
 - Optimize database queries
 - Enable query caching
 

@@ -440,7 +440,6 @@ class EmailConfig(BaseSettings):
 ```python
 class FeatureConfig(BaseSettings):
     enable_ai: bool = Field(default=True)
-    enable_payments: bool = Field(default=False)
 ```
 
 ---
@@ -889,9 +888,9 @@ docker exec django python -c "from api.environment import env; print(env.api_key
 - **[Troubleshooting](./troubleshooting)** - Quick fixes
 
 ### Configuration
-- **[Configuration Overview](/docs/fundamentals/configuration/environment)** - Core concepts
-- **[Database Configuration](/docs/fundamentals/configuration/database)** - PostgreSQL
-- **[Cache Configuration](/docs/fundamentals/configuration/cache)** - Redis
+- **[Configuration Overview](/docs/configuration/environment)** - Core concepts
+- **[Database Configuration](/docs/configuration/database)** - PostgreSQL
+- **[Cache Configuration](/docs/configuration/cache)** - Redis
 - **[Environment Setup](/docs/deployment/environment-setup)** - Detailed ENV guide
 
 ### Security

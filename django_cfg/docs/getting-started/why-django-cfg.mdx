@@ -32,17 +32,12 @@ MIDDLEWARE = [...]  # ❌ Manual security setup
 
 # Missing enterprise features:
 # ❌ No type safety
-# ❌ No AI agents
-# ❌ No support tickets
 # ❌ No user profiles with OTP
-# ❌ No newsletter system
-# ❌ No lead management
 # ❌ No background tasks
 # ❌ No webhook testing
 # ❌ Ugly 2010 admin interface
 # ❌ No API documentation
 # ❌ No multi-database routing
-# ❌ No maintenance mode
 # ❌ No currency conversion
 ```
 
@@ -63,14 +58,8 @@ class MyConfig(DjangoConfig):
     # ✅ Multi-database routing (Smart auto-routing)
     # ✅ API documentation (Auto-generated OpenAPI)
 
-    # ✅ Built-in enterprise apps (one line each!)
+    # ✅ Built-in features (one line each!)
     enable_accounts: bool = True      # User management + OTP auth
-    enable_support: bool = True       # Ticket system + chat
-    enable_newsletter: bool = True    # Email campaigns + tracking
-    enable_leads: bool = True         # CRM + lead capture
-    enable_maintenance: bool = True   # Multi-site Cloudflare
-    enable_agents: bool = True        # AI workflow automation
-    enable_knowbase: bool = True      # AI knowledge management
 
     # ✅ Background tasks (ReArq)
     # ✅ Webhook testing (ngrok)
@@ -176,21 +165,6 @@ result = DocumentProcessorAgent().run({"document_id": "doc_123"})
 
 **Solution**: **Production-ready apps** enabled with single flags.
 
-#### **Support Ticket System** (`enable_support: bool = True`)
-
-```python
-# ✅ Complete support system in one line
-enable_support: bool = True
-
-# Automatically provides:
-# - Ticket management
-# - Modern chat interface
-# - Email notifications
-# - Admin dashboard integration
-# - REST API endpoints
-# - Real-time ticket statistics
-```
-
 #### **Advanced User Management** (`enable_accounts: bool = True`)
 
 ```python
@@ -205,52 +179,7 @@ enable_accounts: bool = True
 # - Custom user model (AUTH_USER_MODEL)
 ```
 
-#### **Newsletter & Email Marketing** (`enable_newsletter: bool = True`)
-
-```python
-# ✅ Complete email marketing system
-enable_newsletter: bool = True
-
-# Automatically provides:
-# - Newsletter campaigns
-# - Subscriber management
-# - Email tracking (opens, clicks)
-# - Analytics dashboard
-# - Beautiful HTML templates
-# - API endpoints
-```
-
-#### **Lead Management & CRM** (`enable_leads: bool = True`)
-
-```python
-# ✅ Full CRM system
-enable_leads: bool = True
-
-# Automatically provides:
-# - Lead capture forms
-# - Lead scoring
-# - Source tracking
-# - Status management
-# - Email notifications
-# - CRM integration ready
-```
-
-#### **Multi-Site Cloudflare Maintenance** (`enable_maintenance: bool = True`)
-
-```python
-# ✅ Zero-config maintenance mode
-enable_maintenance: bool = True
-
-# Automatically provides:
-# - Multi-site management
-# - Cloudflare integration
-# - Automated monitoring
-# - Bulk operations
-# - CLI automation
-# - Health checks with auto-triggers
-```
-
-**Time savings**: **6+ months** of development → **5 lines of config**! 🎉
+**Time savings**: Significant reduction in development time with built-in features.
 
 ---
 
@@ -299,11 +228,9 @@ unfold: UnfoldConfig = UnfoldConfig(
 
 **Displays**:
 - 📈 User growth
-- 💰 Revenue metrics
-- 🎫 Support tickets
 - ⚡ System health
-- 📧 Newsletter stats
-- 🎯 Lead conversion
+- 📊 Application metrics
+- 🔧 Command execution
 
 ---
 
@@ -518,8 +445,6 @@ response = client.chat_completion([
 | **📊 Dashboard** | ❌ Manual setup | ✅ **Real-time metrics & widgets** |
 | **🗄️ Multi-Database** | 🟡 Manual routing | ✅ **Smart auto-routing** |
 | **📚 API Docs** | ❌ Manual setup | ✅ **Auto-generated OpenAPI** |
-| **🤖 AI Agents** | ❌ Build from scratch | ✅ **Built-in framework** |
-| **🎫 Support System** | ❌ Weeks of work | ✅ **One config line** |
 | **👤 User Management** | 🟡 Basic User model | ✅ **OTP + Profiles** |
 | **📧 Communication** | 🟡 Basic email | ✅ **Email + Telegram** |
 | **💱 Currency** | ❌ Manual API | ✅ **14K+ currencies built-in** |
@@ -539,15 +464,14 @@ response = client.chat_completion([
 
 **Enterprise Applications**
 - Need type-safe configuration
-- Require AI automation
 - Multi-database architecture
-- Built-in support/CRM systems
+- Modern admin interface
+- Background task processing
 
 **SaaS Products**
 - User management with OTP
-- Newsletter campaigns
-- Lead generation
 - Background task processing
+- API documentation generation
 
 **Integration Projects**
 - External API integrations
@@ -575,16 +499,11 @@ response = client.chat_completion([
 
 | **Feature** | **Traditional Django** | **Django-CFG** | **Savings** |
 |-------------|----------------------|----------------|-------------|
-| **Support Ticket System** | 2-3 weeks | 1 config line | **99% faster** |
 | **OTP Authentication** | 1 week | 1 config line | **99% faster** |
 | **Multi-Database** | 2-3 days | DatabaseConfig | **95% faster** |
 | **Background Tasks** | 2-3 days | Built-in | **95% faster** |
 | **Modern Admin** | 1-2 weeks | Out of box | **99% faster** |
-| **Streamlit Admin** | 2-3 weeks | 1 config line | **99% faster** |
 | **API TypeScript Clients** | 1 week | Auto-generated | **99% faster** |
-| **Newsletter System** | 2-3 weeks | 1 config line | **99% faster** |
-| **Lead Management** | 2-3 weeks | 1 config line | **99% faster** |
-| **AI Agents** | 3-4 weeks | Built-in framework | **95% faster** |
 | **Currency Conversion** | 1 week | Built-in module | **99% faster** |
 
 **Total Time Savings**: **3-6 months** → **30 seconds**! 🚀
@@ -618,9 +537,8 @@ response = client.chat_completion([
 3. [Configuration](./configuration) - Understanding config system
 
 ### **For Experienced Developers**:
-1. [Architecture](../../fundamentals/core/architecture) - System architecture
-2. [AI Agents](../../ai-agents/introduction) - Building intelligent workflows
-3. [Production Deployment](../../guides/docker/overview) - Deploy to production
+1. [Architecture](../../core/architecture) - System architecture
+2. [Production Deployment](../../guides/docker/overview) - Deploy to production
 
 ### **For Migration**:
 1. [Migration Guide](../../guides/migration-guide) - Migrating existing projects
@@ -629,6 +547,6 @@ response = client.chat_completion([
 
 **Django-CFG**: Because building **enterprise applications** should take **seconds**, not **months**. 🚀
 
-TAGS: introduction, framework, enterprise, why-choose, ai-agents, built-in-apps
+TAGS: introduction, framework, enterprise, why-choose, built-in-apps
 DEPENDS_ON: []
 USED_BY: [installation, first-project, configuration]

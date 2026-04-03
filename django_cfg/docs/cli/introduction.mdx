@@ -79,8 +79,8 @@ poetry run cli runserver --port 8080 --host 0.0.0.0
 # Smart migrator with automatic database detection
 poetry run cli migrator --auto
 
-# Configuration validation
-poetry run cli validate-config --show-details
+# Check settings and diagnostics
+poetry run python manage.py check_settings --verbose
 
 # Show project URLs in table format
 poetry run cli show-urls --format table
@@ -146,7 +146,7 @@ python scripts/test_all.py
 ### Development Tools  
 - `runserver` - Enhanced development server
 - `migrator` - Smart database migrations
-- `validate-config` - Configuration validation
+- `check_settings` - Configuration validation and diagnostics
 
 ### Utilities
 - `show-config` - Display current configuration
@@ -172,19 +172,15 @@ poetry run cli migrator     # Smart database detection
 ## Command Reference
 
 ### Core Commands
-- **[Core Commands](./commands/core-commands)** - Essential project management commands (info, create-project, validate-config)
+- **[Core Commands](./commands/core-commands)** - Essential project management commands (info, create-project, check-settings)
 - **[Development Commands](./commands/development)** - Development server, migrations, debugging tools
 - **[Custom Commands](./custom-commands)** - Create your own management commands
 
 ### Feature-Specific Commands
-- **[AI Agent Commands](./commands/ai-agents)** - Manage AI workflows and agent execution
-- **[Knowledge Base Commands](./commands/knowbase)** - Document ingestion and semantic search
-- **[Background Task Commands](../../features/integrations/django-rq/overview)** - Manage Django-RQ workers and tasks
-- **[Payment Commands](./commands/payments)** - Test payment integrations and webhooks
-- **[Maintenance Commands](./commands/maintenance)** - Enable/disable maintenance mode
+- **[Background Task Commands](../../features/modules/django-rq/overview)** - Manage Django-RQ workers and tasks
 
 ### Guides & Configuration
-- **[Configuration Guide](../../fundamentals/configuration)** - Configure CLI behavior and defaults
+- **[Configuration Guide](../../configuration)** - Configure CLI behavior and defaults
 - **[Production Best Practices](../../guides/production-config)** - CLI usage in production
 - **[Troubleshooting](../../guides/troubleshooting)** - Common CLI issues
 
@@ -217,11 +213,7 @@ The CLI is designed to make Django development faster, safer, and more enjoyable
 - **[Quick Reference](./commands/quick-reference)** - Command cheat sheet
 
 **Feature Commands:**
-- **[AI Agent Commands](./commands/ai-agents)** - Manage AI workflows and agents
-- **[Knowledge Base Commands](./commands/knowbase)** - Document ingestion and search
-- **[Background Task Commands](../../features/integrations/django-rq/overview)** - Manage Django-RQ workers
-- **[Payment Commands](./commands/payments)** - Test payment integrations
-- **[Maintenance Commands](./commands/maintenance)** - Site maintenance control
+- **[Background Task Commands](../../features/modules/django-rq/overview)** - Manage Django-RQ workers
 
 ### Getting Started
 
@@ -232,18 +224,16 @@ The CLI is designed to make Django development faster, safer, and more enjoyable
 - **[Why Django-CFG](../../getting-started/why-django-cfg)** - Benefits and features
 
 **Configuration:**
-- **[Configuration Models](../../fundamentals/configuration)** - All configuration options
-- **[Type-Safe Configuration](../../fundamentals/core/type-safety)** - Pydantic patterns
-- **[Environment Detection](../../fundamentals/configuration/environment)** - Multi-environment setup
-- **[Environment Variables](../../fundamentals/configuration/environment)** - Secrets management
+- **[Configuration Models](../../configuration)** - All configuration options
+- **[Type-Safe Configuration](../../core/type-safety)** - Pydantic patterns
+- **[Environment Detection](../../configuration/environment)** - Multi-environment setup
+- **[Environment Variables](../../configuration/environment)** - Secrets management
 
 ### Features & Deployment
 
 **Built-in Apps:**
 - **[Built-in Apps Overview](../../features/built-in-apps/overview)** - All available apps
 - **[User Management](../../features/built-in-apps/user-management/overview)** - Accounts and support
-- **[AI Agents](../../ai-agents/introduction)** - AI workflow automation
-- **[Operations Apps](../../features/built-in-apps/operations/overview)** - Maintenance and tasks
 
 **Deployment:**
 - **[Docker Deployment](../../guides/docker/production)** - Containerized deployment

@@ -1,0 +1,100 @@
+---
+title: LLM Monitoring
+description: Monitor OpenAI and OpenRouter API balances with multi-tier thresholds and email/Telegram notifications.
+sidebar_label: Overview
+keywords:
+  - llm monitoring
+  - openai balance
+  - openrouter balance
+  - api cost monitoring
+---
+
+# LLM Monitoring
+
+Monitors OpenAI and OpenRouter API account balances and sends notifications when balance drops below configurable thresholds.
+
+## Features
+
+- **Multi-provider support** — OpenAI and OpenRouter
+- **Threshold alerts** — WARNING ($10) and CRITICAL ($5) levels
+- **Multi-channel notifications** — Email and Telegram
+- **Cache-based deduplication** — max one notification per 24h per level
+- **Hourly checks** — recommended cron schedule
+
+## Management Command
+
+```bash
+# Standard check
+python manage.py check_llm_balance
+
+# Bypass cache
+python manage.py check_llm_balance --force
+
+# Force send notifications regardless of cache
+python manage.py check_llm_balance --force-notify
+```
+
+### Recommended Cron
+
+```
+0 * * * *  python manage.py check_llm_balance
+```
+
+## API Reference
+
+### `BalanceChecker`
+
+Check LLM provider account balances.
+
+```python
+from django_cfg.modules.django_llm_monitoring import BalanceChecker
+
+checker = BalanceChecker()
+
+# Check specific provider
+result = checker.check_openrouter_balance(force=False)
+
+# Check all providers
+results = checker.check_all_balances(force=False)
+```
+
+### `LLMBalanceNotifier`
+
+Send threshold-based notifications.
+
+```python
+from django_cfg.modules.django_llm_monitoring import LLMBalanceNotifier
+
+notifier = LLMBalanceNotifier()
+notifier.check_and_notify("openrouter", balance_data, force=False)
+```
+
+### `BalanceResponse`
+
+Response model for balance checks:
+
+```python
+@dataclass
+class BalanceResponse:
+    balance: float       # Current balance
+    currency: str        # Currency code (USD)
+    status: str          # ok / warning / critical / error
+    error: str | None    # Error message if failed
+    note: str | None     # Additional info
+```
+
+## Notification Thresholds
+
+| Level | Threshold | Action |
+|-------|-----------|--------|
+| WARNING | $10 USD | Email + Telegram notification |
+| CRITICAL | $5 USD | Email + Telegram notification (urgent) |
+
+Notifications are deduplicated — each level sends at most once per 24 hours.
+
+## Supported Providers
+
+| Provider | Balance API | Requirements |
+|----------|------------|--------------|
+| OpenAI | Limited (subscription-based) | `OPENAI_API_KEY` |
+| OpenRouter | Full balance endpoint | `OPENROUTER_API_KEY` |

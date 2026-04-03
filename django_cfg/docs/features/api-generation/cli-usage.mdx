@@ -40,6 +40,7 @@ This command:
 | `--go` | Generate Go client only |
 | `--proto` | Generate Protocol Buffer definitions only |
 | `--swift` | Generate Swift client (uses apple/swift-openapi-generator) |
+| `--swift-codable` | Generate simple Swift Codable types without OpenAPIRuntime dependency |
 | **Skip Languages** | |
 | `--no-typescript` | Skip TypeScript generation |
 | `--no-python` | Skip Python generation |
@@ -73,8 +74,11 @@ python manage.py generate_client --groups core shop
 # Generate Proto files only for one group
 python manage.py generate_client --groups profiles --proto
 
-# Generate Swift client
+# Generate Swift client (uses apple/swift-openapi-generator)
 python manage.py generate_client --swift
+
+# Generate simple Swift Codable types (no OpenAPIRuntime dependency)
+python manage.py generate_client --swift-codable
 
 # Validate configuration without generating
 python manage.py generate_client --validate
@@ -217,9 +221,6 @@ During active development, regenerate clients frequently:
 # Quick regeneration (all languages, all groups)
 python manage.py generate_client
 
-# Skip Next.js build for faster iteration
-python manage.py generate_client --no-build
-
 # Validate before generating
 python manage.py generate_client --validate
 ```
@@ -260,20 +261,23 @@ python manage.py generate_client --python
 For iOS apps using Swift:
 
 ```bash
-# Generate Swift clients
+# Generate Swift clients (uses apple/swift-openapi-generator)
 python manage.py generate_client --swift
+
+# Generate simple Swift Codable types (no OpenAPIRuntime dependency)
+python manage.py generate_client --swift-codable
 
 # Or generate proto for Swift gRPC
 python manage.py generate_client --proto
 ```
 
 <Callout type="info">
-**Swift Generator**
+**Swift Generators**
 
-Swift generation uses Apple's official `swift-openapi-generator`. Install with:
-```bash
-brew install swift-openapi-generator
-```
+There are two Swift generation modes:
+
+- **`--swift`** uses Apple's official `swift-openapi-generator` and requires the `OpenAPIRuntime` dependency. Install with: `brew install swift-openapi-generator`
+- **`--swift-codable`** generates simple Swift `Codable` structs with no external dependencies. Ideal for lightweight projects or when you want full control over networking.
 </Callout>
 
 ### Multi-Group Workflow
@@ -630,7 +634,7 @@ jobs:
 
       - name: Generate API clients
         run: |
-          python manage.py generate_client --no-build
+          python manage.py generate_client
 
       - name: Commit generated clients
         run: |
@@ -656,7 +660,7 @@ COPY . .
 
 # Validate and generate clients on build
 RUN python manage.py validate_openapi
-RUN python manage.py generate_client --no-build
+RUN python manage.py generate_client
 
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 ```
@@ -669,7 +673,7 @@ Auto-generate clients on commit:
 # .git/hooks/pre-commit
 #!/bin/bash
 python manage.py validate_openapi || exit 1
-python manage.py generate_client --no-build
+python manage.py generate_client
 git add openapi/
 ```
 
@@ -739,6 +743,6 @@ python manage.py generate_client --verbose
 Add validation and generation to your deployment script:
 ```bash
 python manage.py validate_openapi
-python manage.py generate_client --no-build
+python manage.py generate_client
 ```
 </Callout>

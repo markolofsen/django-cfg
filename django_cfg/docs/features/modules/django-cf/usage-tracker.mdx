@@ -1,0 +1,66 @@
+---
+title: D1 Usage Tracker
+description: Thread-safe daily usage tracking for Cloudflare D1 with automatic limits and warnings.
+sidebar_label: Usage Tracker
+keywords:
+  - cloudflare d1 limits
+  - d1 usage tracking
+  - d1 daily limits
+---
+
+# D1 Usage Tracker
+
+Thread-safe daily usage tracker for Cloudflare D1 operations. Monitors read/write counts per UTC day, automatically resets at midnight, and enforces configurable daily limits.
+
+## Why
+
+Cloudflare D1 has usage-based pricing. Without tracking, runaway queries can cause unexpected costs. The usage tracker provides:
+
+- **Daily counters** — reads and writes tracked separately per UTC day
+- **Configurable limits** — block operations when daily limit is reached
+- **Warning thresholds** — log warnings at 80% (configurable) of limit
+- **Thread-safe** — safe for concurrent Django requests
+- **Auto-reset** — counters reset at UTC midnight
+
+## Usage
+
+```python
+from django_cfg.modules.django_cf.core.usage import usage_tracker
+
+# Check before executing a D1 query
+if usage_tracker.check_read_limit(limit=50000, warn_pct=80):
+    result = client.execute(query)
+else:
+    # Daily read limit reached — skip query or use fallback
+    result = D1QueryResult(rows=[])
+
+# Record activity after successful operations
+usage_tracker.record_read(rows=100)
+usage_tracker.record_write(rows=5)
+
+# Inspect current daily totals
+snapshot = usage_tracker.get_usage()
+# {"reads": 100, "writes": 5, "day": "2026-04-03"}
+```
+
+## API Reference
+
+### `usage_tracker` (singleton)
+
+Global `D1UsageTracker` instance — use directly, no instantiation needed.
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `record_read(rows)` | Increment daily read counter by `rows` |
+| `record_write(rows)` | Increment daily write counter by `rows` |
+| `check_read_limit(limit, warn_pct=80)` | Returns `True` if under limit. Logs warning at threshold. `limit <= 0` disables checking |
+| `check_write_limit(limit, warn_pct=80)` | Same as above for writes |
+| `get_usage()` | Returns `{"reads": int, "writes": int, "day": str}` |
+
+### Behavior
+
+- Counters auto-reset when the UTC date changes
+- Warning logged once per day per threshold (no spam)
+- When limit is exceeded, returns `False` — caller decides whether to block or proceed

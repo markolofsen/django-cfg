@@ -39,7 +39,7 @@ Generate fully typed clients with:
 - **TypeScript**: Interfaces, Zod schemas, typed fetch functions, SWR hooks
 - **Python**: Pydantic 2 models, async/await client, type hints
 - **Go**: Structs, interfaces, typed HTTP client
-- **Swift**: Native Swift types via apple/swift-openapi-generator
+- **Swift**: Native Swift types via apple/swift-openapi-generator or simple Codable structs
 - **Protocol Buffers**: Proto3 messages, gRPC service definitions
 
 ### 🏗️ Group-Based Organization
@@ -104,7 +104,7 @@ wallets = await client.wallets.list(currency="BTC")
 orders = await client.orders.list(status="open")
 ```
 
-**Swift Client (iOS):**
+**Swift Client (iOS) -- `--swift`:**
 ```swift
 import OpenAPIClient
 
@@ -117,6 +117,20 @@ let order = try await client.ordersCreate(body: .json(.init(
     side: .buy,
     amount: 0.1
 )))
+```
+
+**Swift Codable (iOS) -- `--swift-codable`:**
+```swift
+// Simple Codable structs — no OpenAPIRuntime dependency
+struct Wallet: Codable {
+    let id: Int
+    let currency: String
+    let balance: String
+}
+
+// Use with any networking library (URLSession, Alamofire, etc.)
+let (data, _) = try await URLSession.shared.data(from: url)
+let wallets = try JSONDecoder().decode([Wallet].self, from: data)
 ```
 
 **gRPC Client (Protocol Buffers):**
@@ -304,6 +318,7 @@ python manage.py generate_client --python
 python manage.py generate_client --go
 python manage.py generate_client --proto
 python manage.py generate_client --swift
+python manage.py generate_client --swift-codable
 
 # Generate for specific groups
 python manage.py generate_client --groups core shop

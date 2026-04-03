@@ -1,0 +1,63 @@
+---
+title: DRF Theme
+description: Modern Tailwind CSS theme for Django REST Framework's Browsable API with dark mode, glass morphism UI, and keyboard shortcuts.
+sidebar_label: Overview
+keywords:
+  - django rest framework theme
+  - drf browsable api
+  - tailwind drf
+  - dark mode drf
+---
+
+# DRF Theme
+
+Modern Tailwind CSS theme for Django REST Framework's Browsable API with dark/light mode, glass morphism design, and Alpine.js interactivity.
+
+## Features
+
+- **Dark/Light mode** — smooth transitions, system preference detection
+- **Glass morphism UI** — modern translucent design
+- **JSON tree viewer** — syntax highlighting with collapsible nodes
+- **One-click copy** — copy JSON responses and URLs
+- **Keyboard shortcuts** — navigate the API efficiently
+- **Responsive design** — works on all screen sizes
+- **Alpine.js powered** — lightweight interactivity
+
+## Quick Start
+
+```python
+# settings.py or DjangoConfig
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'django_cfg.modules.django_drf_theme.TailwindBrowsableAPIRenderer',
+    ],
+}
+```
+
+That's it — your DRF Browsable API now has a modern theme.
+
+## API Reference
+
+### `TailwindBrowsableAPIRenderer`
+
+Custom DRF renderer extending `BrowsableAPIRenderer`. Uses the template `rest_framework/tailwind/api.html`.
+
+## Template Tags
+
+The module provides template tags via `tailwind_tags`:
+
+| Tag/Filter | Description |
+|-----------|-------------|
+| `tailwind_css` | Load Tailwind CDN with plugins (forms, typography, aspect-ratio) |
+| `add_class` | Add CSS classes to form fields |
+| `get_item` | Dictionary key access in templates |
+| `get_theme_class` | Returns CSS classes based on current theme |
+| `prettify_json` | JSON prettification for display |
+
+## Theme Detection
+
+The theme is detected from:
+1. Cookie preference (user choice)
+2. System preference (`prefers-color-scheme`)
+3. Default: light mode

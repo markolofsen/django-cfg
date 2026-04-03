@@ -112,42 +112,6 @@ django-cfg info --verbose
 
 ## Configuration Management
 
-### `validate_config`
-
-Validates Django-CFG configuration files and settings.
-
-```bash
-python manage.py validate_config [OPTIONS]
-```
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `--show-details` | `flag` | `False` | Show detailed validation results |
-| `--check-connections` | `flag` | `False` | Test database and service connections |
-| `--format` | `json\|yaml\|table` | `table` | Output format |
-
-**Examples:**
-
-```bash
-# Basic validation
-python manage.py validate_config
-
-# Detailed validation with connection tests
-python manage.py validate_config --show-details --check-connections
-
-# JSON output for automation
-python manage.py validate_config --format json
-```
-
-**Validates:**
-- ✅ Pydantic model validation
-- ✅ Database connection strings
-- ✅ Service API keys and credentials
-- ✅ File paths and permissions
-- ✅ Environment variable resolution
-
----
-
 ### `show_config`
 
 Displays current Django-CFG configuration.
@@ -784,7 +748,7 @@ python manage.py clear_constance --dry-run
 
 ## Tips
 
-- Use `validate_config --check-connections` before deployment
+- Use `check_settings --verbose` before deployment
 - Use `migrate_all --dry-run` to preview migrations
 - Use `create_token --expires-in 90` for limited lifetime tokens
 
@@ -792,7 +756,7 @@ python manage.py clear_constance --dry-run
 
 ```bash
 # Pre-deployment checklist
-python manage.py validate_config --check-connections && \
+python manage.py check_settings --verbose && \
 python manage.py check_settings --verbose && \
 python manage.py migrate_all --dry-run
 ```
@@ -800,6 +764,5 @@ python manage.py migrate_all --dry-run
 ## See Also
 
 - [Quick Reference](./quick-reference)
-- [AI Agents Commands](./ai-agents)
-- [Background Tasks](/docs/features/integrations/django-rq/overview)
+- [Background Tasks](/docs/features/modules/django-rq/overview)
 - [Development Commands](./development)

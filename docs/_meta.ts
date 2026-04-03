@@ -1,15 +1,18 @@
 export default {
   'getting-started': 'Getting Started',
-  'core-concepts': 'Core Concepts',
-  'fundamentals': 'Fundamentals',
+  'core': 'Core',
+  'configuration': 'Configuration',
+  'database': 'Database',
   'features': 'Features',
+  'extensions': 'Extensions',
   'cli': 'CLI Tools',
-  'guides': 'Guides & Examples',
+  'frontend': 'Frontend (Next.js)',
+  'guides': 'Guides',
   'deployment': 'Deployment',
-  'business': 'Business',
   'api': 'API Reference',
   '---': {
     type: 'separator'
   },
+  'business': 'Business',
   'updates': 'Updates'
 }

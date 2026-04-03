@@ -1,0 +1,113 @@
+---
+title: Django Logging
+description: Auto-configuring structured logging with optional Cloudflare D1 persistence, log rotation, and Telegram alerts.
+sidebar_label: Overview
+keywords:
+  - django-cfg logging
+  - django structured logging
+  - cloudflare d1 logs
+  - log rotation
+---
+
+# Django Logging
+
+Auto-configuring structured logging with optional Cloudflare D1 persistence for centralized log storage and analysis.
+
+## Features
+
+- **Modular logging** — separate log files per module
+- **Daily log rotation** — automatic file rotation with configurable retention
+- **D1 persistence** — sync WARNING+ logs to Cloudflare D1
+- **Event deduplication** — fingerprint-based with occurrence counting
+- **Telegram alerts** — optional real-time notifications
+- **Reserved attribute handling** — safe `extra` context in log records
+
+## Quick Start
+
+```python
+from django_cfg.modules.django_logging import get_logger, DjangoLogger
+
+# Get a configured logger
+logger = get_logger(__name__)
+
+logger.info("User created", extra={"user_id": 42})
+logger.warning("Rate limit approaching", extra={"endpoint": "/api/users"})
+```
+
+## Configuration
+
+Configure in your extension's `__cfg__.py`:
+
+```python
+from django_cfg.modules.django_logging import DjangoLoggingConfig
+
+class MyConfig:
+    logging = DjangoLoggingConfig(
+        enabled=True,
+        d1_enabled=True,           # Sync to Cloudflare D1
+        d1_min_level="WARNING",    # Minimum level for D1 (WARNING/ERROR/CRITICAL)
+        file_enabled=True,
+        file_rotation_days=30,     # File rotation period (1-365)
+        telegram_alerts_enabled=False,
+        cleanup_days=90,           # D1 event TTL (1-365)
+        normalization_enabled=True, # Strip dynamic data before fingerprinting
+    )
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | bool | `True` | Enable/disable the module |
+| `d1_enabled` | bool | `True` | Enable D1 persistence (requires CloudflareConfig) |
+| `d1_min_level` | str | `"WARNING"` | Minimum log level for D1 sync |
+| `file_enabled` | bool | `True` | Enable file logging |
+| `file_rotation_days` | int | `30` | File rotation period (1-365 days) |
+| `telegram_alerts_enabled` | bool | `False` | Send Telegram alerts |
+| `cleanup_days` | int | `90` | D1 event TTL (1-365 days) |
+| `normalization_enabled` | bool | `True` | Strip dynamic data before fingerprinting |
+
+## API Reference
+
+### `get_logger(name)`
+
+Factory function that returns a configured `DjangoLogger` instance.
+
+```python
+logger = get_logger("my_app.services")
+```
+
+### `sanitize_extra(extra)`
+
+Handles reserved Python logging attributes in extra context to prevent conflicts.
+
+```python
+from django_cfg.modules.django_logging import sanitize_extra
+
+safe_extra = sanitize_extra({"message": "custom", "name": "test"})
+logger.info("Event", extra=safe_extra)
+```
+
+### `clean_old_logs()`
+
+Cleanup function for old log files based on `file_rotation_days`.
+
+### `is_enabled()`
+
+Check if D1 persistence is active.
+
+### `get_service()` / `reset_service()`
+
+Service lifecycle management for the `LogSyncService`.
+
+## D1 Persistence
+
+When `d1_enabled=True` and CloudflareConfig is available, logs at `d1_min_level` and above are synced to Cloudflare D1:
+
+- Events are deduplicated by fingerprint
+- Occurrence count is tracked
+- Statistics by log level are maintained
+- Old events are cleaned up based on `cleanup_days`
+
+## Dependencies
+
+- Django logging framework (built-in)
+- Optional: Cloudflare D1 via `django_cf` module

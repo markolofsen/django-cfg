@@ -84,13 +84,13 @@ sequenceDiagram
     participant D as TOTPDevice
     participant Auth as Authenticator App
 
-    U->>A: POST /cfg/2fa/setup/
+    U->>A: POST /cfg/totp/setup/
     A->>S: create_device(user)
     S->>D: Create PENDING device
     A-->>U: {secret, qr_code_base64, backup_codes}
 
     U->>Auth: Scan QR code
-    U->>A: POST /cfg/2fa/setup/confirm/ {code: "123456"}
+    U->>A: POST /cfg/totp/setup/confirm/ {code: "123456"}
     A->>S: confirm_device(device, code)
     S->>D: Set status = ACTIVE
     A-->>U: {status: "2fa_enabled"}
@@ -102,14 +102,14 @@ sequenceDiagram
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/cfg/2fa/setup/` | POST | Initialize 2FA — get secret + QR code |
-| `/cfg/2fa/setup/confirm/` | POST | Confirm with initial code → activate device |
-| `/cfg/2fa/verify/` | POST | Verify TOTP code during login |
-| `/cfg/2fa/verify/backup/` | POST | Verify using backup code |
-| `/cfg/2fa/devices/` | GET | List user's 2FA devices |
-| `/cfg/2fa/devices/{id}/` | DELETE | Remove a 2FA device |
-| `/cfg/2fa/backup-codes/` | GET | Backup codes status |
-| `/cfg/2fa/backup-codes/regenerate/` | POST | Generate new backup codes |
+| `/cfg/totp/setup/` | POST | Initialize 2FA — get secret + QR code |
+| `/cfg/totp/setup/confirm/` | POST | Confirm with initial code → activate device |
+| `/cfg/totp/verify/` | POST | Verify TOTP code during login |
+| `/cfg/totp/verify/backup/` | POST | Verify using backup code |
+| `/cfg/totp/devices/` | GET | List user's 2FA devices |
+| `/cfg/totp/devices/{id}/` | DELETE | Remove a 2FA device |
+| `/cfg/totp/backup-codes/` | GET | Backup codes status |
+| `/cfg/totp/backup-codes/regenerate/` | POST | Generate new backup codes |
 
 ---
 

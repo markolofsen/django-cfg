@@ -86,8 +86,8 @@ pip install django-cfg
 # Run with gunicorn
 gunicorn api.wsgi:application
 
-# Start ReArq workers
-rearq main:rearq worker
+# Start Django-RQ worker
+python manage.py rqworker default high low
 ```
 
 **Recommended guides**:
@@ -106,24 +106,50 @@ All deployment methods require:
 - **MySQL/MariaDB** - Alternative option
 - **SQLite** - Development only
 
-[Database Configuration Guide →](../../fundamentals/configuration/database)
+[Database Configuration Guide →](../../configuration/database)
 
 ### Cache Layer
 - **Redis** - Recommended for caching and task queues
 - **Memcached** - Alternative caching backend
 
-[Cache Configuration Guide →](../../fundamentals/configuration/cache)
+[Cache Configuration Guide →](../../configuration/cache)
 
 ### Background Tasks
-- **ReArq** - Built-in task processing
+- **Django-RQ** - Built-in task processing
 - **Celery** - Alternative (requires additional setup)
 
-[ReArq Integration →](../../features/integrations/django-rq/overview)
+[Django-RQ Integration →](../../features/modules/django-rq/overview)
+
+### gRPC Server (Optional)
+- **django-grpc** - Built-in gRPC support (requires `grpc` feature)
 
 ### Reverse Proxy
 - **Nginx** - Recommended
 - **Apache** - Alternative
 - **Traefik** - For Docker deployments (included)
+
+---
+
+## Background Workers
+
+Start Django-RQ workers and scheduler for background task processing:
+
+```bash
+# Start RQ worker (listens on default, high, low queues)
+python manage.py rqworker default high low
+
+# Start RQ scheduler (for cron/interval tasks)
+python manage.py rqscheduler
+```
+
+## gRPC Server
+
+If the `grpc` feature is enabled, start the gRPC server alongside Django:
+
+```bash
+# Start gRPC server
+python manage.py rungrpc
+```
 
 ---
 

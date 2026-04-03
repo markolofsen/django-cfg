@@ -1,0 +1,80 @@
+---
+title: Login Alerts
+description: Apple-style login notification emails with device detection, IP tracking, and intelligent suppression rules.
+sidebar_label: Login Alerts
+keywords:
+  - login notifications
+  - login alerts
+  - device detection
+  - security notifications
+---
+
+# Login Alerts
+
+Apple-style login notification emails sent when users log in from new devices or IPs. Detects potentially unauthorized access while suppressing false alarms with intelligent deduplication.
+
+## Features
+
+- **Device detection** — browser, OS, and device type parsed from User-Agent
+- **IP tracking** — real client IP via RealIPMiddleware
+- **Non-blocking** — all work deferred to background thread
+- **Smart suppression** — avoids alert fatigue with dedup rules
+- **Telegram integration** — optional admin notifications for staff logins
+
+## Usage
+
+Call `send_login_alert` after issuing JWT tokens in your login view:
+
+```python
+from django_cfg.apps.system.accounts.services.login_alert_service import send_login_alert
+
+@action(detail=False, methods=['post'])
+def login(self, request):
+    user = authenticate(...)
+    tokens = issue_tokens(user)
+
+    # Trigger login alert (deferred, non-blocking)
+    send_login_alert(user, request)
+
+    return Response({"access": tokens.access, ...})
+```
+
+## Suppression Rules
+
+Alerts are suppressed in these cases (applied in order):
+
+| Rule | Description |
+|------|-------------|
+| **Test accounts** | `user.is_test_account=True` — never alerted |
+| **Registration grace** | First 24h after signup — no alerts |
+| **Recent same-device** | Same IP + browser fingerprint seen in past 24h — no repeat |
+
+## Configuration
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Registration grace period | 24 hours | Suppress alerts for new users |
+| Dedup window | 24 hours | Same IP+browser won't trigger repeat alerts |
+
+## Email Template
+
+Template: `emails/login_alert_email`
+
+Context variables:
+
+| Variable | Description |
+|----------|-------------|
+| `user` | CustomUser instance |
+| `device` | Friendly label (e.g., "Chrome on Windows (mobile)") |
+| `ip_address` | Client IP address |
+| `login_time` | Formatted timestamp ("April 03, 2026 at 14:32 UTC") |
+| `project_name` | From DjangoConfig |
+| `button_url` | Site URL for "review activity" button |
+
+## How It Works
+
+1. `send_login_alert(user, request)` builds a `LoginContext` from the request (IP, User-Agent, fingerprint)
+2. Suppression rules are evaluated in order
+3. If not suppressed, an email is sent via `DjangoEmailService`
+4. Login activity is recorded with fingerprint for future dedup
+5. All steps run in a background thread — auth response is never delayed

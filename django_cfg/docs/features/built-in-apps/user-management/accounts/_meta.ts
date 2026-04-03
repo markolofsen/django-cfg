@@ -5,4 +5,5 @@ export default {
   'jwt': 'JWT Configuration',
   'two-factor': 'Two-Factor Auth (2FA)',
   'oauth': 'OAuth (GitHub)',
+  'login-alerts': 'Login Alerts',
 }

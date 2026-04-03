@@ -18,7 +18,7 @@ keywords:
 These are [Extensions](/docs/extensions) that come **pre-installed** in the Django-CFG solution template. They're fully functional, customizable Django apps ready to use out of the box.
 </Callout>
 
-Django-CFG solution template includes a comprehensive suite of production-ready extensions, organized into three categories. All extensions use the modern [Extensions System](/docs/extensions) with auto-discovery and type-safe [Pydantic configuration](/docs/fundamentals/core/type-safety).
+Django-CFG solution template includes production-ready extensions that use the modern [Extensions System](/docs/extensions) with auto-discovery and type-safe [Pydantic configuration](/docs/core/type-safety).
 
 ## How Extensions Work
 
@@ -28,14 +28,14 @@ Unlike traditional Django apps that require manual `INSTALLED_APPS` configuratio
 your_project/
 └── extensions/
     └── apps/
-        ├── leads/           # Lead management extension
+        ├── accounts/        # User authentication & management
         │   ├── __cfg__.py   # ← Configuration enables extension
         │   ├── models.py
         │   ├── admin.py
         │   └── urls.py
-        ├── payments/        # Payment processing
-        ├── support/         # Support tickets
-        └── knowbase/        # Knowledge base
+        └── totp/            # Two-factor authentication
+            ├── __cfg__.py
+            └── ...
 ```
 
 ### Enable/Disable Extensions
@@ -43,87 +43,40 @@ your_project/
 Each extension has a `__cfg__.py` file. The `settings = ...` line enables it:
 
 ```python
-# extensions/apps/leads/__cfg__.py
-from django_cfg.extensions.configs.apps import BaseExtensionSettings
+# extensions/apps/accounts/__cfg__.py
+from django_cfg.extensions.configs.apps.base import BaseExtensionSettings
 
-class LeadsSettings(BaseExtensionSettings):
-    # Customize settings
-    telegram_enabled: bool = True
-    email_notifications: bool = True
+class AccountsSettings(BaseExtensionSettings):
+    name: str = "accounts"
+    oauth_providers: list[str] = ["google", "github"]
 
-settings = LeadsSettings()  # ← This line ENABLES the extension
+settings = AccountsSettings()  # ← This line ENABLES the extension
 ```
 
 **To disable**: Comment out or remove `settings = ...`:
 
 ```python
-# settings = LeadsSettings()  # Extension disabled
+# settings = AccountsSettings()  # Extension disabled
 ```
 
 [Learn more about Extensions System →](/docs/extensions)
 
 ---
 
-## Extension Categories
+## Built-in Extensions
 
-### 👥 User Management
+### User Management
 
-Complete customer lifecycle management - authentication, leads, support, and communication.
-
-| Extension | Description | Location |
-|-----------|-------------|----------|
-| **Accounts** | User authentication, profiles, OAuth | `extensions/apps/accounts/` |
-| **Leads** | Lead capture, tracking, conversion | `extensions/apps/leads/` |
-| **Support** | Ticketing system, live chat | `extensions/apps/support/` |
-| **Newsletter** | Email marketing, subscribers | `extensions/apps/newsletter/` |
-
-**Use Cases:** SaaS registration, lead generation, customer support, email campaigns.
-
-[**Explore User Management →**](../built-in-apps/user-management/overview)
-
----
-
-### 🤖 AI & Knowledge
-
-Intelligent data processing and automation powered by AI.
+Complete user lifecycle management - authentication, profiles, and security.
 
 | Extension | Description | Location |
 |-----------|-------------|----------|
-| **Knowbase** | Document processing, semantic search, AI chat | `extensions/apps/knowbase/` |
-| **Agents** | Custom AI assistants with tool integration | `extensions/apps/agents/` |
+| **Accounts** | User authentication, profiles, JWT, OTP, OAuth | `extensions/apps/accounts/` |
+| **TOTP** | Two-factor authentication | `extensions/apps/totp/` |
 
-**Use Cases:** AI-powered support, document search, intelligent chatbots.
+**Use Cases:** SaaS registration, user authentication, two-factor security.
 
-[**Explore AI & Knowledge →**](../built-in-apps/ai-knowledge/overview)
-
----
-
-### 💳 Payments
-
-Universal payment processing with multiple providers.
-
-| Extension | Description | Location |
-|-----------|-------------|----------|
-| **Payments** | Stripe, crypto providers, subscriptions | `extensions/apps/payments/` |
-| **Currency** | Multi-currency support, exchange rates | `extensions/apps/currency/` |
-
-**Use Cases:** SaaS billing, e-commerce, subscription services.
-
-
----
-
-### ⚙️ Operations
-
-Site maintenance and operational tools.
-
-| Extension | Description | Location |
-|-----------|-------------|----------|
-| **Maintenance** | Cloudflare maintenance mode | `extensions/apps/maintenance/` |
-| **Backup** | Database backups to S3/cloud | `extensions/apps/backup/` |
-
-**Use Cases:** Scheduled maintenance, disaster recovery, system reliability.
-
-[**Explore Operations →**](../built-in-apps/operations/overview)
+[**Explore User Management →**](./user-management/overview)
 
 ---
 
@@ -134,36 +87,14 @@ Site maintenance and operational tools.
 Each extension in `extensions/apps/` has a `__cfg__.py` file:
 
 ```python
-# extensions/apps/leads/__cfg__.py
-from django_cfg.extensions.configs.apps import BaseExtensionSettings
+# extensions/apps/accounts/__cfg__.py
+from django_cfg.extensions.configs.apps.base import BaseExtensionSettings
 
-class LeadsSettings(BaseExtensionSettings):
-    telegram_enabled: bool = True
-    email_enabled: bool = True
+class AccountsSettings(BaseExtensionSettings):
+    name: str = "accounts"
+    oauth_providers: list[str] = ["google", "github"]
 
-settings = LeadsSettings()
-```
-
-```python
-# extensions/apps/knowbase/__cfg__.py
-from django_cfg.extensions.configs.apps import BaseExtensionSettings
-
-class KnowbaseSettings(BaseExtensionSettings):
-    llm_provider: str = "openai"
-    embedding_model: str = "text-embedding-3-small"
-
-settings = KnowbaseSettings()
-```
-
-```python
-# extensions/apps/payments/__cfg__.py
-from django_cfg.extensions.configs.apps import BaseExtensionSettings
-
-class PaymentsSettings(BaseExtensionSettings):
-    crypto_api_key: str = env.payments.api_key
-    stripe_enabled: bool = True
-
-settings = PaymentsSettings()
+settings = AccountsSettings()
 ```
 
 ### 2. Run Migrations
@@ -179,10 +110,7 @@ python manage.py migrate_all
 http://localhost:8000/admin/
 
 # Extensions are grouped in admin sidebar:
-# - User Management (Leads, Support, Newsletter)
-# - AI & Knowledge (Knowbase, Agents)
-# - Payments (Payments, Currency)
-# - Operations (Maintenance, Backup)
+# - User Management (Accounts, TOTP)
 ```
 
 ---
@@ -238,19 +166,14 @@ Extensions follow automatic URL routing:
 ### Override Extension Settings
 
 ```python
-# extensions/apps/leads/__cfg__.py
-from django_cfg.extensions.configs.apps import BaseExtensionSettings
+# extensions/apps/accounts/__cfg__.py
+from django_cfg.extensions.configs.apps.base import BaseExtensionSettings
 
-class LeadsSettings(BaseExtensionSettings):
-    # Override default values
-    telegram_enabled: bool = True
-    telegram_bot_token: str = env.telegram.bot_token
-    telegram_chat_id: str = env.telegram.chat_id
+class AccountsSettings(BaseExtensionSettings):
+    name: str = "accounts"
+    oauth_providers: list[str] = ["google", "github"]
 
-    # Add custom settings
-    custom_lead_sources: list[str] = ["website", "api", "partner"]
-
-settings = LeadsSettings()
+settings = AccountsSettings()
 ```
 
 ### Modify Extension Code
@@ -258,10 +181,10 @@ settings = LeadsSettings()
 All code in `extensions/apps/` can be modified:
 
 ```python
-# extensions/apps/leads/models.py
+# extensions/apps/accounts/models.py
 from django.db import models
 
-class Lead(models.Model):
+class UserProfile(models.Model):
     # Add custom fields
     custom_field = models.CharField(max_length=100, blank=True)
 
@@ -269,112 +192,6 @@ class Lead(models.Model):
     def save(self, *args, **kwargs):
         # Custom logic before save
         super().save(*args, **kwargs)
-```
-
-### Extend Admin
-
-```python
-# extensions/apps/leads/admin.py
-from django.contrib import admin
-from .models import Lead
-
-@admin.register(Lead)
-class LeadAdmin(admin.ModelAdmin):
-    list_display = ['email', 'name', 'source', 'created_at', 'custom_field']
-    list_filter = ['source', 'status']
-    search_fields = ['email', 'name']
-```
-
----
-
-## Inter-Extension Integration
-
-Extensions can work together:
-
-```python
-# Example: Lead converts to User, subscribes to Newsletter
-from extensions.apps.leads.models import Lead
-from extensions.apps.newsletter.models import Subscriber
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-def convert_lead_to_customer(lead: Lead):
-    # Create user account
-    user = User.objects.create_user(
-        email=lead.email,
-        first_name=lead.name,
-    )
-
-    # Subscribe to newsletter
-    Subscriber.objects.create(
-        email=user.email,
-        user=user,
-        source='lead_conversion',
-    )
-
-    # Update lead status
-    lead.status = 'converted'
-    lead.user = user
-    lead.save()
-
-    return user
-```
-
-### Data Flow
-
-```mermaid
-graph LR
-    A[Leads] --> B[Accounts]
-    B --> C[Newsletter]
-    B --> D[Support]
-    D --> E[Knowbase]
-    E --> F[Agents]
-
-    G[Payments] --> H[Currency]
-
-    I[Maintenance] --> J[Backup]
-
-    style A fill:#3b82f6
-    style B fill:#22c55e
-    style G fill:#f59e0b
-    style I fill:#6b7280
-```
-
----
-
-## Configuration Patterns
-
-### Development Setup
-
-Enable all extensions for development:
-
-```python
-# Each extension's __cfg__.py has settings = ExtensionSettings()
-# All extensions are enabled by default in the solution template
-```
-
-### Production Setup
-
-Disable unused extensions by commenting out settings:
-
-```python
-# extensions/apps/agents/__cfg__.py
-# class AgentsSettings(BaseExtensionSettings):
-#     ...
-# settings = AgentsSettings()  # Commented = disabled
-```
-
-### Minimal Setup
-
-For minimal deployments, keep only needed extensions:
-
-```bash
-extensions/apps/
-├── leads/          # Keep
-├── payments/       # Keep
-├── maintenance/    # Keep
-└── knowbase/       # Remove or disable __cfg__.py
 ```
 
 ---
@@ -387,7 +204,7 @@ All extensions include:
 
 - **Input Validation** - Pydantic-based validation
 - **Authentication** - JWT/session auth support
-- **Rate Limiting** - API rate limiting (see [Rate Limiting](/docs/fundamentals/system/rate-limiting))
+- **Rate Limiting** - API rate limiting (see [Rate Limiting](/docs/core/rate-limiting))
 - **Audit Logging** - Operation audit trails
 
 ### Performance Features

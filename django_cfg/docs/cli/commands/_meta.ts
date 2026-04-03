@@ -5,6 +5,5 @@ export default {
   'core-commands': 'Core Commands',
   'codegen': 'Code Generation',
   'development': 'Development',
-  'testing-monitoring': 'Testing & Monitoring',
-  'maintenance': 'Maintenance'
+  'testing-monitoring': 'Testing & Monitoring'
 }

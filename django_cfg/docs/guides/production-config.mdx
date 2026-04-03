@@ -144,18 +144,7 @@ class MyProductionConfig(DjangoConfig):
     security_domains: list[str] = env.security.domains
 
     # === Built-in Applications ===
-    # User management
     enable_accounts: bool = True
-    enable_support: bool = True
-    enable_newsletter: bool = env.features.marketing
-    enable_leads: bool = env.features.marketing
-
-    # AI features (optional)
-    enable_knowbase: bool = env.features.ai
-    enable_agents: bool = env.features.ai
-
-    # Maintenance
-    enable_maintenance: bool = True
 
     # === Custom Applications ===
     project_apps: list[str] = [
@@ -315,10 +304,6 @@ telegram:
   bot_token: "${TELEGRAM_BOT_TOKEN}"
   chat_id: "${TELEGRAM_CHAT_ID}"
 
-features:
-  marketing: true  # Enable leads & newsletter
-  ai: false        # Disable AI features in production
-
 tasks:
   processes: 4
   threads: 8
@@ -353,11 +338,6 @@ class DevelopmentConfig(DjangoConfig):
 
     # All features enabled for development
     enable_accounts: bool = True
-    enable_support: bool = True
-    enable_newsletter: bool = True
-    enable_leads: bool = True
-    enable_knowbase: bool = True
-    enable_agents: bool = True
 
     # SQLite for development
     databases: dict[str, DatabaseConfig] = {
@@ -398,7 +378,6 @@ class StagingConfig(DjangoConfig):
 
     # Essential apps only
     enable_accounts: bool = True
-    enable_support: bool = True
 
     # PostgreSQL from environment
     databases: dict[str, DatabaseConfig] = {
@@ -423,13 +402,6 @@ class ProductionConfig(DjangoConfig):
 
     # Production apps
     enable_accounts: bool = True
-    enable_support: bool = True
-    enable_maintenance: bool = True
-
-    # Conditional features
-    enable_newsletter: bool = env.features.marketing
-    enable_leads: bool = env.features.marketing
-    enable_knowbase: bool = env.features.ai
 
     # Production database with replicas
     databases: dict[str, DatabaseConfig] = {
@@ -1070,34 +1042,33 @@ Common alert channels for production:
 - **[Docker Deployment](./docker/production)** - Containerized production deployment
 - **[Multi-Database Setup](./multi-database)** - Advanced database configuration
 - **[Logging Configuration](../../deployment/logging)** - Structured logging setup
-- **[Health Monitoring](../../features/modules/health/overview)** - System health checks
+- **[Health Monitoring](../../features/modules/django-health/overview)** - System health checks
 
 **Configuration:**
 - **[Configuration Guide](../../getting-started/configuration)** - YAML configuration setup
-- **[Configuration Models](../../fundamentals/configuration)** - Complete config API
-- **[Environment Detection](../../fundamentals/configuration/environment)** - Auto-detect environments
-- **[Environment Variables](../../fundamentals/configuration/environment)** - Secure credential management
+- **[Configuration Models](../../configuration)** - Complete config API
+- **[Environment Detection](../../configuration/environment)** - Auto-detect environments
+- **[Environment Variables](../../configuration/environment)** - Secure credential management
 
 ### Security & Performance
 
 **Security:**
-- **[Security Settings](../../fundamentals/configuration/security)** - CORS, CSRF, SSL/TLS hardening
-- **[Type-Safe Configuration](../../fundamentals/core/type-safety)** - Pydantic validation
+- **[Security Settings](../../configuration/security)** - CORS, CSRF, SSL/TLS hardening
+- **[Type-Safe Configuration](../../core/type-safety)** - Pydantic validation
 
 **Performance:**
-- **[Cache Configuration](../../fundamentals/configuration/cache)** - Redis, Memcached setup
-- **[Background Tasks](../../features/integrations/django-rq/overview)** - Async processing
-- **[Database Optimization](../../fundamentals/database)** - Connection pooling, read replicas
+- **[Cache Configuration](../../configuration/cache)** - Redis, Memcached setup
+- **[Background Tasks](../../features/modules/django-rq/overview)** - Async processing
+- **[Database Optimization](../../database)** - Connection pooling, read replicas
 
 ### Features & Integration
 
 **Built-in Features:**
 - **[Built-in Apps Overview](../../features/built-in-apps/overview)** - Production-ready apps
-- **[AI Agents](../../ai-agents/ai-django-development-framework)** - AI workflow automation
 
 **Integration:**
 - **[API Generation](../../features/api-generation/overview)** - Auto-generate API clients
-- **[Webhook Testing](../../features/integrations/ngrok/overview)** - Test webhooks with ngrok
+- **[Webhook Testing](../../features/modules/django-ngrok/overview)** - Test webhooks with ngrok
 
 ### Tools & Support
 

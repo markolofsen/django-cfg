@@ -1,0 +1,194 @@
+---
+title: WebSocket
+sidebar_position: 6
+keywords:
+  - centrifugo
+  - websocket
+  - real-time
+  - subscriptions
+  - rpc
+description: Centrifugo WebSocket integration — provider setup, subscription patterns, RPC client, channel naming, and stale closure prevention.
+---
+
+# WebSocket
+
+Real-time communication uses Centrifugo as a WebSocket server, integrated via `@djangocfg/centrifugo`.
+
+<Callout type="info">
+For Django-side Channels setup see [Django Runtime — Channels & ASGI](../guides/django-runtime/channels-asgi). For the generated API layer see [Data Layer](./data-layer).
+</Callout>
+
+## Architecture
+
+```
+Django backend → Centrifugo server → @djangocfg/centrifugo → React app
+```
+
+Two generated artifacts per app (in `_ws/generated/`):
+
+| File | Purpose |
+|------|---------|
+| `client.ts` | Typed RPC client |
+| `types.ts` | Message type definitions |
+| `subscriptions.ts` | Channel definitions |
+
+<Callout type="warning">
+Never edit `_ws/generated/` manually. Regenerate with `make centrifuge`.
+</Callout>
+
+## Provider Setup
+
+```typescript
+import { CentrifugoProvider } from '@djangocfg/centrifugo';
+
+<CentrifugoProvider
+  url="ws://localhost:8000/ws"
+  getToken={async () => {
+    const response = await api.cfg_centrifugo.getCentrifugoAuthToken();
+    return response.token;
+  }}
+>
+  <App />
+</CentrifugoProvider>
+```
+
+The Centrifugo JWT token comes from the Django API (`/cfg/centrifugo/auth-token/`), not the API auth token.
+
+## Subscription Pattern
+
+```typescript
+import { useSubscription } from '@djangocfg/centrifugo';
+
+useSubscription({
+  channel: `project:${projectId}`,
+  enabled: isConnected && !!projectId,  // Only subscribe when ready
+  onPublication: (data) => {
+    switch (data.type) {
+      case 'task.progress':
+        setTaskProgress(data.payload);
+        break;
+      case 'asset.ready':
+        mutateAssets();  // SWR revalidation
+        break;
+    }
+  },
+});
+```
+
+The `enabled` flag must guard against subscribing when workspace or session is not ready.
+
+## Channel Naming Convention
+
+```typescript
+const channels = {
+  project:   `project:${projectId}`,
+  terminal:  `terminal:session:${sessionId}`,
+  transfer:  `transfer:${transferId}`,
+  workspace: `workspace:${workspaceId}`,
+  aiCommand: `ai_command:${sessionId}`,
+};
+```
+
+Pattern: `<resource>:<id>` or `<resource>:<scope>:<id>`.
+
+## RPC Client
+
+Generated typed RPC calls for request-response over WebSocket:
+
+```typescript
+import { getAPIClientInstance } from '@/_ws';
+
+const wsClient = getAPIClientInstance();
+
+// Typed RPC calls
+const messages = await wsClient.aiChatGetMessages({ session_id: sessionId });
+const status = await wsClient.generationTaskStatus({ task_id: taskId });
+await wsClient.generationTaskCancel({ task_id: taskId });
+
+// Fire-and-forget variant
+wsClient.terminalInputNoWait({ session_id: sessionId, data: 'ls -la\n' });
+```
+
+## Channel Authorization
+
+Some channels require explicit authorization before subscribing:
+
+```typescript
+const result = await apiClient.channelAuthorize({
+  channel: `terminal:session:${sessionId}`
+});
+
+// Only subscribe after authorization verified
+useSubscription({
+  channel: `terminal:session:${sessionId}`,
+  enabled: isConnected && isActive && isAuthorized,
+  onPublication: handlePublication,
+});
+```
+
+## Discriminated Union Messages
+
+All WebSocket messages use a `type` discriminant for type-safe handling:
+
+```typescript
+type ProjectEvent =
+  | { type: 'task.started'; payload: { taskId: string; taskType: string } }
+  | { type: 'task.progress'; payload: { taskId: string; progress: number } }
+  | { type: 'task.completed'; payload: { taskId: string; result: unknown } }
+  | { type: 'asset.ready'; payload: { assetId: string } }
+  | { type: 'render.progress'; payload: { jobId: string; percent: number } };
+
+function handleEvent(event: ProjectEvent) {
+  switch (event.type) {
+    case 'task.progress':
+      setProgress(event.payload.progress);
+      break;
+    case 'asset.ready':
+      mutateAssets();
+      break;
+  }
+}
+```
+
+## Stale Closure Prevention
+
+Store handlers in `useRef` to avoid stale closures in subscription callbacks:
+
+```typescript
+const handlersRef = useRef({ onTaskComplete, onAssetReady });
+useEffect(() => {
+  handlersRef.current = { onTaskComplete, onAssetReady };
+}, [onTaskComplete, onAssetReady]);
+
+useSubscription({
+  channel: `project:${projectId}`,
+  enabled: true,
+  onPublication: (data) => {
+    // Always calls latest handler version
+    handlersRef.current.onTaskComplete?.(data);
+  },
+});
+```
+
+## Workspace Isolation
+
+Clear all WebSocket-related state when workspace changes:
+
+```typescript
+useEffect(() => {
+  // Reset message history on workspace change
+  setMessages([]);
+  setTaskProgress({});
+}, [currentWorkspace?.id]);
+```
+
+Subscription auto-disables via `enabled=false` when workspace ID is null.
+
+## Rules
+
+1. Never edit `_ws/generated/` — regenerate with `make centrifuge`
+2. Always guard subscriptions with `enabled` — never subscribe before workspace, session, or auth is ready
+3. Use `useRef` for callback handlers in `onPublication` to prevent stale closures
+4. Channel names follow `<resource>:<id>` or `<resource>:<scope>:<id>` pattern
+5. Handle WebSocket messages with discriminated unions and `switch` on `type`
+6. Reset all WebSocket-related state (messages, progress, etc.) when workspace changes

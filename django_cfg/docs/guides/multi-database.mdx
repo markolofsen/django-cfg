@@ -534,13 +534,13 @@ print(user.blog_posts.all())  # QuerySet with post
 ### Database Configuration
 
 **Core Database Setup:**
-- [**Database Configuration**](../../fundamentals/database) - Complete database configuration guide
-- [**Database Routing**](../../fundamentals/system/routing) - Advanced routing strategies and patterns
-- [**Configuration Models**](../../fundamentals/configuration) - Database config API reference
+- [**Database Configuration**](../../database) - Complete database configuration guide
+- [**Database Routing**](../../core/routing) - Advanced routing strategies and patterns
+- [**Configuration Models**](../../configuration) - Database config API reference
 
 **Infrastructure:**
-- [**Cache Configuration**](../../fundamentals/configuration/cache) - Redis for multi-database caching
-- [**Environment Detection**](../../fundamentals/configuration/environment) - Database per environment
+- [**Cache Configuration**](../../configuration/cache) - Redis for multi-database caching
+- [**Environment Detection**](../../configuration/environment) - Database per environment
 - [**Docker Deployment**](./docker/production) - Multi-database in Docker
 
 ### Configuration & Setup
@@ -552,8 +552,8 @@ print(user.blog_posts.all())  # QuerySet with post
 
 **Production:**
 - [**Production Config**](./production-config) - Production database setup
-- [**Environment Variables**](../../fundamentals/configuration/environment) - Secure database credentials
-- [**Type-Safe Configuration**](../../fundamentals/core/type-safety) - Database config validation
+- [**Environment Variables**](../../configuration/environment) - Secure database credentials
+- [**Type-Safe Configuration**](../../core/type-safety) - Database config validation
 
 ### Examples & Guides
 
@@ -573,7 +573,6 @@ print(user.blog_posts.all())  # QuerySet with post
 - [**Core Commands**](../../cli/commands/core-commands) - Migration and database commands
 
 **Background Processing:**
-- [**ReArq Integration**](../../features/integrations/django-rq/overview) - Task routing per database
-- [**Background Tasks**](../../features/built-in-apps/operations/tasks) - Database-aware tasks
+- [**ReArq Integration**](../../features/modules/django-rq/overview) - Task routing per database
 
 **Note:** All examples use YAML-based configuration via `env` loader. See [Configuration Guide](../../getting-started/configuration) for setup.

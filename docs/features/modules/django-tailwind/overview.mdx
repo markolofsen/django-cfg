@@ -1,0 +1,67 @@
+---
+title: Tailwind CSS
+description: Universal Tailwind CSS layout templates for Django applications with dark mode support, form utilities, and user display helpers.
+sidebar_label: Overview
+keywords:
+  - django tailwind
+  - tailwind css django
+  - django dark mode
+  - django layout templates
+---
+
+# Tailwind CSS
+
+Universal Tailwind CSS layout templates for Django applications with dark mode support and template utilities.
+
+## Features
+
+- **Dark mode support** — automatic theme switching
+- **Responsive layouts** — mobile-first design
+- **Form field utilities** — add CSS classes to Django form fields
+- **User display helpers** — names, initials, avatars
+
+## Template Tags
+
+Load the template tags in your Django templates:
+
+```html
+{% raw %}{% load tailwind_info %}{% endraw %}
+```
+
+### Library Info
+
+| Tag | Returns |
+|-----|---------|
+| `tailwind_lib_name` | `"Django Tailwind Layouts"` |
+| `tailwind_lib_version` | `"1.0.0"` |
+| `tailwind_lib_description` | Library description string |
+| `tailwind_lib_info` | Full info dictionary |
+| `tailwind_powered_by` | "Powered by" HTML snippet |
+| `tailwind_footer_text` | Footer text with version |
+
+### Utility Tags
+
+| Tag/Filter | Description |
+|-----------|-------------|
+| `add_class` | Add CSS classes to form fields |
+| `get_admin_url` | Resolve Django admin URL |
+| `get_user_display_name` | User fullname with fallback |
+| `get_user_initials` | Generate avatar initials from user name |
+
+## Usage Example
+
+```html
+{% raw %}{% load tailwind_info %}
+
+<footer>
+  {% tailwind_powered_by %}
+</footer>
+
+<form>
+  {{ form.email|add_class:"px-4 py-2 border rounded" }}
+</form>
+
+<div class="avatar">
+  {% get_user_initials user %}
+</div>{% endraw %}
+```

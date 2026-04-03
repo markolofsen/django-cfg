@@ -369,7 +369,7 @@ python manage.py test_db cleanup --all --force
 - ✅ JSON output for automation
 - ✅ Force mode for CI/CD
 
-See [Test Database Management](/docs/fundamentals/database/testing) for comprehensive testing documentation.
+See [Test Database Management](/docs/database/testing) for comprehensive testing documentation.
 
 ---
 
@@ -427,55 +427,6 @@ cli test-telegram --message "Hello from Django-CFG!"
 cli test-telegram --message "Deploy successful" --chat-id "-1001234567890"
 ```
 
-## Payment Provider Testing
-
-### `test_providers`
-
-Test payment provider integrations.
-
-```bash
-python manage.py test_providers [OPTIONS]
-```
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `--provider` | `TEXT` | Specific provider to test |
-
-**Examples:**
-
-```bash
-# Test all providers
-python manage.py test_providers
-
-# Test specific provider
-python manage.py test_providers --provider stripe
-```
-
-## Newsletter Testing
-
-### `test_newsletter`
-
-Test newsletter sending functionality.
-
-```bash
-python manage.py test_newsletter --email test@example.com [OPTIONS]
-```
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `--email` | `TEXT` | Recipient email (required) |
-| `--template` | `TEXT` | Template name to test |
-
-**Examples:**
-
-```bash
-# Send test newsletter
-python manage.py test_newsletter --email test@example.com
-
-# Test specific template
-python manage.py test_newsletter --template welcome --email test@example.com
-```
-
 ## Centrifugo / WebSocket Testing
 
 ### `centrifugo_publish`
@@ -518,17 +469,17 @@ Use `:` for namespace separation (not `#`):
 - ✅ `ai_chat:workspace:UUID`
 - ❌ `ai_chat#workspace#UUID`
 
-See [Centrifugo CLI Commands](/docs/features/integrations/centrifugo/cli-commands) for details.
+See [Centrifugo CLI Commands](/docs/features/modules/django-centrifugo/cli-commands) for details.
 </Callout>
 
 ## OTP Authentication Testing
 
-### `test_otp`
+### `otp_test`
 
 Test OTP authentication system.
 
 ```bash
-python manage.py test_otp [OPTIONS]
+python manage.py otp_test [OPTIONS]
 ```
 
 | Option | Type | Description |
@@ -539,7 +490,7 @@ python manage.py test_otp [OPTIONS]
 
 ```bash
 # Test email OTP
-python manage.py test_otp --email user@example.com
+python manage.py otp_test --email user@example.com
 ```
 
 ## Cron Setup
@@ -552,4 +503,3 @@ python manage.py test_otp --email user@example.com
 
 - [Development](./development)
 - [Core Commands](./core-commands)
-- [Payments](./payments)

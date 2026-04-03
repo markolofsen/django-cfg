@@ -145,7 +145,7 @@ __all__ = ["env"]
 
 ```python
 """
-Environment configuration with [Pydantic models](../../fundamentals/core/type-safety) and automatic env loading.
+Environment configuration with [Pydantic models](../../core/type-safety) and automatic env loading.
 
 Based on django-cfg libs/django_cfg_opensource/sample/django/api/environment/loader.py
 """
@@ -296,7 +296,7 @@ class SaaSConfig(DjangoConfig):
     # Security (optional in development, required in production)
     security_domains: list[str] | None = env.security_domains
 
-    # Database from YAML URL (see /fundamentals/database for multi-database setup)
+    # Database from YAML URL (see /core/database for multi-database setup)
     databases: Dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url)
     }
@@ -501,15 +501,12 @@ class SaaSConfig(DjangoConfig):
     # ... existing config ...
 
     # Enable built-in features (see /features/built-in-apps/overview for all apps)
-    enable_support: bool = True      # Support tickets
     enable_accounts: bool = True     # Extended user management
-    enable_newsletter: bool = True   # Email campaigns
-    enable_payments: bool = True     # Subscription billing
 ```
 
 ### Add Caching
 
-Update **core/environment/loader.py** (see [Cache Configuration](../../fundamentals/configuration/cache) for advanced options):
+Update **core/environment/loader.py** (see [Cache Configuration](../../configuration/cache) for advanced options):
 
 ```python
 class EnvironmentConfig(BaseModel):
@@ -572,7 +569,7 @@ python manage.py check
 
 - **[Sample Project Guide](../../guides/sample-project/overview)** - Complete production-ready example with all features
 - **[Examples](../../guides/examples)** - Real-world code examples and use cases
-- [Configuration Reference](../../fundamentals/configuration) - All configuration options
+- [Configuration Reference](../../configuration) - All configuration options
 - [Built-in Apps](../../features/built-in-apps/overview) - Enable additional features
 - [Deployment](../../guides/docker/overview) - Deploy to production
 - [Multi-Database](../../guides/multi-database) - Set up database routing
