@@ -1,0 +1,293 @@
+---
+title: AI MCP Integration
+description: Configure and use the Model Context Protocol (MCP) module to integrate AI agents with your Django-CFG project.
+sidebar_label: AI MCP
+sidebar_position: 5
+keywords:
+  - django-cfg mcp
+  - django-cfg ai agents
+  - model context protocol django
+  - ai tools django
+---
+
+# AI MCP Integration
+
+Configure AI agents to interact with your Django application through the Model Context Protocol (MCP).
+
+## Overview
+
+The MCP module transforms any Django-CFG project into an MCP server, allowing AI agents to:
+
+- **Discover** application structure (apps, models, URLs)
+- **Query** data through safe ORM operations
+- **Execute** whitelisted management commands
+- **Use custom tools** defined by developers
+
+All access is controlled through a single configuration file in your project.
+
+## Quick Start
+
+### 1. Create `mcp/__init__.py` in your project root
+
+```python
+# project_root/mcp/__init__.py
+from django_cfg import MCPConfigBuilder
+
+mcp = MCPConfigBuilder()
+
+# Expose models that agents can query
+mcp.expose("profiles.UserProfile", read_only=True, max_results=50)
+mcp.expose("accounts.User", hidden_fields=["password", "secret_key"])
+
+# Allow management commands
+mcp.allow_command("clearsessions")
+mcp.allow_command("update_stats", staff_only=True)
+
+# Enable introspection (agents can discover app structure)
+mcp.enable_introspection(expose_urls=True, expose_code=False)
+
+# Set access key (required for all requests)
+mcp.set_access_key("your-secret-key-here")
+
+# Define custom tools
+@mcp.tool(
+    name="get_system_stats",
+    description="Get system CPU and memory usage",
+)
+def get_system_stats(ctx) -> str:
+    import psutil
+    return f"CPU: {psutil.cpu_percent()}%, RAM: {psutil.virtual_memory().percent}%"
+
+# Build final config (DO NOT REMOVE)
+mcp_config = mcp.build()
+```
+
+### 2. That's it!
+
+Django-CFG automatically discovers `mcp/__init__.py` and registers the MCP endpoints:
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /cfg/mcp/` | MCP JSON-RPC 2.0 endpoint |
+| `POST /cfg/mcp/agent/` | AI Agent chat endpoint |
+
+## Configuration API
+
+### `mcp.expose("app.Model", ...)`
+
+Expose Django models to agents:
+
+```python
+mcp.expose("orders.Order", read_only=True, max_results=100)
+mcp.expose("accounts.User",
+    hidden_fields=["password", "secret_key"],
+    operations=["list", "retrieve"],
+)
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `read_only` | `True` | Only allow read operations |
+| `hidden_fields` | `[]` | Fields to never return |
+| `max_results` | `100` | Max rows per query |
+| `operations` | `["list", "retrieve"]` | Allowed CRUD operations |
+
+### `mcp.allow_command("command", staff_only=False)`
+
+Allow agents to run management commands:
+
+```python
+mcp.allow_command("clearsessions")
+mcp.allow_command("send_weekly_report", staff_only=True)
+```
+
+Commands run in a sandbox with:
+- 30-second timeout
+- stdout/stderr capture
+- No database writes (unless explicitly enabled)
+
+### `mcp.enable_introspection(expose_urls=False, expose_code=False)`
+
+Let agents discover your application structure:
+
+```python
+mcp.enable_introspection(
+    expose_urls=True,      # Expose URL patterns
+    expose_code=False,     # NEVER in production!
+    max_depth=3,          # Max FK traversal depth
+)
+```
+
+### `mcp.set_access_key("...")`
+
+Required for all MCP requests. Agents must send `X-MCP-Access-Key` header.
+
+### `mcp.set_llm_model("openai/gpt-4.1-nano")`
+
+Set the default LLM model for agents (OpenRouter format). Default: `openai/gpt-4.1-nano`.
+
+## Endpoints
+
+### MCP JSON-RPC Endpoint
+
+`POST /cfg/mcp/`
+
+Full MCP protocol support for tool discovery and execution.
+
+**Initialize handshake:**
+```bash
+curl -X POST http://localhost:8000/cfg/mcp/ \
+  -H "Content-Type: application/json" \
+  -H "X-MCP-Access-Key: your-secret-key" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-03-26",
+      "capabilities": {},
+      "clientInfo": {"name": "my-agent", "version": "1.0"}
+    },
+    "id": 1
+  }'
+```
+
+**List tools:**
+```bash
+curl -X POST http://localhost:8000/cfg/mcp/ \
+  -H "Content-Type: application/json" \
+  -H "X-MCP-Access-Key: your-secret-key" \
+  -d '{"jsonrpc":"2.0","method":"tools/list","id":2}'
+```
+
+**Call a tool:**
+```bash
+curl -X POST http://localhost:8000/cfg/mcp/ \
+  -H "Content-Type: application/json" \
+  -H "X-MCP-Access-Key: your-secret-key" \
+  -d '{
+    "jsonrpc":"2.0",
+    "method":"tools/call",
+    "params":{"name":"list_apps","arguments":{"include_models":true}},
+    "id":3
+  }'
+```
+
+### Agent Chat Endpoint
+
+`POST /cfg/mcp/agent/`
+
+Simple chat-style interface — send a message, get a response. Agents can use tools automatically.
+
+```bash
+curl -X POST http://localhost:8000/cfg/mcp/agent/ \
+  -H "Content-Type: application/json" \
+  -H "X-MCP-Access-Key: your-secret-key" \
+  -d '{
+    "message": "How many active users do we have?",
+    "session_id": "unique-session-id"
+  }'
+```
+
+**Response:**
+```json
+{
+  "response": "You have 1,234 active users.",
+  "tool_calls": 1,
+  "session_id": "unique-session-id"
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `response` | Agent's text response |
+| `tool_calls` | Number of tools the agent used |
+| `session_id` | Session identifier for continuity |
+
+## Built-in Tools
+
+The MCP module ships with 12 tools out of the box:
+
+| Tool | Description |
+|------|-------------|
+| `list_apps` | List installed Django apps and their models |
+| `get_model_schema` | Get detailed schema for a model |
+| `list_urls` | List URL patterns |
+| `get_user_info` | Look up user by ID, email, or username |
+| `query_model` | Query models with filters, ordering, pagination |
+| `get_object` | Get single object by primary key |
+| `execute_command` | Run whitelisted management commands |
+| `aggregate_model` | COUNT, SUM, AVG, MIN, MAX with GROUP BY |
+| `time_series` | Group data by time intervals |
+| `top_values` | Find most frequent values in a field |
+| `distribution` | Statistical distribution (min, max, quartiles) |
+| `get_project_stats` | Project-specific stats (example tool) |
+
+## Custom Project Tools
+
+Place custom tools in `project_root/mcp/tools/*.py`. They are auto-discovered at startup.
+
+**Example: `mcp/tools/orders.py`**
+
+```python
+from django_cfg.modules.django_mcp.tools.base import MCPTool, tool_registry
+
+
+class GetRecentOrdersTool(MCPTool):
+    name = "get_recent_orders"
+    description = "Get the most recent orders for a user"
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "user_id": {"type": "integer", "description": "User ID"},
+            "limit": {"type": "integer", "default": 10},
+        },
+        "required": ["user_id"],
+    }
+
+    def execute(self, context, arguments):
+        from orders.models import Order
+        orders = Order.objects.filter(
+            user_id=arguments["user_id"]
+        ).order_by("-created_at")[:arguments.get("limit", 10)]
+
+        return f"Found {orders.count()} recent orders for user {arguments['user_id']}"
+
+
+# Auto-register when this module is imported
+tool_registry.register(GetRecentOrdersTool())
+```
+
+## Security
+
+The MCP module is designed with a **deny-by-default** security model:
+
+- **No access** unless explicitly configured
+- **Field-level redaction** of PII (emails, phones, API keys)
+- **Row-level limits** prevent mass data exfiltration
+- **Command sandboxing** with timeouts
+- **Access key required** for all requests
+
+## LLM Configuration
+
+By default, agents use `openai/gpt-4.1-nano` via OpenRouter. You can change this:
+
+```python
+# In mcp/__init__.py
+mcp.set_llm_model("anthropic/claude-3.5-haiku")
+```
+
+The agent uses your project's existing `django_llm` configuration — no separate API keys needed.
+
+## Troubleshooting
+
+### "MCP module is not enabled"
+Make sure `mcp/__init__.py` exists in your project root and calls `mcp.build()`.
+
+### "Invalid or missing X-MCP-Access-Key"
+Set an access key with `mcp.set_access_key("...")` and include it in the request header.
+
+### "Tool not found"
+Check that your custom tool file is in `mcp/tools/` and calls `tool_registry.register()`.
+
+### LLM call fails with quota error
+Verify your OpenRouter key in `api_keys.openrouter` is valid and has credits.

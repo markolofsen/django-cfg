@@ -49,11 +49,15 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning>
       <body>
         <AppLayout
-          project="my-app"
-          auth={{ apiUrl: process.env.NEXT_PUBLIC_API_URL }}
-          theme={{ defaultTheme: 'dark', storageKey: 'theme' }}
-          publicLayout={{ component: PublicLayout, enabledPath: ['/', '/about'] }}
-          privateLayout={{ component: DashboardLayout, enabledPath: '/dashboard' }}
+          layouts={{
+            public: { component: PublicLayout, enabledPath: ['/', '/about'] },
+            private: { component: DashboardLayout, enabledPath: '/dashboard' },
+          }}
+          baseApp={{
+            project: 'my-app',
+            auth: { apiUrl: process.env.NEXT_PUBLIC_API_URL },
+            theme: { defaultTheme: 'dark', storageKey: 'theme' },
+          }}
         >
           {children}
         </AppLayout>
@@ -115,8 +119,10 @@ Providers (auth, monitor, theme) remain active. Only the layout wrapper is skipp
 
 ```tsx
 <AppLayout
-  noLayoutPaths={['/private/terminal', '/embed']}
-  // auth pages (/auth/*) are always fullscreen — no extra config
+  layouts={{
+    noLayoutPaths: ['/private/terminal', '/embed']
+    // auth pages (/auth/*) are always fullscreen — no extra config
+  }}
 >
 ```
 

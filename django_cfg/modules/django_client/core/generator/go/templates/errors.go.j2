@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 // APIError represents an API error response with full context.
@@ -37,17 +38,33 @@ type APIError struct {
 }
 
 // Error implements the error interface.
+//
+// The display intentionally hides the request host and any
+// upstream service identifiers. Callers that need the raw URL or
+// message can still read e.URL and e.Message directly — the
+// formatted string is the *user-facing* presentation, and a chat
+// agent that surfaces this error to an end user should never
+// reveal which backend it called. Path-only display (the URL
+// path component, not the full URL) keeps the error report
+// useful for debugging without leaking infrastructure.
 func (e *APIError) Error() string {
-	if e.Detail != nil {
-		return fmt.Sprintf("API error: %s %s -> %d %s: %s (detail: %v)",
-			e.Method, e.URL, e.StatusCode, e.Status, e.Message, e.Detail)
-	}
-	if e.Message != "" {
-		return fmt.Sprintf("API error: %s %s -> %d %s: %s",
-			e.Method, e.URL, e.StatusCode, e.Status, e.Message)
-	}
+	path := requestPath(e.URL)
 	return fmt.Sprintf("API error: %s %s -> %d %s",
-		e.Method, e.URL, e.StatusCode, e.Status)
+		e.Method, path, e.StatusCode, e.Status)
+}
+
+// requestPath extracts the path component from a full URL. If
+// parsing fails, returns "/" so the error string never echoes
+// the raw input. Used by APIError / NetworkError / UnmarshalError
+// to ensure no host or scheme leaks through Error().
+func requestPath(rawURL string) string {
+	if rawURL == "" {
+		return "/"
+	}
+	if u, err := url.Parse(rawURL); err == nil && u.Path != "" {
+		return u.Path
+	}
+	return "/"
 }
 
 // IsNotFound returns true if the error is a 404 Not Found.
@@ -150,8 +167,12 @@ type NetworkError struct {
 }
 
 // Error implements the error interface.
+//
+// Like APIError.Error(), this hides the host and underlying
+// error text to avoid leaking upstream identifiers into agent
+// tool results. The raw cause stays accessible via Unwrap().
 func (e *NetworkError) Error() string {
-	return fmt.Sprintf("network error: %s %s: %v", e.Method, e.URL, e.Err)
+	return fmt.Sprintf("network error: %s %s", e.Method, requestPath(e.URL))
 }
 
 // Unwrap returns the underlying error.
@@ -172,8 +193,14 @@ type UnmarshalError struct {
 }
 
 // Error implements the error interface.
+//
+// The body is intentionally NOT included in the display because
+// it commonly carries upstream service names ("Crawler service
+// unavailable", "LLM service unavailable", etc.) that leak
+// operator identity. The raw body stays accessible via the Body
+// field for callers that need it for debugging.
 func (e *UnmarshalError) Error() string {
-	return fmt.Sprintf("failed to unmarshal response into %s: %v (body: %s)", e.Type, e.Err, string(e.Body))
+	return fmt.Sprintf("failed to unmarshal response into %s", e.Type)
 }
 
 // Unwrap returns the underlying error.

@@ -145,3 +145,7 @@ try:
         _cc()
 except Exception:
     pass
+
+# MCP endpoint (Model Context Protocol for AI agents)
+# Registered unconditionally — module checks enabled state internally
+urlpatterns.append(path('cfg/mcp/', include('django_cfg.modules.django_mcp.urls')))

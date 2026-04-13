@@ -21,6 +21,10 @@ except ImportError:
     DjangoGrpcModuleConfig = None  # type: ignore[assignment,misc]
 if TYPE_CHECKING:
     from django_cfg.modules.django_grpc.__cfg__ import DjangoGrpcModuleConfig
+    from django_cfg.modules.django_mcp.__cfg__ import DjangoMCPModuleConfig
+
+# MCP module is always available within django_cfg
+from django_cfg.modules.django_mcp.__cfg__ import DjangoMCPModuleConfig  # noqa: F401
 
 from django_cfg.modules.django_centrifugo.services.client.config import DjangoCfgCentrifugoConfig
 from ...models import (
@@ -177,6 +181,7 @@ class DjangoConfig(BaseModel):
             "x-requested-with",
             "x-api-key",
             "x-api-token",
+            "x-mcp-access-key",  # MCP agent access key
 
             # File transfer / chunked upload headers
             # For the django_client module, the typescript generator will add the following headers to the request.
@@ -434,6 +439,15 @@ class DjangoConfig(BaseModel):
     streamlit_admin: Optional[StreamlitAdminConfig] = Field(
         default=None,
         description="Streamlit admin panel integration",
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                     AI AGENTS & MCP                                       ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    mcp: Optional["DjangoMCPModuleConfig"] = Field(
+        default=None,
+        description="Model Context Protocol (MCP) integration for AI agents",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

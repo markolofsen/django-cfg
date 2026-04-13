@@ -146,6 +146,10 @@ class InstalledAppsBuilder:
         if self.config.cloudflare and self.config.cloudflare.enabled:
             apps.append("django_cfg.modules.django_cf")
 
+        # MCP module (AI agent integration)
+        if self.config.mcp and self.config.mcp.enabled:
+            apps.append("django_cfg.modules.django_mcp")
+
         return apps
 
     def _get_extension_apps(self) -> List[str]:

@@ -7,6 +7,7 @@ export default {
   'sample-project': 'Sample Project',
   'examples': 'Examples',
   'ai-integration': 'AI Integration',
+  'ai-mcp': 'AI MCP',
   'multi-database': 'Multi-Database',
   'production-config': 'Production Config',
   'migration-guide': 'Migration Guide',

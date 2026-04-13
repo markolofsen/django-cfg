@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.0.30"
+__version__ = "2.0.32"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -273,6 +273,28 @@ except ImportError:
     GrpcTLSConfig = None  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
+# [OPTIONAL] MCP (Model Context Protocol for AI agents)
+# ---------------------------------------------------------------------------
+try:
+    from .modules.django_mcp import (
+        DjangoMCPModuleConfig,
+        MCPConfigBuilder,
+        IntrospectionConfig as MCPIntrospectionConfig,
+        AppMCPConfig as MCPAppMCPConfig,
+        ModelMCPConfig as MCPModelMCPConfig,
+        CommandMCPConfig as MCPCommandMCPConfig,
+        RedactionConfig as MCPRedactionConfig,
+    )
+except ImportError:
+    DjangoMCPModuleConfig = None  # type: ignore[assignment]
+    MCPConfigBuilder = None  # type: ignore[assignment]
+    MCPIntrospectionConfig = None  # type: ignore[assignment]
+    MCPAppMCPConfig = None  # type: ignore[assignment]
+    MCPModelMCPConfig = None  # type: ignore[assignment]
+    MCPCommandMCPConfig = None  # type: ignore[assignment]
+    MCPRedactionConfig = None  # type: ignore[assignment]
+
+# ---------------------------------------------------------------------------
 # Lazy imports — these modules read Django settings at import time
 # (DRF reads REST_FRAMEWORK, import_export imports admin models).
 # They are resolved on first access via __getattr__.
@@ -368,6 +390,11 @@ __all__ = [
     "ExportMixin", "ImportMixin", "BaseResource",
     # optional: grpc
     "DjangoGrpcModuleConfig", "GrpcServerConfig", "GrpcKeepaliveConfig", "GrpcAuthConfig", "GrpcPoolConfig",
+    "GrpcResilienceConfig", "GrpcObservationConfig", "GrpcObservabilityConfig", "GrpcTelegramNotifyConfig",
+    "GrpcCentrifugoPublishConfig", "GrpcMetricsConfig", "GrpcTLSConfig",
+    "DjangoMCPModuleConfig", "MCPConfigBuilder",
+    "MCPIntrospectionConfig", "MCPAppMCPConfig", "MCPModelMCPConfig",
+    "MCPCommandMCPConfig", "MCPRedactionConfig",
     "GrpcResilienceConfig", "GrpcObservabilityConfig", "GrpcTelegramNotifyConfig",
     "GrpcCentrifugoPublishConfig", "GrpcMetricsConfig", "GrpcTLSConfig",
 ]
