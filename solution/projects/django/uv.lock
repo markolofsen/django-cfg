@@ -842,15 +842,6 @@ wheels = [
 ]
 
 [[package]]
-name = "disposable-email-domains"
-version = "0.0.169"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/38/63/ebe9802d62ddf9a3ac982705d8dcfbc374c311a9b87ea94d612492aa7928/disposable_email_domains-0.0.169.tar.gz", hash = "sha256:e051ef00c6449ba7fd5d52c9a494ff12b0578c14218e57a4a5d0b9268ca1a7d3", size = 64418, upload_time = "2026-03-13T02:51:48.757Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/53/30/f4a010edec9492b2584dd41245438fb4fbda32441beb76be57460e73c3b3/disposable_email_domains-0.0.169-py2.py3-none-any.whl", hash = "sha256:a6f4dc54a6939ab685025e05a628eba68ef003245dfd82bbd2b788e8e25caa18", size = 32904, upload_time = "2026-03-13T02:51:47.296Z" },
-]
-
-[[package]]
 name = "distlib"
 version = "0.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -936,18 +927,19 @@ wheels = [
 
 [[package]]
 name = "django-cfg"
-version = "1.7.87"
+version = "2.0.32"
 source = { editable = "../../../../../../../../../../djangocfg" }
 dependencies = [
     { name = "adrf" },
+    { name = "aiobreaker" },
     { name = "beautifulsoup4" },
     { name = "cachetools" },
+    { name = "cent" },
     { name = "click" },
     { name = "cloudflare" },
     { name = "colorlog" },
     { name = "coolname" },
     { name = "cryptography" },
-    { name = "disposable-email-domains" },
     { name = "dj-database-url" },
     { name = "django-admin-rangefilter" },
     { name = "django-axes", extra = ["ipware"] },
@@ -1069,6 +1061,7 @@ full = [
 [package.metadata]
 requires-dist = [
     { name = "adrf", specifier = ">=0.1.11,<0.2.0" },
+    { name = "aiobreaker", specifier = ">=1.2.0,<2.0" },
     { name = "aiobreaker", marker = "extra == 'full'", specifier = ">=1.2.0,<2.0" },
     { name = "aiobreaker", marker = "extra == 'grpc'", specifier = ">=1.2.0,<2.0" },
     { name = "beautifulsoup4", specifier = ">=4.13.0,<5.0" },
@@ -1080,6 +1073,7 @@ requires-dist = [
     { name = "build", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "build", marker = "extra == 'full'", specifier = ">=1.0" },
     { name = "cachetools", specifier = ">=5.3.0,<7.0" },
+    { name = "cent", specifier = ">=5.0.0,<6.0" },
     { name = "cent", marker = "extra == 'centrifugo'", specifier = ">=5.0.0,<6.0" },
     { name = "cent", marker = "extra == 'full'", specifier = ">=5.0.0,<6.0" },
     { name = "click", specifier = ">=8.2.0,<9.0" },
@@ -1087,7 +1081,6 @@ requires-dist = [
     { name = "colorlog", specifier = ">=6.9.0,<7.0" },
     { name = "coolname", specifier = ">=2.2.0,<3.0" },
     { name = "cryptography", specifier = ">=44.0.0" },
-    { name = "disposable-email-domains", specifier = ">=0.0.169" },
     { name = "dj-database-url", specifier = ">=3.0.0,<4.0" },
     { name = "django", marker = "extra == 'dev'", specifier = ">=5.2,<6.0" },
     { name = "django", marker = "extra == 'django52'", specifier = ">=5.2,<6.0" },
@@ -1160,7 +1153,7 @@ requires-dist = [
     { name = "ngrok", marker = "python_full_version >= '3.12'", specifier = ">=1.5.1" },
     { name = "openai", specifier = ">=1.107.0,<3.0" },
     { name = "pandas", specifier = ">=2.0.0,<3.0" },
-    { name = "pgvector", specifier = ">=0.4.0,<1.0" },
+    { name = "pgvector", specifier = ">=0.4.2,<1.0" },
     { name = "pictex", specifier = ">=2.1.0,<3.0" },
     { name = "pillow", specifier = ">=11.0.0,<12.0" },
     { name = "plotly", specifier = ">=6.0.0,<7.0" },
@@ -1253,6 +1246,7 @@ dev = [
     { name = "build", specifier = ">=1.3.0,<2.0" },
     { name = "django-rq", specifier = ">=4.0.0" },
     { name = "fakeredis", specifier = ">=2.31.3,<3.0" },
+    { name = "grpcio", specifier = ">=1.78.0" },
     { name = "psutil", specifier = ">=7.0.0" },
     { name = "pytest", specifier = ">=8.4.2,<9.0" },
     { name = "pytest-asyncio", specifier = ">=1.2.0,<2.0" },

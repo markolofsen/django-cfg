@@ -27,4 +27,4 @@
  * ```
  */
 
-export * from './crypto__api__crypto'
+export * from './crypto__apix__crypto'

@@ -53,7 +53,10 @@ from django_cfg import (
     RQScheduleConfig,
     # Integrations
     DjangoCfgCentrifugoConfig,
-    GRPCConfig,
+    DjangoGrpcModuleConfig,
+    GrpcServerConfig,
+    GrpcObservabilityConfig,
+    GrpcTelegramNotifyConfig,
     NgrokConfig,
     # Dynamic Settings
     ConstanceConfig,
@@ -257,7 +260,7 @@ class DjangoCfgConfig(DjangoConfig):
         generate_zod_schemas=True,
         generate_fetchers=True,
         generate_swr_hooks=True,
-        api_prefix="api",
+        api_prefix="apix",
         output_dir="openapi",
         drf_title=f"{env.app.name} API",
         drf_description="Complete API documentation for Django CFG Demo Project",
@@ -314,14 +317,13 @@ class DjangoCfgConfig(DjangoConfig):
         else None
     )
 
-    grpc: Optional[GRPCConfig] = GRPCConfig(
+    grpc_module: Optional[DjangoGrpcModuleConfig] = DjangoGrpcModuleConfig(
         enabled=True,
-        host="0.0.0.0",
-        port=50051,
+        server=GrpcServerConfig(host="0.0.0.0", port=50051),
         enabled_apps=[],
         package_prefix="api",
         public_url=env.grpc_url,
-        publish_to_telegram=True,
+        observability=GrpcObservabilityConfig(telegram=GrpcTelegramNotifyConfig(enabled=True)),
         handlers_hook=[
             # "apps.*.grpc.services.handlers.grpc_handlers",
         ],

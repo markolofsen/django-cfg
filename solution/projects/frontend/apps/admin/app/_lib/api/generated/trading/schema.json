@@ -14,7 +14,7 @@
     }
   },
   "paths": {
-    "/api/trading/orders/": {
+    "/apix/trading/orders/": {
       "get": {
         "operationId": "trading_orders_list",
         "description": "ViewSet for trading orders.",
@@ -126,7 +126,7 @@
         "x-async-capable": false
       }
     },
-    "/api/trading/orders/{id}/": {
+    "/apix/trading/orders/{id}/": {
       "get": {
         "operationId": "trading_orders_retrieve",
         "description": "ViewSet for trading orders.",
@@ -305,7 +305,7 @@
         "x-async-capable": false
       }
     },
-    "/api/trading/portfolios/": {
+    "/apix/trading/portfolios/": {
       "get": {
         "operationId": "trading_portfolios_list",
         "description": "ViewSet for trading portfolios.",
@@ -371,7 +371,7 @@
         "x-async-capable": false
       }
     },
-    "/api/trading/portfolios/{id}/": {
+    "/apix/trading/portfolios/{id}/": {
       "get": {
         "operationId": "trading_portfolios_retrieve",
         "description": "ViewSet for trading portfolios.",
@@ -410,7 +410,7 @@
         "x-async-capable": false
       }
     },
-    "/api/trading/portfolios/me/": {
+    "/apix/trading/portfolios/me/": {
       "get": {
         "operationId": "trading_portfolios_me_retrieve",
         "description": "Get current user's portfolio.",
@@ -438,7 +438,7 @@
         "x-async-capable": false
       }
     },
-    "/api/trading/portfolios/stats/": {
+    "/apix/trading/portfolios/stats/": {
       "get": {
         "operationId": "trading_portfolios_stats_retrieve",
         "description": "Get portfolio statistics.",

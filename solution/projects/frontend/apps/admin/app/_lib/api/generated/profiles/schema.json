@@ -14,7 +14,7 @@
     }
   },
   "paths": {
-    "/api/profiles/profiles/": {
+    "/apix/profiles/profiles/": {
       "get": {
         "operationId": "profiles_profiles_list",
         "description": "Get a paginated list of all user profiles",
@@ -125,7 +125,7 @@
         "x-async-capable": false
       }
     },
-    "/api/profiles/profiles/{id}/": {
+    "/apix/profiles/profiles/{id}/": {
       "get": {
         "operationId": "profiles_profiles_retrieve",
         "description": "Get detailed information about a specific user profile",
@@ -306,7 +306,7 @@
         "x-async-capable": false
       }
     },
-    "/api/profiles/profiles/me/": {
+    "/apix/profiles/profiles/me/": {
       "get": {
         "operationId": "profiles_profiles_me_retrieve",
         "description": "Get current user's profile",
@@ -424,7 +424,7 @@
         "x-async-capable": false
       }
     },
-    "/api/profiles/profiles/stats/": {
+    "/apix/profiles/profiles/stats/": {
       "get": {
         "operationId": "profiles_profiles_stats_retrieve",
         "description": "Get comprehensive profile statistics",

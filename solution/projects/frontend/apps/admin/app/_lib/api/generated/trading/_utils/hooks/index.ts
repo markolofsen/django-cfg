@@ -27,4 +27,4 @@
  * ```
  */
 
-export * from './trading__api__trading'
+export * from './trading__apix__trading'

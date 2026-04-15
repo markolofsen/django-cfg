@@ -14,7 +14,7 @@
     }
   },
   "paths": {
-    "/api/crypto/coins/": {
+    "/apix/crypto/coins/": {
       "get": {
         "operationId": "crypto_coins_list",
         "description": "ViewSet for cryptocurrency coins.",
@@ -81,7 +81,7 @@
         "x-async-capable": false
       }
     },
-    "/api/crypto/coins/{id}/": {
+    "/apix/crypto/coins/{id}/": {
       "get": {
         "operationId": "crypto_coins_retrieve",
         "description": "ViewSet for cryptocurrency coins.",
@@ -121,7 +121,7 @@
         "x-async-capable": false
       }
     },
-    "/api/crypto/coins/stats/": {
+    "/apix/crypto/coins/stats/": {
       "get": {
         "operationId": "crypto_coins_stats_retrieve",
         "description": "Get cryptocurrency statistics.",
@@ -150,7 +150,7 @@
         "x-async-capable": false
       }
     },
-    "/api/crypto/exchanges/": {
+    "/apix/crypto/exchanges/": {
       "get": {
         "operationId": "crypto_exchanges_list",
         "description": "ViewSet for cryptocurrency exchanges.",
@@ -217,7 +217,7 @@
         "x-async-capable": false
       }
     },
-    "/api/crypto/exchanges/{slug}/": {
+    "/apix/crypto/exchanges/{slug}/": {
       "get": {
         "operationId": "crypto_exchanges_retrieve",
         "description": "ViewSet for cryptocurrency exchanges.",
@@ -256,7 +256,7 @@
         "x-async-capable": false
       }
     },
-    "/api/crypto/wallets/": {
+    "/apix/crypto/wallets/": {
       "get": {
         "operationId": "crypto_wallets_list",
         "description": "ViewSet for user wallets.",
@@ -322,7 +322,7 @@
         "x-async-capable": false
       }
     },
-    "/api/crypto/wallets/{id}/": {
+    "/apix/crypto/wallets/{id}/": {
       "get": {
         "operationId": "crypto_wallets_retrieve",
         "description": "ViewSet for user wallets.",

@@ -29,7 +29,7 @@ export class ProfilesProfiles {
     } else {
       params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
-    const response = await this.client.request('GET', "/api/profiles/profiles/", { params });
+    const response = await this.client.request('GET', "/apix/profiles/profiles/", { params });
     return response;
   }
 
@@ -39,7 +39,7 @@ export class ProfilesProfiles {
    * Create a new user profile
    */
   async profilesCreate(data: Models.UserProfileRequest): Promise<Models.UserProfile> {
-    const response = await this.client.request('POST', "/api/profiles/profiles/", { body: data });
+    const response = await this.client.request('POST', "/apix/profiles/profiles/", { body: data });
     return response;
   }
 
@@ -49,7 +49,7 @@ export class ProfilesProfiles {
    * Get detailed information about a specific user profile
    */
   async profilesRetrieve(id: number): Promise<Models.UserProfile> {
-    const response = await this.client.request('GET', `/api/profiles/profiles/${id}/`);
+    const response = await this.client.request('GET', `/apix/profiles/profiles/${id}/`);
     return response;
   }
 
@@ -59,7 +59,7 @@ export class ProfilesProfiles {
    * Update user profile information
    */
   async profilesUpdate(id: number, data: Models.UserProfileUpdateRequest): Promise<Models.UserProfileUpdate> {
-    const response = await this.client.request('PUT', `/api/profiles/profiles/${id}/`, { body: data });
+    const response = await this.client.request('PUT', `/apix/profiles/profiles/${id}/`, { body: data });
     return response;
   }
 
@@ -69,7 +69,7 @@ export class ProfilesProfiles {
    * Partially update user profile information
    */
   async profilesPartialUpdate(id: number, data?: Models.PatchedUserProfileUpdateRequest): Promise<Models.UserProfileUpdate> {
-    const response = await this.client.request('PATCH', `/api/profiles/profiles/${id}/`, { body: data });
+    const response = await this.client.request('PATCH', `/apix/profiles/profiles/${id}/`, { body: data });
     return response;
   }
 
@@ -79,7 +79,7 @@ export class ProfilesProfiles {
    * Delete a user profile
    */
   async profilesDestroy(id: number): Promise<void> {
-    const response = await this.client.request('DELETE', `/api/profiles/profiles/${id}/`);
+    const response = await this.client.request('DELETE', `/apix/profiles/profiles/${id}/`);
     return;
   }
 
@@ -89,7 +89,7 @@ export class ProfilesProfiles {
    * Get current user's profile
    */
   async profilesMeRetrieve(): Promise<Models.UserProfile> {
-    const response = await this.client.request('GET', "/api/profiles/profiles/me/");
+    const response = await this.client.request('GET', "/apix/profiles/profiles/me/");
     return response;
   }
 
@@ -99,7 +99,7 @@ export class ProfilesProfiles {
    * Get current user's profile
    */
   async profilesMeUpdate(data: Models.UserProfileRequest): Promise<Models.UserProfile> {
-    const response = await this.client.request('PUT', "/api/profiles/profiles/me/", { body: data });
+    const response = await this.client.request('PUT', "/apix/profiles/profiles/me/", { body: data });
     return response;
   }
 
@@ -109,7 +109,7 @@ export class ProfilesProfiles {
    * Get current user's profile
    */
   async profilesMePartialUpdate(data?: Models.PatchedUserProfileRequest): Promise<Models.UserProfile> {
-    const response = await this.client.request('PATCH', "/api/profiles/profiles/me/", { body: data });
+    const response = await this.client.request('PATCH', "/apix/profiles/profiles/me/", { body: data });
     return response;
   }
 
@@ -119,7 +119,7 @@ export class ProfilesProfiles {
    * Get comprehensive profile statistics
    */
   async profilesStatsRetrieve(): Promise<Models.UserProfileStats> {
-    const response = await this.client.request('GET', "/api/profiles/profiles/stats/");
+    const response = await this.client.request('GET', "/apix/profiles/profiles/stats/");
     return response;
   }
 

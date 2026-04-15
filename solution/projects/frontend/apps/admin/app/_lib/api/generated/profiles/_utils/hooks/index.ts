@@ -27,4 +27,4 @@
  * ```
  */
 
-export * from './profiles__api__profiles'
+export * from './profiles__apix__profiles'

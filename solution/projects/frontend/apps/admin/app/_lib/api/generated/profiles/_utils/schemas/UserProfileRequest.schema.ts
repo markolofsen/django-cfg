@@ -10,7 +10,7 @@ import { z } from 'zod'
  * Serializer for user profiles.
  */
 export const UserProfileRequestSchema = z.object({
-  website: z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), { message: 'Must be a URL or relative path' }).optional(),
+  website: z.string().max(200).optional(),
   github: z.string().max(100).optional(),
   twitter: z.string().max(100).optional(),
   linkedin: z.string().max(100).optional(),

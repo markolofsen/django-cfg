@@ -109,3 +109,29 @@ export class FetchAdapter implements HttpClientAdapter {
     };
   }
 }
+
+/**
+ * FetchAdapter with keepalive:true.
+ *
+ * Use this adapter when you need requests to survive page unload
+ * (visibilitychange / beforeunload) — the browser will complete the request
+ * even after the page is navigated away. Typical use: monitor / analytics flush.
+ *
+ * @example
+ * ```typescript
+ * import { APIClient, KeepAliveFetchAdapter } from './client';
+ * const client = new APIClient(baseUrl, { httpClient: new KeepAliveFetchAdapter() });
+ * ```
+ */
+export class KeepAliveFetchAdapter extends FetchAdapter {
+  async request<T = any>(request: HttpRequest): Promise<HttpResponse<T>> {
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) =>
+      origFetch(input, { ...init, keepalive: true });
+    try {
+      return await super.request<T>(request);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  }
+}

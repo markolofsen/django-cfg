@@ -26,11 +26,65 @@ export interface PaginatedUserProfileList {
 }
 
 /**
+ * Serializer for updating user profiles.
+ * 
+ * Request model (no read-only fields).
+ */
+export interface PatchedUserProfileUpdateRequest {
+  website?: string;
+  github?: string;
+  twitter?: string;
+  linkedin?: string;
+  company?: string;
+  job_title?: string;
+}
+
+/**
  * Serializer for user profiles.
  * 
  * Request model (no read-only fields).
  */
 export interface UserProfileRequest {
+  website?: string;
+  github?: string;
+  twitter?: string;
+  linkedin?: string;
+  company?: string;
+  job_title?: string;
+}
+
+/**
+ * Serializer for user profiles.
+ * 
+ * Request model (no read-only fields).
+ */
+export interface PatchedUserProfileRequest {
+  website?: string;
+  github?: string;
+  twitter?: string;
+  linkedin?: string;
+  company?: string;
+  job_title?: string;
+}
+
+/**
+ * Serializer for profile statistics.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface UserProfileStats {
+  total_profiles: number;
+  profiles_with_company: number;
+  profiles_with_social_links: number;
+  most_active_users: Array<UserProfile>;
+}
+
+/**
+ * Serializer for updating user profiles.
+ * 
+ * Request model (no read-only fields).
+ */
+export interface UserProfileUpdateRequest {
   website?: string;
   github?: string;
   twitter?: string;
@@ -65,20 +119,6 @@ export interface UserProfile {
 /**
  * Serializer for updating user profiles.
  * 
- * Request model (no read-only fields).
- */
-export interface UserProfileUpdateRequest {
-  website?: string;
-  github?: string;
-  twitter?: string;
-  linkedin?: string;
-  company?: string;
-  job_title?: string;
-}
-
-/**
- * Serializer for updating user profiles.
- * 
  * Response model (includes read-only fields).
  */
 export interface UserProfileUpdate {
@@ -88,45 +128,5 @@ export interface UserProfileUpdate {
   linkedin?: string;
   company?: string;
   job_title?: string;
-}
-
-/**
- * Serializer for updating user profiles.
- * 
- * Request model (no read-only fields).
- */
-export interface PatchedUserProfileUpdateRequest {
-  website?: string;
-  github?: string;
-  twitter?: string;
-  linkedin?: string;
-  company?: string;
-  job_title?: string;
-}
-
-/**
- * Serializer for user profiles.
- * 
- * Request model (no read-only fields).
- */
-export interface PatchedUserProfileRequest {
-  website?: string;
-  github?: string;
-  twitter?: string;
-  linkedin?: string;
-  company?: string;
-  job_title?: string;
-}
-
-/**
- * Serializer for profile statistics.
- * 
- * Response model (includes read-only fields).
- */
-export interface UserProfileStats {
-  total_profiles: number;
-  profiles_with_company: number;
-  profiles_with_social_links: number;
-  most_active_users: Array<UserProfile>;
 }
 

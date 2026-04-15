@@ -19,7 +19,7 @@
  * ```
  */
 import useSWR from 'swr'
-import * as Fetchers from '../fetchers/crypto__api__crypto'
+import * as Fetchers from '../fetchers/crypto__apix__crypto'
 import type { API } from '../../index'
 import type { Coin } from '../schemas/Coin.schema'
 import type { CoinStats } from '../schemas/CoinStats.schema'
@@ -33,7 +33,7 @@ import type { Wallet } from '../schemas/Wallet.schema'
  * List coins
  *
  * @method GET
- * @path /api/crypto/coins/
+ * @path /apix/crypto/coins/
  */
 export function useCryptoCoinsList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedCoinListList>> {
   return useSWR<PaginatedCoinListList>(
@@ -47,11 +47,11 @@ export function useCryptoCoinsList(params?: { ordering?: string; page?: number; 
  * Get coin details
  *
  * @method GET
- * @path /api/crypto/coins/{id}/
+ * @path /apix/crypto/coins/{id}/
  */
 export function useCryptoCoinsRetrieve(id: number, client?: API): ReturnType<typeof useSWR<Coin>> {
   return useSWR<Coin>(
-    ['crypto-coin', id],
+    id ? ['crypto-coin', id] : null,
     () => Fetchers.getCryptoCoinsRetrieve(id, client)
   )
 }
@@ -61,7 +61,7 @@ export function useCryptoCoinsRetrieve(id: number, client?: API): ReturnType<typ
  * Get coin statistics
  *
  * @method GET
- * @path /api/crypto/coins/stats/
+ * @path /apix/crypto/coins/stats/
  */
 export function useCryptoCoinsStatsRetrieve(client?: API): ReturnType<typeof useSWR<CoinStats>> {
   return useSWR<CoinStats>(
@@ -75,7 +75,7 @@ export function useCryptoCoinsStatsRetrieve(client?: API): ReturnType<typeof use
  * List exchanges
  *
  * @method GET
- * @path /api/crypto/exchanges/
+ * @path /apix/crypto/exchanges/
  */
 export function useCryptoExchangesList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedExchangeList>> {
   return useSWR<PaginatedExchangeList>(
@@ -89,11 +89,11 @@ export function useCryptoExchangesList(params?: { ordering?: string; page?: numb
  * Get exchange details
  *
  * @method GET
- * @path /api/crypto/exchanges/{slug}/
+ * @path /apix/crypto/exchanges/{slug}/
  */
 export function useCryptoExchangesRetrieve(slug: string, client?: API): ReturnType<typeof useSWR<Exchange>> {
   return useSWR<Exchange>(
-    ['crypto-exchange', slug],
+    slug ? ['crypto-exchange', slug] : null,
     () => Fetchers.getCryptoExchangesRetrieve(slug, client)
   )
 }
@@ -103,7 +103,7 @@ export function useCryptoExchangesRetrieve(slug: string, client?: API): ReturnTy
  * List wallets
  *
  * @method GET
- * @path /api/crypto/wallets/
+ * @path /apix/crypto/wallets/
  */
 export function useCryptoWalletsList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedWalletList>> {
   return useSWR<PaginatedWalletList>(
@@ -117,11 +117,11 @@ export function useCryptoWalletsList(params?: { ordering?: string; page?: number
  * Get wallet details
  *
  * @method GET
- * @path /api/crypto/wallets/{id}/
+ * @path /apix/crypto/wallets/{id}/
  */
 export function useCryptoWalletsRetrieve(id: string, client?: API): ReturnType<typeof useSWR<Wallet>> {
   return useSWR<Wallet>(
-    ['crypto-wallet', id],
+    id ? ['crypto-wallet', id] : null,
     () => Fetchers.getCryptoWalletsRetrieve(id, client)
   )
 }

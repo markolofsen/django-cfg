@@ -26,40 +26,6 @@ export interface PaginatedCoinListList {
 }
 
 /**
- * Serializer for coins.
- * 
- * Response model (includes read-only fields).
- */
-export interface Coin {
-  id: number;
-  /** Coin symbol (e.g., BTC, ETH) */
-  symbol: string;
-  /** Full name (e.g., Bitcoin, Ethereum) */
-  name: string;
-  slug: string;
-  /** Current price in USD */
-  current_price_usd?: any;
-  /** Market capitalization */
-  market_cap_usd?: any;
-  /** 24h trading volume */
-  volume_24h_usd?: any;
-  price_change_24h_percent?: any;
-  price_change_7d_percent?: any;
-  price_change_30d_percent?: any;
-  logo_url?: string;
-  description?: string;
-  website?: string;
-  whitepaper_url?: string;
-  /** Market cap rank */
-  rank?: number;
-  is_active?: boolean;
-  is_tradeable?: boolean;
-  is_price_up_24h: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
  * Serializer for coin statistics.
  * 
  * Response model (includes read-only fields).
@@ -97,6 +63,28 @@ export interface PaginatedExchangeList {
 }
 
 /**
+ * Serializer for wallets.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface Wallet {
+  id: number;
+  user: number;
+  coin: number;
+  coin_info: CoinList;
+  /** Available balance */
+  balance?: any;
+  /** Locked balance (in orders) */
+  locked_balance: any;
+  total_balance: any;
+  value_usd: any;
+  /** Deposit address */
+  address?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Serializer for exchanges.
  * 
  * Response model (includes read-only fields).
@@ -129,6 +117,40 @@ export interface Exchange {
 }
 
 /**
+ * Serializer for coins.
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface Coin {
+  id: number;
+  /** Coin symbol (e.g., BTC, ETH) */
+  symbol: string;
+  /** Full name (e.g., Bitcoin, Ethereum) */
+  name: string;
+  slug: string;
+  /** Current price in USD */
+  current_price_usd?: any;
+  /** Market capitalization */
+  market_cap_usd?: any;
+  /** 24h trading volume */
+  volume_24h_usd?: any;
+  price_change_24h_percent?: any;
+  price_change_7d_percent?: any;
+  price_change_30d_percent?: any;
+  logo_url?: string;
+  description?: string;
+  website?: string;
+  whitepaper_url?: string;
+  /** Market cap rank */
+  rank?: number;
+  is_active?: boolean;
+  is_tradeable?: boolean;
+  is_price_up_24h: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * 
  * Response model (includes read-only fields).
  */
@@ -151,28 +173,6 @@ export interface PaginatedWalletList {
   previous_page?: number | null;
   /** Array of items for current page */
   results: Array<Wallet>;
-}
-
-/**
- * Serializer for wallets.
- * 
- * Response model (includes read-only fields).
- */
-export interface Wallet {
-  id: number;
-  user: number;
-  coin: number;
-  coin_info: CoinList;
-  /** Available balance */
-  balance?: any;
-  /** Locked balance (in orders) */
-  locked_balance: any;
-  total_balance: any;
-  value_usd: any;
-  /** Deposit address */
-  address?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 /**

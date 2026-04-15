@@ -21,13 +21,13 @@ python manage.py generate_client --groups crypto --typescript
 ## Operations
 
 **crypto:**
-- `GET` /api/crypto/coins/ → `crypto_coins_list`
-- `GET` /api/crypto/coins/{id}/ → `crypto_coins_retrieve`
-- `GET` /api/crypto/coins/stats/ → `crypto_coins_stats_retrieve`
-- `GET` /api/crypto/exchanges/ → `crypto_exchanges_list`
-- `GET` /api/crypto/exchanges/{slug}/ → `crypto_exchanges_retrieve`
-- `GET` /api/crypto/wallets/ → `crypto_wallets_list`
-- `GET` /api/crypto/wallets/{id}/ → `crypto_wallets_retrieve`
+- `GET` /apix/crypto/coins/ → `crypto_coins_list`
+- `GET` /apix/crypto/coins/{id}/ → `crypto_coins_retrieve`
+- `GET` /apix/crypto/coins/stats/ → `crypto_coins_stats_retrieve`
+- `GET` /apix/crypto/exchanges/ → `crypto_exchanges_list`
+- `GET` /apix/crypto/exchanges/{slug}/ → `crypto_exchanges_retrieve`
+- `GET` /apix/crypto/wallets/ → `crypto_wallets_list`
+- `GET` /apix/crypto/wallets/{id}/ → `crypto_wallets_retrieve`
 
 ## Usage
 

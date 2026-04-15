@@ -46,7 +46,7 @@ import { getAPIInstance } from '../../api-instance'
  * List user profiles
  *
  * @method GET
- * @path /api/profiles/profiles/
+ * @path /apix/profiles/profiles/
  */
 export async function getProfilesProfilesList(  params?: { ordering?: string; page?: number; page_size?: number; search?: string },  client?: any
 ): Promise<PaginatedUserProfileList> {
@@ -57,7 +57,7 @@ export async function getProfilesProfilesList(  params?: { ordering?: string; pa
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box(`getProfilesProfilesList\nPath: /api/profiles/profiles/\nMethod: GET`);
+    consola.box(`getProfilesProfilesList\nPath: /apix/profiles/profiles/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -77,7 +77,7 @@ export async function getProfilesProfilesList(  params?: { ordering?: string; pa
         const event = new CustomEvent('zod-validation-error', {
           detail: {
             operation: 'getProfilesProfilesList',
-            path: '/api/profiles/profiles/',
+            path: '/apix/profiles/profiles/',
             method: 'GET',
             error: error,
             response: response,
@@ -103,7 +103,7 @@ export async function getProfilesProfilesList(  params?: { ordering?: string; pa
  * Create user profile
  *
  * @method POST
- * @path /api/profiles/profiles/
+ * @path /apix/profiles/profiles/
  */
 export async function createProfilesProfilesCreate(  data: UserProfileRequest,  client?: any
 ): Promise<UserProfile> {
@@ -114,7 +114,7 @@ export async function createProfilesProfilesCreate(  data: UserProfileRequest,  
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box(`createProfilesProfilesCreate\nPath: /api/profiles/profiles/\nMethod: POST`);
+    consola.box(`createProfilesProfilesCreate\nPath: /apix/profiles/profiles/\nMethod: POST`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -134,7 +134,7 @@ export async function createProfilesProfilesCreate(  data: UserProfileRequest,  
         const event = new CustomEvent('zod-validation-error', {
           detail: {
             operation: 'createProfilesProfilesCreate',
-            path: '/api/profiles/profiles/',
+            path: '/apix/profiles/profiles/',
             method: 'POST',
             error: error,
             response: response,
@@ -160,7 +160,7 @@ export async function createProfilesProfilesCreate(  data: UserProfileRequest,  
  * Get user profile
  *
  * @method GET
- * @path /api/profiles/profiles/{id}/
+ * @path /apix/profiles/profiles/{id}/
  */
 export async function getProfilesProfilesRetrieve(  id: number,  client?: any
 ): Promise<UserProfile> {
@@ -171,7 +171,7 @@ export async function getProfilesProfilesRetrieve(  id: number,  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box(`getProfilesProfilesRetrieve\nPath: /api/profiles/profiles/{id}/\nMethod: GET`);
+    consola.box(`getProfilesProfilesRetrieve\nPath: /apix/profiles/profiles/{id}/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -191,7 +191,7 @@ export async function getProfilesProfilesRetrieve(  id: number,  client?: any
         const event = new CustomEvent('zod-validation-error', {
           detail: {
             operation: 'getProfilesProfilesRetrieve',
-            path: '/api/profiles/profiles/{id}/',
+            path: '/apix/profiles/profiles/{id}/',
             method: 'GET',
             error: error,
             response: response,
@@ -217,7 +217,7 @@ export async function getProfilesProfilesRetrieve(  id: number,  client?: any
  * Update user profile
  *
  * @method PUT
- * @path /api/profiles/profiles/{id}/
+ * @path /apix/profiles/profiles/{id}/
  */
 export async function updateProfilesProfilesUpdate(  id: number, data: UserProfileUpdateRequest,  client?: any
 ): Promise<UserProfileUpdate> {
@@ -228,7 +228,7 @@ export async function updateProfilesProfilesUpdate(  id: number, data: UserProfi
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box(`updateProfilesProfilesUpdate\nPath: /api/profiles/profiles/{id}/\nMethod: PUT`);
+    consola.box(`updateProfilesProfilesUpdate\nPath: /apix/profiles/profiles/{id}/\nMethod: PUT`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -248,7 +248,7 @@ export async function updateProfilesProfilesUpdate(  id: number, data: UserProfi
         const event = new CustomEvent('zod-validation-error', {
           detail: {
             operation: 'updateProfilesProfilesUpdate',
-            path: '/api/profiles/profiles/{id}/',
+            path: '/apix/profiles/profiles/{id}/',
             method: 'PUT',
             error: error,
             response: response,
@@ -274,7 +274,7 @@ export async function updateProfilesProfilesUpdate(  id: number, data: UserProfi
  * Partially update user profile
  *
  * @method PATCH
- * @path /api/profiles/profiles/{id}/
+ * @path /apix/profiles/profiles/{id}/
  */
 export async function partialUpdateProfilesProfilesPartialUpdate(  id: number, data?: PatchedUserProfileUpdateRequest,  client?: any
 ): Promise<UserProfileUpdate> {
@@ -285,7 +285,7 @@ export async function partialUpdateProfilesProfilesPartialUpdate(  id: number, d
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box(`partialUpdateProfilesProfilesPartialUpdate\nPath: /api/profiles/profiles/{id}/\nMethod: PATCH`);
+    consola.box(`partialUpdateProfilesProfilesPartialUpdate\nPath: /apix/profiles/profiles/{id}/\nMethod: PATCH`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -305,7 +305,7 @@ export async function partialUpdateProfilesProfilesPartialUpdate(  id: number, d
         const event = new CustomEvent('zod-validation-error', {
           detail: {
             operation: 'partialUpdateProfilesProfilesPartialUpdate',
-            path: '/api/profiles/profiles/{id}/',
+            path: '/apix/profiles/profiles/{id}/',
             method: 'PATCH',
             error: error,
             response: response,
@@ -331,7 +331,7 @@ export async function partialUpdateProfilesProfilesPartialUpdate(  id: number, d
  * Delete user profile
  *
  * @method DELETE
- * @path /api/profiles/profiles/{id}/
+ * @path /apix/profiles/profiles/{id}/
  */
 export async function deleteProfilesProfilesDestroy(  id: number,  client?: any
 ): Promise<void> {
@@ -345,7 +345,7 @@ export async function deleteProfilesProfilesDestroy(  id: number,  client?: any
  * Get my profile
  *
  * @method GET
- * @path /api/profiles/profiles/me/
+ * @path /apix/profiles/profiles/me/
  */
 export async function getProfilesProfilesMeRetrieve(  client?: any
 ): Promise<UserProfile> {
@@ -356,7 +356,7 @@ export async function getProfilesProfilesMeRetrieve(  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box(`getProfilesProfilesMeRetrieve\nPath: /api/profiles/profiles/me/\nMethod: GET`);
+    consola.box(`getProfilesProfilesMeRetrieve\nPath: /apix/profiles/profiles/me/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -376,7 +376,7 @@ export async function getProfilesProfilesMeRetrieve(  client?: any
         const event = new CustomEvent('zod-validation-error', {
           detail: {
             operation: 'getProfilesProfilesMeRetrieve',
-            path: '/api/profiles/profiles/me/',
+            path: '/apix/profiles/profiles/me/',
             method: 'GET',
             error: error,
             response: response,
@@ -402,7 +402,7 @@ export async function getProfilesProfilesMeRetrieve(  client?: any
  * Get my profile
  *
  * @method PUT
- * @path /api/profiles/profiles/me/
+ * @path /apix/profiles/profiles/me/
  */
 export async function updateProfilesProfilesMeUpdate(  data: UserProfileRequest,  client?: any
 ): Promise<UserProfile> {
@@ -413,7 +413,7 @@ export async function updateProfilesProfilesMeUpdate(  data: UserProfileRequest,
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box(`updateProfilesProfilesMeUpdate\nPath: /api/profiles/profiles/me/\nMethod: PUT`);
+    consola.box(`updateProfilesProfilesMeUpdate\nPath: /apix/profiles/profiles/me/\nMethod: PUT`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -433,7 +433,7 @@ export async function updateProfilesProfilesMeUpdate(  data: UserProfileRequest,
         const event = new CustomEvent('zod-validation-error', {
           detail: {
             operation: 'updateProfilesProfilesMeUpdate',
-            path: '/api/profiles/profiles/me/',
+            path: '/apix/profiles/profiles/me/',
             method: 'PUT',
             error: error,
             response: response,
@@ -459,7 +459,7 @@ export async function updateProfilesProfilesMeUpdate(  data: UserProfileRequest,
  * Get my profile
  *
  * @method PATCH
- * @path /api/profiles/profiles/me/
+ * @path /apix/profiles/profiles/me/
  */
 export async function partialUpdateProfilesProfilesMePartialUpdate(  data?: PatchedUserProfileRequest,  client?: any
 ): Promise<UserProfile> {
@@ -470,7 +470,7 @@ export async function partialUpdateProfilesProfilesMePartialUpdate(  data?: Patc
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box(`partialUpdateProfilesProfilesMePartialUpdate\nPath: /api/profiles/profiles/me/\nMethod: PATCH`);
+    consola.box(`partialUpdateProfilesProfilesMePartialUpdate\nPath: /apix/profiles/profiles/me/\nMethod: PATCH`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -490,7 +490,7 @@ export async function partialUpdateProfilesProfilesMePartialUpdate(  data?: Patc
         const event = new CustomEvent('zod-validation-error', {
           detail: {
             operation: 'partialUpdateProfilesProfilesMePartialUpdate',
-            path: '/api/profiles/profiles/me/',
+            path: '/apix/profiles/profiles/me/',
             method: 'PATCH',
             error: error,
             response: response,
@@ -516,7 +516,7 @@ export async function partialUpdateProfilesProfilesMePartialUpdate(  data?: Patc
  * Get profile statistics
  *
  * @method GET
- * @path /api/profiles/profiles/stats/
+ * @path /apix/profiles/profiles/stats/
  */
 export async function getProfilesProfilesStatsRetrieve(  client?: any
 ): Promise<UserProfileStats> {
@@ -527,7 +527,7 @@ export async function getProfilesProfilesStatsRetrieve(  client?: any
   } catch (error) {
     // Zod validation error - log detailed information
     consola.error('❌ Zod Validation Failed');
-    consola.box(`getProfilesProfilesStatsRetrieve\nPath: /api/profiles/profiles/stats/\nMethod: GET`);
+    consola.box(`getProfilesProfilesStatsRetrieve\nPath: /apix/profiles/profiles/stats/\nMethod: GET`);
 
     if (error instanceof Error && 'issues' in error && Array.isArray((error as any).issues)) {
       consola.error('Validation Issues:');
@@ -547,7 +547,7 @@ export async function getProfilesProfilesStatsRetrieve(  client?: any
         const event = new CustomEvent('zod-validation-error', {
           detail: {
             operation: 'getProfilesProfilesStatsRetrieve',
-            path: '/api/profiles/profiles/stats/',
+            path: '/apix/profiles/profiles/stats/',
             method: 'GET',
             error: error,
             response: response,

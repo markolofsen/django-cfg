@@ -44,8 +44,8 @@ import {
 import type { RetryConfig } from "./retry";
 import type { LoggerConfig } from "./logger";
 import { APILogger } from "./logger";
-import { ProfilesProfiles } from "./profiles__api__profiles/client";
-export * as ProfilesProfilesTypes from "./profiles__api__profiles/models";
+import { ProfilesProfiles } from "./profiles__apix__profiles/client";
+export * as ProfilesProfilesTypes from "./profiles__apix__profiles/models";
 // Note: Direct exports (export * from) are removed to avoid duplicate type conflicts
 // Use namespace exports like CfgAccountsTypes.User or import from specific modules
 
@@ -88,7 +88,7 @@ export { APIError, NetworkError } from "./errors";
 
 // Re-export HTTP adapters for custom implementations
 export type { HttpClientAdapter, HttpRequest, HttpResponse } from "./http";
-export { FetchAdapter } from "./http";
+export { FetchAdapter, KeepAliveFetchAdapter } from "./http";
 
 // Re-export logger types and classes
 export type { LoggerConfig, RequestLog, ResponseLog, ErrorLog } from "./logger";
@@ -118,6 +118,8 @@ function detectLocale(): string | null {
 export interface APIOptions {
   /** Custom storage adapter (defaults to LocalStorageAdapter) */
   storage?: StorageAdapter;
+  /** Custom HTTP client adapter (defaults to FetchAdapter) */
+  httpClient?: HttpClientAdapter;
   /** Retry configuration for failed requests */
   retryConfig?: RetryConfig;
   /** Logger configuration */
@@ -154,6 +156,7 @@ export class API {
 
     // Initialize APIClient with token getter for URL authentication
     this._client = new APIClient(this.baseUrl, {
+      httpClient: this.options?.httpClient,
       retryConfig: this.options?.retryConfig,
       loggerConfig: this.options?.loggerConfig,
       tokenGetter: () => this.getToken(),
@@ -173,6 +176,7 @@ export class API {
 
   private _reinitClients(): void {
     this._client = new APIClient(this.baseUrl, {
+      httpClient: this.options?.httpClient,
       retryConfig: this.options?.retryConfig,
       loggerConfig: this.options?.loggerConfig,
       tokenGetter: () => this.getToken(),

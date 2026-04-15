@@ -29,7 +29,7 @@ export class TradingTrading {
     } else {
       params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
-    const response = await this.client.request('GET', "/api/trading/orders/", { params });
+    const response = await this.client.request('GET', "/apix/trading/orders/", { params });
     return response;
   }
 
@@ -39,7 +39,7 @@ export class TradingTrading {
    * ViewSet for trading orders.
    */
   async ordersCreate(data: Models.OrderCreateRequest): Promise<Models.OrderCreate> {
-    const response = await this.client.request('POST', "/api/trading/orders/", { body: data });
+    const response = await this.client.request('POST', "/apix/trading/orders/", { body: data });
     return response;
   }
 
@@ -49,7 +49,7 @@ export class TradingTrading {
    * ViewSet for trading orders.
    */
   async ordersRetrieve(id: number): Promise<Models.Order> {
-    const response = await this.client.request('GET', `/api/trading/orders/${id}/`);
+    const response = await this.client.request('GET', `/apix/trading/orders/${id}/`);
     return response;
   }
 
@@ -57,7 +57,7 @@ export class TradingTrading {
    * ViewSet for trading orders.
    */
   async ordersUpdate(id: number, data: Models.OrderRequest): Promise<Models.Order> {
-    const response = await this.client.request('PUT', `/api/trading/orders/${id}/`, { body: data });
+    const response = await this.client.request('PUT', `/apix/trading/orders/${id}/`, { body: data });
     return response;
   }
 
@@ -65,7 +65,7 @@ export class TradingTrading {
    * ViewSet for trading orders.
    */
   async ordersPartialUpdate(id: number, data?: Models.PatchedOrderRequest): Promise<Models.Order> {
-    const response = await this.client.request('PATCH', `/api/trading/orders/${id}/`, { body: data });
+    const response = await this.client.request('PATCH', `/apix/trading/orders/${id}/`, { body: data });
     return response;
   }
 
@@ -73,7 +73,7 @@ export class TradingTrading {
    * ViewSet for trading orders.
    */
   async ordersDestroy(id: number): Promise<void> {
-    const response = await this.client.request('DELETE', `/api/trading/orders/${id}/`);
+    const response = await this.client.request('DELETE', `/apix/trading/orders/${id}/`);
     return;
   }
 
@@ -94,7 +94,7 @@ export class TradingTrading {
     } else {
       params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
-    const response = await this.client.request('GET', "/api/trading/portfolios/", { params });
+    const response = await this.client.request('GET', "/apix/trading/portfolios/", { params });
     return response;
   }
 
@@ -104,7 +104,7 @@ export class TradingTrading {
    * ViewSet for trading portfolios.
    */
   async portfoliosRetrieve(id: number): Promise<Models.Portfolio> {
-    const response = await this.client.request('GET', `/api/trading/portfolios/${id}/`);
+    const response = await this.client.request('GET', `/apix/trading/portfolios/${id}/`);
     return response;
   }
 
@@ -114,7 +114,7 @@ export class TradingTrading {
    * Get current user's portfolio.
    */
   async portfoliosMeRetrieve(): Promise<Models.Portfolio> {
-    const response = await this.client.request('GET', "/api/trading/portfolios/me/");
+    const response = await this.client.request('GET', "/apix/trading/portfolios/me/");
     return response;
   }
 
@@ -124,7 +124,7 @@ export class TradingTrading {
    * Get portfolio statistics.
    */
   async portfoliosStatsRetrieve(): Promise<Models.PortfolioStats> {
-    const response = await this.client.request('GET', "/api/trading/portfolios/stats/");
+    const response = await this.client.request('GET', "/apix/trading/portfolios/stats/");
     return response;
   }
 

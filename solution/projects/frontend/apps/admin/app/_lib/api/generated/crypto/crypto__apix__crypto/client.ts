@@ -29,7 +29,7 @@ export class CryptoCrypto {
     } else {
       params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
-    const response = await this.client.request('GET', "/api/crypto/coins/", { params });
+    const response = await this.client.request('GET', "/apix/crypto/coins/", { params });
     return response;
   }
 
@@ -39,7 +39,7 @@ export class CryptoCrypto {
    * ViewSet for cryptocurrency coins.
    */
   async coinsRetrieve(id: number): Promise<Models.Coin> {
-    const response = await this.client.request('GET', `/api/crypto/coins/${id}/`);
+    const response = await this.client.request('GET', `/apix/crypto/coins/${id}/`);
     return response;
   }
 
@@ -49,7 +49,7 @@ export class CryptoCrypto {
    * Get cryptocurrency statistics.
    */
   async coinsStatsRetrieve(): Promise<Models.CoinStats> {
-    const response = await this.client.request('GET', "/api/crypto/coins/stats/");
+    const response = await this.client.request('GET', "/apix/crypto/coins/stats/");
     return response;
   }
 
@@ -70,7 +70,7 @@ export class CryptoCrypto {
     } else {
       params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
-    const response = await this.client.request('GET', "/api/crypto/exchanges/", { params });
+    const response = await this.client.request('GET', "/apix/crypto/exchanges/", { params });
     return response;
   }
 
@@ -80,7 +80,7 @@ export class CryptoCrypto {
    * ViewSet for cryptocurrency exchanges.
    */
   async exchangesRetrieve(slug: string): Promise<Models.Exchange> {
-    const response = await this.client.request('GET', `/api/crypto/exchanges/${slug}/`);
+    const response = await this.client.request('GET', `/apix/crypto/exchanges/${slug}/`);
     return response;
   }
 
@@ -101,7 +101,7 @@ export class CryptoCrypto {
     } else {
       params = { ordering: args[0], page: args[1], page_size: args[2], search: args[3] };
     }
-    const response = await this.client.request('GET', "/api/crypto/wallets/", { params });
+    const response = await this.client.request('GET', "/apix/crypto/wallets/", { params });
     return response;
   }
 
@@ -111,7 +111,7 @@ export class CryptoCrypto {
    * ViewSet for user wallets.
    */
   async walletsRetrieve(id: string): Promise<Models.Wallet> {
-    const response = await this.client.request('GET', `/api/crypto/wallets/${id}/`);
+    const response = await this.client.request('GET', `/apix/crypto/wallets/${id}/`);
     return response;
   }
 

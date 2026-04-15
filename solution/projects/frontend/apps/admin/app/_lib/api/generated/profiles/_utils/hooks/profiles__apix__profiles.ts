@@ -20,7 +20,7 @@
  */
 import useSWR from 'swr'
 import { useSWRConfig } from 'swr'
-import * as Fetchers from '../fetchers/profiles__api__profiles'
+import * as Fetchers from '../fetchers/profiles__apix__profiles'
 import type { API } from '../../index'
 import type { PaginatedUserProfileList } from '../schemas/PaginatedUserProfileList.schema'
 import type { PatchedUserProfileRequest } from '../schemas/PatchedUserProfileRequest.schema'
@@ -35,7 +35,7 @@ import type { UserProfileUpdateRequest } from '../schemas/UserProfileUpdateReque
  * List user profiles
  *
  * @method GET
- * @path /api/profiles/profiles/
+ * @path /apix/profiles/profiles/
  */
 export function useProfilesProfilesList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedUserProfileList>> {
   return useSWR<PaginatedUserProfileList>(
@@ -49,7 +49,7 @@ export function useProfilesProfilesList(params?: { ordering?: string; page?: num
  * Create user profile
  *
  * @method POST
- * @path /api/profiles/profiles/
+ * @path /apix/profiles/profiles/
  */
 export function useCreateProfilesProfilesCreate() {
   const { mutate } = useSWRConfig()
@@ -67,11 +67,11 @@ export function useCreateProfilesProfilesCreate() {
  * Get user profile
  *
  * @method GET
- * @path /api/profiles/profiles/{id}/
+ * @path /apix/profiles/profiles/{id}/
  */
 export function useProfilesProfilesRetrieve(id: number, client?: API): ReturnType<typeof useSWR<UserProfile>> {
   return useSWR<UserProfile>(
-    ['profiles-profile', id],
+    id ? ['profiles-profile', id] : null,
     () => Fetchers.getProfilesProfilesRetrieve(id, client)
   )
 }
@@ -81,7 +81,7 @@ export function useProfilesProfilesRetrieve(id: number, client?: API): ReturnTyp
  * Update user profile
  *
  * @method PUT
- * @path /api/profiles/profiles/{id}/
+ * @path /apix/profiles/profiles/{id}/
  */
 export function useUpdateProfilesProfilesUpdate() {
   const { mutate } = useSWRConfig()
@@ -100,7 +100,7 @@ export function useUpdateProfilesProfilesUpdate() {
  * Partially update user profile
  *
  * @method PATCH
- * @path /api/profiles/profiles/{id}/
+ * @path /apix/profiles/profiles/{id}/
  */
 export function usePartialUpdateProfilesProfilesPartialUpdate() {
   const { mutate } = useSWRConfig()
@@ -108,7 +108,8 @@ export function usePartialUpdateProfilesProfilesPartialUpdate() {
   return async (id: number, data?: PatchedUserProfileUpdateRequest, client?: API): Promise<UserProfileUpdate> => {
     const result = await Fetchers.partialUpdateProfilesProfilesPartialUpdate(id, data, client)
     // Revalidate related queries
-    mutate('profiles-profiles-partial')
+    mutate('profiles-profiles')
+    mutate('profiles-profile')
     return result
   }
 }
@@ -118,7 +119,7 @@ export function usePartialUpdateProfilesProfilesPartialUpdate() {
  * Delete user profile
  *
  * @method DELETE
- * @path /api/profiles/profiles/{id}/
+ * @path /apix/profiles/profiles/{id}/
  */
 export function useDeleteProfilesProfilesDestroy() {
   const { mutate } = useSWRConfig()
@@ -137,7 +138,7 @@ export function useDeleteProfilesProfilesDestroy() {
  * Get my profile
  *
  * @method GET
- * @path /api/profiles/profiles/me/
+ * @path /apix/profiles/profiles/me/
  */
 export function useProfilesProfilesMeRetrieve(client?: API): ReturnType<typeof useSWR<UserProfile>> {
   return useSWR<UserProfile>(
@@ -151,7 +152,7 @@ export function useProfilesProfilesMeRetrieve(client?: API): ReturnType<typeof u
  * Get my profile
  *
  * @method PUT
- * @path /api/profiles/profiles/me/
+ * @path /apix/profiles/profiles/me/
  */
 export function useUpdateProfilesProfilesMeUpdate() {
   const { mutate } = useSWRConfig()
@@ -169,7 +170,7 @@ export function useUpdateProfilesProfilesMeUpdate() {
  * Get my profile
  *
  * @method PATCH
- * @path /api/profiles/profiles/me/
+ * @path /apix/profiles/profiles/me/
  */
 export function usePartialUpdateProfilesProfilesMePartialUpdate() {
   const { mutate } = useSWRConfig()
@@ -177,7 +178,7 @@ export function usePartialUpdateProfilesProfilesMePartialUpdate() {
   return async (data?: PatchedUserProfileRequest, client?: API): Promise<UserProfile> => {
     const result = await Fetchers.partialUpdateProfilesProfilesMePartialUpdate(data, client)
     // Revalidate related queries
-    mutate('profiles-profiles-me-partial')
+    mutate('profiles-profiles-me')
     return result
   }
 }
@@ -187,7 +188,7 @@ export function usePartialUpdateProfilesProfilesMePartialUpdate() {
  * Get profile statistics
  *
  * @method GET
- * @path /api/profiles/profiles/stats/
+ * @path /apix/profiles/profiles/stats/
  */
 export function useProfilesProfilesStatsRetrieve(client?: API): ReturnType<typeof useSWR<UserProfileStats>> {
   return useSWR<UserProfileStats>(

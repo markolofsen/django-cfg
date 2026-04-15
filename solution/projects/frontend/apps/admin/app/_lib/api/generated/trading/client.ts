@@ -1,4 +1,4 @@
-import { TradingTrading } from "./trading__api__trading";
+import { TradingTrading } from "./trading__apix__trading";
 import { HttpClientAdapter, FetchAdapter } from "./http";
 import { APIError, NetworkError } from "./errors";
 import { APILogger, type LoggerConfig } from "./logger";
@@ -157,6 +157,14 @@ export class APIClient {
     // CSRF not needed - SessionAuthentication not enabled in DRF config
     // Your API uses JWT/Token authentication (no CSRF required)
 
+    // Add Authorization header from tokenGetter (Bearer token / API key)
+    if (!headers['Authorization']) {
+      const token = this.getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+
     // Log request
     if (this.logger) {
       this.logger.logRequest({
@@ -242,55 +250,52 @@ export class APIClient {
         throw error;
       }
 
-      // Detect CORS errors and dispatch event
-      const isCORSError = error instanceof TypeError &&
-        (error.message.toLowerCase().includes('cors') ||
-         error.message.toLowerCase().includes('failed to fetch') ||
-         error.message.toLowerCase().includes('network request failed'));
+      // Classify network error using PerformanceResourceTiming.
+      // Browser intentionally makes CORS errors indistinguishable from network failures
+      // (same TypeError: "Failed to fetch") for security reasons. We use PerformanceResourceTiming
+      // as the best available heuristic:
+      //   - Entry exists with responseStatus === 0 → request reached server, JS blocked → likely CORS
+      //   - No entry / entry missing → connection never established → server unavailable / DNS / offline
+      // All cases are dispatched as 'network-error' with a `possibly_cors` flag.
+      let possiblyCors = false;
+      if (error instanceof TypeError && typeof window !== 'undefined') {
+        try {
+          const isCrossOrigin = (() => {
+            try { return new URL(url).origin !== window.location.origin; } catch { return false; }
+          })();
+          if (isCrossOrigin) {
+            const entries = performance.getEntriesByName(url, 'resource');
+            if (entries.length > 0) {
+              const last = entries[entries.length - 1] as PerformanceResourceTiming;
+              possiblyCors = 'responseStatus' in last && (last as any).responseStatus === 0;
+            }
+          }
+        } catch { /* ignore — PerformanceResourceTiming not available */ }
+      }
 
-      // Log specific error type first
       if (this.logger) {
-        if (isCORSError) {
-          this.logger.error(`🚫 CORS Error: ${method} ${url}`);
-          this.logger.error(`  → ${error instanceof Error ? error.message : String(error)}`);
-          this.logger.error(`  → Configure security_domains parameter on the server`);
-        } else {
-          this.logger.error(`⚠️  Network Error: ${method} ${url}`);
-          this.logger.error(`  → ${error instanceof Error ? error.message : String(error)}`);
+        this.logger.error(`⚠️  Network Error: ${method} ${url}`);
+        this.logger.error(`  → ${error instanceof Error ? error.message : String(error)}`);
+        if (possiblyCors) {
+          this.logger.error(`  → Possibly blocked by CORS policy (configure CORS on the server)`);
         }
       }
 
-      // Dispatch browser events
+      // Dispatch network-error event with possibly_cors hint
       if (typeof window !== 'undefined') {
         try {
-          if (isCORSError) {
-            // Dispatch CORS-specific error event
-            window.dispatchEvent(new CustomEvent('cors-error', {
-              detail: {
-                url: url,
-                method: method,
-                error: error instanceof Error ? error.message : String(error),
-                timestamp: new Date(),
-              },
-              bubbles: true,
-              cancelable: false,
-            }));
-          } else {
-            // Dispatch generic network error event
-            window.dispatchEvent(new CustomEvent('network-error', {
-              detail: {
-                url: url,
-                method: method,
-                error: error instanceof Error ? error.message : String(error),
-                timestamp: new Date(),
-              },
-              bubbles: true,
-              cancelable: false,
-            }));
-          }
-        } catch (eventError) {
-          // Silently fail - event dispatch should never crash the app
-        }
+          window.dispatchEvent(new CustomEvent('network-error', {
+            detail: {
+              url: url,
+              method: method,
+              error: error instanceof Error ? error.message : String(error),
+              possibly_cors: possiblyCors,
+              timestamp: new Date(),
+            },
+            bubbles: true,
+            cancelable: false,
+          }));
+        } catch { /* silently ignore — event dispatch must never crash the app */ }
       }
 
       // Wrap other errors as NetworkError

@@ -3,28 +3,14 @@
 import * as Enums from "../enums";
 
 /**
+ * Serializer for portfolio statistics.
  * 
  * Response model (includes read-only fields).
  */
-export interface PaginatedOrderList {
-  /** Total number of items across all pages */
-  count: number;
-  /** Current page number (1-based) */
-  page: number;
-  /** Total number of pages */
-  pages: number;
-  /** Number of items per page */
-  page_size: number;
-  /** Whether there is a next page */
-  has_next: boolean;
-  /** Whether there is a previous page */
-  has_previous: boolean;
-  /** Next page number (null if no next page) */
-  next_page?: number | null;
-  /** Previous page number (null if no previous page) */
-  previous_page?: number | null;
-  /** Array of items for current page */
-  results: Array<Order>;
+export interface PortfolioStats {
+  total_portfolios: number;
+  total_volume_usd: any;
+  total_orders: number;
 }
 
 /**
@@ -33,6 +19,26 @@ export interface PaginatedOrderList {
  * Request model (no read-only fields).
  */
 export interface OrderCreateRequest {
+  /** Trading pair (e.g., BTC/USDT) */
+  symbol: string;
+  /** * `market` - Market
+  * `limit` - Limit
+  * `stop_loss` - Stop Loss */
+  order_type?: Enums.OrderOrderType;
+  /** * `buy` - Buy
+  * `sell` - Sell */
+  side: Enums.OrderSide;
+  quantity: any;
+  price?: any | null;
+}
+
+/**
+ * Serializer for orders.
+ * 
+ * Request model (no read-only fields).
+ */
+export interface OrderRequest {
+  portfolio: number;
   /** Trading pair (e.g., BTC/USDT) */
   symbol: string;
   /** * `market` - Market
@@ -99,26 +105,6 @@ export interface Order {
  * 
  * Request model (no read-only fields).
  */
-export interface OrderRequest {
-  portfolio: number;
-  /** Trading pair (e.g., BTC/USDT) */
-  symbol: string;
-  /** * `market` - Market
-  * `limit` - Limit
-  * `stop_loss` - Stop Loss */
-  order_type?: Enums.OrderOrderType;
-  /** * `buy` - Buy
-  * `sell` - Sell */
-  side: Enums.OrderSide;
-  quantity: any;
-  price?: any | null;
-}
-
-/**
- * Serializer for orders.
- * 
- * Request model (no read-only fields).
- */
 export interface PatchedOrderRequest {
   portfolio?: number;
   /** Trading pair (e.g., BTC/USDT) */
@@ -132,31 +118,6 @@ export interface PatchedOrderRequest {
   side?: Enums.OrderSide;
   quantity?: any;
   price?: any | null;
-}
-
-/**
- * 
- * Response model (includes read-only fields).
- */
-export interface PaginatedPortfolioList {
-  /** Total number of items across all pages */
-  count: number;
-  /** Current page number (1-based) */
-  page: number;
-  /** Total number of pages */
-  pages: number;
-  /** Number of items per page */
-  page_size: number;
-  /** Whether there is a next page */
-  has_next: boolean;
-  /** Whether there is a previous page */
-  has_previous: boolean;
-  /** Next page number (null if no next page) */
-  next_page?: number | null;
-  /** Previous page number (null if no previous page) */
-  previous_page?: number | null;
-  /** Array of items for current page */
-  results: Array<Portfolio>;
 }
 
 /**
@@ -182,13 +143,52 @@ export interface Portfolio {
 }
 
 /**
- * Serializer for portfolio statistics.
  * 
  * Response model (includes read-only fields).
  */
-export interface PortfolioStats {
-  total_portfolios: number;
-  total_volume_usd: any;
-  total_orders: number;
+export interface PaginatedOrderList {
+  /** Total number of items across all pages */
+  count: number;
+  /** Current page number (1-based) */
+  page: number;
+  /** Total number of pages */
+  pages: number;
+  /** Number of items per page */
+  page_size: number;
+  /** Whether there is a next page */
+  has_next: boolean;
+  /** Whether there is a previous page */
+  has_previous: boolean;
+  /** Next page number (null if no next page) */
+  next_page?: number | null;
+  /** Previous page number (null if no previous page) */
+  previous_page?: number | null;
+  /** Array of items for current page */
+  results: Array<Order>;
+}
+
+/**
+ * 
+ * Response model (includes read-only fields).
+ */
+export interface PaginatedPortfolioList {
+  /** Total number of items across all pages */
+  count: number;
+  /** Current page number (1-based) */
+  page: number;
+  /** Total number of pages */
+  pages: number;
+  /** Number of items per page */
+  page_size: number;
+  /** Whether there is a next page */
+  has_next: boolean;
+  /** Whether there is a previous page */
+  has_previous: boolean;
+  /** Next page number (null if no next page) */
+  next_page?: number | null;
+  /** Previous page number (null if no previous page) */
+  previous_page?: number | null;
+  /** Array of items for current page */
+  results: Array<Portfolio>;
 }
 

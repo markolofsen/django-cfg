@@ -20,7 +20,7 @@
  */
 import useSWR from 'swr'
 import { useSWRConfig } from 'swr'
-import * as Fetchers from '../fetchers/trading__api__trading'
+import * as Fetchers from '../fetchers/trading__apix__trading'
 import type { API } from '../../index'
 import type { Order } from '../schemas/Order.schema'
 import type { OrderCreate } from '../schemas/OrderCreate.schema'
@@ -36,7 +36,7 @@ import type { PortfolioStats } from '../schemas/PortfolioStats.schema'
  * List orders
  *
  * @method GET
- * @path /api/trading/orders/
+ * @path /apix/trading/orders/
  */
 export function useTradingOrdersList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedOrderList>> {
   return useSWR<PaginatedOrderList>(
@@ -50,7 +50,7 @@ export function useTradingOrdersList(params?: { ordering?: string; page?: number
  * Create order
  *
  * @method POST
- * @path /api/trading/orders/
+ * @path /apix/trading/orders/
  */
 export function useCreateTradingOrdersCreate() {
   const { mutate } = useSWRConfig()
@@ -68,11 +68,11 @@ export function useCreateTradingOrdersCreate() {
  * Get order
  *
  * @method GET
- * @path /api/trading/orders/{id}/
+ * @path /apix/trading/orders/{id}/
  */
 export function useTradingOrdersRetrieve(id: number, client?: API): ReturnType<typeof useSWR<Order>> {
   return useSWR<Order>(
-    ['trading-order', id],
+    id ? ['trading-order', id] : null,
     () => Fetchers.getTradingOrdersRetrieve(id, client)
   )
 }
@@ -82,7 +82,7 @@ export function useTradingOrdersRetrieve(id: number, client?: API): ReturnType<t
  * API operation
  *
  * @method PUT
- * @path /api/trading/orders/{id}/
+ * @path /apix/trading/orders/{id}/
  */
 export function useUpdateTradingOrdersUpdate() {
   const { mutate } = useSWRConfig()
@@ -101,7 +101,7 @@ export function useUpdateTradingOrdersUpdate() {
  * API operation
  *
  * @method PATCH
- * @path /api/trading/orders/{id}/
+ * @path /apix/trading/orders/{id}/
  */
 export function usePartialUpdateTradingOrdersPartialUpdate() {
   const { mutate } = useSWRConfig()
@@ -109,7 +109,8 @@ export function usePartialUpdateTradingOrdersPartialUpdate() {
   return async (id: number, data?: PatchedOrderRequest, client?: API): Promise<Order> => {
     const result = await Fetchers.partialUpdateTradingOrdersPartialUpdate(id, data, client)
     // Revalidate related queries
-    mutate('trading-orders-partial')
+    mutate('trading-orders')
+    mutate('trading-order')
     return result
   }
 }
@@ -119,7 +120,7 @@ export function usePartialUpdateTradingOrdersPartialUpdate() {
  * API operation
  *
  * @method DELETE
- * @path /api/trading/orders/{id}/
+ * @path /apix/trading/orders/{id}/
  */
 export function useDeleteTradingOrdersDestroy() {
   const { mutate } = useSWRConfig()
@@ -138,7 +139,7 @@ export function useDeleteTradingOrdersDestroy() {
  * List portfolios
  *
  * @method GET
- * @path /api/trading/portfolios/
+ * @path /apix/trading/portfolios/
  */
 export function useTradingPortfoliosList(params?: { ordering?: string; page?: number; page_size?: number; search?: string }, client?: API): ReturnType<typeof useSWR<PaginatedPortfolioList>> {
   return useSWR<PaginatedPortfolioList>(
@@ -152,11 +153,11 @@ export function useTradingPortfoliosList(params?: { ordering?: string; page?: nu
  * Get portfolio
  *
  * @method GET
- * @path /api/trading/portfolios/{id}/
+ * @path /apix/trading/portfolios/{id}/
  */
 export function useTradingPortfoliosRetrieve(id: number, client?: API): ReturnType<typeof useSWR<Portfolio>> {
   return useSWR<Portfolio>(
-    ['trading-portfolio', id],
+    id ? ['trading-portfolio', id] : null,
     () => Fetchers.getTradingPortfoliosRetrieve(id, client)
   )
 }
@@ -166,7 +167,7 @@ export function useTradingPortfoliosRetrieve(id: number, client?: API): ReturnTy
  * Get my portfolio
  *
  * @method GET
- * @path /api/trading/portfolios/me/
+ * @path /apix/trading/portfolios/me/
  */
 export function useTradingPortfoliosMeRetrieve(client?: API): ReturnType<typeof useSWR<Portfolio>> {
   return useSWR<Portfolio>(
@@ -180,7 +181,7 @@ export function useTradingPortfoliosMeRetrieve(client?: API): ReturnType<typeof 
  * Get portfolio statistics
  *
  * @method GET
- * @path /api/trading/portfolios/stats/
+ * @path /apix/trading/portfolios/stats/
  */
 export function useTradingPortfoliosStatsRetrieve(client?: API): ReturnType<typeof useSWR<PortfolioStats>> {
   return useSWR<PortfolioStats>(

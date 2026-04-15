@@ -17,7 +17,7 @@ export const CoinListSchema = z.object({
   current_price_usd: z.string().optional(),
   market_cap_usd: z.string().optional(),
   price_change_24h_percent: z.string().optional(),
-  logo_url: z.string().refine((v) => v === '' || v.startsWith('/') || v.startsWith('http://') || v.startsWith('https://'), { message: 'Must be a URL or relative path' }).optional(),
+  logo_url: z.string().max(200).optional(),
   rank: z.number().int().min(0.0).max(2147483647.0).optional(),
   is_price_up_24h: z.boolean(),
 })

@@ -21,16 +21,16 @@ python manage.py generate_client --groups trading --typescript
 ## Operations
 
 **trading:**
-- `POST` /api/trading/orders/ → `trading_orders_create`
-- `DELETE` /api/trading/orders/{id}/ → `trading_orders_destroy`
-- `GET` /api/trading/orders/ → `trading_orders_list`
-- `PATCH` /api/trading/orders/{id}/ → `trading_orders_partial_update`
-- `GET` /api/trading/orders/{id}/ → `trading_orders_retrieve`
-- `PUT` /api/trading/orders/{id}/ → `trading_orders_update`
-- `GET` /api/trading/portfolios/ → `trading_portfolios_list`
-- `GET` /api/trading/portfolios/me/ → `trading_portfolios_me_retrieve`
-- `GET` /api/trading/portfolios/{id}/ → `trading_portfolios_retrieve`
-- `GET` /api/trading/portfolios/stats/ → `trading_portfolios_stats_retrieve`
+- `POST` /apix/trading/orders/ → `trading_orders_create`
+- `DELETE` /apix/trading/orders/{id}/ → `trading_orders_destroy`
+- `GET` /apix/trading/orders/ → `trading_orders_list`
+- `PATCH` /apix/trading/orders/{id}/ → `trading_orders_partial_update`
+- `GET` /apix/trading/orders/{id}/ → `trading_orders_retrieve`
+- `PUT` /apix/trading/orders/{id}/ → `trading_orders_update`
+- `GET` /apix/trading/portfolios/ → `trading_portfolios_list`
+- `GET` /apix/trading/portfolios/me/ → `trading_portfolios_me_retrieve`
+- `GET` /apix/trading/portfolios/{id}/ → `trading_portfolios_retrieve`
+- `GET` /apix/trading/portfolios/stats/ → `trading_portfolios_stats_retrieve`
 
 ## Usage
 
