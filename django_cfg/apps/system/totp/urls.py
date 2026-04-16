@@ -43,7 +43,7 @@ urlpatterns = [
     # Device management endpoints
     path(
         "devices/",
-        DeviceViewSet.as_view({"get": "list"}),
+        DeviceViewSet.as_view({"get": "devices"}),
         name="devices-list",
     ),
     path(

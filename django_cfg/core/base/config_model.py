@@ -765,6 +765,62 @@ class DjangoConfig(BaseModel):
             return True
         return False
 
+    def build_media_url(
+        self,
+        path: Optional[str],
+        fallback: Optional[str] = None,
+    ) -> Optional[str]:
+        """
+        Build an absolute URL for a media file from its storage path.
+
+        Combines ``api_url`` + ``media_url`` + *path*, handling both relative
+        and absolute (CDN) ``media_url`` values automatically.
+
+        Args:
+            path: Relative path as stored in a model field, e.g.
+                  ``"avatars/user_42.jpg"``.  Returns *fallback* if falsy.
+            fallback: Value returned when *path* is empty/None (default ``None``).
+
+        Returns:
+            Absolute URL string, or *fallback*.
+
+        Examples::
+
+            config.build_media_url("avatars/user_42.jpg")
+            # media_url="/media/"  → "https://api.example.com/media/avatars/user_42.jpg"
+            # media_url="https://cdn.example.com/media/"
+            #                      → "https://cdn.example.com/media/avatars/user_42.jpg"
+
+            config.build_media_url(None, fallback="/static/no-avatar.png")
+            # → "/static/no-avatar.png"
+        """
+        from ..utils.url_helpers import build_media_url as _build
+        return _build(path, api_url=self.api_url, media_url=self.media_url, fallback=fallback)
+
+    def build_api_url(self, path: str) -> str:
+        """
+        Build an absolute URL relative to *api_url*.
+
+        Useful for constructing API proxy URLs (not media files).
+        Strips leading/trailing slashes from *path* before joining so
+        double-slashes are never produced.
+
+        Args:
+            path: URL path segment, e.g. ``"apix/catalog_photos/photo/abc.jpg"``.
+
+        Returns:
+            Absolute URL string.
+
+        Examples::
+
+            config.build_api_url("apix/catalog_photos/photo/abc.jpg")
+            # → "https://api.example.com/apix/catalog_photos/photo/abc.jpg"
+
+            config.build_api_url(f"{config.openapi_client.api_prefix}/catalog_photos/photo/{photo_id}.jpg")
+            # → "https://api.example.com/apix/catalog_photos/photo/<uuid>.jpg"
+        """
+        return f"{self.api_url.rstrip('/')}/{path.lstrip('/')}"
+
 
 __all__ = ["DjangoConfig"]
 

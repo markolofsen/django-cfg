@@ -1,7 +1,7 @@
 """Views for TOTP device management."""
 
 from django.db import transaction
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -20,25 +20,12 @@ from ..services import BackupCodeService, TOTPService
 logger = get_logger(__name__)
 
 
-@extend_schema_view(
-    list=extend_schema(
-        responses={200: DeviceListResponseSerializer},
-        tags=["TOTP Management"],
-    ),
-    disable=extend_schema(
-        request=DisableSerializer,
-        responses={
-            200: {"description": "2FA disabled successfully"},
-            400: {"description": "Invalid code"},
-        },
-        tags=["TOTP Management"],
-    ),
-)
 class DeviceViewSet(viewsets.GenericViewSet):
     """ViewSet for managing TOTP devices."""
 
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = DeviceListSerializer
+    pagination_class = None
 
     def get_queryset(self):
         """Return devices for authenticated user."""
@@ -46,8 +33,12 @@ class DeviceViewSet(viewsets.GenericViewSet):
             return TOTPDevice.objects.none()
         return TOTPDevice.objects.filter(user=self.request.user)
 
+    @extend_schema(
+        responses={200: DeviceListResponseSerializer},
+        tags=["TOTP Management"],
+    )
     @action(detail=False, methods=["get"], url_path="list", url_name="list")
-    def list(self, request):
+    def devices(self, request):
         """List all TOTP devices for user."""
         devices = self.get_queryset()
         serializer = self.get_serializer(devices, many=True)
@@ -121,6 +112,14 @@ class DeviceViewSet(viewsets.GenericViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        request=DisableSerializer,
+        responses={
+            200: {"description": "2FA disabled successfully"},
+            400: {"description": "Invalid code"},
+        },
+        tags=["TOTP Management"],
+    )
     @action(detail=False, methods=["post"], url_path="disable", url_name="disable")
     @transaction.atomic
     def disable(self, request):

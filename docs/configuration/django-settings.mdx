@@ -622,6 +622,94 @@ def get_allowed_hosts(self) -> List[str]:
 
 Auto-generated from `security_domains`, including localhost variants for development.
 
+### build_media_url
+
+```python
+def build_media_url(
+    self,
+    path: Optional[str],
+    fallback: Optional[str] = None,
+) -> Optional[str]:
+```
+
+Builds an **absolute URL** for a media file from its storage path, handling both
+relative and CDN-absolute `media_url` values automatically.
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `path` | `str \| None` | Relative path as stored in a model field, e.g. `"avatars/user_42.jpg"`. Returns `fallback` if empty/None. |
+| `fallback` | `str \| None` | Value returned when `path` is empty (default `None`). |
+
+```python
+# media_url = "/media/"  (relative — prepends api_url)
+config.build_media_url("avatars/user_42.jpg")
+# → "https://api.example.com/media/avatars/user_42.jpg"
+
+# media_url = "https://cdn.example.com/media/"  (absolute CDN)
+config.build_media_url("avatars/user_42.jpg")
+# → "https://cdn.example.com/media/avatars/user_42.jpg"
+
+# Empty path → fallback
+config.build_media_url(None, fallback="/static/no-avatar.png")
+# → "/static/no-avatar.png"
+```
+
+**Standalone helpers** (when the config isn't directly accessible):
+
+```python
+from django_cfg import get_media_url, build_media_url
+
+# Auto-reads current config — use anywhere after Django is set up:
+avatar_url = get_media_url(user.avatar)
+logo_url   = get_media_url(org.logo, fallback="/static/default-logo.png")
+
+# Explicit — useful in tests or code running before Django starts:
+url = build_media_url(
+    "logos/company.png",
+    api_url="https://api.example.com",
+    media_url="/media/",
+)
+```
+
+### build_api_url
+
+```python
+def build_api_url(self, path: str) -> str:
+```
+
+Builds an **absolute URL** relative to `api_url`. Use this for API proxy URLs — photo endpoints, download routes, webhooks — anything that goes through the backend API rather than the media storage.
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `path` | `str` | URL path segment, e.g. `"apix/catalog_photos/photo/abc.jpg"`. Leading slash is stripped automatically. |
+
+```python
+config.build_api_url("apix/catalog_photos/photo/abc.jpg")
+# → "https://api.example.com/apix/catalog_photos/photo/abc.jpg"
+
+# Typical usage in a service:
+prefix = config.openapi_client.api_prefix  # e.g. "apix"
+url = config.build_api_url(f"{prefix}/catalog_photos/photo/{photo_id}.jpg")
+# → "https://api.example.com/apix/catalog_photos/photo/<uuid>.jpg"
+```
+
+**Standalone helpers**:
+
+```python
+from django_cfg import get_api_url, build_api_url
+
+# Auto-reads current config:
+url = get_api_url("apix/catalog_photos/photo/abc.jpg")
+# → "https://api.example.com/apix/catalog_photos/photo/abc.jpg"
+
+# Explicit:
+url = build_api_url("apix/photo/abc.jpg", api_url="https://api.example.com")
+```
+
+<Callout type="info">
+**`build_api_url` vs `build_media_url`** — use `build_media_url` for files served from Django's `MEDIA_ROOT` (user uploads, avatars). Use `build_api_url` for URLs that go through an API view or proxy (photo watermarking endpoint, download routes, etc.).
+</Callout>
+
 ### Other Methods
 
 ```python

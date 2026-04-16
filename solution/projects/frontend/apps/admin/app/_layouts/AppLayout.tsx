@@ -95,12 +95,6 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
       resetAfterDays: 7,
     },
 
-    // MCP Chat configuration
-    mcpChat: {
-      enabled: false,
-      autoDetectEnvironment: false,
-    },
-
     // i18n configuration for locale switcher
     i18n: {
       locale,

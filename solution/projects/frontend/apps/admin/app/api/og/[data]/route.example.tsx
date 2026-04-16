@@ -1,61 +1,30 @@
 /**
- * OG Image Route Handler with dynamic data parameter
- * 
- * See README.md in this directory for setup instructions.
- * 
- * Uses /api/og/[data] instead of /api/og?data=... to avoid Next.js
- * stripping query parameters in internal requests
- * 
- * Note: This route is automatically excluded from static export by createOgImageDynamicRoute
+ * OG Image Route Handler Example
+ *
+ * This is an example of a custom OG image route. The current implementation
+ * uses Django's built-in og-image renderer via @djangocfg/nextjs/og-image.
+ *
+ * For dynamic OG images, configure the Django backend og-image endpoint
+ * and use buildOgUrl / withOgImage from @djangocfg/nextjs/og-image in metadata.
+ *
+ * See app/_core/metadata.ts for usage.
+ *
+ * Note: This route is automatically excluded from static export by Next.js
+ * when using output: 'export' mode — route handlers are not statically exported.
  */
 
-import { settings } from '@core/settings';
-import { createOgImageDynamicRoute } from '@djangocfg/nextjs/og-image';
-import { DefaultTemplate } from '@djangocfg/nextjs/og-image/components';
+import { buildOgUrl, createOgMetadata } from '@djangocfg/nextjs/og-image';
 
-import type { NextRequest } from 'next/server';
-
-/**
- * OG Image Route Handler with dynamic data parameter
- * 
- * Uses /api/og/[data] instead of /api/og?data=... to avoid Next.js
- * stripping query parameters in internal requests
- * 
- * Note: This route is automatically excluded from static export by createOgImageDynamicRoute
- */
-
-export const runtime = 'nodejs';
-export const revalidate = false;
-
-const { GET: handlerGET } = createOgImageDynamicRoute({
-  template: DefaultTemplate,
-  defaultProps: {
-    siteName: settings.app.name,
-    logo: settings.app.media.logoVector,
-    // Customize to match previous OgImageTemplate style
-    backgroundType: 'gradient',
-    gradientStart: '#0f172a',
-    gradientEnd: '#334155',
-    titleSize: 80, // Larger title like custom template
-    titleWeight: 800,
-    titleColor: 'white',
-    descriptionSize: 36, // Larger description
-    descriptionColor: 'rgba(226, 232, 240, 0.9)',
-    siteNameSize: 32, // Larger site name
-    siteNameColor: 'rgba(255, 255, 255, 0.95)',
-    padding: 80,
-    logoSize: 56, // Larger logo
-  },
-  fonts: [
-    { family: 'Manrope', weight: 700 },
-    { family: 'Manrope', weight: 500 },
-  ],
-  size: { width: 1200, height: 630 },
+// Example: building an OG image URL for a specific page
+export const exampleOgUrl = buildOgUrl({
+  title: 'Django CFG Admin',
+  description: 'Modern Django framework with type-safe Pydantic v2 configuration',
+  preset: 'DARK_BLUE',
 });
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ data: string }> }
-) {
-  return handlerGET(request, context);
-}
+// Example: generating metadata with OG image for a page
+export const exampleMetadata = createOgMetadata({
+  title: 'Django CFG Admin',
+  description: 'Modern Django framework with type-safe Pydantic v2 configuration',
+  preset: 'DARK_BLUE',
+});

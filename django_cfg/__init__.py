@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.0.32"
+__version__ = "2.0.36"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -64,7 +64,7 @@ from .core.exceptions import (
     CacheError,
     EnvironmentError,
 )
-from .core.utils.url_helpers import get_ticket_url, get_otp_url
+from .core.utils.url_helpers import get_ticket_url, get_otp_url, get_media_url, build_media_url, build_api_url, get_api_url
 
 # ---------------------------------------------------------------------------
 # [GROUP 2] Infrastructure models
@@ -339,7 +339,7 @@ __all__ = [
     "add_django_cfg_urls", "get_django_cfg_urls_info",
     "DjangoCfgException", "ConfigurationError", "ValidationError",
     "DatabaseError", "CacheError", "EnvironmentError",
-    "get_ticket_url", "get_otp_url",
+    "get_ticket_url", "get_otp_url", "get_media_url", "build_media_url", "build_api_url", "get_api_url",
     # infrastructure
     "DatabaseConfig", "CacheConfig", "SecurityConfig", "LoggingConfig",
     # API

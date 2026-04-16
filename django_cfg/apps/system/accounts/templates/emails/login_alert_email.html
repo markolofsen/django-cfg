@@ -1,140 +1,278 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New sign-in to your account</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f8f9fa;
-        }
-        .container {
-            background: white;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-        h1 {
-            font-size: 22px;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin: 0 0 8px 0;
-        }
-        .subtitle {
-            color: #6b7280;
-            font-size: 15px;
-            margin: 0;
-        }
-        .details-table {
-            width: 100%;
-            margin: 24px 0;
-            border-collapse: collapse;
-        }
-        .details-table td {
-            padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 15px;
-        }
-        .details-table td:first-child {
-            color: #6b7280;
-            width: 120px;
-            font-weight: 500;
-        }
-        .details-table td:last-child {
-            color: #1a1a1a;
-            font-weight: 500;
-        }
-        .details-table tr:last-child td {
-            border-bottom: none;
-        }
-        .warning-box {
-            background: #fff7ed;
-            border: 1px solid #fed7aa;
-            border-radius: 8px;
-            padding: 16px 20px;
-            margin: 24px 0;
-            font-size: 14px;
-            color: #9a3412;
-        }
-        .button-container {
-            text-align: center;
-            margin: 28px 0;
-        }
-        .button {
-            display: inline-block;
-            background: #2563eb;
-            color: white !important;
-            padding: 12px 28px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 15px;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 32px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            color: #9ca3af;
-            font-size: 13px;
-        }
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>New sign-in detected — {{ project_name }}</title>
+    <style type="text/css">
+      * { box-sizing: border-box; }
+      body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+      table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: #f0f2f5;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+
+      .email-bg { background-color: #f0f2f5; padding: 48px 16px; }
+
+      .email-card {
+        max-width: 520px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+      }
+
+      /* Header */
+      .email-header {
+        background-color: #0f0f1a;
+        padding: 26px 36px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-name {
+        font-size: 17px;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: -0.2px;
+      }
+
+      /* Alert strip */
+      .alert-strip {
+        background-color: #fef3c7;
+        border-bottom: 1px solid #fde68a;
+        padding: 10px 36px;
+        font-size: 13px;
+        color: #92400e;
+        font-weight: 500;
+      }
+
+      /* Body */
+      .email-body { padding: 32px 36px 28px; }
+
+      .email-eyebrow {
+        font-size: 11px;
+        font-weight: 600;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin: 0 0 8px;
+      }
+
+      .email-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: #0f0f1a;
+        margin: 0 0 6px;
+        letter-spacing: -0.4px;
+        line-height: 1.3;
+      }
+
+      .email-subtitle {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0 0 24px;
+        line-height: 1.5;
+      }
+
+      /* Details table */
+      .details-card {
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 0 0 24px;
+      }
+
+      .details-row {
+        display: flex;
+        padding: 12px 16px;
+        border-bottom: 1px solid #f3f4f6;
+      }
+
+      .details-row:last-child { border-bottom: none; }
+
+      .details-label {
+        font-size: 13px;
+        color: #9ca3af;
+        font-weight: 500;
+        width: 90px;
+        flex-shrink: 0;
+      }
+
+      .details-value {
+        font-size: 13px;
+        color: #111827;
+        font-weight: 500;
+      }
+
+      /* Warning */
+      .warning-box {
+        background-color: #fff7ed;
+        border: 1px solid #fed7aa;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin: 0 0 24px;
+        font-size: 14px;
+        color: #78350f;
+        line-height: 1.6;
+      }
+
+      .warning-box strong { font-weight: 600; }
+
+      /* Button */
+      .btn-wrapper { margin: 4px 0 24px; }
+
+      .divider { border: none; border-top: 1px solid #f3f4f6; margin: 24px 0; }
+
+      .email-signature {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0;
+        line-height: 1.6;
+      }
+
+      .email-signature strong { color: #374151; font-weight: 600; }
+
+      .email-footer {
+        background-color: #f9fafb;
+        border-top: 1px solid #f3f4f6;
+        padding: 22px 36px;
+        text-align: center;
+      }
+
+      .email-footer p {
+        font-size: 12px;
+        color: #9ca3af;
+        margin: 0 0 3px;
+        line-height: 1.6;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .email-bg { padding: 20px 12px; }
+        .email-header { padding: 20px 24px; }
+        .alert-strip { padding: 10px 24px; }
+        .email-body { padding: 28px 24px 22px; }
+        .email-footer { padding: 18px 24px; }
+      }
     </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="icon">&#x1F512;</div>
-            <h1>New sign-in detected</h1>
-            <p class="subtitle">Your {{ project_name }} account was just signed into</p>
+  </head>
+
+  <body>
+    <div class="email-bg">
+      <div class="email-card">
+
+        <!-- Header -->
+        <div class="email-header">
+          <a href="{{ site_url|default:'#' }}" style="text-decoration: none; display: inline-block;">
+            <table border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                {% if logo_url %}
+                <td valign="middle" style="padding-right: 10px;">
+                  <img src="{{ logo_url }}" alt="{{ project_name }}" width="36" height="36" style="display: block; border-radius: 8px; object-fit: cover;" />
+                </td>
+                {% endif %}
+                <td valign="middle">
+                  <span style="font-size: 17px; font-weight: 700; color: #ffffff; letter-spacing: -0.2px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">{{ project_name }}</span>
+                </td>
+              </tr>
+            </table>
+          </a>
         </div>
 
-        <p>Hello {{ user.get_full_name|default:user.username }},</p>
-        <p>We noticed a new sign-in to your account. Here are the details:</p>
+        <!-- Alert strip -->
+        <div class="alert-strip">
+          &#9888;&#65039;&nbsp; Security notification for your account
+        </div>
 
-        <table class="details-table">
+        <!-- Body -->
+        <div class="email-body">
+
+          <p class="email-eyebrow">Security alert</p>
+          <h1 class="email-title">New sign-in detected</h1>
+          <p class="email-subtitle">
+            Hi {{ user.get_full_name|default:user.username }} — we noticed a new sign-in to your {{ project_name }} account.
+          </p>
+
+          <!-- Details card using table for email clients -->
+          <table border="0" cellspacing="0" cellpadding="0" width="100%"
+                 style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 20px;">
             <tr>
-                <td>Device</td>
-                <td>{{ device }}</td>
+              <td style="padding: 12px 16px; border-bottom: 1px solid #f3f4f6;">
+                <table border="0" cellspacing="0" cellpadding="0" width="100%">
+                  <tr>
+                    <td width="90" style="font-size: 13px; color: #9ca3af; font-weight: 500;">Device</td>
+                    <td style="font-size: 13px; color: #111827; font-weight: 500;">{{ device }}</td>
+                  </tr>
+                </table>
+              </td>
             </tr>
             <tr>
-                <td>IP Address</td>
-                <td>{{ ip_address }}</td>
+              <td style="padding: 12px 16px; border-bottom: 1px solid #f3f4f6;">
+                <table border="0" cellspacing="0" cellpadding="0" width="100%">
+                  <tr>
+                    <td width="90" style="font-size: 13px; color: #9ca3af; font-weight: 500;">IP Address</td>
+                    <td style="font-size: 13px; color: #111827; font-weight: 500;">{{ ip_address }}</td>
+                  </tr>
+                </table>
+              </td>
             </tr>
             <tr>
-                <td>Time</td>
-                <td>{{ login_time }}</td>
+              <td style="padding: 12px 16px;">
+                <table border="0" cellspacing="0" cellpadding="0" width="100%">
+                  <tr>
+                    <td width="90" style="font-size: 13px; color: #9ca3af; font-weight: 500;">Time</td>
+                    <td style="font-size: 13px; color: #111827; font-weight: 500;">{{ login_time }}</td>
+                  </tr>
+                </table>
+              </td>
             </tr>
-        </table>
+          </table>
 
-        <div class="warning-box">
-            If this was you, no further action is needed.<br>
-            If you didn't sign in, please change your password and review your account security immediately.
+          <!-- Warning -->
+          <div class="warning-box">
+            <strong>Was this you?</strong> If you recognise this sign-in, no action is required. If you didn't sign in, please secure your account immediately.
+          </div>
+
+          {% if button_url %}
+          <div class="btn-wrapper">
+            <table border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td style="border-radius: 10px; background-color: #111827;">
+                  <a href="{{ button_url }}"
+                     style="display: inline-block; padding: 13px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff !important; text-decoration: none !important; border-radius: 10px; letter-spacing: -0.1px;">
+                    Review account activity
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </div>
+          {% endif %}
+
+          <hr class="divider" />
+
+          <p class="email-signature">
+            Stay safe out there.<br />
+            <strong>The {{ project_name }} Security Team</strong>
+          </p>
+
         </div>
 
-        {% if button_url %}
-        <div class="button-container">
-            <a href="{{ button_url }}" class="button">Review Account Activity</a>
+        <!-- Footer -->
+        <div class="email-footer">
+          <p>This is an automated security notification from {{ project_name }}.</p>
+          <p>You received this because a sign-in occurred on your account.</p>
+          {% if site_url %}<p><a href="{{ site_url }}" style="color: #9ca3af; text-decoration: none;">{{ site_url }}</a></p>{% endif %}
         </div>
-        {% endif %}
 
-        <div class="footer">
-            <p>This is an automated security notification from {{ project_name }}.</p>
-            <p>You received this because a sign-in occurred on your account.</p>
-        </div>
+      </div>
     </div>
-</body>
+  </body>
 </html>

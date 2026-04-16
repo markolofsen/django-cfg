@@ -1,110 +1,210 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>{{ subject }}</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f8f9fa;
-        }
-        .container {
-            background: white;
-            border-radius: 8px;
-            padding: 40px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 10px;
-        }
-        .main-content {
-            margin: 30px 0;
-        }
-        .main-html-content {
-            text-align: center;
-            margin: 20px 0;
-        }
-        .button {
-            display: inline-block;
-            background: #2563eb;
-            color: white;
-            padding: 12px 24px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 500;
-            margin: 20px 0;
-        }
-        .button:hover {
-            background: #1d4ed8;
-        }
-        .secondary-text {
-            background: #f1f5f9;
-            border-left: 4px solid #2563eb;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-            color: #475569;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            color: #6b7280;
-            font-size: 14px;
-        }
+    <style type="text/css">
+      * { box-sizing: border-box; }
+      body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+      table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: #f0f2f5;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        color: #1a1a2e;
+      }
+
+      .email-bg {
+        background-color: #f0f2f5;
+        padding: 48px 16px;
+      }
+
+      .email-card {
+        max-width: 560px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+      }
+
+      .email-header {
+        background-color: #0f0f1a;
+        padding: 26px 36px;
+      }
+
+      .brand-name {
+        font-size: 17px;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: -0.2px;
+        text-decoration: none;
+      }
+
+      .email-body {
+        padding: 36px 36px 28px;
+      }
+
+      .email-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: #0f0f1a;
+        margin: 0 0 20px;
+        letter-spacing: -0.4px;
+        line-height: 1.3;
+      }
+
+      .email-text {
+        font-size: 15px;
+        color: #374151;
+        line-height: 1.65;
+        margin: 0 0 16px;
+      }
+
+      .greeting {
+        font-size: 15px;
+        color: #374151;
+        margin: 0 0 20px;
+      }
+
+      .main-content {
+        font-size: 15px;
+        color: #374151;
+        line-height: 1.65;
+        margin: 0 0 16px;
+      }
+
+      .main-html-content {
+        margin: 20px 0;
+      }
+
+      /* Button — Gmail-compatible table approach */
+      .btn-wrapper {
+        margin: 28px 0;
+      }
+
+      .secondary-text {
+        font-size: 13px;
+        color: #6b7280;
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin: 16px 0;
+        line-height: 1.6;
+        font-style: italic;
+      }
+
+      .divider {
+        border: none;
+        border-top: 1px solid #f3f4f6;
+        margin: 24px 0;
+      }
+
+      .email-signature {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0;
+        line-height: 1.6;
+      }
+
+      .email-signature strong {
+        color: #374151;
+        font-weight: 600;
+      }
+
+      .email-footer {
+        background-color: #f9fafb;
+        border-top: 1px solid #f3f4f6;
+        padding: 22px 36px;
+        text-align: center;
+      }
+
+      .email-footer p {
+        font-size: 12px;
+        color: #9ca3af;
+        margin: 0 0 3px;
+        line-height: 1.6;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .email-bg { padding: 20px 12px; }
+        .email-header { padding: 20px 24px; }
+        .email-body { padding: 28px 24px 22px; }
+        .email-footer { padding: 18px 24px; }
+        .email-title { font-size: 20px; }
+      }
     </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">🚀 UnrealON</div>
-            <h1>{{ subject }}</h1>
+  </head>
+
+  <body>
+    <div class="email-bg">
+      <div class="email-card">
+
+        <!-- Header -->
+        <div class="email-header">
+          <span class="brand-name">{{ site_name|default:"App" }}</span>
         </div>
 
-        <p>Hello {{ user.get_full_name|default:user.username }},</p>
-        
-        {% if main_text %}
-        <div class="main-content">
-            <p>{{ main_text }}</p>
-        </div>
-        {% endif %}
+        <!-- Body -->
+        <div class="email-body">
 
-        {% if main_html_content %}
-        <div class="main-html-content">
+          <h1 class="email-title">{{ subject }}</h1>
+
+          <p class="greeting">Hello {{ user.get_full_name|default:user.username }},</p>
+
+          {% if main_text %}
+          <div class="main-content">
+            <p class="email-text">{{ main_text }}</p>
+          </div>
+          {% endif %}
+
+          {% if main_html_content %}
+          <div class="main-html-content">
             {{ main_html_content|safe }}
-        </div>
-        {% endif %}
+          </div>
+          {% endif %}
 
-        {% if button_text and button_url %}
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{{ button_url }}" class="button">{{ button_text }}</a>
-        </div>
-        {% endif %}
+          {% if button_text and button_url %}
+          <div class="btn-wrapper">
+            <table border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td style="border-radius: 10px; background-color: #111827;">
+                  <a href="{{ button_url }}"
+                     style="display: inline-block; padding: 13px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff !important; text-decoration: none !important; border-radius: 10px; letter-spacing: -0.1px;">
+                    {{ button_text }}
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </div>
+          {% endif %}
 
-        {% if secondary_text %}
-        <div class="secondary-text">
+          {% if secondary_text %}
+          <div class="secondary-text">
             {{ secondary_text }}
-        </div>
-        {% endif %}
+          </div>
+          {% endif %}
 
-        <div class="footer">
-            <p>This is an automated message from UnrealON.</p>
-            <p>Please do not reply to this email.</p>
+          <hr class="divider" />
+
+          <p class="email-signature">
+            Need help? Reach out to our support team.<br />
+            <strong>The {{ site_name|default:"App" }} Team</strong>
+          </p>
+
         </div>
+
+        <!-- Footer -->
+        <div class="email-footer">
+          <p>This is an automated message — please do not reply to this email.</p>
+        </div>
+
+      </div>
     </div>
-</body>
+  </body>
 </html>

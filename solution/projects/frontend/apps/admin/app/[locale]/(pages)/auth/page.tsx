@@ -21,7 +21,6 @@ export default function AuthPage() {
       supportUrl={routes.public.contact?.path}
       termsUrl={routes.public.terms?.path}
       privacyUrl={routes.public.privacy?.path}
-      enablePhoneAuth={false}
       enableGithubAuth={true}
       redirectUrl={routes.private.home.path}
     >

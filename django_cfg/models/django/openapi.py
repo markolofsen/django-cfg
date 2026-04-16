@@ -73,7 +73,7 @@ class OpenAPIClientConfig(OpenAPIConfig):
 
     # Django-cfg specific integration
     api_prefix: str = Field(
-        default="api",
+        default="apix",
         description="API prefix for URL routing (e.g., 'api' -> /api/...)"
     )
 

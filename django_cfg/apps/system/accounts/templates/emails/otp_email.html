@@ -1,94 +1,255 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Login Code</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f8f9fa;
-        }
-        .container {
-            background: white;
-            border-radius: 8px;
-            padding: 40px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 10px;
-        }
-        .otp-code {
-            background: #f1f5f9;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            margin: 30px 0;
-        }
-        .code {
-            font-size: 32px;
-            font-weight: bold;
-            color: #1e40af;
-            letter-spacing: 4px;
-            font-family: 'Courier New', monospace;
-        }
-        .warning {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            color: #6b7280;
-            font-size: 14px;
-        }
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Your login code — {{ site_name }}</title>
+    <style type="text/css">
+      * { box-sizing: border-box; }
+      body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+      table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background-color: #f0f2f5;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+
+      .email-bg {
+        background-color: #f0f2f5;
+        padding: 48px 16px;
+      }
+
+      .email-card {
+        max-width: 520px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+      }
+
+      /* Header */
+      .email-header {
+        background-color: #0f0f1a;
+        padding: 26px 36px;
+      }
+
+      .brand-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+      }
+
+      .brand-logo {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        object-fit: cover;
+      }
+
+      .brand-name {
+        font-size: 17px;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: -0.2px;
+      }
+
+      /* Body */
+      .email-body {
+        padding: 36px 36px 28px;
+      }
+
+      .email-eyebrow {
+        font-size: 11px;
+        font-weight: 600;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin: 0 0 10px;
+      }
+
+      .email-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: #0f0f1a;
+        margin: 0 0 6px;
+        letter-spacing: -0.4px;
+        line-height: 1.3;
+      }
+
+      .email-subtitle {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0 0 28px;
+        line-height: 1.5;
+      }
+
+      /* OTP Code block */
+      .otp-block {
+        background-color: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 28px 24px;
+        text-align: center;
+        margin: 0 0 24px;
+      }
+
+      .otp-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin: 0 0 12px;
+      }
+
+      .otp-code {
+        font-size: 42px;
+        font-weight: 800;
+        color: #0f0f1a;
+        letter-spacing: 10px;
+        font-variant-numeric: tabular-nums;
+        font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", "Courier New", monospace;
+        margin: 0;
+        padding-left: 10px; /* compensate letter-spacing on last char */
+        line-height: 1;
+      }
+
+      .otp-expiry {
+        font-size: 13px;
+        color: #9ca3af;
+        margin: 12px 0 0;
+      }
+
+      /* CTA Button */
+      .btn-wrapper {
+        margin: 4px 0 24px;
+      }
+
+      /* Divider */
+      .divider {
+        border: none;
+        border-top: 1px solid #f3f4f6;
+        margin: 24px 0;
+      }
+
+      /* Warning note */
+      .warning-note {
+        font-size: 13px;
+        color: #6b7280;
+        background-color: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin: 0 0 20px;
+        line-height: 1.55;
+      }
+
+      .warning-note strong {
+        color: #92400e;
+      }
+
+      .email-signature {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0;
+        line-height: 1.6;
+      }
+
+      .email-signature strong {
+        color: #374151;
+        font-weight: 600;
+      }
+
+      /* Footer */
+      .email-footer {
+        background-color: #f9fafb;
+        border-top: 1px solid #f3f4f6;
+        padding: 22px 36px;
+        text-align: center;
+      }
+
+      .email-footer p {
+        font-size: 12px;
+        color: #9ca3af;
+        margin: 0 0 3px;
+        line-height: 1.6;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .email-bg { padding: 20px 12px; }
+        .email-header { padding: 20px 24px; }
+        .email-body { padding: 28px 24px 22px; }
+        .email-footer { padding: 18px 24px; }
+        .otp-code { font-size: 34px; letter-spacing: 6px; }
+      }
     </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div class="logo">🔐 {{ site_name }}</div>
-            <h1>Your Login Code</h1>
+  </head>
+
+  <body>
+    <div class="email-bg">
+      <div class="email-card">
+
+        <!-- Header -->
+        <div class="email-header">
+          <a href="{{ site_url|default:'#' }}" style="text-decoration: none; display: inline-block;">
+            <table border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                {% if logo_url %}
+                <td valign="middle" style="padding-right: 10px;">
+                  <img src="{{ logo_url }}" alt="{{ site_name }}" width="36" height="36" style="display: block; border-radius: 8px; object-fit: cover;" />
+                </td>
+                {% endif %}
+                <td valign="middle">
+                  <span style="font-size: 17px; font-weight: 700; color: #ffffff; letter-spacing: -0.2px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">{{ site_name }}</span>
+                </td>
+              </tr>
+            </table>
+          </a>
         </div>
 
-        <p>Hello {{ user.get_full_name|default:user.username }},</p>
-        
-        <p>You requested a login code for your account. Use the code below to sign in:</p>
+        <!-- Body -->
+        <div class="email-body">
 
-        <div class="otp-code">
-            <div class="code">{{ otp_code }}</div>
-            <p style="margin: 10px 0 0 0; color: #64748b;">Enter this code to continue</p>
+          <p class="email-eyebrow">Authentication</p>
+          <h1 class="email-title">Your login code</h1>
+          <p class="email-subtitle">
+            Hi {{ user.get_full_name|default:user.username }} — use the code below to sign in to your account.
+          </p>
+
+          <!-- OTP Code -->
+          <div class="otp-block">
+            <p class="otp-label">One-time code</p>
+            <p class="otp-code">{{ otp_code }}</p>
+            <p class="otp-expiry">Expires in <strong>{{ expires_minutes }} minutes</strong></p>
+          </div>
+
+          <!-- Warning -->
+          <div class="warning-note">
+            <strong>Didn't request this?</strong> If you didn't try to sign in, you can safely ignore this email. Someone may have entered your email address by mistake.
+          </div>
+
+          <hr class="divider" />
+
+          <p class="email-signature">
+            Questions? Contact our support team.<br />
+            <strong>The {{ site_name }} Team</strong>
+          </p>
+
         </div>
 
-        <div class="warning">
-            <strong>⚠️ Important:</strong> This code will expire in {{ expires_minutes }} minutes. 
-            If you didn't request this code, please ignore this email.
+        <!-- Footer -->
+        <div class="email-footer">
+          <p>&copy; {% now "Y" %} {{ site_name }}. All rights reserved.</p>
+          <p>This is an automated security message — please do not reply.</p>
+          {% if site_url %}<p><a href="{{ site_url }}" style="color: #9ca3af; text-decoration: none;">{{ site_url }}</a></p>{% endif %}
         </div>
 
-        <p>If you're having trouble, you can request a new code or contact our support team.</p>
-
-        <div class="footer">
-            <p>This is an automated message from {{ site_name }}.</p>
-            <p>Please do not reply to this email.</p>
-        </div>
+      </div>
     </div>
-</body>
+  </body>
 </html>
