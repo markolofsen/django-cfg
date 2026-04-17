@@ -24,14 +24,53 @@ class CurrencyField(models.CharField):
     """
     CharField for storing currency codes (ISO 4217).
 
-    Usage:
-        currency = CurrencyField(default="USD")
+    Auto-created by MoneyField.contribute_to_class() as "{field}_currency".
+    Do NOT declare it manually alongside a MoneyField — that creates a duplicate
+    column and crashes migrations with "column already exists".
+
+    Migration behaviour:
+    - deconstruct() returns django.db.models.CharField so generated migrations
+      have no dependency on django_cfg.
+    - CurrencyField registers itself with FakeMigrationHandler so migrate_all
+      automatically fake-applies any AddField migration for a column that
+      already exists in the DB (backwards-compat with pre-tracking projects).
     """
+
+    # Sentinel so FakeMigrationHandler can identify companion fields
+    # without hardcoding field names or packages.
+    is_companion_currency_field: bool = True
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("max_length", 10)
         kwargs.setdefault("default", "USD")
         super().__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super().deconstruct()
+        # Serialize as plain CharField — migrations need only the column type,
+        # not the custom class, keeping them free of django_cfg imports.
+        path = "django.db.models.CharField"
+        return name, path, args, kwargs
+
+
+def _register_currency_fake_detector():
+    try:
+        from django_cfg.management.utils.migration_manager import register_fake_detector
+        from django.db import migrations as dj_migrations
+
+        def _is_currency_companion(op: object) -> bool:
+            if not isinstance(op, dj_migrations.AddField):
+                return False
+            # Match any AddField whose field carries our sentinel attribute,
+            # regardless of field name or app — no hardcoding required.
+            return getattr(op.field, "is_companion_currency_field", False)
+
+        register_fake_detector(_is_currency_companion)
+    except Exception:
+        pass  # management utils not available in all environments
+
+
+_register_currency_fake_detector()
 
 
 class MoneyTargetDescriptor:
@@ -289,10 +328,25 @@ class MoneyField(models.DecimalField):
         return name, path, args, kwargs
 
     def contribute_to_class(self, cls, name, private_only=False):
-        """Add currency field, target properties, and display properties to model."""
+        """Add currency field, target properties, and display properties to model.
+
+        This is called by Django when the model class is built. It registers:
+        - {name}_currency  — CurrencyField DB column (via cls.add_to_class)
+        - {name}_target    — descriptor (no DB column)
+        - {name}_target_rounded, {name}_display, etc. — descriptors (no DB column)
+
+        WHY cls.add_to_class() for currency?
+        add_to_class() registers the field with cls._meta.local_fields, which means
+        Django's makemigrations sees it and includes it in the migration automatically.
+        This is intentional — the migration needs both columns (price + price_currency).
+
+        DO NOT declare price_currency = CurrencyField() manually on the model.
+        That would register the field twice → duplicate column → migration error.
+        """
         super().contribute_to_class(cls, name, private_only)
 
-        # Add currency field
+        # Auto-attach currency field. Django migrations will detect it via _meta.local_fields
+        # and write it into the migration alongside this DecimalField — both columns needed.
         currency_field = CurrencyField(
             default=self.default_currency,
             db_index=True,

@@ -398,5 +398,59 @@ For issues or questions:
 
 ---
 
-**Last Updated:** 2025-01-04
-**Version:** 1.0.0
+## MigrationManager
+
+Centralized migration logic used by `migrate_all` and other management commands.
+
+```python
+from django_cfg.management.utils import MigrationManager
+
+manager = MigrationManager(self.stdout, self.style, self.logger)
+manager.migrate_all_databases()
+```
+
+### Internal structure (`migration_manager/`)
+
+| Module | Responsibility |
+|--------|---------------|
+| `logger.py` | `MigrationLogger` — wraps stdout/style/logger |
+| `app_inspector.py` | `AppInspector` — app/model discovery, routing |
+| `db_inspector.py` | `DbInspector` — column existence, consistency, unapplied migrations |
+| `fake_handler.py` | `FakeMigrationHandler` + `register_fake_detector()` |
+| `core.py` | `MigrationManager` — orchestrates everything |
+
+### Companion-field fake-apply mechanism
+
+Fields that auto-create DB columns via `contribute_to_class()` (e.g. `MoneyField`
+adds `price_currency`) register a detector so `MigrationManager` knows when to
+`--fake` a migration instead of running it (column already exists in the DB).
+
+**How it works:**
+
+1. `CurrencyField` carries a sentinel: `is_companion_currency_field = True`
+2. On module import `CurrencyField` calls `register_fake_detector()` with a
+   callable that checks for this sentinel on the `AddField.field` object
+3. Before running migrations, `MigrationManager` calls `FakeMigrationHandler.fake_if_needed()`:
+   - finds unapplied migrations whose **every** operation matches a registered detector
+   - checks each column physically exists in the DB
+   - if yes → `migrate <app> <name> --fake` instead of a real run
+
+**Adding a detector for your own companion field:**
+
+```python
+# In your field module or AppConfig.ready():
+from django_cfg.management.utils.migration_manager import register_fake_detector
+from django.db import migrations as dj_migrations
+
+def _is_my_companion(op: object) -> bool:
+    if not isinstance(op, dj_migrations.AddField):
+        return False
+    return getattr(op.field, "is_my_companion_field", False)
+
+register_fake_detector(_is_my_companion)
+```
+
+---
+
+**Last Updated:** 2026-04-17
+**Version:** 2.0.0
