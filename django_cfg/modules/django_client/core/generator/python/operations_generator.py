@@ -373,9 +373,24 @@ class OperationsGenerator:
             lines.append(f"if data.{field} is not None:")
             lines.append(f"    _files['{field}'] = data.{field}")
 
-        # Only dump non-file fields to avoid serializing binary data
+        # Only dump non-file fields. Pydantic's JSON serializer cannot
+        # encode raw bytes (it tries to UTF-8 decode binary content and
+        # crashes with UnicodeDecodeError), so file fields must be
+        # excluded from the dump even though they're already extracted
+        # into ``_files`` above.
         if data_fields:
-            lines.append("_raw_data = data.model_dump(mode=\"json\", exclude_unset=True, exclude_none=True)")
+            if file_fields:
+                exclude_repr = "{" + ", ".join(repr(f) for f in file_fields) + "}"
+                lines.append(
+                    f"_raw_data = data.model_dump("
+                    f"mode=\"json\", exclude_unset=True, exclude_none=True, "
+                    f"exclude={exclude_repr})"
+                )
+            else:
+                lines.append(
+                    "_raw_data = data.model_dump("
+                    "mode=\"json\", exclude_unset=True, exclude_none=True)"
+                )
 
         # Check if we need json import for object/array serialization
         needs_json = any(

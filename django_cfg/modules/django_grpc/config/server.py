@@ -118,7 +118,6 @@ class GrpcServerConfig(BaseModel):
             ("grpc.keepalive_timeout_ms", self.keepalive.timeout_ms),
             ("grpc.keepalive_permit_without_calls", int(self.keepalive.permit_without_calls)),
             ("grpc.http2.min_time_between_pings_ms", self.keepalive.http2_min_ping_interval_ms),
-            ("grpc.http2.min_ping_interval_without_data_ms", self.keepalive.http2_min_ping_interval_ms),
             ("grpc.http2.max_pings_without_data", self.keepalive.max_pings_without_data),
             # G-5: three missing production-critical keepalive options
             ("grpc.max_connection_idle_ms", self.keepalive.max_connection_idle_ms),

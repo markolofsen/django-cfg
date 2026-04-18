@@ -4,6 +4,7 @@ Telegram Message Formatters.
 Emoji mappings and message formatting utilities.
 """
 
+import html as _html_module
 from typing import Any, Dict
 
 import yaml
@@ -50,6 +51,22 @@ def format_to_yaml(data: Dict[str, Any]) -> str:
         return str(data)
 
 
+def escape_html(text: str) -> str:
+    """
+    Escape user-provided text for safe embedding in HTML parse_mode messages.
+
+    Escapes: & → &amp;  < → &lt;  > → &gt;
+
+    Use this on any LLM-generated or user-controlled content before wrapping
+    it in HTML tags for Telegram. Pre-formatted HTML (with intentional tags)
+    should NOT be escaped.
+
+    Example:
+        safe = f"<b>{escape_html(user_input)}</b>"
+    """
+    return _html_module.escape(text, quote=False)
+
+
 def format_message_with_context(
     emoji_key: str,
     title: str,
@@ -69,14 +86,15 @@ def format_message_with_context(
         HTML formatted message
     """
     emoji = EMOJI_MAP.get(emoji_key, "")
-    text = f"{emoji} <b>{title}</b>\n\n{message}"
+    text = f"{emoji} <b>{escape_html(title)}</b>\n\n{escape_html(message)}"
     if context:
-        text += "\n\n<pre>" + format_to_yaml(context) + "</pre>"
+        text += "\n\n<pre>" + _html_module.escape(format_to_yaml(context)) + "</pre>"
     return text
 
 
 __all__ = [
     "EMOJI_MAP",
+    "escape_html",
     "format_to_yaml",
     "format_message_with_context",
 ]
