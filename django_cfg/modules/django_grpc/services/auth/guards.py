@@ -20,7 +20,14 @@ from __future__ import annotations
 import logging
 from typing import Awaitable, Callable, Optional, Union
 
-from .session_token import verify_session_token
+from .session_token import (
+    verify_session_token,
+    record_token_probe_failure,
+    reset_token_probe_failures,
+    is_token_probing_locked,
+    PROBE_FAILS_LIMIT,
+    PROBE_FAILS_WINDOW_SECONDS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +75,23 @@ async def require_session_access(
     if not requires_password:
         return True
 
+    # Before touching the token we check whether this session is
+    # already in probe-lockout. Skipping the Redis round-trip on every
+    # successful call isn't free either, so only the failure path
+    # hits the probe counter — but the lockout check here means a
+    # caller that just burned through the limit gets a distinct
+    # RESOURCE_EXHAUSTED instead of another UNAUTHENTICATED round.
+    if is_token_probing_locked(session_id):
+        logger.warning(
+            "Session access rate-limited: session=%s (>%d token probe failures in %ds)",
+            session_id, PROBE_FAILS_LIMIT, PROBE_FAILS_WINDOW_SECONDS,
+        )
+        await context.abort(  # type: ignore[union-attr]
+            grpc.StatusCode.RESOURCE_EXHAUSTED,
+            f"Too many failed session-token attempts. Wait {PROBE_FAILS_WINDOW_SECONDS // 60} minutes.",
+        )
+        return False
+
     # Extract session token from metadata
     metadata = dict(context.invocation_metadata())  # type: ignore[union-attr]
     session_token = metadata.get("x-session-token", "")
@@ -75,10 +99,22 @@ async def require_session_access(
         session_token = session_token.decode()
 
     if session_token and verify_session_token(session_id, session_token):
+        # Good token → clear whatever probe counter the caller
+        # accumulated before getting it right. Without this, a user
+        # who fumbled a couple of tokens before pasting the correct
+        # one would carry those fails forever until the TTL expired.
+        reset_token_probe_failures(session_id)
         return True
 
-    # Deny access
-    logger.warning("Session access denied: session=%s (no valid session token)", session_id)
+    # Failure path — record the miss so repeat probing eventually
+    # locks the session. Do this whether or not a token was actually
+    # presented: silence (empty header) from the same caller over
+    # and over is just as suspicious as wrong tokens.
+    count = record_token_probe_failure(session_id)
+    logger.warning(
+        "Session access denied: session=%s (no valid session token, fail #%d)",
+        session_id, count,
+    )
     await context.abort(  # type: ignore[union-attr]
         grpc.StatusCode.UNAUTHENTICATED,
         "Session requires password. Authenticate via ConnectTerminal first.",
