@@ -1,0 +1,168 @@
+---
+title: "@action Request Body Validation"
+sidebar_position: 7
+keywords:
+  - drf action request body
+  - extend_schema request
+  - inline_serializer
+  - action_inherited_viewset_body
+  - openapi client generation error
+  - drf-spectacular action body
+description: The client generator aborts when a DRF @action detail endpoint inherits its ViewSet's default request body. Declare the body explicitly with @extend_schema.
+---
+
+# `@action` Request Body Validation
+
+The OpenAPI→client generator runs a strict validation pass over the IR before any Go / TypeScript / Python / Swift code is emitted. One of those rules — `action_inherited_viewset_body` — **blocks generation** when a DRF `@action` detail endpoint silently inherits its ViewSet's default request body from `drf-spectacular`.
+
+This page explains the error, why it is fatal rather than advisory, and the three accepted ways to fix it.
+
+<Callout type="warning">
+**This is a hard failure.** Generation stops with a non-zero exit code. No partial clients are written. Fix the offending action and re-run.
+</Callout>
+
+---
+
+## What the error looks like
+
+When the rule fires, the generator aborts with a message of this shape:
+
+```
+ERROR  action_inherited_viewset_body
+
+Endpoint:   POST /api/machines/{id}/mark-offline/
+ViewSet:    MachineViewSet
+Action:     mark_offline
+Body type:  MachineRequest  (inherited from ViewSet.serializer_class)
+
+This detail-action endpoint declares a request body identical to the
+resource's canonical create/update schema. drf-spectacular auto-filled
+it from MachineViewSet.serializer_class — the action itself did not
+opt in to accepting MachineRequest.
+
+Fix this by declaring the body explicitly with @extend_schema.
+See: /docs/features/drf-guide/drf-action-request-body
+```
+
+Searchable tokens: `action_inherited_viewset_body`, `inherited from ViewSet.serializer_class`.
+
+---
+
+## Why this is an error and not a warning
+
+`drf-spectacular` copies a ViewSet's `serializer_class` into every action's OpenAPI request body by default. For an action that takes no body — or a body with a completely different shape — that default is wrong, but the wrongness is **invisible**:
+
+- The OpenAPI document is syntactically valid.
+- The generated clients compile cleanly.
+- Callers must invent zero-value request structs to reach endpoints that ignore their payload.
+- The server happily accepts and discards those payloads, so runtime behavior looks fine.
+
+We shipped silent client garbage for months before catching this pattern by hand. Fail-fast at generation time is cheaper than post-hoc discovery across four client languages and every downstream consumer of a published SDK.
+
+The rule runs **once in the IR parser**, so Go, TypeScript, Python, and Swift clients are all protected by the same check.
+
+---
+
+## When the rule fires
+
+All three conditions must hold:
+
+1. The endpoint comes from a DRF `@action` with `detail=True` (path matches `/{id}/<slug>/`).
+2. The action does **not** declare its own request via `@extend_schema(request=...)`.
+3. The inherited request body is the exact schema the resource's canonical `POST`/`PUT` uses — i.e. the fingerprint of a drf-spectacular auto-fill.
+
+If any of those is false, the rule stays quiet.
+
+---
+
+## The three accepted fixes
+
+### Option 1 — The endpoint takes no body
+
+Most detail-actions are verbs on an existing resource (activate, archive, mark-offline, resend-invite). They take an id in the URL and nothing in the body. Say so:
+
+```python
+from drf_spectacular.utils import extend_schema
+from rest_framework.decorators import action
+
+class MachineViewSet(ModelViewSet):
+    serializer_class = MachineSerializer
+    queryset = Machine.objects.all()
+
+    @extend_schema(request=None)
+    @action(detail=True, methods=['post'], url_path='mark-offline')
+    def mark_offline(self, request, pk=None):
+        # Flip a flag, return the resource.
+        ...
+```
+
+Generated signatures drop the phantom body:
+
+```go
+// Go
+func (c *Client) MarkOfflineCreate(ctx context.Context, id string) (Machine, error)
+```
+
+```typescript
+// TypeScript
+markOffline(id: string): Promise<Machine>
+```
+
+### Option 2 — The endpoint takes a specific shape
+
+When the action really does accept input but it is **not** the resource serializer, use `inline_serializer` to declare the exact shape. This keeps one-off request schemas co-located with the action and avoids polluting your module with a `FooActionRequestSerializer` class that is only referenced once:
+
+```python
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import serializers
+from rest_framework.decorators import action
+
+class MachineViewSet(ModelViewSet):
+    serializer_class = MachineSerializer
+    queryset = Machine.objects.all()
+
+    @extend_schema(
+        request=inline_serializer(
+            name='UpdateRoleRequest',
+            fields={
+                'role': serializers.ChoiceField(choices=Role.choices),
+            },
+        ),
+    )
+    @action(detail=True, methods=['post'], url_path='update-role')
+    def update_role(self, request, pk=None):
+        ...
+```
+
+The generator emits a dedicated `UpdateRoleRequest` type in every client.
+
+### Option 3 — You genuinely mean the full resource serializer
+
+If the action really does accept the canonical resource payload (a `clone`, `duplicate`, or `replace` verb is the usual case), confirm it explicitly:
+
+```python
+@extend_schema(request=MachineRequest)
+@action(detail=True, methods=['post'], url_path='clone')
+def clone(self, request, pk=None):
+    ...
+```
+
+The explicit declaration is indistinguishable in the OpenAPI output from the old auto-filled behavior — but it records authorial intent, which is the whole point. The rule sees the explicit `request=` and stays silent.
+
+---
+
+## When the rule does NOT fire
+
+The validator is intentionally narrow. These patterns are all fine and need no changes:
+
+- **Canonical CRUD operations.** `POST /machines/`, `PUT /machines/{id}/`, `PATCH /machines/{id}/` legitimately use the resource serializer — that is what the serializer is for. The rule only inspects custom actions.
+- **Non-detail actions.** `@action(detail=False, ...)` (collection actions like `/machines/bulk-import/`) are not checked. They do not path-match the detail-action pattern.
+- **Actions with an explicit `@extend_schema(request=...)`** — including `request=None`, `request=SomeOtherSerializer`, `request=inline_serializer(...)`, or even `request=MachineRequest` spelled out. The rule fires only on the **silent inheritance** case.
+- **`GET` / `DELETE` actions.** Methods without a request body are skipped.
+
+---
+
+## Related
+
+- **[DRF ViewSets & Serializers](./drf-viewsets)** — ViewSet + `@action` authoring conventions the generator expects.
+- **[Django Client Troubleshooting](../modules/django-client/troubleshooting)** — Other client-generation errors and their fixes.

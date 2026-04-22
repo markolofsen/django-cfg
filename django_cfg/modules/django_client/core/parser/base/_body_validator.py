@@ -5,11 +5,18 @@ produce incorrect TypeScript hook signatures.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Callable
 
 from ...ir import IROperationObject
 from ._errors import raise_if_errors
+
+
+# Path shape of a DRF `@action(detail=True, ...)`:
+# `/prefix/{id}/<action-slug>/`. Genuine CRUD paths (`/prefix/`,
+# `/prefix/{id}/`) must NOT match so canonical POST/PUT don't false-positive.
+_DETAIL_ACTION_PATH = re.compile(r"/\{[^/}]+\}/[^/{}]+/?$")
 
 
 @dataclass(frozen=True)
@@ -20,8 +27,14 @@ class ValidationContext:
     Attributes:
         list_response_schemas: Schema names that appear as GET response bodies.
             A POST body using one of these is almost certainly a drf-spectacular bug.
+        canonical_write_schemas: Request-body schemas used on canonical
+            (non-detail-action) POST/PUT endpoints. Reuse of one of these
+            on a detail-action is the drf-spectacular auto-inheritance
+            fingerprint that the `action_inherited_viewset_body` rule
+            catches.
     """
     list_response_schemas: frozenset[str]
+    canonical_write_schemas: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -96,6 +109,34 @@ _RULES: list[BodyValidationRule] = [
         blocking=True,
     ),
     BodyValidationRule(
+        name="action_inherited_viewset_body",
+        description=(
+            "Detail `@action` endpoints must declare their body explicitly. "
+            "A body schema that's reused from the resource's canonical "
+            "POST/PUT is the drf-spectacular auto-inheritance fingerprint "
+            "and almost always means the author forgot `@extend_schema(request=...)`."
+        ),
+        check=lambda op, ctx: (
+            op.request_body is not None
+            and op.http_method in ("POST", "PUT", "PATCH")
+            and bool(_DETAIL_ACTION_PATH.search(op.path))
+            and op.request_body.schema_name in ctx.canonical_write_schemas
+        ),
+        message=lambda op, schema: (
+            f"\n  [{op.operation_id}] {op.http_method} {op.path}\n"
+            f"    Bug: Detail-action endpoint inherited '{schema}' from the ViewSet's default serializer.\n"
+            f"    This produces generated signatures like `Fn(ctx, id, body {schema})` for\n"
+            f"    endpoints that typically take no input — callers must invent a zero-value struct\n"
+            f"    to call an action that ignores their body.\n"
+            f"    Fix: add @extend_schema(request=...) above the @action:\n"
+            f"      @extend_schema(request=None)            # no body\n"
+            f"      @extend_schema(request=MySerializer)    # explicit body\n"
+            f"    If you *do* want to accept the full {schema}, set request={schema} explicitly —\n"
+            f"    that declares intent and satisfies this check."
+        ),
+        blocking=True,
+    ),
+    BodyValidationRule(
         name="response_schema_as_body",
         description="Response schema used as request body (missing 'Request' suffix).",
         check=lambda op, ctx: (
@@ -133,7 +174,18 @@ class RequestBodyValidatorMixin:
                 if op.http_method == "GET"
                 for response in op.responses.values()
                 if response.schema_name
-            )
+            ),
+            # Request bodies on canonical (non-detail-action) writes.
+            # Used to flag detail-actions that reuse the same schema —
+            # the drf-spectacular auto-inheritance fingerprint.
+            canonical_write_schemas=frozenset(
+                op.request_body.schema_name
+                for op in operations.values()
+                if op.http_method in ("POST", "PUT")
+                and op.request_body is not None
+                and op.request_body.schema_name
+                and not _DETAIL_ACTION_PATH.search(op.path)
+            ),
         )
 
         errors: list[str] = []

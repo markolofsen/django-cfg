@@ -5,4 +5,5 @@ export default {
   'drf-nested-serializers': 'Nested Serializers & allOf',
   'drf-pagination': 'Pagination',
   'drf-pydantic-responses': 'Pydantic v2 Response Schemas',
+  'drf-action-request-body': '@action Request Body Validation',
 }

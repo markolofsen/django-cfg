@@ -72,6 +72,28 @@ python manage.py spectacular --validate --format openapi --file openapi.yaml
 
 ---
 
+### `action_inherited_viewset_body` Aborts Generation
+
+**Problem:**
+```
+ERROR  action_inherited_viewset_body
+
+Endpoint:   POST /api/<resource>/{id}/<action>/
+Body type:  <ResourceRequest>  (inherited from ViewSet.serializer_class)
+```
+
+**Cause:**
+
+A DRF `@action(detail=True, methods=['post'])` endpoint did not declare its own `request=` in `@extend_schema`, so `drf-spectacular` auto-filled the ViewSet's `serializer_class` as the request body. The IR validator blocks generation to prevent shipping clients that force callers to invent zero-value request structs for endpoints that ignore the body.
+
+**Solution:**
+
+Declare the action's request body explicitly — `@extend_schema(request=None)` for no body, `inline_serializer(...)` for a one-off shape, or the resource serializer spelled out if you genuinely mean it.
+
+Full walkthrough with examples: [@action Request Body Validation](/docs/features/drf-guide/drf-action-request-body).
+
+---
+
 ### Empty Generated Files
 
 **Problem:**
