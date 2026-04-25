@@ -422,6 +422,13 @@ class OperationsGenerator:
         if body_opts_entry:
             request_opts.append(body_opts_entry)
 
+        # Force blob parsing for binary downloads. Without this the runtime
+        # adapter falls back to Content-Type sniffing, which mis-parses CSV
+        # (`text/csv` → string) and JSON (`application/json`) file downloads.
+        primary = operation.primary_success_response
+        if primary and primary.is_binary:
+            request_opts.append("responseType: 'blob'")
+
         # Request call + response parsing
         response_lines = self._build_response_parsing(operation, return_type, request_prefix, path_expr, request_opts)
         body_lines.extend(response_lines)

@@ -174,6 +174,17 @@ class DjangoModelParser:
         if getattr(field, 'auto_created', False) and not getattr(field, 'concrete', True):
             return None
 
+        # Skip non-concrete fields — GenericForeignKey, GenericRelation, and
+        # other virtual descriptors are surfaced by ``_meta.get_fields()`` but
+        # have no DB column. SQLModel can't map them (typing.Any has no SQL
+        # type), so they must not appear in generated tables.
+        #
+        # Note: in newer Django, GenericForeignKey gained ``attname``, so the
+        # reverse-relation check above no longer catches it; ``concrete=False``
+        # is the reliable signal.
+        if hasattr(field, 'concrete') and not field.concrete:
+            return None
+
         try:
             field_type = type(field).__name__
 

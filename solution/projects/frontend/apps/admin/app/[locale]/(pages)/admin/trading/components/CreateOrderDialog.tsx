@@ -10,7 +10,7 @@ import {
 
 import { TRADING_DIALOG_EVENTS } from '../events';
 
-import type { OrderCreateRequest } from '@/api/generated/trading/trading__api__trading/models';
+import type { OrderCreateRequest } from '@/api/generated/trading/trading__apix__trading/models';
 export function CreateOrderDialogComponent() {
   const { createOrder } = useTrading();
   const [isOpen, setIsOpen] = useState(false);

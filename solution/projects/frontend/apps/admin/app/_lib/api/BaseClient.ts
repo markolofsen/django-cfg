@@ -35,7 +35,7 @@ const cryptoApi = new CryptoAPI(baseUrl, { storage: new CryptoStorage() });
 export class BaseClient {
   /**
    * Profiles API client
-   * Available: this.profilesApi.profiles__api__profiles
+   * Available: this.profilesApi.profiles__apix__profiles
    */
   protected static profilesApi = profilesApi;
 

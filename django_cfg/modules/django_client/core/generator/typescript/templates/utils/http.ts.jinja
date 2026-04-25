@@ -17,6 +17,11 @@ export interface HttpRequest {
   formData?: FormData;
   /** Binary data for octet-stream uploads */
   binaryBody?: Blob | ArrayBuffer;
+  /**
+   * Force a specific response parser. When set, overrides Content-Type sniffing.
+   * Generated for endpoints whose primary response is binary (file downloads).
+   */
+  responseType?: 'json' | 'text' | 'blob';
 }
 
 export interface HttpResponse<T = any> {
@@ -40,7 +45,7 @@ export interface HttpClientAdapter {
  */
 export class FetchAdapter implements HttpClientAdapter {
   async request<T = any>(request: HttpRequest): Promise<HttpResponse<T>> {
-    const { method, url, headers, body, params, formData, binaryBody } = request;
+    const { method, url, headers, body, params, formData, binaryBody, responseType } = request;
 
     // Build URL with query params
     let finalUrl = url;
@@ -85,15 +90,26 @@ export class FetchAdapter implements HttpClientAdapter {
       credentials: 'include',  // Include Django session cookies
     });
 
-    // Parse response by Content-Type:
-    //   application/json  → JSON
-    //   text/*            → string
-    //   anything else     → Blob (CSV/JSON file downloads, octet-stream, …)
+    // Parse response. Explicit `responseType` (set by the generator for binary
+    // endpoints) wins over Content-Type sniffing — backends often serve CSV/JSON
+    // file downloads with `text/csv` or `application/json`, which would otherwise
+    // be parsed as string/object instead of the Blob the caller expects.
+    //
+    //   responseType set        → use it directly
+    //   application/json        → JSON
+    //   text/*                  → string
+    //   anything else           → Blob (file downloads, octet-stream, …)
     let data: any = null;
     const contentType = response.headers.get('content-type') ?? '';
 
     if (response.status !== 204) {
-      if (contentType.includes('application/json')) {
+      if (responseType === 'blob') {
+        data = await response.blob();
+      } else if (responseType === 'text') {
+        data = await response.text();
+      } else if (responseType === 'json') {
+        data = await response.json();
+      } else if (contentType.includes('application/json')) {
         data = await response.json();
       } else if (contentType.startsWith('text/')) {
         data = await response.text();

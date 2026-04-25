@@ -11,7 +11,7 @@ import { tradingClient } from '@/api/BaseClient';
 import {
     useCreateTradingOrdersCreate, useDeleteTradingOrdersDestroy, useTradingOrdersList,
     useTradingPortfoliosMeRetrieve, useTradingPortfoliosStatsRetrieve
-} from '../../api/generated/trading/_utils/hooks/trading__api__trading';
+} from '../../api/generated/trading/_utils/hooks/trading__apix__trading';
 
 import type { API } from '../../api/generated/trading';
 import type { OrderCreateRequest } from './types';

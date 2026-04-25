@@ -11,18 +11,15 @@ import { ReactNode } from 'react';
 
 import { settings } from '@core/settings';
 import {
+    FloatingNavbar,
     NavigationItem as BaseNavigationItem,
     PublicLayout as BasePublicLayout,
-    PublicNavbar,
     UserMenuConfig,
 } from '@djangocfg/layouts';
 import { generatePublicNavigation, routes } from '@routes/index';
 
-import type { I18nLayoutConfig } from '@djangocfg/layouts';
-
 interface PublicLayoutProps {
   children: ReactNode;
-  i18n?: I18nLayoutConfig;
 }
 
 /**
@@ -43,7 +40,7 @@ function convertNavigationSections(sections: Array<{ title: string; items: Array
  * Wrapper around base PublicLayout from @djangocfg/layouts
  * Converts routes to layout props
  */
-export function PublicLayout({ children, i18n }: PublicLayoutProps) {
+export function PublicLayout({ children }: PublicLayoutProps) {
   const publicNavSections = generatePublicNavigation();
 
   const navigation: BaseNavigationItem[] = convertNavigationSections(publicNavSections);
@@ -64,7 +61,7 @@ export function PublicLayout({ children, i18n }: PublicLayoutProps) {
   return (
     <BasePublicLayout
       navbar={
-        <PublicNavbar
+        <FloatingNavbar
           config={{
             brand: settings.app.name,
             navigation,

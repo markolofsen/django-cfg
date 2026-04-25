@@ -2,7 +2,7 @@ import { Award, DollarSign, Target, TrendingUp } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@djangocfg/ui-nextjs';
 
-import type { Portfolio, PortfolioStats } from '@/api/generated/trading/trading__api__trading/models';
+import type { Portfolio, PortfolioStats } from '@/api/generated/trading/trading__apix__trading/models';
 
 interface PortfolioStatsProps {
   portfolio: Portfolio | undefined;
