@@ -120,3 +120,21 @@ def header_to_param_name(header_name: str) -> str:
 
     # First part lowercase, rest title case
     return parts[0].lower() + "".join(p.title() for p in parts[1:])
+
+
+def header_to_snake_param_name(header_name: str) -> str:
+    """
+    Convert HTTP header name to snake_case parameter name (Python identifier).
+
+    Examples:
+        >>> header_to_snake_param_name("X-Chunk-Index")
+        'x_chunk_index'
+        >>> header_to_snake_param_name("Content-Type")
+        'content_type'
+        >>> header_to_snake_param_name("Authorization")
+        'authorization'
+    """
+    parts = [p for p in header_name.strip().split("-") if p]
+    if not parts:
+        return header_name.lower().replace("-", "_")
+    return "_".join(p.lower() for p in parts)

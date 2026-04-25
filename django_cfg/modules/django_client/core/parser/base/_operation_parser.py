@@ -148,6 +148,7 @@ class OperationParserMixin:
             is_paginated = False
             is_array = False
             items_schema_name = None
+            is_binary = False
             content_type = "application/json"
 
             if response_or_ref.content:
@@ -165,6 +166,19 @@ class OperationParserMixin:
                                 if isinstance(media_type.schema_.items, ReferenceObject):
                                     items_schema_name = media_type.schema_.items.ref_name
                                     schema_name = items_schema_name
+                            # Binary file response: {type: string, format: binary}
+                            # or contentEncoding=base64/binary (OAS 3.1).
+                            if (
+                                getattr(media_type.schema_, "format", None) == "binary"
+                                or getattr(media_type.schema_, "contentEncoding", None) in ("base64", "binary")
+                            ):
+                                is_binary = True
+                    # Non-JSON, non-text content type → treat as binary download.
+                    if content_type and not (
+                        content_type.startswith("application/json")
+                        or content_type.startswith("text/")
+                    ):
+                        is_binary = True
                     break
 
             ir_responses[status_code] = IRResponseObject(
@@ -175,6 +189,7 @@ class OperationParserMixin:
                 is_paginated=is_paginated,
                 is_array=is_array,
                 items_schema_name=items_schema_name,
+                is_binary=is_binary,
             )
 
         return ir_responses

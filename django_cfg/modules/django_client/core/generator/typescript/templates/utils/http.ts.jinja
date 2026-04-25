@@ -85,14 +85,21 @@ export class FetchAdapter implements HttpClientAdapter {
       credentials: 'include',  // Include Django session cookies
     });
 
-    // Parse response
+    // Parse response by Content-Type:
+    //   application/json  → JSON
+    //   text/*            → string
+    //   anything else     → Blob (CSV/JSON file downloads, octet-stream, …)
     let data: any = null;
-    const contentType = response.headers.get('content-type');
+    const contentType = response.headers.get('content-type') ?? '';
 
-    if (response.status !== 204 && contentType?.includes('application/json')) {
-      data = await response.json();
-    } else if (response.status !== 204) {
-      data = await response.text();
+    if (response.status !== 204) {
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else if (contentType.startsWith('text/')) {
+        data = await response.text();
+      } else {
+        data = await response.blob();
+      }
     }
 
     // Convert Headers to plain object

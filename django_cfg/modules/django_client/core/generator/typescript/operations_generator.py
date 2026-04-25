@@ -150,6 +150,9 @@ class OperationsGenerator:
         primary_response = operation.primary_success_response
         if primary_response and primary_response.status_code == 204:
             return "void"
+        elif primary_response and primary_response.is_binary:
+            # File download — runtime returns a Blob (see http.ts FetchAdapter).
+            return "Blob"
         elif primary_response and primary_response.schema_name:
             is_paginated = primary_response.schema_name.startswith('Paginated')
             if operation.is_list_operation and not is_paginated:

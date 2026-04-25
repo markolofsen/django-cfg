@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..types import FieldType, TypeMapper
 from ..types.content_type import ContentType
-from ..utils import header_to_param_name
+from ..utils import header_to_param_name, header_to_snake_param_name
 
 if TYPE_CHECKING:
     from ..ir import IROperationObject, IRParameterObject, IRRequestBodyObject
@@ -304,13 +304,15 @@ class ParamsBuilder:
             if not p.required:
                 sig_params.append(f"{p.name}: {p.python_type} = None")
 
-        # Header params (required first, then optional)
+        # Header params (required first, then optional). Header names like
+        # "X-Chunk-Checksum" are not valid Python identifiers — normalize to
+        # snake_case so the generated signature compiles.
         for p in self._context.header_params:
             if p.required:
-                sig_params.append(f"{p.name}: {p.python_type}")
+                sig_params.append(f"{header_to_snake_param_name(p.name)}: {p.python_type}")
         for p in self._context.header_params:
             if not p.required:
-                sig_params.append(f"{p.name}: {p.python_type} = None")
+                sig_params.append(f"{header_to_snake_param_name(p.name)}: {p.python_type} = None")
 
         return {
             "signature_params": sig_params,

@@ -116,6 +116,9 @@ class SecurityBuilder:
             'CORS_ALLOW_ALL_ORIGINS': False,
             'CORS_ALLOW_CREDENTIALS': True,
             'CORS_ALLOWED_ORIGINS': dev_cors_origins,
+            # Desktop apps use custom URL schemes (wails://, app://, tauri://)
+            # that http-only whitelists reject. Regex list covers them.
+            'CORS_ALLOWED_ORIGIN_REGEXES': self._get_desktop_app_cors_regexes(),
             'CORS_ALLOW_HEADERS': self.config.cors_allow_headers,
 
             # === ALLOWED_HOSTS: Accept everything ===
@@ -189,7 +192,14 @@ class SecurityBuilder:
             'CORS_ALLOW_ALL_ORIGINS': False,
             'CORS_ALLOW_CREDENTIALS': True,
             'CORS_ALLOWED_ORIGINS': normalized['cors_origins'],
-            'CORS_ALLOWED_ORIGIN_REGEXES': self._get_localhost_cors_regexes() if has_localhost else [],
+            # Desktop-app custom schemes (wails://, app://, tauri://) are
+            # always trusted — the binary is our build and carries a
+            # native JWT. Localhost regex only when explicitly opted-in
+            # via security_domains.
+            'CORS_ALLOWED_ORIGIN_REGEXES': (
+                self._get_desktop_app_cors_regexes()
+                + (self._get_localhost_cors_regexes() if has_localhost else [])
+            ),
             'CORS_ALLOW_HEADERS': self.config.cors_allow_headers,
 
             # === ALLOWED_HOSTS: security_domains + Docker patterns ===
@@ -547,6 +557,44 @@ class SecurityBuilder:
         return [
             r'^http://localhost:\d+$',      # localhost with any port
             r'^http://127\.0\.0\.1:\d+$',   # 127.0.0.1 with any port
+        ]
+
+    def _get_desktop_app_cors_regexes(self) -> List[str]:
+        """
+        CORS regex for desktop-app custom URL schemes.
+
+        Electron / Wails / Tauri render frontend under a custom scheme
+        (not http), so the browser sends Origin headers that standard
+        http-only regexes reject. These are trusted origins — the
+        desktop binary is shipped by us and holds the user's JWT via
+        the native auth manager, so allowing the Origin is equivalent
+        to trusting our own build.
+
+        Matches:
+        - wails://localhost                     (Wails v3 prod)
+        - wails://localhost:9245                (Wails v3 dev, any port)
+        - wails.localhost / wails.localhost:PORT (Wails v2 on Windows)
+        - app://-                               (Electron prod)
+        - tauri://localhost                     (Tauri prod on macOS)
+        - https://tauri.localhost               (Tauri prod on Windows)
+        - capacitor://localhost / ionic://localhost (mobile webviews)
+
+        Returns:
+            List of regex patterns for CORS_ALLOWED_ORIGIN_REGEXES
+        """
+        return [
+            # Wails v3 (macOS/Linux): wails://localhost[:port]
+            r'^wails://localhost(:\d+)?$',
+            # Wails v2 (Windows): wails.localhost[:port]
+            r'^https?://wails\.localhost(:\d+)?$',
+            # Electron: app://- (dash is literal in Electron 12+)
+            r'^app://.*$',
+            # Tauri
+            r'^tauri://localhost$',
+            r'^https://tauri\.localhost$',
+            # Capacitor / Ionic webviews (for consistency, same pattern)
+            r'^capacitor://localhost$',
+            r'^ionic://localhost$',
         ]
 
     def _get_localhost_csrf_origins(self) -> List[str]:

@@ -184,6 +184,11 @@ class FetchersGenerator:
         if 204 in operation.responses or operation.http_method == "DELETE":
             return ("void", None, False)
 
+        # Binary file download — return Blob (matches FetchAdapter parsing).
+        primary = operation.primary_success_response
+        if primary and primary.is_binary:
+            return ("Blob", None, False)
+
         return ("any", None, False)
 
     def _get_api_call(self, operation: IROperationObject) -> str:

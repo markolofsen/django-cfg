@@ -227,6 +227,16 @@ class IRResponseObject(BaseModel):
         None, description="Schema name for array items (when is_array=True)"
     )
 
+    # Binary response (file download — content is a Blob, not JSON)
+    is_binary: bool = Field(
+        False,
+        description=(
+            "True for binary file download responses "
+            "(application/octet-stream, schema with format=binary, etc.). "
+            "Generators should map the return type to Blob and skip JSON parsing."
+        ),
+    )
+
     @property
     def is_success(self) -> bool:
         """Check if response is successful (2xx)."""

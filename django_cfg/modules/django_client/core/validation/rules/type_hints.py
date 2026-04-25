@@ -209,16 +209,41 @@ class TypeHintRule(ValidationRule):
                     elif child.value.value is None:
                         return 'Optional[Any]'
 
+                # f-strings always evaluate to ``str``
+                elif isinstance(child.value, ast.JoinedStr):
+                    return 'str'
+
                 # List/Dict literals
                 elif isinstance(child.value, ast.List):
                     return 'List[Any]'
                 elif isinstance(child.value, ast.Dict):
                     return 'Dict[str, Any]'
 
-                # Method calls that suggest serializer
+                # ``SomeSerializer(...).data`` pattern.
+                #
+                # In the AST this is an ``Attribute`` node whose ``value`` is a
+                # ``Call`` (the serializer construction) and whose ``attr`` is
+                # ``"data"``. The previous implementation only matched a Call
+                # whose ``func.attr == 'data'`` — i.e. ``foo.data(...)`` — which
+                # is the wrong shape for the documented pattern.
+                elif (
+                    isinstance(child.value, ast.Attribute)
+                    and child.value.attr == 'data'
+                    and isinstance(child.value.value, ast.Call)
+                ):
+                    serializer_call = child.value.value
+                    # Check if many=True is passed to the serializer
+                    for keyword in getattr(serializer_call, 'keywords', []):
+                        if keyword.arg == 'many' and isinstance(keyword.value, ast.Constant):
+                            if keyword.value.value is True:
+                                return 'List[Dict[str, Any]]'
+                    return 'Dict[str, Any]'
+
+                # Method calls that suggest serializer (legacy shape:
+                # ``something.data(...)``)
                 elif isinstance(child.value, ast.Call):
-                    # SomeSerializer(...).data pattern
-                    if hasattr(child.value.func, 'attr') and child.value.func.attr == 'data':
+                    func = child.value.func
+                    if isinstance(func, ast.Attribute) and func.attr == 'data':
                         # Check if many=True in call
                         for keyword in getattr(child.value, 'keywords', []):
                             if keyword.arg == 'many' and isinstance(keyword.value, ast.Constant):
