@@ -1,7 +1,7 @@
 """
 Django-CFG wrapper for generate_fastapi command.
 
-This is a simple alias for django_fastapi.management.commands.generate_fastapi.
+This is a simple alias for django_cfg.modules.django_generator.fastapi.management.commands.generate_fastapi.
 All logic is in django_fastapi module.
 
 Usage:
@@ -11,7 +11,7 @@ Usage:
     python manage.py generate_fastapi --no-crud --no-schemas
 """
 
-from django_cfg.modules.django_fastapi.management.commands.generate_fastapi import (
+from django_cfg.modules.django_generator.fastapi.management.commands.generate_fastapi import (
     Command as DjangoFastAPICommand,
 )
 

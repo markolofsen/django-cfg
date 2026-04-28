@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import Field
 
-from django_cfg.modules.django_client.core.config import OpenAPIConfig, OpenAPIGroupConfig
+from django_cfg.modules.django_generator.openapi.pipeline.config import OpenAPIConfig, OpenAPIGroupConfig
 
 
 class OpenAPIClientConfig(OpenAPIConfig):

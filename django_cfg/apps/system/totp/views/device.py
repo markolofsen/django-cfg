@@ -35,7 +35,7 @@ class DeviceViewSet(viewsets.GenericViewSet):
 
     @extend_schema(
         responses={200: DeviceListResponseSerializer},
-        tags=["TOTP Management"],
+        tags=["cfg", "totp", "TOTP Management"],
     )
     @action(detail=False, methods=["get"], url_path="list", url_name="list")
     def devices(self, request):
@@ -118,7 +118,7 @@ class DeviceViewSet(viewsets.GenericViewSet):
             200: {"description": "2FA disabled successfully"},
             400: {"description": "Invalid code"},
         },
-        tags=["TOTP Management"],
+        tags=["cfg", "totp", "TOTP Management"],
     )
     @action(detail=False, methods=["post"], url_path="disable", url_name="disable")
     @transaction.atomic

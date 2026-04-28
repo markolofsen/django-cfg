@@ -8,13 +8,13 @@ from .otp import (
 )
 from .profile import (
     AccountDeleteResponseSerializer,
-    UserProfileUpdateSerializer,
+    CfgUserUpdateSerializer,
     UserSerializer,
 )
 
 __all__ = [
     'UserSerializer',
-    'UserProfileUpdateSerializer',
+    'CfgUserUpdateSerializer',
     'AccountDeleteResponseSerializer',
     'OTPSerializer',
     'OTPRequestSerializer',

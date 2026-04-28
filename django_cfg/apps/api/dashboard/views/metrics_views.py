@@ -60,7 +60,7 @@ class MetricsViewSet(viewsets.GenericViewSet):
             ),
         ],
         responses={200: MetricsResponseSerializer},
-        tags=["Dashboard Metrics"]
+        tags=["cfg", "dashboard", "Dashboard Metrics"]
     )
     def list(self, request):
         """
@@ -119,7 +119,7 @@ class MetricsViewSet(viewsets.GenericViewSet):
                 type=bool,
             ),
         ],
-        tags=["Dashboard Metrics"]
+        tags=["cfg", "dashboard", "Dashboard Metrics"]
     )
     @action(detail=False, methods=["get"], url_path="llm-balances")
     def llm_balances(self, request):
@@ -165,7 +165,7 @@ class MetricsViewSet(viewsets.GenericViewSet):
                 type=bool,
             ),
         ],
-        tags=["Dashboard Metrics"]
+        tags=["cfg", "dashboard", "Dashboard Metrics"]
     )
     @action(detail=False, methods=["get"], url_path="system-health")
     def system_health(self, request):

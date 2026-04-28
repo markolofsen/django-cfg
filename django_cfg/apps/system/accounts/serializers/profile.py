@@ -112,7 +112,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 
-class UserProfileUpdateSerializer(serializers.ModelSerializer):
+class CfgUserUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user profile."""
 
     class Meta:

@@ -4,7 +4,23 @@ System Serializers
 Serializers for system health and metrics endpoints.
 """
 
+from django.db import models
 from rest_framework import serializers
+
+
+class SystemHealthStatus(models.TextChoices):
+    """Health status of a system component or the overall system.
+
+    A named ``TextChoices`` subclass — referenced from
+    ``SpectacularConfig.enum_name_overrides`` (default) so the schema
+    component always lands as ``SystemHealthStatusEnum``, not a
+    hash-suffixed identifier that flips on every backend change.
+    """
+
+    HEALTHY = "healthy", "Healthy"
+    WARNING = "warning", "Warning"
+    ERROR = "error", "Error"
+    UNKNOWN = "unknown", "Unknown"
 
 
 class SystemHealthItemSerializer(serializers.Serializer):
@@ -16,8 +32,8 @@ class SystemHealthItemSerializer(serializers.Serializer):
 
     component = serializers.CharField(help_text="Component name")
     status = serializers.ChoiceField(
-        choices=['healthy', 'warning', 'error', 'unknown'],
-        help_text="Health status"
+        choices=SystemHealthStatus.choices,
+        help_text="Health status",
     )
     description = serializers.CharField(help_text="Status description")
     last_check = serializers.CharField(help_text="Last check time (ISO format)")
@@ -34,8 +50,8 @@ class SystemHealthSerializer(serializers.Serializer):
     """Serializer for overall system health status."""
 
     overall_status = serializers.ChoiceField(
-        choices=['healthy', 'warning', 'error', 'unknown'],
-        help_text="Overall system health status"
+        choices=SystemHealthStatus.choices,
+        help_text="Overall system health status",
     )
     overall_health_percentage = serializers.IntegerField(
         min_value=0,

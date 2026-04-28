@@ -40,7 +40,7 @@ class ConfigViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         summary="Get configuration data",
         description="Retrieve user's DjangoConfig settings and complete Django settings (sanitized)",
         responses={200: ConfigDataSerializer},
-        tags=["Dashboard - Config"]
+        tags=["cfg", "dashboard", "Dashboard - Config"]
     )
     @action(detail=False, methods=['get'], url_path='', url_name='config')
     def config(self, request):

@@ -87,7 +87,7 @@ def get_default_cfg_group():
     Returns:
         OpenAPIGroupConfig with enabled django-cfg apps
     """
-    from django_cfg.modules.django_client.core.config import OpenAPIGroupConfig
+    from django_cfg.modules.django_generator.openapi.pipeline.config import OpenAPIGroupConfig
 
     return OpenAPIGroupConfig(
         name="cfg",
@@ -104,7 +104,7 @@ urlpatterns = [
     path('cfg/health/', include('django_cfg.apps.api.health.urls')),
     path('cfg/endpoints/', include('django_cfg.apps.api.endpoints.urls')),
     path('cfg/commands/', include('django_cfg.apps.api.commands.urls')),
-    path('cfg/openapi/', include('django_cfg.modules.django_client.urls')),
+    path('cfg/openapi/', include('django_cfg.modules.django_generator.urls')),
     path('cfg/dashboard/', include('django_cfg.apps.api.dashboard.urls')),
     path('cfg/accounts/', include('django_cfg.apps.system.accounts.urls')),
     path('cfg/totp/', include('django_cfg.apps.system.totp.urls')),
@@ -123,7 +123,12 @@ except Exception:
 base_module = BaseCfgModule()
 
 # Integration apps (conditional based on config)
-# django_centrifugo has no REST API — replaced by Streamlit dashboard reading D1 directly
+# django_centrifugo: token endpoint for client websocket auth.
+# Mounted only when centrifugo is enabled in config.
+if base_module.is_centrifugo_enabled():
+    urlpatterns.append(
+        path('cfg/centrifugo/', include('django_cfg.modules.django_centrifugo.urls'))
+    )
 
 
 

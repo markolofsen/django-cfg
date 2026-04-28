@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.1.8"
+version = "2.2.1"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -194,6 +194,27 @@ text = "MIT"
 [project.optional-dependencies]
 local = []
 
+# django_generator: codegen pipeline + FastAPI ORM generator.
+#
+# Python-only deps (everything pip-installable). External CLIs needed for
+# specific languages are NOT pip packages — install them per-machine:
+#   Go     (ogen):                 go install github.com/ogen-go/ogen/cmd/ogen@latest
+#   TS     (Hey API):              npx -y @hey-api/openapi-ts@latest  (auto, no install)
+#   Swift  (swift-openapi-gen):    brew install apple/tap/swift-openapi-generator
+#   Proto  (buf, swift, grpc):     brew install bufbuild/buf/buf swift-protobuf grpc-swift
+gen = [
+    # OpenAPI → Python clients
+    "openapi-python-client>=0.21,<1",
+    # Proto → Python (gRPC stubs); already in [grpc] but listed here too for `pip install django-cfg[gen]` ergonomics
+    "grpcio-tools>=1.50.0,<2.0",
+    "protobuf>=5.0,<7.0",
+    # FastAPI/SQLModel ORM generator (django_generator/fastapi/)
+    "sqlmodel>=0.0.16,<1.0",
+    "sqlalchemy>=2.0,<3.0",
+    "alembic>=1.13,<2.0",
+    "asyncpg>=0.29,<1.0",  # async PG driver for generated FastAPI repositories
+]
+
 django52 = [
     "django>=5.2,<6.0",
 ]
@@ -213,6 +234,16 @@ grpc = [
     "structlog>=24.0.0,<26.0",
     "betterproto2[all]>=0.9.0,<1.0",
     "grpclib>=0.4.8,<1.0",
+]
+
+# HTTP/3 (QUIC) reverse-proxy frontend for django_grpc.
+# Opt-in: only install when you want the rungrpc --http3 flag to work. The
+# proxy runs Hypercorn[h3] as a sibling task to grpc.aio.server() and forwards
+# all traffic to the upstream HTTP/2 origin, so the gRPC interceptor chain
+# stays untouched. See django_grpc/services/h3.py.
+grpc-h3 = [
+    "hypercorn[h3]>=0.14.0,<1.0",
+    "aioquic>=0.9.21,<2.0",
 ]
 
 centrifugo = [
@@ -325,6 +356,12 @@ full = [
     "rq-scheduler>=0.14.0",
     "hiredis>=2.0",
     "pydantic-ai>=1.34.0,<2.0",
+    # gen (django_generator)
+    "openapi-python-client>=0.21,<1",
+    "sqlmodel>=0.0.16,<1.0",
+    "sqlalchemy>=2.0,<3.0",
+    "alembic>=1.13,<2.0",
+    "asyncpg>=0.29,<1.0",
 ]
 
 [project.urls]

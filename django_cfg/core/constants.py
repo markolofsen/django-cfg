@@ -46,7 +46,7 @@ DEFAULT_APPS: List[str] = [
     "axes",  # django-axes for brute-force protection
     # Django CFG Core
     "django_cfg",
-    "django_cfg.modules.django_client",
+    "django_cfg.modules.django_generator",
     "django_cfg.modules.django_admin",
 ]
 

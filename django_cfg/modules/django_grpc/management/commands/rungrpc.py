@@ -16,11 +16,52 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 
 from django.core.management.base import BaseCommand
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# H3 env-var helpers (kept here so rungrpc owns the CLI/env→config merge logic)
+# ---------------------------------------------------------------------------
+
+_TRUTHY = {"1", "true", "yes", "on", "y", "t"}
+_FALSY = {"0", "false", "no", "off", "n", "f"}
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    """Parse a boolean env var. Unknown values fall back to default."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    v = raw.strip().lower()
+    if v in _TRUTHY:
+        return True
+    if v in _FALSY:
+        return False
+    return default
+
+
+def _env_int(name: str, default: int) -> int:
+    """Parse an int env var; fall back to default on bad values."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return default
+
+
+def _env_str(name: str, default: str) -> str:
+    """Read a string env var; treat empty string as unset."""
+    raw = os.environ.get(name)
+    if raw is None or raw == "":
+        return default
+    return raw
 
 
 def check_internal_secret_config(grpc_module_cfg) -> list[str]:
@@ -68,6 +109,30 @@ class Command(BaseCommand):
             action="store_false",
             dest="use_reloader",
             help="Disable auto-reloader",
+        )
+        # ── HTTP/3 (QUIC) reverse-proxy frontend ─────────────────────────────
+        # Off by default. CLI flag overrides env var, env var overrides config.
+        parser.add_argument(
+            "--http3",
+            action="store_true",
+            dest="enable_http3",
+            default=False,
+            help=(
+                "Enable HTTP/3 (QUIC) reverse-proxy frontend (Hypercorn[h3]). "
+                "Requires 'pip install django-cfg[grpc-h3]'."
+            ),
+        )
+        parser.add_argument(
+            "--http3-host",
+            type=str,
+            default=None,
+            help="HTTP/3 listen address (only used with --http3).",
+        )
+        parser.add_argument(
+            "--http3-port",
+            type=int,
+            default=None,
+            help="HTTP/3 listen port (only used with --http3).",
         )
 
     def handle(self, *args, **options):
@@ -121,6 +186,32 @@ class Command(BaseCommand):
         # Read server config
         grpc_module_cfg = get_grpc_module_config()
         server_cfg: GrpcServerConfig = grpc_module_cfg.server if grpc_module_cfg else GrpcServerConfig()
+
+        # ── H3 config merge (precedence: CLI flag > env var > config field) ──
+        # The H3 listener is opt-in. Resolve the effective enable_h3 / h3_host /
+        # h3_port values once here so the rest of _async_main can rely on them.
+        enable_h3 = (
+            bool(options.get("enable_http3"))
+            or _env_bool("DJANGO_GRPC_ENABLE_H3", server_cfg.enable_h3)
+        )
+        h3_host = (
+            options.get("http3_host")
+            or _env_str("DJANGO_GRPC_H3_HOST", server_cfg.h3_host)
+        )
+        h3_port = (
+            options.get("http3_port")
+            or _env_int("DJANGO_GRPC_H3_PORT", server_cfg.h3_port)
+        )
+        if enable_h3 and (
+            h3_host != server_cfg.h3_host
+            or h3_port != server_cfg.h3_port
+            or enable_h3 != server_cfg.enable_h3
+        ):
+            # Reflect resolved values onto server_cfg so build_h3_proxy_from_server_config
+            # reads the correct bind address.
+            server_cfg = server_cfg.model_copy(
+                update={"enable_h3": True, "h3_host": h3_host, "h3_port": h3_port}
+            )
 
         host = options.get("host") or server_cfg.host
         port = options.get("port") or server_cfg.port
@@ -206,6 +297,42 @@ class Command(BaseCommand):
 
         await self.server.start()
 
+        # ── HTTP/3 reverse-proxy frontend (optional) ─────────────────────────
+        # Sibling asyncio task to grpc.aio.server. Both shut down together —
+        # the H3 task is cancelled in the finally block below.
+        h3_task: asyncio.Task | None = None
+        h3_proxy = None
+        if enable_h3:
+            try:
+                from django_cfg.modules.django_grpc.services.h3 import (
+                    build_h3_proxy_from_server_config,
+                )
+                # Resolve the upstream loopback host: when the gRPC server binds
+                # a wildcard, the proxy must connect to 127.0.0.1, not [::]/0.0.0.0.
+                # build_h3_proxy_from_server_config handles that normalisation.
+                h3_proxy = build_h3_proxy_from_server_config(server_cfg)
+                # Override upstream port if --port CLI flag was used (server_cfg.port
+                # is the configured default, but the actual bind port may have been
+                # overridden via --port).
+                if port != server_cfg.port:
+                    h3_proxy.upstream_port = port
+                h3_task = asyncio.create_task(h3_proxy.serve(), name="grpc-h3-proxy")
+                self.stdout.write(self.style.SUCCESS(
+                    f"HTTP/3 (QUIC) proxy listening on {h3_proxy.listen_address} "
+                    f"-> upstream {h3_proxy.upstream_url_base}"
+                ))
+            except RuntimeError as e:
+                # hypercorn[h3] not installed — log loud and continue with HTTP/2 only.
+                logger.error(
+                    "[gRPC] enable_h3=True but %s. Continuing without HTTP/3.", e,
+                )
+                self.stdout.write(self.style.WARNING(
+                    "HTTP/3 requested but Hypercorn[h3] is not installed. "
+                    "Install with: pip install 'django-cfg[grpc-h3]'"
+                ))
+            except Exception as e:
+                logger.error("[gRPC] Failed to start HTTP/3 proxy: %s", e, exc_info=True)
+
         # Reap zombie child processes (PID 1 in Docker doesn't do this)
         self._setup_zombie_reaper()
 
@@ -252,6 +379,22 @@ class Command(BaseCommand):
                 await self.server.stop(grace=server_cfg.shutdown_grace_seconds)
             except Exception:
                 pass
+            # Stop H3 proxy: trigger Hypercorn's graceful shutdown event first,
+            # then cancel the wrapping task as a fallback if it doesn't exit.
+            if h3_task is not None:
+                try:
+                    if h3_proxy is not None:
+                        h3_proxy.trigger_shutdown()
+                    try:
+                        await asyncio.wait_for(h3_task, timeout=5.0)
+                    except asyncio.TimeoutError:
+                        h3_task.cancel()
+                        try:
+                            await h3_task
+                        except (asyncio.CancelledError, Exception):
+                            pass
+                except Exception as _e:
+                    logger.debug("Error stopping H3 proxy: %s", _e)
             # Drain log worker — must happen before event loop tears down so buffered
             # entries are flushed; stop_log_worker cancels the task and awaits it.
             try:

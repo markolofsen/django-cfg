@@ -113,7 +113,7 @@ class InstalledAppsBuilder:
             "django_cfg.modules.django_tailwind",  # Universal Tailwind layouts
             "django_cfg.modules.django_llm_monitoring",  # LLM balance monitoring
             "django_cfg.modules.django_cleanup",  # Automatic file cleanup
-            "django_cfg.modules.django_codegen",  # Unified client generation
+            "django_cfg.modules.django_generator",  # Unified client generation (replaces django_codegen + django_client + django_fastapi)
             "django_cfg.modules.streamlit_admin",  # Streamlit admin (always loaded for templatetags)
             "django_cfg.apps.api.health",
             "django_cfg.apps.api.commands",

@@ -206,7 +206,7 @@ class DRFHealthCheckView(APIView):
     def _get_openapi_schema_links(self, request) -> Dict[str, str]:
         """Get OpenAPI schema links for all configured groups."""
         try:
-            from django_cfg.modules.django_client.core import get_openapi_service
+            from django_cfg.modules.django_generator.openapi.pipeline import get_openapi_service
 
             service = get_openapi_service()
 

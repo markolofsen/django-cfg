@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 @extend_schema_view(
     status=extend_schema(
         responses={200: BackupCodesStatusSerializer},
-        tags=["Backup Codes"],
+        tags=["cfg", "totp", "Backup Codes"],
     ),
     regenerate=extend_schema(
         request=BackupCodesRegenerateSerializer,
@@ -29,7 +29,7 @@ logger = get_logger(__name__)
             200: BackupCodesRegenerateResponseSerializer,
             400: {"description": "Invalid code or 2FA not enabled"},
         },
-        tags=["Backup Codes"],
+        tags=["cfg", "totp", "Backup Codes"],
     ),
 )
 class BackupViewSet(viewsets.GenericViewSet):

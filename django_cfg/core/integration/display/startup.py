@@ -604,7 +604,7 @@ class StartupDisplayManager(BaseDisplayManager):
     def _display_openapi_client_info(self):
         """Display Django Client (OpenAPI) information."""
         try:
-            from django_cfg.modules.django_client.core.config.service import get_openapi_service
+            from django_cfg.modules.django_generator.openapi.pipeline.config.service import get_openapi_service
 
             service = get_openapi_service()
             if not service.config or not service.config.enabled:

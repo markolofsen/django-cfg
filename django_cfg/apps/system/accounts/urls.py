@@ -26,7 +26,7 @@ router = DefaultRouter()
 router.register(r'otp', OTPViewSet, basename='otp')
 
 # Token-related URLs
-@extend_schema(tags=['Auth'])
+@extend_schema(tags=["cfg", "accounts", 'Auth'])
 class CustomTokenRefreshView(TokenRefreshView):
     """Refresh JWT token."""
     pass

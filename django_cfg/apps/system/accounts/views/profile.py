@@ -12,7 +12,7 @@ from django_cfg.utils import get_logger
 from ..serializers.profile import (
     AccountDeleteResponseSerializer,
     AvatarUploadSerializer,
-    UserProfileUpdateSerializer,
+    CfgUserUpdateSerializer,
     UserSerializer,
 )
 
@@ -22,7 +22,7 @@ User = get_user_model()
 
 
 @extend_schema(
-    tags=['User Profile'],
+    tags=["cfg", "accounts", 'User Profile'],
     summary="Get current user profile",
     description="Retrieve the current authenticated user's profile information.",
     responses={
@@ -43,10 +43,10 @@ class UserProfileView(ClientAPIMixin, generics.RetrieveAPIView):
 
 
 @extend_schema(
-    tags=['User Profile'],
+    tags=["cfg", "accounts", 'User Profile'],
     summary="Update user profile",
     description="Update the current authenticated user's profile information.",
-    request=UserProfileUpdateSerializer,
+    request=CfgUserUpdateSerializer,
     responses={
         200: UserSerializer,
         400: {"description": "Invalid data provided."},
@@ -73,7 +73,7 @@ class UserProfileUpdateView(ClientAPIMixin, generics.UpdateAPIView):
 
     Requires authenticated user (JWT or Session).
     """
-    serializer_class = UserProfileUpdateSerializer
+    serializer_class = CfgUserUpdateSerializer
 
     def get_object(self):
         return self.request.user
@@ -92,10 +92,10 @@ class UserProfileUpdateView(ClientAPIMixin, generics.UpdateAPIView):
 
 
 @extend_schema(
-    tags=['User Profile'],
+    tags=["cfg", "accounts", 'User Profile'],
     summary="Partial update user profile",
     description="Partially update the current authenticated user's profile information. Supports avatar upload.",
-    request=UserProfileUpdateSerializer,
+    request=CfgUserUpdateSerializer,
     responses={
         200: UserSerializer,
         400: {"description": "Invalid data provided."},
@@ -122,7 +122,7 @@ class UserProfilePartialUpdateView(ClientAPIMixin, generics.UpdateAPIView):
 
     Requires authenticated user (JWT or Session).
     """
-    serializer_class = UserProfileUpdateSerializer
+    serializer_class = CfgUserUpdateSerializer
 
     def get_object(self):
         return self.request.user
@@ -140,7 +140,7 @@ class UserProfilePartialUpdateView(ClientAPIMixin, generics.UpdateAPIView):
 
 
 @extend_schema(
-    tags=['User Profile'],
+    tags=["cfg", "accounts", 'User Profile'],
     summary="Upload user avatar",
     description="Upload avatar image for the current authenticated user. Accepts multipart/form-data with 'avatar' field.",
     request={
@@ -189,7 +189,7 @@ def upload_avatar(request):
 
 
 @extend_schema(
-    tags=['User Profile'],
+    tags=["cfg", "accounts", 'User Profile'],
     summary="Delete user account",
     description="""
     Permanently delete the current user's account.

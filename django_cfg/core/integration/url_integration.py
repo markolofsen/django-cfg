@@ -33,7 +33,7 @@ def _get_openapi_group_urls() -> List[URLPattern]:
     patterns = []
 
     try:
-        from django_cfg.modules.django_client.core import get_openapi_service
+        from django_cfg.modules.django_generator.openapi.pipeline import get_openapi_service
 
         service = get_openapi_service()
 
@@ -49,7 +49,7 @@ def _get_openapi_group_urls() -> List[URLPattern]:
         added_apps: Set[str] = set()
 
         # Import discovery helper lazily to avoid circular imports
-        from django_cfg.modules.django_client.core.groups.discovery import discover_app_url_modules
+        from django_cfg.modules.django_generator.openapi.groups.discovery import discover_app_url_modules
 
         # Get all groups from config
         for group_config in service.config.groups:
@@ -118,7 +118,7 @@ def _make_deferred_include(urls_module: str):
 
     Delegates to the shared implementation in GroupManager module.
     """
-    from django_cfg.modules.django_client.core.groups.manager import _deferred_include
+    from django_cfg.modules.django_generator.openapi.groups.manager import _deferred_include
     return _deferred_include(urls_module)
 
 
@@ -274,7 +274,7 @@ def get_django_cfg_urls_info() -> dict:
 
     # Add Django Client info if available
     try:
-        from django_cfg.modules.django_client.core.config.service import DjangoOpenAPI
+        from django_cfg.modules.django_generator.openapi.pipeline.config.service import DjangoOpenAPI
         service = DjangoOpenAPI.instance()
         if service.config and service.config.enabled:
             info["django_client"] = {

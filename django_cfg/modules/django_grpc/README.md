@@ -57,7 +57,93 @@ def register_handlers(server) -> list[str]:
 uv run manage.py rungrpc
 uv run manage.py rungrpc --host 0.0.0.0 --port 50051
 uv run manage.py rungrpc --noreload   # disable hot-reload in staging
+uv run manage.py rungrpc --http3      # add a Hypercorn[h3] frontend on :50052
 ```
+
+---
+
+## HTTP/3 (QUIC) Frontend (optional)
+
+`django_grpc` can run a Hypercorn[h3] reverse proxy alongside the gRPC server.
+Clients see HTTP/3 over QUIC, and traffic is forwarded transparently to the
+existing `grpc.aio.server()` on the upstream HTTP/2 origin. The gRPC
+interceptor chain (auth, error handling, observability) is unchanged — it all
+runs on the upstream server.
+
+### Install
+
+The H3 dependencies are isolated in an opt-in extras group so projects that
+don't need QUIC don't pay the dep cost:
+
+```bash
+pip install 'django-cfg[grpc-h3]'
+```
+
+This pulls in `hypercorn[h3]>=0.14.0` and `aioquic>=0.9.21`.
+
+### Enable
+
+Three independent paths set H3 on (priority: CLI > env > config field):
+
+1. **CLI flag**
+
+   ```bash
+   uv run manage.py rungrpc --http3
+   uv run manage.py rungrpc --http3 --http3-host 0.0.0.0 --http3-port 50052
+   ```
+
+2. **Environment variables** (useful for Docker / Kubernetes)
+
+   ```bash
+   export DJANGO_GRPC_ENABLE_H3=1
+   export DJANGO_GRPC_H3_HOST=0.0.0.0
+   export DJANGO_GRPC_H3_PORT=50052
+   uv run manage.py rungrpc
+   ```
+
+3. **Config field** (per-project default)
+
+   ```python
+   from django_cfg.modules.django_grpc import (
+       DjangoGrpcModuleConfig,
+       GrpcServerConfig,
+   )
+
+   grpc_module = DjangoGrpcModuleConfig(
+       server=GrpcServerConfig(
+           port=50051,
+           enable_h3=True,
+           h3_host="0.0.0.0",
+           h3_port=50052,
+       ),
+   )
+   ```
+
+### TLS
+
+HTTP/3 mandates TLS. When `GrpcServerConfig.tls.enabled=True` with valid
+`cert_path` / `key_path`, the H3 listener reuses those certs and clients
+negotiate real QUIC. Without certs, Hypercorn falls back to HTTP/1.1 + HTTP/2
+cleartext on the H3 port (a warning is logged) — useful in dev only.
+
+### Behaviour
+
+| Setting | Result |
+|---|---|
+| `enable_h3=False` (default) | No Hypercorn process spawned; rungrpc behaves exactly as before. |
+| `enable_h3=True`, hypercorn installed | gRPC server on `:50051` + Hypercorn[h3] on `:50052`. Both shut down together on SIGINT. |
+| `enable_h3=True`, hypercorn missing | A loud warning is logged, the gRPC server starts normally on HTTP/2 only — never crashes. |
+
+### Limitations
+
+- The proxy adds one localhost hop (~negligible latency).
+- Per the audit, this is the recommended path until `grpcio` ships native
+  HTTP/3 (no concrete ETA from upstream as of 2026).
+- The H3 listener is server-side only — agents and other gRPC clients keep
+  using their existing HTTP/2 transport unchanged.
+
+See `services/h3.py` and `@plans/plan24-transport/reports2/11-djangocfg-h3-integration-audit.md`
+for the design rationale.
 
 ---
 

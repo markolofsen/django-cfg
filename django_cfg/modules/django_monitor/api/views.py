@@ -50,7 +50,7 @@ class MonitorIngestViewSet(viewsets.GenericViewSet):
             "Accepts a batch of up to 50 frontend events. "
             "No authentication required — anonymous visitors can send events."
         ),
-        tags=["monitor"],
+        tags=["cfg", "monitor", "monitor"],
     )
     @action(detail=False, methods=["post"], url_path="ingest")
     def ingest(self, request):

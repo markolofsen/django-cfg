@@ -6,23 +6,41 @@ No ORM models — fields mirror FrontendEventSyncData exactly.
 
 from __future__ import annotations
 
+from django.db import models
 from rest_framework import serializers
+
+
+class FrontendEventType(models.TextChoices):
+    """Named enum so drf-spectacular emits a standalone components/schemas
+    entry — Hey API then materializes it as a TS `enum` (not an inline union)."""
+
+    JS_ERROR = "JS_ERROR"
+    NETWORK_ERROR = "NETWORK_ERROR"
+    ERROR = "ERROR"
+    WARNING = "WARNING"
+    PAGE_VIEW = "PAGE_VIEW"
+    PERFORMANCE = "PERFORMANCE"
+    CONSOLE = "CONSOLE"
+
+
+class FrontendEventLevel(models.TextChoices):
+    ERROR = "error"
+    WARNING = "warning"
+    INFO = "info"
+    DEBUG = "debug"
 
 
 class FrontendEventIngestSerializer(serializers.Serializer):
     """Single browser event payload."""
 
     # Required
-    event_type = serializers.ChoiceField(choices=[
-        "JS_ERROR", "NETWORK_ERROR", "ERROR", "WARNING",
-        "PAGE_VIEW", "PERFORMANCE", "CONSOLE",
-    ])
+    event_type = serializers.ChoiceField(choices=FrontendEventType.choices)
     message = serializers.CharField(max_length=5000)
 
     # Optional core
     level = serializers.ChoiceField(
-        choices=["error", "warning", "info", "debug"],
-        default="error",
+        choices=FrontendEventLevel.choices,
+        default=FrontendEventLevel.ERROR,
         required=False,
     )
     stack_trace = serializers.CharField(max_length=10000, required=False, allow_blank=True, default="")

@@ -105,9 +105,38 @@ class GrpcServerConfig(BaseModel):
         ),
     )
 
+    # H-3: HTTP/3 (QUIC) frontend via Hypercorn reverse proxy.
+    # Optional, off by default. When enabled, a Hypercorn[h3] listener is started on
+    # h3_host:h3_port alongside the gRPC server. Incoming HTTP/3 requests are proxied
+    # to the upstream HTTP/2 gRPC server on host:port via loopback. The full gRPC
+    # interceptor chain (auth, error handling, observability) remains on the upstream
+    # server — the H3 hop is transparent. Requires the `grpc-h3` extras group:
+    #   pip install 'django-cfg[grpc-h3]'
+    enable_h3: bool = Field(
+        default=False,
+        description=(
+            "Enable HTTP/3 (QUIC) frontend via Hypercorn reverse proxy. "
+            "Off by default. Requires `pip install django-cfg[grpc-h3]`."
+        ),
+    )
+    h3_host: str = Field(
+        default="0.0.0.0",
+        description="HTTP/3 listen address (only used if enable_h3=True).",
+    )
+    h3_port: int = Field(
+        default=50052,
+        ge=1,
+        le=65535,
+        description="HTTP/3 listen port (only used if enable_h3=True).",
+    )
+
     @property
     def address(self) -> str:
         return f"{self.host}:{self.port}"
+
+    @property
+    def h3_address(self) -> str:
+        return f"{self.h3_host}:{self.h3_port}"
 
     def get_channel_options(self) -> list[tuple[str, object]]:
         """Build grpc_options list for grpc.aio.server()."""

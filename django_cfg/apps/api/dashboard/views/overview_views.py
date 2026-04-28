@@ -43,7 +43,7 @@ class OverviewViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         summary="Get dashboard overview",
         description="Retrieve complete dashboard data including stats, health, actions, and metrics",
         responses={200: DashboardOverviewSerializer},
-        tags=["Dashboard - Overview"]
+        tags=["cfg", "dashboard", "Dashboard - Overview"]
     )
     @action(detail=False, methods=['get'], url_path='', url_name='overview')
     def overview(self, request):

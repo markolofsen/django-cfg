@@ -35,7 +35,7 @@ class APIZonesService:
         """
         try:
             # Try to import django_client service
-            from django_cfg.modules.django_client.core import get_openapi_service
+            from django_cfg.modules.django_generator.openapi.pipeline import get_openapi_service
             from django_cfg.core.config import get_current_config
 
             service = get_openapi_service()

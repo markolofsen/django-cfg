@@ -42,7 +42,7 @@ class StatisticsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         summary="Get statistics cards",
         description="Retrieve dashboard statistics cards with key metrics",
         responses=StatCardSerializer(many=True),
-        tags=["Dashboard - Statistics"]
+        tags=["cfg", "dashboard", "Dashboard - Statistics"]
     )
     @action(detail=False, methods=['get'], url_path='cards', pagination_class=None, serializer_class=StatCardSerializer)
     def cards(self, request):
@@ -62,7 +62,7 @@ class StatisticsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         summary="Get user statistics",
         description="Retrieve user-related statistics",
         responses={200: UserStatisticsSerializer},
-        tags=["Dashboard - Statistics"]
+        tags=["cfg", "dashboard", "Dashboard - Statistics"]
     )
     @action(detail=False, methods=['get'], url_path='users', serializer_class=UserStatisticsSerializer)
     def users(self, request):
@@ -82,7 +82,7 @@ class StatisticsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         summary="Get application statistics",
         description="Retrieve statistics for all enabled django-cfg applications",
         responses=AppStatisticsSerializer(many=True),
-        tags=["Dashboard - Statistics"]
+        tags=["cfg", "dashboard", "Dashboard - Statistics"]
     )
     @action(detail=False, methods=['get'], url_path='apps', pagination_class=None, serializer_class=AppStatisticsSerializer)
     def apps(self, request):

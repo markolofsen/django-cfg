@@ -46,7 +46,7 @@ class CommandsViewSet(SuperAdminAPIMixin, viewsets.GenericViewSet):
         summary="Get all commands",
         description="Retrieve all available Django management commands",
         responses=CommandSerializer(many=True),
-        tags=["Dashboard - Commands"]
+        tags=["cfg", "dashboard", "Dashboard - Commands"]
     )
     def list(self, request):
         """Get all Django management commands."""
@@ -65,7 +65,7 @@ class CommandsViewSet(SuperAdminAPIMixin, viewsets.GenericViewSet):
         summary="Get commands summary",
         description="Retrieve commands summary with statistics and categorization",
         responses={200: CommandsSummarySerializer},
-        tags=["Dashboard - Commands"]
+        tags=["cfg", "dashboard", "Dashboard - Commands"]
     )
     @action(detail=False, methods=['get'], url_path='summary', serializer_class=CommandsSummarySerializer)
     def summary(self, request):
@@ -90,7 +90,7 @@ class CommandsViewSet(SuperAdminAPIMixin, viewsets.GenericViewSet):
             400: {"description": "Invalid request"},
             403: {"description": "Command not allowed"},
         },
-        tags=["Dashboard - Commands"]
+        tags=["cfg", "dashboard", "Dashboard - Commands"]
     )
     @action(detail=False, methods=['post'], url_path='execute', serializer_class=CommandExecuteRequestSerializer)
     def execute(self, request):
@@ -146,7 +146,7 @@ class CommandsViewSet(SuperAdminAPIMixin, viewsets.GenericViewSet):
             ),
         ],
         responses={200: CommandHelpResponseSerializer},
-        tags=["Dashboard - Commands"]
+        tags=["cfg", "dashboard", "Dashboard - Commands"]
     )
     @action(detail=True, methods=['get'], url_path='help', serializer_class=CommandHelpResponseSerializer)
     def help(self, request, pk=None):

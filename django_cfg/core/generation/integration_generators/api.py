@@ -123,7 +123,7 @@ class APIFrameworksGenerator:
 
             # Build REST_FRAMEWORK settings with smart defaults
             rest_framework = {
-                "DEFAULT_SCHEMA_CLASS": "django_cfg.modules.django_client.spectacular.schema.PathBasedAutoSchema",
+                "DEFAULT_SCHEMA_CLASS": "django_cfg.modules.django_generator.openapi.spectacular.schema.PathBasedAutoSchema",
                 "DEFAULT_PAGINATION_CLASS": "django_cfg.middleware.pagination.DefaultPagination",
                 "PAGE_SIZE": 100,
                 "DEFAULT_RENDERER_CLASSES": [
@@ -182,16 +182,41 @@ class APIFrameworksGenerator:
                 "OAS_VERSION": "3.1.0",
                 # Prevent null from appearing as explicit enum value
                 "ENUM_ADD_EXPLICIT_BLANK_NULL_CHOICE": False,
-                # Postprocessing hooks
+                # Postprocessing hooks. `postprocess_schema_enums` is the
+                # drf-spectacular default that lifts inline enum properties
+                # into named `components/schemas` entries — required so Hey
+                # API can materialize each as a TS `enum`. We add it
+                # explicitly because overriding POSTPROCESSING_HOOKS replaces
+                # the default list.
                 "POSTPROCESSING_HOOKS": [
-                    "django_cfg.modules.django_client.spectacular.auto_fix_enum_names",
-                    "django_cfg.modules.django_client.spectacular.mark_async_operations",
+                    "drf_spectacular.hooks.postprocess_schema_enums",
+                    "django_cfg.modules.django_generator.openapi.spectacular.auto_fix_enum_names",
+                    "django_cfg.modules.django_generator.openapi.spectacular.mark_async_operations",
                 ],
             }
+
+            # Merge user-supplied SpectacularConfig (enum_name_overrides,
+            # extra hooks, etc.) on top of the OpenAPIClientConfig-derived
+            # defaults. Without this, settings like enum_name_overrides
+            # silently fall on the floor when both blocks are configured.
+            if getattr(self.config, "spectacular", None) is not None:
+                user_spectacular = self.config.spectacular.get_spectacular_settings(
+                    project_name=self.config.project_name
+                )
+                # Don't let user clobber our pinned hooks list — drop the
+                # user's hook list if present (postprocessing_hooks default
+                # is a single camelize hook that breaks generation).
+                user_spectacular.pop("POSTPROCESSING_HOOKS", None)
+                spectacular_settings.update(user_spectacular)
 
             drf_settings = {
                 "REST_FRAMEWORK": rest_framework,
                 "SPECTACULAR_SETTINGS": spectacular_settings,
+                "DJANGO_CFG_ENUM_COLLISION_POLICY": (
+                    self.config.spectacular.enum_collision_policy
+                    if getattr(self.config, "spectacular", None) is not None
+                    else "warn"
+                ),
             }
 
             logger.info("🚀 Generated DRF + Spectacular settings from OpenAPIClientConfig")
@@ -248,29 +273,23 @@ class APIFrameworksGenerator:
         except (ImportError, RuntimeError):
             pass
 
-        # Check if Spectacular settings exist (from OpenAPI Client or elsewhere)
-        if not hasattr(self, '_has_spectacular_settings'):
+        # OpenAPIClientConfig path already merges user spectacular settings
+        # in _apply_drf_extensions(); this method is for projects that don't
+        # use OpenAPIClientConfig but still set DjangoConfig.spectacular.
+        if getattr(self.config, "openapi_client", None) is not None:
             return {}
 
-        settings = {"SPECTACULAR_SETTINGS": {}}
+        if self.config.spectacular is None:
+            return {}
 
-        if self.config.spectacular:
-            # User provided explicit spectacular config
-            spectacular_extensions = self.config.spectacular.get_spectacular_settings(
-                project_name=self.config.project_name
-            )
-            settings["SPECTACULAR_SETTINGS"].update(spectacular_extensions)
-            logger.info("🔧 Extended SPECTACULAR_SETTINGS with django-cfg Spectacular config")
-        else:
-            # Auto-create minimal spectacular config to set project name
-            from django_cfg.models.api.drf import SpectacularConfig
+        settings: Dict[str, Any] = {"SPECTACULAR_SETTINGS": {}}
 
-            auto_spectacular = SpectacularConfig()
-            spectacular_extensions = auto_spectacular.get_spectacular_settings(
-                project_name=self.config.project_name
-            )
-            settings["SPECTACULAR_SETTINGS"].update(spectacular_extensions)
-            logger.info(f"🚀 Auto-configured API title as '{self.config.project_name} API'")
+        spectacular_extensions = self.config.spectacular.get_spectacular_settings(
+            project_name=self.config.project_name
+        )
+        settings["SPECTACULAR_SETTINGS"].update(spectacular_extensions)
+        settings["DJANGO_CFG_ENUM_COLLISION_POLICY"] = self.config.spectacular.enum_collision_policy
+        logger.info("🔧 Extended SPECTACULAR_SETTINGS with django-cfg Spectacular config")
 
         return settings
 

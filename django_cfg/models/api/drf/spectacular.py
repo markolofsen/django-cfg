@@ -59,12 +59,35 @@ class SpectacularConfig(BaseModel):
     # NOTE: Enum generation settings are handled by django-client (OpenAPI)
     # Only override if you need different values than django-client defaults
 
-    # Enum overrides
-    enum_name_overrides: Dict[str, str] = Field(
+    # Enum overrides — drf-spectacular's ENUM_NAME_OVERRIDES has an
+    # INVERTED schema: KEY is the desired enum name, VALUE is either
+    # a dotted path to a TextChoices subclass / serializer field, or
+    # a literal `[(value, label), ...]` choices list. We accept Any
+    # for the value side so both forms validate.
+    #
+    # Default entries pin enums shipped by django-cfg itself so they
+    # don't drift across schema regenerations:
+    #   - SystemHealthStatusEnum: used by SystemHealthItem.status and
+    #     SystemHealth.overall_status. drf-spectacular picks an unstable
+    #     hash suffix without an explicit override.
+    enum_name_overrides: Dict[str, Any] = Field(
         default_factory=lambda: {
             'ValidationErrorEnum': 'django.contrib.auth.models.ValidationError',
+            'SystemHealthStatusEnum': (
+                'django_cfg.apps.api.dashboard.serializers.system.SystemHealthStatus'
+            ),
         },
         description="Enum name overrides"
+    )
+
+    # Collision policy: 'ignore' | 'warn' | 'error'.
+    # 'warn' (default) logs a structured report when drf-spectacular
+    # generates hash-suffixed enum names (e.g. Status50eEnum) — those
+    # are unstable across regenerations. 'error' additionally aborts
+    # schema generation so CI catches new collisions.
+    enum_collision_policy: str = Field(
+        default="warn",
+        description="Behaviour on hash-suffixed enum names: ignore | warn | error",
     )
 
     def get_spectacular_settings(self, project_name: Optional[str] = None) -> Dict[str, Any]:

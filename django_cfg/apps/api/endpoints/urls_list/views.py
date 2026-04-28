@@ -230,7 +230,7 @@ class DRFURLsListView(APIView):
 
 
 @extend_schema(
-    tags=["System"],
+    tags=["cfg", "endpoints", "System"],
     summary="Compact URL list",
     description="Returns a compact list of all URL patterns and their names.",
     responses={200: {"type": "object"}},

@@ -38,7 +38,7 @@ class APIZonesViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         summary="Get all API zones",
         description="Retrieve all OpenAPI zones/groups with their configuration",
         responses={200: APIZoneSerializer(many=True)},
-        tags=["Dashboard - API Zones"]
+        tags=["cfg", "dashboard", "Dashboard - API Zones"]
     )
     def list(self, request):
         """Get all API zones."""
@@ -57,7 +57,7 @@ class APIZonesViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         summary="Get zones summary",
         description="Retrieve zones summary with statistics",
         responses={200: APIZonesSummarySerializer},
-        tags=["Dashboard - API Zones"]
+        tags=["cfg", "dashboard", "Dashboard - API Zones"]
     )
     @action(detail=False, methods=['get'], url_path='summary', serializer_class=APIZonesSummarySerializer)
     def summary(self, request):

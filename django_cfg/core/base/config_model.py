@@ -347,8 +347,12 @@ class DjangoConfig(BaseModel):
         description="Django REST Framework configuration",
     )
 
-    spectacular: Optional[SpectacularConfig] = Field(
-        default=None,
+    # Always materialize a SpectacularConfig so its default
+    # ``enum_name_overrides`` (pinning django-cfg's own enums like
+    # SystemHealthStatusEnum) reach SPECTACULAR_SETTINGS even when the
+    # project never explicitly sets `spectacular=...`.
+    spectacular: SpectacularConfig = Field(
+        default_factory=SpectacularConfig,
         description="DRF Spectacular OpenAPI configuration",
     )
 

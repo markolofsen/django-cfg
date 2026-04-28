@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.1.8"
+__version__ = "2.2.1"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -143,7 +143,7 @@ from .modules.django_admin.icons import Icons, IconCategories
 # ---------------------------------------------------------------------------
 # [GROUP 9] OpenAPI client
 # ---------------------------------------------------------------------------
-from .modules.django_client.core.config import OpenAPIGroupConfig, OpenAPIConfig
+from .modules.django_generator.openapi.pipeline.config import OpenAPIGroupConfig, OpenAPIConfig
 
 # ---------------------------------------------------------------------------
 # [OPTIONAL] Unfold admin  (requires: django-unfold)
