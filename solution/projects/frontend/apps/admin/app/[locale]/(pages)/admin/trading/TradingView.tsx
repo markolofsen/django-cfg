@@ -3,9 +3,7 @@
 import { Plus, RefreshCw } from 'lucide-react';
 
 import { useTrading } from '@/contexts';
-import {
-    Button, Card, CardContent, CardDescription, CardHeader, CardTitle
-} from '@djangocfg/ui-nextjs';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@djangocfg/ui-core';
 
 import { CreateOrderDialog, OrderCard, PortfolioStats } from './components';
 import { openCreateOrderDialog } from './events';

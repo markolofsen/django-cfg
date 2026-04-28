@@ -1,6 +1,6 @@
 import { TrendingDown, TrendingUp, X } from 'lucide-react';
 
-import { Badge, Button, Card, CardContent } from '@djangocfg/ui-nextjs';
+import { Badge, Button, Card, CardContent } from '@djangocfg/ui-core';
 
 import type { Order } from '@/api/generated/trading/trading__apix__trading/models';
 

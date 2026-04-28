@@ -2,7 +2,7 @@
 
 import { Bot, Globe, Terminal } from 'lucide-react';
 
-import { Badge, Card, CardContent, CopyButton } from '@djangocfg/ui-nextjs';
+import { Badge, Card, CardContent, CopyButton } from '@djangocfg/ui-core';
 
 const options = [
   {

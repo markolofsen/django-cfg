@@ -2,7 +2,7 @@ import { ArrowRight, Github } from 'lucide-react';
 import Link from 'next/link';
 
 import { settings } from '@core/settings';
-import { ButtonLink, Card } from '@djangocfg/ui-nextjs';
+import { ButtonLink, Card } from '@djangocfg/ui-core';
 import { routes } from '@routes/index';
 
 export function CTASection() {

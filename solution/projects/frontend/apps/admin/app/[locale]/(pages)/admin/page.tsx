@@ -1,6 +1,4 @@
-import {
-    Badge, ButtonLink, Card, CardContent, CardDescription, CardHeader, CardTitle
-} from '@djangocfg/ui-nextjs';
+import { Badge, ButtonLink, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@djangocfg/ui-core';
 import { routes } from '@routes/admin';
 
 /**

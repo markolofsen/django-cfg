@@ -1,6 +1,6 @@
 import { Award, DollarSign, Target, TrendingUp } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@djangocfg/ui-nextjs';
+import { Card, CardContent, CardHeader, CardTitle } from '@djangocfg/ui-core';
 
 import type { Portfolio, PortfolioStats } from '@/api/generated/trading/trading__apix__trading/models';
 

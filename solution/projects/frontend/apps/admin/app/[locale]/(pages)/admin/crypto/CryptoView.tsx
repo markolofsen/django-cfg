@@ -3,10 +3,7 @@
 import { RefreshCw } from 'lucide-react';
 
 import { useCrypto } from '@/contexts';
-import {
-    Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsContent, TabsList,
-    TabsTrigger
-} from '@djangocfg/ui-nextjs';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Tabs, TabsContent, TabsList, TabsTrigger } from '@djangocfg/ui-core';
 
 import { CoinCard, CryptoStats, ExchangeCard, WalletCard } from './components';
 

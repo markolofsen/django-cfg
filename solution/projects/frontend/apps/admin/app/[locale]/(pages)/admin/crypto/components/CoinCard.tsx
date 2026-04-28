@@ -1,6 +1,6 @@
 import { TrendingDown, TrendingUp } from 'lucide-react';
 
-import { Badge, Card, CardContent } from '@djangocfg/ui-nextjs';
+import { Badge, Card, CardContent } from '@djangocfg/ui-core';
 
 import type { CoinList } from '@/api/generated/crypto/_utils/schemas/CoinList.schema';
 

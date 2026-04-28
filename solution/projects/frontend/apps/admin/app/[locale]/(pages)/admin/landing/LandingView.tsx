@@ -1,4 +1,4 @@
-import { Separator } from '@djangocfg/ui-nextjs';
+import { Separator } from '@djangocfg/ui-core';
 
 import { CTASection, FeaturesSection, HeroSection, StatsSection } from './components';
 

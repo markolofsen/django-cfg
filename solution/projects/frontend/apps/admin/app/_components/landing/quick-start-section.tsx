@@ -2,7 +2,7 @@
 
 import { Layout, Lock, Rocket } from 'lucide-react';
 
-import { Badge, ButtonLink, Card, CardContent } from '@djangocfg/ui-nextjs';
+import { Badge, ButtonLink, Card, CardContent } from '@djangocfg/ui-core';
 import { routes } from '@routes/public';
 
 const demos = [
