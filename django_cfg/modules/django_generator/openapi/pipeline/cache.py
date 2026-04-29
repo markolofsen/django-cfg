@@ -22,7 +22,12 @@ so manual cache busts are almost never necessary. To force a fresh
 build, just ``rm -rf openapi/.cache``.
 
 Set ``DJANGO_CFG_GEN_NO_CACHE=1`` to disable both layers (useful when
-chasing a flaky tool — every target re-runs).
+chasing a flaky tool — every target re-runs). This is also required
+when modifying the generator's Python source: the fingerprint covers
+only the spec + tool config, not the generator code itself, so cache
+hits are stale after generator changes.
+
+    DJANGO_CFG_GEN_NO_CACHE=1 make gen   # force full re-render + tool run
 """
 
 from __future__ import annotations
@@ -340,6 +345,7 @@ def _is_skipped(path: Path, project_root: Path) -> bool:
 __all__ = [
     "SpecCacheKey",
     "TargetCacheKey",
+    "_dict_hash",
     "cache_disabled",
     "compute_spec_cache_key",
     "compute_target_cache_key",

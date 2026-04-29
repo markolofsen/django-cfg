@@ -232,7 +232,9 @@ def _format_report(
         "",
         "  Per-collision detail:",
     ]
-    for enum_name, sources in collisions:
+    shown = collisions[:5]
+    hidden = len(collisions) - len(shown)
+    for enum_name, sources in shown:
         lines.append(f"  • {enum_name}  →  suggest naming as `{suggested_names[enum_name]}`")
         for model, field, values in sources:
             preview = ", ".join(map(str, values[:6]))
@@ -240,6 +242,8 @@ def _format_report(
                 preview += ", …"
             lines.append(f"      ↳ {model}.{field}  choices=[{preview}]")
         lines.append("")
+    if hidden:
+        lines.append(f"  … and {hidden} more collision(s) — run: python manage.py suggest_enum_overrides")
     return "\n".join(lines)
 
 

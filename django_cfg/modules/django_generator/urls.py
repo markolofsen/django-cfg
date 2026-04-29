@@ -26,6 +26,7 @@ def get_openapi_urls() -> list[Any]:
     try:
         from django.urls import path
         from drf_spectacular.views import SpectacularAPIView
+        from rest_framework.permissions import AllowAny
 
         from .openapi.service import (
             get_openapi_service,
@@ -46,6 +47,7 @@ def get_openapi_urls() -> list[Any]:
                 SpectacularAPIView.as_view(
                     urlconf=urlconf_name,
                     api_version=group.version,
+                    permission_classes=[AllowAny],
                 ),
                 name=f"openapi-schema-{group.name}",
             )

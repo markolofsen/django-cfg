@@ -105,8 +105,10 @@ def _get_openapi_group_urls() -> List[URLPattern]:
                 added_apps.add(app_name)
 
     except Exception as e:
+        import traceback
         # Don't break if OpenAPI config is not available
         sys.stderr.write(f"❌ ERROR: Could not auto-add OpenAPI group URLs: {e}\n")
+        traceback.print_exc(file=sys.stderr)
         sys.stderr.flush()
 
     return patterns

@@ -12,7 +12,7 @@ from typing import Dict, List, Optional
 
 from django.urls import path, include
 
-from ..config import OpenAPIConfig
+from ..pipeline.config import OpenAPIConfig
 from .detector import GroupDetector
 
 logger = logging.getLogger(__name__)
@@ -230,8 +230,12 @@ class GroupManager:
 
         urlpatterns = self._build_urlpatterns(group_name, apps)
 
-        # Wrap in a module object so drf-spectacular can use it as urlconf
-        module_name = f"_django_client_urlconf_{group_name}"
+        # Wrap in a module object so drf-spectacular can use it as urlconf.
+        # The prefix MUST match `urls.py:get_openapi_urls()` which references
+        # `_django_generator_urlconf_<name>` by string in `SpectacularAPIView(urlconf=...)`.
+        # When these drift, every per-group `/schema/` request ends in
+        # `ModuleNotFoundError` from importlib.
+        module_name = f"_django_generator_urlconf_{group_name}"
         module = ModuleType(module_name)
         module.__file__ = f"<dynamic: {group_name}>"
         module.urlpatterns = urlpatterns

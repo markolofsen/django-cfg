@@ -181,6 +181,7 @@ class DjangoConfig(BaseModel):
             "x-requested-with",
             "x-api-key",
             "x-api-token",
+            "x-auth-retry",  # generated TS SDK marks refresh-and-retry requests
             "x-mcp-access-key",  # MCP agent access key
 
             # File transfer / chunked upload headers

@@ -56,21 +56,27 @@ def to_zod(schema: Any, *, lookup: Callable[[str], bool]) -> str:
         )
 
     if t == "string":
-        return _string(schema)
-    if t == "integer":
-        return _integer(schema)
-    if t == "number":
-        return _number(schema)
-    if t == "boolean":
-        return "z.boolean()"
-    if t == "array":
-        return _array(schema, lookup=lookup)
-    if t == "object" or "properties" in schema:
-        return _object(schema, lookup=lookup)
-    if t == "null":
-        return "z.null()"
+        expr = _string(schema)
+    elif t == "integer":
+        expr = _integer(schema)
+    elif t == "number":
+        expr = _number(schema)
+    elif t == "boolean":
+        expr = "z.boolean()"
+    elif t == "array":
+        expr = _array(schema, lookup=lookup)
+    elif t == "object" or "properties" in schema:
+        expr = _object(schema, lookup=lookup)
+    elif t == "null":
+        expr = "z.null()"
+    else:
+        expr = "z.unknown()"
 
-    return "z.unknown()"
+    # Attach .default(...) when the schema declares a default value.
+    if "default" in schema and not schema.get("$ref"):
+        expr = f"{expr}.default({_js_literal(schema['default'])})"
+
+    return expr
 
 
 def _ref_to_const(ref: str, lookup: Callable[[str], bool]) -> str:
@@ -101,6 +107,25 @@ def _literal(v: Any) -> str:
     if isinstance(v, (int, float)):
         return f"z.literal({v})"
     return "z.unknown()"
+
+
+def _js_literal(v: Any) -> str:
+    """Serialize a Python value to a JS literal for .default(...)."""
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, str):
+        escaped = v.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    if isinstance(v, (int, float)):
+        return str(v)
+    if v is None:
+        return "null"
+    if isinstance(v, list):
+        return "[" + ", ".join(_js_literal(i) for i in v) + "]"
+    if isinstance(v, dict):
+        pairs = ", ".join(f'"{k}": {_js_literal(val)}' for k, val in v.items())
+        return "{" + pairs + "}"
+    return "undefined"
 
 
 def _string(schema: dict[str, Any]) -> str:
@@ -144,16 +169,32 @@ def _array(schema: dict[str, Any], *, lookup: Callable[[str], bool]) -> str:
 def _object(schema: dict[str, Any], *, lookup: Callable[[str], bool]) -> str:
     props = schema.get("properties") or {}
     required = set(schema.get("required") or [])
+    additional = schema.get("additionalProperties")
+
     if not props:
-        return "z.object({})"
-    lines = ["z.object({"]
-    for key, sub in props.items():
-        expr = to_zod(sub, lookup=lookup)
-        if key not in required:
-            expr = f"{expr}.optional()"
-        lines.append(f"  {_safe_key(key)}: {expr},")
-    lines.append("})")
-    return "\n".join(lines)
+        base = "z.object({})"
+    else:
+        lines = ["z.object({"]
+        for key, sub in props.items():
+            expr = to_zod(sub, lookup=lookup)
+            if key not in required:
+                expr = f"{expr}.optional()"
+            lines.append(f"  {_safe_key(key)}: {expr},")
+        lines.append("})")
+        base = "\n".join(lines)
+
+    # additionalProperties: true / {} → .passthrough()  (allow extra keys)
+    # additionalProperties: false    → .strict()        (reject extra keys)
+    # additionalProperties: <schema> → .catchall(<zod>) (type all extra keys)
+    if additional is True or additional == {}:
+        base = f"{base}.passthrough()"
+    elif additional is False:
+        base = f"{base}.strict()"
+    elif isinstance(additional, dict) and additional:
+        inner = to_zod(additional, lookup=lookup)
+        base = f"{base}.catchall({inner})"
+
+    return base
 
 
 def _union(branches: list[Any], *, lookup: Callable[[str], bool]) -> str:

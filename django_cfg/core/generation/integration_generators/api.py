@@ -126,6 +126,17 @@ class APIFrameworksGenerator:
                 "DEFAULT_SCHEMA_CLASS": "django_cfg.modules.django_generator.openapi.spectacular.schema.PathBasedAutoSchema",
                 "DEFAULT_PAGINATION_CLASS": "django_cfg.middleware.pagination.DefaultPagination",
                 "PAGE_SIZE": 100,
+                # JSON-only by default. The DRF default
+                # ``[JSONParser, FormParser, MultiPartParser]`` makes
+                # drf-spectacular emit three ``requestBody`` content-types
+                # for every POST, which breaks generated clients on nested
+                # payloads (httpx multipart encoder rejects nested dicts;
+                # see ``pipeline/audit/requestbody.py``).
+                # File-upload views opt back in with explicit
+                # ``parser_classes = [JSONParser, MultiPartParser]``.
+                "DEFAULT_PARSER_CLASSES": [
+                    "rest_framework.parsers.JSONParser",
+                ],
                 "DEFAULT_RENDERER_CLASSES": [
                     "rest_framework.renderers.JSONRenderer",
                     "django_cfg.modules.django_drf_theme.renderers.TailwindBrowsableAPIRenderer",

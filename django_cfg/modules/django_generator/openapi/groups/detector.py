@@ -8,7 +8,7 @@ import fnmatch
 import logging
 from typing import Dict, List, Set
 
-from ..config import OpenAPIConfig
+from ..pipeline.config import OpenAPIConfig
 
 logger = logging.getLogger(__name__)
 

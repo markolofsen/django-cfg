@@ -1,22 +1,28 @@
 """Wrapper generator — per-group `class API` + shared utilities.
 
-Architecture (matches legacy `api_old/` layout, adapted for Hey API + DRY):
+Architecture (new layout — single shared SDK at target root):
 
     <target>/
-      _shared/
-        storage.ts            — Local/Memory/Cookie adapters (one copy)
-        errors.ts             — APIError + NetworkError
-        logger.ts             — APILogger (consola)
-        validation-events.ts  — Zod CustomEvent dispatcher
-      cfg_accounts/
-        index.ts              — `class API` for this group + barrel re-exports
-        client.gen.ts         — Hey API client (already there)
-        sdk.gen.ts            — Hey API SDK classes (already there)
-        types.gen.ts, zod.gen.ts, hooks/  (already there)
-      cfg_totp/
-        index.ts              — same shape, isolated `class API`
-      cfg_centrifugo/
-        index.ts              — same shape
+      sdk.gen.ts            — SINGLE shared SDK (all groups combined), written by hey-api
+      types.gen.ts          — SINGLE shared types, written by hey-api
+      client/               — hey-api client
+      core/                 — hey-api core
+      helpers/
+        storage.ts          — Local/Memory/Cookie adapters (one copy)
+        errors.ts           — APIError + NetworkError
+        logger.ts           — APILogger (consola)
+        validation-events.ts — Zod CustomEvent dispatcher
+        index.ts            — barrel re-export of above
+      _skills/              — per-group subdir (underscore prefix, has hooks/ and/or schemas/)
+        hooks/
+        schemas/
+        api.ts              — `class API` for this group
+        index.ts            — barrel re-exports
+      _reviews/
+        hooks/
+        schemas/
+        api.ts
+        index.ts
 
 Each group's `class API`:
   - takes `(baseUrl, { storage?, logger? })`
@@ -25,7 +31,7 @@ Each group's `class API`:
   - wires Hey API request interceptor for Authorization: Bearer
 
 Group `index.ts` re-exports `API`, storage adapters, errors, logger, validation
-events — so consumers do `import { API, LocalStorageAdapter } from './generated/cfg_accounts'`.
+events — so consumers do `import { API, LocalStorageAdapter } from './generated/_skills'`.
 
 The thin app-level `BaseClient.ts` (hand-written, not generated) instantiates one
 `API` per group. See `_api/BaseClient.ts` in the solution.
@@ -43,6 +49,7 @@ from .templates import (
     LOGGER_TS,
     STORAGE_TS,
     VALIDATION_EVENTS_TS,
+    render_auth_ts,
     render_group_api_ts,
     render_group_index_ts,
     render_target_index_ts,
@@ -86,21 +93,38 @@ class WrapperResult:
 def discover_group_dirs(target_dir: Path) -> list[tuple[str, list[GroupSpec]]]:
     """Walk `target_dir` and return `(dir_name, [GroupSpec, ...])` per group.
 
-    One entry per per-group subdir that contains a Hey API `sdk.gen.ts`. The
-    list of `GroupSpec` covers every `export class` in that file (one tag =
-    one SDK class).
+    One entry per per-group subdir (underscore-prefixed, e.g. ``_skills``)
+    that contains a ``hooks/`` or ``schemas/`` directory produced by
+    ts_extras. SDK classes are read from the **target root** ``sdk.gen.ts``
+    (the single shared SDK written by hey-api), filtered to those whose
+    name contains the group's logical name (strip leading underscore).
     """
+    # Read the shared root sdk.gen.ts once.
+    root_sdk_file = target_dir / "sdk.gen.ts"
+    all_classes = _extract_sdk_classes(root_sdk_file)
+
     out: list[tuple[str, list[GroupSpec]]] = []
     for child in sorted(target_dir.iterdir()):
-        if not child.is_dir() or child.name == "_shared":
+        if not child.is_dir():
             continue
-        sdk_file = child / "sdk.gen.ts"
-        if not sdk_file.exists():
+        if child.name in ("helpers", "client", "core", "_shared"):
             continue
-        classes = _extract_sdk_classes(sdk_file)
-        if not classes:
+        # Only consider underscore-prefixed group dirs that contain hooks/ or schemas/.
+        if not child.name.startswith("_"):
             continue
-        specs = [GroupSpec(sdk_class=c, dir_name=child.name) for c in classes]
+        has_hooks = (child / "hooks").is_dir()
+        has_schemas = (child / "schemas").is_dir()
+        if not has_hooks and not has_schemas:
+            continue
+        # Derive the logical group name by stripping the leading underscore.
+        logical_name = child.name[1:]
+        # Filter SDK classes that belong to this group (case-insensitive prefix match).
+        logical_lower = logical_name.lower().replace("_", "")
+        group_classes = [
+            c for c in all_classes
+            if c.lower().startswith(logical_lower[:4]) or logical_lower in c.lower()
+        ] if all_classes else []
+        specs = [GroupSpec(sdk_class=c, dir_name=child.name) for c in group_classes]
         out.append((child.name, specs))
     return out
 
@@ -122,14 +146,24 @@ def generate(
 
     written: list[Path] = []
 
-    # Shared utilities — one copy per target.
-    shared_dir = target_dir / "_shared"
-    shared_dir.mkdir(parents=True, exist_ok=True)
-    written.append(_write(shared_dir / "storage.ts", STORAGE_TS))
-    written.append(_write(shared_dir / "errors.ts", ERRORS_TS))
-    written.append(_write(shared_dir / "logger.ts", LOGGER_TS))
-    written.append(_write(shared_dir / "validation-events.ts", VALIDATION_EVENTS_TS))
-    written.append(_write(shared_dir / "index.ts", _SHARED_BARREL))
+    # Shared utilities — one copy per target, written to helpers/.
+    helpers_dir = target_dir / "helpers"
+    helpers_dir.mkdir(parents=True, exist_ok=True)
+    written.append(_write(helpers_dir / "storage.ts", STORAGE_TS))
+    written.append(_write(helpers_dir / "errors.ts", ERRORS_TS))
+    written.append(_write(helpers_dir / "logger.ts", LOGGER_TS))
+    written.append(_write(helpers_dir / "validation-events.ts", VALIDATION_EVENTS_TS))
+    written.append(_write(
+        helpers_dir / "auth.ts",
+        render_auth_ts(access_key=access_key, refresh_key=refresh_key),
+    ))
+    written.append(_write(helpers_dir / "index.ts", _SHARED_BARREL))
+
+    # Patch client.gen.ts so the auth interceptor installs as a
+    # side-effect on first import — even when consumers only ever
+    # touch hooks/SDK classes (which import client.gen directly,
+    # bypassing index.ts).
+    _ensure_auth_import_in_client(target_dir / "client.gen.ts")
 
     # Per-group: api.ts (class API) + index.ts (barrel).
     for dir_name, specs in groups_by_dir:
@@ -162,6 +196,7 @@ _SHARED_BARREL = '''\
 // AUTO-GENERATED by django_generator / ts_extras.wrapper
 // Shared utilities barrel. DO NOT EDIT — re-run `make gen`.
 
+export { auth, type Auth } from './auth';
 export {
   type StorageAdapter,
   LocalStorageAdapter,
@@ -185,6 +220,34 @@ export {
   type ValidationErrorEvent,
 } from './validation-events';
 '''
+
+
+_AUTH_IMPORT_MARKER = "// auto-init: install auth on client"
+_AUTH_IMPORT_BLOCK = (
+    f"{_AUTH_IMPORT_MARKER}\n"
+    "import { installAuthOnClient } from './helpers/auth';\n"
+    "installAuthOnClient(client);"
+)
+
+
+def _ensure_auth_import_in_client(client_gen: Path) -> None:
+    """Append `installAuthOnClient(client)` to `client.gen.ts` if absent.
+
+    `client.gen.ts` is written by hey-api on every run; we patch it
+    after generation so the auth wiring runs synchronously right after
+    `createClient()`. No circular import (auth.ts no longer imports
+    `client`), no microtask deferral — this works for SSR where the
+    first fetch can fire before any microtask is drained.
+    """
+    if not client_gen.exists():
+        return
+    text = client_gen.read_text(encoding="utf-8")
+    if _AUTH_IMPORT_MARKER in text:
+        return
+    if not text.endswith("\n"):
+        text += "\n"
+    text += f"\n{_AUTH_IMPORT_BLOCK}\n"
+    client_gen.write_text(text, encoding="utf-8")
 
 
 def _write(path: Path, content: str) -> Path:

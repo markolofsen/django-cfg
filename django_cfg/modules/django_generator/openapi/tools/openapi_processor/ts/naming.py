@@ -47,7 +47,7 @@ def tag_to_folder(tag: str) -> str:
 
 
 def _to_camel(snake: str) -> str:
-    parts = re.split(r"[_\-\s]+", snake.strip())
+    parts = re.split(r"[_\-\s\.]+", snake.strip())
     if not parts:
         return ""
     head, *rest = parts
@@ -55,7 +55,7 @@ def _to_camel(snake: str) -> str:
 
 
 def snake_to_pascal(s: str) -> str:
-    return "".join(p.capitalize() for p in re.split(r"[_\-\s]+", s.strip()) if p)
+    return "".join(p.capitalize() for p in re.split(r"[_\-\s\.]+", s.strip()) if p)
 
 
 # Borrowed from PEP 8 → snake_case helper, kept around in case operations

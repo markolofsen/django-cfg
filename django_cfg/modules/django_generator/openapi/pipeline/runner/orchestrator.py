@@ -67,9 +67,46 @@ def run_pipeline(
     cache = cache_dir(config)
     run_started = now()
 
+    # ════════════════════════════════════════════════════════════════════
+    # ⚠️  CRITICAL — DO NOT REMOVE: per-run fingerprint invalidation
+    # ════════════════════════════════════════════════════════════════════
+    # Every `make gen` MUST nuke ALL fingerprint files in the cache so the
+    # generators re-run end-to-end. Fingerprints only hash the SLICED SPEC
+    # + tool config — they do NOT hash the generator's own Python source.
+    # Without this wipe, edits to generator templates / post-processors go
+    # undetected when the spec hasn't changed, and stale output ships.
+    #
+    # Two file names are wiped:
+    #   • `extras.fingerprint`  — ts_extras (TS post-processor) per-group cache
+    #   • `fingerprint`         — per-target snapshot cache (ogen / hey-api /
+    #                             openapi-python-client / swift-openapi /
+    #                             python post-processor)
+    #
+    # If you (an AI agent or human) "see this is unnecessary" — IT IS NOT.
+    # The pain it prevents:
+    #   - Generator template / post-process fixer edited → no spec change →
+    #     cache says "hit" → tool isn't re-invoked → app keeps shipping
+    #     stale output → 30 min of `find … -name fingerprint -delete`
+    #     before the next `make gen` actually picks up the new code.
+    #
+    # This is the single source of truth for cache invalidation when
+    # GENERATOR CODE changes. Spec-only changes are handled by the per-group
+    # fingerprint comparison in dispatch._run_group_extras.
+    # ════════════════════════════════════════════════════════════════════
+    for fp_name in ("extras.fingerprint", "fingerprint"):
+        for fp in cache.rglob(fp_name):
+            fp.unlink(missing_ok=True)
+
     global_spec = _load_spec_cached(config, cache, targets, report)
     if global_spec is None:
         return report
+
+    # Lint the spec for shapes that crash generated clients. Don't fail
+    # the build — surface findings so engineers see them in `make gen`
+    # output and have the option to act on them.
+    from ..audit import audit_requestbody_content_types
+    for finding in audit_requestbody_content_types(global_spec):
+        print(finding.format())
 
     workers = _resolve_parallelism(len(targets))
     if workers <= 1 or len(targets) <= 1:
