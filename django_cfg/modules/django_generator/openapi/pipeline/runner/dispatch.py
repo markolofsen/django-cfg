@@ -39,6 +39,7 @@ from ...tools.external import (
     openapi_python_client,
     swift_openapi,
 )
+from ...tools.openapi_processor.go.tool import generate as generate_go_wrapper
 from ...tools.openapi_processor.python.tool import generate as generate_python_extras
 from ...tools.openapi_processor.python.wrapper.generator import (
     generate as generate_python_wrapper,
@@ -282,6 +283,11 @@ def run_single(
     )
     slot = target_cache_slot(target, groups)
     if restore_target_output(cache, slot, target_key, out_dir):
+        # Cache hit: ogen output restored. Still run the Go wrapper so it
+        # picks up any changes made to the post-processor itself.
+        if target.tool == "ogen":
+            pkg = str((target.options or {}).get("package", "api"))
+            generate_go_wrapper(out_dir=out_dir, package=pkg)
         return True, None, True
 
     ok, err = _dispatch_tool(target, spec_path, out_dir, config, skip_ts_extras=_skip_ts_extras)
@@ -345,7 +351,9 @@ def _dispatch_tool(
     options = target.options or {}
 
     if tool == "ogen":
-        ogen.generate(spec_path, out_dir, package=str(options.get("package", "api")))
+        pkg = str(options.get("package", "api"))
+        ogen.generate(spec_path, out_dir, package=pkg)
+        generate_go_wrapper(out_dir=out_dir, package=pkg)
         return True, None
 
     if tool == "hey-api":
