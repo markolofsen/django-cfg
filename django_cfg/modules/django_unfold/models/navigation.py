@@ -5,6 +5,7 @@ Pydantic models for navigation items and sections.
 """
 
 import logging
+import re
 from enum import Enum
 from typing import Callable, List, Optional, Union
 
@@ -30,7 +31,7 @@ class NavigationItem(BaseModel):
     icon: Optional[str] = Field(None, description="Material icon name")
     link: Optional[str] = Field(None, description="URL link or URL name")
     badge: Optional[str] = Field(None, description="Badge callback function path")
-    permission: Optional[str] = Field(None, description="Permission callback function path")
+    permission: Optional[Union[str, Callable]] = Field(None, description="Permission callback function or import path")
     type: NavigationItemType = Field(default=NavigationItemType.LINK, description="Item type")
 
     @computed_field
@@ -54,13 +55,36 @@ class NavigationItem(BaseModel):
                 link = str(reverse_lazy(link))
             except NoReverseMatch:
                 pass
+
+        permission = self.permission
+        if not permission and self.link and self.link.startswith("admin:"):
+            permission = self._auto_permission_callback(self.link)
+
         return {
             "title": self.title,
             "icon": self.icon,
             "link": link,
             "badge": self.badge,
-            "permission": self.permission,
+            "permission": permission,
         }
+
+    @staticmethod
+    def _auto_permission_callback(link: str):
+        """Build a permission callable from an admin changelist URL name."""
+        match = re.match(r"^admin:(?P<app>[a-z_]+)_(?P<model>[a-z]+)_changelist$", link)
+        if not match:
+            return None
+        app_label = match.group("app")
+        model = match.group("model")
+
+        def _checker(request) -> bool:
+            if not request.user or not request.user.is_authenticated:
+                return False
+            if request.user.is_superuser:
+                return True
+            return request.user.has_perm(f"{app_label}.view_{model}")
+
+        return _checker
 
 
 

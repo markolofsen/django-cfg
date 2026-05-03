@@ -484,23 +484,9 @@ class UnfoldConfig(BaseModel):
                     if group.open:
                         group_dict["open"] = True
 
-                    # Resolve each item's URL
+                    # Use item.to_dict() which resolves URLs and auto-detects permissions
                     for item in group.items:
-                        item_link = item.link or "#"
-                        # Try to resolve URL names
-                        if not item_link.startswith(("/", "http", "#")):
-                            try:
-                                item_link = reverse(item_link)
-                            except Exception:
-                                pass  # Keep original if reverse fails
-
-                        group_dict["items"].append({
-                            "title": item.title,
-                            "icon": item.icon,
-                            "link": item_link,
-                            "badge": item.badge,
-                            "permission": item.permission,
-                        })
+                        group_dict["items"].append(item.to_dict())
 
                     nav_items.append(group_dict)
 

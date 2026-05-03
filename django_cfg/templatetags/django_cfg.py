@@ -377,3 +377,33 @@ def generate_jwt_tokens(context):
         return {'access': '', 'refresh': ''}
     except Exception as e:
         return {'access': '', 'refresh': ''}
+
+
+@register.simple_tag(takes_context=True)
+def can_view_admin_dashboard(context):
+    """
+    Check if the current user can view the admin dashboard iframe.
+
+    Only superusers have full dashboard access. Staff users with
+    specific model permissions see filtered navigation instead.
+
+    Usage:
+        {% load django_cfg %}
+        {% can_view_admin_dashboard as show_dashboard %}
+        {% if show_dashboard %}
+            <iframe src="..."></iframe>
+        {% else %}
+            <p>Hello, {{ user.email }}</p>
+        {% endif %}
+    """
+    from django.contrib.auth.models import AnonymousUser
+
+    request = context.get('request')
+    if not request:
+        return False
+
+    user = getattr(request, 'user', None)
+    if not user or isinstance(user, AnonymousUser) or not user.is_authenticated:
+        return False
+
+    return user.is_superuser

@@ -232,6 +232,8 @@
 
             <!-- Streamlit Dashboard Content -->
             {% if streamlit_enabled %}
+            {% can_view_admin_dashboard as show_dashboard %}
+            {% if show_dashboard %}
             {% streamlit_admin_iframe_url_with_token as streamlit_url %}
             <div class="iframe-container">
                 <div class="iframe-loading" id="iframe-loading-streamlit">
@@ -249,6 +251,9 @@
                     onload="this.classList.add('loaded'); document.getElementById('iframe-loading-streamlit').classList.add('hidden');"
                 ></iframe>
             </div>
+            {% else %}
+            {% include "admin/user_message.html" %}
+            {% endif %}
             {% else %}
             <!-- Streamlit Not Configured -->
             <div class="flex items-center justify-center h-96 bg-gray-50 dark:bg-base-900 rounded-md border border-gray-200 dark:border-gray-700">

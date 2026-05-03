@@ -1,0 +1,15 @@
+{% load i18n %}
+
+<div class="flex flex-col items-center justify-center h-full min-h-[24rem] bg-white dark:bg-base-900 border border-base-200 dark:border-base-700 rounded-md p-8">
+    <div class="flex flex-col items-center text-center max-w-md">
+        <div class="flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 dark:bg-primary-900/30 mb-5">
+            <span class="material-icons text-3xl text-primary-600 dark:text-primary-400">person</span>
+        </div>
+        <h2 class="text-xl font-semibold text-font-important-light dark:text-font-important-dark mb-2">
+            {% blocktrans with email=user.email|default:user.username %}Hello, {{ email }}{% endblocktrans %}
+        </h2>
+        <p class="text-sm text-font-subtle-light dark:text-font-subtle-dark leading-relaxed">
+            {% trans "You have limited access to the admin panel. Contact a super administrator for additional permissions." %}
+        </p>
+    </div>
+</div>
