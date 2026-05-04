@@ -98,6 +98,37 @@ def normalize_tags(spec: dict[str, Any]) -> None:
                 op["tags"] = cleaned
 
 
+def warn_tag_format(spec: dict[str, Any]) -> None:
+    """Warn when tags contain spaces, em-dashes, or other characters
+    that break group-name matching in the slicer.
+    """
+    bad_tags: set[str] = set()
+    for item in (spec.get("paths") or {}).values():
+        if not isinstance(item, dict):
+            continue
+        for method, op in item.items():
+            if method.lower() not in _HTTP_METHODS or not isinstance(op, dict):
+                continue
+            for t in (op.get("tags") or []):
+                s = str(t)
+                if " " in s or "—" in s or "–" in s:
+                    bad_tags.add(s)
+    if bad_tags:
+        sep = "=" * 64
+        tag_list = "\n  • ".join(sorted(bad_tags))
+        print(
+            f"\n{sep}\n"
+            f"  WARNING: tags with spaces or dashes detected:\n"
+            f"  • {tag_list}\n\n"
+            f"  These tags will NOT match group names in generation.py.\n"
+            f"  The slicer normalizes tags to snake_case (spaces/dashes → _).\n"
+            f"  Use lowercase snake_case tags (e.g. 'crm_clients') or add\n"
+            f"  the normalized form as a second tag: tags=['crm', 'clients'].\n"
+            f"{sep}\n",
+            flush=True,
+        )
+
+
 def nullable_3_1_to_3_0(spec: dict[str, Any]) -> None:
     """Rewrite OpenAPI 3.1 nullable forms into 3.0-compatible shape.
 

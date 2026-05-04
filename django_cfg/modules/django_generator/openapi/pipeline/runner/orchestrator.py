@@ -32,7 +32,7 @@ from ..cache import (
 )
 from ..config import GenerationTarget, OpenAPIConfig, RunReport
 from ..errors import GeneratorError
-from ..postprocess import normalize_tags
+from ..postprocess import normalize_tags, warn_tag_format
 from ..spec_loader import load_spec
 from .dispatch import run_target
 from .paths import (
@@ -213,6 +213,7 @@ def _load_spec_cached(
     # ``spec_loader.load_spec``.
     try:
         normalize_tags(spec)
+        warn_tag_format(spec)
     except GeneratorError as e:
         for t in targets:
             report.failures.append((t.name, f"postprocess: {e}"))

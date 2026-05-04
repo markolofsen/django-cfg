@@ -19,7 +19,7 @@ from typing import Any
 
 _HTTP_METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
 _REF_RE = re.compile(r'"\$ref":\s*"#/components/schemas/([^"]+)"')
-_NORMALIZE_RE = re.compile(r"[\s\-]+")
+_NORMALIZE_RE = re.compile(r"[\s\-–—]+")
 
 
 def _normalize_tag(tag: str) -> str:
