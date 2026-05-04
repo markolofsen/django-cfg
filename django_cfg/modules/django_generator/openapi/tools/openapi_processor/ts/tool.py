@@ -60,12 +60,25 @@ def _write_shims(out_dir: Path) -> list[Path]:
     return [sdk_path, types_path]
 
 
-def generate(spec_path: Path, out_dir: Path, *, extras: list[str]) -> TsExtrasResult:
+def generate(
+    spec_path: Path,
+    out_dir: Path,
+    *,
+    extras: list[str],
+    enum_prefix: str = "",
+) -> TsExtrasResult:
     """Generate the requested extras into `out_dir`.
 
     `extras` selects which sub-generators run: {"zod", "hooks", "events"}.
     Order is fixed: zod → hooks → events (events is purely additive, no
     cross-deps).
+
+    `enum_prefix` — when provided (typically the group/tag name, e.g.
+    ``"crm"``), all hash-suffixed enum names produced by drf-spectacular
+    collision resolution (e.g. ``StatusA3aEnum``) are renamed to
+    ``<PascalPrefix><BaseName>Enum`` (e.g. ``CrmStatusEnum``) before any
+    files are written. This makes enum names stable across regenerations
+    and avoids cryptic hash suffixes in generated TypeScript.
     """
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
     ir = build_ir(spec)
@@ -73,7 +86,7 @@ def generate(spec_path: Path, out_dir: Path, *, extras: list[str]) -> TsExtrasRe
 
     files: list[Path] = []
     if "zod" in extras:
-        files.extend(generate_schemas(ir, out_dir / "schemas"))
+        files.extend(generate_schemas(ir, out_dir / "schemas", enum_prefix=enum_prefix))
     if "hooks" in extras:
         files.extend(generate_hooks(ir, out_dir / "hooks"))
     if "events" in extras:

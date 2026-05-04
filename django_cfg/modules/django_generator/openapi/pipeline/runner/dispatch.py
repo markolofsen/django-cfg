@@ -179,6 +179,7 @@ def run_target(
                         group_spec_path,
                         group_out_dir,
                         extras=extras,
+                        enum_prefix=group_name,
                     )
                     try:
                         fp_path.write_text(fp, encoding="utf-8")
