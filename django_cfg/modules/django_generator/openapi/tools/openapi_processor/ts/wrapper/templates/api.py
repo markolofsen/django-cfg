@@ -16,8 +16,45 @@ Each group dir gets:
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
+
+_log = logging.getLogger(__name__)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Reserved type names in the top-level barrel
+# ─────────────────────────────────────────────────────────────────────────────
+# The top-level `index.ts` re-exports these symbols from `helpers/`:
+#
+#   export { auth, type Auth } from './helpers/auth';
+#
+# The `type Auth` alias means **any OpenAPI tag whose Hey-API SDK class
+# would also be named `Auth`** collides — TypeScript can't merge a type
+# alias and a class under the same exported name.
+#
+# Same story for any future helper-side type aliases. Add them here.
+#
+# Resolution policy in `render_target_index_ts(...)`:
+#   1. If a colliding tag is encountered, log a WARNING (visible in
+#      `make gen` output) so callers learn about it.
+#   2. Re-export the SDK class with the alias defined below — barrel
+#      stays compilable. Consumers that need the original name can
+#      import directly from `./_<group>` (e.g. `import { Auth } from
+#      '@api-server/_auth'`).
+#   3. The cleanest long-term fix is to rename the OpenAPI tag on the
+#      backend (FastAPI / DRF) so the SDK class doesn't collide. Tags
+#      like `auth` → `authentication` cost nothing and remove the rule
+#      from this list entirely.
+_BARREL_TYPE_RESERVED: dict[str, str] = {
+    # SDK class name → re-export alias
+    "Auth": "AuthSDK",
+}
+
+# SDK names we deliberately drop from the top-level barrel (no alias —
+# they live behind their own per-group import only). "Cfg" is an
+# internal helper namespace consumers don't reach for at top level.
+_BARREL_SDK_DROPPED: frozenset[str] = frozenset({"Cfg"})
 
 
 @dataclass(frozen=True)
@@ -261,18 +298,32 @@ def render_target_index_ts(*, groups_by_dir: list[tuple[str, list[GroupSpec]]]) 
         for d, _ in groups_by_dir
     )
 
-    _RESERVED_SDK = {"Cfg"}
+    # See `_BARREL_TYPE_RESERVED` / `_BARREL_SDK_DROPPED` at module
+    # top for the policy + rationale.
     seen: set[str] = set()
     sdk_class_reexports_lines: list[str] = []
     for d, specs in groups_by_dir:
         names: list[str] = []
         for s in specs:
-            if s.sdk_class in _RESERVED_SDK:
+            if s.sdk_class in _BARREL_SDK_DROPPED:
                 continue
             if s.sdk_class in seen:
                 continue
             seen.add(s.sdk_class)
-            names.append(s.sdk_class)
+            if s.sdk_class in _BARREL_TYPE_RESERVED:
+                alias = _BARREL_TYPE_RESERVED[s.sdk_class]
+                _log.warning(
+                    "ts_extras.wrapper: SDK class %r collides with a "
+                    "reserved name in the top-level barrel — re-exporting "
+                    "as %r. Direct import still works "
+                    "(`import { %s } from '<api>/_%s'`). To remove this "
+                    "warning, rename the OpenAPI tag on the backend so "
+                    "the generated SDK class no longer collides.",
+                    s.sdk_class, alias, s.sdk_class, d,
+                )
+                names.append(f"{s.sdk_class} as {alias}")
+            else:
+                names.append(s.sdk_class)
         if names:
             sdk_class_reexports_lines.append(
                 f"export {{ {', '.join(names)} }} from './{d}';"
@@ -302,6 +353,13 @@ export {{ auth, type Auth }} from './helpers/auth';
 
 // Hey API SDK classes — one per OpenAPI tag. Lets consumers call
 // `Centrifugo.cfgCentrifugoAuthTokenRetrieve({{...}})` directly.
+//
+// NOTE: classes whose name would collide with a barrel-level type
+// alias (e.g. `Auth`, which is also `type Auth = typeof auth`) are
+// re-exported under a `*SDK` suffix here. The original name is still
+// available via the per-group import: `import {{ Auth }} from
+// '<api>/_auth'`. To remove the alias, rename the OpenAPI tag on the
+// backend so the SDK class doesn't collide.
 {sdk_class_reexports}
 
 // Shared utilities (errors, storage adapters, logger).
