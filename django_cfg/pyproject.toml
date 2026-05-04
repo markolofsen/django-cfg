@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.2.11"
+version = "2.2.12"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -220,7 +220,7 @@ django52 = [
 ]
 
 ai = [
-    "pydantic-ai>=1.34.0,<2.0",
+    "pydantic-ai>=1.89.1,<2.0",
 ]
 
 grpc = [
@@ -355,7 +355,7 @@ full = [
     "rq>=2.7.0",
     "rq-scheduler>=0.14.0",
     "hiredis>=2.0",
-    "pydantic-ai>=1.34.0,<2.0",
+    "pydantic-ai>=1.89.1,<2.0",
     # gen (django_generator)
     "openapi-python-client>=0.21,<1",
     "sqlmodel>=0.0.16,<1.0",
