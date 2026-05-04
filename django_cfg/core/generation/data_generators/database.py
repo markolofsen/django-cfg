@@ -87,6 +87,14 @@ class DatabaseSettingsGenerator:
                     elif key not in django_databases[alias]:
                         django_databases[alias][key] = value
 
+            # Set ATOMIC_REQUESTS unless DatabaseConfig explicitly provided it.
+            # default DB: True (wrap every request in a transaction).
+            # secondary DBs: False — opening a transaction on every request for a
+            # DB the view may never touch wastes connections and causes
+            # DatabaseOperationForbidden in Django TestCase.
+            if "ATOMIC_REQUESTS" not in django_databases[alias]:
+                django_databases[alias]["ATOMIC_REQUESTS"] = (alias == "default")
+
         # Configure database routing if needed
         routing_settings = self._generate_routing_settings()
         settings.update(routing_settings)

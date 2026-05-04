@@ -8,16 +8,17 @@ Usage with Django test:
     python manage.py test
 
 Usage with pytest:
-    # pytest-django handles test DB automatically
-    # Just use standard pytest-django fixtures (db, django_user_model, etc.)
-    pytest
+    # Add to your project's conftest.py:
+    pytest_plugins = ["django_cfg.testing.pytest_plugin"]
 
 🔥 Generated with django-cfg
 """
 
 from .runners import FastTestRunner, SmartTestRunner
+from .runners.utils import install_all_extensions
 
 __all__ = [
     "SmartTestRunner",
     "FastTestRunner",
+    "install_all_extensions",
 ]

@@ -255,7 +255,6 @@ class SmartDefaults:
         defaults = {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': Path('db') / 'db.sqlite3',
-            'ATOMIC_REQUESTS': True,  # Safe default - ~5-10ms overhead acceptable for data integrity
             'CONN_MAX_AGE': 0,  # Set to 0 for native pooling (Django 5.1+)
             'CONN_HEALTH_CHECKS': True,  # Enable health checks to prevent stale connections
             'OPTIONS': {}

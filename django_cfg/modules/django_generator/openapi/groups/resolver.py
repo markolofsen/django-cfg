@@ -56,6 +56,23 @@ def resolve_tags(
             continue
         if any(t.lower() in short_names for t in tags):
             found.update(tags)
+
+    # Fallback: if app short-name lookup found nothing, try the group name
+    # itself as a tag. Handles the common case where the app folder name
+    # differs from the @extend_schema tag (e.g. app "todos" tagged "tasks").
+    # Only the group name itself is added — not the full tag set of matching
+    # ops — so multi-tag ops like ["crm", "tasks"] don't pull in the entire
+    # "crm" group.
+    if not found:
+        norm_name = group.name.lower()
+        for op in _iter_ops(global_spec):
+            tags = [str(t) for t in (op.get("tags") or [])]
+            if _CFG_MARKER in tags:
+                continue
+            if any(t.lower() == norm_name for t in tags):
+                found.add(group.name)
+                break
+
     return found
 
 

@@ -115,6 +115,15 @@ class DatabaseConfig(BaseModel):
         description="Human-readable description of the routing rule",
     )
 
+    atomic_requests: Optional[bool] = Field(
+        default=None,
+        description=(
+            "Wrap each HTTP request in a transaction on this database. "
+            "Defaults to True for 'default', False for secondary databases. "
+            "Set explicitly to override the default."
+        ),
+    )
+
     # Internal fields for parsed connection strings
     _is_connection_string: bool = PrivateAttr(default=False)
     _parsed_components: Optional[Dict[str, Any]] = PrivateAttr(default=None)

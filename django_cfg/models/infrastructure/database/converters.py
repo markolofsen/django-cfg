@@ -41,6 +41,11 @@ def to_django_config(config: "DatabaseConfig") -> Dict[str, Any]:  # type: ignor
             "CONN_HEALTH_CHECKS": config.conn_health_checks,
         }
 
+        # Only set if explicitly provided — database_builder applies the
+        # default (True for default, False for secondary) when None.
+        if config.atomic_requests is not None:
+            django_config["ATOMIC_REQUESTS"] = config.atomic_requests
+
         # Add database-specific options
         if config.engine == "django.db.backends.postgresql":
             # PostgreSQL supports connect_timeout and sslmode
