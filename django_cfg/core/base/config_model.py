@@ -184,6 +184,13 @@ class DjangoConfig(BaseModel):
             "x-auth-retry",  # generated TS SDK marks refresh-and-retry requests
             "x-mcp-access-key",  # MCP agent access key
 
+            # Client locale/timezone headers
+            # Sent by the generated TS SDK auth interceptor on every request so
+            # Django can apply user-local timezone (via TimezoneMiddleware) and
+            # format dates correctly server-side without any per-view changes.
+            "x-timezone",    # IANA timezone string, e.g. "Europe/Moscow"
+            "x-client-time", # ISO-8601 timestamp at request origin, e.g. "2026-05-05T12:00:00.000Z"
+
             # File transfer / chunked upload headers
             # For the django_client module, the typescript generator will add the following headers to the request.
             # These headers are used to track the progress of the file upload.

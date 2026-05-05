@@ -54,8 +54,16 @@ def resolve_tags(
         if _CFG_MARKER in tags:
             # django-cfg op — never claim it for app-side groups.
             continue
-        if any(t.lower() in short_names for t in tags):
-            found.update(tags)
+        # Add ONLY the tag(s) that actually correspond to this group's
+        # short-name(s). Adding the full ``tags`` of a matched op
+        # would suck in shared umbrella tags — e.g. an op tagged
+        # ``["crm", "welcome"]`` would teach the ``welcome`` group to
+        # also claim every other op tagged ``"crm"``. That's how
+        # ``useCrmClientsRetrieve`` ended up duplicated across the
+        # ``_welcome``, ``_chat``, etc. groups.
+        for t in tags:
+            if t.lower() in short_names:
+                found.add(t)
 
     # Fallback: if app short-name lookup found nothing, try the group name
     # itself as a tag. Handles the common case where the app folder name

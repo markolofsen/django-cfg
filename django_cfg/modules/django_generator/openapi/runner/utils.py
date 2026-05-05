@@ -227,9 +227,22 @@ def fix_go_imports(
                 import_match = re.match(r'^"([^"]+)"', line)
                 if import_match:
                     import_path = import_match.group(1)
-                    # Fix bare imports: add module prefix
-                    # Skip stdlib, already-qualified paths, and dot/slash imports
-                    if not import_path.startswith((".", "/", "github.com", "golang.org")) and not _is_go_stdlib(import_path):
+                    # Fix bare imports: add module prefix.
+                    # Skip stdlib, already-qualified paths, and dot/slash
+                    # imports. The third-party hostnames listed here are
+                    # already fully qualified — bolting `<module>/` onto
+                    # `go.opentelemetry.io/...` produces a phantom
+                    # subpackage that fails `go build`.
+                    _QUALIFIED_HOSTS = (
+                        "github.com",
+                        "golang.org",
+                        "go.opentelemetry.io",
+                        "google.golang.org",
+                        "gopkg.in",
+                        "k8s.io",
+                        "sigs.k8s.io",
+                    )
+                    if not import_path.startswith((".", "/", *_QUALIFIED_HOSTS)) and not _is_go_stdlib(import_path):
                         line = f'"{module_path}/{import_path}"'
                 fixed.append(line)
 

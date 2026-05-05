@@ -317,10 +317,29 @@ def generate(out_dir: Path, package: str | None = None) -> GoWrapperResult:
 
     ``package`` defaults to the name discovered from ``oas_*.go`` files.
     Skips generation when no ``oas_*.go`` files are present.
+
+    Also runs ``_patch_opt_marshal_json`` on ``oas_json_gen.go`` to fix
+    an upstream ogen bug — see that function's docstring. The patch
+    runs unconditionally; the wrapper.go emission only fires when a
+    JWT-style ``SecuritySource`` is present (the wrapper is a Bearer
+    helper and useless on specs that don't use one).
     """
     out_dir = Path(out_dir)
     oas_files = list(out_dir.glob("oas_*.go"))
     if not oas_files:
+        return GoWrapperResult(out_dir=out_dir, skipped=True)
+
+    # Always run — fixes a runtime crash in stdjson Marshal of any
+    # struct with an Opt*/OptNil* field.
+    _patch_opt_marshal_json(out_dir)
+    # Also fix the broken otel import prefix (see _patch_otel_imports).
+    _patch_otel_imports(out_dir)
+
+    # The Bearer wrapper only makes sense when ogen actually emitted a
+    # JWT security source. Specs without it (e.g. FastAPI exposing a
+    # cookie/session scheme) end up with an undefined-symbols compile
+    # error if we still write wrapper.go.
+    if not (out_dir / "oas_security_gen.go").is_file():
         return GoWrapperResult(out_dir=out_dir, skipped=True)
 
     pkg = package or _discover_package(out_dir)
@@ -331,6 +350,96 @@ def generate(out_dir: Path, package: str | None = None) -> GoWrapperResult:
     target.write_text(text, encoding="utf-8")
     _gofmt(target)
     return GoWrapperResult(out_dir=out_dir, written=[target])
+
+
+# ── Opt*.MarshalJSON fix ─────────────────────────────────────────────
+
+
+# Match an Opt*/OptNil* MarshalJSON body that is missing the "not Set"
+# guard. The unpatched template ogen emits is:
+#
+#     func (s OptFoo) MarshalJSON() ([]byte, error) {
+#         e := jx.Encoder{}
+#         s.Encode(&e)
+#         return e.Bytes(), nil
+#     }
+#
+# (OptNil* variants pass a `format` callback as the second arg.) When the
+# value is unset, Encode early-returns and writes nothing — the empty
+# byte slice then crashes encoding/json on the parent struct with
+# "unexpected end of JSON input". The fix is to emit literal `null`,
+# which is what stdjson expects from a Marshaler for an absent field.
+#
+# Conservative: only matches the exact 4-line shape ogen produces, so
+# we don't accidentally rewrite anything else.
+_MARSHAL_JSON_PATTERN = re.compile(
+    r"(func \(s (Opt[A-Za-z0-9_]+)\) MarshalJSON\(\) \(\[\]byte, error\) \{\n"
+    r")(\te := jx\.Encoder\{\}\n"
+    r"\ts\.Encode\(&e(?:, [^)]+)?\)\n"
+    r"\treturn e\.Bytes\(\), nil\n"
+    r"\})",
+)
+
+
+def _patch_opt_marshal_json(out_dir: Path) -> None:
+    """Inject ``if !s.Set { return []byte("null"), nil }`` into Opt*.MarshalJSON.
+
+    Targets ``oas_json_gen.go`` only. The unpatched ogen template returns
+    empty bytes when the optional value is unset, which breaks the
+    parent struct's MarshalJSON. The fix mirrors what ogen *should*
+    have generated — see https://github.com/ogen-go/ogen for the
+    upstream bug context.
+
+    Idempotent: re-running on already-patched files is a no-op.
+    """
+    target = out_dir / "oas_json_gen.go"
+    if not target.is_file():
+        return
+    original = target.read_text(encoding="utf-8")
+
+    def _inject(m: re.Match[str]) -> str:
+        header, body = m.group(1), m.group(3)
+        # If somebody already added the guard, leave it alone.
+        if "if !s.Set" in body:
+            return m.group(0)
+        return (
+            f"{header}"
+            f"\tif !s.Set {{\n"
+            f'\t\treturn []byte("null"), nil\n'
+            f"\t}}\n"
+            f"{body}"
+        )
+
+    patched = _MARSHAL_JSON_PATTERN.sub(_inject, original)
+    if patched != original:
+        target.write_text(patched, encoding="utf-8")
+
+
+# Match `<go-module-path>/<pkg-path>/go.opentelemetry.io/otel...` —
+# ogen sometimes emits the otel import path with the consuming module's
+# Go path glued in front, which becomes an unresolvable import. The
+# real path is always plain `go.opentelemetry.io/otel...`.
+_OTEL_BAD_IMPORT = re.compile(
+    r'"[^"]*?/go\.opentelemetry\.io(/otel[^"]*)"'
+)
+
+
+def _patch_otel_imports(out_dir: Path) -> None:
+    """Strip module-path prefix from broken otel imports.
+
+    ogen 1.x leaks the consumer's Go module path before
+    ``go.opentelemetry.io/...`` in a handful of generated files
+    (oas_cfg_gen.go, oas_client_gen.go, oas_handlers_gen.go,
+    oas_labeler_gen.go, oas_response_encoders_gen.go). Replace with
+    the canonical import path so ``go build`` resolves the package.
+
+    Idempotent.
+    """
+    for path in out_dir.glob("oas_*.go"):
+        original = path.read_text(encoding="utf-8")
+        patched = _OTEL_BAD_IMPORT.sub(r'"go.opentelemetry.io\1"', original)
+        if patched != original:
+            path.write_text(patched, encoding="utf-8")
 
 
 def _gofmt(path: Path) -> None:

@@ -65,6 +65,9 @@ DEFAULT_MIDDLEWARE: List[str] = [
     "axes.middleware.AxesMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Activates user's local timezone from X-Timezone header (sent by TS SDK auth interceptor).
+    # Allows all Django date/time formatting to use the user's timezone without per-view code.
+    "django_cfg.middleware.TimezoneMiddleware",
 ]
 
 # Debug apps (added only in development)

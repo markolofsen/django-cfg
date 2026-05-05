@@ -321,6 +321,12 @@ export function installAuthOnClient(client: HeyClient): void {{
     const apiKey = auth.getApiKey();
     if (apiKey) request.headers.set('X-API-Key', apiKey);
 
+    try {{
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) request.headers.set('X-Timezone', tz);
+    }} catch {{}}
+    request.headers.set('X-Client-Time', new Date().toISOString());
+
     return request;
   }});
 

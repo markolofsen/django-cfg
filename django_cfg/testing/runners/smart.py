@@ -120,17 +120,47 @@ class SmartTestRunner(DiscoverRunner):
         runner_self = self
 
         def patched_create_test_db(creation_self, verbosity=1, autoclobber=False, serialize=True, keepdb=False):
-            test_db_name = creation_self._create_test_db(verbosity, autoclobber, keepdb)
+            # Step 1: create the empty DB (no migrations yet).
+            # autoclobber=True: always drop any leftover test DB from a
+            # previous interrupted run — no interactive prompt in CI.
+            test_db_name = creation_self._create_test_db(verbosity, True, keepdb)
             creation_self.connection.settings_dict['NAME'] = test_db_name
             creation_self.connection.close()
+
+            # Step 2: install extensions while DB is empty.
             try:
                 install_extensions_on(creation_self.connection, verbosity=runner_self.verbosity)
             except Exception as e:
                 if verbosity >= 2:
                     sys.stderr.write(f"⚠️  Could not install extensions on {test_db_name}: {e}\n")
+
             creation_self.connection.settings_dict['NAME'] = test_db_name
             creation_self.connection.close()
-            return original_create_test_db(creation_self, verbosity=verbosity, autoclobber=True, serialize=serialize, keepdb=True)
+
+            # Step 3: run the original create_test_db so migrations run
+            # normally. _create_test_db already executed above — replace
+            # it with a no-op lambda so original_create_test_db skips
+            # DB re-creation but still applies migrations on the fresh
+            # DB. We MUST honour the caller's keepdb flag (do not force
+            # keepdb=True): forcing keepdb makes Django skip migrations
+            # when the DB already exists, leaving the test DB schema
+            # frozen at whatever the previous (possibly stale) run
+            # left behind. This was the root cause of "duplicate key"
+            # IntegrityError in test runs that worked under pytest but
+            # not under manage.py test — see pytest_plugin.py for the
+            # original pattern this mirrors.
+            original_inner = creation_self._create_test_db
+            creation_self._create_test_db = lambda *_, **__: test_db_name
+            try:
+                return original_create_test_db(
+                    creation_self,
+                    verbosity=verbosity,
+                    autoclobber=autoclobber,
+                    serialize=serialize,
+                    keepdb=keepdb,
+                )
+            finally:
+                creation_self._create_test_db = original_inner
 
         BaseDatabaseCreation.create_test_db = patched_create_test_db
 
