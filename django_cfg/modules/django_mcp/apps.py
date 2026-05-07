@@ -1,10 +1,34 @@
 """MCP Module - Model Context Protocol integration."""
 
 import logging
+from pathlib import Path
 from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
+
+# Extra template dirs bundled with this app but outside the standard <app>/templates/ path
+_EXTRA_TEMPLATE_DIRS = [
+    Path(__file__).parent / "chat" / "templates",
+]
+
+
+def _register_template_dirs() -> None:
+    """Inject extra template directories into Django's TEMPLATES setting at runtime."""
+    from django.conf import settings
+    for engine in getattr(settings, "TEMPLATES", []):
+        if engine.get("BACKEND") == "django.template.backends.django.DjangoTemplates":
+            dirs = engine.setdefault("DIRS", [])
+            for d in _EXTRA_TEMPLATE_DIRS:
+                if d not in dirs:
+                    dirs.append(d)
+            # Invalidate cached template engines so the new dirs take effect
+            try:
+                from django.template import engines
+                engines._engines = {}
+            except Exception:
+                pass
+            break
 
 
 class DjangoMCPConfig(AppConfig):
@@ -15,6 +39,8 @@ class DjangoMCPConfig(AppConfig):
 
     def ready(self) -> None:
         """Initialize MCP module and auto-discover project config + tools."""
+        _register_template_dirs()
+
         from . import is_enabled
         if not is_enabled():
             return

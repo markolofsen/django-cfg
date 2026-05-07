@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from django.db.models import Case, When, F, Value, DecimalField, QuerySet
+from django.db.models.functions import Cast
 
 if TYPE_CHECKING:
     pass
@@ -96,9 +97,15 @@ def annotate_converted_price(
     )
 
     if not currencies:
-        # Empty queryset, just add annotation with null
+        # Cast to numeric so PostgreSQL can resolve AVG/SUM overloads —
+        # bare NULL has type "unknown" and triggers AmbiguousFunction.
         return queryset.annotate(
-            **{annotation_name: Value(None, output_field=DecimalField())}
+            **{
+                annotation_name: Cast(
+                    Value(None),
+                    output_field=DecimalField(max_digits=24, decimal_places=2),
+                )
+            }
         )
 
     # Get conversion rates

@@ -48,7 +48,7 @@ class OTPVerifySerializer(serializers.Serializer):
     identifier = serializers.CharField(
         help_text="Email address used for OTP request"
     )
-    otp = serializers.CharField(max_length=6, min_length=6)
+    otp = serializers.CharField(max_length=4, min_length=4)
     source_url = serializers.URLField(
         required=False,
         allow_blank=True,

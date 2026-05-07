@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.2.16"
+__version__ = "2.2.19"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -174,14 +174,6 @@ except ImportError:
     NavigationSection = None  # type: ignore[assignment]
     NavigationItemType = None  # type: ignore[assignment]
     SiteDropdownItem = None  # type: ignore[assignment]
-
-# ---------------------------------------------------------------------------
-# [OPTIONAL] Streamlit admin  (requires: streamlit)
-# ---------------------------------------------------------------------------
-try:
-    from .modules.streamlit_admin import StreamlitAdminConfig
-except ImportError:
-    StreamlitAdminConfig = None  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
 # [OPTIONAL] Centrifugo  (requires: cent)
@@ -371,8 +363,6 @@ __all__ = [
     "UnfoldConfig", "UnfoldTheme", "UnfoldThemeConfig", "UnfoldColors",
     "UnfoldSidebar", "UnfoldDashboardConfig",
     "NavigationItem", "NavigationSection", "NavigationItemType", "SiteDropdownItem",
-    # optional: streamlit
-    "StreamlitAdminConfig",
     # optional: centrifugo
     "DjangoCfgCentrifugoConfig",
     # optional: ngrok

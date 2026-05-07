@@ -53,7 +53,6 @@ try:
 except ImportError:
     GRPCConfig = None  # type: ignore[assignment,misc]
 from ...models.ngrok import NgrokConfig
-from ...modules.streamlit_admin import StreamlitAdminConfig
 from ...modules.django_cf import CloudflareConfig
 from ..exceptions import ConfigurationError
 from ..types.enums import EnvironmentMode, StartupInfoMode
@@ -446,11 +445,6 @@ class DjangoConfig(BaseModel):
     ngrok: Optional[NgrokConfig] = Field(
         default=None,
         description="Ngrok tunneling for development/webhooks",
-    )
-
-    streamlit_admin: Optional[StreamlitAdminConfig] = Field(
-        default=None,
-        description="Streamlit admin panel integration",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

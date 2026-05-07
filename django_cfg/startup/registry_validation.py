@@ -23,7 +23,6 @@ _OPTIONAL_PREFIXES = (
     "django_cfg.modules.django_ngrok",
     "django_cfg.modules.django_import_export",
     "django_cfg.modules.django_unfold",
-    "django_cfg.modules.streamlit_admin",
     "django_cfg.modules.django_cf",
     "django_cfg.models.api.grpc",  # old flat gRPC API — optional same as grpc module
 )

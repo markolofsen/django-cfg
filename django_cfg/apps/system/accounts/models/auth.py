@@ -14,7 +14,7 @@ class OTPSecret(models.Model):
     """Stores One-Time Passwords for authentication."""
 
     email = models.EmailField(db_index=True)
-    secret = models.CharField(max_length=6)
+    secret = models.CharField(max_length=4)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)
@@ -25,7 +25,7 @@ class OTPSecret(models.Model):
         super().save(*args, **kwargs)
 
     @staticmethod
-    def generate_otp(length=6):
+    def generate_otp(length=4):
         """Generate random numeric OTP."""
         return "".join(random.choices(string.digits, k=length))
 

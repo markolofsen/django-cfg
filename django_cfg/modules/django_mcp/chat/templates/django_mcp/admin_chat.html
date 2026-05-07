@@ -1,0 +1,286 @@
+{# MCP Agent Chat fragment — {% include "django_mcp/admin_chat.html" %} #}
+{% load django_cfg %}
+
+<style>
+    .mcp-chat {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 500px;
+        border: 1px solid rgba(209, 213, 219, 0.3);
+        border-radius: 0.375rem;
+        overflow: hidden;
+    }
+    .dark .mcp-chat { border-color: rgba(75, 85, 99, 0.3); }
+
+    .mcp-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        background: transparent;
+    }
+
+    .mcp-msg {
+        max-width: 85%;
+        padding: 0.6rem 0.9rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .mcp-msg-user {
+        align-self: flex-end;
+        background: rgb(59 130 246);
+        color: #fff;
+    }
+    .mcp-msg-assistant {
+        align-self: flex-start;
+        background: rgb(243 244 246);
+        color: rgb(17 24 39);
+    }
+    .dark .mcp-msg-assistant {
+        background: rgb(31 41 55);
+        color: rgb(229 231 235);
+    }
+    .mcp-msg-tool {
+        align-self: flex-start;
+        background: transparent;
+        border: 1px solid rgba(209 213 219 / 0.4);
+        color: rgb(107 114 128);
+        font-family: monospace;
+        font-size: 0.78rem;
+        max-width: 95%;
+    }
+    .dark .mcp-msg-tool { color: rgb(156 163 175); border-color: rgba(75 85 99 / 0.4); }
+    .mcp-msg-error {
+        align-self: flex-start;
+        background: rgb(254 242 242);
+        color: rgb(185 28 28);
+        border: 1px solid rgb(254 202 202);
+    }
+    .dark .mcp-msg-error { background: rgb(69 10 10); color: rgb(252 165 165); border-color: rgb(127 29 29); }
+
+    .mcp-thinking {
+        align-self: flex-start;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: rgb(107 114 128);
+        font-size: 0.8rem;
+    }
+    .mcp-dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: mcp-bounce 1.2s infinite;
+    }
+    .mcp-dot:nth-child(2) { animation-delay: .2s; }
+    .mcp-dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes mcp-bounce {
+        0%, 80%, 100% { transform: translateY(0); opacity: .4; }
+        40% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    .mcp-input-row {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        border-top: 1px solid rgba(209 213 219 / 0.3);
+        background: transparent;
+    }
+    .dark .mcp-input-row { border-top-color: rgba(75 85 99 / 0.3); }
+
+    .mcp-textarea {
+        flex: 1;
+        resize: none;
+        border: 1px solid rgba(209 213 219 / 0.5);
+        border-radius: 0.375rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        background: transparent;
+        color: inherit;
+        outline: none;
+        max-height: 120px;
+    }
+    .mcp-textarea:focus { border-color: rgb(99 102 241); box-shadow: 0 0 0 1px rgb(99 102 241 / 0.3); }
+    .dark .mcp-textarea { border-color: rgba(75 85 99 / 0.5); }
+
+    .mcp-send-btn {
+        padding: 0.5rem 1rem;
+        background: rgb(99 102 241);
+        color: #fff;
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .mcp-send-btn:hover { background: rgb(79 70 229); }
+    .mcp-send-btn:disabled { background: rgb(156 163 175); cursor: not-allowed; }
+</style>
+
+{% if user.is_superuser %}
+<div class="mcp-chat" id="mcp-chat">
+    <div class="mcp-messages" id="mcp-messages">
+        <div class="mcp-msg mcp-msg-assistant">Hi! I'm your MCP agent. Ask me anything about this Django project — models, users, commands, and more.</div>
+    </div>
+    <div class="mcp-input-row">
+        <textarea
+            id="mcp-input"
+            class="mcp-textarea"
+            rows="1"
+            placeholder="Ask the agent..."
+        ></textarea>
+        <button id="mcp-send" class="mcp-send-btn">
+            <span class="material-icons" style="font-size:16px;">send</span>
+            Send
+        </button>
+    </div>
+</div>
+
+<script>
+(function () {
+    const messages = document.getElementById('mcp-messages');
+    const input = document.getElementById('mcp-input');
+    const sendBtn = document.getElementById('mcp-send');
+    const STREAM_URL = '/cfg/mcp/agent/stream/';
+    const HISTORY_URL = '/cfg/mcp/agent/history/';
+    const SESSION_ID = 'admin-chat';
+
+    function getCsrf() {
+        const name = 'csrftoken';
+        const cookies = document.cookie.split(';');
+        for (const c of cookies) {
+            const [k, v] = c.trim().split('=');
+            if (k === name) return decodeURIComponent(v);
+        }
+        return '';
+    }
+
+    function addMsg(text, cls) {
+        const div = document.createElement('div');
+        div.className = 'mcp-msg ' + cls;
+        div.textContent = text;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+        return div;
+    }
+
+    async function loadHistory() {
+        try {
+            const resp = await fetch(`${HISTORY_URL}?session_id=${SESSION_ID}`);
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (!data.messages || !data.messages.length) return;
+            // Remove the default greeting before rendering history
+            messages.innerHTML = '';
+            for (const msg of data.messages) {
+                const cls = msg.role === 'user' ? 'mcp-msg-user' : 'mcp-msg-assistant';
+                addMsg(msg.content, cls);
+            }
+        } catch (e) {}
+    }
+    loadHistory();
+
+    function addThinking() {
+        const div = document.createElement('div');
+        div.className = 'mcp-thinking';
+        div.innerHTML = '<span class="mcp-dot"></span><span class="mcp-dot"></span><span class="mcp-dot"></span>';
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+        return div;
+    }
+
+    async function send() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.value = '';
+        input.style.height = 'auto';
+        sendBtn.disabled = true;
+        input.disabled = true;
+
+        addMsg(text, 'mcp-msg-user');
+        const thinking = addThinking();
+
+        let assistantDiv = null;
+
+        try {
+            const resp = await fetch(STREAM_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrf(),
+                },
+                body: JSON.stringify({message: text, session_id: 'admin-chat'}),
+            });
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buf = '';
+
+            while (true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, {stream: true});
+                const parts = buf.split('\n\n');
+                buf = parts.pop();
+                for (const part of parts) {
+                    if (!part.trim()) continue;
+                    let eventType = 'message', dataStr = '';
+                    for (const line of part.split('\n')) {
+                        if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+                        if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
+                    }
+                    let data = {};
+                    try { data = JSON.parse(dataStr); } catch {}
+
+                    if (eventType === 'tool_start') {
+                        thinking.remove();
+                        addMsg(`⚙ ${data.name}(${JSON.stringify(data.args || {})})`, 'mcp-msg mcp-msg-tool');
+                        thinking.remove = () => {};
+                    } else if (eventType === 'tool_result') {
+                        const preview = (data.result || '').slice(0, 200);
+                        addMsg(`→ ${preview}${data.result && data.result.length > 200 ? '…' : ''}`, 'mcp-msg mcp-msg-tool');
+                    } else if (eventType === 'text') {
+                        thinking.remove();
+                        assistantDiv = addMsg(data.content || '', 'mcp-msg-assistant');
+                    } else if (eventType === 'error') {
+                        thinking.remove();
+                        addMsg(data.message || 'Unknown error', 'mcp-msg-error');
+                    }
+                }
+            }
+        } catch (err) {
+            thinking.remove();
+            addMsg('Network error: ' + err.message, 'mcp-msg-error');
+        } finally {
+            sendBtn.disabled = false;
+            input.disabled = false;
+            input.focus();
+        }
+    }
+
+    sendBtn.addEventListener('click', send);
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+    input.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+})();
+</script>
+{% else %}
+{% include "admin/user_message.html" %}
+{% endif %}

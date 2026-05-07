@@ -110,15 +110,6 @@ urlpatterns = [
     path('cfg/totp/', include('django_cfg.apps.system.totp.urls')),
 ]
 
-# Streamlit Admin Integration (conditional)
-try:
-    from django_cfg.core.config import get_current_config
-    _config = get_current_config()
-    if _config and _config.streamlit_admin:
-        urlpatterns.append(path('cfg/streamlit/', include('django_cfg.modules.streamlit_admin.urls')))
-except Exception:
-    pass
-
 # Business apps (conditional based on config)
 base_module = BaseCfgModule()
 
