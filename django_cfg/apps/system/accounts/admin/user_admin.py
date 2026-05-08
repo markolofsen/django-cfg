@@ -247,7 +247,7 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
         (
             "Contact Information",
             {
-                "fields": ("company", "phone", "position", "language"),
+                "fields": ("company", "phone", "position", "language", "timezone"),
             },
         ),
         (

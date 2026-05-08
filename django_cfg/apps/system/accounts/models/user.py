@@ -27,6 +27,12 @@ class CustomUser(AbstractUser):
     phone = models.CharField(max_length=20, blank=True)
     position = models.CharField(max_length=100, blank=True)
     language = models.CharField(max_length=10, blank=True, default='')
+    timezone = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        help_text="IANA timezone name (e.g. 'Asia/Seoul'). Auto-detected from browser via X-Timezone header.",
+    )
     avatar = models.ImageField(upload_to=user_avatar_path, blank=True, null=True)
 
     # Test account for App Store review, API testing, etc.
@@ -65,6 +71,17 @@ class CustomUser(AbstractUser):
     @property
     def is_admin(self) -> bool:
         return self.is_superuser
+
+    @property
+    def is_staff_member(self) -> bool:
+        """Internal-team flag: either staff or superuser.
+
+        Mirrors the ``UserQuerySet.staff_members()`` predicate so a
+        single account can be classified consistently in Python and
+        in SQL. Use this when you want the answer to "is this an
+        operator account?" rather than the underlying Django flags.
+        """
+        return bool(self.is_staff or self.is_superuser)
 
     @property
     def full_name(self) -> str:

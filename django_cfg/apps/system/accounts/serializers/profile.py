@@ -48,6 +48,7 @@ class UserSerializer(serializers.ModelSerializer):
             "phone",
             "position",
             "language",
+            "timezone",
             "avatar",
             "is_staff",
             "is_superuser",
@@ -117,7 +118,7 @@ class CfgUserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ["first_name", "last_name", "company", "phone", "position", "language"]
+        fields = ["first_name", "last_name", "company", "phone", "position", "language", "timezone"]
 
     def validate_first_name(self, value):
         """Validate first name."""

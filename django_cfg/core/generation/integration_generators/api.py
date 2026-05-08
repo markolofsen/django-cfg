@@ -203,6 +203,15 @@ class APIFrameworksGenerator:
                     "drf_spectacular.hooks.postprocess_schema_enums",
                     "django_cfg.modules.django_generator.openapi.spectacular.auto_fix_enum_names",
                     "django_cfg.modules.django_generator.openapi.spectacular.mark_async_operations",
+                    # Promote DefaultPagination wrappers from inline
+                    # objects to named ``Paginated{X}List`` components
+                    # so the TS codegen can ship zod schemas for them.
+                    # Bare-array list endpoints are left as-is (the
+                    # writer's intent is clear from ``pagination_class
+                    # = None`` or an APIView with ``many=True``); the
+                    # runtime zod check in the generated SWR hooks is
+                    # what guards drift between schema and wire.
+                    "django_cfg.middleware.pagination_schema_hook.extract_paginated_components",
                 ],
             }
 

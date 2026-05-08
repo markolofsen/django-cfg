@@ -5,15 +5,29 @@ import traceback
 from urllib.parse import urlparse
 
 from coolname import generate_slug
-from django.contrib.auth.models import UserManager
+from django.contrib.auth.models import UserManager as DjangoUserManager
 from django.utils import timezone
+
+from .user_queryset import UserQuerySet
 
 logger = logging.getLogger(__name__)
 
 
-class UserManager(UserManager):
+# Compose Django's UserManager (for create_user / create_superuser
+# helpers) with our UserQuerySet predicates. ``from_queryset`` returns
+# a fresh manager class with all queryset methods exposed, which we
+# then subclass to attach the legacy helpers below.
+_BaseUserManager = DjangoUserManager.from_queryset(UserQuerySet)
+
+
+class UserManager(_BaseUserManager):
     """
     Custom manager for user statistics and data calculations.
+
+    Inherits queryset predicates from ``UserQuerySet``
+    (``staff_members``, ``regular_users``, ``exclude_staff``,
+    ``alive``) via ``from_queryset``. New predicates go on the
+    queryset, not here, so they compose through chaining.
     """
 
     # ------------------------------------------------------------------

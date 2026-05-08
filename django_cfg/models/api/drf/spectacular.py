@@ -49,9 +49,19 @@ class SpectacularConfig(BaseModel):
     )
 
     # Post-processing
+    #
+    # Order matters:
+    #   1. ``extract_paginated_components`` runs first so the audit
+    #      step can rely on ``$ref``-based recognition of paginated
+    #      list responses.
+    #   2. ``enforce_paginated_lists`` fails the build when any GET
+    #      list endpoint isn't paginated and hasn't opted out via
+    #      ``@extend_schema(extensions={"x-pagination-opt-out": True})``.
     postprocessing_hooks: List[str] = Field(
         default_factory=lambda: [
-            'drf_spectacular.contrib.djangorestframework_camel_case.camelize_serializer_fields'
+            'drf_spectacular.contrib.djangorestframework_camel_case.camelize_serializer_fields',
+            'django_cfg.middleware.pagination_schema_hook.extract_paginated_components',
+            'django_cfg.middleware.pagination_schema_hook.enforce_paginated_lists',
         ],
         description="Post-processing hooks"
     )

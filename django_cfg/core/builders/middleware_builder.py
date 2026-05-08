@@ -85,6 +85,11 @@ class MiddlewareBuilder:
         """
         middleware = []
 
+        # Timezone middleware — activates request timezone from X-Timezone header
+        # and persists it to CustomUser.timezone when it changes.
+        # Must run early so all downstream code sees the correct timezone.
+        middleware.append("django_cfg.middleware.TimezoneMiddleware")
+
         # Accounts middleware (user activity tracking)
         # accounts is always enabled - core django-cfg functionality
         middleware.append("django_cfg.middleware.UserActivityMiddleware")

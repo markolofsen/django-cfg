@@ -116,15 +116,18 @@ class DefaultPagination(PageNumberPagination):
                     'description': 'Whether there is a previous page',
                     'example': True
                 },
+                # OpenAPI 3.1 union form. drf-spectacular's 3.0-style
+                # ``nullable: True`` is silently dropped by the 3.1 ts_extras
+                # post-processor, so the generated zod schema would emit
+                # ``z.number().optional()`` and reject the legitimate
+                # ``null`` we send when there is no next/previous page.
                 'next_page': {
-                    'type': 'integer',
-                    'nullable': True,
+                    'type': ['integer', 'null'],
                     'description': 'Next page number (null if no next page)',
                     'example': 3
                 },
                 'previous_page': {
-                    'type': 'integer',
-                    'nullable': True,
+                    'type': ['integer', 'null'],
                     'description': 'Previous page number (null if no previous page)',
                     'example': 1
                 },
