@@ -39,6 +39,7 @@ from ...models import (
     EmailConfig,
     FrontendMonitorConfig,
     GeoConfig,
+    SimpleHistoryConfig,
     GitHubOAuthConfig,
     LimitsConfig,
     SpectacularConfig,
@@ -408,6 +409,11 @@ class DjangoConfig(BaseModel):
     geo: Optional[GeoConfig] = Field(
         default=None,
         description="Geographic data (countries, states, cities)",
+    )
+
+    simple_history: Optional[SimpleHistoryConfig] = Field(
+        default=None,
+        description="django-simple-history audit log: field-level diff tracking with admin integration",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

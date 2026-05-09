@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.2.26"
+__version__ = "2.2.27"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -94,6 +94,7 @@ from .models.django.django_rq import DjangoRQConfig, RQQueueConfig, RQScheduleCo
 from .modules.django_logging.__cfg__ import DjangoLoggingConfig
 from .models.django.currency import CurrencyConfig
 from .models.django.geo import GeoConfig
+from .models.django.simple_history import SimpleHistoryConfig
 from .models.django.frontend_monitor import FrontendMonitorConfig
 from .models.django.constance import ConstanceConfig, ConstanceField
 from .models.django.storage import StorageConfig
@@ -342,7 +343,7 @@ __all__ = [
     "EnvironmentConfig", "AxesConfig", "CryptoFieldsConfig",
     "DjangoRQConfig", "RQQueueConfig", "RQScheduleConfig",
     "DjangoLoggingConfig",
-    "CurrencyConfig", "GeoConfig", "FrontendMonitorConfig",
+    "CurrencyConfig", "GeoConfig", "SimpleHistoryConfig", "FrontendMonitorConfig",
     "ConstanceConfig", "ConstanceField", "StorageConfig", "OpenAPIClientConfig",
     "EmailConfig", "TelegramConfig",
     # middleware (lazy — DRF reads settings at import time)

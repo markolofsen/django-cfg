@@ -61,6 +61,7 @@ class ThirdPartyIntegrationsGenerator:
         settings.update(self._generate_unfold_settings())
         settings.update(self._generate_constance_settings())
         settings.update(self._generate_centrifugo_settings())
+        settings.update(self._generate_simple_history_settings())
 
         # Track enabled integrations
         if self.integrations:
@@ -130,6 +131,24 @@ class ThirdPartyIntegrationsGenerator:
         self.integrations.append("centrifugo")
 
         return centrifugo_settings
+
+    def _generate_simple_history_settings(self) -> Dict[str, Any]:
+        """
+        Generate django-simple-history settings.
+
+        Returns:
+            Dictionary with simple_history configuration
+        """
+        if not self.config.simple_history or not self.config.simple_history.enabled:
+            return {}
+
+        self.integrations.append("simple_history")
+
+        return {
+            "SIMPLE_HISTORY_ASSERT_UNICODE_USERNAME": self.config.simple_history.assert_unicode_username,
+            "SIMPLE_HISTORY_REVERT_DISABLED": self.config.simple_history.revert_disabled,
+            "SIMPLE_HISTORY_HISTORY_CHANGE_REASON_MAX_LENGTH": self.config.simple_history.history_change_reason_max_length,
+        }
 
     def get_enabled_integrations(self) -> List[str]:
         """

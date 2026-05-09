@@ -137,6 +137,10 @@ class InstalledAppsBuilder:
         if self.config.geo and self.config.geo.enabled:
             apps.append("django_cfg.apps.tools.geo")
 
+        # django-simple-history audit log (opt-in)
+        if self.config.simple_history and self.config.simple_history.enabled:
+            apps.append("simple_history")
+
         # Monitor module — always included (ingest URL needed for OpenAPI + JS SDK).
         # Actual D1 forwarding is a no-op when cloudflare is not configured.
         apps.append("django_cfg.modules.django_monitor")

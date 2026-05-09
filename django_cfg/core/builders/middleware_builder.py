@@ -99,6 +99,10 @@ class MiddlewareBuilder:
         if self.config.encryption and self.config.encryption.enabled:
             middleware.append("django_cfg.core.encryption.middleware.EncryptionMiddleware")
 
+        # django-simple-history: resolves request.user for audit rows
+        if self.config.simple_history and self.config.simple_history.enabled:
+            middleware.append("simple_history.middleware.HistoryRequestMiddleware")
+
         # Extension middleware (from extensions/apps/)
         # Extensions define middleware via middleware_classes or get_middleware_classes()
         middleware.extend(self._get_extension_middleware())

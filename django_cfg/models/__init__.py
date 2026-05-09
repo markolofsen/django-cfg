@@ -45,6 +45,7 @@ from .django.environment import EnvironmentConfig
 from .django.frontend_monitor import FrontendMonitorConfig
 from .django.geo import GeoConfig
 from .django.openapi import OpenAPIClientConfig
+from .django.simple_history import SimpleHistoryConfig
 from .infrastructure.cache import CacheConfig
 
 # Infrastructure
@@ -90,6 +91,7 @@ __all__ = [
     "RQQueueConfig",
     "FrontendMonitorConfig",
     "GeoConfig",
+    "SimpleHistoryConfig",
     "StorageConfig",
     "OpenAPIClientConfig",
     "UnfoldConfig",
