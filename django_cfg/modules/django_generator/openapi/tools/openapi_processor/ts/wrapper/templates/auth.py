@@ -110,19 +110,13 @@ function detectLocale(): string | null {{
 
 /** Default baseUrl from `NEXT_PUBLIC_API_URL`.
  *
- * In the browser: always returns '' (same-origin) so Next.js rewrites
- * can intercept the request and proxy it server-side — the API key
- * never appears in the browser bundle.
- * On the server (SSR/RSC): returns the absolute Django URL from
- * NEXT_PUBLIC_API_URL so server components can call Django directly.
+ * Both browser and server use NEXT_PUBLIC_API_URL — requests go
+ * directly to Django without Next.js proxy.
  */
 function defaultBaseUrl(): string {{
   try {{
     if (typeof process !== 'undefined' && process.env) {{
       if (process.env.NEXT_PUBLIC_STATIC_BUILD === 'true') return '';
-      // Browser → same-origin (rewrite handles forwarding)
-      if (isBrowser) return '';
-      // Server → absolute Django URL
       return process.env.NEXT_PUBLIC_API_URL || '';
     }}
   }} catch {{}}

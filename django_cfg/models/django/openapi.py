@@ -77,12 +77,11 @@ class OpenAPIClientConfig(OpenAPIConfig):
         description="API prefix for URL routing (e.g., 'api' -> /api/...)"
     )
     append_slash: bool = Field(
-        default=True,
+        default=False,
         description=(
-            "Django APPEND_SLASH setting. Keep True (Django default) so DRF "
-            "router URL patterns with trailing slashes resolve correctly. "
-            "The Next.js rewrite always appends a trailing slash to the "
-            "destination, so no 301 redirect is ever triggered."
+            "Django APPEND_SLASH setting. False for REST APIs — SDK always "
+            "generates URLs with trailing slashes, so no redirect is needed. "
+            "APPEND_SLASH=True causes 500 on POST requests without trailing slash."
         ),
     )
 

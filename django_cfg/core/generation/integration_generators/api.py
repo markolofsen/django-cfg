@@ -241,10 +241,7 @@ class APIFrameworksGenerator:
                     if getattr(self.config, "spectacular", None) is not None
                     else "warn"
                 ),
-                # APPEND_SLASH=False by default: Next.js rewrites strip the trailing
-                # slash before forwarding, causing an infinite 301 loop with Django's
-                # default APPEND_SLASH=True. REST APIs don't require trailing slashes.
-                "APPEND_SLASH": getattr(openapi_config, "append_slash", False),
+                "APPEND_SLASH": getattr(openapi_config, "append_slash", True),
             }
 
             logger.info("🚀 Generated DRF + Spectacular settings from OpenAPIClientConfig")
