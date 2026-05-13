@@ -76,6 +76,15 @@ class OpenAPIClientConfig(OpenAPIConfig):
         default="apix",
         description="API prefix for URL routing (e.g., 'api' -> /api/...)"
     )
+    append_slash: bool = Field(
+        default=True,
+        description=(
+            "Django APPEND_SLASH setting. Keep True (Django default) so DRF "
+            "router URL patterns with trailing slashes resolve correctly. "
+            "The Next.js rewrite always appends a trailing slash to the "
+            "destination, so no 301 redirect is ever triggered."
+        ),
+    )
 
     def get_drf_schema_path_prefix(self) -> str:
         """Get the schema path prefix, defaulting to api_prefix if not set."""

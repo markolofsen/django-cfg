@@ -58,6 +58,48 @@ class IR:
     operations: list[IROperation] = field(default_factory=list)
 
 
+def promote_inline_schemas(spec: dict[str, Any]) -> dict[str, Any]:
+    """Promote every inline response / requestBody schema to a named $ref.
+
+    Mutates *spec* in-place (adds entries to ``components.schemas`` and
+    replaces inline dicts with ``{"$ref": "#/components/schemas/..."}``).
+    Safe to call multiple times — already-promoted schemas are left untouched.
+    """
+    paths = spec.get("paths", {})
+    for path, item in paths.items():
+        if not isinstance(item, dict):
+            continue
+        for method, op in item.items():
+            if method.lower() not in _HTTP_METHODS or not isinstance(op, dict):
+                continue
+            op_id = op.get("operationId") or _fallback_op_id(method, path)
+
+            # responses
+            responses = op.get("responses")
+            if isinstance(responses, dict):
+                for code in ("200", "201", "202"):
+                    resp = responses.get(code)
+                    if isinstance(resp, dict):
+                        _extract_ref(
+                            resp,
+                            op_id=op_id,
+                            kind=f"response_{code}",
+                            spec=spec,
+                        )
+
+            # requestBody
+            body = op.get("requestBody")
+            if isinstance(body, dict):
+                _extract_ref(
+                    body,
+                    op_id=op_id,
+                    kind="requestBody",
+                    spec=spec,
+                )
+
+    return spec
+
+
 def build_ir(spec: dict[str, Any]) -> IR:
     """Walk a (sliced) OpenAPI spec and emit IR."""
     ir = IR()
@@ -168,7 +210,29 @@ def _parse_params(params: list[dict[str, Any]]) -> tuple[list[IRParam], list[IRP
     return path, query
 
 
-def _extract_ref(body: Any, *, op_id: str = "", kind: str = "") -> str | None:
+def _ensure_components_schemas(spec: dict[str, Any]) -> dict[str, Any]:
+    """Return (and create if missing) the components.schemas dict."""
+    components = spec.setdefault("components", {})
+    return components.setdefault("schemas", {})
+
+
+def _auto_name(op_id: str, kind: str) -> str:
+    """Generate a collision-resistant schema name from operationId + kind."""
+    base = op_id
+    for suffix in ("_create", "_list", "_retrieve", "_update", "_partial_update", "_destroy"):
+        if base.endswith(suffix):
+            base = base[: -len(suffix)]
+            break
+    return f"{base}_{kind}_AutoRef"
+
+
+def _extract_ref(
+    body: Any,
+    *,
+    op_id: str = "",
+    kind: str = "",
+    spec: dict[str, Any] | None = None,
+) -> str | None:
     if not isinstance(body, dict):
         return None
     content = body.get("content") or {}
@@ -178,22 +242,47 @@ def _extract_ref(body: Any, *, op_id: str = "", kind: str = "") -> str | None:
         return None
     ref = _ref_name(schema.get("$ref"))
     if ref is None and schema:
-        _log.warning(
-            "Inline schema (no $ref) on %s of %r — schema will be ignored by ts_extras. "
-            "Use a named component ($ref) to enable zod validation and typed hooks.",
-            kind or "body",
-            op_id,
-        )
+        if spec is not None:
+            schemas = _ensure_components_schemas(spec)
+            auto_name = _auto_name(op_id, kind)
+            # collision guard — append _2, _3, …
+            candidate = auto_name
+            counter = 2
+            while candidate in schemas:
+                candidate = f"{auto_name}_{counter}"
+                counter += 1
+            schemas[candidate] = schema
+            # mutate inline → $ref so downstream tools see a normal ref
+            json_part["schema"] = {"$ref": f"#/components/schemas/{candidate}"}
+            _log.info(
+                "Promoted inline schema to $ref %r (%s of %r).",
+                candidate,
+                kind or "body",
+                op_id,
+            )
+            return candidate
+        else:
+            _log.warning(
+                "Inline schema (no $ref) on %s of %r — schema will be ignored by ts_extras. "
+                "Use a named component ($ref) to enable zod validation and typed hooks.",
+                kind or "body",
+                op_id,
+            )
     return ref
 
 
-def _extract_response_ref(responses: Any, *, op_id: str = "") -> str | None:
+def _extract_response_ref(
+    responses: Any,
+    *,
+    op_id: str = "",
+    spec: dict[str, Any] | None = None,
+) -> str | None:
     if not isinstance(responses, dict):
         return None
     for code in ("200", "201", "202"):
         resp = responses.get(code)
         if isinstance(resp, dict):
-            ref = _extract_ref(resp, op_id=op_id, kind=f"response {code}")
+            ref = _extract_ref(resp, op_id=op_id, kind=f"response_{code}", spec=spec)
             if ref:
                 return ref
     return None

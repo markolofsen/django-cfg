@@ -2,6 +2,7 @@
 
 import logging
 from django.http import JsonResponse
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
@@ -10,6 +11,7 @@ from django_cfg.modules.django_mcp.handlers.tools import tool_registry
 logger = logging.getLogger(__name__)
 
 
+@extend_schema(exclude=True)
 class MCPInfoView(APIView):
     """
     GET /cfg/mcp/info/

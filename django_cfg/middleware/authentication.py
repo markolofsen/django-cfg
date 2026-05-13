@@ -125,6 +125,32 @@ except ImportError:
     pass
 
 
+# Register OpenAPI extension for APIKeyAuthentication
+try:
+    from drf_spectacular.extensions import OpenApiAuthenticationExtension
+
+    class APIKeyAuthenticationScheme(OpenApiAuthenticationExtension):
+        """
+        OpenAPI authentication scheme for APIKeyAuthentication.
+
+        Registers the X-API-Key header in the generated OpenAPI schema.
+        """
+        target_class = 'django_cfg.apps.system.accounts.authentication.APIKeyAuthentication'
+        name = 'apiKeyAuth'
+
+        def get_security_definition(self, auto_schema):
+            """Return API key security definition."""
+            return {
+                'type': 'apiKey',
+                'in': 'header',
+                'name': 'X-API-Key',
+            }
+
+except ImportError:
+    # drf-spectacular not installed, skip extension registration
+    pass
+
+
 class JWTAuthenticationWithLastLogin(JWTAuthentication):
     """
     JWT Authentication that updates last_login on successful authentication.

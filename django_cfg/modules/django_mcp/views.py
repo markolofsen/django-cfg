@@ -6,6 +6,7 @@ import logging
 from typing import Any, Dict
 
 from django.http import JsonResponse
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 
 from django_cfg.modules.django_mcp.exceptions import (
@@ -27,6 +28,7 @@ from django_cfg.modules.django_mcp.services.context import MCPContext
 logger = logging.getLogger(__name__)
 
 
+@extend_schema(exclude=True)
 class MCPView(APIView):
     """
     Main MCP endpoint that handles JSON-RPC 2.0 requests.

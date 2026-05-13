@@ -200,6 +200,10 @@ class APIFrameworksGenerator:
                 # explicitly because overriding POSTPROCESSING_HOOKS replaces
                 # the default list.
                 "POSTPROCESSING_HOOKS": [
+                    # Auto-populate ENUM_NAME_OVERRIDES from discovered
+                    # TextChoices classes BEFORE postprocess_schema_enums
+                    # reads them. Must be first in the chain.
+                    "django_cfg.modules.django_generator.openapi.spectacular.enum_auto_overrides.auto_populate_enum_overrides",
                     "drf_spectacular.hooks.postprocess_schema_enums",
                     "django_cfg.modules.django_generator.openapi.spectacular.auto_fix_enum_names",
                     "django_cfg.modules.django_generator.openapi.spectacular.mark_async_operations",
@@ -237,6 +241,10 @@ class APIFrameworksGenerator:
                     if getattr(self.config, "spectacular", None) is not None
                     else "warn"
                 ),
+                # APPEND_SLASH=False by default: Next.js rewrites strip the trailing
+                # slash before forwarding, causing an infinite 301 loop with Django's
+                # default APPEND_SLASH=True. REST APIs don't require trailing slashes.
+                "APPEND_SLASH": getattr(openapi_config, "append_slash", False),
             }
 
             logger.info("🚀 Generated DRF + Spectacular settings from OpenAPIClientConfig")

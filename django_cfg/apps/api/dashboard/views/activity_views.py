@@ -45,7 +45,7 @@ class ActivityViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             ),
         ],
         responses=ActivityEntrySerializer(many=True),
-        tags=["cfg", "dashboard", "Dashboard - Activity"]
+        tags=["cfg_dashboard_activity"]
     )
     @action(detail=False, methods=['get'], url_path='recent', pagination_class=None, serializer_class=ActivityEntrySerializer)
     def recent(self, request):
@@ -66,7 +66,7 @@ class ActivityViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         summary="Get quick actions",
         description="Retrieve quick action buttons for dashboard",
         responses=QuickActionSerializer(many=True),
-        tags=["cfg", "dashboard", "Dashboard - Activity"]
+        tags=["cfg_dashboard_activity"]
     )
     @action(detail=False, methods=['get'], url_path='actions', pagination_class=None, serializer_class=QuickActionSerializer)
     def actions(self, request):

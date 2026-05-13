@@ -8,7 +8,7 @@ from unfold.admin import TabularInline
 
 from django_cfg.modules.base import BaseCfgModule
 
-from ..models import UserActivity, UserRegistrationSource
+from ..models import UserActivity, UserAPIKey, UserRegistrationSource
 
 
 class UserRegistrationSourceInline(TabularInline):
@@ -121,6 +121,24 @@ class UserEmailLogInline(TabularInline):
             return base_module.is_newsletter_enabled()
         except Exception:
             return False
+
+
+class UserAPIKeyInline(TabularInline):
+    """Inline for user's API key."""
+
+    model = UserAPIKey
+    extra = 0
+    max_num = 1
+    readonly_fields = ["key", "reissued_at", "created_at"]
+    fields = ["key", "reissued_at", "created_at"]
+    verbose_name = "API Key"
+    verbose_name_plural = "API Key"
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class UserSupportTicketsInline(TabularInline):

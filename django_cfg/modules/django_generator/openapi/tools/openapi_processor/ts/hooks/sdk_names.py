@@ -110,6 +110,7 @@ def sdk_class_name(op: IROperation) -> str:
     cls_part, method_part = _split_operation_id(op.operation_id)
     if method_part:
         return _hey_api_pascal(cls_part)
+    # Flat operationId — use tag (normalized to PascalCase) for byTags class.
     return _hey_api_pascal(op.tag) if op.tag else "Api"
 
 

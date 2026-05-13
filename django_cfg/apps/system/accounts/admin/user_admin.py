@@ -33,6 +33,7 @@ from ..models import CustomUser
 from .filters import UserStatusFilter
 from .inlines import (
     UserActivityInline,
+    UserAPIKeyInline,
     UserEmailLogInline,
     UserRegistrationSourceInline,
     UserSupportTicketsInline,
@@ -289,7 +290,7 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
 
     def get_inlines(self, request, obj):
         """Get inlines based on enabled apps."""
-        inlines = [UserRegistrationSourceInline, UserActivityInline]
+        inlines = [UserRegistrationSourceInline, UserActivityInline, UserAPIKeyInline]
         try:
             base_module = BaseCfgModule()
             if base_module.is_newsletter_enabled():

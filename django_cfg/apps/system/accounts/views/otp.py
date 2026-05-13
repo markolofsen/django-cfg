@@ -55,6 +55,7 @@ class OTPViewSet(viewsets.GenericViewSet):
             429: OTPErrorResponseSerializer,
             500: OTPErrorResponseSerializer,
         },
+        tags=["cfg_accounts"],
     )
     @action(detail=False, methods=["post"], url_path="request", url_name="request")
     def request_otp(self, request):
@@ -141,6 +142,7 @@ class OTPViewSet(viewsets.GenericViewSet):
             401: OTPErrorResponseSerializer,
             429: OTPErrorResponseSerializer,
         },
+        tags=["cfg_accounts"],
     )
     @action(detail=False, methods=["post"], url_path="verify", url_name="verify")
     def verify_otp(self, request):

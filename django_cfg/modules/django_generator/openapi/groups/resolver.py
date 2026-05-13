@@ -33,7 +33,6 @@ from ..pipeline.config import OpenAPIGroupConfig
 
 _HTTP_METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
 _CFG_PREFIX = "cfg_"
-_CFG_MARKER = "cfg"
 
 
 def resolve_tags(
@@ -51,7 +50,7 @@ def resolve_tags(
     found: set[str] = set()
     for op in _iter_ops(global_spec):
         tags = [str(t) for t in (op.get("tags") or [])]
-        if _CFG_MARKER in tags:
+        if _CFG_PREFIX in tags:
             # django-cfg op — never claim it for app-side groups.
             continue
         # Add ONLY the tag(s) that actually correspond to this group's
@@ -75,7 +74,7 @@ def resolve_tags(
         norm_name = group.name.lower()
         for op in _iter_ops(global_spec):
             tags = [str(t) for t in (op.get("tags") or [])]
-            if _CFG_MARKER in tags:
+            if _CFG_PREFIX in tags:
                 continue
             if any(t.lower() == norm_name for t in tags):
                 found.add(group.name)
@@ -90,8 +89,11 @@ def resolve_tags_by_name(
 ) -> set[str]:
     """Derive tag set from a group name alone (no `OpenAPIGroupConfig`)."""
     if group_name.startswith(_CFG_PREFIX):
-        inner = group_name[len(_CFG_PREFIX):]  # "accounts" or "*"
-        return _collect_cfg_tags(global_spec, sub_glob=inner)
+        # With the unified cfg_<app>_<sub> tag scheme, every tag carries the
+        # full group prefix (e.g. cfg_accounts_profile).  Use prefix match so
+        # group "cfg_accounts" collects cfg_accounts, cfg_accounts_profile,
+        # cfg_accounts_oauth, etc.
+        return _collect_cfg_tags(global_spec, sub_glob=group_name + "*")
 
     # Non-cfg fallback: group name itself is the tag.
     return {group_name}
@@ -111,9 +113,11 @@ def _collect_cfg_tags(global_spec: dict[str, Any], *, sub_glob: str) -> set[str]
     found: set[str] = set()
     for op in _iter_ops(global_spec):
         tags = [str(t) for t in (op.get("tags") or [])]
-        if _CFG_MARKER not in tags:
+        # Unified tag scheme: tags are cfg_<app>[_<sub>] (e.g. cfg_accounts_profile).
+        # Match any tag that starts with the cfg prefix.
+        if not any(t.startswith(_CFG_PREFIX) for t in tags):
             continue
-        sub_tags = [t for t in tags if t != _CFG_MARKER]
+        sub_tags = [t for t in tags if t.startswith(_CFG_PREFIX)]
         if any(fnmatch.fnmatch(t, sub_glob) for t in sub_tags):
             found.update(sub_tags)
     return found

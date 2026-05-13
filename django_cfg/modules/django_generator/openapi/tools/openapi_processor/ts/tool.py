@@ -27,7 +27,7 @@ from pathlib import Path
 
 from .events.generator import generate_events
 from .hooks.generator import generate_hooks
-from .ir import build_ir
+from .ir import build_ir, promote_inline_schemas
 from .schemas.generator import generate_schemas
 
 
@@ -81,6 +81,7 @@ def generate(
     and avoids cryptic hash suffixes in generated TypeScript.
     """
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
+    promote_inline_schemas(spec)
     ir = build_ir(spec)
     out_dir.mkdir(parents=True, exist_ok=True)
 

@@ -177,6 +177,11 @@ def _object(schema: dict[str, Any], *, lookup: Callable[[str], bool]) -> str:
         lines = ["z.object({"]
         for key, sub in props.items():
             expr = to_zod(sub, lookup=lookup)
+            # OpenAPI 3.0 nullable:true → .nullable() (3.1 type:["T","null"] is
+            # handled upstream by _union, so this only fires for 3.0-style schemas).
+            if isinstance(sub, dict) and sub.get("nullable") is True:
+                if not expr.endswith(".nullable()"):
+                    expr = f"{expr}.nullable()"
             if key not in required:
                 expr = f"{expr}.optional()"
             lines.append(f"  {_safe_key(key)}: {expr},")

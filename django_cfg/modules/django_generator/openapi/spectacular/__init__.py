@@ -8,6 +8,9 @@ below — never raw strings.
 from .async_detection import (
     mark_async_operations,
 )
+from .enum_auto_overrides import (
+    auto_populate_enum_overrides,
+)
 from .enum_naming import (
     EnumCollisionError,
     auto_fix_enum_names,
@@ -22,6 +25,7 @@ from .enum_overrides_service import (
 from .schema import PathBasedAutoSchema
 
 POSTPROCESSING_HOOKS = (
+    "django_cfg.modules.django_generator.openapi.spectacular.enum_auto_overrides.auto_populate_enum_overrides",
     "django_cfg.modules.django_generator.openapi.spectacular.async_detection.mark_async_operations",
     "django_cfg.modules.django_generator.openapi.spectacular.enum_naming.auto_fix_enum_names",
 )
@@ -32,6 +36,7 @@ DEFAULT_SCHEMA_CLASS = (
 
 
 __all__ = [
+    "auto_populate_enum_overrides",
     "auto_fix_enum_names",
     "EnumCollisionError",
     "find_enum_collisions",

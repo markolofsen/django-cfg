@@ -27,7 +27,7 @@ logger = get_logger(__name__)
             200: SetupResponseSerializer,
             400: {"description": "2FA already enabled or invalid request"},
         },
-        tags=["cfg", "totp", "TOTP Setup"],
+        tags=["cfg_totp_setup"],
     ),
     confirm=extend_schema(
         request=ConfirmSetupSerializer,
@@ -35,7 +35,7 @@ logger = get_logger(__name__)
             200: ConfirmSetupResponseSerializer,
             400: {"description": "Invalid code or setup expired"},
         },
-        tags=["cfg", "totp", "TOTP Setup"],
+        tags=["cfg_totp_setup"],
     ),
 )
 class SetupViewSet(viewsets.GenericViewSet):

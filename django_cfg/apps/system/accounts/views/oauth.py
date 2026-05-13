@@ -35,7 +35,7 @@ from ..services.github_service import GitHubOAuthError, GitHubOAuthService
 logger = logging.getLogger(__name__)
 
 
-@extend_schema(tags=["cfg", "accounts", 'OAuth'])
+@extend_schema(tags=["cfg_accounts_oauth"])
 class OAuthProvidersView(APIView):
     """
     List available OAuth providers.
@@ -70,7 +70,7 @@ class OAuthProvidersView(APIView):
 
 @extend_schema_view(
     post=extend_schema(
-        tags=["cfg", "accounts", 'OAuth'],
+        tags=["cfg_accounts_oauth"],
         request=OAuthAuthorizeRequestSerializer,
         responses={
             200: OAuthAuthorizeResponseSerializer,
@@ -150,7 +150,7 @@ class GitHubAuthorizeView(APIView):
 
 @extend_schema_view(
     post=extend_schema(
-        tags=["cfg", "accounts", 'OAuth'],
+        tags=["cfg_accounts_oauth"],
         request=OAuthCallbackRequestSerializer,
         responses={
             200: OAuthTokenResponseSerializer,
@@ -308,7 +308,7 @@ class GitHubCallbackView(APIView):
             )
 
 
-@extend_schema(tags=["cfg", "accounts", 'OAuth'])
+@extend_schema(tags=["cfg_accounts_oauth"])
 class OAuthConnectionsView(APIView):
     """
     Manage user's OAuth connections.
@@ -331,7 +331,7 @@ class OAuthConnectionsView(APIView):
 
 @extend_schema_view(
     post=extend_schema(
-        tags=["cfg", "accounts", 'OAuth'],
+        tags=["cfg_accounts_oauth"],
         request=OAuthDisconnectRequestSerializer,
         responses={
             200: {'type': 'object', 'properties': {'message': {'type': 'string'}}},

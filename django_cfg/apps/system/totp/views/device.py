@@ -35,7 +35,7 @@ class DeviceViewSet(viewsets.GenericViewSet):
 
     @extend_schema(
         responses={200: DeviceListResponseSerializer},
-        tags=["cfg", "totp", "TOTP Management"],
+        tags=["cfg_totp"],
     )
     @action(detail=False, methods=["get"], url_path="list", url_name="list")
     def devices(self, request):
@@ -51,6 +51,9 @@ class DeviceViewSet(viewsets.GenericViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        tags=["cfg_totp"],
+    )
     @action(detail=True, methods=["delete"], url_path="delete", url_name="delete")
     @transaction.atomic
     def delete_device(self, request, pk=None):
@@ -118,7 +121,7 @@ class DeviceViewSet(viewsets.GenericViewSet):
             200: {"description": "2FA disabled successfully"},
             400: {"description": "Invalid code"},
         },
-        tags=["cfg", "totp", "TOTP Management"],
+        tags=["cfg_totp"],
     )
     @action(detail=False, methods=["post"], url_path="disable", url_name="disable")
     @transaction.atomic

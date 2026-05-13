@@ -33,6 +33,8 @@ def render_auth_ts(
 // post-processed bottom of client.gen.ts. No circular import here.
 // DO NOT EDIT — re-run `make gen`.
 
+import {{ APIError }} from './errors';
+
 const ACCESS_KEY = '{access_key}';
 const REFRESH_KEY = '{refresh_key}';
 const API_KEY_KEY = '{api_key_storage_key}';
@@ -106,19 +108,36 @@ function detectLocale(): string | null {{
   return null;
 }}
 
-/** Default baseUrl from `NEXT_PUBLIC_API_URL` (empty for static builds). */
+/** Default baseUrl from `NEXT_PUBLIC_API_URL`.
+ *
+ * In the browser: always returns '' (same-origin) so Next.js rewrites
+ * can intercept the request and proxy it server-side — the API key
+ * never appears in the browser bundle.
+ * On the server (SSR/RSC): returns the absolute Django URL from
+ * NEXT_PUBLIC_API_URL so server components can call Django directly.
+ */
 function defaultBaseUrl(): string {{
   try {{
     if (typeof process !== 'undefined' && process.env) {{
       if (process.env.NEXT_PUBLIC_STATIC_BUILD === 'true') return '';
+      // Browser → same-origin (rewrite handles forwarding)
+      if (isBrowser) return '';
+      // Server → absolute Django URL
       return process.env.NEXT_PUBLIC_API_URL || '';
     }}
   }} catch {{}}
   return '';
 }}
 
-/** Default API key fallback from `NEXT_PUBLIC_API_KEY`. */
+/** Default API key fallback from `NEXT_PUBLIC_API_KEY`.
+ *
+ * In the browser: returns null — requests go through the Next.js rewrite
+ * and the key is injected server-side (never exposed in the bundle).
+ * On the server: reads NEXT_PUBLIC_API_KEY as a fallback for SSR calls
+ * that bypass the rewrite (e.g. server components calling Django directly).
+ */
 function defaultApiKey(): string | null {{
+  if (isBrowser) return null;
   try {{
     if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_KEY) {{
       return process.env.NEXT_PUBLIC_API_KEY;
@@ -161,6 +180,7 @@ type HeyClient = {{
   interceptors: {{
     request: {{ use(fn: (req: Request) => Request | Promise<Request>): void }};
     response: {{ use(fn: (res: Response, req: Request) => Response | Promise<Response>): void }};
+    error: {{ use(fn: (err: unknown, res: Response | undefined, req: Request | undefined, opts: unknown) => unknown): void }};
   }};
 }};
 let _client: HeyClient | null = null;
@@ -328,6 +348,17 @@ export function installAuthOnClient(client: HeyClient): void {{
     request.headers.set('X-Client-Time', new Date().toISOString());
 
     return request;
+  }});
+
+  // Wrap raw JSON error objects (thrown by hey-api on non-2xx responses) into
+  // APIError so callers can do `error instanceof APIError` and read
+  // `error.statusCode` / `error.response` consistently.
+  client.interceptors.error.use((err, res, req) => {{
+    if (err instanceof APIError) return err;
+    const url = (req as Request | undefined)?.url ?? '';
+    const status = (res as Response | undefined)?.status ?? 0;
+    const statusText = (res as Response | undefined)?.statusText ?? '';
+    return new APIError(status, statusText, err, url);
   }});
 
   client.interceptors.response.use(async (response, request) => {{

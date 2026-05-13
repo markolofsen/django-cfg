@@ -52,7 +52,7 @@ class ChartsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             ),
         ],
         responses={200: ChartDataSerializer},
-        tags=["cfg", "dashboard", "Dashboard - Charts"]
+        tags=["cfg_dashboard_charts"]
     )
     @action(detail=False, methods=['get'], url_path='registrations', serializer_class=ChartDataSerializer)
     def registrations(self, request):
@@ -82,7 +82,7 @@ class ChartsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             ),
         ],
         responses={200: ChartDataSerializer},
-        tags=["cfg", "dashboard", "Dashboard - Charts"]
+        tags=["cfg_dashboard_charts"]
     )
     @action(detail=False, methods=['get'], url_path='activity', serializer_class=ChartDataSerializer)
     def activity(self, request):
@@ -112,7 +112,7 @@ class ChartsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             ),
         ],
         responses=ActivityTrackerDaySerializer(many=True),
-        tags=["cfg", "dashboard", "Dashboard - Charts"]
+        tags=["cfg_dashboard_charts"]
     )
     @action(detail=False, methods=['get'], url_path='tracker', pagination_class=None, serializer_class=ActivityTrackerDaySerializer)
     def tracker(self, request):
@@ -142,7 +142,7 @@ class ChartsViewSet(AdminAPIMixin, viewsets.GenericViewSet):
             ),
         ],
         responses=RecentUserSerializer(many=True),
-        tags=["cfg", "dashboard", "Dashboard - Charts"]
+        tags=["cfg_dashboard_charts"]
     )
     @action(detail=False, methods=['get'], url_path='recent-users', pagination_class=None, serializer_class=RecentUserSerializer)
     def recent_users(self, request):

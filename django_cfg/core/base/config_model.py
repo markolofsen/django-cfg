@@ -346,7 +346,9 @@ class DjangoConfig(BaseModel):
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
     extra_authentication_classes: List[str] = Field(
-        default_factory=list,
+        default_factory=lambda: [
+            "django_cfg.apps.system.accounts.authentication.APIKeyAuthentication",
+        ],
         description="Extra DRF authentication classes prepended before defaults (e.g., custom API key auth)",
     )
 

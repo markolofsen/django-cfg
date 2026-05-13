@@ -30,9 +30,19 @@ class UserSerializer(serializers.ModelSerializer):
     display_username = serializers.ReadOnlyField()
     avatar = serializers.SerializerMethodField()
     centrifugo = serializers.SerializerMethodField()
+    api_key = serializers.SerializerMethodField()
     # Explicit nullable fields for proper OpenAPI schema generation
     last_login = serializers.DateTimeField(read_only=True, allow_null=True)
     unanswered_messages_count = serializers.IntegerField(read_only=True, default=0)
+    # Optional profile fields — allow_null so OpenAPI marks them nullable
+    # and Zod generates .nullable().optional() instead of just .optional()
+    first_name = serializers.CharField(max_length=50, required=False, allow_null=True, allow_blank=True)
+    last_name = serializers.CharField(max_length=50, required=False, allow_null=True, allow_blank=True)
+    company = serializers.CharField(max_length=100, required=False, allow_null=True, allow_blank=True)
+    phone = serializers.CharField(max_length=20, required=False, allow_null=True, allow_blank=True)
+    position = serializers.CharField(max_length=100, required=False, allow_null=True, allow_blank=True)
+    language = serializers.CharField(max_length=10, required=False, allow_null=True, allow_blank=True)
+    timezone = serializers.CharField(max_length=64, required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = CustomUser
@@ -56,6 +66,7 @@ class UserSerializer(serializers.ModelSerializer):
             "last_login",
             "unanswered_messages_count",
             "centrifugo",
+            "api_key",
         ]
         read_only_fields = [
             "id",
@@ -65,7 +76,16 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "unanswered_messages_count",
+            "api_key",
         ]
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_api_key(self, obj):
+        """Return masked API key for the user."""
+        try:
+            return obj.api_key.masked_key
+        except Exception:
+            return None
 
     @extend_schema_field(serializers.URLField(allow_null=True))
     def get_avatar(self, obj):
@@ -122,17 +142,17 @@ class CfgUserUpdateSerializer(serializers.ModelSerializer):
 
     def validate_first_name(self, value):
         """Validate first name."""
-        if value and len(value.strip()) < 2:
+        if value and len(value.strip()) < 1:
             raise serializers.ValidationError(
-                "First name must be at least 2 characters long."
+                "First name must be at least 1 character long."
             )
         return value.strip() if value else value
 
     def validate_last_name(self, value):
         """Validate last name."""
-        if value and len(value.strip()) < 2:
+        if value and len(value.strip()) < 1:
             raise serializers.ValidationError(
-                "Last name must be at least 2 characters long."
+                "Last name must be at least 1 character long."
             )
         return value.strip() if value else value
 

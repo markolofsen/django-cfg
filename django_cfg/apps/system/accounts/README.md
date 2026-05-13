@@ -6,15 +6,17 @@ Passwordless authentication system for django-cfg.
 - **OAuth** — GitHub (extensible)
 - **2FA** — optional TOTP layer (see `totp` app)
 - **JWT** — access + refresh with rotation & blacklist
+- **API Keys** — per-user UUID keys for service-to-service auth (long-lived alternative to JWT)
 - **Login alerts** — Apple-style email on new device/IP
 - **Soft delete** — GDPR anonymization with partial unique email
 
 ## Auth Flows
 
 ```
-OTP:     POST /cfg/otp/request/  →  POST /cfg/otp/verify/  →  JWT
-OAuth:   POST /cfg/oauth/github/authorize/  →  callback/   →  JWT
-2FA:     ...verified → { requires_2fa, session_id } → POST /cfg/totp/verify/ → JWT
+OTP:      POST /cfg/otp/request/  →  POST /cfg/otp/verify/  →  JWT
+OAuth:    POST /cfg/oauth/github/authorize/  →  callback/   →  JWT
+2FA:      ...verified → { requires_2fa, session_id } → POST /cfg/totp/verify/ → JWT
+API Key:  X-API-Key: <uuid>  →  any authenticated endpoint (skips JWT)
 ```
 
 ## API
@@ -28,6 +30,8 @@ OAuth:   POST /cfg/oauth/github/authorize/  →  callback/   →  JWT
 | PATCH | `/cfg/profile/partial/` | JWT | Update profile |
 | POST | `/cfg/profile/avatar/` | JWT | Upload avatar |
 | POST | `/cfg/profile/delete/` | JWT | Soft-delete account |
+| GET | `/cfg/api-key/` | JWT / API Key | Get API key (masked) |
+| POST | `/cfg/api-key/regenerate/` | JWT / API Key | Rotate API key (returns full key once) |
 | GET | `/cfg/oauth/providers/` | — | List OAuth providers |
 | POST | `/cfg/oauth/github/authorize/` | — | Start GitHub OAuth |
 | POST | `/cfg/oauth/github/callback/` | — | Complete GitHub OAuth |
@@ -46,11 +50,14 @@ OAuth:   POST /cfg/oauth/github/authorize/  →  callback/   →  JWT
 | `ActivityService` | User activity audit log |
 | `AccountNotifications` | Email + Telegram notifications |
 | `validate_email_address` | 5-layer email validation |
+| `APIKeyAuthentication` | DRF auth class for X-API-Key header |
+| `UserAPIKey` | Per-user API key model (auto-created on signup) |
 
 ## Tests
 
 ```bash
 uv run python manage.py test django_cfg.apps.system.accounts.tests -v 2
+uv run python manage.py test django_cfg.apps.system.accounts.tests.test_api_key -v 2
 ```
 
 ## Docs

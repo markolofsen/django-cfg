@@ -7,7 +7,7 @@ without requiring manual parameter passing.
 
 import socket
 import threading
-from smtplib import SMTPException
+from smtplib import SMTPAuthenticationError, SMTPDataError, SMTPException, SMTPRecipientsRefused, SMTPSenderRefused
 from typing import Any, Dict, List, Optional
 
 from django.conf import settings
@@ -62,15 +62,14 @@ class DjangoEmailService(BaseCfgModule):
             try:
                 func(*args, **kwargs)
             except Exception as e:
-                error_msg = f"Background email send failed: {e}"
+                # _handle_email_sending already notifies telegram for SMTP errors;
+                # this catches anything that escapes it (e.g. template rendering).
+                error_msg = f"Background email task failed: {e}"
                 logger.error(error_msg)
-
-                # Notify telegram about email error
-                context = {
+                _notify_telegram_on_email_error(error_msg, {
                     'error_type': type(e).__name__,
                     'function': func.__name__ if hasattr(func, '__name__') else 'unknown',
-                }
-                _notify_telegram_on_email_error(str(e), context)
+                })
 
         thread = threading.Thread(target=_wrapper, daemon=True)
         thread.start()
@@ -91,15 +90,62 @@ class DjangoEmailService(BaseCfgModule):
             logger.debug(f"Email sent successfully: {email_func.__name__}")
             return result
         except (socket.timeout, TimeoutError) as e:
-            logger.warning(f"Email sending timeout: {e}")
-            logger.info("Consider checking SMTP server configuration or network connectivity")
+            msg = f"SMTP timeout: {e}"
+            logger.warning(msg)
+            _notify_telegram_on_email_error(msg, {
+                "type": "timeout",
+                "host": getattr(self.email_config, "host", "?"),
+            })
+            return 0
+        except SMTPAuthenticationError as e:
+            msg = f"SMTP authentication failed: {e}"
+            logger.error(msg)
+            _notify_telegram_on_email_error(msg, {
+                "type": "auth_error",
+                "host": getattr(self.email_config, "host", "?"),
+                "username": getattr(self.email_config, "username", "?"),
+            })
+            return 0
+        except SMTPDataError as e:
+            msg = f"SMTP data error (quota/limit/policy): {e}"
+            logger.error(msg)
+            _notify_telegram_on_email_error(msg, {
+                "type": "data_error",
+                "code": e.smtp_code,
+                "host": getattr(self.email_config, "host", "?"),
+            })
+            return 0
+        except SMTPRecipientsRefused as e:
+            msg = f"SMTP recipients refused: {e.recipients}"
+            logger.error(msg)
+            _notify_telegram_on_email_error(msg, {
+                "type": "recipients_refused",
+                "recipients": str(e.recipients),
+            })
+            return 0
+        except SMTPSenderRefused as e:
+            msg = f"SMTP sender refused: {e.sender}"
+            logger.error(msg)
+            _notify_telegram_on_email_error(msg, {
+                "type": "sender_refused",
+                "sender": e.sender,
+                "code": e.smtp_code,
+            })
             return 0
         except SMTPException as e:
-            logger.warning(f"SMTP error during email sending: {e}")
-            logger.info("Email service temporarily unavailable")
+            msg = f"SMTP error: {e}"
+            logger.warning(msg)
+            _notify_telegram_on_email_error(msg, {
+                "type": type(e).__name__,
+                "host": getattr(self.email_config, "host", "?"),
+            })
             return 0
         except Exception as e:
-            logger.error(f"Unexpected error during email sending: {e}")
+            msg = f"Unexpected email error: {e}"
+            logger.error(msg)
+            _notify_telegram_on_email_error(msg, {
+                "type": type(e).__name__,
+            })
             if not kwargs.get('fail_silently', False):
                 raise
             return 0

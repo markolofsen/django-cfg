@@ -30,7 +30,7 @@ User = get_user_model()
             400: {"description": "Invalid code or session"},
             403: {"description": "Too many attempts"},
         },
-        tags=["cfg", "totp", "TOTP Verification"],
+        tags=["cfg_totp_verify"],
     ),
     verify_backup=extend_schema(
         request=VerifyBackupSerializer,
@@ -38,7 +38,7 @@ User = get_user_model()
             200: VerifyResponseSerializer,
             400: {"description": "Invalid backup code or session"},
         },
-        tags=["cfg", "totp", "TOTP Verification"],
+        tags=["cfg_totp_verify"],
     ),
 )
 class VerifyViewSet(viewsets.GenericViewSet):

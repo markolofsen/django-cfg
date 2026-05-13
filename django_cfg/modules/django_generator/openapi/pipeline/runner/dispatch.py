@@ -31,6 +31,7 @@ from ..errors import GeneratorError
 from ..postprocess import nullable_3_1_to_3_0
 from ..slicer import slice_by_tags
 from ...groups.resolver import resolve_tags, resolve_tags_by_name
+from ...tools.openapi_processor.ts.ir import promote_inline_schemas
 from ...tools.external import (
     buf_proto,
     grpc_python,
@@ -259,6 +260,7 @@ def run_single(
     external tool.
     """
     sliced = _resolve_and_slice(target, groups, global_spec, config)
+    promote_inline_schemas(sliced)
 
     if target.tool == "ogen":
         nullable_3_1_to_3_0(sliced)

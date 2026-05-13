@@ -43,7 +43,7 @@ class CentrifugoTokenViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        tags=["cfg", "centrifugo", "Centrifugo Auth"],
+        tags=["cfg_centrifugo"],
         summary="Get Centrifugo connection token",
         description=(
             "Generate JWT token for WebSocket connection to Centrifugo. "

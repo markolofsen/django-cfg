@@ -35,7 +35,7 @@ class SystemViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         summary="Get system health status",
         description="Retrieve overall system health including all component checks",
         responses={200: SystemHealthSerializer},
-        tags=["cfg", "dashboard", "Dashboard - System"]
+        tags=["cfg_dashboard_system"]
     )
     @action(detail=False, methods=['get'], url_path='health', serializer_class=SystemHealthSerializer)
     def health(self, request):
@@ -55,7 +55,7 @@ class SystemViewSet(AdminAPIMixin, viewsets.GenericViewSet):
         summary="Get system metrics",
         description="Retrieve system performance metrics (CPU, memory, disk, etc.)",
         responses={200: SystemMetricsSerializer},
-        tags=["cfg", "dashboard", "Dashboard - System"]
+        tags=["cfg_dashboard_system"]
     )
     @action(detail=False, methods=['get'], url_path='metrics', serializer_class=SystemMetricsSerializer)
     def metrics(self, request):

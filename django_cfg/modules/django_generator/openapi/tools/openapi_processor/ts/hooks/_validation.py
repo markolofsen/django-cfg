@@ -111,5 +111,5 @@ def runtime_validation_block(op: IROperation) -> ValidationBlock:
         }}
         return data;
       }}
-      return parsed.data as Result;""",
+      return parsed.data as unknown as Result;""",
     )

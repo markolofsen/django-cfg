@@ -97,6 +97,15 @@ def run_pipeline(
         for fp in cache.rglob(fp_name):
             fp.unlink(missing_ok=True)
 
+    # ════════════════════════════════════════════════════════════════════
+    # Always nuke the spec cache so tag / schema / endpoint changes are
+    # never masked.  The spec render is fast enough (~1-5 s) that the
+    # safety of a guaranteed-fresh spec outweighs the cost.
+    # ════════════════════════════════════════════════════════════════════
+    if cache.exists():
+        import shutil
+        shutil.rmtree(cache)
+
     global_spec = _load_spec_cached(config, cache, targets, report)
     if global_spec is None:
         return report

@@ -19,6 +19,18 @@ def cache_dir(config: OpenAPIConfig) -> Path:
 
     Lives under the same root the OpenAPI output goes to so it's easy
     to nuke (``rm -rf openapi/.cache``) without affecting source code.
+
+    .. note::
+
+        If you add new endpoints or change ``@extend_schema`` tags and
+        ``make gen`` does not reflect them, the global spec cache is likely
+        stale.  Delete ``openapi/.cache/`` and re-run::
+
+            rm -rf openapi/.cache && make gen
+
+        The spec cache key is based on the Django project fingerprint, not
+        on individual view changes, so tag edits can be invisible to the
+        cache invalidator.
     """
     return config.get_output_path() / ".cache"
 

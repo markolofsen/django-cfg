@@ -33,6 +33,9 @@ from .registration import (
     UserRegistrationSource,
 )
 
+# Import API key model
+from .api_key import UserAPIKey
+
 # Import user models
 from .user import CustomUser
 
@@ -65,4 +68,7 @@ __all__ = [
     # Settings models
     'TwoFactorEnforcement',
     'TwoFactorSettings',
+
+    # API key model
+    'UserAPIKey',
 ]

@@ -91,10 +91,10 @@ def normalize_tags(spec: dict[str, Any]) -> None:
                 cleaned: list[str] = []
                 seen: set[str] = set()
                 for t in tags:
-                    s = str(t).strip()
-                    if s and s.lower() not in seen:
+                    s = str(t).strip().lower()
+                    if s and s not in seen:
                         cleaned.append(s)
-                        seen.add(s.lower())
+                        seen.add(s)
                 op["tags"] = cleaned
 
 

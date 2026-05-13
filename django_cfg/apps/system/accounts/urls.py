@@ -11,6 +11,7 @@ from .views.oauth import (
     OAuthDisconnectView,
     OAuthProvidersView,
 )
+from .views.api_key import APIKeyViewSet
 from .views.profile import (
     AccountDeleteView,
     UserProfilePartialUpdateView,
@@ -26,7 +27,7 @@ router = DefaultRouter()
 router.register(r'otp', OTPViewSet, basename='otp')
 
 # Token-related URLs
-@extend_schema(tags=["cfg", "accounts", 'Auth'])
+@extend_schema(tags=["cfg_accounts_auth"])
 class CustomTokenRefreshView(TokenRefreshView):
     """Refresh JWT token."""
     pass
@@ -43,6 +44,13 @@ profile_patterns = [
     path('partial/', UserProfilePartialUpdateView.as_view(), name='profile_partial_update'),
     path('avatar/', upload_avatar, name='profile_avatar_upload'),
     path('delete/', AccountDeleteView.as_view(), name='account_delete'),
+]
+
+# API key-related URLs
+api_key_patterns = [
+    path('', APIKeyViewSet.as_view({'get': 'retrieve_key'}), name='api_key_detail'),
+    path('regenerate/', APIKeyViewSet.as_view({'post': 'regenerate'}), name='api_key_regenerate'),
+    path('test/', APIKeyViewSet.as_view({'post': 'test_key'}), name='api_key_test'),
 ]
 
 # OAuth-related URLs
@@ -64,6 +72,9 @@ urlpatterns = [
 
     # Profile endpoints
     path('profile/', include(profile_patterns)),
+
+    # API key endpoints
+    path('api-key/', include(api_key_patterns)),
 
     # OAuth endpoints
     path('oauth/', include(oauth_patterns)),

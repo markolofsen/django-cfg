@@ -22,7 +22,7 @@ User = get_user_model()
 
 
 @extend_schema(
-    tags=["cfg", "accounts", 'User Profile'],
+    tags=["cfg_accounts_profile"],
     summary="Get current user profile",
     description="Retrieve the current authenticated user's profile information.",
     responses={
@@ -43,7 +43,7 @@ class UserProfileView(ClientAPIMixin, generics.RetrieveAPIView):
 
 
 @extend_schema(
-    tags=["cfg", "accounts", 'User Profile'],
+    tags=["cfg_accounts_profile"],
     summary="Update user profile",
     description="Update the current authenticated user's profile information.",
     request=CfgUserUpdateSerializer,
@@ -92,7 +92,7 @@ class UserProfileUpdateView(ClientAPIMixin, generics.UpdateAPIView):
 
 
 @extend_schema(
-    tags=["cfg", "accounts", 'User Profile'],
+    tags=["cfg_accounts_profile"],
     summary="Partial update user profile",
     description="Partially update the current authenticated user's profile information. Supports avatar upload.",
     request=CfgUserUpdateSerializer,
@@ -140,7 +140,7 @@ class UserProfilePartialUpdateView(ClientAPIMixin, generics.UpdateAPIView):
 
 
 @extend_schema(
-    tags=["cfg", "accounts", 'User Profile'],
+    tags=["cfg_accounts_profile"],
     summary="Upload user avatar",
     description="Upload avatar image for the current authenticated user. Accepts multipart/form-data with 'avatar' field.",
     request={
@@ -189,7 +189,7 @@ def upload_avatar(request):
 
 
 @extend_schema(
-    tags=["cfg", "accounts", 'User Profile'],
+    tags=["cfg_accounts_profile"],
     summary="Delete user account",
     description="""
     Permanently delete the current user's account.

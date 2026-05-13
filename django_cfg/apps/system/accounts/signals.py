@@ -93,6 +93,14 @@ def send_user_profile_update_email(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=User)
+def create_user_api_key(sender, instance, created, **kwargs):
+    """Auto-generate API key for new users."""
+    if created:
+        from .models.api_key import UserAPIKey
+        UserAPIKey.objects.get_or_create(user=instance)
+
+
+@receiver(post_save, sender=User)
 def send_user_login_notification(sender, instance, created, **kwargs):
     """Send login notification email (triggered by login events)."""
     if not created and hasattr(instance, '_login_time'):
