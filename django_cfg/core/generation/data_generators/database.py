@@ -142,6 +142,10 @@ class DatabaseSettingsGenerator:
         """
         test_settings: Dict[str, Any] = {}
 
+        # MIRROR alias takes full precedence — no other TEST keys apply.
+        if db_config.test_mirror:
+            return {"MIRROR": db_config.test_mirror}
+
         # Determine engine
         engine = db_config.engine or ""
 

@@ -56,8 +56,6 @@ class MigrationManager:
             if not apps_list:
                 return
 
-            self.create_migrations()
-
             unapplied = self._db.get_unapplied_migrations(db_name)
             self._faker.fake_if_needed(db_name, unapplied)
 

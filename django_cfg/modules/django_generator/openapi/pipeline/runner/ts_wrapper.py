@@ -41,6 +41,8 @@ _TS_ROOT_KEEP = {
     "index.ts",
     "events.ts",
     ".routes.json",
+    # OpenAPI spec saved alongside generated output
+    "openapi.json",
     # misc
     ".cache",
     ".gitignore",

@@ -182,6 +182,10 @@ def run_target(
                         extras=extras,
                         enum_prefix=group_name,
                     )
+                    group_out_dir.mkdir(parents=True, exist_ok=True)
+                    (group_out_dir / "openapi.json").write_text(
+                        json.dumps(group_sliced, ensure_ascii=False, indent=2), encoding="utf-8"
+                    )
                     try:
                         fp_path.write_text(fp, encoding="utf-8")
                     except OSError:
@@ -296,6 +300,11 @@ def run_single(
     ok, err = _dispatch_tool(target, spec_path, out_dir, config, skip_ts_extras=_skip_ts_extras)
     if not ok:
         return False, err, False
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "openapi.json").write_text(
+        json.dumps(sliced, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     # Snapshot the freshly generated output for next run's cache lookup.
     store_target_output(cache, slot, target_key, out_dir)

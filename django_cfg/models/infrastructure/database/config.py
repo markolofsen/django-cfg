@@ -124,6 +124,16 @@ class DatabaseConfig(BaseModel):
         ),
     )
 
+    test_mirror: Optional[str] = Field(
+        default=None,
+        description=(
+            "Mirror this database to another alias during tests (Django TEST['MIRROR']). "
+            "When set, all test queries are redirected to the target alias and no "
+            "separate test database is created. Useful for multi-database projects "
+            "that want a single test database (e.g. test_mirror='default')."
+        ),
+    )
+
     # Internal fields for parsed connection strings
     _is_connection_string: bool = PrivateAttr(default=False)
     _parsed_components: Optional[Dict[str, Any]] = PrivateAttr(default=None)

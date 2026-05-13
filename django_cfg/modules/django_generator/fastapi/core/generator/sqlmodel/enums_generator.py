@@ -68,6 +68,9 @@ class EnumsGenerator(BaseGenerator):
                         continue
                     # Derive UPPER_CASE member name from value
                     member_name = value.upper().replace("-", "_").replace(".", "_").replace(" ", "_")
+                    # Python identifiers cannot start with a digit
+                    if member_name and member_name[0].isdigit():
+                        member_name = "_" + member_name
                     members.append((member_name, value))
                 if members:
                     enums[class_name] = members
