@@ -1,0 +1,200 @@
+{% extends dashboard_base %}
+{% block tab_content %}
+
+<style>
+  .db-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .db-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 20px 18px;
+  }
+  .db-card__label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 8px;
+  }
+  .db-card__value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #f1f5f9;
+    line-height: 1;
+  }
+  .db-card__value.positive { color: #4ade80; }
+  .db-card__value.negative { color: #f87171; }
+  .db-card__sub {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 4px;
+  }
+
+  .db-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0 14px 0;
+  }
+
+  .db-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .db-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .db-table thead tr {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .db-table th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .db-table th:first-child { border-radius: 10px 0 0 0; }
+  .db-table th:last-child  { border-radius: 0 10px 0 0; }
+  .db-table td {
+    padding: 10px 14px;
+    color: #e2e8f0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    white-space: nowrap;
+  }
+  .db-table tbody tr:last-child td { border-bottom: none; }
+  .db-table tbody tr:hover td { background: rgba(255, 255, 255, 0.03); }
+
+  .rank-badge {
+    display: inline-block;
+    min-width: 26px;
+    text-align: center;
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.07);
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .symbol-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .change-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .change-pill.pos { background: rgba(74, 222, 128, 0.15); color: #4ade80; }
+  .change-pill.neg { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+  .change-pill.neu { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
+</style>
+
+<!-- Stat cards -->
+<div class="db-grid">
+  <div class="db-card">
+    <div class="db-card__label">Total Coins</div>
+    <div class="db-card__value">{{ total_coins }}</div>
+    <div class="db-card__sub">in database</div>
+  </div>
+  <div class="db-card">
+    <div class="db-card__label">Active</div>
+    <div class="db-card__value">{{ active_coins }}</div>
+    <div class="db-card__sub">currently tracked</div>
+  </div>
+  <div class="db-card">
+    <div class="db-card__label">Gainers</div>
+    <div class="db-card__value positive">{{ gainers }}</div>
+    <div class="db-card__sub">price up 24h</div>
+  </div>
+  <div class="db-card">
+    <div class="db-card__label">Losers</div>
+    <div class="db-card__value negative">{{ losers }}</div>
+    <div class="db-card__sub">price down 24h</div>
+  </div>
+  <div class="db-card">
+    <div class="db-card__label">Avg 24h Change</div>
+    <div class="db-card__value {% if avg_change_24h > 0 %}positive{% elif avg_change_24h < 0 %}negative{% endif %}">
+      {% if avg_change_24h > 0 %}+{% endif %}{{ avg_change_24h }}%
+    </div>
+    <div class="db-card__sub">market average</div>
+  </div>
+</div>
+
+<!-- Coins table -->
+<p class="db-section-title">Top 20 Active Coins</p>
+<div class="db-table-wrap">
+  <table class="db-table">
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Symbol</th>
+        <th>Name</th>
+        <th style="text-align:right">Price (USD)</th>
+        <th style="text-align:right">24h Change</th>
+        <th style="text-align:right">Market Cap</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for coin in coins %}
+      <tr>
+        <td><span class="rank-badge">#{{ coin.rank }}</span></td>
+        <td><span class="symbol-badge">{{ coin.symbol }}</span></td>
+        <td style="color:#f1f5f9; font-weight:500;">{{ coin.name }}</td>
+        <td style="text-align:right; font-variant-numeric:tabular-nums;">
+          ${{ coin.price_usd|floatformat:4 }}
+        </td>
+        <td style="text-align:right;">
+          {% with pct=coin.price_change_24h_percent %}
+            {% if pct > 0 %}
+              <span class="change-pill pos">+{{ pct|floatformat:2 }}%</span>
+            {% elif pct < 0 %}
+              <span class="change-pill neg">{{ pct|floatformat:2 }}%</span>
+            {% else %}
+              <span class="change-pill neu">0.00%</span>
+            {% endif %}
+          {% endwith %}
+        </td>
+        <td style="text-align:right; color:rgba(255,255,255,0.55); font-variant-numeric:tabular-nums;">
+          {% if coin.market_cap_usd %}
+            ${{ coin.market_cap_usd|floatformat:0 }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" style="text-align:center; color:rgba(255,255,255,0.3); padding:32px;">
+          No active coins found.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

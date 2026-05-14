@@ -1,0 +1,167 @@
+{% extends dashboard_base %}
+{% block tab_content %}
+
+<style>
+  .sys-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(250, 204, 21, 0.08);
+    border: 1px solid rgba(250, 204, 21, 0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 28px;
+    font-size: 13px;
+    color: rgba(250, 204, 21, 0.9);
+  }
+  .sys-notice .icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    font-family: 'Material Symbols Outlined', sans-serif;
+  }
+
+  .db-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .db-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 22px 20px;
+  }
+  .db-card__icon {
+    font-family: 'Material Symbols Outlined', sans-serif;
+    font-size: 22px;
+    color: rgba(255, 255, 255, 0.3);
+    margin-bottom: 12px;
+    display: block;
+  }
+  .db-card__label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 6px;
+  }
+  .db-card__value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #f1f5f9;
+    line-height: 1.1;
+    word-break: break-all;
+  }
+  .db-card__sub {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.3);
+    margin-top: 5px;
+  }
+
+  .db-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0 14px 0;
+  }
+
+  .db-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .db-kv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .db-kv-table tr { border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+  .db-kv-table tr:last-child { border-bottom: none; }
+  .db-kv-table td {
+    padding: 12px 16px;
+    vertical-align: top;
+  }
+  .db-kv-table td:first-child {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    width: 200px;
+    white-space: nowrap;
+  }
+  .db-kv-table td:last-child {
+    color: #e2e8f0;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+  }
+
+  .accent-green { color: #4ade80; }
+  .accent-blue  { color: #60a5fa; }
+</style>
+
+<!-- Superuser-only notice -->
+<div class="sys-notice">
+  <span class="icon">lock</span>
+  <span>
+    <strong>Superuser only tab</strong> — staff members cannot see this.
+    Only accounts with <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;">is_superuser=True</code> have access.
+  </span>
+</div>
+
+<!-- Runtime info cards -->
+<div class="db-grid-2">
+  <div class="db-card">
+    <span class="db-card__icon">widgets</span>
+    <div class="db-card__label">Django Version</div>
+    <div class="db-card__value accent-green">{{ django_version }}</div>
+    <div class="db-card__sub">framework runtime</div>
+  </div>
+  <div class="db-card">
+    <span class="db-card__icon">terminal</span>
+    <div class="db-card__label">Python Version</div>
+    <div class="db-card__value accent-blue">{{ python_version }}</div>
+    <div class="db-card__sub">interpreter</div>
+  </div>
+  <div class="db-card">
+    <span class="db-card__icon">computer</span>
+    <div class="db-card__label">Platform</div>
+    <div class="db-card__value">{{ platform }}</div>
+    <div class="db-card__sub">operating system</div>
+  </div>
+  <div class="db-card">
+    <span class="db-card__icon">table_chart</span>
+    <div class="db-card__label">DB Tables</div>
+    <div class="db-card__value">{{ db_table_count }}</div>
+    <div class="db-card__sub">in public schema</div>
+  </div>
+</div>
+
+<!-- Users summary -->
+<p class="db-section-title">Users Summary</p>
+<div class="db-table-wrap">
+  <table class="db-kv-table">
+    <tr>
+      <td>Total Users</td>
+      <td>{{ total_users }}</td>
+    </tr>
+    <tr>
+      <td>Superusers</td>
+      <td><span style="color:#f87171;">{{ superusers }}</span></td>
+    </tr>
+    <tr>
+      <td>Staff Members</td>
+      <td><span style="color:#facc15;">{{ staff_users }}</span></td>
+    </tr>
+    <tr>
+      <td>Regular Users</td>
+      <td>{{ total_users|add:"-"|add:superusers }}</td>
+    </tr>
+  </table>
+</div>
+
+{% endblock %}

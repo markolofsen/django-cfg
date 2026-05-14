@@ -44,6 +44,9 @@ from django_cfg import (
     NavigationSection,
     NavigationItem,
     Icons,
+    # Dashboard tabs
+    DashboardConfig,
+    DashboardTab,
     # API
     OpenAPIClientConfig,
     OpenAPIGroupConfig,
@@ -142,6 +145,7 @@ class DjangoCfgConfig(DjangoConfig):
         "apps.profiles",
         "apps.trading",
         "apps.crypto",
+        "apps.dashboard",
     ]
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
@@ -241,6 +245,37 @@ class DjangoCfgConfig(DjangoConfig):
                     NavigationItem(title="Wallets", icon=Icons.ACCOUNT_BALANCE_WALLET, link="admin:crypto_wallet_changelist"),
                     NavigationItem(title="User Profiles", icon=Icons.PERSON, link="admin:profiles_userprofile_changelist"),
                 ],
+            ),
+        ],
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          ADMIN DASHBOARD TABS                            ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    dashboard: DashboardConfig = DashboardConfig(
+        tabs=[
+            DashboardTab(
+                slug="market",
+                title="Market",
+                icon="trending_up",
+                template="dashboard/market.html",
+                callback="apps.dashboard.tabs.market.callback",
+            ),
+            DashboardTab(
+                slug="trading",
+                title="Trading",
+                icon="candlestick_chart",
+                template="dashboard/trading.html",
+                callback="apps.dashboard.tabs.trading.callback",
+            ),
+            DashboardTab(
+                slug="system",
+                title="System",
+                icon="dns",
+                template="dashboard/system.html",
+                callback="apps.dashboard.tabs.system.callback",
+                superuser_only=True,
             ),
         ],
     )

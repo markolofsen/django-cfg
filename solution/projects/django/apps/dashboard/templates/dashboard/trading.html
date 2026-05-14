@@ -1,0 +1,254 @@
+{% extends dashboard_base %}
+{% block tab_content %}
+
+<style>
+  .db-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .db-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 20px 18px;
+  }
+  .db-card__label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 8px;
+  }
+  .db-card__value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #f1f5f9;
+    line-height: 1;
+  }
+  .db-card__sub {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 4px;
+  }
+
+  .db-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 32px 0 14px 0;
+  }
+  .db-section-title:first-of-type { margin-top: 0; }
+
+  .db-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 8px;
+  }
+  .db-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .db-table thead tr {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .db-table th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.4);
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .db-table td {
+    padding: 10px 14px;
+    color: #e2e8f0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    white-space: nowrap;
+  }
+  .db-table tbody tr:last-child td { border-bottom: none; }
+  .db-table tbody tr:hover td { background: rgba(255, 255, 255, 0.03); }
+
+  .side-pill {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .side-pill.buy  { background: rgba(74, 222, 128, 0.14); color: #4ade80; }
+  .side-pill.sell { background: rgba(248, 113, 113, 0.14); color: #f87171; }
+
+  .status-pill {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .status-pill.filled    { background: rgba(74,222,128,0.12); color: #4ade80; }
+  .status-pill.pending   { background: rgba(250,204,21,0.12); color: #facc15; }
+  .status-pill.cancelled { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); }
+
+  .username-link {
+    color: #93c5fd;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .username-link:hover { text-decoration: underline; }
+</style>
+
+<!-- Stat cards -->
+<div class="db-grid">
+  <div class="db-card">
+    <div class="db-card__label">Total Volume</div>
+    <div class="db-card__value">${{ total_volume|floatformat:0 }}</div>
+    <div class="db-card__sub">filled orders</div>
+  </div>
+  <div class="db-card">
+    <div class="db-card__label">Orders</div>
+    <div class="db-card__value">{{ orders_count }}</div>
+    <div class="db-card__sub">total filled</div>
+  </div>
+  <div class="db-card">
+    <div class="db-card__label">Buy Orders</div>
+    <div class="db-card__value" style="color:#4ade80;">{{ buy_orders }}</div>
+    <div class="db-card__sub">long positions</div>
+  </div>
+  <div class="db-card">
+    <div class="db-card__label">Sell Orders</div>
+    <div class="db-card__value" style="color:#f87171;">{{ sell_orders }}</div>
+    <div class="db-card__sub">short positions</div>
+  </div>
+</div>
+
+<!-- Top portfolios -->
+<p class="db-section-title">Top 10 Portfolios by Balance</p>
+<div class="db-table-wrap">
+  <table class="db-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>User</th>
+        <th style="text-align:right">Balance (USD)</th>
+        <th style="text-align:right">P&amp;L (USD)</th>
+        <th style="text-align:right">Win Rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pf in portfolios %}
+      <tr>
+        <td style="color:rgba(255,255,255,0.35); font-size:12px;">{{ forloop.counter }}</td>
+        <td>
+          <span class="username-link">{{ pf.user.username }}</span>
+        </td>
+        <td style="text-align:right; font-variant-numeric:tabular-nums; font-weight:600; color:#f1f5f9;">
+          ${{ pf.total_balance_usd|floatformat:2 }}
+        </td>
+        <td style="text-align:right; font-variant-numeric:tabular-nums;">
+          {% if pf.total_pnl_usd %}
+            {% if pf.total_pnl_usd > 0 %}
+              <span style="color:#4ade80;">+${{ pf.total_pnl_usd|floatformat:2 }}</span>
+            {% else %}
+              <span style="color:#f87171;">-${{ pf.total_pnl_usd|floatformat:2 }}</span>
+            {% endif %}
+          {% else %}
+            <span style="color:rgba(255,255,255,0.3);">—</span>
+          {% endif %}
+        </td>
+        <td style="text-align:right;">
+          {% if pf.win_rate %}
+            {{ pf.win_rate|floatformat:1 }}%
+          {% else %}
+            <span style="color:rgba(255,255,255,0.3);">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" style="text-align:center; color:rgba(255,255,255,0.3); padding:32px;">
+          No portfolios found.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Recent orders -->
+<p class="db-section-title">Recent 15 Orders</p>
+<div class="db-table-wrap">
+  <table class="db-table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Symbol</th>
+        <th>Side</th>
+        <th style="text-align:right">Quantity</th>
+        <th style="text-align:right">Total (USD)</th>
+        <th>Status</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in recent_orders %}
+      <tr>
+        <td>
+          {% if order.portfolio.user %}
+            <span style="color:#93c5fd;">{{ order.portfolio.user.username }}</span>
+          {% else %}
+            <span style="color:rgba(255,255,255,0.3);">—</span>
+          {% endif %}
+        </td>
+        <td>
+          <span style="
+            display:inline-block;
+            padding:2px 7px;
+            border-radius:5px;
+            background:rgba(59,130,246,0.14);
+            color:#93c5fd;
+            font-size:12px;
+            font-weight:700;
+          ">{{ order.symbol }}</span>
+        </td>
+        <td>
+          <span class="side-pill {{ order.side }}">{{ order.side }}</span>
+        </td>
+        <td style="text-align:right; font-variant-numeric:tabular-nums;">
+          {{ order.quantity|floatformat:6 }}
+        </td>
+        <td style="text-align:right; font-variant-numeric:tabular-nums; color:#f1f5f9; font-weight:500;">
+          ${{ order.total_usd|floatformat:2 }}
+        </td>
+        <td>
+          <span class="status-pill {{ order.status }}">{{ order.status }}</span>
+        </td>
+        <td style="color:rgba(255,255,255,0.4); font-size:12px;">
+          {{ order.created_at|date:"M d, H:i" }}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" style="text-align:center; color:rgba(255,255,255,0.3); padding:32px;">
+          No orders found.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
