@@ -125,13 +125,11 @@ function defaultBaseUrl(): string {{
 
 /** Default API key fallback from `NEXT_PUBLIC_API_KEY`.
  *
- * In the browser: returns null — requests go through the Next.js rewrite
- * and the key is injected server-side (never exposed in the bundle).
- * On the server: reads NEXT_PUBLIC_API_KEY as a fallback for SSR calls
- * that bypass the rewrite (e.g. server components calling Django directly).
+ * Both browser and server: if NEXT_PUBLIC_API_KEY is set it is used as a
+ * global fallback (e.g. a public demo key). When not set, returns null so
+ * per-request keys passed via options.headers take effect unobstructed.
  */
 function defaultApiKey(): string | null {{
-  if (isBrowser) return null;
   try {{
     if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_KEY) {{
       return process.env.NEXT_PUBLIC_API_KEY;
@@ -315,6 +313,37 @@ async function tryRefresh(): Promise<string | null> {{
  * non-browser environments, so headers populated by the interceptor
  * are simply absent server-side (which is the correct behaviour
  * unless the caller explicitly sets a server-side token).
+ *
+ * ── How API key auth works ────────────────────────────────────────────────
+ *
+ * There are three ways to supply X-API-Key, in priority order:
+ *
+ *   1. Per-request header (highest priority, overrides everything):
+ *        SomeApi.someEndpoint({{ headers: {{ 'X-API-Key': userKey }} }})
+ *      Use this in playgrounds or any context where the key comes from
+ *      user input rather than app config.
+ *
+ *   2. Global override via auth.setApiKey(key) — applies to every request
+ *      from this client until cleared. Good for single-user sessions.
+ *
+ *   3. NEXT_PUBLIC_API_KEY env var — read by defaultApiKey() on every request.
+ *      Use as a public fallback key (e.g. a shared demo key for unauthenticated
+ *      visitors). When not set, returns null so per-request keys work freely.
+ *
+ * ── baseUrl gotcha with proxy packages ───────────────────────────────────
+ *
+ * If another package (e.g. @carapis/catalog-api/client) calls
+ * `auth.setBaseUrl('')` on import, ALL requests from this shared client
+ * will go to relative paths (Next.js proxy) instead of hitting Django
+ * directly. This is intentional for the public catalog — but breaks any
+ * feature that needs to reach Django with a dynamic API key from the
+ * browser (e.g. a playground).
+ *
+ * Fix: pass `baseUrl` explicitly per-call to override the global setting:
+ *   SomeApi.someEndpoint({{
+ *     baseUrl: process.env.NEXT_PUBLIC_API_URL,
+ *     headers: {{ 'X-API-Key': userKey }},
+ *   }})
  */
 export function installAuthOnClient(client: HeyClient): void {{
   if (_client) return; // idempotent
@@ -332,8 +361,10 @@ export function installAuthOnClient(client: HeyClient): void {{
     const locale = auth.getLocale();
     if (locale) request.headers.set('Accept-Language', locale);
 
+    // Only set X-API-Key from global store if NOT already present on the
+    // request — per-request headers (option 1 above) take precedence.
     const apiKey = auth.getApiKey();
-    if (apiKey) request.headers.set('X-API-Key', apiKey);
+    if (apiKey && !request.headers.has('X-API-Key')) request.headers.set('X-API-Key', apiKey);
 
     try {{
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;

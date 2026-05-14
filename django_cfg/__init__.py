@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.2.40"
+__version__ = "2.2.43"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -175,6 +175,11 @@ except ImportError:
     NavigationSection = None  # type: ignore[assignment]
     NavigationItemType = None  # type: ignore[assignment]
     SiteDropdownItem = None  # type: ignore[assignment]
+
+# ---------------------------------------------------------------------------
+# Dashboard tabs (always available — no optional deps)
+# ---------------------------------------------------------------------------
+from .modules.django_dashboard.models import DashboardConfig, DashboardTab
 
 # ---------------------------------------------------------------------------
 # [OPTIONAL] Centrifugo  (requires: cent)
@@ -364,6 +369,8 @@ __all__ = [
     "UnfoldConfig", "UnfoldTheme", "UnfoldThemeConfig", "UnfoldColors",
     "UnfoldSidebar", "UnfoldDashboardConfig",
     "NavigationItem", "NavigationSection", "NavigationItemType", "SiteDropdownItem",
+    # dashboard
+    "DashboardConfig", "DashboardTab",
     # optional: centrifugo
     "DjangoCfgCentrifugoConfig",
     # optional: ngrok

@@ -55,6 +55,7 @@ except ImportError:
     GRPCConfig = None  # type: ignore[assignment,misc]
 from ...models.ngrok import NgrokConfig
 from ...modules.django_cf import CloudflareConfig
+from ...modules.django_dashboard.models import DashboardConfig
 from ..exceptions import ConfigurationError
 from ..types.enums import EnvironmentMode, StartupInfoMode
 
@@ -334,6 +335,11 @@ class DjangoConfig(BaseModel):
     unfold: Optional[UnfoldConfig] = Field(
         default=None,
         description="Unfold admin interface configuration",
+    )
+
+    dashboard: Optional[DashboardConfig] = Field(
+        default=None,
+        description="Custom admin dashboard tabs configuration",
     )
 
     admin_timezone: Optional[str] = Field(

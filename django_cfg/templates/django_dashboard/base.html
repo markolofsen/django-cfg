@@ -1,0 +1,26 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+{% load unfold %}
+{% load django_cfg %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    {% if dashboard_config.tailwind_css %}
+    <link rel="stylesheet" href="{% static dashboard_config.tailwind_css %}">
+    {% endif %}
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+{% block coltype %}{% endblock %}
+
+{% block title %}{{ current_tab.title }} | {{ site_title|default:'Django site admin' }}{% endblock %}
+
+{% block content %}
+{% component "unfold/components/container.html" %}
+    {% include "django_dashboard/tabs_bar.html" %}
+    <div class="mt-4">
+        {% block tab_content %}{% endblock %}
+    </div>
+{% endcomponent %}
+{% endblock %}

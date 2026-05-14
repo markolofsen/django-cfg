@@ -1,0 +1,73 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ current_tab.title }}</title>
+    {# Material Icons (used by existing templates) #}
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    {# Tailwind CDN #}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    'base': {
+                        50:  'rgb(249 250 251)',
+                        100: 'rgb(243 244 246)',
+                        200: 'rgb(229 231 235)',
+                        700: 'rgb(55 65 81)',
+                        800: 'rgb(31 41 55)',
+                        900: 'rgb(17 24 39)',
+                    }
+                }
+            }
+        }
+    };
+    </script>
+    {# Alpine.js 3.15.12 #}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
+    {# Lucide icons 1.14.0 — use via: <i data-lucide="circle-check"></i> + lucide.createIcons() #}
+    <script src="https://cdn.jsdelivr.net/npm/lucide@1.14.0/dist/umd/lucide.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+    </script>
+    {% if dashboard_config.tailwind_css %}
+    <link rel="stylesheet" href="{% static dashboard_config.tailwind_css %}">
+    {% endif %}
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            height: 100%;
+            overflow-x: hidden;
+        }
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            background: transparent;
+        }
+        html.dark body {
+            background-color: rgb(17 24 39);
+        }
+    </style>
+    <script>
+    /* Inherit dark mode from parent Unfold page */
+    (function() {
+        try {
+            if (window.parent.document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.add('dark');
+                document.body.classList.add('dark');
+            }
+        } catch(e) {}
+    })();
+    </script>
+</head>
+<body>
+    {% block tab_content %}{% endblock %}
+</body>
+</html>

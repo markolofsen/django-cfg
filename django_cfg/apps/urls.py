@@ -145,3 +145,6 @@ except Exception:
 # MCP endpoint (Model Context Protocol for AI agents)
 # Registered unconditionally — module checks enabled state internally
 urlpatterns.append(path('cfg/mcp/', include('django_cfg.modules.django_mcp.urls')))
+
+# Custom admin dashboard tabs — always registered; view returns 404 if dashboard not configured
+urlpatterns.append(path('cfg/admin/dashboard/', include('django_cfg.modules.django_dashboard.urls')))

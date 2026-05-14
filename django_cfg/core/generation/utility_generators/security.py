@@ -57,6 +57,11 @@ class SecuritySettingsGenerator:
         builder = SecurityBuilder(self.config)
         settings = builder.build_security_settings()
 
+        # Dashboard uses iframes inside Django admin — DENY blocks them.
+        # When dashboard is configured, relax to SAMEORIGIN automatically.
+        if getattr(self.config, "dashboard", None) is not None:
+            settings["X_FRAME_OPTIONS"] = "SAMEORIGIN"
+
         # Add base Django settings
         base_settings = self._get_base_settings()
         settings.update(base_settings)
