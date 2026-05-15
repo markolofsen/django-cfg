@@ -108,12 +108,30 @@ function detectLocale(): string | null {{
   return null;
 }}
 
-/** Default baseUrl from `NEXT_PUBLIC_API_URL`.
+/** Default baseUrl.
  *
- * Both browser and server use NEXT_PUBLIC_API_URL — requests go
- * directly to Django without Next.js proxy.
+ * Browser: uses NEXT_PUBLIC_API_PROXY_URL if set (empty string = same-origin
+ * Next.js proxy), otherwise falls back to NEXT_PUBLIC_API_URL directly.
+ * Set NEXT_PUBLIC_API_PROXY_URL='' in apps that proxy /apix/* via Next.js
+ * Route Handler; leave it unset in apps that hit Django directly.
+ *
+ * Server (SSR / RSC / Edge): use NEXT_PUBLIC_API_URL so server-side fetch
+ * reaches Django directly (proxy is a same-origin HTTP round-trip on server).
  */
 function defaultBaseUrl(): string {{
+  if (typeof window !== 'undefined') {{
+    try {{
+      if (typeof process !== 'undefined' && process.env) {{
+        if (process.env.NEXT_PUBLIC_STATIC_BUILD === 'true') return '';
+        // NEXT_PUBLIC_API_PROXY_URL='' means same-origin proxy (e.g. /apix/* route handler).
+        // Next.js inlines defined vars as their value; undefined means the var was not set.
+        if (process.env.NEXT_PUBLIC_API_PROXY_URL !== undefined)
+          return process.env.NEXT_PUBLIC_API_PROXY_URL;
+        return process.env.NEXT_PUBLIC_API_URL || '';
+      }}
+    }} catch {{}}
+    return '';
+  }}
   try {{
     if (typeof process !== 'undefined' && process.env) {{
       if (process.env.NEXT_PUBLIC_STATIC_BUILD === 'true') return '';
