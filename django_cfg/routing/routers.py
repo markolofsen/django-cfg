@@ -18,16 +18,41 @@ class DatabaseRouter:
     @staticmethod
     def _resolve_alias(alias: str) -> str:
         """
-        If alias is a TEST MIRROR of another alias, return that source alias.
+        If alias is a TEST MIRROR of another alias AND we're currently running
+        under the test database, return that source alias.
 
         In tests, Django sets TEST.MIRROR on secondary aliases to point them at
         the same physical DB as 'default'. Routing writes to a mirrored alias
         would open a second transaction on the same DB, breaking FK constraints.
         Returning the mirror source keeps everything on one connection.
+
+        IMPORTANT: this redirect must NOT trigger in production. ``TEST.MIRROR``
+        is persisted in DATABASES even when ``manage.py test`` isn't running, so
+        a naive check would always collapse the routed alias onto its mirror
+        source — meaning a configured ``apps=["catalog"]`` routing rule pointing
+        to ``vehicles`` would silently read/write to ``default`` instead. We
+        detect the test state by checking the live connection: Django swaps the
+        ``NAME`` to the test DB only during ``setup_databases`` (and only the
+        primary alias of a mirror group gets a real database; mirror aliases
+        share that same connection). Outside tests both NAMEs are the real
+        production names, so the redirect is skipped.
         """
         databases = getattr(settings, 'DATABASES', {})
         mirror = databases.get(alias, {}).get('TEST', {}).get('MIRROR')
-        if mirror:
+        if not mirror:
+            return alias
+
+        # Compare the live connection NAME on the mirror alias vs its source.
+        # Django's test runner mutates these to point at the same physical DB
+        # during test setup; outside tests they keep their production NAMEs.
+        from django.db import connections
+        try:
+            mirror_name = connections[alias].settings_dict.get('NAME')
+            source_name = connections[mirror].settings_dict.get('NAME')
+        except Exception:
+            return alias
+
+        if mirror_name and source_name and mirror_name == source_name:
             return mirror
         return alias
 

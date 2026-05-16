@@ -1,178 +1,169 @@
 """
-Smart Migration Command for Django Config Toolkit
-Simple and reliable migration for all databases.
+Interactive migration command.
+
+Wraps ``django_migrator.Migrator`` with a questionary-based menu for
+day-to-day developer flow. CI/automation should prefer ``migrate_all``
+directly.
 """
+
+from __future__ import annotations
+
+import sys
 
 import questionary
 from django.conf import settings
 from django.core.management import call_command
 from django.db import connections
 
-from django_cfg.management.utils import DestructiveCommand, MigrationManager
+from django_cfg.management.utils import DestructiveCommand
+from django_cfg.modules.django_migrator import (
+    AppInspector,
+    Migrator,
+    MigratorLogger,
+    MigratorOptions,
+    TextReportFormatter,
+)
 
 
 class Command(DestructiveCommand):
-    command_name = 'migrator'
-    help = "Smart migration command with interactive menu for multiple databases"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.manager = None
+    command_name = "migrator"
+    help = "Interactive migration tool — multi-DB aware."
 
     def add_arguments(self, parser):
-        parser.add_argument("--auto", action="store_true", help="Run automatic migration without prompts")
-        parser.add_argument("--database", type=str, help="Migrate specific database only")
-        parser.add_argument("--app", type=str, help="Migrate specific app only")
+        parser.add_argument("--auto", action="store_true", help="Run full migration non-interactively")
+        parser.add_argument("--database", type=str, help="Migrate one database alias only")
+        parser.add_argument("--app", type=str, help="Migrate one app across every DB that owns it")
+        parser.add_argument("--repair", action="store_true", help="Allow auto-repair of drift")
 
     def handle(self, *args, **options):
-        # Initialize migration manager
-        self.manager = MigrationManager(self.stdout, self.style, self.logger)
-        
+        self._log = MigratorLogger(self.stdout, self.style, self.logger)
+        self._apps = AppInspector()
+
         if options["auto"]:
-            self.run_automatic_migration()
-        elif options["database"]:
-            self.manager.migrate_database(options["database"])
-        elif options["app"]:
-            self.migrate_app(options["app"])
-        else:
-            self.show_interactive_menu()
+            self._run_full(repair=bool(options["repair"]))
+            return
+        if options["database"]:
+            self._run_full(repair=bool(options["repair"]), only_alias=options["database"])
+            return
+        if options["app"]:
+            self._migrate_app(options["app"])
+            return
+        self._interactive_menu()
 
-    def show_interactive_menu(self):
-        """Show interactive menu with options"""
-        self.stdout.write(self.style.SUCCESS("\n🚀 Smart Migration Tool - Django Config Toolkit\n"))
+    # ---- High-level flows ----
 
-        databases = self.manager.get_all_database_names()
+    def _run_full(self, *, repair: bool, only_alias: str | None = None) -> None:
+        opts = MigratorOptions(repair=repair, interactive=False)
+        migrator = Migrator(options=opts, log=self._log)
+        report = migrator.migrate_all() if only_alias is None else self._run_single(
+            migrator, only_alias
+        )
+        self.stdout.write(TextReportFormatter().render(report))
+        if not report.all_clean:
+            sys.exit(1)
 
-        choices = [
-            questionary.Choice("🔄 Run Full Migration (All Databases)", value="full"),
+    def _run_single(self, migrator: Migrator, alias: str):
+        # Single-DB run via the same lifecycle — just don't iterate.
+        from django_cfg.modules.django_migrator import MigrationReport
+        report = MigrationReport()
+        report.add(migrator._migrate_one(alias))  # type: ignore[attr-defined]
+        return report
+
+    def _migrate_app(self, app_name: str) -> None:
+        """Migrate one app on every DB that owns it.
+
+        Sanity-checks routing rules first so we don't push DDL to the
+        wrong connection by accident.
+        """
+        targets = [
+            db for db in self._apps.all_database_names()
+            if app_name in self._apps.apps_for_database(db)
+        ]
+        if not targets:
+            self.stdout.write(self.style.ERROR(
+                f"App '{app_name}' has no routing rule — refusing to guess a DB."
+            ))
+            sys.exit(1)
+
+        for alias in targets:
+            self.stdout.write(f"📊 Migrating {app_name} on {alias}…")
+            try:
+                call_command("migrate", app_name, database=alias, verbosity=1)
+            except Exception as exc:
+                self.stdout.write(self.style.ERROR(
+                    f"❌ {app_name} on {alias}: {exc}"
+                ))
+                sys.exit(1)
+
+    # ---- Interactive menu ----
+
+    def _interactive_menu(self) -> None:
+        self.stdout.write(self.style.SUCCESS("\n🚀 django-cfg Migration Tool\n"))
+        databases = self._apps.all_database_names()
+
+        choices: list[questionary.Choice] = [
+            questionary.Choice("🔄 Run Full Migration (all DBs)", value="full"),
+            questionary.Choice("🩹 Run Full Migration with --repair", value="full_repair"),
+            questionary.Choice("🔍 Check (forensic only, no DDL)", value="check"),
             questionary.Choice("📝 Create Migrations Only", value="makemigrations"),
-            questionary.Choice("🔍 Show Database Status", value="status"),
-            questionary.Choice("⚙️  Show Django Config Info", value="config"),
+            questionary.Choice("📊 Show DB Status", value="status"),
             questionary.Choice("❌ Exit", value="exit"),
         ]
+        for db in databases:
+            choices.insert(
+                -1,
+                questionary.Choice(f"📦 Migrate {db} Only", value=f"db:{db}"),
+            )
 
-        # Add individual database options
-        for db_name in databases:
-            display_name = f"📊 Migrate {db_name.title()} Database Only"
-            choices.insert(-1, questionary.Choice(display_name, value=f"migrate_{db_name}"))
-
-        choice = questionary.select("Select an option:", choices=choices).ask()
+        choice = questionary.select("Select an action:", choices=choices).ask()
+        if choice == "exit" or choice is None:
+            self.stdout.write("Goodbye 👋")
+            return
 
         if choice == "full":
-            self.run_full_migration()
+            self._run_full(repair=False)
+        elif choice == "full_repair":
+            self._run_full(repair=True)
+        elif choice == "check":
+            self._run_check()
         elif choice == "makemigrations":
-            self.manager.create_migrations()
+            Migrator(log=self._log).create_migrations()
         elif choice == "status":
-            self.show_database_status()
-        elif choice == "config":
-            self.show_config_info()
-        elif choice == "exit":
-            self.stdout.write("Goodbye! 👋")
-            return
-        elif choice.startswith("migrate_"):
-            db_name = choice.replace("migrate_", "")
-            self.manager.migrate_database(db_name)
+            self._show_status()
+        elif choice.startswith("db:"):
+            self._run_full(repair=False, only_alias=choice.split(":", 1)[1])
 
-    def run_full_migration(self):
-        """Run migration for all databases"""
-        self.manager.migrate_all_databases()
+    def _run_check(self) -> None:
+        opts = MigratorOptions(dry_run=True, interactive=False)
+        report = Migrator(options=opts, log=self._log).check()
+        self.stdout.write(TextReportFormatter().render(report))
+        if not report.all_clean:
+            sys.exit(1)
 
-    def run_automatic_migration(self):
-        """Run automatic migration for all databases"""
-        self.stdout.write(self.style.SUCCESS("🚀 Running automatic migration..."))
+    # ---- Status ----
 
-        # Create migrations
-        self.manager.create_migrations()
+    def _show_status(self) -> None:
+        self.stdout.write(self.style.SUCCESS("\n📊 Database Status\n"))
+        for alias in self._apps.all_database_names():
+            cfg = settings.DATABASES.get(alias, {})
+            self.stdout.write(f"\n🗄️  {alias}")
+            self.stdout.write(f"   engine: {cfg.get('ENGINE', '?')}")
+            self.stdout.write(f"   name:   {cfg.get('NAME', '?')}")
 
-        # Run full migration
-        self.manager.migrate_all_databases()
+            try:
+                with connections[alias].cursor() as cur:
+                    cur.execute("SELECT 1")
+                self.stdout.write("   conn:   ✅")
+            except Exception as exc:
+                self.stdout.write(self.style.ERROR(f"   conn:   ❌ {exc}"))
 
-        # Always migrate constance (required for django-cfg)
-        self.manager.migrate_constance_if_needed()
+            apps_here = self._apps.apps_for_database(alias)
+            self.stdout.write(
+                f"   apps:   {', '.join(apps_here) if apps_here else '<none>'}"
+            )
 
-
-    def migrate_app(self, app_name):
-        """Migrate specific app across all databases"""
-        self.stdout.write(f"🔄 Migrating app {app_name}...")
-
-        databases = self.manager.get_all_database_names()
-        for db_name in databases:
-            apps = self.manager.get_apps_for_database(db_name)
-            if app_name in apps:
-                self.stdout.write(f"  📊 Migrating {app_name} on {db_name}...")
-                try:
-                    call_command("migrate", app_name, database=db_name, verbosity=1)
-                except Exception as e:
-                    self.stdout.write(self.style.ERROR(f"❌ Migration failed for {app_name} on {db_name}: {e}"))
-                    self.logger.error(f"Migration failed for {app_name} on {db_name}: {e}")
-                    raise SystemExit(1)
-
-    def show_database_status(self):
-        """Show status of all databases and their apps"""
-        self.stdout.write(self.style.SUCCESS("\n📊 Database Status Report\n"))
-
-        # Get database info from Django settings
-        db_info = self.manager.get_database_info()
-        databases = self.manager.get_all_database_names()
-
-        for db_name in databases:
-            self.stdout.write(f"\n🗄️  Database: {db_name}")
-
-            # Show database info from Django settings
-            if db_name in db_info:
-                info = db_info[db_name]
-                self.stdout.write(f'  🔧 Engine: {info["engine"]}')
-                self.stdout.write(f'  🔗 Name: {info["name"]}')
-
-            # Test connection
-            if self.manager.check_database_connection(db_name):
-                self.stdout.write("  ✅ Connection: OK")
-
-            # Show apps
-            apps = self.manager.get_apps_for_database(db_name)
-            if apps:
-                self.stdout.write(f'  📦 Apps: {", ".join(apps)}')
-            else:
-                self.stdout.write("  📦 Apps: None configured")
-
-    def show_config_info(self):
-        """Show Django configuration information"""
-        self.stdout.write(self.style.SUCCESS("\n⚙️  Django Configuration Information\n"))
-
-        try:
-            # Environment info
-            self.stdout.write(f'🌍 Environment: {getattr(settings, "ENVIRONMENT", "unknown")}')
-            self.stdout.write(f"🔧 Debug: {settings.DEBUG}")
-
-            # Database info
-            databases = settings.DATABASES
-            self.stdout.write(f"🗄️ Databases: {len(databases)}")
-
-            for db_name, db_config in databases.items():
-                engine = db_config.get("ENGINE", "unknown")
-                name = db_config.get("NAME", "unknown")
-                self.stdout.write(f"  📊 {db_name}: {engine} -> {name}")
-
-            # Multiple databases
-            if len(databases) > 1:
-                self.stdout.write("📊 Multiple Databases: Yes")
-
-                # Show routing rules
-                routing_rules = getattr(settings, "DATABASE_ROUTING_RULES", {})
-                if routing_rules:
-                    self.stdout.write("  🔀 Routing Rules:")
-                    for app, db in routing_rules.items():
-                        self.stdout.write(f"    - {app} → {db}")
-                else:
-                    self.stdout.write("  🔀 Routing Rules: None configured")
-            else:
-                self.stdout.write("📊 Multiple Databases: No")
-
-            # Other settings
-            self.stdout.write(f'🔑 Secret Key: {"*" * 20}...')
-            self.stdout.write(f"🌐 Allowed Hosts: {settings.ALLOWED_HOSTS}")
-            self.stdout.write(f"📦 Installed Apps: {len(settings.INSTALLED_APPS)}")
-
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f"❌ Error getting Django config info: {e}"))
-            self.logger.error(f"Error getting Django config info: {e}")
+        rules = getattr(settings, "DATABASE_ROUTING_RULES", {})
+        if rules:
+            self.stdout.write("\n🔀 Routing rules:")
+            for app, db in sorted(rules.items()):
+                self.stdout.write(f"   {app} → {db}")

@@ -55,7 +55,7 @@ class CurrencyField(models.CharField):
 
 def _register_currency_fake_detector():
     try:
-        from django_cfg.management.utils.migration_manager import register_fake_detector
+        from django_cfg.modules.django_migrator import register_fake_detector
         from django.db import migrations as dj_migrations
 
         def _is_currency_companion(op: object) -> bool:
@@ -67,7 +67,7 @@ def _register_currency_fake_detector():
 
         register_fake_detector(_is_currency_companion)
     except Exception:
-        pass  # management utils not available in all environments
+        pass  # django_migrator not available in all environments
 
 
 _register_currency_fake_detector()
