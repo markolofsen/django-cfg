@@ -19,6 +19,13 @@ class GeoDatabase:
     - Geodesic distance calculations via geopy
     - Bounding box pre-filtering for proximity searches
 
+    Multi-DB note:
+        Queries here use plain ``Country.objects`` etc. — Django's
+        ``DatabaseRouter`` resolves the alias from ``DATABASE_ROUTING_RULES``,
+        which ``DatabaseSettingsGenerator`` populates from
+        ``GeoConfig.database`` when it's non-default. No ``.using(...)``
+        needed in user code.
+
     Usage:
         db = get_geo_db()
         country = db.get_country("KR")

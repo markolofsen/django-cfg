@@ -31,6 +31,16 @@ class GeoConfig(BaseModel):
         description="Enable geo app (auto-adds to INSTALLED_APPS)"
     )
 
+    database: str = Field(
+        default="default",
+        description=(
+            "DATABASES alias where cfg_geo tables live. Set to a non-default "
+            "alias if your project's domain models (vehicles, listings, etc.) "
+            "live in a secondary DB and you want JOINs or co-located queries. "
+            "Non-default values are auto-registered in DATABASE_ROUTING_RULES."
+        )
+    )
+
     auto_populate: bool = Field(
         default=True,
         description="Auto-populate geo data on startup if empty"

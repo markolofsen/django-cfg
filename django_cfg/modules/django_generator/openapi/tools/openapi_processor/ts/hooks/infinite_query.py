@@ -55,14 +55,14 @@ def render_infinite_query(op: IROperation, hook: str) -> str:
 
     if required:
         args_sig = f"args: {args_type},"
-        key_fn = (
+        key_fn_base = (
             f"(pageIndex: number) => "
             f'["{op.operation_id}_infinite", args, pageIndex + 1] as const'
         )
         sdk_args_spread = "...args, query: { ...(args.query ?? {}), page }"
     else:
         args_sig = f"args?: {args_type},"
-        key_fn = (
+        key_fn_base = (
             f"(pageIndex: number) => args !== undefined\n"
             f'    ? ["{op.operation_id}_infinite", args, pageIndex + 1] as const\n'
             f"    : null"
@@ -84,11 +84,20 @@ import type {{ {data_t}, {resp_t} }} from "../../types.gen";
 type PageResult = {page_result};
 type Result = PageResult;
 
+/**
+ * Optional `enabled` flag — when `false`, `getKey` returns `null` so
+ * useSWRInfinite skips fetching. Use for gated endpoints (auth-required,
+ * etc.). The flag is stripped before being forwarded to the SWR config.
+ */
+type HookConfig = SWRInfiniteConfiguration<PageResult> & {{ enabled?: boolean }};
+
 export function {hook}(
   {args_sig}
-  config?: SWRInfiniteConfiguration<PageResult>,
+  config?: HookConfig,
 ) {{
-  const getKey = {key_fn};
+  const {{ enabled = true, ...swrConfig }} = config ?? {{}};
+  const baseGetKey = {key_fn_base};
+  const getKey = enabled ? baseGetKey : () => null;
 
   const swr = useSWRInfinite<PageResult>(
     getKey,
@@ -98,7 +107,7 @@ export function {hook}(
       const data = res.data as Result;
 {validation.body}
     }},
-    config,
+    swrConfig,
   );
 
   const pages = swr.data ?? [];

@@ -57,11 +57,20 @@ import type {{ {data_t}, {resp_t} }} from "../../types.gen";
 
 type Result = {resp_t}[keyof {resp_t}];
 
+/**
+ * Optional `enabled` flag — when `false`, the SWR key becomes `null` and
+ * no request is made. Use for gated endpoints (auth-required, feature
+ * flags, "fetch only when X is selected"). The flag is stripped before
+ * being forwarded to `useSWR` so the underlying SWR config stays pristine.
+ */
+type HookConfig = SWRConfiguration<Result> & {{ enabled?: boolean }};
+
 export function {hook}(
   {args_sig}
-  config?: SWRConfiguration<Result>,
+  config?: HookConfig,
 ) {{
-  const key = {key_expr};
+  const {{ enabled = true, ...swrConfig }} = config ?? {{}};
+  const key = enabled ? {key_expr} : null;
   return useSWR<Result>(
     key,
     async () => {{
@@ -69,7 +78,7 @@ export function {hook}(
       const data = res.data as Result;
 {validation.body}
     }},
-    config,
+    swrConfig,
   );
 }}
 """

@@ -116,6 +116,14 @@ class DatabaseSettingsGenerator:
                 for app in db_config.apps:
                     routing_rules[app] = alias
 
+        # Bolt on routing rules contributed by feature configs (geo, etc.).
+        # Feature configs may declare ``database != "default"`` to live in a
+        # secondary alias — typically so the app's tables sit next to the
+        # project's domain models, enabling co-located queries.
+        for app_label, alias in self._collect_feature_routing_rules().items():
+            # Explicit per-database `apps=[...]` wins over feature defaults.
+            routing_rules.setdefault(app_label, alias)
+
         if not routing_rules:
             return {}
 
@@ -123,6 +131,24 @@ class DatabaseSettingsGenerator:
             "DATABASE_ROUTERS": ["django_cfg.routing.routers.DatabaseRouter"],
             "DATABASE_ROUTING_RULES": routing_rules,
         }
+
+    def _collect_feature_routing_rules(self) -> Dict[str, str]:
+        """
+        Routing rules contributed by feature-level configs that declare a
+        non-default database (e.g. ``GeoConfig(database="catalog")``).
+
+        Returns:
+            Mapping of app_label → DATABASES alias.
+        """
+        rules: Dict[str, str] = {}
+
+        geo = getattr(self.config, "geo", None)
+        if geo and getattr(geo, "enabled", False):
+            alias = getattr(geo, "database", "default")
+            if alias and alias != "default":
+                rules["cfg_geo"] = alias
+
+        return rules
 
     def _generate_test_settings(self, alias: str, db_config: "DatabaseConfig") -> Dict[str, Any]:
         """
