@@ -8,6 +8,7 @@ export default {
   'registry': 'Registry',
   'routing': 'Routing',
   'middleware': 'Middleware',
+  'mixins': 'API Mixins',
   'cors': 'CORS',
   'rate-limiting': 'Rate Limiting',
   'startup': 'Startup',

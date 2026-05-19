@@ -1,8 +1,6 @@
 ---
 title: Configuration Models
 description: Type-safe Pydantic configuration models for Django-CFG
-sidebar_label: Configuration Models
-sidebar_position: 1
 ---
 
 # Configuration Models
@@ -59,10 +57,10 @@ database:
 ```
 
 ```python filename="config.py"
-from django_cfg import DjangoConfig, load_config
+from django_cfg import DjangoConfig
 
-# Load from YAML
-config = load_config()  # Reads config.yaml
+# Instantiate config directly
+config = MyProjectConfig()
 ```
 
 
@@ -190,30 +188,31 @@ email:
 
 ```yaml filename="config.yaml"
 # Use ${VAR_NAME} for environment variable substitution
+# Use ${VAR_NAME:default_value} to provide a fallback
 secret_key: "${SECRET_KEY}"
 debug: false
 project_name: "My Project"
 
 database:
-  url: "${DATABASE_URL}"
+  url: "${DATABASE_URL:sqlite:///db.sqlite3}"
 
 email:
-  host: "${EMAIL_HOST}"
+  host: "${EMAIL_HOST:localhost}"
   password: "${EMAIL_PASSWORD}"
 ```
 
 
 ```python filename="config.py"
-# Load from YAML
-from django_cfg import load_config
+from django_cfg import DjangoConfig
 
-config = load_config()  # Reads config.yaml
+# Instantiate your config class directly
+config = MyProjectConfig()
 ```
 
 
 <Callout type="info">
 **YAML Best Practice**
-Keep sensitive values in environment variables and reference them in YAML with `${VAR_NAME}` syntax.
+Keep sensitive values in environment variables and reference them in YAML with `${VAR_NAME}` syntax. Use `${VAR_NAME:default_value}` to provide a fallback when the variable is not set.
 
 </Callout>
 
@@ -248,16 +247,14 @@ Use `field_validator` for custom validation logic. Validators run automatically 
 ### Using Properties
 
 ```python filename="config.py"
-from django_cfg import DjangoConfig, Environment
+from django_cfg import DjangoConfig
 
 class MyConfig(DjangoConfig):
-    @property
-    def debug(self) -> bool:
-        return Environment.current() == Environment.DEVELOPMENT
+    debug: bool = False  # Set via env or override in subclass
 
     @property
     def database_url(self) -> str:
-        if Environment.is_production():
+        if self.is_production:
             return "postgresql://prod-db/main"
         return "sqlite:///db/dev.sqlite3"
 ```

@@ -1,8 +1,6 @@
 ---
 title: Configuration Setup
 description: Complete guide to type-safe configuration management in the Django-CFG sample project
-sidebar_label: Configuration
-sidebar_position: 3
 ---
 
 # Configuration Setup
@@ -25,16 +23,25 @@ The sample project uses a simple, modern configuration approach:
 The heart of the project is the type-safe configuration class:
 
 ```python
+from typing import Dict, Optional
+
 from django_cfg import (
     DjangoConfig,
-    DatabaseConfig, EmailConfig,
-    TelegramConfig, UnfoldConfig, DRFConfig
+    DatabaseConfig,
+    EmailConfig,
+    TelegramConfig,
+    UnfoldConfig,
+    UnfoldColors,
+    UnfoldSidebar,
+    NavigationSection,
+    NavigationItem,
+    Icons,
+    set_current_config,
 )
-from typing import Dict
 from .environment import env
 
 
-class SampleProjectConfig(DjangoConfig):
+class DjangoCfgConfig(DjangoConfig):
     """Complete Django-CFG sample configuration."""
 
     # Project metadata
@@ -46,18 +53,17 @@ class SampleProjectConfig(DjangoConfig):
     # URL Configuration
     api_url: str = env.app.api_url
     site_url: str = env.app.site_url
-    media_url: str = env.app.media_url  # CDN or "__auto__" for api_url + /media/
+    media_url: str = "/media/"
 
     # Multi-database configuration
     databases: Dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(
             url=env.database.url,
-            # Main database for users, sessions, admin
         ),
     }
 
     # Email configuration
-    email: EmailConfig | None = (
+    email: Optional[EmailConfig] = (
         EmailConfig(
             host=env.email.host,
             port=env.email.port,
@@ -71,7 +77,7 @@ class SampleProjectConfig(DjangoConfig):
     )
 
     # Telegram notifications
-    telegram: TelegramConfig | None = (
+    telegram: Optional[TelegramConfig] = (
         TelegramConfig(
             bot_token=env.telegram.bot_token,
             chat_id=env.telegram.chat_id,
@@ -84,41 +90,33 @@ class SampleProjectConfig(DjangoConfig):
     unfold: UnfoldConfig = UnfoldConfig(
         site_title="Django-CFG Sample Admin",
         site_header="Django-CFG Sample",
+        colors=UnfoldColors(primary="#4F46E5"),
+        sidebar=UnfoldSidebar(
+            show_search=True,
+            show_all_applications=True,
+        ),
         navigation=[
-            {
-                "title": "Content Management",
-                "items": [
-                    {"title": "Profiles", "link": "/admin/profiles/profile/"},
-                ]
-            },
-            {
-                "title": "User Management",
-                "items": [
-                    {"title": "Users", "link": "/admin/auth/user/"},
-                ]
-            }
-        ]
-    )
-
-    # API configuration
-    drf: DRFConfig = DRFConfig(
-        default_authentication_classes=[
-            "rest_framework_simplejwt.authentication.JWTAuthentication",
+            NavigationSection(
+                title="Content Management",
+                separator=True,
+                items=[
+                    NavigationItem(title="Profiles", icon=Icons.PERSON, link="admin:profiles_profile_changelist"),
+                ],
+            ),
+            NavigationSection(
+                title="User Management",
+                separator=True,
+                items=[
+                    NavigationItem(title="Users", icon=Icons.PEOPLE, link="admin:auth_user_changelist"),
+                ],
+            ),
         ],
-        default_permission_classes=[
-            "rest_framework.permissions.IsAuthenticated",
-        ],
-        spectacular_settings={
-            "TITLE": "Django-CFG Sample API",
-            "DESCRIPTION": "Complete API for Django-CFG sample project",
-            "VERSION": "1.0.0",
-            "SERVE_INCLUDE_SCHEMA": False,
-        }
     )
 
 
-# Create global config instance
-config = SampleProjectConfig()
+# Create and register config instance
+config = DjangoCfgConfig()
+set_current_config(config)
 ```
 
 ### Configuration Components
@@ -141,7 +139,7 @@ URL settings for API, frontend, and media files:
 ```python
 api_url: str = env.app.api_url  # From APP__API_URL (default: http://localhost:8000)
 site_url: str = env.app.site_url  # From APP__SITE_URL (default: http://localhost:3000)
-media_url: str = env.app.media_url  # From APP__MEDIA_URL (default: /media/)
+media_url: str = "/media/"  # Or set from env: env.app.media_url
 ```
 
 **Media URL options:**
@@ -227,23 +225,19 @@ unfold: UnfoldConfig = UnfoldConfig(
 
 See [Admin Interface](./admin-interface) for customization options.
 
-#### API Configuration
+#### Admin Interface Configuration
 
-Django REST Framework settings:
+Unfold theme customization with typed config objects:
 
 ```python
-drf: DRFConfig = DRFConfig(
-    default_authentication_classes=[
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ],
-    spectacular_settings={
-        "TITLE": "Django-CFG Sample API",
-        "VERSION": "1.0.0",
-    }
+unfold: UnfoldConfig = UnfoldConfig(
+    site_title="Django-CFG Sample Admin",
+    colors=UnfoldColors(primary="#4F46E5"),
+    navigation=[...],
 )
 ```
 
-See [API Documentation](./api-documentation) for API configuration.
+See [Admin Interface](./admin-interface) for customization options.
 
 ## Environment Configuration
 

@@ -1,12 +1,6 @@
 ---
 title: Configuration
-description: Complete configuration reference for Django-CFG gRPC integration
-sidebar_label: Configuration
-sidebar_position: 4
-keywords:
-  - grpc configuration
-  - grpc settings
-  - grpc config
+description: Complete configuration reference for Django-CFG gRPC integration.
 ---
 
 # gRPC Configuration
@@ -1002,9 +996,201 @@ server = grpc.server(
 - [ ] Health check enabled
 - [ ] Monitoring/logging enabled
 
+## DjangoGrpcModuleConfig — Top-Level Fields
+
+The actual top-level configuration class is `DjangoGrpcModuleConfig` (defined in `__cfg__.py`). It is the single source of truth that composes all sub-configs.
+
+```python
+from django_cfg.modules.django_grpc.__cfg__ import DjangoGrpcModuleConfig
+from django_cfg.modules.django_grpc.config.server import GrpcServerConfig
+from django_cfg.modules.django_grpc.config.auth import GrpcAuthConfig
+from django_cfg.modules.django_grpc.config.resilience import ResilienceConfig
+from django_cfg.modules.django_grpc.config.pool import GrpcPoolConfig
+from django_cfg.modules.django_grpc.config.metrics import MetricsConfig
+from django_cfg.modules.django_grpc.config.observability import ObservabilityConfig
+
+grpc_module = DjangoGrpcModuleConfig(
+    enabled=True,
+    public_url="grpc.example.com:443",
+    server=GrpcServerConfig(host="[::]", port=50051),
+    auth=GrpcAuthConfig(require_auth=True),
+    resilience=ResilienceConfig(),
+    pool=GrpcPoolConfig(),
+    metrics=MetricsConfig(),
+    observability=ObservabilityConfig(),
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable the gRPC module |
+| `server` | `GrpcServerConfig` | defaults | Server bind and limits |
+| `public_url` | `str \| None` | `None` | Public gRPC URL for external clients |
+| `internal_url` | `str \| None` | `None` | Internal container-to-container URL |
+| `handlers_hook` | `str \| list[str]` | `""` | Import path(s) to a `grpc_handlers` function for manual service registration |
+| `enabled_apps` | `list[str]` | `[]` | Django apps to expose via gRPC (auto-discovery) |
+| `package_prefix` | `str` | `"api"` | Proto package prefix |
+| `auth` | `GrpcAuthConfig` | defaults | Authentication settings |
+| `resilience` | `ResilienceConfig` | defaults | Retry and circuit breaker |
+| `pool` | `GrpcPoolConfig` | defaults | Connection pool |
+| `persistence` | `GrpcPersistenceConfig` | defaults | D1/database persistence |
+| `observability` | `ObservabilityConfig` | defaults | Centrifugo publishing, Telegram alerts, OpenTelemetry |
+| `metrics` | `MetricsConfig` | defaults | In-memory metrics and Prometheus export |
+
+---
+
+## GrpcServerConfig
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `host` | `str` | `"[::]"` | IPv4/IPv6 listen address |
+| `port` | `int` | `50051` | Listen port (1–65535) |
+| `max_workers` | `int` | `10` | Thread pool workers (1–256) |
+| `max_send_message_length` | `int` | `4194304` | Max outbound message bytes (4 MB) |
+| `max_receive_message_length` | `int` | `4194304` | Max inbound message bytes (4 MB) |
+| `enable_reflection` | `bool` | `False` | Enable server reflection (grpcurl). **Disable in production** — exposes the full schema publicly. |
+| `enable_health_check` | `bool` | `True` | Enable `grpc.health.v1.Health` service |
+| `shutdown_grace_seconds` | `float` | `5.0` | Graceful shutdown wait time (0–60 s) |
+| `keepalive` | `GrpcKeepaliveConfig` | defaults | HTTP/2 keepalive and connection lifetime |
+| `tls` | `TLSConfig \| None` | `None` | Server TLS. When `None`, binds an insecure port. |
+| `reflection_require_auth` | `bool` | `False` | Gate reflection behind JWT auth |
+| `reflection_admin_key` | `str \| None` | `None` | Bypass reflection auth via `x-admin-key` metadata (dev tooling) |
+| `enable_h3` | `bool` | `False` | HTTP/3 (QUIC) frontend via Hypercorn. Requires `pip install django-cfg[grpc-h3]`. |
+| `h3_host` | `str` | `"0.0.0.0"` | HTTP/3 listen address (only when `enable_h3=True`) |
+| `h3_port` | `int` | `50052` | HTTP/3 listen port (only when `enable_h3=True`) |
+
+---
+
+## GrpcKeepaliveConfig
+
+Controls HTTP/2 PING frames and connection lifetime on the server side.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `time_ms` | `int` | `30000` | Keepalive ping interval (ms) |
+| `timeout_ms` | `int` | `10000` | Time to wait for a PING ACK before closing (ms) |
+| `permit_without_calls` | `bool` | `True` | Allow pings even with no active RPCs |
+| `max_pings_without_data` | `int` | `0` | Max pings without data frames. `0` = unlimited |
+| `http2_min_ping_interval_ms` | `int` | `5000` | Minimum time between HTTP/2 pings (ms) |
+| `max_connection_idle_ms` | `int` | `600000` | Close idle connections after N ms. `0` = disabled (10 min default) |
+| `max_connection_age_ms` | `int` | `3600000` | Maximum connection lifetime (ms). `0` = disabled (1 h default) |
+| `max_connection_age_grace_ms` | `int` | `60000` | Grace period after `max_connection_age_ms` before forced close (1 min default) |
+
+---
+
+## GrpcPoolConfig
+
+Unified connection pool (single source of truth, replacing older per-file `PoolConfig` classes).
+
+```python
+from django_cfg.modules.django_grpc.config.pool import GrpcPoolConfig
+
+pool = GrpcPoolConfig(
+    enabled=True,
+    max_size=20,
+    idle_timeout=120.0,
+    min_idle=2,
+    max_age=3600.0,
+    cleanup_interval=60.0,
+    health_check_interval=30.0,
+    channel_ready_timeout=5.0,
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable connection pooling |
+| `max_size` | `int` | `20` | Maximum channels in pool (1–200) |
+| `idle_timeout` | `float` | `120.0` | Seconds before an idle channel is closed (10–3600) |
+| `min_idle` | `int` | `2` | Minimum idle channels to maintain per address (0–20) |
+| `max_age` | `float` | `3600.0` | Maximum channel lifetime in seconds (60–86400) |
+| `cleanup_interval` | `float` | `60.0` | Seconds between pool cleanup cycles (10–600) |
+| `health_check_interval` | `float` | `30.0` | Seconds between idle channel health checks (5–600) |
+| `channel_ready_timeout` | `float` | `5.0` | Seconds to wait for a channel to become ready (1–60) |
+
+See [Connection Pooling](./connection-pooling) for detailed usage.
+
+---
+
+## MetricsConfig
+
+Controls in-memory request metrics collection and optional Prometheus export.
+
+```python
+from django_cfg.modules.django_grpc.config.metrics import MetricsConfig
+
+metrics = MetricsConfig(
+    enabled=True,
+    response_time_ttl=3600.0,
+    prometheus_enabled=False,
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable in-memory metrics collection |
+| `response_time_ttl` | `float` | `3600.0` | TTL in seconds for in-memory response time history (60–86400). Prevents unbounded growth. |
+| `prometheus_enabled` | `bool` | `False` | Export metrics via `prometheus_client` (requires the `prometheus_client` package). When enabled, exposes standard gRPC Prometheus counters and histograms. |
+
+When `prometheus_enabled=True` and `prometheus_client` is installed, the following metrics are exported with labels `{grpc_service, grpc_method, grpc_type}`:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `grpc_server_started_total` | Counter | Total started RPCs |
+| `grpc_server_handled_total` | Counter | Total finished RPCs (adds `grpc_code` label) |
+| `grpc_server_handling_seconds` | Histogram | RPC latency |
+| `grpc_server_msg_received_total` | Counter | Streaming messages received |
+| `grpc_server_msg_sent_total` | Counter | Streaming messages sent |
+
+---
+
+## ObservabilityConfig
+
+Controls Centrifugo real-time publishing, Telegram error notifications, and OpenTelemetry tracing.
+
+```python
+from django_cfg.modules.django_grpc.config.observability import ObservabilityConfig
+
+observability = ObservabilityConfig(
+    otel_enabled=False,
+)
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `centrifugo` | `CentrifugoPublishConfig` | defaults | Centrifugo event publishing settings |
+| `telegram` | `TelegramNotifyConfig` | defaults | Telegram notification settings |
+| `otel_enabled` | `bool` | `False` | Prepend `OpenTelemetryServerInterceptor` (requires `opentelemetry-instrumentation-grpc`). Interceptor order: OTel → ErrorHandling → Auth → Observability. |
+
+### CentrifugoPublishConfig
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `True` | Enable Centrifugo event publishing |
+| `publish_start` | `bool` | `False` | Publish `rpc_start` events (high volume — disabled by default) |
+| `publish_end` | `bool` | `True` | Publish `rpc_end` events |
+| `publish_errors` | `bool` | `True` | Publish error events |
+| `publish_stream_messages` | `bool` | `False` | Publish per-message stream events (very high volume — disabled by default) |
+| `channel_template` | `str` | `"grpc:{service}:{method}:meta"` | Centrifugo channel pattern for method events |
+| `error_channel_template` | `str` | `"grpc:{service}:{method}:errors"` | Centrifugo channel pattern for error events |
+| `max_retries` | `int` | `3` | Publish retry attempts on transient failure (0–10) |
+| `max_concurrent_publishes` | `int` | `100` | Semaphore cap on concurrent fire-and-forget publish tasks (1–10000) |
+
+### TelegramNotifyConfig
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `False` | Send gRPC error/event notifications to Telegram |
+| `exclude_methods` | `list[str]` | Health/reflection paths | Method paths excluded from notifications |
+
+Default excluded methods: `/grpc.health.v1.Health/Check`, `/grpc.health.v1.Health/Watch`, `/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo`.
+
+---
+
 ## Related Documentation
 
 - **[Getting Started](./getting-started)** - Build your first service
+- **[TLS Configuration](./tls)** - Server TLS, client TLS, mTLS
 - **[Resilience Patterns](./resilience)** - Retry, circuit breaker, logging
 - **[Connection Pooling](./connection-pooling)** - Channel reuse
 - **[Betterproto2](./betterproto2)** - Modern Python gRPC

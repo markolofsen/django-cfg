@@ -1,13 +1,6 @@
 ---
 title: Currency API Reference
 description: Complete API reference for Django-CFG Currency System including CurrencyRate, MoneyField, and MoneyFieldDisplay.
-sidebar_label: API Reference
-sidebar_position: 5
-keywords:
-  - django-cfg currency api
-  - currencyrate model
-  - moneyfield api
-  - currency converter
 ---
 
 import { Callout } from 'nextra/components';
@@ -133,7 +126,8 @@ When you add `MoneyField(name="price")`, it creates:
 |-----------|------|---------|-------------|
 | `price` | `DecimalField` | Database | The amount |
 | `price_currency` | `CharField` | Database | Currency code |
-| `price_target` | Property | Calculated | Converted amount |
+| `price_target` | Property | Calculated | Raw converted amount (Decimal) |
+| `price_target_rounded` | Property | Calculated | Smart-rounded converted amount |
 | `price_display` | Property | Calculated | Formatted original (e.g., "Rp 150M") |
 | `price_target_display` | Property | Calculated | Formatted target (e.g., "$9,500") |
 | `price_full_display` | Property | Calculated | Combined (e.g., "$9,500 (Rp 150M)") |

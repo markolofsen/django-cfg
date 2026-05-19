@@ -1,4 +1,5 @@
 export default {
+  'README': { display: 'hidden' },
   'overview': 'Overview',
   'architecture': 'Architecture',
   'configuration': 'Configuration',

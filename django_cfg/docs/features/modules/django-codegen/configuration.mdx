@@ -1,17 +1,11 @@
 ---
 title: Configuration
-sidebar_position: 2
-keywords:
-  - configuration
-  - targets
-  - extensions
-  - openapi
-description: Complete configuration reference for django_codegen module.
+description: Complete configuration reference for django_generator module.
 ---
 
 # Configuration
 
-Complete reference for `django_codegen` configuration models.
+Complete reference for `django_generator` configuration models.
 
 ---
 
@@ -20,7 +14,7 @@ Complete reference for `django_codegen` configuration models.
 Main configuration container:
 
 ```python
-from django_cfg.modules.django_codegen import Config, OpenAPI, Centrifugo, ORM
+from django_cfg.modules.django_generator import Config, OpenAPI, Centrifugo, ORM
 
 config = Config(
     openapi=OpenAPI(...),       # OpenAPI client generation
@@ -36,7 +30,7 @@ config = Config(
 OpenAPI client generation configuration:
 
 ```python
-from django_cfg.modules.django_codegen import OpenAPI, Target, ExtensionTarget
+from django_cfg.modules.django_generator import OpenAPI, Target, ExtensionTarget
 
 OpenAPI(
     targets=[...],              # List of Target objects
@@ -60,7 +54,7 @@ OpenAPI(
 Single generation target:
 
 ```python
-from django_cfg.modules.django_codegen import Target, Language, TargetType
+from django_cfg.modules.django_generator import Target, Language, TargetType
 
 Target(
     lang=Language.TYPESCRIPT,
@@ -88,7 +82,7 @@ Target(
 Auto-discover extension packages:
 
 ```python
-from django_cfg.modules.django_codegen import ExtensionTarget, Language
+from django_cfg.modules.django_generator import ExtensionTarget, Language
 
 ExtensionTarget(
     lang=Language.TYPESCRIPT,
@@ -135,7 +129,7 @@ Results in:
 Available platforms:
 
 ```python
-from django_cfg.modules.django_codegen import Language, Platform
+from django_cfg.modules.django_generator import Language, Platform
 
 # Language and Platform are aliases
 Language.TYPESCRIPT  # TypeScript/JavaScript
@@ -168,7 +162,7 @@ Platform.SWIFT.is_external  # True (uses apple/swift-openapi-generator)
 Predefined target types:
 
 ```python
-from django_cfg.modules.django_codegen import TargetType
+from django_cfg.modules.django_generator import TargetType
 
 TargetType.ADMIN       # Admin panel
 TargetType.WEB         # Public web app
@@ -194,7 +188,7 @@ Target(
 Generate FastAPI/SQLModel from Django models:
 
 ```python
-from django_cfg.modules.django_codegen import ORM, ORMTarget, ORMGenerator
+from django_cfg.modules.django_generator import ORM, ORMTarget, ORMGenerator
 
 ORM(
     targets=[
@@ -237,7 +231,7 @@ ORM(
 Typed options for programmatic generation:
 
 ```python
-from django_cfg.modules.django_codegen import GeneratorOptions, Platform
+from django_cfg.modules.django_generator import GeneratorOptions, Platform
 
 options = GeneratorOptions(
     platforms={Platform.TYPESCRIPT, Platform.PYTHON},
@@ -270,7 +264,7 @@ options = GeneratorOptions(
 # generation.py
 from pathlib import Path
 
-from django_cfg.modules.django_codegen import (
+from django_cfg.modules.django_generator import (
     Config,
     OpenAPI,
     Centrifugo,

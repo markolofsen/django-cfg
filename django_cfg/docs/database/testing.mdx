@@ -1,15 +1,6 @@
 ---
 title: Test Database Management
 description: Zero-configuration test database management with automatic setup, cleanup, and migration fixes.
-sidebar_label: Testing
-sidebar_position: 6
-keywords:
-  - django test database
-  - test runner
-  - smart test runner
-  - postgresql test database
-  - migration testing
-  - pytest django
 ---
 
 # Test Database Management
@@ -436,7 +427,6 @@ class MyConfig(DjangoConfig):
     databases = {
         "default": DatabaseConfig.from_url(
             url=env.database.url,
-            test_name="custom_test_db"  # Custom test DB name
         )
     }
 ```

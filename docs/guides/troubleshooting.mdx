@@ -1,13 +1,6 @@
 ---
 title: Troubleshooting Guide
 description: Django-CFG troubleshooting guide. Practical tutorial for troubleshooting guide with real-world examples, troubleshooting tips, and production patterns.
-sidebar_label: Troubleshooting
-sidebar_position: 10
-keywords:
-  - django-cfg troubleshooting
-  - django-cfg errors
-  - fix django-cfg issues
-  - django-cfg debugging
 ---
 
 
@@ -38,8 +31,7 @@ No databases defined in configuration.
 
 **Solution:**
 ```python
-from django_cfg import DjangoConfig
-from django_cfg.models import DatabaseConfig
+from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
     databases = {
@@ -607,9 +599,7 @@ redis-cli info | grep uptime  # Show uptime
 **Configure custom Redis URL:**
 ```python
 # In config.py
-tasks: TaskConfig = TaskConfig(
-    redis_url="redis://localhost:6379/0",
-)
+redis_url: str = "redis://localhost:6379/0"
 ```
 
 </Callout>
@@ -1307,34 +1297,35 @@ For enterprise customers:
 
 ```python
 # Use environment-specific configuration
+from django_cfg import DjangoConfig, StartupInfoMode
 
 # Development
 class DevelopmentConfig(DjangoConfig):
-    env_mode = EnvironmentMode.DEVELOPMENT
-    debug = True
-    startup_info_mode = StartupInfoMode.FULL
+    debug: bool = True
+    startup_info_mode: str = StartupInfoMode.FULL
 
 # Production
 class ProductionConfig(DjangoConfig):
-    env_mode = EnvironmentMode.PRODUCTION
-    debug = False
-    startup_info_mode = StartupInfoMode.NONE
-    security_domains = ["example.com"]
+    debug: bool = False
+    startup_info_mode: str = StartupInfoMode.NONE
+    security_domains: list[str] = ["example.com"]
 ```
 
 ### Testing Configuration
 
 ```python
 # Test-specific settings
+from django_cfg import DjangoConfig, DatabaseConfig, EmailConfig
+
 class TestConfig(DjangoConfig):
-    env_mode = EnvironmentMode.TEST
-    databases = {
+    debug: bool = True
+    databases: dict = {
         "default": DatabaseConfig(
             engine="django.db.backends.sqlite3",
             name=":memory:",
         )
     }
-    email = EmailConfig(
+    email: EmailConfig = EmailConfig(
         backend="django.core.mail.backends.locmem.EmailBackend",
     )
 ```

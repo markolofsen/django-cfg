@@ -1,18 +1,6 @@
 ---
 title: 10 Django Configuration Problems Solved by Type-Safe Config
 description: Common Django configuration problems and solutions using type-safe Pydantic models. Fix environment variable issues, CORS misconfiguration, database errors, and more.
-sidebar_label: Problems Solved
-sidebar_position: 4
-keywords:
-  - django configuration problems
-  - django settings.py errors
-  - django environment variables not working
-  - django cors misconfiguration
-  - django database connection errors
-  - fix django configuration bugs
-schema:
-  - type: HowTo
-  - type: FAQPage
 ---
 
 
@@ -329,7 +317,10 @@ else:
 
 ```python
 # config.py - Single file for all environments (50 lines)
-from django_cfg import DjangoConfig, detect_environment, DatabaseConfig
+import os
+from django_cfg import DjangoConfig, DatabaseConfig, EmailConfig
+
+_env = os.environ.get("ENV", "development")
 
 class MyConfig(DjangoConfig):
     """Auto-detects environment and adjusts settings"""
@@ -338,28 +329,24 @@ class MyConfig(DjangoConfig):
     secret_key: str = env.secret_key
 
     # Auto-adjusts based on ENV environment variable
-    debug: bool = Field(
-        default_factory=lambda: detect_environment() == "development"
-    )
+    debug: bool = _env == "development"
 
     # Different database per environment
-    databases: Dict[str, DatabaseConfig] = Field(
-        default_factory=lambda: {
-            "default": DatabaseConfig(
-                engine="django.db.backends.sqlite3",
-                name="db.sqlite3"
-            ) if detect_environment() == "development" else DatabaseConfig(
-                engine="django.db.backends.postgresql",
-                name=env.database.name,
-                host=env.database.host,
-            )
-        }
-    )
+    databases: dict[str, DatabaseConfig] = {
+        "default": DatabaseConfig(
+            engine="django.db.backends.sqlite3",
+            name="db.sqlite3"
+        ) if _env == "development" else DatabaseConfig(
+            engine="django.db.backends.postgresql",
+            name=env.database.name,
+            host=env.database.host,
+        )
+    }
 
     # Email backend switches automatically
     email: EmailConfig = EmailConfig(
-        backend="console" if detect_environment() == "development" else "smtp",
-        host=env.email.host if detect_environment() != "development" else "localhost",
+        backend="console" if _env == "development" else "smtp",
+        host=env.email.host if _env != "development" else "localhost",
     )
 
     # Production-only SSL settings (automatic)
@@ -375,7 +362,7 @@ class MyConfig(DjangoConfig):
 **Why it works**:
 - ✅ 1 file instead of 4-5 files
 - ✅ Explicit environment logic (no import magic)
-- ✅ `detect_environment()` reads ENV variable
+- ✅ Reads `ENV` environment variable
 - ✅ Impossible to have inheritance conflicts
 - ✅ Clear which settings differ per environment
 

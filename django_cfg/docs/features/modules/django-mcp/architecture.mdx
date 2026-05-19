@@ -1,0 +1,132 @@
+---
+title: Architecture
+description: How django_mcp's MCP protocol server and admin chat agent are structured and share a common tool registry.
+---
+
+# Architecture
+
+`django_mcp` contains two independent subsystems that share configuration and a global tool registry but otherwise operate completely separately.
+
+## Two subsystems
+
+### 1. MCP Protocol Server
+
+Exposes Django data to external AI clients via the [Model Context Protocol](https://modelcontextprotocol.io/) JSON-RPC 2.0 wire format.
+
+```
+External AI client (Claude Desktop, Cursor, custom agent)
+    │ POST /cfg/mcp/  (JSON-RPC 2.0, X-MCP-Access-Key header)
+    ▼
+MCPView (views.py)
+    │
+    ├── method: initialize      → handlers/initialize.py
+    ├── method: tools/list      → handlers/tools.py → tool_registry.get_all_tools()
+    ├── method: tools/call      → handlers/tools.py → tool.execute(context, args)
+    └── method: resources/list  → handlers/resources.py
+```
+
+Every tool call receives an `MCPContext` (from `services/context.py`) carrying the resolved `DjangoMCPModuleConfig`, the validated `access_key`, and optional tenant/user information.
+
+### 2. Admin Chat Agent
+
+An LLM-powered chat interface embedded in the Django admin dashboard. It bypasses the MCP protocol entirely — it talks directly to the LLM via `django_llm` and uses MCP tools as plain Python callables.
+
+```
+Browser (Django admin /admin/)
+    │ POST /cfg/mcp/agent/stream/
+    │ body: {message, session_id, model}
+    │ auth: Django session cookie + CSRF token
+    ▼
+MCPAgentStreamView (agents/views.py)
+    │ validates auth, parses body
+    │ builds AgentContext with all registered tools
+    │ calls agent_runner.stream(message, context)
+    ▼
+MCPAgentRunner.stream() (agents/runner.py)
+    │
+    │  ┌─────────────────────────────────┐
+    │  │  agentic loop (max 10 iters)     │
+    │  │                                  │
+    │  │  LLMClient.chat_completion()     │
+    │  │       ↓                          │
+    │  │  LLM response                    │
+    │  │       ↓                          │
+    │  │  has tool_calls?                 │
+    │  │  yes → execute each tool         │
+    │  │        yield tool_start event    │
+    │  │        yield tool_result event   │
+    │  │        → back to top             │
+    │  │  no  → yield text event          │
+    │  │        yield done event          │
+    │  │        → exit loop               │
+    │  └─────────────────────────────────┘
+    ▼
+StreamingHttpResponse (text/event-stream)
+    ▼
+Browser JS reads ReadableStream, renders tool calls + final answer
+```
+
+## Shared tool registry
+
+Both subsystems use the same global `MCPToolRegistry` instance from `tools/base.py`. Tools are registered once in `handlers/tools.py` at import time, which is triggered by `auto_loader.py` inside `AppConfig.ready()`. After Django startup, both `MCPView` and `MCPAgentRunner` pull from the same registry — adding a tool makes it available in both contexts simultaneously.
+
+## Module layout
+
+```
+django_mcp/
+├── __cfg__.py          DjangoMCPModuleConfig — Pydantic config
+├── views.py            JSON-RPC MCP protocol endpoint
+├── urls.py             URL routing for all MCP endpoints
+├── apps.py             Django AppConfig
+├── auto_loader.py      Loads tools and handlers at AppConfig.ready()
+│
+├── agents/             Admin chat layer
+│   ├── runner.py       MCPAgentRunner — agentic loop and SSE stream
+│   ├── views.py        MCPAgentChatView (sync) + MCPAgentStreamView (SSE)
+│   ├── serializers.py  DRF serializers for agent request/response
+│   └── services/
+│       └── agent_service.py  High-level wrapper for the sync view
+│
+├── handlers/           MCP protocol method handlers
+│   ├── tools.py        tools/list + tools/call + registry population
+│   ├── initialize.py   initialize handshake handler
+│   └── resources.py    resources/list handler
+│
+├── tools/              Built-in MCP tool implementations
+│   ├── base.py         MCPTool ABC + MCPToolRegistry
+│   ├── model_tools.py  query_model, get_object
+│   ├── introspection.py list_apps, get_model_schema, list_urls
+│   ├── command_tool.py execute_command (management commands)
+│   └── user_info.py    get_user_info
+│
+├── agent/              Advanced analytics tools (ORM-level)
+│   └── orm_tools.py    aggregate_model, time_series, top_values, distribution
+│
+├── protocols/          JSON-RPC 2.0 types and parser
+├── services/           MCPContext dataclass + PII redactor
+├── sql/                SQL validator + EXPLAIN cost estimator
+├── models/             MCPAuditLog Django model
+├── cache.py            QueryCache — Redis query result cache
+├── budget.py           QueryBudget — per-session resource limits
+└── chat/               RedisMCPChatStore for conversation history (planned)
+```
+
+## LLM integration
+
+The admin chat agent uses `django_llm.LLMClient` with OpenRouter as the provider. The model is resolved in this priority order:
+
+1. `model` field in the request body (explicit per-request override)
+2. `mcp_config.llm_model` from `DjangoMCPModuleConfig` (default: `"openai/gpt-4.1-nano"`)
+3. Primary provider's default model from `django_llm`
+4. Hard fallback: `"openai/gpt-4o-mini"`
+
+## Security boundaries
+
+| Path | Auth mechanism | Who can access |
+|------|---------------|----------------|
+| `POST /cfg/mcp/` | `X-MCP-Access-Key` header | External MCP clients with static key |
+| `POST /cfg/mcp/agent/` | `X-MCP-Access-Key` header | Programmatic agents with static key |
+| `POST /cfg/mcp/agent/stream/` | Django session + CSRF token | Authenticated users (superuser UI gate) |
+| `GET /cfg/mcp/info/` | None | Anyone — returns tool list metadata |
+
+The streaming endpoint (`agent/stream/`) checks `request.user.is_authenticated` and requires a valid CSRF token. The admin template wraps the chat UI in `{% if user.is_superuser %}`, so only superusers see it in the admin panel.

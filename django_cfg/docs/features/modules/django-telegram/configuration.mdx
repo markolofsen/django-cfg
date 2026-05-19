@@ -1,0 +1,166 @@
+---
+title: Telegram Configuration
+description: Complete reference for TelegramConfig fields including bot credentials, message options, connection settings, and webhook configuration.
+---
+
+# Telegram Configuration
+
+`TelegramConfig` is a Pydantic v2 model set on `DjangoConfig.telegram`. When `telegram=None`, all send methods fail silently.
+
+```python
+from django_cfg.models.services.telegram import TelegramConfig
+```
+
+## TelegramConfig Fields
+
+### Bot Credentials
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `bot_token` | `str` | required | Bot token from @BotFather. Format: `{bot_id}:{token}` |
+| `chat_id` | `int` | required | Default target chat ID. Negative for groups and channels. |
+
+**`bot_token` validation:**
+- Must contain `:` separator
+- Bot ID part (before `:`) must be numeric
+- Total token must be at least 30 characters
+
+**`chat_id` validation:**
+- Must be non-zero
+
+### Message Options
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `parse_mode` | `"HTML" \| "Markdown" \| "MarkdownV2" \| None` | `"HTML"` | Message parse mode |
+| `disable_notification` | `bool` | `False` | Send silently — no sound or vibration |
+| `disable_web_page_preview` | `bool` | `False` | Disable link preview in messages |
+
+### Connection
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `timeout` | `int` | `30` | Request timeout in seconds (1–300) |
+| `max_retries` | `int` | `3` | Maximum retry attempts on failure (0–10) |
+| `retry_delay` | `float` | `1.0` | Delay between retries in seconds (0.1–60.0) |
+
+### Webhook (Optional)
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `webhook_url` | `Optional[str]` | `None` | HTTPS URL for incoming updates |
+| `webhook_secret` | `Optional[str]` | `None` | Secret token for webhook verification |
+
+`webhook_url` must be HTTPS unless it is an environment variable template (e.g., `${TELEGRAM_WEBHOOK_URL}`).
+
+## DjangoConfig Integration
+
+```python
+class DjangoConfig:
+    telegram: Optional[TelegramConfig] = None
+```
+
+When `telegram=None`, `DjangoTelegram.is_configured` returns `False` and all send methods return `False` silently.
+
+## Example Configurations
+
+### Minimal
+
+```python
+from django_cfg import DjangoConfig
+from django_cfg.models.services.telegram import TelegramConfig
+
+class MyConfig(DjangoConfig):
+    telegram = TelegramConfig(
+        bot_token="${TELEGRAM_BOT_TOKEN}",
+        chat_id=-1001234567890,
+    )
+```
+
+### With Silent Notifications
+
+Useful for high-volume notification channels where sound alerts would be disruptive:
+
+```python
+telegram = TelegramConfig(
+    bot_token="${TELEGRAM_BOT_TOKEN}",
+    chat_id=-1001234567890,
+    disable_notification=True,
+    disable_web_page_preview=True,
+)
+```
+
+### Multiple Channels
+
+Use the default config for one channel, then override per-call or per-instance for others:
+
+```python
+class MyConfig(DjangoConfig):
+    telegram = TelegramConfig(
+        bot_token="${TELEGRAM_BOT_TOKEN}",
+        chat_id=-100111111111,     # general notifications channel
+    )
+```
+
+```python
+from django_cfg.modules.django_telegram import DjangoTelegram
+
+# Instance with different credentials — for an alerts channel
+alerts = DjangoTelegram(
+    bot_token="${ALERTS_BOT_TOKEN}",
+    chat_id=-100222222222,
+)
+alerts.send_message("Critical alert!")
+```
+
+### With Webhook
+
+```python
+telegram = TelegramConfig(
+    bot_token="${TELEGRAM_BOT_TOKEN}",
+    chat_id=-1001234567890,
+    webhook_url="${TELEGRAM_WEBHOOK_URL}",
+    webhook_secret="${TELEGRAM_WEBHOOK_SECRET}",
+)
+```
+
+## Getting Your Bot Token and Chat ID
+
+### Bot Token
+
+1. Message [@BotFather](https://t.me/BotFather) on Telegram
+2. Send `/newbot`
+3. Follow the prompts to name your bot
+4. Copy the token provided — format: `1234567890:ABCDEFabcdefABCDEFabcdef-example`
+
+### Chat ID
+
+Use the management command to discover chat IDs for groups and channels:
+
+```bash
+# Show bot info
+python manage.py telegram_bot info
+
+# List all chats where the bot received messages
+# (send a message to the bot or group first)
+python manage.py telegram_bot chats
+```
+
+Or use the Python API:
+
+```python
+from django_cfg.modules.django_telegram import DjangoTelegram
+
+telegram = DjangoTelegram(bot_token="YOUR_BOT_TOKEN")
+chats = telegram.get_chats()
+for chat in chats:
+    print(f"ID: {chat['id']}, Type: {chat['type']}, Title: {chat.get('title')}")
+```
+
+<Callout type="info">
+For groups and supergroups, the chat ID is a negative number. For channels, it is a large negative number prefixed with `-100`.
+</Callout>
+
+## See Also
+
+- [Telegram Overview](./overview) — public API, priority queue, shortcuts, management commands

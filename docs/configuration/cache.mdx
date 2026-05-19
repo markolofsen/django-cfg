@@ -1,8 +1,6 @@
 ---
 title: Cache Models
 description: CacheConfig model for Redis, LocMem, and Dummy cache backends
-sidebar_label: Cache Models
-sidebar_position: 5
 ---
 
 # Cache Models
@@ -29,6 +27,8 @@ Type-safe cache backend configuration with environment-aware smart defaults.
 | `key_prefix` | `str` | `""` | Cache key prefix |
 | `version` | `int` | `1` | Cache key version (≥1) |
 | `connection_pool_kwargs` | `dict[str, Any]` | `{}` | Redis connection pool parameters |
+| `compress` | `bool` | `False` | Enable cache value compression (zlib) |
+| `serializer` | `Literal["json", "pickle", "msgpack"]` | `"pickle"` | Cache value serializer |
 
 ### Methods
 

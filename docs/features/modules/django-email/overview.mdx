@@ -1,27 +1,129 @@
 ---
-title: Email System Overview
-description: Django-CFG email module - auto-configuring email service with template support and admin notifications.
-sidebar_label: Overview
-sidebar_position: 1
-keywords:
-  - django-cfg email
-  - django email
-  - email django-cfg
+title: Email Module
+description: Auto-configuring email service that reads settings from DjangoConfig. Supports SMTP, HTML, template-based, and attachment emails with background sending and Telegram error fallback.
 ---
 
 # Email Module
 
-Django-CFG's **Email Module** provides an auto-configuring email service that reads settings from your `DjangoConfig` instance. It supports simple emails, HTML emails, template-based emails, and attachments.
+Django-CFG's **Email Module** provides an auto-configuring email service that reads settings from your `DjangoConfig` instance. All emails are sent in background threads so they never block request handling. Errors are automatically reported to Telegram if that module is configured.
 
 ## Features
 
-- **Auto-Configuration** - Reads email settings from DjangoConfig
-- **Background Sending** - All emails sent in background threads (non-blocking)
-- **Template Support** - Django template integration
-- **HTML/Text Alternatives** - Automatic plain text generation from HTML
-- **Attachment Support** - Send files with any email type
-- **Admin Notifications** - Send to all configured admin emails
-- **Telegram Integration** - Combined email + Telegram notifications
+- **Auto-configuration** — reads `EmailConfig` from `DjangoConfig` without manual parameter passing
+- **Background sending** — all methods dispatch to a daemon thread and return immediately
+- **Template support** — renders `.html` and `.txt` Django templates with auto-injected context variables
+- **HTML emails** — automatic plain-text fallback generated via `strip_tags`
+- **Attachment support** — send files with any email type via `EmailMultiAlternatives`
+- **Admin notifications** — send to all addresses from `config.admin_emails` or Django `ADMINS` setting
+- **Multi-channel alerts** — single call sends to both email and Telegram simultaneously
+- **Telegram fallback** — SMTP errors are forwarded to Telegram for visibility
+
+## Quick Start
+
+### Simple Text Email
+
+```python
+from django_cfg import send_email
+
+send_email(
+    subject="Hello World",
+    message="This is a test email.",
+    recipient_list=["user@example.com"],
+)
+```
+
+### HTML Email
+
+```python
+from django_cfg.modules.django_email import DjangoEmailService
+
+email = DjangoEmailService()
+email.send_html(
+    subject="Welcome!",
+    html_message="<h1>Welcome</h1><p>Thanks for joining us.</p>",
+    recipient_list=["user@example.com"],
+)
+```
+
+### Template-Based Email
+
+Templates are resolved by appending `.html` and `.txt` to the `template_name`.
+
+```python
+email = DjangoEmailService()
+email.send_template(
+    subject="Order Shipped",
+    template_name="emails/order_shipped",
+    context={
+        "user_name": "John Doe",
+        "order_id": "12345",
+        "tracking_url": "https://track.example.com/12345",
+    },
+    recipient_list=["john@example.com"],
+)
+```
+
+The following context variables are injected automatically if not present in `context`:
+
+| Variable | Source |
+| --- | --- |
+| `project_name` | `config.project_name` |
+| `logo_url` | `config.project_logo` |
+| `site_url` | `config.site_url` |
+
+### Email with Attachments
+
+```python
+email = DjangoEmailService()
+email.send_with_attachments(
+    subject="Your Invoice",
+    recipient_list=["customer@example.com"],
+    html_message="<p>Please find your invoice attached.</p>",
+    attachments=[
+        ("invoice.pdf", pdf_bytes, "application/pdf"),
+    ],
+)
+```
+
+### Admin Notifications
+
+```python
+from django_cfg import send_admin_email, send_admin_notification
+
+# Email only — sent to all addresses in config.admin_emails
+send_admin_email(
+    subject="[Alert] Database Backup Failed",
+    message='Backup for "default" database failed at 2025-01-15 02:00',
+)
+
+# Email + Telegram simultaneously
+send_admin_notification(
+    subject="Database Backup Completed",
+    message='Backup "default_20250115_020000.sql.gz" created successfully',
+)
+```
+
+## Configuration
+
+```python
+from django_cfg import DjangoConfig
+from django_cfg.models.services.email import EmailConfig
+
+class MyConfig(DjangoConfig):
+    email = EmailConfig(
+        backend="smtp",
+        host="smtp.gmail.com",
+        port=587,
+        username="me@gmail.com",
+        password="${EMAIL_PASSWORD}",
+        use_tls=True,
+        default_from="noreply@example.com",
+    )
+
+    admin_emails = ["ops@example.com", "alerts@example.com"]
+```
+
+See [Configuration Reference](./configuration) for all `EmailConfig` fields and provider examples.
 
 ## Public API
 
@@ -32,171 +134,89 @@ from django_cfg import send_email, send_admin_email, send_admin_notification, ge
 ```
 
 | Function | Description |
-|----------|-------------|
-| `send_email()` | Send a simple text email |
-| `send_admin_email()` | Send email to all admin addresses |
-| `send_admin_notification()` | Send to admins via email AND Telegram |
-| `get_admin_emails()` | Get list of admin email addresses |
+| --- | --- |
+| `send_email(subject, message, recipient_list, ...)` | Send a plain text email |
+| `send_admin_email(subject, message, ...)` | Send to all admin addresses |
+| `send_admin_notification(subject, message, ...)` | Send to admins via email and/or Telegram |
+| `get_admin_emails()` | Return list of configured admin email addresses |
 
-### DjangoEmailService Class
-
-```python
-from django_cfg import DjangoEmailService
-
-email_service = DjangoEmailService()
-```
-
-**Methods:**
-- `send_simple()` - Send plain text email
-- `send_html()` - Send HTML email with optional text alternative
-- `send_template()` - Send email using Django template
-- `send_multipart()` - Send email with attachments
-- `send_with_attachments()` - Universal method for emails with attachments
-- `send_template_with_tracking()` - Send template email with open/click tracking
-
-## Quick Start
-
-### Simple Email
+### DjangoEmailService
 
 ```python
-from django_cfg import send_email
+from django_cfg.modules.django_email import DjangoEmailService
 
-send_email(
-    subject='Hello World',
-    message='This is a test email.',
-    recipient_list=['user@example.com']
-)
+service = DjangoEmailService()
 ```
 
-### HTML Email
+| Method | Description |
+| --- | --- |
+| `send_simple(subject, message, recipient_list, ...)` | Plain text email |
+| `send_html(subject, html_message, recipient_list, ...)` | HTML email with auto text fallback |
+| `send_template(subject, template_name, context, recipient_list, ...)` | Template-based email |
+| `send_multipart(subject, recipient_list, html_content, ...)` | Email with attachments |
+| `send_with_attachments(subject, recipient_list, attachments, ...)` | Universal attachment method |
+| `send_template_with_tracking(subject, template_name, context, ..., email_log_id)` | Template email with open/click tracking pixels |
+| `is_configured()` | Returns `True` if `email_config.host` is set |
+| `get_backend_info()` | Returns dict with current backend, host, port, TLS settings |
 
-```python
-from django_cfg import DjangoEmailService
+### Admin Email Resolution
 
-email = DjangoEmailService()
-email.send_html(
-    subject='Welcome!',
-    html_message='<h1>Welcome</h1><p>Thanks for joining us.</p>',
-    recipient_list=['user@example.com']
-)
-```
+`get_admin_emails()` resolves addresses in priority order:
 
-### Template-Based Email
-
-```python
-from django_cfg import DjangoEmailService
-
-email = DjangoEmailService()
-email.send_template(
-    subject='Order Shipped',
-    template_name='emails/order_shipped',  # Will look for .html and .txt
-    context={
-        'user_name': 'John Doe',
-        'order_id': '12345',
-        'tracking_url': 'https://...'
-    },
-    recipient_list=['john@example.com']
-)
-```
-
-### Email with Attachments
-
-```python
-from django_cfg import DjangoEmailService
-
-email = DjangoEmailService()
-email.send_with_attachments(
-    subject='Your Invoice',
-    recipient_list=['customer@example.com'],
-    html_message='<p>Please find your invoice attached.</p>',
-    attachments=[
-        ('invoice.pdf', pdf_content, 'application/pdf'),
-    ]
-)
-```
-
-### Admin Notifications
-
-```python
-from django_cfg import send_admin_email, send_admin_notification
-
-# Email only
-send_admin_email(
-    subject='[Alert] Database Backup Failed',
-    message='Backup for "default" database failed at 2025-01-15 02:00'
-)
-
-# Email + Telegram
-send_admin_notification(
-    subject='Database Backup Completed',
-    message='Backup "default_20250115_020000.sql.gz" created successfully'
-)
-```
-
-## Configuration
-
-Configure email in your `DjangoConfig`:
-
-```python
-from django_cfg import DjangoConfig
-from django_cfg.models import EmailConfig
-
-class MyConfig(DjangoConfig):
-    project_name = "My Project"
-    # ... other config ...
-
-    email = EmailConfig(
-        host="smtp.gmail.com",
-        port=587,
-        username="your-email@gmail.com",
-        password="your-app-password",
-        use_tls=True,
-        default_from="noreply@example.com",
-    )
-
-    # Admin emails for notifications
-    admin_emails = ["admin@example.com", "dev@example.com"]
-```
-
-The email service automatically uses these settings without additional configuration.
-
-## Template Context
-
-Template emails automatically receive these context variables from your config:
-
-- `project_name` - From `config.project_name`
-- `logo_url` - From `config.project_logo`
-- `site_url` - From `config.site_url`
-
-You can override these by passing them in your context.
-
-## Background Sending
-
-All email methods send in background threads to avoid blocking your request:
-
-```python
-# This returns immediately - email is sent in background
-email.send_simple(...)
-
-# Check if service is configured
-if email.is_configured():
-    email.send_simple(...)
-```
+1. `config.admin_emails` (list on `DjangoConfig`)
+2. Django `ADMINS` setting (list of `(name, email)` tuples)
+3. Empty list (no warning sent)
 
 ## Error Handling
 
-Errors are logged and optionally reported to Telegram. Use `fail_silently=False` to raise exceptions:
+All SMTP errors are caught, logged, and silently forwarded to Telegram:
+
+- `SMTPAuthenticationError` — wrong credentials
+- `SMTPDataError` — quota or policy rejection
+- `SMTPRecipientsRefused` — recipient address rejected
+- `SMTPSenderRefused` — sender address rejected
+- `socket.timeout` / `TimeoutError` — connection timeout
+
+Use `fail_silently=False` to re-raise the exception after logging:
 
 ```python
-# Silent failure (default for notifications)
-send_admin_email(subject='...', message='...', fail_silently=True)
-
-# Raise exception on failure
-send_email(subject='...', message='...', recipient_list=['...'], fail_silently=False)
+# Raises on any SMTP error
+email.send_simple(
+    subject="Critical",
+    message="...",
+    recipient_list=["user@example.com"],
+    fail_silently=False,
+)
 ```
+
+## Management Commands
+
+### `test_email`
+
+Send test emails for all built-in template types:
+
+```bash
+python manage.py test_email
+python manage.py test_email --email user@example.com
+python manage.py test_email --type otp
+python manage.py test_email --type all
+```
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--email` | `markolofsen@gmail.com` | Recipient address |
+| `--type` | `all` | Template to send: `all`, `base`, `otp`, `welcome`, `login_alert` |
+
+Built-in templates tested:
+
+| Key | Template | Subject |
+| --- | --- | --- |
+| `base` | `emails/base_email` | General notification |
+| `otp` | `emails/otp_email` | OTP authentication code |
+| `welcome` | `emails/welcome_email` | New account welcome |
+| `login_alert` | `emails/login_alert_email` | Security login alert |
 
 ## See Also
 
-- **[Telegram Module](../django-telegram/overview)** - Telegram bot notifications
-- **[Configuration Guide](/docs/configuration)** - DjangoConfig setup
-- **[Environment Variables](/docs/configuration/environment)** - SMTP credentials
+- [Configuration Reference](./configuration) — all `EmailConfig` fields, provider setups
+- [Telegram Module](../django-telegram/overview) — Telegram notifications and combined alerts

@@ -1,13 +1,6 @@
 ---
 title: Test Runners
-description: SmartTestRunner, FastTestRunner, and MigrationManager — the testing infrastructure built into Django-CFG.
-keywords:
-  - SmartTestRunner
-  - FastTestRunner
-  - MigrationManager
-  - django test runner
-  - migration fix
-  - inconsistent migration history
+description: SmartTestRunner and FastTestRunner — the test runners built into Django-CFG with automatic migration handling.
 ---
 
 import { Callout } from 'nextra/components'
@@ -40,20 +33,16 @@ from django_cfg.testing.runners import SmartTestRunner
 TEST_RUNNER = "django_cfg.testing.runners.SmartTestRunner"
 ```
 
-### Disable Auto-Cleanup
+### Preserve Between Runs
 
-If you need to preserve the test database between runs:
+To skip the automatic cleanup and reuse an existing test database:
 
-```python
-from django_cfg.testing.runners import SmartTestRunner
-
-class MyTestRunner(SmartTestRunner):
-    def _cleanup_old_test_databases(self):
-        pass  # skip cleanup
+```bash
+python manage.py test --keepdb
 ```
 
 <Callout type="warning">
-Disabling cleanup can cause `InconsistentMigrationHistory` errors when migrations change. Use `--keepdb` instead if you want to speed up reruns.
+`--keepdb` can cause `InconsistentMigrationHistory` errors when migrations change. Drop the test DB manually if that happens: `python manage.py test_db cleanup --force`
 </Callout>
 
 ---
@@ -84,61 +73,11 @@ from django_cfg.testing.runners import FastTestRunner
 
 ---
 
-## MigrationManager
+## What SmartTestRunner Fixes Automatically
 
-Handles migration inconsistencies automatically. Used internally by `SmartTestRunner`, but available for direct use.
-
-### Usage
-
-```python
-from django_cfg.management.utils.migration_manager import MigrationManager
-
-manager = MigrationManager(stdout=self.stdout, style=self.style)
-
-# Migrate with auto-fix (default)
-manager.migrate_test_database("default", auto_fix=True)
-
-# Check consistency only
-has_issues = manager.check_migration_consistency("default")
-
-# Manual fix
-if has_issues:
-    manager.fix_inconsistent_migrations("default")
-    manager._migrate_with_bypass("default")
-```
-
-### API Reference
-
-```python
-class MigrationManager:
-    def __init__(self, stdout=None, style=None, logger=None): ...
-
-    def migrate_test_database(self, db_name: str, auto_fix: bool = True) -> None:
-        """Migrate test database. Auto-fixes errors when auto_fix=True."""
-
-    def check_migration_consistency(self, db_name: str) -> bool:
-        """Returns True if inconsistencies found."""
-
-    def fix_inconsistent_migrations(self, db_name: str) -> None:
-        """Removes problematic migration records so Django reapplies them correctly."""
-
-    def _migrate_with_bypass(self, db_name: str) -> None:
-        """Runs migrate with consistency-check patch applied."""
-```
+`SmartTestRunner` handles migration inconsistencies internally as part of `setup_databases()`. No manual intervention is needed.
 
 ### What Gets Fixed
-
-#### Admin before custom user model
-
-**Problem:**
-```
-Migration admin.0001_initial is applied before its dependency
-django_cfg_accounts.0001_initial
-```
-
-**Cause:** Django applies `admin` migrations before the custom `AUTH_USER_MODEL` app migrations when reading from an old test database.
-
-**Fix:** `fix_inconsistent_migrations()` deletes `admin` migration records from `django_migrations`. Django reapplies them after `django_cfg_accounts` on the next `migrate` run.
 
 #### Missing PostgreSQL extensions
 
@@ -147,58 +86,42 @@ django_cfg_accounts.0001_initial
 django.db.utils.ProgrammingError: type "vector" does not exist
 ```
 
-**Fix:** `migrate_test_database()` detects `pgvector` usage by scanning migrations and runs `CREATE EXTENSION IF NOT EXISTS vector` before applying migrations.
+**Fix:** Extensions are installed **after** the empty DB is created but **before** migrations run, using `install_extensions_on()` from `django_cfg.testing.runners.utils`.
+
+#### Inconsistent migration history
+
+**Problem:**
+```
+InconsistentMigrationHistory: ai_chat.0001_initial applied before
+workspaces.0002_alter_workspacemember_options
+```
+
+**Fix:** `SmartTestRunner` patches `MigrationLoader.check_consistent_history` to skip the error and patches `_check_lazy_references` to suppress "app isn't installed" errors from migration state snapshots. Both patches are applied only during `setup_databases()` and restored immediately after.
 
 #### Swappable dependency order
 
 **Problem:** Django doesn't always respect `swappable_dependency()` ordering when creating test databases.
 
-**Fix:** `_migrate_with_bypass()` patches `MigrationLoader.check_consistent_history` to log the error instead of raising, then calls `migrate`. After the call the original method is restored.
+**Fix:** The consistency-check patch allows `migrate` to proceed with the correct plan rather than blocking on a history error.
 
 ```python
-# What the bypass does internally
+# What the bypass does internally (from SmartTestRunner.setup_databases)
 original_check = MigrationLoader.check_consistent_history
 
 def patched_check(self, connection):
     try:
         return original_check(self, connection)
-    except InconsistentMigrationHistory:
-        pass  # log, don't raise
+    except Exception as e:
+        if 'InconsistentMigrationHistory' in str(type(e).__name__):
+            sys.stderr.write(f"⚠️  Using smart migration manager to fix: {e}\n")
+            return
+        raise
 
 MigrationLoader.check_consistent_history = patched_check
 try:
-    call_command("migrate", database=db_name)
+    old_config = super().setup_databases(autoclobber=True, **kwargs)
 finally:
     MigrationLoader.check_consistent_history = original_check
-```
-
-### In Test Cases
-
-```python
-from django.test import TestCase
-from django_cfg.management.utils.migration_manager import MigrationManager
-
-
-class MyTestCase(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        manager = MigrationManager()
-        if manager.check_migration_consistency("default"):
-            manager.fix_inconsistent_migrations("default")
-```
-
-### In Management Commands
-
-```python
-from django.core.management.base import BaseCommand
-from django_cfg.management.utils.migration_manager import MigrationManager
-
-
-class Command(BaseCommand):
-    def handle(self, *args, **options):
-        manager = MigrationManager(self.stdout, self.style)
-        manager.migrate_test_database("default", auto_fix=True)
 ```
 
 ---

@@ -1,12 +1,6 @@
 ---
 title: Multi-Database Setup
 description: Django-CFG multi database guide. Practical tutorial for multi-database setup with real-world examples, troubleshooting tips, and production patterns.
-sidebar_label: Multi-Database
-sidebar_position: 2
-keywords:
-  - django-cfg multi database
-  - django-cfg guide multi database
-  - how to multi database django
 ---
 
 
@@ -41,7 +35,7 @@ Perfect for small to medium projects with 2-3 databases.
 ```python
 # config.py
 from django_cfg import DjangoConfig
-from django_cfg.models import DatabaseConfig
+from django_cfg import DatabaseConfig
 
 class MyConfig(DjangoConfig):
     databases = {
@@ -88,7 +82,7 @@ For large applications with multiple domains and services.
 ```python
 # config.py
 from django_cfg import DjangoConfig
-from django_cfg.models import DatabaseConfig
+from django_cfg import DatabaseConfig
 
 class MyConfig(DjangoConfig):
     databases = {
@@ -160,7 +154,7 @@ Each service has its own database with shared authentication.
 ```python
 # config.py
 from django_cfg import DjangoConfig
-from django_cfg.models import DatabaseConfig
+from django_cfg import DatabaseConfig
 
 class MyConfig(DjangoConfig):
     databases = {
@@ -469,26 +463,21 @@ database:
 ```
 
 ```python
-# settings.py
-import dj_database_url
-from django_cfg import load_config
+# config.py
+from django_cfg import DjangoConfig, DatabaseConfig
 
-config = load_config()
-
-DATABASES = {
-    'default': dj_database_url.parse(config.database.url),
-    'blog_db': dj_database_url.parse(config.database.url_blog),
-    'shop_db': dj_database_url.parse(config.database.url_shop),
-    'analytics': dj_database_url.parse(config.database.url_analytics),
-}
-
-DATABASE_ROUTERS = ['django_cfg.routing.DatabaseRouter']
-
-DATABASE_ROUTING_RULES = {
-    'blog': 'blog_db',
-    'shop': 'shop_db',
-    'analytics': 'analytics',
-}
+class MyConfig(DjangoConfig):
+    databases: dict[str, DatabaseConfig] = {
+        'default': DatabaseConfig.from_url(env.database.url),
+        'blog_db': DatabaseConfig.from_url(env.database.url_blog),
+        'shop_db': DatabaseConfig.from_url(env.database.url_shop),
+        'analytics': DatabaseConfig.from_url(env.database.url_analytics),
+    }
+    database_routing_rules: dict[str, str] = {
+        'blog': 'blog_db',
+        'shop': 'shop_db',
+        'analytics': 'analytics',
+    }
 ```
 
 ## Testing Multi-Database Setup

@@ -1,0 +1,183 @@
+---
+title: Email Configuration
+description: Complete reference for EmailConfig fields, backend options, and provider-specific SMTP setups for Gmail, SendGrid, Mailgun, and AWS SES.
+---
+
+# Email Configuration
+
+`EmailConfig` is a Pydantic v2 model set on `DjangoConfig.email`. It maps directly to Django's `EMAIL_*` settings and is applied automatically at startup.
+
+```python
+from django_cfg.models.services.email import EmailConfig
+```
+
+## EmailConfig Fields
+
+### Backend
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `backend` | `str` | `"console"` | Email backend type |
+
+| Value | Django class | Use case |
+| --- | --- | --- |
+| `"smtp"` | `django.core.mail.backends.smtp.EmailBackend` | Production SMTP |
+| `"console"` | `django.core.mail.backends.console.EmailBackend` | Print to stdout (development) |
+| `"file"` | `django.core.mail.backends.filebased.EmailBackend` | Write to files (testing) |
+| `"memory"` | `django.core.mail.backends.locmem.EmailBackend` | Store in memory (unit tests) |
+| `"dummy"` | `django.core.mail.backends.dummy.EmailBackend` | Discard silently |
+
+### SMTP Connection
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `host` | `str` | `"localhost"` | SMTP server hostname |
+| `port` | `int` | `587` | SMTP port (1–65535) |
+| `username` | `Optional[str]` | `None` | SMTP authentication username |
+| `password` | `Optional[str]` | `None` | SMTP authentication password |
+| `use_tls` | `bool` | `True` | Use STARTTLS upgrade |
+| `use_ssl` | `bool` | `False` | Use SSL/TLS wrapper from the start |
+| `ssl_verify` | `bool` | `True` | Verify SSL certificate |
+| `timeout` | `int` | `30` | Connection timeout in seconds (1–300) |
+
+<Callout type="warning">
+`use_tls=True` and `use_ssl=True` cannot both be set. The validator raises `ValueError` if both are enabled. Use `use_tls=True` for port 587 (STARTTLS) and `use_ssl=True` for port 465 (SSL).
+</Callout>
+
+When `ssl_verify=False`, a custom backend is used that skips certificate verification. Never use this in production.
+
+### From Address
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `default_from` | `str` | `"noreply@example.com"` | Default sender address (must contain `@`) |
+
+If `DjangoConfig.project_name` is set, the from address is automatically formatted as `"Project Name <email@example.com>"`. You can override this by passing a pre-formatted string with `<` and `>`.
+
+### File Backend
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `file_path` | `str` | `"emails/"` | Directory for file backend output |
+
+Only used when `backend="file"`.
+
+## DjangoConfig Fields
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `email` | `Optional[EmailConfig]` | `None` | Email configuration |
+| `admin_emails` | `list[str]` | `[]` | Admin addresses for `send_admin_email()` |
+
+```python
+from django_cfg import DjangoConfig
+from django_cfg.models.services.email import EmailConfig
+
+class MyConfig(DjangoConfig):
+    email = EmailConfig(
+        backend="smtp",
+        host="smtp.gmail.com",
+        port=587,
+        username="${EMAIL_USER}",
+        password="${EMAIL_PASSWORD}",
+        use_tls=True,
+        default_from="noreply@example.com",
+    )
+    admin_emails = ["ops@example.com", "alerts@example.com"]
+```
+
+## Provider Examples
+
+### Gmail (App Password)
+
+<Callout type="info">
+Gmail requires a 16-character App Password when 2-Step Verification is enabled. Create one at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+</Callout>
+
+```python
+email = EmailConfig(
+    backend="smtp",
+    host="smtp.gmail.com",
+    port=587,
+    username="you@gmail.com",
+    password="${GMAIL_APP_PASSWORD}",
+    use_tls=True,
+    default_from="you@gmail.com",
+)
+```
+
+### SendGrid
+
+```python
+email = EmailConfig(
+    backend="smtp",
+    host="smtp.sendgrid.net",
+    port=587,
+    username="apikey",
+    password="${SENDGRID_API_KEY}",
+    use_tls=True,
+    default_from="noreply@example.com",
+)
+```
+
+### Mailgun
+
+```python
+email = EmailConfig(
+    backend="smtp",
+    host="smtp.mailgun.org",
+    port=587,
+    username="postmaster@mg.example.com",
+    password="${MAILGUN_SMTP_PASSWORD}",
+    use_tls=True,
+    default_from="noreply@example.com",
+)
+```
+
+### AWS SES (SMTP Interface)
+
+```python
+email = EmailConfig(
+    backend="smtp",
+    host="email-smtp.us-east-1.amazonaws.com",
+    port=587,
+    username="${AWS_SES_SMTP_USER}",
+    password="${AWS_SES_SMTP_PASSWORD}",
+    use_tls=True,
+    default_from="noreply@verified-domain.com",
+)
+```
+
+### Development (Console Output)
+
+```python
+email = EmailConfig(backend="console")
+```
+
+### Development (File Inspection)
+
+```python
+email = EmailConfig(backend="file", file_path="sent_emails/")
+```
+
+## Django Settings Mapping
+
+`EmailConfig` maps to standard Django settings applied automatically at startup:
+
+| EmailConfig field | Django setting |
+| --- | --- |
+| `backend` | `EMAIL_BACKEND` |
+| `host` | `EMAIL_HOST` |
+| `port` | `EMAIL_PORT` |
+| `use_tls` | `EMAIL_USE_TLS` |
+| `use_ssl` | `EMAIL_USE_SSL` |
+| `timeout` | `EMAIL_TIMEOUT` |
+| `username` | `EMAIL_HOST_USER` |
+| `password` | `EMAIL_HOST_PASSWORD` |
+| `default_from` | `DEFAULT_FROM_EMAIL` |
+
+You do not call `to_django_settings()` directly — django-cfg applies it during configuration loading.
+
+## See Also
+
+- [Email Module Overview](./overview) — public API and usage patterns

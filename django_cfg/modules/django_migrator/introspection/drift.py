@@ -52,7 +52,17 @@ class DriftDetector:
         report = DriftReport(alias=alias)
 
         applied = history.applied_keys()
-        for loaded in history.disk_migrations(owned_apps):
+        disk = history.disk_migrations(owned_apps)
+        # Per-app forward plan, used to decide whether a recorded_missing
+        # incident is actually superseded by a later DeleteModel/RemoveField.
+        plans: dict[str, list[str]] = {}
+        by_app_migrations: dict[str, dict[str, LoadedMigration]] = {}
+        for loaded in disk:
+            by_app_migrations.setdefault(loaded.app_label, {})[loaded.name] = loaded
+        for app_label in by_app_migrations:
+            plans[app_label] = history.forwards_plan_for_app(app_label)
+
+        for loaded in disk:
             ddl_status = self._operations_effect_status(loaded, schema)
             if ddl_status is None:
                 continue  # Pure data migration — can't introspect.
@@ -67,12 +77,29 @@ class DriftDetector:
                 #     but somehow recorded — extremely rare, treat as
                 #     half_applied for safety).
                 if create_present:
+                    if self._is_superseded(
+                        loaded,
+                        plan=plans.get(loaded.app_label, []),
+                        by_name=by_app_migrations.get(loaded.app_label, {}),
+                        schema=schema,
+                    ):
+                        # CreateModel's table is partially present but a
+                        # later migration drops it entirely — not drift.
+                        continue
                     report.half_applied.append(DriftIncident(
                         app_label=loaded.app_label,
                         migration_name=loaded.name,
                         direction="half_applied",
                         detail=self._describe_missing(loaded, schema),
                     ))
+                elif self._is_superseded(
+                    loaded,
+                    plan=plans.get(loaded.app_label, []),
+                    by_name=by_app_migrations.get(loaded.app_label, {}),
+                ):
+                    # A later migration removes everything this migration
+                    # created — the missing DDL is intentional, not drift.
+                    continue
                 else:
                     report.recorded_missing.append(DriftIncident(
                         app_label=loaded.app_label,
@@ -119,9 +146,27 @@ class DriftDetector:
         """
         for op in loaded.migration.operations:
             if isinstance(op, dj_migrations.CreateModel):
+                if self._is_non_ddl_create(op):
+                    continue
                 table = self._table_name_for_create(loaded.app_label, op)
                 if schema.table_exists(table):
                     return True
+        return False
+
+    @staticmethod
+    def _is_non_ddl_create(op: dj_migrations.CreateModel) -> bool:
+        """True for CreateModel ops that don't produce a real table.
+
+        Proxy and ``managed=False`` models are pure ORM constructs —
+        ``schemaeditor.create_model`` no-ops on them. Flagging them as
+        drift causes permanent false positives (the table will never
+        exist no matter how many migrations run).
+        """
+        options = op.options or {}
+        if options.get("proxy"):
+            return True
+        if options.get("managed") is False:
+            return True
         return False
 
     # --- Per-operation effect check ---
@@ -153,6 +198,11 @@ class DriftDetector:
         schema: PostgresSchemaInspector,
     ) -> bool | None:
         if isinstance(op, dj_migrations.CreateModel):
+            # Proxy / managed=False / abstract models don't produce DDL —
+            # skip them so we don't flag e.g. authtoken.0003_tokenproxy
+            # as recorded_missing forever.
+            if self._is_non_ddl_create(op):
+                return None
             table = self._table_name_for_create(app_label, op)
             return schema.table_exists(table)
         if isinstance(op, dj_migrations.AddField):
@@ -191,6 +241,80 @@ class DriftDetector:
         if getattr(field, "many_to_one", False) or getattr(field, "one_to_one", False):
             return f"{op.name}_id"
         return op.name
+
+    def _is_superseded(
+        self,
+        loaded: LoadedMigration,
+        *,
+        plan: list[str],
+        by_name: dict[str, LoadedMigration],
+        schema: PostgresSchemaInspector | None = None,
+    ) -> bool:
+        """True if every MISSING DDL-effect of ``loaded`` is undone downstream.
+
+        For each introspectable op (CreateModel / AddField) whose effect
+        is NOT present in the live schema, scan migrations that come
+        AFTER ``loaded`` in the app's forward plan for a matching
+        ``DeleteModel`` / ``RemoveField``. If every missing effect has a
+        downstream cancellation, the recorded-but-missing state is
+        intentional, not drift.
+
+        Ops whose effect IS already present in the schema are not checked
+        — they don't represent drift even without cancellation.
+
+        ``schema=None`` falls back to the strict "all ops must be cancelled"
+        rule (used when the caller cannot supply a schema inspector, e.g.
+        for plan-only tests).
+
+        Trade-off: we only handle direct cancellation, not rename chains.
+        A CreateModel→RenameModel→DeleteModel sequence will still flag
+        as drift — acceptable, very rare.
+        """
+        if not plan:
+            return False
+        try:
+            idx = plan.index(loaded.name)
+        except ValueError:
+            return False
+        later_ops = []
+        for later_name in plan[idx + 1:]:
+            later = by_name.get(later_name)
+            if later is None:
+                continue
+            later_ops.extend(later.migration.operations)
+        if not later_ops:
+            return False
+
+        deleted_models = {
+            op.name.lower() for op in later_ops
+            if isinstance(op, dj_migrations.DeleteModel)
+        }
+        removed_fields = {
+            (op.model_name.lower(), op.name.lower()) for op in later_ops
+            if isinstance(op, dj_migrations.RemoveField)
+        }
+
+        for op in loaded.migration.operations:
+            if isinstance(op, dj_migrations.CreateModel):
+                if self._is_non_ddl_create(op):
+                    continue
+                table = self._table_name_for_create(loaded.app_label, op)
+                if schema is not None and schema.table_exists(table):
+                    continue  # Effect present — nothing to cancel.
+                if op.name.lower() not in deleted_models:
+                    return False
+            elif isinstance(op, dj_migrations.AddField):
+                model = self._resolve_model(loaded.app_label, op.model_name)
+                if schema is not None and model is not None:
+                    col = self._column_name_for_field(op)
+                    if schema.column_exists(model._meta.db_table, col):
+                        continue  # Effect present — nothing to cancel.
+                key = (op.model_name.lower(), op.name.lower())
+                # AddField is cancelled either by RemoveField OR by the
+                # parent model being deleted later.
+                if key not in removed_fields and op.model_name.lower() not in deleted_models:
+                    return False
+        return True
 
     def _resolve_model(self, app_label: str, model_name: str):
         try:

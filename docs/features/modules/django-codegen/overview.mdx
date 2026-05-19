@@ -1,13 +1,5 @@
 ---
 title: Overview
-sidebar_position: 1
-keywords:
-  - code generation
-  - api client
-  - typescript
-  - python
-  - openapi
-  - multi-target
 description: Unified code generation module for API clients, supporting multiple platforms and targets with automatic extension discovery.
 ---
 
@@ -15,7 +7,7 @@ description: Unified code generation module for API clients, supporting multiple
 
 **Unified code generation module for multi-platform API clients.**
 
-The `django_codegen` module provides a declarative configuration system for generating API clients across multiple platforms (TypeScript, Python, Go, Swift) with support for multiple targets and automatic extension discovery.
+The `django_generator` module provides a declarative configuration system for generating API clients across multiple platforms (TypeScript, Python, Go, Swift) with support for multiple targets and automatic extension discovery.
 
 ## Key Features
 
@@ -35,7 +27,7 @@ The `django_codegen` module provides a declarative configuration system for gene
 # generation.py
 from pathlib import Path
 
-from django_cfg.modules.django_codegen import (
+from django_cfg.modules.django_generator import (
     Config,
     OpenAPI,
     Target,
@@ -91,10 +83,9 @@ python manage.py gen --groups profiles catalog
 ## Architecture
 
 ```
-django_codegen/
+django_generator/
 ├── __init__.py           # Public API exports
-├── config.py             # Pydantic configuration models
-├── runner.py             # Generation orchestrator
+├── public/config.py      # Pydantic configuration models
 ├── apps.py               # Django app config
 └── management/
     └── commands/
@@ -239,7 +230,7 @@ This copies generated Python clients to the Streamlit app's `api/generated/` dir
 Generate Centrifugo RPC clients:
 
 ```python
-from django_cfg.modules.django_codegen import Config, Centrifugo, Target
+from django_cfg.modules.django_generator import Config, Centrifugo, Target
 
 config = Config(
     centrifugo=Centrifugo(
@@ -262,7 +253,7 @@ config = Config(
 Generate FastAPI/SQLModel models from Django models:
 
 ```python
-from django_cfg.modules.django_codegen import Config, ORM, ORMTarget, ORMGenerator
+from django_cfg.modules.django_generator import Config, ORM, ORMTarget, ORMGenerator
 
 config = Config(
     orm=ORM(
@@ -284,7 +275,7 @@ config = Config(
 ## Programmatic Usage
 
 ```python
-from django_cfg.modules.django_codegen import (
+from django_cfg.modules.django_generator import (
     run,
     run_with_options,
     GeneratorOptions,

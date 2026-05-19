@@ -34,6 +34,9 @@ def get_enabled_cfg_apps() -> List[str]:
     enabled_apps.append("django_cfg.apps.api.health")
     enabled_apps.append("django_cfg.apps.api.commands")
 
+    # Sitemap module — its AppConfig.ready() autoloads per-app sitemap_sources.py
+    enabled_apps.append("django_cfg.modules.django_sitemap")
+
     # Integration apps
     if base_module.is_centrifugo_enabled():
         enabled_apps.append("django_cfg.modules.django_centrifugo")
@@ -101,6 +104,7 @@ def get_default_cfg_group():
 # Core API endpoints (always enabled)
 urlpatterns = [
     path('og/', include('django_cfg.modules.django_ogimage.http.urls')),
+    path('cfg/sitemap/', include('django_cfg.modules.django_sitemap.http.urls')),
     path('cfg/health/', include('django_cfg.apps.api.health.urls')),
     path('cfg/endpoints/', include('django_cfg.apps.api.endpoints.urls')),
     path('cfg/commands/', include('django_cfg.apps.api.commands.urls')),

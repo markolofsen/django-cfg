@@ -48,6 +48,7 @@ DEFAULT_APPS: List[str] = [
     "django_cfg",
     "django_cfg.modules.django_generator",
     "django_cfg.modules.django_admin",
+    "django_cfg.modules.django_sitemap",
 ]
 
 # Default middleware stack

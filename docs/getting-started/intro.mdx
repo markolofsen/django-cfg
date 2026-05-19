@@ -1,17 +1,6 @@
 ---
 title: Django-CFG - Type-Safe Django Configuration
-description: Learn intro in Django-CFG. Step-by-step guide to django-cfg - type-safe django configuration with code examples, best practices, and production-ready configurat
-sidebar_label: Introduction
-sidebar_position: 1
-asIndexPage: true
-keywords:
-  - django configuration framework
-  - type-safe django
-  - pydantic django
-  - django AI framework
-  - django settings validation
-  - django pydantic models
-  - production django configuration
+description: Learn intro in Django-CFG. Step-by-step guide to django-cfg - type-safe django configuration with code examples, best practices, and production-ready configuration.
 ---
 
 
@@ -335,9 +324,8 @@ class SaaSConfig(DjangoConfig):
 **With Django-CFG:**
 ```python
 from django_cfg import (
-    DjangoConfig, DatabaseConfig, EmailConfig, TaskConfig, SpectacularConfig
+    DjangoConfig, DatabaseConfig, EmailConfig, SpectacularConfig, DjangoRQConfig
 )
-from pydantic import SecretStr
 from typing import Dict
 
 class APIServiceConfig(DjangoConfig):
@@ -361,10 +349,8 @@ class APIServiceConfig(DjangoConfig):
     )
 
     # Background tasks for async processing
-    task: TaskConfig = TaskConfig(
-        broker_url=f"redis://{env.redis.host}:6379/0",
-        result_backend=f"redis://{env.redis.host}:6379/1",
-    )
+    redis_url: str = f"redis://{env.redis.host}:6379/0"
+    # Django-CFG auto-creates cache from redis_url; for task queues use django_rq
 
     # API documentation auto-generated
     spectacular: SpectacularConfig = SpectacularConfig(

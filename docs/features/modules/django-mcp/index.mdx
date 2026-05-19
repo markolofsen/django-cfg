@@ -1,0 +1,48 @@
+---
+title: django_mcp — MCP & Admin Chat Agent
+description: Expose Django data to AI agents via Model Context Protocol and embed a streaming chat agent in the Django admin.
+---
+
+# django_mcp — MCP & Admin Chat Agent
+
+`django_mcp` does two independent things that share a configuration model and a tool registry:
+
+1. **MCP protocol server** — a JSON-RPC 2.0 endpoint that lets external AI clients (Claude Desktop, Cursor, custom agents) read and query your Django application's data.
+2. **Admin chat agent** — an LLM-powered chat interface embedded directly in the Django admin dashboard. Superusers can ask natural-language questions and get answers backed by real Django queries.
+
+Both subsystems use the same global tool registry, so any tool you register is available in both contexts immediately.
+
+<Callout type="info">
+`django_mcp` requires `django_llm` for the admin chat agent. The MCP protocol server works without it.
+</Callout>
+
+## What you can do with it
+
+- Connect Claude Desktop, Cursor, or any MCP-compatible client to your Django app and let it query models, run management commands, and inspect the app structure.
+- Let admin users ask "How many users signed up this week?" or "Show me the 10 largest orders" directly from the admin panel — no SQL, no custom views.
+- Build custom tools that wrap any Django logic and expose them to both external MCP clients and the admin chat in one registration step.
+- Track every tool call in `MCPAuditLog` for compliance and debugging.
+
+## Quick start
+
+```python
+# api/config.py
+from django_cfg import DjangoConfig
+from django_cfg.modules.django_mcp.__cfg__ import DjangoMCPModuleConfig
+
+class MyConfig(DjangoConfig):
+    mcp = DjangoMCPModuleConfig(
+        enabled=True,
+        access_key="your-secret-key",
+    )
+```
+
+That's enough to start the MCP server at `POST /cfg/mcp/` and enable the admin chat. Add `exposed_apps` to let agents query your models.
+
+<Cards>
+  <Card title="Architecture" href="./architecture">How the two subsystems are designed and how they share tools.</Card>
+  <Card title="Configuration" href="./configuration">Full reference for `DjangoMCPModuleConfig` and all nested config models.</Card>
+  <Card title="MCP Tools" href="./tools">Built-in tools, custom tool creation, and the tool registry.</Card>
+  <Card title="Admin Chat Agent" href="./agent-chat">SSE streaming, session history, and the agentic loop.</Card>
+  <Card title="Redis & Caching" href="./redis">Query cache, per-session budget tracking, and chat history persistence.</Card>
+</Cards>

@@ -2,7 +2,6 @@
 title: LLM Balance Monitoring
 description: Professional monitoring of OpenAI and OpenRouter account balances with automatic email and Telegram notifications
 sidebar_label: Balance Monitoring
-sidebar_position: 2
 keywords:
   - llm monitoring
   - openai balance
@@ -451,13 +450,13 @@ from typing import Optional, Literal
 from pydantic import BaseModel, Field
 
 class BalanceResponse(BaseModel):
-    balance: Optional[float] = None      # USD balance (None if unavailable)
-    currency: str = "usd"                # Currency code
-    usage: Optional[float] = None        # Total usage
-    limit: Optional[float] = None        # Total limit/credits
+    balance: Optional[float] = None      # USD balance (None when unavailable, e.g. OpenAI)
+    currency: str = "usd"                # Always "usd"
+    usage: Optional[float] = None        # Total spend to date (OpenRouter only)
+    limit: Optional[float] = None        # Total credits purchased (OpenRouter only)
     status: Optional[Literal["valid", "invalid", "error", "unavailable"]] = None
-    note: Optional[str] = None           # Additional information
-    error: Optional[str] = None          # Error message if check failed
+    note: Optional[str] = None           # Human-readable extra info
+    error: Optional[str] = None          # Error message if the balance check failed
 ```
 
 ### API Endpoints

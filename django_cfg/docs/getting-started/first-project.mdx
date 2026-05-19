@@ -1,13 +1,6 @@
 ---
 title: Your First Django-CFG Project
 description: Learn first project in Django-CFG. Step-by-step guide to your first django-cfg project with code examples, best practices, and production-ready configuration.
-sidebar_label: First Project
-sidebar_position: 4
-keywords:
-  - django-cfg first project
-  - django-cfg tutorial
-  - create django-cfg project
-  - django-cfg example
 ---
 
 
@@ -509,7 +502,7 @@ class SaaSConfig(DjangoConfig):
 Update **core/environment/loader.py** (see [Cache Configuration](../../configuration/cache) for advanced options):
 
 ```python
-class EnvironmentConfig(BaseModel):
+class EnvironmentConfig(BaseSettings):
     # ... existing fields ...
 
     # Cache
@@ -573,7 +566,3 @@ python manage.py check
 - [Built-in Apps](../../features/built-in-apps/overview) - Enable additional features
 - [Deployment](../../guides/docker/overview) - Deploy to production
 - [Multi-Database](../../guides/multi-database) - Set up database routing
-
-TAGS: tutorial, first-project, yaml, pydantic, django-cfg, saas, multi-tenant
-DEPENDS_ON: [installation, configuration]
-USED_BY: [configuration, built-in-apps]

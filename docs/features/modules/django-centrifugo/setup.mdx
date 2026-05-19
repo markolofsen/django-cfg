@@ -1,3 +1,8 @@
+---
+title: Setup and Configuration
+description: Complete guide to setting up Centrifugo WebSocket integration with native RPC proxy in your Django-CFG project.
+---
+
 # Setup and Configuration
 
 Complete guide to setting up Centrifugo WebSocket integration with native RPC proxy in your Django-CFG project.
@@ -149,16 +154,19 @@ class MyConfig(DjangoConfig):
     centrifugo: Optional[DjangoCfgCentrifugoConfig] = DjangoCfgCentrifugoConfig(
         enabled=True,
 
+        # Python Wrapper URL (required)
+        wrapper_url="http://centrifugo-wrapper:8080",
+
         # Centrifugo server URLs
-        centrifugo_url="ws://localhost:8000/connection/websocket",
-        centrifugo_api_url="http://centrifugo:8000/api",
+        centrifugo_url="ws://localhost:8002/connection/websocket",
+        centrifugo_api_url="http://centrifugo:8002/api",
         centrifugo_api_key="your-api-key-min-32-chars",
         centrifugo_token_hmac_secret="your-hmac-secret-min-32-chars",
 
         # Optional settings
-        default_ack_timeout=30,
+        ack_timeout=10,
         log_level="INFO",
-        log_all_calls=True,
+        log_all_calls=False,
     )
 ```
 
@@ -187,13 +195,14 @@ class MyConfig(DjangoConfig):
 ```bash
 # Django Centrifugo Client (pydantic-settings format)
 CENTRIFUGO__ENABLED=true
-CENTRIFUGO__CENTRIFUGO_URL=ws://localhost:8000/connection/websocket
-CENTRIFUGO__CENTRIFUGO_API_URL=http://centrifugo:8000/api
+CENTRIFUGO__WRAPPER_URL=http://centrifugo-wrapper:8080
+CENTRIFUGO__CENTRIFUGO_URL=ws://localhost:8002/connection/websocket
+CENTRIFUGO__CENTRIFUGO_API_URL=http://centrifugo:8002/api
 CENTRIFUGO__CENTRIFUGO_API_KEY=your-api-key-min-32-chars
 CENTRIFUGO__CENTRIFUGO_TOKEN_HMAC_SECRET=your-hmac-secret-min-32-chars
-CENTRIFUGO__DEFAULT_ACK_TIMEOUT=30
+CENTRIFUGO__ACK_TIMEOUT=10
 CENTRIFUGO__LOG_LEVEL=INFO
-CENTRIFUGO__LOG_ALL_CALLS=true
+CENTRIFUGO__LOG_ALL_CALLS=false
 ```
 
 ## Step 3: Register RPC Handlers
@@ -332,18 +341,26 @@ client.on('connected', async () => {
 | `client.token.hmac_secret_key` | `string` | JWT signing secret |
 | `http_api.key` | `string` | API key for server-side calls |
 
-### Django Settings
+### DjangoCfgCentrifugoConfig Fields
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
 | `enabled` | `bool` | `False` | Enable Centrifugo integration |
-| `centrifugo_url` | `str` | - | WebSocket URL for clients |
-| `centrifugo_api_url` | `str` | - | HTTP API URL for publishing |
-| `centrifugo_api_key` | `str` | - | API key for HTTP API |
-| `centrifugo_token_hmac_secret` | `str` | - | JWT signing secret |
-| `default_ack_timeout` | `int` | `30` | RPC timeout in seconds |
-| `log_level` | `str` | `"INFO"` | Logging level |
-| `log_all_calls` | `bool` | `True` | Log all RPC calls |
+| `wrapper_url` | `str` | `"http://localhost:8080"` | Python Wrapper HTTP API URL |
+| `wrapper_api_key` | `Optional[str]` | `None` | Optional API key for wrapper authentication |
+| `centrifugo_url` | `str` | `"ws://localhost:8002/connection/websocket"` | WebSocket URL for browser clients |
+| `centrifugo_api_url` | `str` | `"http://localhost:8002/api"` | HTTP API URL for server-to-server calls |
+| `centrifugo_api_key` | `Optional[str]` | `None` | API key for server-to-server authentication |
+| `centrifugo_token_hmac_secret` | `Optional[str]` | `None` | HMAC secret for JWT generation (uses Django `SECRET_KEY` if `None`) |
+| `default_timeout` | `int` | `30` | Default publish timeout in seconds |
+| `ack_timeout` | `int` | `10` | ACK timeout for delivery confirmation in seconds |
+| `http_timeout` | `int` | `35` | HTTP request timeout to wrapper in seconds |
+| `max_retries` | `int` | `3` | Maximum retry attempts for failed publishes |
+| `retry_delay` | `float` | `1.0` | Delay between retries in seconds |
+| `verify_ssl` | `bool` | `False` | Verify SSL certificates for HTTPS connections |
+| `log_all_calls` | `bool` | `False` | Log all publish calls to database |
+| `log_only_with_ack` | `bool` | `True` | Only log calls that wait for ACK |
+| `log_level` | `str` | `"INFO"` | Log level (`DEBUG`/`INFO`/`WARNING`/`ERROR`/`CRITICAL`) |
 
 ## Troubleshooting
 

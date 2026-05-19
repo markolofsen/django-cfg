@@ -1,8 +1,6 @@
 ---
 title: Deployment Guide
 description: Production deployment with Docker and best practices for Django-CFG sample project
-sidebar_label: Deployment
-sidebar_position: 10
 ---
 
 # Deployment Guide
@@ -198,102 +196,73 @@ server {
 
 ### Environment Variables
 
-Set production environment variables:
+Set production environment variables (use `__` double-underscore for nested config):
 
 ```bash
-# .env.production
+# Core
 SECRET_KEY=your-super-secret-key-change-in-production
 DEBUG=false
-DJANGO_ENV=prod
+IS_PROD=true
+
+# Database (nested with __)
+DATABASE__URL=postgresql://user:password@db:5432/djangocfg_sample
+
+# Cache
+REDIS_URL=redis://redis:6379/0
+
+# Email (nested with __)
+EMAIL__HOST=smtp.example.com
+EMAIL__PORT=587
+EMAIL__USE_TLS=true
+EMAIL__DEFAULT_FROM=noreply@myapp.com
+
+# Telegram (nested with __)
+TELEGRAM__BOT_TOKEN=123456:ABC-DEF
+TELEGRAM__CHAT_ID=-1001234567890
+
+# Application
+APP__NAME="Django CFG Sample"
+APP__API_URL=https://api.myapp.com
+APP__SITE_URL=https://myapp.com
+
+# Security domains
+SECURITY_DOMAINS=myapp.com,www.myapp.com
+```
+
+### Production Environment Variables
+
+All configuration uses environment variables — no YAML files. Set these in Docker Compose or K8s Secrets:
+
+```bash
+# Core
+SECRET_KEY="production-secret-key-from-secrets-manager"
+DEBUG=false
 IS_PROD=true
 
 # Database
-DATABASE_URL=postgresql://user:password@db:5432/djangocfg_sample
-DB_HOST=db
-DB_PORT=5432
-DB_NAME=djangocfg_sample
-DB_USER=djangocfg
-DB_PASSWORD=secure_password
+DATABASE__URL="postgresql://prod_user:prod_pass@db.example.com:5432/prod_db"
 
-# Redis
-REDIS_URL=redis://redis:6379/0
+# Cache
+REDIS_URL="redis://redis:6379/1"
+
+# Application
+APP__NAME="Django CFG Sample"
+APP__API_URL="https://api.example.com"
+APP__SITE_URL="https://example.com"
+
+# Security domains (ALLOWED_HOSTS / CORS)
+SECURITY_DOMAINS="example.com,api.example.com"
 
 # Email
-EMAIL_HOST=smtp.example.com
-EMAIL_FROM=noreply@myapp.com
+EMAIL__HOST="smtp.example.com"
+EMAIL__PORT=587
+EMAIL__USERNAME="your-user"
+EMAIL__PASSWORD="your-password"
+EMAIL__USE_TLS=true
 
 # Telegram
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF
-TELEGRAM_CHAT_ID=@your_channel
-
-# Domain
-DOMAIN=myapp.com
-ALLOWED_HOSTS=myapp.com,www.myapp.com
-
-# Security (SSL handled by nginx reverse proxy)
-# SECURE_SSL_REDIRECT not needed - Django-CFG defaults to reverse proxy mode
-SESSION_COOKIE_SECURE=true
-CSRF_COOKIE_SECURE=true
-```
-
-### Production YAML Configuration
-
-```yaml
-# api/environment/config.prod.yaml
-secret_key: "<from-yaml-config>"  # Loaded from environment
-debug: false
-is_prod: true
-
-# Database configuration
-database:
-  url: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
-
-# Application settings
-app:
-  name: "Django CFG Sample"
-  domain: "${DOMAIN}"
-
-security_domains: ["${DOMAIN}", "www.${DOMAIN}"]
-
-# Email configuration
-email:
-  host: "${EMAIL_HOST}"
-  from_email: "${EMAIL_FROM}"
-
-# Telegram configuration
-telegram:
-  bot_token: "${TELEGRAM_BOT_TOKEN}"
-  chat_id: "${TELEGRAM_CHAT_ID}"
-
-# Cache configuration (Redis)
-cache:
-  backend: "django_redis.cache.RedisCache"
-  location: "${REDIS_URL}"
-
-# Static files (served by nginx)
-static:
-  url: "/static/"
-  root: "/app/static/"
-
-# Media files (served by nginx)
-media:
-  url: "/media/"
-  root: "/app/media/"
-
-# Security settings
-# Note: SSL/TLS handled by nginx reverse proxy
-# secure_ssl_redirect not needed - Django-CFG defaults to reverse proxy mode
-security:
-  session_cookie_secure: true
-  csrf_cookie_secure: true
-  secure_browser_xss_filter: true
-  secure_content_type_nosniff: true
-  secure_hsts_seconds: 31536000
-
-# Logging
-logging:
-  level: "INFO"
-  format: "json"
+TELEGRAM__BOT_TOKEN="1234567890:ABCdefGHI"
+TELEGRAM__CHAT_ID=-1001234567890
 ```
 
 See [Configuration](./configuration) for complete configuration details.
@@ -571,21 +540,17 @@ databases: Dict[str, DatabaseConfig] = {
 
 ### Redis Caching
 
-Enable Redis caching:
+Enable Redis caching by setting `redis_url` on your config. Django-CFG auto-creates the Redis cache backend:
 
 ```python
 # api/config.py
-cache: CacheConfig = CacheConfig(
-    backend="django_redis.cache.RedisCache",
-    location=env.redis.url,
-    options={
-        "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        "CONNECTION_POOL_KWARGS": {
-            "max_connections": 50,
-            "retry_on_timeout": True,
-        },
-    }
-)
+redis_url: Optional[str] = env.redis_url  # From REDIS_URL env var
+```
+
+Set via environment:
+
+```bash
+REDIS_URL="redis://redis:6379/1"
 ```
 
 ## Deployment Checklist

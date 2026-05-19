@@ -1,12 +1,6 @@
 ---
 title: Ngrok Configuration Reference
 description: Django-CFG configuration feature guide. Production-ready ngrok configuration reference with built-in validation, type safety, and seamless Django integration.
-sidebar_label: Configuration
-sidebar_position: 2
-keywords:
-  - django-cfg configuration
-  - django configuration
-  - configuration django-cfg
 ---
 
 # Ngrok Configuration Reference
@@ -24,9 +18,7 @@ class MyConfig(DjangoConfig):
     # Enable ngrok for webhook development
     ngrok: NgrokConfig = NgrokConfig(
         enabled=True,  # Enable ngrok (only in DEBUG=True)
-        auto_start=True,  # Auto-start with runserver_ngrok
-        webhook_path="/api/webhooks/",  # Path for webhook URLs
-        update_api_url=True  # Automatically update api_url
+        authtoken="${NGROK_AUTHTOKEN}",  # Optional: from env var automatically if omitted
     )
 
 config = MyConfig()
@@ -37,11 +29,9 @@ config = MyConfig()
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | `bool` | `False` | Enable ngrok integration (only works when `DEBUG=True`) |
-| `auto_start` | `bool` | `True` | Automatically start tunnel when using `runserver_ngrok` |
-| `webhook_path` | `str` | `"/webhooks/"` | Default path for webhook URLs |
-| `update_api_url` | `bool` | `True` | Automatically update `api_url` with tunnel URL |
-| `auth` | `NgrokAuthConfig` | `None` | Authentication configuration |
-| `tunnel` | `NgrokTunnelConfig` | `None` | Tunnel-specific settings |
+| `authtoken` | `Optional[str]` | `None` | Ngrok auth token. Falls back to `NGROK_AUTHTOKEN` env var if `None` |
+| `basic_auth` | `Optional[List[str]]` | `None` | Basic auth credentials in format `["user:pass"]` |
+| `compression` | `bool` | `True` | Enable gzip compression |
 
 ---
 
@@ -49,71 +39,41 @@ config = MyConfig()
 
 ### With Authentication
 
-For advanced ngrok features like custom domains, you need an auth token:
+For advanced ngrok features like custom domains, provide an auth token:
 
 ```python
-from django_cfg import NgrokConfig, NgrokAuthConfig
+from django_cfg import NgrokConfig
 
 ngrok: NgrokConfig = NgrokConfig(
     enabled=True,
-
-    # Authentication
-    auth=NgrokAuthConfig(
-        authtoken_from_env=True  # Load from NGROK_AUTHTOKEN env var
-    )
+    authtoken="${NGROK_AUTHTOKEN}",  # Load from NGROK_AUTHTOKEN env var
 )
 ```
 
-**Or provide token directly:**
+**Or provide token directly (not recommended for production):**
 
 ```python
 ngrok: NgrokConfig = NgrokConfig(
     enabled=True,
-
-    auth=NgrokAuthConfig(
-        authtoken="your_ngrok_token_here"  # Not recommended for production
-    )
+    authtoken="your_ngrok_token_here",
 )
 ```
 
-### NgrokAuthConfig Fields
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `authtoken` | `str` | `None` | Ngrok auth token (get from [ngrok.com](https://ngrok.com)) |
-| `authtoken_from_env` | `bool` | `False` | Load auth token from `NGROK_AUTHTOKEN` environment variable |
+If `authtoken` is `None`, the service automatically checks the `NGROK_AUTHTOKEN` environment variable at tunnel start via `get_authtoken()`.
 
 ---
 
-### With Custom Tunnel Settings
+### With Basic Auth Protection
 
-Advanced tunnel configuration for paid ngrok plans:
+Password-protect the tunnel:
 
 ```python
-from django_cfg import NgrokConfig, NgrokTunnelConfig
-
 ngrok: NgrokConfig = NgrokConfig(
     enabled=True,
-
-    # Tunnel settings
-    tunnel=NgrokTunnelConfig(
-        domain="myapp.ngrok.io",  # Custom domain (paid plan)
-        basic_auth=["admin:secret"],  # Password protect tunnel
-        compression=True,  # Enable gzip compression
-        bind_tls=True,  # Force HTTPS
-    )
+    basic_auth=["admin:secret"],  # Format: ["user:pass"]
+    compression=True,
 )
 ```
-
-### NgrokTunnelConfig Fields
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `domain` | `str` | `None` | Custom ngrok domain (requires paid plan) |
-| `basic_auth` | `List[str]` | `None` | Basic auth credentials (format: `["user:pass"]`) |
-| `compression` | `bool` | `False` | Enable gzip compression |
-| `bind_tls` | `bool` | `True` | Force HTTPS connections |
-| `inspect` | `bool` | `True` | Enable ngrok web interface |
 
 ---
 
@@ -164,26 +124,18 @@ class MyConfig(DjangoConfig):
     # Ngrok only in development
     ngrok: NgrokConfig = NgrokConfig(
         enabled=(env.environment == "development"),
-        webhook_path="/api/webhooks/"
     )
 ```
 
-### Example 2: With Custom Domain
+### Example 2: With Auth Token from Env
 
 ```python
-from django_cfg import NgrokConfig, NgrokAuthConfig, NgrokTunnelConfig
+from django_cfg import NgrokConfig
 
 ngrok: NgrokConfig = NgrokConfig(
     enabled=True,
-
-    auth=NgrokAuthConfig(
-        authtoken_from_env=True  # Load from NGROK_AUTHTOKEN
-    ),
-
-    tunnel=NgrokTunnelConfig(
-        domain="myapp.ngrok.io",  # Custom domain
-        compression=True
-    )
+    # authtoken is None → automatically reads NGROK_AUTHTOKEN at tunnel start
+    compression=True,
 )
 ```
 
@@ -192,12 +144,7 @@ ngrok: NgrokConfig = NgrokConfig(
 ```python
 ngrok: NgrokConfig = NgrokConfig(
     enabled=True,
-
-    tunnel=NgrokTunnelConfig(
-        # Protect tunnel with basic auth
-        basic_auth=["admin:supersecret"],
-        bind_tls=True  # Force HTTPS
-    )
+    basic_auth=["admin:supersecret"],
 )
 ```
 
@@ -207,17 +154,11 @@ ngrok: NgrokConfig = NgrokConfig(
 from .environment import env
 
 class MyConfig(DjangoConfig):
-    # Different settings per environment
     ngrok: NgrokConfig = NgrokConfig(
         enabled=(env.environment == "development"),
-        webhook_path=(
-            "/webhooks/"  # Development
-            if env.environment == "development"
-            else None  # Production
-        )
     )
 
-    # Use ngrok URL in dev, real URL in prod
+    # Use real URL in prod
     api_url: str = (
         "https://api.myapp.com"
         if env.environment == "production"
@@ -229,56 +170,50 @@ class MyConfig(DjangoConfig):
 
 ## Configuration Best Practices
 
-### 1. Use Environment Variables
+### 1. Use Environment Variables for Auth Token
 
 ```python
-# ✅ CORRECT - load from environment
+# ✅ CORRECT - omit authtoken; NGROK_AUTHTOKEN env var is read automatically
 ngrok: NgrokConfig = NgrokConfig(
     enabled=True,
-    auth=NgrokAuthConfig(
-        authtoken_from_env=True  # From NGROK_AUTHTOKEN
-    )
 )
 
 # ❌ WRONG - hardcode token
 ngrok: NgrokConfig = NgrokConfig(
     enabled=True,
-    auth=NgrokAuthConfig(
-        authtoken="hardcoded-token"  # Security risk!
-    )
+    authtoken="hardcoded-token",  # Security risk!
 )
 ```
 
 ### 2. Development Only
 
 ```python
-# ✅ CORRECT - automatically disabled in production
+# ✅ CORRECT - automatically disabled in production (validator enforces DEBUG=True)
 ngrok: NgrokConfig = NgrokConfig(
-    enabled=True  # Only works when DEBUG=True
+    enabled=True,
 )
 
 # Even better - explicit environment check
 from .environment import env
 
 ngrok: NgrokConfig = NgrokConfig(
-    enabled=(env.environment == "development")
+    enabled=(env.environment == "development"),
 )
 ```
 
 ### 3. Type-Safe Configuration
 
 ```python
-# ✅ CORRECT - use Pydantic models
+# ✅ CORRECT - use Pydantic model
 from django_cfg import NgrokConfig
 
 ngrok: NgrokConfig = NgrokConfig(
     enabled=True,
-    webhook_path="/api/webhooks/"  # Type-checked!
+    compression=True,
 )
 
 # ❌ WRONG - raw Django settings
-# NGROK_ENABLED = True
-# NGROK_WEBHOOK_PATH = "/api/webhooks/"  # No validation!
+# NGROK_ENABLED = True  # No validation!
 ```
 
 ---
@@ -288,20 +223,14 @@ ngrok: NgrokConfig = NgrokConfig(
 Django-CFG automatically validates your ngrok configuration:
 
 ```python
-# ❌ This will raise ValidationError
+# ❌ Raises ValidationError — cannot enable ngrok in production (DEBUG=False)
 ngrok: NgrokConfig = NgrokConfig(
-    enabled=True,
-    tunnel=NgrokTunnelConfig(
-        domain="invalid domain with spaces"  # ValidationError!
-    )
+    enabled=True,  # ValidationError if DEBUG is False
 )
 
-# ✅ Correct configuration
+# ✅ Correct — enable only in development
 ngrok: NgrokConfig = NgrokConfig(
-    enabled=True,
-    tunnel=NgrokTunnelConfig(
-        domain="myapp.ngrok.io"  # Valid!
-    )
+    enabled=(env.environment == "development"),
 )
 ```
 

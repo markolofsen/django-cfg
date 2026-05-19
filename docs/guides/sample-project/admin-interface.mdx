@@ -1,8 +1,6 @@
 ---
 title: Admin Interface
 description: Modern admin interface with Unfold theme and custom dashboards in Django-CFG
-sidebar_label: Admin Interface
-sidebar_position: 5
 ---
 
 # Admin Interface
@@ -18,28 +16,22 @@ The sample project uses the Unfold theme for a modern, Material Design-inspired 
 Configure the theme in `api/config.py`:
 
 ```python
-from django_cfg import UnfoldConfig
+from django_cfg import (
+    UnfoldConfig, UnfoldColors, UnfoldSidebar,
+    NavigationSection, NavigationItem, Icons,
+)
 
 unfold: UnfoldConfig = UnfoldConfig(
     site_title="Django-CFG Sample Admin",
     site_header="Django-CFG Sample",
     site_url="/",
-    site_icon={
-        "light": "/static/icon-light.svg",
-        "dark": "/static/icon-dark.svg",
-    },
-    navigation=[...],  # Navigation structure
-    colors={
-        "primary": {
-            "50": "250 245 255",
-            "100": "243 232 255",
-            "200": "233 213 255",
-            "300": "196 181 253",
-            "400": "147 51 234",
-            "500": "124 58 237",
-            "600": "109 40 217",
-        }
-    }
+    site_symbol=Icons.ROCKET_LAUNCH,
+    colors=UnfoldColors(primary="#4F46E5"),
+    sidebar=UnfoldSidebar(
+        show_search=True,
+        show_all_applications=True,
+    ),
+    navigation=[...],  # NavigationSection list
 )
 ```
 
@@ -52,42 +44,19 @@ UnfoldConfig(
     site_title="My Admin",           # Browser tab title
     site_header="My Site Admin",     # Admin header text
     site_url="/",                     # Logo link URL
-    index_title="Dashboard",          # Index page title
-)
-```
-
-#### Branding
-
-```python
-UnfoldConfig(
-    site_icon={
-        "light": "/static/icon-light.svg",  # Light mode icon
-        "dark": "/static/icon-dark.svg",     # Dark mode icon
-    },
-    site_logo={
-        "light": "/static/logo-light.svg",   # Light mode logo
-        "dark": "/static/logo-dark.svg",     # Dark mode logo
-    },
+    site_symbol=Icons.DASHBOARD,     # Material icon name
 )
 ```
 
 #### Colors
 
-Customize the color scheme:
+Customize the color scheme using `UnfoldColors`:
 
 ```python
+from django_cfg import UnfoldColors
+
 UnfoldConfig(
-    colors={
-        "primary": {
-            "50": "250 245 255",   # Lightest
-            "100": "243 232 255",
-            "200": "233 213 255",
-            "300": "196 181 253",
-            "400": "147 51 234",
-            "500": "124 58 237",   # Base color
-            "600": "109 40 217",   # Darkest
-        }
-    }
+    colors=UnfoldColors(primary="#4F46E5"),
 )
 ```
 
@@ -95,71 +64,40 @@ UnfoldConfig(
 
 ### Custom Navigation
 
-Define a custom navigation menu:
+Define a custom navigation menu using typed `NavigationSection` and `NavigationItem` objects:
 
 ```python
+from django_cfg import (
+    UnfoldConfig, NavigationSection, NavigationItem, Icons,
+)
+
 unfold: UnfoldConfig = UnfoldConfig(
     navigation=[
-        {
-            "title": "Dashboard",
-            "separator": True,
-            "items": [
-                {
-                    "title": "Overview",
-                    "icon": "dashboard",
-                    "link": "/admin/",
-                },
-            ]
-        },
-        {
-            "title": "Content Management",
-            "separator": True,
-            "items": [
-                {
-                    "title": "Blog Posts",
-                    "icon": "article",
-                    "link": "/admin/blog/post/",
-                },
-                {
-                    "title": "Comments",
-                    "icon": "comment",
-                    "link": "/admin/blog/comment/",
-                },
-            ]
-        },
-        {
-            "title": "E-Commerce",
-            "separator": True,
-            "items": [
-                {
-                    "title": "Products",
-                    "icon": "inventory",
-                    "link": "/admin/shop/product/",
-                },
-                {
-                    "title": "Orders",
-                    "icon": "shopping_cart",
-                    "link": "/admin/shop/order/",
-                },
-            ]
-        },
-        {
-            "title": "User Management",
-            "separator": True,
-            "items": [
-                {
-                    "title": "Users",
-                    "icon": "people",
-                    "link": "/admin/auth/user/",
-                },
-                {
-                    "title": "Profiles",
-                    "icon": "account_circle",
-                    "link": "/admin/profiles/profile/",
-                },
-            ]
-        }
-    ]
+        NavigationSection(
+            title="Content Management",
+            separator=True,
+            items=[
+                NavigationItem(title="Blog Posts", icon=Icons.ARTICLE, link="admin:blog_post_changelist"),
+                NavigationItem(title="Comments", icon=Icons.COMMENT, link="admin:blog_comment_changelist"),
+            ],
+        ),
+        NavigationSection(
+            title="E-Commerce",
+            separator=True,
+            items=[
+                NavigationItem(title="Products", icon=Icons.INVENTORY, link="admin:shop_product_changelist"),
+                NavigationItem(title="Orders", icon=Icons.SHOPPING_CART, link="admin:shop_order_changelist"),
+            ],
+        ),
+        NavigationSection(
+            title="User Management",
+            separator=True,
+            items=[
+                NavigationItem(title="Users", icon=Icons.PEOPLE, link="admin:auth_user_changelist"),
+                NavigationItem(title="Profiles", icon=Icons.ACCOUNT_CIRCLE, link="admin:profiles_profile_changelist"),
+            ],
+        ),
+    ],
 )
 ```
 
@@ -170,47 +108,45 @@ unfold: UnfoldConfig = UnfoldConfig(
 Add visual separators between sections:
 
 ```python
-{
-    "title": "Section Name",
-    "separator": True,  # Adds separator above section
-    "items": [...]
-}
+NavigationSection(
+    title="Section Name",
+    separator=True,  # Adds separator above section
+    items=[...],
+)
 ```
 
 #### Icons
 
-Use Material Design icons:
+Use `Icons` constants from `django_cfg`:
 
 ```python
-{
-    "title": "Dashboard",
-    "icon": "dashboard",  # Material icon name
-    "link": "/admin/",
-}
+from django_cfg import Icons, NavigationItem
+
+NavigationItem(title="Dashboard", icon=Icons.DASHBOARD, link="admin:index")
 ```
 
 Common icons:
-- `dashboard` - Dashboard/overview
-- `article` - Blog posts/content
-- `inventory` - Products/items
-- `shopping_cart` - Orders/cart
-- `people` - Users
-- `settings` - Settings
-- `analytics` - Analytics/reports
+- `Icons.DASHBOARD` - Dashboard/overview
+- `Icons.ARTICLE` - Blog posts/content
+- `Icons.INVENTORY` - Products/items
+- `Icons.SHOPPING_CART` - Orders/cart
+- `Icons.PEOPLE` - Users
+- `Icons.SETTINGS` - Settings
+- `Icons.ANALYTICS` - Analytics/reports
 
 #### Collapsible Sections
 
 Create expandable sections:
 
 ```python
-{
-    "title": "Reports",
-    "collapsible": True,
-    "items": [
-        {"title": "Sales Report", "link": "/admin/reports/sales/"},
-        {"title": "User Report", "link": "/admin/reports/users/"},
-    ]
-}
+NavigationSection(
+    title="Reports",
+    collapsible=True,
+    items=[
+        NavigationItem(title="Sales Report", link="admin:reports_sales_changelist"),
+        NavigationItem(title="User Report", link="admin:reports_users_changelist"),
+    ],
+)
 ```
 
 ## Model Admin Customization
@@ -388,12 +324,13 @@ class UserAdmin(ModelAdmin):
 ### Sidebar Settings
 
 ```python
+from django_cfg import UnfoldConfig, UnfoldSidebar
+
 UnfoldConfig(
-    sidebar={
-        "show_search": True,              # Enable search box
-        "show_all_applications": False,   # Hide ungrouped apps
-        "navigation": [...],               # Custom navigation
-    }
+    sidebar=UnfoldSidebar(
+        show_search=True,              # Enable search box
+        show_all_applications=False,   # Hide ungrouped apps
+    ),
 )
 ```
 
@@ -402,9 +339,9 @@ UnfoldConfig(
 Enable global search in sidebar:
 
 ```python
-sidebar={
-    "show_search": True,
-}
+sidebar=UnfoldSidebar(
+    show_search=True,
+)
 ```
 
 Users can search for:
@@ -455,21 +392,19 @@ class PostAdmin(ModelAdmin):
 
 ### 1. Organize Navigation Logically
 
-Group related items together:
+Group related items together using `NavigationSection`:
 
 ```python
 # ✅ Good: Logical grouping
 navigation=[
-    {"title": "Content", "items": [...]},
-    {"title": "E-Commerce", "items": [...]},
-    {"title": "Users", "items": [...]},
+    NavigationSection(title="Content", separator=True, items=[...]),
+    NavigationSection(title="E-Commerce", separator=True, items=[...]),
+    NavigationSection(title="Users", separator=True, items=[...]),
 ]
 
-# ❌ Bad: Random order
+# ❌ Bad: Random order or raw dicts
 navigation=[
-    {"title": "Orders", ...},
-    {"title": "Posts", ...},
-    {"title": "Products", ...},
+    {"title": "Orders", ...},   # Wrong: use NavigationSection objects
 ]
 ```
 

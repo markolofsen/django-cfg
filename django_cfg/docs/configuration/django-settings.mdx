@@ -1,8 +1,6 @@
 ---
 title: DjangoConfig Base Class
 description: Complete reference for DjangoConfig base configuration class
-sidebar_label: DjangoConfig
-sidebar_position: 2
 ---
 
 # DjangoConfig Base Class
@@ -780,8 +778,7 @@ elif config.is_test:
 ### With Services
 
 ```python
-from django_cfg import DjangoConfig, DatabaseConfig
-from django_cfg.models import EmailConfig, TelegramConfig
+from django_cfg import DjangoConfig, DatabaseConfig, EmailConfig, TelegramConfig
 
 class MyConfig(DjangoConfig):
     project_name: str = "My Project"
@@ -819,9 +816,7 @@ class MyConfig(DjangoConfig):
 ### With Integrations
 
 ```python
-from django_cfg import DjangoConfig, DatabaseConfig
-from django_cfg.models.api import DRFConfig, GRPCConfig
-from django_cfg.models import UnfoldConfig
+from django_cfg import DjangoConfig, DatabaseConfig, DRFConfig, UnfoldConfig
 
 class MyConfig(DjangoConfig):
     project_name: str = "My Project"
@@ -838,11 +833,6 @@ class MyConfig(DjangoConfig):
     drf = DRFConfig(
         page_size=20,
         max_page_size=100,
-    )
-
-    # gRPC server
-    grpc = GRPCConfig(
-        port=50051,
     )
 
     # Unfold admin interface

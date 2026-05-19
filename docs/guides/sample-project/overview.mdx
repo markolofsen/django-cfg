@@ -1,9 +1,6 @@
 ---
 title: Sample Project Overview
 description: Introduction to the comprehensive Django-CFG sample project demonstrating all features and best practices
-sidebar_label: Overview
-sidebar_position: 1
-asIndexPage: true
 ---
 
 # Sample Project Overview
@@ -182,17 +179,16 @@ The sample project showcases Django-CFG's type-safe configuration system:
 graph TB
     subgraph "1. Environment Sources"
         ENV[.env File]
-        YAML[config.yaml]
-        OS_ENV[OS Environment]
+        OS_ENV[OS Environment Variables]
     end
 
     subgraph "2. Django-CFG Processing"
-        LOADER[Environment Loader]
+        LOADER[Pydantic BaseSettings Loader]
         VALIDATOR[Pydantic Validator]
     end
 
     subgraph "3. Type-Safe Configuration"
-        CONFIG[SampleProjectConfig]
+        CONFIG[DjangoCfgConfig]
         DB_CFG[DatabaseConfig]
         EMAIL_CFG[EmailConfig]
         CACHE_CFG[CacheConfig]
@@ -206,7 +202,6 @@ graph TB
     end
 
     ENV --> LOADER
-    YAML --> LOADER
     OS_ENV --> LOADER
 
     LOADER --> VALIDATOR
@@ -228,13 +223,13 @@ graph TB
 ### Configuration Code Example
 
 ```python
-from django_cfg import DjangoConfig
+from django_cfg import DjangoConfig, set_current_config
 
-class SampleProjectConfig(DjangoConfig):
+class DjangoCfgConfig(DjangoConfig):
     """Complete Django-CFG sample configuration."""
 
     # Project metadata
-    project_name: str = "Django CFG Sample"
+    project_name: str = env.app.name
     debug: bool = env.debug
     secret_key: str = env.secret_key
 
@@ -242,17 +237,15 @@ class SampleProjectConfig(DjangoConfig):
     databases: Dict[str, DatabaseConfig] = {...}
 
     # Service integrations
-    email: EmailConfig = EmailConfig(...)
-    telegram: TelegramConfig = TelegramConfig(...)
+    email: Optional[EmailConfig] = EmailConfig(...)
+    telegram: Optional[TelegramConfig] = TelegramConfig(...)
 
     # Admin interface
     unfold: UnfoldConfig = UnfoldConfig(...)
 
-    # API configuration
-    drf: DRFConfig = DRFConfig(...)
-
-# Create global config instance
-config = SampleProjectConfig()
+# Create and register config instance
+config = DjangoCfgConfig()
+set_current_config(config)
 ```
 
 For complete configuration details, see [Configuration Setup](./configuration).

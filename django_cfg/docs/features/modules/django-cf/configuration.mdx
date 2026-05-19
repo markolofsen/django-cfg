@@ -1,12 +1,6 @@
 ---
 title: django_cf Configuration
 description: All CloudflareConfig fields, environment variables, and validation rules for the django_cf module.
-sidebar_label: Configuration
-keywords:
-  - cloudflare config
-  - django_cf settings
-  - d1 credentials
-  - telegram alerts
 ---
 
 # Configuration
@@ -26,7 +20,11 @@ class MyConfig(DjangoConfig):
         d1_database_id="${CF_D1_DATABASE_ID}",
         sync_users=True,               # sync CustomUser on post_save
         sync_batch_size=500,           # rows per batch in bulk sync
+        d1_plan="free",                # "free" or "paid"
+        d1_limit_warn_pct=80,          # warn at 80% of daily limit
         telegram_alerts_enabled=False, # Telegram on critical monitor events
+        telegram_batch_interval_sec=60,
+        telegram_alert_on_new=True,
     )
 ```
 
@@ -84,6 +82,20 @@ Set to `False` to disable automatic user sync (manual sync via `cf_sync_users` s
 
 Number of users per batch when running `full_sync_users()` (bulk sync command).
 
+### `d1_plan`
+
+**Default:** `"free"` (choices: `"free"`, `"paid"`)
+
+Cloudflare D1 billing plan. Affects daily usage limits enforced by the usage tracker:
+- `"free"` — 5 million reads / 100 000 writes per day
+- `"paid"` — unlimited (no enforcement)
+
+### `d1_limit_warn_pct`
+
+**Default:** `80` (range: 0–100)
+
+Log a `WARNING` when daily D1 usage exceeds this percentage of the plan limit. Set to `0` to disable warnings. Ignored when `d1_plan="paid"`.
+
 ### `telegram_alerts_enabled`
 
 **Default:** `False`
@@ -94,6 +106,18 @@ Enables Telegram notifications from `django_monitor` for critical events:
 - `SLOW_QUERY` (threshold > 5s)
 
 Requires `TelegramConfig` to also be configured in `DjangoConfig`.
+
+### `telegram_batch_interval_sec`
+
+**Default:** `60` (min: 10)
+
+Seconds between batched Telegram alert flushes. Alerts are queued and sent together to avoid flooding.
+
+### `telegram_alert_on_new`
+
+**Default:** `True`
+
+When `True`, flush the batch immediately when a new error fingerprint appears (first occurrence), regardless of the batch interval.
 
 ---
 

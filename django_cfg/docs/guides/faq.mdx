@@ -1,17 +1,6 @@
 ---
 title: Django-CFG FAQ - Frequently Asked Questions
 description: Comprehensive FAQ about Django-CFG type-safe configuration. Installation, features, comparison with alternatives, migration guide, troubleshooting, and best practices.
-sidebar_label: ❓ FAQ
-sidebar_position: 1
-keywords:
-  - django-cfg faq
-  - django-cfg questions
-  - django-cfg how to
-  - django configuration faq
-  - type-safe django questions
-  - pydantic django faq
-schema:
-  - type: FAQPage
 ---
 
 
@@ -167,7 +156,7 @@ class MyConfig(DjangoConfig):
 from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
-    databases: Dict[str, DatabaseConfig] = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name=env.database.name,
@@ -611,10 +600,10 @@ class MyConfig(DjangoConfig):
 
 **4. Use environment detection**:
 ```python
-from django_cfg import detect_environment
+import os
 
 class MyConfig(DjangoConfig):
-    debug: bool = detect_environment() == "development"
+    debug: bool = os.environ.get("ENV", "development") == "development"
 ```
 
 **5. Enable built-in apps for production features**:
@@ -630,19 +619,20 @@ enable_support: bool = True   # Support tickets
 **Single file with environment detection**:
 
 ```python
-from django_cfg import DjangoConfig, detect_environment
+import os
+from django_cfg import DjangoConfig
 
 class MyConfig(DjangoConfig):
     """Auto-detects environment"""
 
     # Different database per environment
-    databases: Dict[str, DatabaseConfig] = Field(
+    databases: dict[str, DatabaseConfig] = Field(
         default_factory=lambda: {
             "default": DatabaseConfig(
                 # SQLite for dev, PostgreSQL for prod
-                engine="django.db.backends.sqlite3" if detect_environment() == "development"
+                engine="django.db.backends.sqlite3" if os.environ.get("ENV") == "development"
                     else "django.db.backends.postgresql",
-                name="db.sqlite3" if detect_environment() == "development"
+                name="db.sqlite3" if os.environ.get("ENV") == "development"
                     else env.database.name,
             )
         }
@@ -662,12 +652,12 @@ class BaseConfig(DjangoConfig):
 class DevConfig(BaseConfig):
     """Development settings"""
     debug: bool = True
-    databases: Dict[str, DatabaseConfig] = {...}  # SQLite
+    databases: dict[str, DatabaseConfig] = {...}  # SQLite
 
 class ProdConfig(BaseConfig):
     """Production settings"""
     debug: bool = False
-    databases: Dict[str, DatabaseConfig] = {...}  # PostgreSQL
+    databases: dict[str, DatabaseConfig] = {...}  # PostgreSQL
 
 # In settings.py
 from myproject.config import DevConfig, ProdConfig

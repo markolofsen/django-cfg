@@ -2,41 +2,42 @@ export default {
   'index': { display: 'hidden' },
   'overview': 'Overview',
 
-  // --- Core Infrastructure ---
+  // ── Core Infrastructure ──────────────────────────────────────
   'django-cf': 'Cloudflare D1',
   'django-monitor': 'Monitor',
   'django-logging': 'Logging',
   'django-health': 'Health Checks',
 
-  // --- Communication ---
+  // ── Communication ────────────────────────────────────────────
   'django-grpc': 'gRPC Server',
   'django-centrifugo': 'Centrifugo WebSocket',
-  'django-rq': 'Django-RQ Tasks',
+  'django-rq': 'Background Tasks (RQ)',
   'django-email': 'Email',
   'django-telegram': 'Telegram Bot',
 
-  // --- Admin & UI ---
+  // ── Admin & UI ───────────────────────────────────────────────
   'django-admin': 'Django Admin',
   'django-unfold': 'Unfold Theme',
-  'streamlit-admin': 'Streamlit Admin',
+  'django-dashboard': 'Dashboard',
   'django-drf-theme': 'DRF Theme',
 
-  // --- Code Generation ---
+  // ── Code Generation ──────────────────────────────────────────
   'django-codegen': 'Code Generation',
-  'django-client': 'API Client',
   'django-fastapi': 'FastAPI ORM',
   'django-ogimage': 'OG Images',
 
-  // --- AI & LLM ---
+  // ── AI & LLM ────────────────────────────────────────────────
   'django-llm': 'LLM Integration',
   'django-llm-monitoring': 'LLM Monitoring',
+  'django-mcp': 'MCP (AI Agents)',
 
-  // --- Data & Tools ---
+  // ── Data & Tools ─────────────────────────────────────────────
   'django-currency': 'Currency',
-  'django-import-export': 'Import/Export',
+  'django-import-export': 'Import / Export',
   'django-cleanup': 'File Cleanup',
   'django-tailwind': 'Tailwind CSS',
+  'django-migrator': 'Migrator',
 
-  // --- Networking ---
+  // ── Networking ────────────────────────────────────────────────
   'django-ngrok': 'Ngrok Tunnels',
 }

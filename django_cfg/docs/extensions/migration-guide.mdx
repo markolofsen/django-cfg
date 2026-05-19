@@ -145,7 +145,6 @@ from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
 class PaymentsSettings(BaseExtensionSettings):
     # Move settings here
-    enabled: bool = True
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
     crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
 
@@ -236,10 +235,10 @@ python manage.py runserver
 # Check in shell
 python manage.py shell
 >>> from extensions.apps.payments.__cfg__ import settings
->>> settings.enabled
-True
 >>> settings.crypto_api_key
 'your-api-key'
+>>> settings.admin_enabled
+True
 ```
 
 ---
@@ -278,7 +277,7 @@ curl http://localhost:8000/cfg/support/api/
 ```python
 # api/config.py (OLD - 300 lines)
 from django_cfg import DjangoConfig
-from django_cfg.models import DatabaseConfig
+from django_cfg import DatabaseConfig
 
 class MyProjectConfig(DjangoConfig):
     project_name: str = "My SaaS Platform"
@@ -323,7 +322,7 @@ class MyProjectConfig(DjangoConfig):
 ```python
 # api/config.py (NEW - 50 lines)
 from django_cfg import DjangoConfig
-from django_cfg.models import DatabaseConfig
+from django_cfg import DatabaseConfig
 
 class MyProjectConfig(DjangoConfig):
     project_name: str = "My SaaS Platform"
@@ -347,7 +346,6 @@ class MyProjectConfig(DjangoConfig):
 from django_cfg.extensions.configs.apps import BaseExtensionSettings
 
 class PaymentsSettings(BaseExtensionSettings):
-    enabled: bool = True
     crypto_api_key: str = env.payments_api_keys.crypto_api_key
     crypto_webhook_secret: str = env.payments_api_keys.crypto_webhook_secret
 

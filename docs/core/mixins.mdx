@@ -1,0 +1,179 @@
+---
+title: API Access Mixins
+description: Four DRF ViewSet mixins that enforce authentication and permission tiers — public, client, admin, and superadmin — for Django-CFG API endpoints.
+---
+
+# API Access Mixins
+
+Django-CFG provides four DRF mixins that configure `authentication_classes` and `permission_classes` on ViewSets according to the access tier required. Apply the appropriate mixin as the first base class on any ViewSet or APIView.
+
+## Overview
+
+| Mixin | Permission | Authentication | Who can access |
+|-------|-----------|----------------|----------------|
+| `PublicAPIMixin` | `AllowAny` | None | Anyone (no token required) |
+| `ClientAPIMixin` | `IsAuthenticated` | JWT + Session | Any authenticated user |
+| `AdminAPIMixin` | `IsAdminUser` | JWT + Session + Basic | Staff users (`is_staff=True`) |
+| `SuperAdminAPIMixin` | `IsSuperUser` | JWT + Session + Basic | Superusers only (`is_superuser=True`) |
+
+All four mixins are importable directly from `django_cfg.mixins`:
+
+```python
+from django_cfg.mixins import (
+    PublicAPIMixin,
+    ClientAPIMixin,
+    AdminAPIMixin,
+    SuperAdminAPIMixin,
+)
+```
+
+---
+
+## PublicAPIMixin
+
+**Purpose:** Endpoints that require no authentication. Any client, authenticated or not, can call these endpoints.
+
+**Permission class:** `AllowAny`
+**Authentication classes:** none (empty list)
+
+CORS for public endpoints is handled separately by `PublicAPICORSMiddleware`. Configure the allowed paths via the `PUBLIC_API_CORS_PATHS` setting.
+
+```python
+from django_cfg.mixins import PublicAPIMixin
+from rest_framework import viewsets
+
+class LeadViewSet(PublicAPIMixin, viewsets.ModelViewSet):
+    queryset = Lead.objects.all()
+    serializer_class = LeadSerializer
+```
+
+Typical uses: contact forms, newsletter subscriptions, public product listings, OTP requests, health checks.
+
+---
+
+## ClientAPIMixin
+
+**Purpose:** Endpoints accessible to any authenticated user. The user must supply a valid JWT Bearer token or have an active session.
+
+**Permission class:** `IsAuthenticated`
+**Authentication classes:** `JWTAuthentication`, `SessionAuthentication`
+
+```python
+from django_cfg.mixins import ClientAPIMixin
+from rest_framework import viewsets
+
+class ProfileViewSet(ClientAPIMixin, viewsets.ModelViewSet):
+    serializer_class = ProfileSerializer
+
+    def get_queryset(self):
+        # Filter to the current user's data
+        return Profile.objects.filter(user=self.request.user)
+```
+
+Typical uses: user profile, order history, personal settings, any resource scoped to the requesting user.
+
+---
+
+## AdminAPIMixin
+
+**Purpose:** Endpoints restricted to Django staff users (`is_staff=True`). Supports three authentication methods to cover SPAs, the Django admin panel, and scripts.
+
+**Permission class:** `IsAdminUser`
+**Authentication classes:** `JWTAuthentication`, `SessionAuthentication`, `BasicAuthentication`
+
+```python
+from django_cfg.mixins import AdminAPIMixin
+from rest_framework import viewsets
+
+class OrderAdminViewSet(AdminAPIMixin, viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderAdminSerializer
+```
+
+Authentication methods in order:
+
+1. **JWT Bearer token** — for frontend SPA dashboards.
+2. **Session** — for views embedded in the Django admin.
+3. **Basic Auth** — for scripts and testing.
+
+Typical uses: admin dashboards, content moderation, support tooling, internal reporting endpoints.
+
+---
+
+## SuperAdminAPIMixin
+
+**Purpose:** Endpoints restricted to superusers only (`is_superuser=True`). More restrictive than `AdminAPIMixin` — staff users without the superuser flag are denied.
+
+**Permission class:** `IsSuperUser` (custom, checks `request.user.is_superuser`)
+**Authentication classes:** `JWTAuthentication`, `SessionAuthentication`, `BasicAuthentication`
+
+```python
+from django_cfg.mixins import SuperAdminAPIMixin
+from rest_framework import viewsets
+
+class SystemCommandViewSet(SuperAdminAPIMixin, viewsets.ViewSet):
+    def create(self, request):
+        # Execute sensitive system operation
+        ...
+```
+
+The `IsSuperUser` permission class is also importable directly if you need to apply it without the mixin:
+
+```python
+from django_cfg.mixins.superadmin_api import IsSuperUser
+
+class MyView(APIView):
+    permission_classes = [IsSuperUser]
+```
+
+Typical uses: management command execution, system configuration changes, direct database operations, developer tooling.
+
+---
+
+## Combining Mixins with Other Classes
+
+Mixins should be listed **before** the ViewSet base class in the MRO so that their `authentication_classes` and `permission_classes` attributes take precedence:
+
+```python
+# Correct — mixin first
+class ProductViewSet(ClientAPIMixin, viewsets.ModelViewSet):
+    ...
+
+# Also valid — explicit override after mixin
+class SpecialViewSet(ClientAPIMixin, viewsets.ModelViewSet):
+    # Override to add a custom permission on top
+    permission_classes = [IsAuthenticated, IsEmailVerified]
+```
+
+## Per-Action Permission Overrides
+
+Use `get_permissions()` to apply different access tiers per action:
+
+```python
+from django_cfg.mixins import PublicAPIMixin, ClientAPIMixin
+from rest_framework import viewsets
+from rest_framework.permissions import AllowAny, IsAuthenticated
+
+class ArticleViewSet(ClientAPIMixin, viewsets.ModelViewSet):
+    """Read-only public, write requires auth."""
+
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve'):
+            return [AllowAny()]
+        return super().get_permissions()
+
+    def get_authenticators(self):
+        if self.action in ('list', 'retrieve'):
+            return []
+        return super().get_authenticators()
+```
+
+## Related
+
+- [./middleware](./middleware) — Middleware classes including `PublicEndpointsMiddleware` and `JWTAuthenticationWithLastLogin`
+- [../features/drf-guide/drf-viewsets](../features/drf-guide/drf-viewsets) — ViewSet patterns and DRF guide
+- [../configuration](../configuration) — JWT and authentication configuration
+
+TAGS: mixins, authentication, permissions, drf, viewsets, jwt
+DEPENDS_ON: [authentication, middleware]
+USED_BY: [extensions, api-generation, drf-guide]

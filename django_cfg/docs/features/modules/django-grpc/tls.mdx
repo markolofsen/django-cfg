@@ -1,0 +1,205 @@
+---
+title: TLS Configuration
+description: Secure your gRPC server and clients with server TLS, client TLS, and mutual TLS (mTLS).
+---
+
+import { Callout } from 'nextra/components';
+
+# TLS Configuration
+
+`TLSConfig` is a Pydantic v2 model that controls TLS/SSL for both gRPC **servers** and **clients**. It supports three modes: one-way server TLS, client TLS (verify the server), and mutual TLS (mTLS).
+
+```python
+from django_cfg.modules.django_grpc.config.tls import TLSConfig
+```
+
+---
+
+## TLS Modes at a Glance
+
+| Mode | What it secures | Required fields |
+|------|----------------|-----------------|
+| Server TLS | Encrypts transport; clients verify the server | `cert_path`, `key_path` |
+| Client TLS | Client verifies server with a custom CA | `ca_cert_path` |
+| Mutual TLS (mTLS) | Both sides present certificates | `cert_path`, `key_path`, `ca_cert_path`, `client_cert_path`, `client_key_path`, `require_client_cert=True` |
+
+---
+
+## TLSConfig Field Reference
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `bool` | `False` | Enable TLS. When `False` all other fields are ignored. |
+| `cert_path` | `str \| None` | `None` | Path to the server certificate file (`.crt` / `.pem`). Required together with `key_path`. |
+| `key_path` | `str \| None` | `None` | Path to the server private key file (`.key` / `.pem`). Required together with `cert_path`. |
+| `ca_cert_path` | `str \| None` | `None` | Path to the CA certificate. On the server side, used to verify client certificates. On the client side, used to verify the server. |
+| `client_cert_path` | `str \| None` | `None` | Client certificate path for mTLS. Required together with `client_key_path`. |
+| `client_key_path` | `str \| None` | `None` | Client private key path for mTLS. Required together with `client_cert_path`. |
+| `require_client_cert` | `bool` | `False` | Require the client to present a certificate (server-side mTLS enforcement). Requires `ca_cert_path`. |
+| `verify_server` | `bool` | `True` | Verify the server certificate on the client side. |
+| `min_version` | `Literal["TLS1.0","TLS1.1","TLS1.2","TLS1.3"]` | `"TLS1.2"` | Advisory minimum TLS version. gRPC does not expose a version API — enforce via `GRPC_SSL_CIPHER_SUITES` or system OpenSSL config. |
+| `ssl_target_name_override` | `str \| None` | `None` | Client-side SNI hostname override. Useful when the certificate CN does not match the dial address (e.g., local testing with a self-signed cert). Has no effect on the server. |
+
+<Callout type="info">
+All path fields are validated at config construction time: the file must exist and be a regular file. Mismatched cert/key pairs and missing `ca_cert_path` when `require_client_cert=True` also raise a `ValidationError` immediately, preventing silent misconfiguration at runtime.
+</Callout>
+
+---
+
+## Server TLS
+
+Encrypt the transport so clients can verify the server's identity. Provide the server certificate and key; no CA or client certificates are needed.
+
+```python
+from django_cfg.modules.django_grpc.config.tls import TLSConfig
+from django_cfg.modules.django_grpc.config.server import GrpcServerConfig
+from django_cfg.modules.django_grpc.__cfg__ import DjangoGrpcModuleConfig
+
+grpc_module = DjangoGrpcModuleConfig(
+    enabled=True,
+    server=GrpcServerConfig(
+        host="[::]",
+        port=50051,
+        tls=TLSConfig(
+            enabled=True,
+            cert_path="/etc/ssl/server.crt",
+            key_path="/etc/ssl/server.key",
+        ),
+    ),
+)
+```
+
+When `TLSConfig.enabled=True` and `cert_path`/`key_path` are provided, `get_server_credentials()` calls `grpc.ssl_server_credentials()` and the server binds a secure port instead of an insecure one.
+
+---
+
+## Client TLS
+
+Connect to a TLS-enabled server and verify it using a custom CA certificate. Useful when the server uses a private CA (e.g., internal PKI or self-signed in staging).
+
+```python
+from django_cfg.modules.django_grpc.config.tls import TLSConfig
+
+client_tls = TLSConfig(
+    enabled=True,
+    ca_cert_path="/etc/ssl/ca.crt",  # verify the server
+)
+
+# Pass to your client:
+credentials = client_tls.get_channel_credentials()
+options = client_tls.get_channel_options()
+```
+
+To connect to a server whose certificate CN does not match the dial address:
+
+```python
+client_tls = TLSConfig(
+    enabled=True,
+    ca_cert_path="/etc/ssl/ca.crt",
+    ssl_target_name_override="my-service.internal",
+)
+```
+
+---
+
+## Mutual TLS (mTLS)
+
+Both the server and the client authenticate with certificates. The server presents its certificate; the client presents its certificate; both are verified against the shared CA.
+
+### Server side
+
+```python
+server_tls = TLSConfig(
+    enabled=True,
+    cert_path="/etc/ssl/server.crt",
+    key_path="/etc/ssl/server.key",
+    ca_cert_path="/etc/ssl/ca.crt",   # verify incoming client certs
+    require_client_cert=True,          # reject clients without a cert
+)
+```
+
+<Callout type="warning">
+`require_client_cert=True` without `ca_cert_path` raises a `ValidationError` at startup. Without a CA certificate, gRPC would silently pass `root_certificates=None` to `ssl_server_credentials()` which disables client verification — mTLS would silently degrade to one-way TLS.
+</Callout>
+
+### Client side
+
+```python
+client_tls = TLSConfig(
+    enabled=True,
+    ca_cert_path="/etc/ssl/ca.crt",          # verify the server
+    client_cert_path="/etc/ssl/client.crt",  # present to the server
+    client_key_path="/etc/ssl/client.key",
+)
+
+credentials = client_tls.get_channel_credentials()
+```
+
+---
+
+## API Reference
+
+### `TLSConfig.get_server_credentials() -> grpc.ServerCredentials | None`
+
+Returns `grpc.ssl_server_credentials()` if `enabled=True` and `cert_path`/`key_path` are set; otherwise `None`. Used internally by `rungrpc` to bind a secure port.
+
+### `TLSConfig.get_channel_credentials() -> grpc.ChannelCredentials | None`
+
+Returns `grpc.ssl_channel_credentials()` if `enabled=True`; otherwise `None`. Include the result when creating a `grpc.aio.secure_channel()`.
+
+### `TLSConfig.get_channel_options() -> list[tuple[str, str]]`
+
+Returns `[("grpc.ssl_target_name_override", ...)]` when `ssl_target_name_override` is set; otherwise an empty list.
+
+### Properties
+
+| Property | Returns | Description |
+|----------|---------|-------------|
+| `is_mtls` | `bool` | `True` when `client_cert_path` and `client_key_path` are both set |
+| `has_server_certs` | `bool` | `True` when `cert_path` and `key_path` are both set |
+| `has_ca_cert` | `bool` | `True` when `ca_cert_path` is set |
+
+---
+
+## Environment-Specific Examples
+
+### Development (no TLS)
+
+```python
+# TLS is disabled by default — no configuration needed
+server=GrpcServerConfig(host="127.0.0.1", port=50051)
+```
+
+### Staging (self-signed server TLS)
+
+```python
+server=GrpcServerConfig(
+    tls=TLSConfig(
+        enabled=True,
+        cert_path="/etc/ssl/staging-server.crt",
+        key_path="/etc/ssl/staging-server.key",
+    ),
+)
+```
+
+### Production (full mTLS)
+
+```python
+server=GrpcServerConfig(
+    tls=TLSConfig(
+        enabled=True,
+        cert_path="/etc/ssl/prod-server.crt",
+        key_path="/etc/ssl/prod-server.key",
+        ca_cert_path="/etc/ssl/prod-ca.crt",
+        require_client_cert=True,
+    ),
+)
+```
+
+---
+
+## See Also
+
+- [Configuration](./configuration) — Full module configuration reference
+- [Getting Started](./getting-started) — Run your first gRPC server
+- [Troubleshooting](./troubleshooting) — Connection and certificate errors

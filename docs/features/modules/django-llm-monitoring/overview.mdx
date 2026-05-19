@@ -1,100 +1,394 @@
 ---
 title: LLM Monitoring
-description: Monitor OpenAI and OpenRouter API balances with multi-tier thresholds and email/Telegram notifications.
-sidebar_label: Overview
-keywords:
-  - llm monitoring
-  - openai balance
-  - openrouter balance
-  - api cost monitoring
+description: Monitor OpenAI and OpenRouter API balances with multi-tier thresholds and automatic email and Telegram notifications.
 ---
 
 # LLM Monitoring
 
-Monitors OpenAI and OpenRouter API account balances and sends notifications when balance drops below configurable thresholds.
+`django_llm_monitoring` tracks the account balance of every configured LLM provider. When a balance drops below a threshold it sends email and Telegram notifications to admins — at most once per day per alert level, so your inbox stays quiet even during an incident.
 
 ## Features
 
-- **Multi-provider support** — OpenAI and OpenRouter
-- **Threshold alerts** — WARNING ($10) and CRITICAL ($5) levels
-- **Multi-channel notifications** — Email and Telegram
-- **Cache-based deduplication** — max one notification per 24h per level
-- **Hourly checks** — recommended cron schedule
+- **Multi-provider** — OpenAI (API-key validation) and OpenRouter (real prepaid balance)
+- **Two-tier thresholds** — WARNING at $10, CRITICAL at $5
+- **Multi-channel notifications** — Email and Telegram via `send_admin_notification()`
+- **Deduplication** — each alert level is suppressed for 24 hours after sending
+- **API-error alerts** — invalid key, insufficient funds, and quota-exceeded errors trigger an immediate critical notification
+- **Management command** — `check_llm_balance` for manual checks and cron scheduling
+- **Type-safe responses** — Pydantic v2 `BalanceResponse` model for all providers
+
+## Quick Start
+
+### 1. Configure API Keys
+
+Add your provider API keys in `config.py`:
+
+```python
+from django_cfg import DjangoConfig, ApiKeys
+
+class MyConfig(DjangoConfig):
+    project_name: str = "My Project"
+
+    api_keys: ApiKeys = ApiKeys(
+        openai=env.api_keys.openai,
+        openrouter=env.api_keys.openrouter,
+    )
+
+    # Admin contacts (used for all alert types)
+    admin_emails: list[str] = ["admin@example.com"]
+```
+
+Corresponding environment variables (`.env` or `.env.secrets`):
+
+```bash
+API_KEYS__OPENAI=sk-proj-...
+API_KEYS__OPENROUTER=sk-or-v1-...
+ADMIN_EMAILS=["admin@example.com"]
+```
+
+### 2. Run a Manual Check
+
+```bash
+python manage.py check_llm_balance
+```
+
+Example output:
+
+```
+======================================================================
+LLM BALANCE CHECK
+======================================================================
+
+Checking balances...
+
+  Openai: API Key Valid ✓ (Balance check not available via API...)
+  Openrouter: $0.69 USD 🚨 CRITICAL [limit: $217.50, usage: $216.81]
+
+Checking notification thresholds...
+  🚨 Sent CRITICAL notification: Openrouter
+
+======================================================================
+CHECK COMPLETE
+======================================================================
+Total balance across all providers: $0.69 USD
+
+⚠️ Low balance alerts were sent to administrators
+
+Waiting for notification delivery...
+✓ Notifications delivered
+```
+
+### 3. Schedule Hourly Checks
+
+```bash
+# /etc/cron.d/llm-monitoring
+0 * * * * app cd /app && /app/.venv/bin/python manage.py check_llm_balance >> /var/log/llm-balance.log 2>&1
+```
 
 ## Management Command
 
 ```bash
-# Standard check
+# Standard check (uses 1-hour balance cache)
 python manage.py check_llm_balance
 
-# Bypass cache
+# Bypass balance cache and fetch fresh data from provider APIs
 python manage.py check_llm_balance --force
 
-# Force send notifications regardless of cache
+# Force send notifications even if already sent in the last 24 hours
 python manage.py check_llm_balance --force-notify
 ```
 
-### Recommended Cron
+### Command Options
+
+| Option | Description |
+|--------|-------------|
+| `--force` | Bypass the 1-hour balance cache; always calls provider APIs |
+| `--force-notify` | Send notifications even if the 24-hour deduplication cache is active |
+
+## Notification Thresholds
+
+| Level | Balance | Channels |
+|-------|---------|----------|
+| WARNING | ≤ $10 USD | Email + Telegram |
+| CRITICAL | ≤ $5 USD | Email + Telegram |
+| API Error | Any key/quota error | Email + Telegram |
+
+All three levels are deduplicated: once a notification has been sent for a given provider and level, the next one is suppressed for 24 hours. The counter resets automatically when the balance recovers above the threshold.
+
+Default thresholds are class attributes that can be overridden at runtime:
+
+```python
+from django_cfg.modules.django_llm_monitoring import LLMBalanceNotifier
+
+LLMBalanceNotifier.THRESHOLD_WARNING = 20.0   # raise to $20
+LLMBalanceNotifier.THRESHOLD_CRITICAL = 10.0  # raise to $10
+```
+
+## Supported Providers
+
+### OpenAI
+
+OpenAI does not expose a public balance API. The module validates the configured API key by calling `client.models.list()` and reports:
+
+- `status="valid"` — key accepted, balance must be checked manually
+- `error=<message>` — invalid key (`401`), quota exceeded, or other API error
+
+**Manual balance check:** https://platform.openai.com/settings/organization/billing/overview
+
+### OpenRouter
+
+OpenRouter provides a credits endpoint. The module fetches it and calculates the remaining balance:
 
 ```
-0 * * * *  python manage.py check_llm_balance
+GET https://openrouter.ai/api/v1/credits
+Authorization: Bearer <key>
 ```
 
-## API Reference
+Response fields used:
 
-### `BalanceChecker`
+| Field | Meaning |
+|-------|---------|
+| `data.total_credits` | Total prepaid credits purchased (USD) |
+| `data.total_usage` | Total usage to date (USD) |
 
-Check LLM provider account balances.
+Remaining balance = `total_credits − total_usage`.
+
+## `BalanceResponse` Model
+
+All provider checks return a `BalanceResponse` Pydantic model:
+
+```python
+from django_cfg.modules.django_llm_monitoring.models import BalanceResponse
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `balance` | `float \| None` | Current balance in USD (`None` when unavailable, e.g. OpenAI) |
+| `currency` | `str` | Always `"usd"` |
+| `usage` | `float \| None` | Total spend to date in USD (OpenRouter only) |
+| `limit` | `float \| None` | Total credits purchased (OpenRouter only) |
+| `status` | `"valid" \| "invalid" \| "error" \| "unavailable" \| None` | Key validation status (OpenAI) |
+| `note` | `str \| None` | Additional human-readable info |
+| `error` | `str \| None` | Error message when the check failed |
+
+## `BalanceChecker` API
 
 ```python
 from django_cfg.modules.django_llm_monitoring import BalanceChecker
 
 checker = BalanceChecker()
 
-# Check specific provider
-result = checker.check_openrouter_balance(force=False)
+# Check a single provider
+openai_result = checker.check_openai_balance(force=False)
+openrouter_result = checker.check_openrouter_balance(force=False)
 
-# Check all providers
-results = checker.check_all_balances(force=False)
+# Check all providers at once
+balances = checker.check_all_balances(force=False)
+# {"openai": BalanceResponse(...), "openrouter": BalanceResponse(...)}
 ```
 
-### `LLMBalanceNotifier`
+The `force` parameter bypasses the 1-hour balance cache and always calls the provider API.
 
-Send threshold-based notifications.
+## `LLMBalanceNotifier` API
 
 ```python
 from django_cfg.modules.django_llm_monitoring import LLMBalanceNotifier
 
 notifier = LLMBalanceNotifier()
-notifier.check_and_notify("openrouter", balance_data, force=False)
+
+# Check one provider and send notification if threshold is exceeded
+level = notifier.check_and_notify(
+    provider="openrouter",
+    balance_data=openrouter_result,
+    force=False,
+)
+# Returns: "warning" | "critical" | "api_error" | None
+
+# Check all providers at once
+results = notifier.check_all_and_notify(balances, force=False)
+# {"openai": None, "openrouter": "critical"}
 ```
 
-### `BalanceResponse`
+## Notification Channels
 
-Response model for balance checks:
+Notifications are sent via `send_admin_notification()` from `django_email`, which dispatches to both email and Telegram in a single call. Both channels are attempted even if one fails.
+
+### Email
+
+**Subject format:**
+
+- `⚠️ WARNING: Openrouter Balance Low`
+- `🚨 CRITICAL: Openrouter Balance Low`
+- `🔴 CRITICAL: Openai API Key Error`
+
+**Body includes:** provider name, current balance, threshold, and action guidance.
+
+### Telegram
+
+Same message content as the email, sent to the configured Telegram chat. Telegram delivery is handled by an async worker queue with a 2-second drain window after `check_llm_balance` exits.
+
+### Configuring Telegram
 
 ```python
-@dataclass
-class BalanceResponse:
-    balance: float       # Current balance
-    currency: str        # Currency code (USD)
-    status: str          # ok / warning / critical / error
-    error: str | None    # Error message if failed
-    note: str | None     # Additional info
+from django_cfg import TelegramConfig
+
+class MyConfig(DjangoConfig):
+    telegram: TelegramConfig = TelegramConfig(
+        bot_token=env.telegram.bot_token,
+        chat_id=env.telegram.chat_id,
+    )
 ```
 
-## Notification Thresholds
+```bash
+TELEGRAM__BOT_TOKEN=123456:ABC-DEF...
+TELEGRAM__CHAT_ID=-1001234567890
+```
 
-| Level | Threshold | Action |
-|-------|-----------|--------|
-| WARNING | $10 USD | Email + Telegram notification |
-| CRITICAL | $5 USD | Email + Telegram notification (urgent) |
+## Caching
 
-Notifications are deduplicated — each level sends at most once per 24 hours.
+### Balance Cache
 
-## Supported Providers
+Prevents hammering provider APIs when the command is called frequently.
 
-| Provider | Balance API | Requirements |
-|----------|------------|--------------|
-| OpenAI | Limited (subscription-based) | `OPENAI_API_KEY` |
-| OpenRouter | Full balance endpoint | `OPENROUTER_API_KEY` |
+| Property | Value |
+|----------|-------|
+| TTL | 1 hour (3 600 s) |
+| Cache keys | `llm_monitoring:openai_balance`, `llm_monitoring:openrouter_balance` |
+| Bypass | `--force` flag or `force=True` |
+
+### Notification Cache
+
+Prevents duplicate alert spam.
+
+| Property | Value |
+|----------|-------|
+| TTL | 24 hours (86 400 s) |
+| Key pattern | `llm_monitoring:notification_sent:{provider}:{level}` |
+| Bypass | `--force-notify` flag or `force=True` on the notifier |
+
+## Programmatic Usage
+
+```python
+from django_cfg.modules.django_llm_monitoring import BalanceChecker, LLMBalanceNotifier
+
+checker = BalanceChecker()
+notifier = LLMBalanceNotifier()
+
+# Fetch fresh balances
+balances = checker.check_all_balances(force=True)
+
+# Inspect results
+for provider, data in balances.items():
+    if data.error:
+        print(f"{provider} error: {data.error}")
+    elif data.balance is not None:
+        print(f"{provider}: ${data.balance:.2f}")
+    else:
+        print(f"{provider}: key {data.status}")
+
+# Send notifications for any threshold breach
+results = notifier.check_all_and_notify(balances, force=False)
+for provider, level in results.items():
+    if level:
+        print(f"Notified admins: {provider} is {level}")
+```
+
+## Using Individual Providers
+
+```python
+from django_cfg.modules.django_llm_monitoring.providers import (
+    OpenAIProvider,
+    OpenRouterProvider,
+)
+
+# OpenAI — validates API key
+openai = OpenAIProvider()
+result = openai.check_balance(force=True)
+print(result.status)   # "valid" or error in result.error
+
+# OpenRouter — real prepaid balance
+openrouter = OpenRouterProvider()
+result = openrouter.check_balance(force=True)
+print(f"Balance: ${result.balance:.2f}")
+print(f"Credits: ${result.limit:.2f}")
+print(f"Usage:   ${result.usage:.2f}")
+```
+
+## Module Structure
+
+```
+django_llm_monitoring/
+├── __init__.py          # Exports BalanceChecker, LLMBalanceNotifier
+├── models.py            # BalanceResponse (Pydantic v2)
+├── balance_checker.py   # Orchestrates all providers
+├── notifier.py          # Threshold checks and notifications
+├── providers/
+│   ├── base.py          # BaseLLMProvider (caching, error handling)
+│   ├── openai.py        # OpenAIProvider (key validation)
+│   └── openrouter.py    # OpenRouterProvider (balance via /api/v1/credits)
+└── management/
+    └── commands/
+        └── check_llm_balance.py
+```
+
+## Troubleshooting
+
+### No Telegram Messages
+
+1. Verify bot token and chat ID in config
+2. Ensure the bot is a member of the target group or channel
+3. Run a direct test:
+
+```bash
+python manage.py shell -c "
+from django_cfg.modules.django_telegram import send_telegram_message
+result = send_telegram_message('Test')
+print('result:', result)
+import time; time.sleep(3)
+"
+```
+
+### Notifications Not Sending (balance is low)
+
+The 24-hour deduplication cache may have already fired. Force a fresh send:
+
+```bash
+python manage.py check_llm_balance --force-notify
+```
+
+Or clear the cache manually:
+
+```python
+from django.core.cache import cache
+for provider in ["openai", "openrouter"]:
+    for level in ["warning", "critical", "api_error"]:
+        cache.delete(f"llm_monitoring:notification_sent:{provider}:{level}")
+```
+
+### OpenAI Shows No Balance
+
+This is expected. OpenAI does not provide a public balance API. The module only validates the API key. Check your actual balance at:
+https://platform.openai.com/settings/organization/billing/overview
+
+## Adding a New Provider
+
+1. Create `providers/myprovider.py` extending `BaseLLMProvider` and implementing `get_provider_name()` and `_fetch_balance()`.
+2. Register it in `BalanceChecker.__init__`:
+
+```python
+self.providers = {
+    "openai": OpenAIProvider(),
+    "openrouter": OpenRouterProvider(),
+    "myprovider": MyProvider(),
+}
+```
+
+3. `BalanceChecker.check_all_balances()` and `LLMBalanceNotifier.check_all_and_notify()` pick it up automatically.
+
+## Related
+
+- [LLM Integration Overview](../django-llm/overview) — main LLM module
+- [Balance Monitoring (LLM module page)](../django-llm/balance-monitoring) — detailed setup guide
+- [Cost Tracking](../django-llm/cost-tracking) — per-request cost measurement
+
+TAGS: llm-monitoring, balance, openai, openrouter, notifications, telegram

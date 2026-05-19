@@ -1,0 +1,141 @@
+---
+title: Configuration
+description: MigratorOptions fields, database routing rules, and how to configure multi-database setups for django_migrator.
+---
+
+# Configuration
+
+`django_migrator` does not have a Pydantic config block in `DjangoConfig` — it reads routing from the standard `DATABASES` setting (populated by django-cfg's `DatabaseConfig.apps` field) and receives runtime behavior through `MigratorOptions`.
+
+## `MigratorOptions`
+
+A frozen dataclass that controls orchestrator behavior for one run.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `repair` | `bool` | `False` | Allow the orchestrator to auto-repair detected drift. Without this, drift is reported as an error and migration stops. |
+| `dry_run` | `bool` | `False` | No DDL, no record changes — forensic check only. Drift is reported but nothing is fixed or migrated. |
+| `interactive` | `bool` | `True` | Prompt before applying repairs. Set to `False` for CI. |
+| `skip_makemigrations` | `bool` | `False` | Skip the `makemigrations` step. Faster when you know migrations are already generated. |
+| `verbosity` | `int` | `1` | Passed to underlying `migrate` and `makemigrations` calls. |
+
+```python
+from django_cfg.modules.django_migrator import MigratorOptions
+
+options = MigratorOptions(
+    repair=True,
+    dry_run=False,
+    interactive=False,   # CI mode
+    skip_makemigrations=True,
+    verbosity=2,
+)
+```
+
+## Database routing
+
+Routing rules come from `settings.DATABASE_ROUTING_RULES`, which django-cfg generates automatically from each `DatabaseConfig.apps` field in your project config.
+
+```python
+# api/config.py
+from django_cfg import DjangoConfig, DatabaseConfig
+
+class MyConfig(DjangoConfig):
+    databases = {
+        "default": DatabaseConfig.from_url(
+            url="${DATABASE_URL}",
+        ),
+        "vehicles": DatabaseConfig.from_url(
+            url="${DATABASE_URL_VEHICLES}",
+            apps=["catalog", "catalog_api", "normalizer", "intelligence"],
+            test_mirror="default",  # only honored when DB NAMEs match (test mode)
+        ),
+    }
+```
+
+Models in `apps=[...]` route to `vehicles`; everything else stays in `default`. The orchestrator never overrides this mapping — it respects whatever `allow_migrate` returns from the router.
+
+<Callout type="info">
+`test_mirror="default"` is safe. The guard `test_mirror_isolation` detects when `TEST.MIRROR` is actively routing writes outside of test mode by comparing physical database NAMEs. If the NAMEs differ (mirror configured but inactive), the guard passes silently.
+</Callout>
+
+## Command-line flags
+
+The `migrate_all` management command maps directly to `MigratorOptions`:
+
+| Flag | MigratorOptions field |
+|------|-----------------------|
+| `--check` | `dry_run=True` |
+| `--repair` | `repair=True` |
+| `--non-interactive` | `interactive=False` |
+| `--skip-makemigrations` | `skip_makemigrations=True` |
+| `-v N` | `verbosity=N` |
+
+## Guard configuration
+
+Guards run before each database and are configured in `orchestration/guards.py`. The default guard set includes:
+
+| Guard | Fatal | What it detects |
+|-------|-------|-----------------|
+| `connection_live` | Yes | Dead connection — bad credentials, unreachable host, typo in alias. |
+| `test_mirror_isolation` | Yes | `TEST.MIRROR` actively redirecting writes in non-test mode. |
+| `no_concurrent_migration` | Yes | Another process holds a PostgreSQL advisory migration lock. |
+
+Custom guards can be added by appending to `DEFAULT_GUARDS` or by passing a custom tuple to `GuardSet(...)`.
+
+## Processing order
+
+Databases are processed in a deterministic order: `default` first, then all other aliases alphabetically. This ensures cross-database FK targets exist before routed apps try to reference them.
+
+```python
+# Internal ordering in manager.py
+aliases = ["default"] + sorted(other_aliases)
+```
+
+## Report types
+
+`migrate_all()` returns a `MigrationReport` aggregate. Inspect it programmatically:
+
+```python
+report = migrator.migrate_all()
+
+# Top-level status
+print(report.all_clean)      # bool — True if every DB is clean
+
+# Per-DB
+for db in report.db_reports:
+    print(db.alias)
+    print(db.is_clean)       # bool
+    print(db.aborted)        # bool — guard tripped
+    print(db.errors)         # list[str]
+    print(db.warnings)       # list[str]
+    print(db.repairs_applied)  # list[str]
+    print(db.pending_after_migrate)  # int
+    if db.drift:
+        print(db.drift.total_drift_count())
+```
+
+Render as terminal text:
+
+```python
+from django_cfg.modules.django_migrator import TextReportFormatter
+
+print(TextReportFormatter().render(report))
+```
+
+Output example:
+
+```
+═══ Migration Report ═══
+
+• default — in sync ✅
+  Executed: migrate --database=default
+
+• vehicles — WARNINGS
+  Drift: 0 recorded-missing, 1 unrecorded-present, 0 half-applied
+    - unrecorded_present catalog.0003_vehicle_source_meta  (table catalog_vehicle_photo exists in DB)
+  Repairs:
+    ✓ fake-apply vehicles:catalog.0003_vehicle_source_meta
+  Executed: migrate --database=vehicles
+
+✅ All 2 database(s) in sync.
+```

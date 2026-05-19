@@ -239,9 +239,11 @@ touch extensions/apps/analytics/__cfg__.py
 
 ```python
 # extensions/apps/analytics/__cfg__.py
-from django_cfg.extensions.configs.apps.base import BaseExtensionSettings
-from django_cfg.modules.django_unfold.icons import Icons
-from django_cfg.modules.django_unfold.navigation import NavigationSection, NavigationItem
+from django_cfg.extensions.configs.apps.base import (
+    BaseExtensionSettings,
+    NavigationSection,
+    NavigationItem,
+)
 
 class AnalyticsSettings(BaseExtensionSettings):
     # Manifest
@@ -264,7 +266,7 @@ class AnalyticsSettings(BaseExtensionSettings):
     # Admin navigation
     navigation = NavigationSection(
         title="Analytics",
-        icon=Icons.ANALYTICS,
+        icon="analytics",
         items=[
             NavigationItem(
                 title="Dashboard",
@@ -425,7 +427,7 @@ settings = CRMSettings()
 ```python
 # extensions/apps/backup/__cfg__.py
 from django_cfg.extensions.configs.apps import BaseExtensionSettings
-from django_cfg.extensions.types import ExtensionScheduleConfig
+from django_cfg.extensions.configs.apps.base import ExtensionScheduleConfig
 
 class BackupSettings(BaseExtensionSettings):
     schedules = [

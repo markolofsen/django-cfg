@@ -1,13 +1,6 @@
 ---
 title: Why Django-CFG?
 description: Learn why django cfg in Django-CFG. Step-by-step guide to why django-cfg? with code examples, best practices, and production-ready configuration.
-sidebar_label: Why Django-CFG?
-sidebar_position: 2
-keywords:
-  - why django-cfg
-  - django-cfg benefits
-  - type-safe django benefits
-  - django configuration problems
 ---
 
 
@@ -118,37 +111,18 @@ class MyConfig(DjangoConfig):
 **Solution**: **Enterprise-grade AI agents** with type-safe workflows.
 
 ```python
-from django_cfg.agents import Agent, Workflow, Context
-from django_cfg.agents.toolsets import ORMToolset, CacheToolset
+# Django-CFG MCP module enables AI agent tools for your Django project
+from django_cfg import DjangoMCPModuleConfig, MCPConfigBuilder
 
-@Agent.register("document_processor")
-class DocumentProcessorAgent(Agent):
-    """AI-powered document processing."""
-
-    name = "Document Processor"
-    toolsets = [
-        ORMToolset(allowed_models=['documents.Document']),
-        CacheToolset(cache_alias='default'),
-    ]
-
-    def process(self, context: Context) -> dict:
-        document_id = context.get("document_id")
-
-        # AI-powered analysis with Django ORM access
-        document = self.tools.orm.get_object("documents.Document", id=document_id)
-        analysis = self.analyze_document(document.content)
-
-        # Cache results
-        self.tools.cache.set_cache_key(
-            f"analysis:{document_id}",
-            analysis,
-            timeout=3600
-        )
-
-        return {"status": "completed", "analysis": analysis}
-
-# Use in workflows
-result = DocumentProcessorAgent().run({"document_id": "doc_123"})
+# In your DjangoConfig:
+class MyConfig(DjangoConfig):
+    mcp: DjangoMCPModuleConfig = DjangoMCPModuleConfig(
+        enabled=True,
+        builder=MCPConfigBuilder(
+            expose_models=True,
+            expose_commands=True,
+        ),
+    )
 ```
 
 **Perfect for**:
@@ -248,7 +222,7 @@ databases: dict[str, DatabaseConfig] = {
     ),
     "analytics": DatabaseConfig(
         name="analytics_db",
-        routing_apps=["analytics", "reports"],  # Auto-routes!
+        apps=["analytics", "reports"],  # Auto-routes!
     ),
     "cache": DatabaseConfig(
         engine="redis",
@@ -381,7 +355,7 @@ webhook_url = get_webhook_url("/api/webhooks/stripe/")
 **Solution**: **14K+ currencies** with multi-threading.
 
 ```python
-from django_cfg.modules.django_currency import convert_currency
+from django_cfg.modules.django_currency import convert_currency  # optional module
 
 # Convert any currency pair
 amount_eur = convert_currency(100, "USD", "EUR")
@@ -403,7 +377,7 @@ amount_eur = convert_currency(100, "USD", "EUR")
 
 #### **Email** (Django Email Service)
 ```python
-from django_cfg.modules.django_email import DjangoEmailService
+from django_cfg import DjangoEmailService
 
 email = DjangoEmailService()
 email.send_simple(
@@ -415,9 +389,9 @@ email.send_simple(
 
 #### **Telegram** (Bot Integration)
 ```python
-from django_cfg.modules.django_telegram import DjangoTelegramService
+from django_cfg import DjangoTelegram
 
-telegram = DjangoTelegramService()
+telegram = DjangoTelegram()
 telegram.send_message(
     chat_id="123456",
     text="System alert!"
@@ -546,7 +520,3 @@ response = client.chat_completion([
 ---
 
 **Django-CFG**: Because building **enterprise applications** should take **seconds**, not **months**. 🚀
-
-TAGS: introduction, framework, enterprise, why-choose, built-in-apps
-DEPENDS_ON: []
-USED_BY: [installation, first-project, configuration]

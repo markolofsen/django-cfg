@@ -1,9 +1,6 @@
 ---
 title: Connection Pooling
-description: Efficient channel reuse for high-performance gRPC applications
-sidebar_label: Connection Pooling
-keywords: [grpc, pooling, channels, performance, connection-reuse]
-position: 9
+description: Efficient channel reuse for high-performance gRPC applications.
 ---
 
 import { Callout } from 'nextra/components';
@@ -165,42 +162,49 @@ close_global_sync_pool()
 
 ## Configuration
 
-### PoolConfig
+### GrpcPoolConfig
+
+The canonical pool configuration class. Import it from `config.pool` — it is the single source of truth, replacing older `PoolConfig` dataclass definitions.
 
 ```python
-from django_cfg.modules.django_grpc.services.client import PoolConfig
+from django_cfg.modules.django_grpc.config.pool import GrpcPoolConfig
 
-config = PoolConfig(
-    max_size=20,        # Maximum channels in pool
-    idle_timeout=120.0, # Close idle channels after (seconds)
-    min_idle=2,         # Keep minimum idle channels
-    max_age=3600.0,     # Maximum channel age (seconds)
-    cleanup_interval=60.0,  # Cleanup check interval
+config = GrpcPoolConfig(
+    enabled=True,
+    max_size=20,
+    idle_timeout=120.0,
+    min_idle=2,
+    max_age=3600.0,
+    cleanup_interval=60.0,
+    health_check_interval=30.0,
+    channel_ready_timeout=5.0,
 )
 ```
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `max_size` | int | 20 | Maximum channels (1-100) |
-| `idle_timeout` | float | 120.0 | Close idle after (10-3600s) |
-| `min_idle` | int | 2 | Keep minimum idle (0-10) |
-| `max_age` | float | 3600.0 | Max channel age (60-86400s) |
-| `cleanup_interval` | float | 60.0 | Cleanup interval (10-600s) |
+| `enabled` | bool | True | Enable connection pooling |
+| `max_size` | int | 20 | Maximum channels in pool (1–200) |
+| `idle_timeout` | float | 120.0 | Seconds before an idle channel is closed (10–3600) |
+| `min_idle` | int | 2 | Minimum idle channels to maintain per address (0–20) |
+| `max_age` | float | 3600.0 | Maximum channel lifetime in seconds (60–86400) |
+| `cleanup_interval` | float | 60.0 | Seconds between pool cleanup cycles (10–600) |
+| `health_check_interval` | float | 30.0 | Seconds between idle channel health checks (5–600) |
+| `channel_ready_timeout` | float | 5.0 | Seconds to wait for a channel to become ready before giving up (1–60) |
 
-### Pydantic Configuration
-
-For integration with ResilienceConfig:
+### Integration with DjangoGrpcModuleConfig
 
 ```python
-from django_cfg.modules.django_grpc.resilience import ResilienceConfig
+from django_cfg.modules.django_grpc.__cfg__ import DjangoGrpcModuleConfig
+from django_cfg.modules.django_grpc.config.pool import GrpcPoolConfig
 
-config = ResilienceConfig(
-    pool=PoolConfig(
-        enabled=True,
+grpc_module = DjangoGrpcModuleConfig(
+    enabled=True,
+    pool=GrpcPoolConfig(
         max_size=50,
         idle_timeout=300.0,
+        health_check_interval=15.0,
     ),
-    # ... other resilience settings
 )
 ```
 

@@ -1,8 +1,6 @@
 ---
 title: Email Models
 description: EmailConfig model for SMTP and Console email backends
-sidebar_label: Email Models
-sidebar_position: 6
 ---
 
 # Email Models
@@ -24,14 +22,16 @@ Type-safe email service configuration.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `backend` | `Literal["console", "smtp"]` | `"console"` | Email backend type |
+| `backend` | `Literal["smtp", "console", "file", "memory", "dummy"]` | `"console"` | Email backend type |
 | `host` | `str` | `"localhost"` | SMTP server hostname |
 | `port` | `int` | `587` | SMTP server port (1-65535) |
 | `username` | `str \| None` | `None` | SMTP username |
 | `password` | `str \| None` | `None` | SMTP password |
 | `use_tls` | `bool` | `True` | Use TLS encryption |
 | `use_ssl` | `bool` | `False` | Use SSL encryption |
+| `ssl_verify` | `bool` | `True` | Verify SSL certificates (set False for self-signed certs in dev) |
 | `default_from` | `str` | `"noreply@example.com"` | Default FROM email address |
+| `file_path` | `str` | `"emails/"` | Path for file-based email backend |
 | `timeout` | `int` | `30` | Email send timeout in seconds (≥1) |
 
 ### Methods
@@ -46,6 +46,9 @@ Type-safe email service configuration.
 |---------|----------|----------|
 | `console` | Development | Prints emails to console, no actual delivery |
 | `smtp` | Production | Standard SMTP delivery (Gmail, SES, Mailgun) |
+| `file` | Development/staging | Writes emails to files on disk |
+| `memory` | Testing | Stores emails in memory (accessible via `outbox`) |
+| `dummy` | Testing | Discards all emails silently |
 
 ## Usage Examples
 
@@ -677,7 +680,7 @@ class MyConfig(DjangoConfig):
 
 EmailConfig validates:
 
-- **Backend** - Must be 'console' or 'smtp'
+- **Backend** - Must be one of: `smtp`, `console`, `file`, `memory`, `dummy`
 - **Port** - Must be 1-65535
 - **Timeout** - Must be ≥ 1 second
 

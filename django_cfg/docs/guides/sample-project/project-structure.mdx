@@ -1,8 +1,6 @@
 ---
 title: Project Structure
 description: Deep dive into the Django-CFG sample project folder structure and organization
-sidebar_label: Project Structure
-sidebar_position: 2
 ---
 
 # Project Structure
@@ -17,11 +15,9 @@ my_django_cfg_demo/
 │   ├── 🔧 config.py                 # Main Django-CFG configuration
 │   ├── ⚙️ settings.py               # Auto-generated Django settings
 │   ├── 🔗 urls.py                   # Root URL configuration
-│   └── 📁 environment/              # Environment-specific configs
-│       ├── 🛠️ config.dev.yaml       # Development settings
-│       ├── 🚀 config.prod.yaml      # Production settings
-│       ├── 🧪 config.test.yaml      # Testing settings
-│       └── 📥 loader.py             # Configuration loader
+│   └── 📁 environment/              # Environment loader
+│       ├── 📥 __init__.py           # Exports env instance
+│       └── 📥 loader.py             # Pydantic BaseSettings loader
 ├── 📁 apps/                         # Django Applications
 │   ├── 📝 blog/                     # Blog with posts & comments
 │   ├── 🛒 shop/                     # E-commerce with products & orders
@@ -58,7 +54,7 @@ The main configuration file using Django-CFG's type-safe configuration system. T
 
 ```python
 # api/config.py structure
-class SampleProjectConfig(DjangoConfig):
+class DjangoCfgConfig(DjangoConfig):
     # Core settings
     project_name: str
     debug: bool
@@ -68,12 +64,11 @@ class SampleProjectConfig(DjangoConfig):
     databases: Dict[str, DatabaseConfig]
 
     # Service configurations
-    email: EmailConfig
-    telegram: TelegramConfig
+    email: Optional[EmailConfig]
+    telegram: Optional[TelegramConfig]
 
-    # UI and API
+    # Admin interface
     unfold: UnfoldConfig
-    drf: DRFConfig
 ```
 
 See [Configuration Setup](./configuration) for detailed examples.
@@ -103,37 +98,26 @@ urlpatterns = [
 
 #### 📁 environment/
 
-Environment-specific configuration files in YAML format.
+Environment loader using `pydantic-settings` (`BaseSettings`). All configuration is loaded from environment variables and `.env` files — no YAML files.
 
-**config.dev.yaml** - Development settings:
-```yaml
-debug: true
-is_prod: false
-database:
-  url: "sqlite:///db/db.sqlite3"
-email:
-  host: ""  # Console backend
+**loader.py** - Defines pydantic BaseSettings models:
+```python
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+class EnvironmentConfig(BaseSettings):
+    secret_key: str = "dev-key"
+    debug: bool = True
+    # ...
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_nested_delimiter="__",
+    )
+
+env = EnvironmentConfig()
 ```
 
-**config.prod.yaml** - Production settings:
-```yaml
-debug: false
-is_prod: true
-database:
-  url: "postgresql://..."
-email:
-  host: "<from-yaml-config>"
-```
-
-**config.test.yaml** - Testing settings:
-```yaml
-debug: true
-is_prod: false
-database:
-  url: "sqlite:///:memory:"
-```
-
-**loader.py** - Configuration loader that reads YAML files and environment variables.
+**Priority**: System ENV > `.env` file > code defaults.
 
 See [Configuration Setup](./configuration) for environment configuration patterns.
 
@@ -389,18 +373,16 @@ misc/
 
 ### 4. Separate Configuration from Code
 
-Keep environment-specific settings in YAML files:
+Keep environment-specific settings in `.env` files (gitignored) or system environment variables:
 
-```yaml
-# config.dev.yaml
-debug: true
-database:
-  url: "sqlite:///db/db.sqlite3"
+```bash
+# .env (development, gitignored)
+DEBUG=true
+DATABASE__URL="sqlite:///db/db.sqlite3"
 
-# config.prod.yaml
-debug: false
-database:
-  url: "postgresql://..."
+# Production: system ENV or Docker/K8s secrets
+DEBUG=false
+DATABASE__URL="postgresql://..."
 ```
 
 ## Navigation Between Components

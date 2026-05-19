@@ -1,0 +1,335 @@
+---
+title: Translation
+description: LLM-powered translation service with automatic language detection, JSON support, two-level caching, and usage statistics.
+---
+
+# Translation
+
+`DjangoTranslator` is the translation orchestrator built into `django_llm`. It uses the configured LLM client (OpenAI or OpenRouter) to translate plain text and nested JSON objects, with automatic language detection, a two-level cache, and per-session statistics.
+
+## Quick Start
+
+The easiest way to translate is through the module-level convenience functions:
+
+```python
+from django_cfg.modules.django_llm import translate_text, translate_json
+
+# Translate a string
+result = translate_text("Привет мир", target_language="en")
+# "Hello world"
+
+# Translate a nested dict
+data = translate_json(
+    {"title": "Привет", "body": "Добро пожаловать"},
+    target_language="en",
+)
+# {"title": "Hello", "body": "Welcome"}
+```
+
+These helpers instantiate `DjangoTranslator` automatically using the API key from Django config.
+
+## Using `DjangoTranslator` Directly
+
+```python
+from django_cfg.modules.django_llm.translator import DjangoTranslator
+from django_cfg.modules.django_llm.llm.client import LLMClient
+
+# Auto-configure from Django config
+translator = DjangoTranslator()
+
+# Or pass a client explicitly
+client = LLMClient(apikey_openrouter="sk-or-v1-...")
+translator = DjangoTranslator(client=client)
+```
+
+### Check Configuration
+
+```python
+if translator.is_configured:
+    print("Ready to translate")
+```
+
+`is_configured` returns `True` when a client was passed directly or when `config.llm.api_key` is set.
+
+## Translating Text
+
+```python
+# Auto-detect source language
+translated = translator.translate(
+    text="안녕하세요",
+    target_language="en",
+)
+
+# Specify source language explicitly
+translated = translator.translate(
+    text="Bonjour le monde",
+    target_language="en",
+    source_language="fr",
+)
+
+# Override the model and temperature for this call
+translated = translator.translate(
+    text="Hello",
+    target_language="es",
+    model="openai/gpt-4o",
+    temperature=0.0,
+)
+
+# Suppress exceptions — return original text on failure
+translated = translator.translate(
+    text="...",
+    target_language="ko",
+    fail_silently=True,
+)
+```
+
+### `translate()` Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `text` | `str` | — | Text to translate |
+| `target_language` | `str` | `"en"` | BCP-47 language code |
+| `source_language` | `str` | `"auto"` | Source language code, or `"auto"` for detection |
+| `fail_silently` | `bool` | `False` | Return original text instead of raising on failure |
+| `model` | `str \| None` | `None` | Override the LLM model for this request |
+| `temperature` | `float \| None` | `None` | Override sampling temperature (default `0.1`) |
+
+## Translating JSON Objects
+
+`translate_json` traverses a dict recursively, collecting all string values that need translation, sends them to the LLM in a single batched request, caches each translated string individually, and then reconstructs the original structure.
+
+```python
+product = {
+    "id": 42,
+    "title": "노트북",
+    "description": "가볍고 빠른 울트라북",
+    "specs": {
+        "cpu": "Intel i7",
+        "storage": "512GB SSD"
+    },
+    "tags": ["전자제품", "컴퓨터"],
+}
+
+translated = translator.translate_json(
+    data=product,
+    target_language="en",
+    source_language="auto",
+)
+# {
+#   "id": 42,
+#   "title": "Laptop",
+#   "description": "A light and fast ultrabook",
+#   "specs": {"cpu": "Intel i7", "storage": "512GB SSD"},
+#   "tags": ["electronics", "computer"],
+# }
+```
+
+### What Gets Translated
+
+- String **values** in dicts and lists (translated by the LLM)
+- Nested dicts and lists (traversed recursively)
+
+### What Is Never Translated
+
+- JSON **keys** (always preserved as-is)
+- URLs (`http://...`, `https://...`, `www.`)
+- File paths containing `/`
+- Pure numbers
+- ALL-CAPS identifiers (e.g., `SKIP_TRANSLATION`, `USD`)
+- Empty strings
+
+### `translate_json()` Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `data` | `dict` | — | JSON object to translate |
+| `target_language` | `str` | `"en"` | Target language code |
+| `source_language` | `str` | `"auto"` | Source language, or `"auto"` |
+| `fail_silently` | `bool` | `False` | Return original data on failure |
+| `model` | `str \| None` | `None` | LLM model override |
+| `temperature` | `float \| None` | `None` | Temperature override (default `0.1`) |
+
+## Language Detection
+
+Language detection happens in two stages, handled by two separate detector classes.
+
+### Script Detector (`ScriptDetector`)
+
+The primary detector, used for `translate()`. Identifies language by Unicode script ranges — no external library required.
+
+| Script | Detected Language |
+|--------|------------------|
+| Hangul (AC00–D7AF) | `ko` |
+| Hiragana / Katakana (3040–30FF) | `ja` |
+| Other CJK ideographs | `zh` |
+| Cyrillic (0400–04FF) | `ru` |
+| Everything else | `en` (default) |
+
+```python
+lang = translator.detect_language("안녕하세요")  # "ko"
+lang = translator.detect_language("こんにちは")   # "ja"
+lang = translator.detect_language("Привет")       # "ru"
+lang = translator.detect_language("Hello")        # "en"
+```
+
+### Language Detector (`LanguageDetector`)
+
+A dictionary-based detector used by `translate_json`. Counts common words for English, Russian, Spanish, and Portuguese, then picks the language with the most matches. Falls back to `"en"` when no matches are found.
+
+```python
+# Used internally when source_language="auto" in translate_json
+```
+
+### Check If Translation Is Needed
+
+```python
+needed = translator.needs_translation(
+    text="Hello",
+    source_language="en",
+    target_language="en",   # Same language → False
+)
+```
+
+## Supported Languages
+
+Both the prompt builder and text utilities recognise these codes:
+
+| Code | Language |
+|------|----------|
+| `en` | English |
+| `ru` | Russian |
+| `ko` | Korean |
+| `zh` | Chinese |
+| `ja` | Japanese |
+| `es` | Spanish |
+| `fr` | French |
+| `de` | German |
+| `it` | Italian |
+| `pt` | Portuguese |
+| `ar` | Arabic |
+| `hi` | Hindi |
+| `tr` | Turkish |
+| `pl` | Polish |
+| `uk` | Ukrainian |
+| `be` | Belarusian |
+| `kk` | Kazakh |
+
+Any other BCP-47 code is passed through to the LLM prompt as-is.
+
+## Caching
+
+`DjangoTranslator` uses a two-level cache managed by `TranslationCacheManager`:
+
+| Level | Backend | TTL |
+|-------|---------|-----|
+| Memory | `cachetools.TTLCache` (1 000 entries max) | 24 hours |
+| File | JSON files on disk, one per language pair | Persistent |
+
+Cache files are stored at:
+
+```
+<django_cfg package dir>/.cache/llm_translate/<source>→<target>.json
+```
+
+For example, `ko→en.json` holds all Korean-to-English translations.
+
+### Cache Lookup Order
+
+1. Check in-memory TTL cache (`<source>→<target>:<md5_of_text>`)
+2. Load the corresponding file cache and promote to memory
+3. On miss, call the LLM and write to both layers
+
+### `translate_json` Partial Caching
+
+For JSON translation, only strings that are **not already cached** are sent to the LLM. Cached translations are merged with the fresh LLM response before reconstructing the object, so re-translating the same product catalogue is nearly free after the first call.
+
+### Clearing the Cache
+
+```python
+# Clear all caches
+translator.clear_cache()
+
+# Clear a specific language pair via the cache manager
+translator.translation_cache.clear(source_lang="ko", target_lang="en")
+
+# Inspect cache state
+stats = translator.translation_cache.get_stats()
+print(stats["memory_cache_size"])   # entries in memory
+print(stats["language_pairs"])      # list of {pair, translations, file_size}
+```
+
+## Statistics
+
+`StatsTracker` records per-session counters that accumulate in memory.
+
+```python
+stats = translator.get_stats()
+# {
+#   "total_translations": 42,
+#   "successful_translations": 41,
+#   "failed_translations": 1,
+#   "cache_hits": 38,
+#   "cache_misses": 4,
+#   "total_tokens_used": 12800,
+#   "total_cost_usd": 0.0032,
+#   "language_pairs": {"ko-en": 30, "ru-en": 12}
+# }
+```
+
+| Field | Description |
+|-------|-------------|
+| `total_translations` | Total `translate()` calls |
+| `successful_translations` | Calls that returned a translated string |
+| `failed_translations` | Calls that raised or returned original text |
+| `cache_hits` | Served directly from cache |
+| `cache_misses` | Required an LLM API call |
+| `total_tokens_used` | Sum of `tokens_used` from LLM responses |
+| `total_cost_usd` | Sum of `cost_usd` from LLM responses |
+| `language_pairs` | Count per `"<source>-<target>"` pair |
+
+## Configuration Info
+
+```python
+info = translator.get_config_info()
+# {
+#   "configured": True,
+#   "provider": "openrouter",
+#   "cache_size": 14,
+#   "client_info": {...},
+#   "supported_languages": ["en", "ru", "ko", ...]
+# }
+```
+
+## Sending Translation Alerts
+
+The class method `send_translation_alert` sends an HTML-formatted message to the configured Telegram chat (via `DjangoTelegram`). It is a fire-and-forget notification — errors are logged but never re-raised.
+
+```python
+DjangoTranslator.send_translation_alert(
+    message="High translation failure rate detected",
+    context={"failure_rate": "12%", "language_pair": "ko→en"},
+)
+```
+
+## Error Handling
+
+`TranslationError` is the base exception for all translation failures:
+
+```python
+from django_cfg.modules.django_llm.translator import TranslationError
+
+try:
+    result = translator.translate("Hello", target_language="fr")
+except TranslationError as e:
+    print(f"Translation failed: {e}")
+```
+
+Pass `fail_silently=True` to suppress `TranslationError` and return the original input instead.
+
+## Related
+
+- [Text Client](./text-client) — underlying `LLMClient` used for API calls
+- [Caching](./caching) — LLM response caching layer
+- [Cost Tracking](./cost-tracking) — token and cost monitoring
+
+TAGS: translation, llm, language-detection, caching, json

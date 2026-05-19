@@ -1,14 +1,59 @@
 ---
-title: Startup Information Display
-description: Django-CFG startup information fundamentals. Comprehensive guide to startup information display with Pydantic validation, type safety, and enterprise patterns.
-sidebar_label: Startup Information
-sidebar_position: 8
-keywords:
-  - django-cfg startup information
-  - django startup information
+title: Startup & Validation
+description: Django-CFG startup hooks covering registry validation, DRF patching, type stub installation, and Constance admin registration — plus the startup information display system.
 ---
 
-# Startup Information Display
+# Startup & Validation
+
+Django-CFG runs a set of focused startup hooks from `AppConfig.ready()` that validate the registry, patch DRF authentication, install development type stubs, and register Constance admin. It also provides a rich startup information display to show system status at a glance.
+
+## Startup Validation Hooks
+
+These hooks run automatically from `DjangoCfgConfig.ready()`. They are each isolated in their own module under `django_cfg/startup/`.
+
+### Registry Validation (`registry_validation.py`)
+
+`validate_registry()` walks every entry in `DJANGO_CFG_REGISTRY` and confirms that the module can be imported and the expected attribute exists on it.
+
+- Optional-dependency entries (gRPC, Centrifugo, ngrok, import-export, Unfold, Cloudflare) that fail with `ImportError` are logged at `DEBUG` level only — these failures are expected when the optional package is not installed.
+- Required entries that fail (missing attribute or unexpected error) are logged as `ERROR` and collected into a summary warning.
+- The check is read-only and idempotent — calling it multiple times is safe.
+
+```python
+# Logger: django_cfg.registry
+# Level: DEBUG for optional deps, ERROR for required deps
+```
+
+This surfaces broken registry entries at startup rather than deferring the failure until the first request in production.
+
+### DRF Authentication Patch (`drf_patch.py`)
+
+`patch_drf_authentication()` re-applies the JWT-aware `DRF Request._authenticate` monkey-patch after all apps are loaded.
+
+The patch ensures that `AuthenticationFailed` raised by non-JWT backends does not block JWT authentication when the request carries a JWT Bearer token. This allows projects to register API-key or other custom authentication backends alongside `JWTAuthenticationWithLastLogin` without modifying those backends.
+
+The patch is idempotent — applying it twice replaces the method with the same implementation.
+
+See [./middleware](./middleware) for full details on the JWT authentication class.
+
+### Type Stubs (`type_stubs.py`)
+
+`install_type_stubs()` runs only in development environments (`DJANGO_ENV != "production"`).
+
+It writes `typings/rest_framework/serializers.pyi` and patches `pyrightconfig.json` so that Pyright narrows `serializer.validated_data` to `dict[str, Any]` after `is_valid(raise_exception=True)` is called. This eliminates a common Pyright false-positive in DRF views.
+
+The hook is a no-op in production and silently swallows all exceptions to avoid breaking the server start.
+
+### Constance Admin Registration (`constance.py`)
+
+`register_constance_admin()` registers the Constance `Config` model in the Django admin using an `Unfold`-styled `ModelAdmin` when both `django-constance` and `django-unfold` are installed.
+
+- No-op if `CONSTANCE_CONFIG` is empty or either package is missing.
+- Ensures the Constance settings page respects the Unfold admin theme without requiring manual `admin.py` configuration in the project.
+
+---
+
+## Startup Information Display
 
 Django-CFG provides a **comprehensive startup information system** that gives you complete visibility into your application's configuration, status, and available features when your Django server starts.
 

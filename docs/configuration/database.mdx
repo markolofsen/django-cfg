@@ -1,8 +1,6 @@
 ---
 title: Database Models
 description: DatabaseConfig and DatabaseRoutingRule configuration models
-sidebar_label: Database Models
-sidebar_position: 4
 ---
 
 # Database Models
@@ -17,15 +15,23 @@ Type-safe database connection configuration with validation.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `engine` | `str` | *required* | Django database engine |
+| `engine` | `str \| None` | `None` | Django database engine (auto-detected from URL scheme if not provided) |
 | `name` | `str` | *required* | Database name or connection string |
 | `user` | `str \| None` | `None` | Database user |
 | `password` | `str \| None` | `None` | Database password (hidden in repr) |
 | `host` | `str` | `"localhost"` | Database host |
 | `port` | `int` | `5432` | Database port (1-65535) |
-| `options` | `dict[str, Any]` | `{}` | Additional database options |
 | `connect_timeout` | `int` | `10` | Connection timeout in seconds (≥1) |
 | `sslmode` | `str` | `"prefer"` | SSL mode for connection |
+| `options` | `dict[str, Any]` | `{}` | Additional database-specific options |
+| `conn_max_age` | `int` | `0` | Maximum age of database connections in seconds (must be 0 with connection pooling) |
+| `conn_health_checks` | `bool` | `True` | Enable database connection health checks |
+| `apps` | `list[str]` | `[]` | Django app labels that should use this database |
+| `operations` | `list[str]` | `["read", "write", "migrate"]` | Allowed operations for this database |
+| `migrate_to` | `str \| None` | `None` | Override database alias for migrations |
+| `routing_description` | `str` | `""` | Human-readable description of the routing rule |
+| `atomic_requests` | `bool \| None` | `None` | Wrap each HTTP request in a transaction (defaults True for default, False for secondary) |
+| `test_mirror` | `str \| None` | `None` | Mirror this database to another alias during tests |
 
 ### Methods
 
@@ -37,6 +43,7 @@ Type-safe database connection configuration with validation.
 
 - **Port range**: 1-65535
 - **Timeout**: ≥1 second
+- **Engine**: Optional — auto-detected from URL scheme when using `from_url()`
 - **Connection string parsing**: Supports `postgresql://`, `mysql://`, `sqlite:///` formats
 
 ## Usage Examples
@@ -431,7 +438,7 @@ DatabaseConfig validates:
 - **Port range** (1-65535)
 - **Timeout** (≥1 second)
 - **Connection string format**
-- **Required fields** (engine, name)
+- **Required fields** (`name` only; `engine` is optional and auto-detected from URL)
 
 **Example validation error:**
 

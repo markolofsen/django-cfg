@@ -1,11 +1,5 @@
 ---
 title: Pagination
-sidebar_position: 9
-keywords:
-  - drf pagination openapi
-  - drf-spectacular pagination
-  - viewset action pagination
-  - api client pagination
 description: Pagination patterns for DRF ViewSet actions and their effect on generated TypeScript clients. How to control paginated vs unpaginated responses.
 ---
 
@@ -203,7 +197,7 @@ Django-CFG provides several pre-configured pagination classes that you can use d
 The default pagination class used by Django-CFG. Configured via `REST_FRAMEWORK` settings in your Django-CFG configuration.
 
 ```python
-from django_cfg.pagination import DefaultPagination
+from django_cfg.middleware.pagination import DefaultPagination
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -213,10 +207,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
 ### LargePagination
 
-Returns **100 items per page**. Useful for admin dashboards or bulk data views:
+Returns **500 items per page**. Useful for admin dashboards or bulk data views:
 
 ```python
-from django_cfg.pagination import LargePagination
+from django_cfg.middleware.pagination import LargePagination
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
@@ -226,10 +220,10 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 ### SmallPagination
 
-Returns **10 items per page**. Ideal for mobile-first APIs or sidebar widgets:
+Returns **20 items per page**. Ideal for mobile-first APIs or sidebar widgets:
 
 ```python
-from django_cfg.pagination import SmallPagination
+from django_cfg.middleware.pagination import SmallPagination
 
 class NotificationViewSet(viewsets.ModelViewSet):
     queryset = Notification.objects.all()
@@ -242,7 +236,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
 Disables pagination entirely. Use for endpoints that return small, fixed-size collections:
 
 ```python
-from django_cfg.pagination import NoPagination
+from django_cfg.middleware.pagination import NoPagination
 
 class StatusViewSet(viewsets.GenericViewSet):
     serializer_class = StatusSerializer
@@ -256,9 +250,9 @@ class StatusViewSet(viewsets.GenericViewSet):
 
 | Class | Page Size | Use Case |
 |-------|-----------|----------|
-| `DefaultPagination` | Configured in settings | General-purpose lists |
-| `LargePagination` | 100 | Admin dashboards, bulk exports |
-| `SmallPagination` | 10 | Mobile APIs, widgets, sidebars |
+| `DefaultPagination` | 100 (configurable) | General-purpose lists |
+| `LargePagination` | 500 | Admin dashboards, bulk exports |
+| `SmallPagination` | 20 | Mobile APIs, widgets, sidebars |
 | `NoPagination` | N/A (disabled) | Small fixed collections |
 
 ## Common Issues

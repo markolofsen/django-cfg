@@ -1,199 +1,255 @@
 ---
-title: File Cleanup Module
-description: Automatic file cleanup for Django FileField and ImageField when records are deleted or files are replaced.
-sidebar_label: Overview
-sidebar_position: 1
-keywords:
-  - django-cfg cleanup
-  - django file cleanup
-  - filefield cleanup
-  - imagefield cleanup
-  - automatic file deletion
+title: File Cleanup
+description: Automatic file deletion for FileField and ImageField on instance deletion or field replacement, with transaction-safe signal-based cleanup.
 ---
 
-# Django Cleanup Module
+# File Cleanup
 
-Django-CFG's **Cleanup Module** provides automatic file deletion for `FileField` and `ImageField` when:
+The `django_cleanup` module automatically deletes files from storage when Django model instances with `FileField` or `ImageField` are deleted or updated. It works via Django signals, schedules deletions inside `transaction.on_commit()` for safety, and requires no changes to existing models.
 
-- Model instances are deleted
-- File fields are updated with new files
+## What It Handles
 
-## Features
+| Trigger | Behavior |
+| --- | --- |
+| Instance deleted | All file fields on the instance are deleted from storage |
+| File field replaced | Old file is deleted when a new value is saved |
+| Soft-deleted instance | Files are **not** deleted — soft-delete fields are detected automatically |
+| Model in `exclude_models` | Signals not connected — files never touched |
+| Field in `exclude_fields` | That field skipped — others cleaned up normally |
 
-- **Auto-delete on instance deletion** - Files are automatically removed when model instances are deleted
-- **Auto-delete on file replacement** - Old files are deleted when a field is updated with a new file
-- **Transaction-safe** - File deletion happens after transaction commit (no orphaned deletions on rollback)
-- **Soft-delete aware** - Respects soft-delete patterns (won't delete files for soft-deleted records)
-- **Configurable exclusions** - Exclude specific models or fields from cleanup
-- **Storage-agnostic** - Works with any Django storage backend (local, S3, GCS, etc.)
+## Installation
 
-## Quick Start
+`django_cleanup` is a built-in module in Django-CFG and is always included in `INSTALLED_APPS` automatically. No manual setup is needed.
 
-The module is **enabled by default** in Django-CFG. No configuration needed - it just works.
+## Zero-Config Usage
+
+With default settings, all `FileField` and `ImageField` on all models are covered automatically:
 
 ```python
-# Your model - files will be cleaned up automatically
-class Document(models.Model):
-    file = models.FileField(upload_to='documents/')
-    image = models.ImageField(upload_to='images/')
+class Report(models.Model):
+    pdf = models.FileField(upload_to="reports/")
+    cover = models.ImageField(upload_to="covers/", null=True)
+
+# Delete instance → pdf and cover files deleted from storage
+report.delete()
+
+# Replace pdf → old file deleted, new file kept
+report.pdf = new_file
+report.save()
 ```
 
 ## Configuration
 
-Configure cleanup behavior in your `DjangoConfig`:
+Configure cleanup behavior via `StorageConfig` on your `DjangoConfig`:
 
 ```python
 from django_cfg import DjangoConfig, StorageConfig
 
 class MyConfig(DjangoConfig):
-    project_name = "My Project"
-
     storage = StorageConfig(
-        auto_cleanup=True,           # Enable automatic cleanup (default: True)
-        delete_on_replace=True,      # Delete old file when replaced (default: True)
-        log_deletions=True,          # Log file deletions (default: False)
-        check_shared_files=False,    # Check if file is shared (default: False)
-        respect_soft_delete=True,    # Don't delete for soft-deleted records (default: True)
-        exclude_models=[
-            "backups.DatabaseBackup",  # Keep backup files
-        ],
-        exclude_fields=[
-            "documents.Contract.original_scan",  # Keep original scans
-        ],
+        auto_cleanup=True,
+        delete_on_replace=True,
+        log_deletions=True,
+        exclude_models={"backups.DatabaseBackup"},
+        exclude_fields={"docs.Contract.original_scan"},
+        check_shared_files=False,
+        respect_soft_delete=True,
+        soft_delete_fields={"deleted_at", "is_deleted", "deleted"},
     )
 ```
 
-## Disable Cleanup
+### Disabling the Module
 
 ```python
-from django_cfg import DjangoConfig, StorageConfig
-
 class MyConfig(DjangoConfig):
     storage = StorageConfig(enabled=False)
 ```
 
-## Configuration Options
+### Configuration Fields
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enabled` | bool | `True` | Enable the cleanup module |
-| `auto_cleanup` | bool | `True` | Auto-register signals for all models with file fields |
-| `delete_on_replace` | bool | `True` | Delete old file when field is updated with new file |
-| `log_deletions` | bool | `False` | Log file deletions at INFO level |
-| `check_shared_files` | bool | `False` | Check if file is used by other records before deleting |
-| `respect_soft_delete` | bool | `True` | Don't delete files for soft-deleted records |
-| `exclude_models` | Set[str] | `{}` | Models to exclude (e.g., `"app.Model"`) |
-| `exclude_fields` | Set[str] | `{}` | Fields to exclude (e.g., `"app.Model.field"`) |
-| `soft_delete_fields` | Set[str] | `{"deleted_at", "is_deleted", "deleted"}` | Field names that indicate soft-delete |
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `enabled` | `bool` | `True` | Enable the cleanup module entirely |
+| `auto_cleanup` | `bool` | `True` | Register signals for all models with file fields at startup |
+| `delete_on_replace` | `bool` | `True` | Delete old file when a field is updated with a new value |
+| `exclude_models` | `set[str]` | `set()` | Models to skip. Format: `"app_label.ModelName"` |
+| `exclude_fields` | `set[str]` | `set()` | Fields to skip. Format: `"app_label.ModelName.field_name"` |
+| `log_deletions` | `bool` | `False` | Log each deleted file at `INFO` level |
+| `check_shared_files` | `bool` | `False` | Check if another record references the same file before deleting |
+| `respect_soft_delete` | `bool` | `True` | Skip file deletion for soft-deleted instances |
+| `soft_delete_fields` | `set[str]` | `{"deleted_at", "is_deleted", "deleted"}` | Field names that indicate a soft-delete pattern |
 
-## Manual Cleanup Functions
+<Callout type="warning">
+`check_shared_files=True` adds one extra DB query per file field at deletion time. Enable only when your data model shares file paths across rows.
+</Callout>
 
-For fine-grained control, use the cleanup functions directly:
+### Exclusion Formats
+
+```python
+StorageConfig(
+    exclude_models={
+        "backups.DatabaseBackup",   # entire model excluded
+        "audit.AuditLog",
+    },
+    exclude_fields={
+        "documents.Contract.original_scan",   # only this field excluded
+        "users.Profile.legacy_avatar",
+    },
+)
+```
+
+Both fields accept lists — they are automatically converted to sets on initialization.
+
+## How Signals Work
+
+```
+1. pre_save   → cache original file values before save
+2. post_save  → compare with originals, schedule deletion for replaced files
+3. post_delete → schedule deletion for all files on deleted instance
+
+All deletions run inside transaction.on_commit() — files survive if the
+transaction rolls back.
+```
+
+When `auto_cleanup=True`, the `DjangoCleanupConfig.ready()` method iterates all registered models, checks for file fields, and connects the three signals using `dispatch_uid` to prevent duplicate connections.
+
+## Soft-Delete Support
+
+If a model has any field whose name appears in `soft_delete_fields`, the module detects a soft-delete pattern. Files are **not** deleted when the instance is soft-deleted — only when it is hard-deleted.
+
+```python
+class Article(models.Model):
+    cover = models.ImageField(upload_to="articles/")
+    deleted_at = models.DateTimeField(null=True)
+
+# Soft delete — file preserved
+article.deleted_at = timezone.now()
+article.save()
+
+# Hard delete — file deleted
+article.delete()
+```
+
+Custom soft-delete field names:
+
+```python
+StorageConfig(
+    respect_soft_delete=True,
+    soft_delete_fields={"deleted_at", "is_deleted", "removed_at"},
+)
+```
+
+## Storage Backend Compatibility
+
+Works with any Django storage backend that implements the standard `Storage` interface:
+
+- `FileSystemStorage` (default)
+- `S3Boto3Storage` from `django-storages`
+- `GoogleCloudStorage` from `django-storages`
+- Azure Blob storage from `django-storages`
+- Any custom storage backend
+
+## Per-Model Control with `FileCleanupMixin`
+
+When `auto_cleanup=False`, use `FileCleanupMixin` on models that need explicit cleanup:
+
+```python
+from django_cfg.modules.django_cleanup import FileCleanupMixin
+
+class Contract(FileCleanupMixin, models.Model):
+    signed_pdf = models.FileField(upload_to="contracts/")
+    draft_pdf = models.FileField(upload_to="drafts/")
+
+    # Exclude specific fields from cleanup
+    file_cleanup_exclude_fields = ["draft_pdf"]
+```
+
+The mixin overrides `delete()` and `save()` to handle cleanup. You can also trigger cleanup manually:
+
+```python
+contract.cleanup_file("signed_pdf")   # delete one field
+contract.cleanup_all_files()          # delete all fields
+```
+
+## Bulk Delete with `FileCleanupQuerySet`
+
+Regular `QuerySet.delete()` issues a single SQL `DELETE` without loading instances — files are never cleaned up. Use `FileCleanupQuerySet` to fix this:
+
+```python
+from django_cfg.modules.django_cleanup import FileCleanupQuerySet
+
+class Report(models.Model):
+    file = models.FileField(upload_to="reports/")
+    objects = models.Manager.from_queryset(FileCleanupQuerySet)()
+
+# Loads all instances first, then deletes — files are cleaned up
+Report.objects.filter(archived=True).delete()
+```
+
+<Callout type="info">
+`FileCleanupQuerySet.delete()` fetches all matching instances before deleting. It is more expensive than regular bulk delete but ensures files are cleaned up.
+</Callout>
+
+## Public API
+
+All public symbols are importable from `django_cfg.modules.django_cleanup`:
 
 ```python
 from django_cfg.modules.django_cleanup import (
-    delete_file,
+    # Config
+    StorageCleanupConfig,
+    get_config,
+    clear_config_cache,
+    # Cleanup functions
     cleanup_instance_files,
+    delete_file,
+    delete_file_by_name,
     get_file_fields,
+    is_file_shared,
+    is_model_excluded,
+    has_soft_delete,
+    is_soft_deleted,
+    # Mixins (lazy loaded)
+    FileCleanupMixin,
+    FileCleanupQuerySet,
+    # Signal management
+    connect_signals_for_model,
+    disconnect_signals_for_model,
 )
-
-# Delete a specific file field
-delete_file(instance.avatar)
-
-# Clean up all files for an instance
-from django_cfg.modules.django_cleanup import get_config
-cleanup_instance_files(instance, get_config())
-
-# Get all file fields from a model
-fields = get_file_fields(MyModel)  # Returns [(field_name, field), ...]
 ```
 
-## Mixin for Manual Control
+## Fallback: `settings.DJANGO_STORAGE`
 
-For models that need custom cleanup behavior:
+If `DjangoConfig` is not used, configure via Django settings:
 
 ```python
-from django.db import models
-from django_cfg.modules.django_cleanup import FileCleanupMixin
-
-class MyModel(FileCleanupMixin, models.Model):
-    document = models.FileField(upload_to='documents/')
-    backup = models.FileField(upload_to='backups/')
-
-    # Exclude specific fields from cleanup
-    file_cleanup_exclude_fields = ['backup']
+# settings.py
+DJANGO_STORAGE = {
+    "auto_cleanup": True,
+    "delete_on_replace": True,
+    "log_deletions": True,
+    "exclude_models": ["backups.DatabaseBackup"],
+    "exclude_fields": ["documents.Contract.original_scan"],
+    "check_shared_files": False,
+    "respect_soft_delete": True,
+    "soft_delete_fields": ["deleted_at", "is_deleted"],
+}
 ```
 
-## How It Works
-
-### Signal-Based Cleanup
-
-The module uses Django signals to track file changes:
-
-1. **`pre_save`** - Caches original file values before save
-2. **`post_save`** - Compares with cached values, deletes replaced files
-3. **`post_delete`** - Deletes all files associated with deleted instance
-
-### Transaction Safety
-
-File deletions are wrapped in `transaction.on_commit()`:
-
-```python
-# Files are only deleted after the transaction commits
-with transaction.atomic():
-    instance.delete()  # File deletion is scheduled
-# Transaction commits -> files are deleted
-```
-
-If the transaction rolls back, files remain intact.
-
-### Soft Delete Support
-
-The module detects soft-delete patterns by checking for common field names:
-- `deleted_at` (timestamp)
-- `is_deleted` (boolean)
-- `deleted` (boolean)
-
-When a record has these fields set, file cleanup is skipped.
-
-## Edge Cases
-
-### Bulk Delete
-
-Works with `QuerySet.delete()` - signals fire for each instance:
-
-```python
-# All files will be cleaned up
-MyModel.objects.filter(status='expired').delete()
-```
-
-### Cascade Delete
-
-When parent is deleted, related models' files are also cleaned up (via cascade signals).
-
-### Shared Files
-
-If multiple records reference the same file, enable `check_shared_files`:
-
-```python
-storage = StorageConfig(check_shared_files=True)
-```
-
-This adds a DB query per file field to check for other references.
+Configuration priority: `DjangoConfig.storage` > `settings.DJANGO_STORAGE` > built-in defaults.
 
 ## Troubleshooting
 
-### Files not being deleted
+### Files Not Being Deleted
 
 1. Check if model is excluded: `is_model_excluded(MyModel, get_config())`
-2. Check if using soft-delete: `is_soft_deleted(instance, get_config())`
+2. Check if soft-delete is active: `is_soft_deleted(instance, get_config())`
 3. Enable logging: `StorageConfig(log_deletions=True)`
 
-### Files deleted unexpectedly
+### Files Deleted Unexpectedly
 
-1. Add model to exclusions: `exclude_models=["myapp.MyModel"]`
-2. Add field to exclusions: `exclude_fields=["myapp.MyModel.keep_this"]`
+1. Add model to exclusions: `exclude_models={"myapp.MyModel"}`
+2. Add field to exclusions: `exclude_fields={"myapp.MyModel.keep_this"}`
 
-## See Also
-
-- **[Configuration Guide](/docs/configuration)** - DjangoConfig setup
+TAGS: file-cleanup, storage, filefield, imagefield, signals
+DEPENDS_ON: [configuration]

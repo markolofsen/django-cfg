@@ -1,13 +1,6 @@
 ---
 title: Migration Guide
 description: Django-CFG migration guide guide. Practical tutorial for migration guide with real-world examples, troubleshooting tips, and production patterns.
-sidebar_label: Migration Guide
-sidebar_position: 5
-keywords:
-  - migrate to django-cfg
-  - django-cfg migration
-  - settings.py to django-cfg
-  - django configuration migration
 ---
 
 
@@ -167,7 +160,6 @@ Create `config.py` in your project root:
 ```python
 # config.py
 from django_cfg import DjangoConfig
-from typing import List
 
 class MyConfig(DjangoConfig):
     """Gradual migration configuration"""
@@ -178,7 +170,7 @@ class MyConfig(DjangoConfig):
     debug: bool = True  # Copy from old settings
     
     # Copy your INSTALLED_APPS
-    project_apps: List[str] = [
+    project_apps: list[str] = [
         "myapp",
         "anotherapp",
         # ... your existing apps
@@ -379,12 +371,11 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=lambda v: [s.strip() for s in v.spl
 
 # New (Django-CFG)
 from django_cfg import DjangoConfig
-from typing import List
 
 class MyConfig(DjangoConfig):
     debug: bool = False
     secret_key: str = "<from-yaml-config>"  # Set via environment/config.yaml
-    security_domains: List[str] = ["myapp.com"]  # Auto-generates ALLOWED_HOSTS, CORS, SSL
+    security_domains: list[str] = ["myapp.com"]  # Auto-generates ALLOWED_HOSTS, CORS, SSL
 ```
 
 ### From django-configurations
@@ -435,7 +426,7 @@ DATABASES = {
 
 # New config.py
 from django_cfg import DjangoConfig
-from django_cfg.models import DatabaseConfig
+from django_cfg import DatabaseConfig
 
 class MyConfig(DjangoConfig):
     databases: dict[str, DatabaseConfig] = {

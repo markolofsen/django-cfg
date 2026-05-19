@@ -1,8 +1,6 @@
 ---
 title: Multi-Database Setup
 description: Comprehensive guide to multi-database architecture and automatic routing in Django-CFG
-sidebar_label: Multi-Database Setup
-sidebar_position: 4
 ---
 
 # Multi-Database Setup
@@ -438,27 +436,34 @@ databases: Dict[str, DatabaseConfig] = {
 
 ### Environment Configuration
 
-```yaml
-# api/environment/config.prod.yaml
-database:
-  # Default database
-  name: "djangocfg_main"
-  user: "djangocfg"
-  password: "<from-yaml-config>"
-  host: "db.example.com"
-  port: 5432
+Set connection URLs via environment variables:
 
-  # Blog database
-  blog_name: "djangocfg_blog"
-  blog_user: "djangocfg_blog"
-  blog_password: "<from-yaml-config>"
-  blog_host: "blog-db.example.com"
+```bash
+# Default database
+DATABASE__URL="postgresql://djangocfg:password@db.example.com:5432/djangocfg_main"
 
-  # Shop database
-  shop_name: "djangocfg_shop"
-  shop_user: "djangocfg_shop"
-  shop_password: "<from-yaml-config>"
-  shop_host: "shop-db.example.com"
+# Blog database
+BLOG_DATABASE__URL="postgresql://djangocfg_blog:password@blog-db.example.com:5432/djangocfg_blog"
+
+# Shop database
+SHOP_DATABASE__URL="postgresql://djangocfg_shop:password@shop-db.example.com:5432/djangocfg_shop"
+```
+
+Then reference them in `config.py`:
+
+```python
+databases: Dict[str, DatabaseConfig] = {
+    "default": DatabaseConfig.from_url(url=env.database.url),
+    "blog_db": DatabaseConfig.from_url(
+        url=env.blog_database.url,
+        apps=["apps.blog"],
+    ),
+    "shop_db": DatabaseConfig.from_url(
+        url=env.shop_database.url,
+        apps=["apps.shop"],
+        operations=["read", "write", "migrate"],
+    ),
+}
 ```
 
 See [Configuration](./configuration) for environment configuration details.
@@ -591,32 +596,21 @@ for alias in connections:
         print(f"✗ {alias} - Error: {e}")
 ```
 
-Health check endpoint:
+Health check endpoint (using standard Django db connections):
 
 ```python
-from django_cfg.modules.django_health import SimpleHealthView
+from django.db import connections
 
-health = DjangoHealthService()
-
-@health.register_check("blog_database")
-def check_blog_database():
-    """Check blog database connectivity."""
-    try:
-        from apps.blog.models import Post
-        Post.objects.using('blog_db').count()
-        return {"status": "healthy", "details": "Blog database accessible"}
-    except Exception as e:
-        return {"status": "unhealthy", "details": str(e)}
-
-@health.register_check("shop_database")
-def check_shop_database():
-    """Check shop database connectivity."""
-    try:
-        from apps.shop.models import Product
-        Product.objects.using('shop_db').count()
-        return {"status": "healthy", "details": "Shop database accessible"}
-    except Exception as e:
-        return {"status": "unhealthy", "details": str(e)}
+def check_all_databases():
+    """Check all configured database aliases."""
+    results = {}
+    for alias in connections:
+        try:
+            connections[alias].ensure_connection()
+            results[alias] = {"status": "healthy"}
+        except Exception as e:
+            results[alias] = {"status": "unhealthy", "details": str(e)}
+    return results
 ```
 
 ## Best Practices

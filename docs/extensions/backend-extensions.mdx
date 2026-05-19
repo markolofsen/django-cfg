@@ -241,9 +241,8 @@ Settings are available via the extension's `settings` object:
 ```python
 from extensions.apps.payments.__cfg__ import settings
 
-if settings.enabled:
-    # Use payments extension
-    api_key = settings.crypto_api_key
+# Extension is enabled when the settings object exists
+api_key = settings.crypto_api_key
 ```
 
 ---

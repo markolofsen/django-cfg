@@ -1,12 +1,6 @@
 ---
 title: Production Configuration
 description: Django-CFG production config guide. Practical tutorial for production configuration with real-world examples, troubleshooting tips, and production patterns.
-sidebar_label: Production Config
-sidebar_position: 4
-keywords:
-  - django-cfg production config
-  - django-cfg guide production config
-  - how to production config django
 ---
 
 # Production Configuration
@@ -112,15 +106,15 @@ This complete example shows **all available features**. For most production depl
 
 ```python
 # config.py
-from typing import Optional
 from django_cfg import (
     DjangoConfig,
     DatabaseConfig,
     CacheConfig,
     EmailConfig,
-    TaskConfig,
     UnfoldConfig,
     SpectacularConfig,
+    TelegramConfig,
+    DjangoRQConfig,
 )
 from .environment import env
 
@@ -166,7 +160,7 @@ class MyProductionConfig(DjangoConfig):
 
     # === Cache Configuration ===
     # ✨ AUTO-MAGIC: Just set redis_url - cache auto-created!
-    redis_url: Optional[str] = env.redis.url
+    redis_url: str | None = env.redis.url
     # Django-CFG automatically creates CacheConfig with:
     # - timeout=300 (5 minutes)
     # - key_prefix=project_name.lower()
@@ -174,7 +168,7 @@ class MyProductionConfig(DjangoConfig):
     # Override with explicit cache_default if needed
 
     # === Email Configuration ===
-    email: Optional[EmailConfig] = (
+    email: EmailConfig | None = (
         EmailConfig(
             backend="django.core.mail.backends.smtp.EmailBackend",
             host=env.email.host,
@@ -189,7 +183,7 @@ class MyProductionConfig(DjangoConfig):
     )
 
     # === Telegram Configuration ===
-    telegram: Optional[TelegramConfig] = (
+    telegram: TelegramConfig | None = (
         TelegramConfig(
             bot_token=env.telegram.bot_token,
             chat_id=env.telegram.chat_id,
@@ -198,21 +192,17 @@ class MyProductionConfig(DjangoConfig):
         else None
     )
 
-    # === Background Tasks ===
-    tasks: Optional[TaskConfig] = (
-        TaskConfig(
-            redis_url=env.redis.url,
-            processes=env.tasks.processes or 4,
-            threads=env.tasks.threads or 8,
+    # === Background Tasks (Django-RQ) ===
+    django_rq: DjangoRQConfig | None = (
+        DjangoRQConfig(
             queues=env.tasks.queues or ["default", "high", "low"],
-            max_retries=3,
         )
         if env.redis.url
         else None
     )
 
     # === Admin Interface ===
-    unfold: Optional[UnfoldConfig] = UnfoldConfig(
+    unfold: UnfoldConfig | None = UnfoldConfig(
         site_title=f"{env.app.name} Admin",
         site_header=f"{env.app.name} Administration",
         dashboard_enabled=True,
@@ -220,7 +210,7 @@ class MyProductionConfig(DjangoConfig):
     )
 
     # === API Documentation ===
-    spectacular: Optional[SpectacularConfig] = SpectacularConfig(
+    spectacular: SpectacularConfig | None = SpectacularConfig(
         title=f"{env.app.name} API",
         description=env.app.description or "API Documentation",
         version=env.app.version or "1.0.0",
@@ -820,12 +810,8 @@ Just set `redis_url` and Django-CFG handles the rest! No need for manual `CacheC
 ### Task Queues
 
 ```python filename="config.py"
-tasks: TaskConfig = TaskConfig(
-    redis_url=env.redis.url,
-    processes=6,  # CPU cores
-    threads=8,    # I/O-bound tasks
+django_rq: DjangoRQConfig = DjangoRQConfig(
     queues=["default", "high", "low", "emails", "reports"],
-    max_retries=3,
 )
 ```
 

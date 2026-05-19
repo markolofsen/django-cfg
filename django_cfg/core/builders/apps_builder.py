@@ -114,6 +114,7 @@ class InstalledAppsBuilder:
             "django_cfg.modules.django_llm_monitoring",  # LLM balance monitoring
             "django_cfg.modules.django_cleanup",  # Automatic file cleanup
             "django_cfg.modules.django_generator",  # Unified client generation (replaces django_codegen + django_client + django_fastapi)
+            "django_cfg.modules.django_sitemap",  # Universal sitemap source registry + JSON feed
 "django_cfg.apps.api.health",
             "django_cfg.apps.api.commands",
             "django_cfg.apps.api.dashboard",  # Dashboard API

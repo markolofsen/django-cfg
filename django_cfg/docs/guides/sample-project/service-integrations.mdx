@@ -1,8 +1,6 @@
 ---
 title: Service Integrations
 description: Integration with external services - Telegram in Django-CFG
-sidebar_label: Service Integrations
-sidebar_position: 9
 ---
 
 # Service Integrations
@@ -23,20 +21,21 @@ Configure Telegram in `api/config.py`:
 ```python
 from django_cfg import TelegramConfig
 
-telegram: TelegramConfig = TelegramConfig(
-    bot_token=env.telegram.bot_token,
-    chat_id=env.telegram.chat_id,
-    enabled=env.is_prod
+telegram: TelegramConfig | None = (
+    TelegramConfig(
+        bot_token=env.telegram.bot_token,
+        chat_id=env.telegram.chat_id,
+    )
+    if env.telegram.bot_token and env.telegram.chat_id != 0
+    else None
 )
 ```
 
-Environment configuration:
+Environment variables:
 
-```yaml
-# api/environment/config.prod.yaml
-telegram:
-  bot_token: "<from-yaml-config>"
-  chat_id: "@your_channel"  # or numeric chat ID
+```bash
+TELEGRAM__BOT_TOKEN="123456:ABC-DEF"
+TELEGRAM__CHAT_ID=-1001234567890
 ```
 
 ### Sending Messages
@@ -48,23 +47,19 @@ from django_cfg import DjangoTelegram
 
 telegram = DjangoTelegram()
 
-# Send simple message
+# Send simple message (uses chat_id from config)
 def send_alert(message):
     """Send alert to Telegram channel."""
-    telegram.send_message(
-        chat_id="@system_alerts",
-        text=message
-    )
+    telegram.send_message(message=message)
 
-# Send formatted message
+# Send formatted message with parse mode
 def send_system_alert(message, level="info"):
     """Send formatted system alert."""
     emoji = {"info": "ℹ️", "warning": "⚠️", "error": "🚨"}
 
     telegram.send_message(
-        chat_id="@system_alerts",
-        text=f"{emoji[level]} *System Alert*\n\n{message}",
-        parse_mode="Markdown"
+        message=f"{emoji[level]} *System Alert*\n\n{message}",
+        parse_mode="Markdown",
     )
 ```
 
@@ -87,15 +82,8 @@ Order ID: `{order.id}`
 Customer: {order.user.get_full_name()}
 Total: ${order.total}
 Items: {order.items.count()}
-
-[View Order](https://admin.myapp.com/admin/shop/order/{order.id}/)
     """
-
-    telegram.send_message(
-        chat_id="@order_notifications",
-        text=message,
-        parse_mode="Markdown"
-    )
+    telegram.send_message(message=message, parse_mode="Markdown")
 
 # Notify order status change
 def notify_order_status(order, old_status, new_status):
@@ -106,80 +94,8 @@ def notify_order_status(order, old_status, new_status):
 Order ID: `{order.id}`
 Status: {old_status} → *{new_status}*
 Customer: {order.user.email}
-
-[View Order](https://admin.myapp.com/admin/shop/order/{order.id}/)
     """
-
-    telegram.send_message(
-        chat_id="@order_notifications",
-        text=message,
-        parse_mode="Markdown"
-    )
-```
-
-### Bot Commands
-
-Create interactive bot commands:
-
-```python
-from django_cfg import DjangoTelegram
-
-telegram = DjangoTelegram()
-
-# Status command
-@telegram.command("status")
-def handle_status_command(update, context):
-    """Handle /status command."""
-    from django.contrib.auth import get_user_model
-
-    User = get_user_model()
-
-    status = f"""
-🏥 *System Status*
-
-Database: ✅ Connected
-Cache: ✅ Active
-Workers: ✅ Running
-
-👥 Users: {User.objects.count()}
-📊 Load: Low
-    """
-
-    return status
-
-# Stats command
-@telegram.command("stats")
-def handle_stats_command(update, context):
-    """Handle /stats command."""
-    from django.contrib.auth import get_user_model
-    from apps.shop.models import Order
-    from django.db.models import Sum
-
-    User = get_user_model()
-
-    stats = f"""
-📊 *Quick Stats*
-
-👥 Users: {User.objects.count()}
-🛒 Orders: {Order.objects.count()}
-💰 Revenue: ${Order.objects.aggregate(Sum('total'))['total__sum'] or 0}
-    """
-
-    return stats
-
-# Orders command
-@telegram.command("orders")
-def handle_orders_command(update, context):
-    """Handle /orders command - show recent orders."""
-    from apps.shop.models import Order
-
-    recent_orders = Order.objects.order_by('-created_at')[:5]
-
-    message = "📦 *Recent Orders*\n\n"
-    for order in recent_orders:
-        message += f"#{order.id} - ${order.total} - {order.status}\n"
-
-    return message
+    telegram.send_message(message=message, parse_mode="Markdown")
 ```
 
 ## Async Service Usage
@@ -233,10 +149,7 @@ def notify_error(error_message):
     try:
         # Try Telegram first
         telegram = DjangoTelegram()
-        telegram.send_message(
-            chat_id="@system_alerts",
-            text=f"🚨 Error: {error_message}"
-        )
+        telegram.send_message(message=f"🚨 Error: {error_message}", fail_silently=True)
     except Exception as e:
         # Fallback to email
         logger.warning(f"Telegram notification failed: {e}")
@@ -288,15 +201,18 @@ send_notification(user.id)  # Blocks request
 ### 2. Handle Service Failures
 
 ```python
-# ✅ Good: Graceful error handling
+# ✅ Good: Use fail_silently for non-critical notifications
+telegram.send_message(message=message, fail_silently=True)
+
+# ✅ Good: Explicit try/except
 try:
-    telegram.send_message(chat_id, message)
+    telegram.send_message(message=message)
 except Exception as e:
     logger.warning(f"Telegram failed: {e}")
     # Continue without failing
 
 # ❌ Bad: Unhandled failures
-telegram.send_message(chat_id, message)  # Crashes on error
+telegram.send_message(message=message)  # Crashes on error if unconfigured
 ```
 
 ## Related Topics

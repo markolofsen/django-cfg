@@ -1,13 +1,6 @@
 ---
 title: Migration Internals
 description: Deep-dive into how Django creates test databases and the root causes of "No migrations to apply", "column does not exist", and StateApps failures.
-keywords:
-  - django test database internals
-  - no migrations to apply
-  - StateApps ValueError
-  - InconsistentMigrationHistory
-  - SmartTestRunner internals
-  - django migration debugging
 ---
 
 import { Callout } from 'nextra/components'
@@ -205,7 +198,7 @@ Separate issue. Migration `llm_models.0019_rename...` tries `ALTER COLUMN "id" T
 
 | File | Role |
 |------|------|
-| `testing/runners.py` | `SmartTestRunner` — the runner being fixed |
+| `testing/runners/smart.py` | `SmartTestRunner` — the runner being fixed |
 | `django/db/migrations/state.py` | `StateApps.__init__`, local import of `_check_lazy_references` |
 | `django/db/migrations/executor.py` | `MigrationExecutor.migrate()`, `migration_plan()` |
 | `django/db/migrations/loader.py` | `MigrationLoader.build_graph()`, `applied_migrations` |

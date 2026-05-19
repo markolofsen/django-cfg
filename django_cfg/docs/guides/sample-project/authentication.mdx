@@ -1,8 +1,6 @@
 ---
 title: Authentication System
 description: OTP-based authentication and user management in Django-CFG sample project
-sidebar_label: Authentication
-sidebar_position: 7
 ---
 
 # Authentication System
@@ -28,10 +26,10 @@ The sample project uses:
 
 ### Requesting OTP
 
-Send OTP to user's email or phone:
+OTP services are implemented at the project level. The example below shows a typical service pattern:
 
 ```python
-from django_cfg.apps.accounts.services import OTPService
+# apps/accounts/services.py (project-level implementation)
 
 # Request OTP via email
 success, error = OTPService.request_otp(
@@ -50,8 +48,6 @@ else:
 Validate the OTP code and authenticate user:
 
 ```python
-from django_cfg.apps.accounts.services import OTPService
-
 # Verify OTP
 user = OTPService.verify_otp(
     email="user@example.com",
@@ -180,7 +176,7 @@ Response:
 Track where users come from for analytics:
 
 ```python
-from django_cfg.apps.accounts.models import RegistrationSource, UserRegistrationSource
+from apps.accounts.models import RegistrationSource, UserRegistrationSource
 
 # Automatic source creation during OTP verification
 user, created = CustomUser.objects.register_user(
@@ -490,7 +486,7 @@ def save_user_profile(sender, instance, **kwargs):
 
 ```python
 from django.test import TestCase
-from django_cfg.apps.accounts.services import OTPService
+from apps.accounts.services import OTPService  # project-level service
 
 class AuthenticationTest(TestCase):
     def test_otp_request(self):
@@ -510,7 +506,7 @@ class AuthenticationTest(TestCase):
         )
 
         # Get OTP from database
-        from django_cfg.apps.accounts.models import OTPSecret
+        from apps.accounts.models import OTPSecret
         otp = OTPSecret.objects.get(email="test@example.com")
 
         # Verify OTP

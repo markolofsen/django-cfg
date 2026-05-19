@@ -1,13 +1,6 @@
 ---
 title: Django-RQ Configuration
 description: Complete configuration guide for Django-RQ in django-cfg with examples and best practices
-sidebar_position: 3
-tags:
-  - configuration
-  - django-rq
-  - setup
-  - queues
-  - scheduler
 ---
 
 # Django-RQ Configuration
@@ -192,7 +185,8 @@ Configuration for a single queue:
 | `username` | `Optional[str]` | `None` | Redis username (Redis 6+) |
 | `password` | `Optional[str]` | `None` | Redis password |
 | `default_timeout` | `int` | `360` | Default job timeout in seconds |
-| `default_result_ttl` | `int` | `800` | Default result TTL in seconds |
+| `default_result_ttl` | `int` | `86400` | Default result TTL in seconds (24 hours) |
+| `failure_ttl` | `int` | `604800` | Failed job TTL in seconds (7 days) |
 | `socket_timeout` | `Optional[float]` | `None` | Redis socket timeout |
 | `connection_kwargs` | `Dict[str, Any]` | `{}` | Additional connection arguments |
 | `redis_client_kwargs` | `Dict[str, Any]` | `{}` | Additional Redis client arguments |
@@ -248,6 +242,7 @@ RQScheduleConfig supports declarative parameters that are automatically added to
 | `report_type` | `Optional[str]` | Report type parameter |
 | `days` | `Optional[int]` | Days parameter |
 | `force` | `Optional[bool]` | Force parameter |
+| `ignore_errors` | `Optional[bool]` | Continue execution even if task fails |
 
 **Example:**
 ```python

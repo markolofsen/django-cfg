@@ -1,12 +1,6 @@
 ---
 title: Django-CFG Examples
 description: Django-CFG examples guide. Practical tutorial for django-cfg examples with real-world examples, troubleshooting tips, and production patterns.
-sidebar_label: Examples
-sidebar_position: 10
-keywords:
-  - django-cfg examples
-  - django-cfg guide examples
-  - how to examples django
 ---
 
 # Django-CFG Examples
@@ -110,12 +104,11 @@ email.send_simple(
 
 ### Telegram Examples
 ```python
-from django_cfg.modules.django_telegram import DjangoTelegramService
+from django_cfg import send_telegram_message
 
-telegram = DjangoTelegramService()
-telegram.send_message(
+send_telegram_message(
     chat_id="123456",
-    text="🚀 Your order has been shipped!"
+    text="Your order has been shipped!"
 )
 ```
 

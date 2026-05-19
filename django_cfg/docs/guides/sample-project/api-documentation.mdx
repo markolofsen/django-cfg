@@ -1,8 +1,6 @@
 ---
 title: API Documentation
 description: Auto-generated REST API with OpenAPI schema and Swagger UI in Django-CFG
-sidebar_label: API Documentation
-sidebar_position: 6
 ---
 
 # API Documentation
@@ -21,7 +19,7 @@ The sample project provides:
 
 ## API Configuration
 
-### DRF Spectacular Setup
+### DRF Setup
 
 Configure the API in `api/config.py`:
 
@@ -29,62 +27,29 @@ Configure the API in `api/config.py`:
 from django_cfg import DRFConfig
 
 drf: DRFConfig = DRFConfig(
-    default_authentication_classes=[
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    authentication_classes=[
+        "django_cfg.middleware.authentication.JWTAuthenticationWithLastLogin",
     ],
-    default_permission_classes=[
+    permission_classes=[
         "rest_framework.permissions.IsAuthenticated",
     ],
-    spectacular_settings={
-        "TITLE": "Django-CFG Sample API",
-        "DESCRIPTION": "Complete API for Django-CFG sample project",
-        "VERSION": "1.0.0",
-        "SERVE_INCLUDE_SCHEMA": False,
-    }
 )
 ```
 
-### Spectacular Settings
-
-Detailed OpenAPI configuration:
+OpenAPI schema title and description are configured separately via `OpenAPIClientConfig`:
 
 ```python
-spectacular_settings={
-    'TITLE': 'Django-CFG Sample API',
-    'DESCRIPTION': 'Complete REST API for Django-CFG sample project',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
+from django_cfg import OpenAPIClientConfig
 
-    # Authentication
-    'COMPONENT_SPLIT_REQUEST': True,
-    'COMPONENT_NO_READ_ONLY_REQUIRED': True,
-
-    # Schema customization
-    'SCHEMA_PATH_PREFIX': '/api/',
-    'DEFAULT_GENERATOR_CLASS': 'drf_spectacular.openapi.AutoSchema',
-
-    # UI customization
-    'SWAGGER_UI_SETTINGS': {
-        'deepLinking': True,
-        'persistAuthorization': True,
-        'displayOperationId': True,
-    },
-
-    # Security schemes
-    'APPEND_COMPONENTS': {
-        'securitySchemes': {
-            'jwtAuth': {
-                'type': 'http',
-                'scheme': 'bearer',
-                'bearerFormat': 'JWT',
-            }
-        }
-    },
-    'SECURITY': [{'jwtAuth': []}],
-}
+openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
+    enabled=True,
+    drf_title="Django-CFG Sample API",
+    drf_description="Complete API for Django-CFG sample project",
+    drf_version="1.0.0",
+)
 ```
 
-See [Configuration](./configuration) for complete DRF setup.
+See [Configuration](./configuration) for complete setup.
 
 ## API Endpoints
 
@@ -541,11 +506,11 @@ Configure API rate limits:
 ```python
 # api/config.py
 drf: DRFConfig = DRFConfig(
-    default_throttle_classes=[
+    throttle_classes=[
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
     ],
-    default_throttle_rates={
+    throttle_rates={
         'anon': '100/day',
         'user': '1000/day',
     }

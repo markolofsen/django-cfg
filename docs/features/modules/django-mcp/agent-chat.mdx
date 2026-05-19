@@ -1,0 +1,151 @@
+---
+title: Admin Chat Agent
+description: SSE streaming chat agent embedded in Django admin — how the endpoints, agentic loop, and session history work.
+---
+
+# Admin Chat Agent
+
+The admin chat is a natural-language interface embedded directly in the Django admin dashboard at `/admin/`. Superusers can type questions and the MCP agent answers them by calling Django tools — querying models, introspecting the app, running management commands — and streaming results back to the browser in real time.
+
+No external server is needed. Everything runs inside the same Django process.
+
+## Endpoints
+
+### `POST /cfg/mcp/agent/stream/`
+
+The SSE streaming endpoint used by the admin chat UI.
+
+**Auth:** Django session cookie + CSRF token. The view requires `is_authenticated`; the admin template gates the UI to `{% if user.is_superuser %}`.
+
+**Request body:**
+
+```json
+{
+  "message": "How many users signed up this week?",
+  "session_id": "admin-chat",
+  "model": "openai/gpt-4o-mini"
+}
+```
+
+`session_id` and `model` are optional. `session_id` defaults to `"agent-session"`.
+
+**Response:** `Content-Type: text/event-stream`
+
+```
+event: tool_start
+data: {"name": "query_model", "args": {"app": "auth", "model": "User", "filters": {...}}}
+
+event: tool_result
+data: {"name": "query_model", "result": "[{\"id\": 1, ...}]"}
+
+event: text
+data: {"content": "There are 42 users who signed up this week."}
+
+event: done
+data: {}
+```
+
+### `POST /cfg/mcp/agent/`
+
+Synchronous variant. Uses `X-MCP-Access-Key` header auth (not session). Blocks until the agent finishes all tool calls, then returns one JSON response. Useful for programmatic clients; not used by the admin UI.
+
+## SSE event types
+
+| Event | Payload fields | When emitted |
+|-------|---------------|--------------|
+| `tool_start` | `name`, `args` | LLM decided to call a tool, before execution. |
+| `tool_result` | `name`, `result` | Tool executed, result returned. |
+| `text` | `content` | LLM produced final text answer. |
+| `error` | `message` | Auth failure, JSON parse error, LLM failure, or max tool calls exceeded. |
+| `done` | _(empty)_ | Always the last event — signals stream end. |
+
+`tool_start` and `tool_result` always come in pairs. Multiple pairs appear when the LLM calls several tools in a single turn.
+
+## Agentic loop
+
+`MCPAgentRunner.stream()` in `agents/runner.py` drives the loop:
+
+```
+user_message → context.messages
+tools_def = build OpenAI-compatible function definitions from registry
+
+while tool_call_count < max_tool_calls (default 10):
+    messages = context.to_llm_messages(system_prompt)
+    response = LLMClient.chat_completion(messages, tools=tools_def)
+
+    if response has tool_calls:
+        for each tool_call:
+            yield {"event": "tool_start", "name": ..., "args": ...}
+            result = tool.execute(context.config, args)
+            context.add_message("tool", result, tool_call_id=...)
+            yield {"event": "tool_result", "name": ..., "result": ...}
+        continue loop
+
+    else:  # final text response
+        yield {"event": "text", "content": ...}
+        yield {"event": "done"}
+        return
+
+yield {"event": "error", "message": "Max tool calls reached"}
+yield {"event": "done"}
+```
+
+The loop is synchronous. Django's `StreamingHttpResponse` sends each yielded chunk immediately because Gunicorn/uvicorn flushes after each `yield`.
+
+## Session history
+
+Session history is currently **in-memory only** — `AgentContext.messages` lives for the duration of a single HTTP request. Each request starts a fresh context. The `session_id` field is stored but not persisted.
+
+**Planned:** `chat/store.py` will add `RedisMCPChatStore` to persist history to Django's default cache (Redis) keyed as `mcp_chat:{user_id}:{session_id}`. Once wired in, `MCPAgentStreamView` will:
+
+1. Load history from Redis before building `AgentContext`.
+2. Append the user message to Redis.
+3. After stream ends, append the assistant reply to Redis.
+
+See [Redis & Caching](./redis) for the full store API and key format.
+
+## Browser-side implementation
+
+The chat UI uses `fetch` with `ReadableStream` rather than `EventSource` because the request is a POST with a JSON body:
+
+```javascript
+const resp = await fetch('/cfg/mcp/agent/stream/', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrf(),   // reads csrftoken cookie
+    },
+    body: JSON.stringify({ message, session_id: 'admin-chat' }),
+});
+
+const reader = resp.body.getReader();
+// reads chunks, splits on '\n\n', parses 'event:' and 'data:' lines
+```
+
+The CSRF token is read from the `csrftoken` cookie set automatically by Django's CSRF middleware for authenticated sessions.
+
+## Wiring in Redis history (when ready)
+
+```python
+from django_cfg.modules.django_mcp.chat.store import RedisMCPChatStore
+
+store = RedisMCPChatStore(user_id=request.user.pk, session_id=session_id)
+history = store.get_history()   # list of {"role": ..., "content": ...}
+
+context = AgentContext(tools=tools, session_key=session_id, config=mcp_config)
+for msg in history:
+    context.add_message(msg["role"], msg["content"])
+
+# Run stream, collect assistant text
+collected = []
+def event_stream():
+    for event in agent_runner.stream(message, context, model=model):
+        if event["event"] == "text":
+            collected.append(event.get("content", ""))
+        yield _sse_line(event)
+
+# After stream: persist to Redis
+store.append_message("user", message)
+if collected:
+    store.append_message("assistant", "".join(collected))
+```
