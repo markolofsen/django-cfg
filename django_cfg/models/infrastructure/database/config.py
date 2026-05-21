@@ -93,6 +93,22 @@ class DatabaseConfig(BaseModel):
         description="Enable database connection health checks",
     )
 
+    disable_server_side_cursors: bool = Field(
+        default=True,
+        description=(
+            "Set Django's DISABLE_SERVER_SIDE_CURSORS. Default True for "
+            "zero-config production: managed PostgreSQL is almost always "
+            "fronted by pgbouncer or PgPool in transaction-pool mode, where "
+            "Django's named .iterator() cursors are dropped between fetches "
+            "and surface as 'psycopg.errors.InvalidCursorName: cursor "
+            "\"_django_curs_...\" does not exist'. The only cost of True is "
+            "that .iterator() no longer streams from the server — ordinary "
+            "querysets are unaffected. Set False on direct-Postgres "
+            "deployments that genuinely stream millions of rows via "
+            ".iterator(). No effect on SQLite or MySQL backends."
+        ),
+    )
+
     # Database routing configuration
     apps: List[str] = Field(
         default_factory=list,

@@ -28,7 +28,7 @@ Django LLM provides multiple caching layers:
 ### Configuration
 
 ```python
-from django_cfg.modules.django_llm.llm.client import LLMClient
+from django_cfg.modules.django_llm.client import LLMClient
 from pathlib import Path
 
 client = LLMClient(
@@ -41,7 +41,7 @@ client = LLMClient(
 ### Direct Access
 
 ```python
-from django_cfg.modules.django_llm.llm.cache import LLMCache
+from django_cfg.modules.django_llm.storage import LLMCache
 
 cache = LLMCache(
     cache_dir=Path("cache/llm"),
@@ -106,7 +106,7 @@ def smart_cache(prompt, model):
 ### Configuration
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import ImageCache, get_image_cache
+from django_cfg.modules.django_llm.features.vision import ImageCache, get_image_cache
 from pathlib import Path
 
 cache = get_image_cache(
@@ -161,7 +161,7 @@ print(f"Removed {count} expired entries")
 ## Models Pricing Cache
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import VisionModelsRegistry
+from django_cfg.modules.django_llm.features.vision import VisionModelsRegistry
 
 registry = VisionModelsRegistry(
     api_key=api_key,

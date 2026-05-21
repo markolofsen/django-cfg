@@ -28,7 +28,6 @@ export default {
 
   // ── AI & LLM ────────────────────────────────────────────────
   'django-llm': 'LLM Integration',
-  'django-llm-monitoring': 'LLM Monitoring',
   'django-mcp': 'MCP (AI Agents)',
 
   // ── Data & Tools ─────────────────────────────────────────────

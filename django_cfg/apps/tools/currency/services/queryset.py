@@ -28,7 +28,7 @@ def get_conversion_rates(
     Returns:
         Dict mapping source currency to rate (1 source = X target)
     """
-    from ..models import CurrencyRate
+    from django_cfg.modules.django_currency._rate_cache import get_cached_rate
 
     target_currency = target_currency.upper()
     rates = {}
@@ -39,19 +39,21 @@ def get_conversion_rates(
             rates[source] = Decimal("1")
             continue
 
-        rate_obj = CurrencyRate.get_rate(source, target_currency)
-        if rate_obj:
-            rates[source] = rate_obj.rate
-        else:
-            # Try to fetch via converter (will create rate in DB)
-            try:
-                from .converter import get_converter
-                converter = get_converter()
-                rate = converter.get_rate(source, target_currency)
-                rates[source] = Decimal(str(rate.rate))
-            except Exception:
-                # Fallback: assume 1:1 if rate not available
-                rates[source] = Decimal("1")
+        # Cached lookup: TTL'd, wrapped in transaction.atomic() so the
+        # SELECT cfg_currency_rate ... commits immediately. Without this
+        # path, callers inside an outer atomic() on another DB pinned the
+        # default-DB backend conn and exhausted pgbouncer's transaction
+        # pool — observed as PoolTimeout / query_wait_timeout in
+        # production at carapis.
+        #
+        # get_cached_rate() negative-caches missing rates (returns None
+        # for TTL seconds), so falling back to 1:1 is cheap and the rate
+        # gets picked up automatically once the scheduled converter task
+        # populates the row. Do NOT call converter.get_rate() inline here:
+        # it does an un-atomic CurrencyRate.get_rate() that resurrects
+        # the original leak under hot traffic.
+        cached = get_cached_rate(source, target_currency)
+        rates[source] = cached.rate if cached is not None else Decimal("1")
 
     return rates
 

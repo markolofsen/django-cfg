@@ -321,6 +321,97 @@ def cleanup_orphaned_job_keys(
         raise
 
 
+def prune_orphaned_queue_ids(
+    queue_name: str = "default",
+    dry_run: bool = False,
+) -> Dict[str, int]:
+    """
+    Remove stale job IDs from a queue list whose job hash no longer exists.
+
+    ``cleanup_orphaned_job_keys`` prunes orphan ``rq:job:<id>`` *hashes*, but it
+    never removes the stale IDs that still sit inside the ``rq:queue:<q>`` Redis
+    list. Those IDs accumulate when a job hash TTL-expires while its ID is still
+    queued, and a worker wastes a cycle fetching each one.
+
+    This task scans ``rq:queue:<queue_name>`` and ``LREM``s every ID whose
+    ``rq:job:<id>`` hash is missing.
+
+    NOTE: This is the self-heal action behind ``RQHealthConfig.auto_prune_orphan_ids``.
+    The queue-health monitor only *reports* the orphan ratio unless that flag is
+    enabled; this function may also be called directly / from a schedule.
+
+    Args:
+        queue_name: Queue whose list to prune.
+        dry_run: If True, only count orphan IDs without removing them.
+
+    Returns:
+        Dictionary with statistics::
+
+            {
+                "queue": "default",
+                "scanned": 1200,
+                "orphaned": 37,
+                "pruned": 37,
+                "dry_run": False,
+            }
+    """
+    try:
+        queue = django_rq.get_queue(queue_name)
+        redis_conn = queue.connection
+        queue_key = f"rq:queue:{queue_name}"
+
+        stats: Dict[str, int] = {
+            "queue": queue_name,
+            "scanned": 0,
+            "orphaned": 0,
+            "pruned": 0,
+            "dry_run": dry_run,
+        }
+
+        logger.info(
+            f"=== Pruning orphaned queue IDs from '{queue_key}' [dry_run={dry_run}] ==="
+        )
+
+        raw_ids = redis_conn.lrange(queue_key, 0, -1)
+        stats["scanned"] = len(raw_ids)
+
+        orphan_ids = []
+        for raw_id in raw_ids:
+            job_id = raw_id.decode("utf-8") if isinstance(raw_id, bytes) else raw_id
+            if not redis_conn.exists(f"rq:job:{job_id}"):
+                orphan_ids.append(raw_id)
+
+        stats["orphaned"] = len(orphan_ids)
+
+        if orphan_ids:
+            logger.warning(
+                f"Found {len(orphan_ids)} orphaned IDs in queue '{queue_name}' "
+                f"(of {stats['scanned']} scanned)"
+            )
+            if not dry_run:
+                pruned = 0
+                for raw_id in orphan_ids:
+                    # LREM removes all matching occurrences of this ID.
+                    removed = redis_conn.lrem(queue_key, 0, raw_id)
+                    pruned += int(removed)
+                stats["pruned"] = pruned
+                logger.info(f"Pruned {pruned} orphaned IDs from queue '{queue_name}'")
+            else:
+                logger.info(
+                    f"DRY RUN: would prune {len(orphan_ids)} orphaned IDs "
+                    f"from queue '{queue_name}'"
+                )
+        else:
+            logger.info(f"No orphaned IDs found in queue '{queue_name}'")
+
+        logger.info(f"Stats: {stats}")
+        return stats
+
+    except Exception as e:
+        logger.error(f"Orphaned queue ID pruning failed: {e}", exc_info=True)
+        raise
+
+
 def get_rq_stats(queue_name: str = "default") -> Dict[str, any]:
     """
     Get statistics about RQ queues and jobs.

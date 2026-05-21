@@ -121,7 +121,13 @@ class CurrencyRate(models.Model):
     @classmethod
     def get_rate_value(cls, base: str, quote: str) -> Decimal | None:
         """
-        Get rate value as Decimal.
+        Get rate value as Decimal — TTL-cached, transaction-safe.
+
+        Routes through django_currency._rate_cache so the SELECT commits
+        immediately and the backend connection returns to pgbouncer
+        instead of pinning in "idle in transaction". Prefer this in hot
+        paths (filters, serializers, descriptors); reach for .get_rate()
+        only when you need the full ORM instance.
 
         Args:
             base: Base currency code
@@ -130,8 +136,13 @@ class CurrencyRate(models.Model):
         Returns:
             Rate as Decimal or None if not found
         """
-        rate = cls.get_rate(base, quote)
-        return rate.rate if rate else None
+        try:
+            from django_cfg.modules.django_currency._rate_cache import get_cached_rate
+        except ImportError:
+            rate = cls.get_rate(base, quote)
+            return rate.rate if rate else None
+        cached = get_cached_rate(base, quote)
+        return cached.rate if cached else None
 
     @classmethod
     def set_rate(

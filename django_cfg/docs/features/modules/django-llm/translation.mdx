@@ -31,8 +31,8 @@ These helpers instantiate `DjangoTranslator` automatically using the API key fro
 ## Using `DjangoTranslator` Directly
 
 ```python
-from django_cfg.modules.django_llm.translator import DjangoTranslator
-from django_cfg.modules.django_llm.llm.client import LLMClient
+from django_cfg.modules.django_llm.features.translator import DjangoTranslator
+from django_cfg.modules.django_llm.client import LLMClient
 
 # Auto-configure from Django config
 translator = DjangoTranslator()
@@ -316,7 +316,7 @@ DjangoTranslator.send_translation_alert(
 `TranslationError` is the base exception for all translation failures:
 
 ```python
-from django_cfg.modules.django_llm.translator import TranslationError
+from django_cfg.modules.django_llm.features.translator import TranslationError
 
 try:
     result = translator.translate("Hello", target_language="fr")

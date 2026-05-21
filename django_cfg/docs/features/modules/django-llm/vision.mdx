@@ -30,7 +30,7 @@ OpenAI Vision API charges based on image size:
 ## Quick Start
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import VisionClient
+from django_cfg.modules.django_llm.features.vision import VisionClient
 
 # Default: auto_resize=True, default_detail="low"
 client = VisionClient()
@@ -158,7 +158,7 @@ Direct access to the resizer for custom workflows.
 ### Resize PIL Image
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import ImageResizer
+from django_cfg.modules.django_llm.features.vision import ImageResizer
 from PIL import Image
 
 img = Image.open("photo.jpg")
@@ -199,7 +199,7 @@ print(f"Saved: {savings['savings_percent']}%")
 Fetch images with automatic resize.
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import ImageFetcher
+from django_cfg.modules.django_llm.features.vision import ImageFetcher
 
 fetcher = ImageFetcher(
     timeout=30.0,
@@ -228,7 +228,7 @@ data_url = fetcher.fetch_as_base64_url_sync(url)
 ## Token Estimation
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import (
+from django_cfg.modules.django_llm.features.vision import (
     estimate_image_tokens,
     get_optimal_detail_mode,
 )

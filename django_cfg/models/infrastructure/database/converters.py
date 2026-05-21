@@ -46,6 +46,13 @@ def to_django_config(config: "DatabaseConfig") -> Dict[str, Any]:  # type: ignor
         if config.atomic_requests is not None:
             django_config["ATOMIC_REQUESTS"] = config.atomic_requests
 
+        # DISABLE_SERVER_SIDE_CURSORS is only honored by the PostgreSQL
+        # backend; emit it unconditionally there so users running behind
+        # pgbouncer transaction-pool mode have a one-flag fix for
+        # InvalidCursorName errors raised by Django's .iterator().
+        if config.disable_server_side_cursors:
+            django_config["DISABLE_SERVER_SIDE_CURSORS"] = True
+
         # Add database-specific options
         if config.engine == "django.db.backends.postgresql":
             # PostgreSQL supports connect_timeout and sslmode

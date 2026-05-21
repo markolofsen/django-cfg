@@ -5,8 +5,10 @@ Auto-configuring LLM and translation service that integrates with DjangoConfig.
 """
 
 # from .service import DjangoLLM, LLMError, LLMConfigError  # Removed - using LLMClient directly
-from .llm import LLMCache, LLMClient, LLMProvider
-from .translator import DjangoTranslator, TranslationError
+from .client import LLMClient
+from .storage import LLMCache
+from .providers import LLMProvider
+from .features.translator import DjangoTranslator, TranslationError
 
 
 # Convenience functions

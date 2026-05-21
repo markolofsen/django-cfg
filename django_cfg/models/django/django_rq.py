@@ -76,9 +76,19 @@ Scheduler Support:
     ```
 """
 
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+if TYPE_CHECKING:
+    from .rq_health import RQHealthConfig
+
+
+def _default_rq_health_config() -> "RQHealthConfig":
+    """Build a default RQHealthConfig (imported lazily to avoid an import cycle)."""
+    from .rq_health import RQHealthConfig
+
+    return RQHealthConfig()
 
 
 class RQQueueConfig(BaseModel):
@@ -149,6 +159,15 @@ class RQQueueConfig(BaseModel):
         default=86400,  # 24 hours - keep results for a day
         ge=0,
         description="Default result TTL in seconds (0 = no expiry, -1 = never expire)",
+    )
+
+    default_ttl: Optional[int] = Field(
+        default=None,
+        description=(
+            "Default job TTL in seconds — how long a job may sit queued before it "
+            "is discarded. None = no expiry (RQ default). Set this to prevent stale "
+            "queued jobs from accumulating in a starved queue."
+        ),
     )
 
     failure_ttl: int = Field(
@@ -242,6 +261,9 @@ class RQQueueConfig(BaseModel):
         config["DEFAULT_TIMEOUT"] = self.default_timeout
         config["DEFAULT_RESULT_TTL"] = self.default_result_ttl
         config["DEFAULT_FAILURE_TTL"] = self.failure_ttl
+
+        if self.default_ttl is not None:
+            config["DEFAULT_TTL"] = self.default_ttl
 
         return config
 
@@ -378,6 +400,12 @@ class DjangoRQConfig(BaseModel):
         description="Scheduled jobs for rq-scheduler (cron-style, interval, or one-time)",
     )
 
+    # RQ queue-health monitor configuration
+    health: "RQHealthConfig" = Field(
+        default_factory=lambda: _default_rq_health_config(),
+        description="RQ queue-health monitor configuration (periodic checks + Telegram alerts)",
+    )
+
     @field_validator("commit_mode")
     @classmethod
     def validate_commit_mode(cls, v: str) -> str:
@@ -425,6 +453,7 @@ class DjangoRQConfig(BaseModel):
         Automatically adds based on configuration:
         - cleanup_old_jobs (daily) - if enable_auto_cleanup=True
         - cleanup_orphaned_job_keys (weekly) - if enable_auto_cleanup=True
+        - run_queue_health_check (every check_interval_sec) - if health.enabled=True
         - demo_scheduler_heartbeat (every minute) - if is_development=True
 
         Returns:
@@ -456,6 +485,16 @@ class DjangoRQConfig(BaseModel):
             )
 
             all_schedules.extend([cleanup_jobs_schedule, cleanup_orphaned_schedule])
+
+        # Add RQ queue-health monitor (enabled by default)
+        if self.health.enabled:
+            health_monitor_schedule = RQScheduleConfig(
+                func="django_cfg.modules.django_rq.health.tasks.run_queue_health_check",
+                interval=self.health.check_interval_sec,
+                queue=self.health.monitor_queue,
+                description="RQ queue-health monitor",
+            )
+            all_schedules.append(health_monitor_schedule)
 
         # Add demo heartbeat task (development only)
         # Need to import here to avoid circular imports at module level
@@ -872,6 +911,14 @@ class RQScheduleConfig(BaseModel):
             object.__setattr__(self, 'kwargs', merged_kwargs)
 
         return self
+
+
+# Resolve the forward reference to RQHealthConfig now that RQScheduleConfig is
+# defined. Importing here (rather than at module top) avoids an import cycle:
+# rq_health.py does not import django_rq.py, so this direction is safe.
+from .rq_health import RQHealthConfig  # noqa: E402
+
+DjangoRQConfig.model_rebuild()
 
 
 __all__ = [

@@ -18,7 +18,7 @@ Automatic cost calculation and monitoring for all LLM operations.
 All clients automatically track costs:
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import VisionClient
+from django_cfg.modules.django_llm.features.vision import VisionClient
 
 client = VisionClient()
 response = client.analyze(
@@ -36,7 +36,7 @@ print(f"Output tokens: {response.tokens_output}")
 ### Chat Completions
 
 ```python
-from django_cfg.modules.django_llm.llm.costs import calculate_chat_cost
+from django_cfg.modules.django_llm.registry import calculate_chat_cost
 
 cost = calculate_chat_cost(
     model="openai/gpt-4o-mini",
@@ -52,7 +52,7 @@ print(f"Cost: ${cost:.6f}")
 Estimate cost before making a request:
 
 ```python
-from django_cfg.modules.django_llm.llm.tokenizer import Tokenizer
+from django_cfg.modules.django_llm.tokenizer import Tokenizer
 
 tokenizer = Tokenizer()
 
@@ -78,7 +78,7 @@ Image tokens depend on size and detail mode:
 | `high` | 85 + 170×tiles | 512×512 tiles |
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import estimate_image_tokens
+from django_cfg.modules.django_llm.features.vision import estimate_image_tokens
 
 # Low detail - always 85
 tokens = estimate_image_tokens(2000, 2000, "low")  # 85
@@ -92,7 +92,7 @@ tokens = estimate_image_tokens(1024, 1024, "high")  # 765
 Pre-resizing saves 90% on image tokens:
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import ImageResizer
+from django_cfg.modules.django_llm.features.vision import ImageResizer
 
 savings = ImageResizer.estimate_savings(4000, 3000, "low")
 print(f"Original: {savings['original_tokens']} tokens")
@@ -110,7 +110,7 @@ print(f"Saved: {savings['savings_percent']}%")
 Pricing is fetched from OpenRouter API:
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import VisionModelsRegistry
+from django_cfg.modules.django_llm.features.vision import VisionModelsRegistry
 
 registry = VisionModelsRegistry()
 await registry.fetch()

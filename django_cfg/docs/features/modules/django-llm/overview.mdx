@@ -58,8 +58,8 @@ models = get_available_models()
 ### Vision & Image Generation (submodule imports)
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import VisionClient
-from django_cfg.modules.django_llm.llm.image_gen import ImageGenClient
+from django_cfg.modules.django_llm.features.vision import VisionClient
+from django_cfg.modules.django_llm.features.image_gen import ImageGenClient
 
 # Vision analysis (auto-resize enabled by default)
 vision = VisionClient()
@@ -79,14 +79,17 @@ print(image.first_url)
 
 ```
 django_llm/
-├── llm/
-│   ├── client.py           # LLMClient for text
-│   ├── vision/
-│   │   ├── client.py       # VisionClient
-│   │   ├── image_resizer.py # Token optimization
-│   │   └── ...
-│   └── image_gen/
-│       └── client.py       # ImageGenClient
+├── client/             # LLMClient for text completions
+├── providers/          # Provider management (OpenAI, OpenRouter)
+├── registry/           # Model catalogue, pricing, cost calculation
+├── storage/            # Response caching with TTL
+├── structured/         # Structured output + JSON extraction
+├── tokenizer.py        # Token counting
+├── monitoring/         # Provider balance monitoring
+├── features/
+│   ├── vision/         # VisionClient, OCR, image resizing
+│   ├── image_gen/      # ImageGenClient
+│   └── translator/     # DjangoTranslator
 └── __init__.py
 ```
 
@@ -158,7 +161,7 @@ embedding = client.generate_embedding(
 Automatic cost calculation and monitoring.
 
 ```python
-from django_cfg.modules.django_llm.llm.costs import calculate_chat_cost
+from django_cfg.modules.django_llm.registry import calculate_chat_cost
 
 cost = calculate_chat_cost(
     model="openai/gpt-4o-mini",

@@ -16,7 +16,7 @@ The LLMClient provides text-based LLM operations including chat completions, emb
 ## Quick Start
 
 ```python
-from django_cfg.modules.django_llm.llm.client import LLMClient
+from django_cfg.modules.django_llm.client import LLMClient
 
 client = LLMClient()
 
@@ -150,7 +150,7 @@ toon_string = client.to_toon(data)
 ### Token Counting
 
 ```python
-from django_cfg.modules.django_llm.llm.tokenizer import Tokenizer
+from django_cfg.modules.django_llm.tokenizer import Tokenizer
 
 tokenizer = Tokenizer()
 
@@ -178,7 +178,7 @@ def manage_budget(messages, max_tokens=4000, model="gpt-4o-mini"):
 ## JSON Extraction
 
 ```python
-from django_cfg.modules.django_llm.llm.extractor import JSONExtractor
+from django_cfg.modules.django_llm.structured import JSONExtractor
 
 extractor = JSONExtractor()
 
@@ -247,7 +247,7 @@ print(f"Hit rate: {cache_info['hit_rate']:.2%}")
 ## Cost Calculation
 
 ```python
-from django_cfg.modules.django_llm.llm.costs import calculate_chat_cost
+from django_cfg.modules.django_llm.registry import calculate_chat_cost
 
 cost = calculate_chat_cost(
     model="openai/gpt-4o-mini",

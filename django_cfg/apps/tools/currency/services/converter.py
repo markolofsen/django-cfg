@@ -155,10 +155,26 @@ class CurrencyConverter:
         return rate
 
     def _get_db_rate(self, base: str, quote: str) -> "CurrencyRate | None":
-        """Get rate from CurrencyRate model."""
+        """Get rate from CurrencyRate model — TTL-cached, transaction-safe.
+
+        Routes through django_currency._rate_cache so this hot path doesn't
+        leak idle-in-transaction sessions onto pgbouncer when called from
+        inside an outer atomic() on another DB.
+
+        Returns a lightweight cached value object that quacks like a
+        CurrencyRate (`.rate` attr) — converter callers only read .rate.
+        """
         try:
-            from ..models import CurrencyRate
-            return CurrencyRate.get_rate(base, quote)
+            from django_cfg.modules.django_currency._rate_cache import get_cached_rate
+        except ImportError:
+            try:
+                from ..models import CurrencyRate
+                return CurrencyRate.get_rate(base, quote)
+            except Exception as e:
+                logger.debug(f"DB lookup failed: {e}")
+                return None
+        try:
+            return get_cached_rate(base, quote)
         except Exception as e:
             logger.debug(f"DB lookup failed: {e}")
             return None

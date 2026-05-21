@@ -211,7 +211,7 @@ TELEGRAM__CHAT_ID=
 Default thresholds can be customized:
 
 ```python
-from django_cfg.modules.django_llm_monitoring import LLMBalanceNotifier
+from django_cfg.modules.django_llm.monitoring import LLMBalanceNotifier
 
 # Customize thresholds
 LLMBalanceNotifier.THRESHOLD_WARNING = 20.0   # $20 USD
@@ -221,7 +221,7 @@ LLMBalanceNotifier.THRESHOLD_CRITICAL = 10.0  # $10 USD
 Or modify in source:
 
 ```python
-# django_cfg/modules/django_llm_monitoring/notifier.py
+# django_cfg/modules/django_llm/monitoring/notifier.py
 
 class LLMBalanceNotifier:
     THRESHOLD_WARNING = 20.0   # Default: 10.0
@@ -355,7 +355,7 @@ You will receive this notification once per 24 hours until the issue is resolved
 Use Pydantic models for type-safe access:
 
 ```python
-from django_cfg.modules.django_llm_monitoring import BalanceChecker, LLMBalanceNotifier
+from django_cfg.modules.django_llm.monitoring import BalanceChecker, LLMBalanceNotifier
 
 # Check balances
 checker = BalanceChecker()
@@ -382,7 +382,7 @@ for provider, level in results.items():
 ### Using Individual Providers
 
 ```python
-from django_cfg.modules.django_llm_monitoring.providers import (
+from django_cfg.modules.django_llm.monitoring.providers import (
     OpenAIProvider,
     OpenRouterProvider,
 )
@@ -422,14 +422,14 @@ results = notifier.check_all_and_notify(balances, force=True)
 The module uses a **modular provider architecture**:
 
 ```
-django_llm_monitoring/
+django_llm/monitoring/
 ├── providers/
 │   ├── base.py          # BaseLLMProvider (caching, error handling)
 │   ├── openai.py        # OpenAIProvider (key validation)
 │   └── openrouter.py    # OpenRouterProvider (balance check)
 ├── models.py            # Pydantic v2 models
 ├── balance_checker.py   # Main checker
-└── notifier.py         # Notifications
+└── notifier.py          # Notifications
 ```
 
 ### Balance Checking Flow

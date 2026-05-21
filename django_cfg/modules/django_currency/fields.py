@@ -101,17 +101,15 @@ class MoneyTargetDescriptor:
         if currency.upper() == self.target_currency.upper():
             return Decimal(str(amount))
 
-        # Get rate from CurrencyRate (CurrencyManager handles DB routing)
+        # Cached lookup: TTL'd, single COMMIT'd transaction on the default
+        # DB, no leak into pgbouncer when this descriptor is accessed inside
+        # an outer atomic() on a different database. See _rate_cache for
+        # the reasoning.
         try:
-            from django_cfg.apps.tools.currency.models import CurrencyRate
-            rate = CurrencyRate.objects.filter(
-                base_currency=currency.upper(),
-                quote_currency=self.target_currency.upper()
-            ).first()
-            if rate:
-                return Decimal(str(amount)) * rate.rate
-        except ImportError:
-            pass
+            from ._rate_cache import get_cached_rate
+            cached = get_cached_rate(currency, self.target_currency)
+            if cached is not None:
+                return Decimal(str(amount)) * cached.rate
         except Exception:
             pass
 

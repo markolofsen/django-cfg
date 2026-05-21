@@ -111,7 +111,7 @@ class InstalledAppsBuilder:
         apps = [
             # Core apps (always enabled)
             "django_cfg.modules.django_tailwind",  # Universal Tailwind layouts
-            "django_cfg.modules.django_llm_monitoring",  # LLM balance monitoring
+            "django_cfg.modules.django_llm",  # LLM service + balance monitoring
             "django_cfg.modules.django_cleanup",  # Automatic file cleanup
             "django_cfg.modules.django_generator",  # Unified client generation (replaces django_codegen + django_client + django_fastapi)
             "django_cfg.modules.django_sitemap",  # Universal sitemap source registry + JSON feed

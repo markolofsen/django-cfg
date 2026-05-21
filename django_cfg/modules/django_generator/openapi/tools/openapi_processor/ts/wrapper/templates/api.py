@@ -362,6 +362,12 @@ export {{ auth, type Auth }} from './helpers/auth';
 // backend so the SDK class doesn't collide.
 {sdk_class_reexports}
 
+// Generated DTO / schema types (Hey API). The per-group barrels each
+// re-export these too; surfacing them at the top level lets consumers
+// `import {{ FleetSummary }} from '<api>'` without reaching into a
+// group subpath.
+export type * from './types.gen';
+
 // Shared utilities (errors, storage adapters, logger).
 export * from './helpers';
 '''

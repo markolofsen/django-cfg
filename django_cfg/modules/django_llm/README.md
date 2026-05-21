@@ -24,27 +24,25 @@
 
 ```
 django_llm/
-├── llm/
+├── client/                    # Text LLM client
 │   ├── client.py              # Main LLMClient class
-│   ├── cache.py               # LLM response caching
-│   ├── models_cache.py        # Model pricing cache
-│   ├── costs.py               # Cost calculation utilities
-│   ├── tokenizer.py           # Token counting utilities
-│   ├── extractor.py           # JSON extraction utilities
-│   ├── config.py              # VisionConfig, ImageGenConfig
-│   ├── vision/
-│   │   ├── client.py          # VisionClient for image analysis
-│   │   ├── models.py          # Request/Response models
-│   │   ├── presets.py         # Model quality & OCR mode presets
-│   │   ├── tokens.py          # Image token estimation
-│   │   ├── image_encoder.py   # Base64 encoding with resize
-│   │   ├── image_fetcher.py   # URL fetching with validation & resize
-│   │   ├── image_resizer.py   # Image resizing for token optimization
-│   │   ├── cache.py           # Image caching with TTL
-│   │   └── vision_models.py   # Vision models registry
-│   └── image_gen/
-│       ├── client.py          # ImageGenClient
-│       └── models.py          # ImageGenRequest/Response
+│   ├── chat_handler.py        # Chat completion handling
+│   └── embedding_handler.py   # Embedding generation
+├── core/                      # Shared types and errors
+├── providers/                 # Provider management (OpenAI, OpenRouter)
+├── registry/                  # Model catalogue, pricing, cost calculation
+│   ├── models.py              # Model cache + pricing data
+│   └── pricing.py             # Cost calculation utilities
+├── storage/                   # Response caching with TTL
+├── structured/                # Structured output + JSON extraction
+│   ├── extractor.py           # JSONExtractor
+│   └── response_format.py     # JSON schema helpers
+├── tokenizer.py               # Token counting utilities
+├── monitoring/                # LLM provider balance monitoring
+├── features/
+│   ├── vision/                # VisionClient, OCR, image resize
+│   ├── image_gen/             # ImageGenClient
+│   └── translator/            # DjangoTranslator
 └── __init__.py                # Public API exports
 ```
 
@@ -90,7 +88,7 @@ For high-volume OCR tasks, pre-resizing images can save **90% on token costs**:
 ### Usage
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import VisionClient
+from django_cfg.modules.django_llm.features.vision import VisionClient
 
 # Default: auto_resize=True, default_detail="low"
 client = VisionClient()
@@ -124,7 +122,7 @@ client = VisionClient(auto_resize=False)
 ### ImageResizer Class
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import ImageResizer
+from django_cfg.modules.django_llm.features.vision import ImageResizer
 
 # Resize PIL image
 from PIL import Image
@@ -153,7 +151,7 @@ new_w, new_h = ImageResizer.get_optimal_size(2000, 1500, "low")
 ### ImageFetcher with Resize
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import ImageFetcher
+from django_cfg.modules.django_llm.features.vision import ImageFetcher
 
 # Default: resize=True, detail="low"
 fetcher = ImageFetcher()
@@ -183,7 +181,7 @@ data_url = await fetcher.fetch_as_base64_url(
 **Image analysis and OCR with model quality presets**
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import VisionClient
+from django_cfg.modules.django_llm.features.vision import VisionClient
 
 # Initialize (API key auto-detected from django config)
 # Default: auto_resize=True, default_detail="low"
@@ -265,14 +263,14 @@ response = await client.aocr(image_url="https://example.com/doc.jpg")
 ### Token Estimation
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import estimate_image_tokens
+from django_cfg.modules.django_llm.features.vision import estimate_image_tokens
 
 # Estimate tokens for image
 tokens = estimate_image_tokens(width=1024, height=1024, detail="high")
 # Returns: 765 (85 base + 170 * 4 tiles)
 
 # Auto-detect optimal detail mode
-from django_cfg.modules.django_llm.llm.vision import get_optimal_detail_mode
+from django_cfg.modules.django_llm.features.vision import get_optimal_detail_mode
 mode = get_optimal_detail_mode(width=512, height=512)  # Returns "low"
 mode = get_optimal_detail_mode(width=2048, height=2048)  # Returns "high"
 ```
@@ -284,7 +282,7 @@ mode = get_optimal_detail_mode(width=2048, height=2048)  # Returns "high"
 ### ImageGenClient
 
 ```python
-from django_cfg.modules.django_llm.llm.image_gen import ImageGenClient
+from django_cfg.modules.django_llm.features.image_gen import ImageGenClient
 
 # Initialize (API key auto-detected)
 client = ImageGenClient()
@@ -330,7 +328,7 @@ response = await client.agenerate(
 ### ImageFetcher
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import ImageFetcher
+from django_cfg.modules.django_llm.features.vision import ImageFetcher
 
 fetcher = ImageFetcher(
     timeout=30.0,
@@ -369,7 +367,7 @@ content_type = ImageFetcher.detect_format_from_base64("iVBORw0KGgo...")  # "imag
 ### Image Cache
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import ImageCache, get_image_cache
+from django_cfg.modules.django_llm.features.vision import ImageCache, get_image_cache
 
 # Get global cache instance
 cache = get_image_cache(cache_dir=Path("cache/images"), ttl_hours=168)
@@ -392,42 +390,18 @@ count = cache.cleanup_expired()  # Remove expired entries
 
 ## Configuration
 
-### VisionConfig
+Clients are configured through their constructor arguments. API keys are
+auto-detected from `django_config.api_keys` when omitted (see [API Keys](#api-keys)).
 
 ```python
-from django_cfg.modules.django_llm.llm.config import VisionConfig
+from django_cfg.modules.django_llm.features.vision import VisionClient
+from django_cfg.modules.django_llm.features.image_gen import ImageGenClient
 
-config = VisionConfig(
-    enabled=True,
-    default_model="openai/gpt-4o",
-    default_model_quality="balanced",
-    default_ocr_mode="base",
-    fetch_enabled=True,
-    fetch_timeout=30.0,
-    max_image_size_mb=10,
-    allowed_domains=None,  # None = all allowed
-    cache_enabled=True,
-    cache_ttl_hours=168,
-    auto_resize=True,      # NEW: Enable auto-resize
-    default_detail="low",  # NEW: Default detail mode
-)
-```
+# Vision: auto_resize and default_detail tune token usage
+vision = VisionClient(auto_resize=True, default_detail="low")
 
-### ImageGenConfig
-
-```python
-from django_cfg.modules.django_llm.llm.config import ImageGenConfig
-
-config = ImageGenConfig(
-    enabled=True,
-    default_model="openai/dall-e-3",
-    default_size="1024x1024",
-    default_quality="standard",
-    default_style="vivid",
-    cache_enabled=True,
-    cache_ttl_hours=168,
-    cache_max_size_mb=500,
-)
+# Image generation
+image_gen = ImageGenClient()
 ```
 
 ---
@@ -437,7 +411,7 @@ config = ImageGenConfig(
 ### Basic Usage
 
 ```python
-from django_cfg.modules.django_llm.llm.client import LLMClient
+from django_cfg.modules.django_llm.client import LLMClient
 
 client = LLMClient(
     apikey_openrouter="sk-or-v1-...",
@@ -462,20 +436,18 @@ embedding = client.generate_embedding(
 ### Cost Calculation
 
 ```python
-from django_cfg.modules.django_llm.llm.costs import calculate_chat_cost
+from django_cfg.modules.django_llm.registry import calculate_chat_cost
 
 cost = calculate_chat_cost(
+    usage={"prompt_tokens": 100, "completion_tokens": 50},
     model="openai/gpt-4o-mini",
-    input_tokens=100,
-    output_tokens=50,
-    models_cache=models_cache
 )
 ```
 
 ### Tokenizer
 
 ```python
-from django_cfg.modules.django_llm.llm.tokenizer import Tokenizer
+from django_cfg.modules.django_llm.tokenizer import Tokenizer
 
 tokenizer = Tokenizer()
 count = tokenizer.count_tokens("Hello world", "gpt-4o-mini")
@@ -485,7 +457,7 @@ count = tokenizer.count_messages_tokens(messages, "gpt-4o-mini")
 ### JSON Extraction
 
 ```python
-from django_cfg.modules.django_llm.llm.extractor import JSONExtractor
+from django_cfg.modules.django_llm.structured import JSONExtractor
 
 extractor = JSONExtractor()
 json_data = extractor.extract_json_from_response("Here's the data: {'name': 'John'}")
@@ -498,7 +470,7 @@ json_data = extractor.extract_json_from_response("Here's the data: {'name': 'Joh
 ### Vision Models
 
 ```python
-from django_cfg.modules.django_llm.llm.vision import (
+from django_cfg.modules.django_llm.features.vision import (
     VisionAnalyzeRequest,
     VisionAnalyzeResponse,
     OCRRequest,
@@ -530,7 +502,7 @@ print(response.tokens_total)  # 150
 ### Image Generation Models
 
 ```python
-from django_cfg.modules.django_llm.llm.image_gen import (
+from django_cfg.modules.django_llm.features.image_gen import (
     ImageGenRequest,
     ImageGenResponse,
     GeneratedImage,

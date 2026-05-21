@@ -27,7 +27,7 @@ class MCPAgentRunner:
         """Lazy-load django_llm client, forced to use OpenRouter."""
         if self._llm_client is None:
             from django_cfg.modules.django_llm import LLMClient
-            from django_cfg.modules.django_llm.llm.providers import LLMProvider
+            from django_cfg.modules.django_llm.providers import LLMProvider
             # Force OpenRouter to avoid OpenAI quota issues
             self._llm_client = LLMClient(preferred_provider=LLMProvider.OPENROUTER)
         return self._llm_client

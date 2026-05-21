@@ -12,6 +12,7 @@ from .environment import EnvironmentConfig
 from .frontend_monitor import FrontendMonitorConfig
 from .geo import GeoConfig
 from .openapi import OpenAPIClientConfig
+from .rq_health import QueueHealthThresholds, RQHealthConfig
 
 __all__ = [
     "EnvironmentConfig",
@@ -20,6 +21,8 @@ __all__ = [
     "CurrencyConfig",
     "DjangoRQConfig",
     "RQQueueConfig",
+    "RQHealthConfig",
+    "QueueHealthThresholds",
     "FrontendMonitorConfig",
     "GeoConfig",
     "OpenAPIClientConfig",

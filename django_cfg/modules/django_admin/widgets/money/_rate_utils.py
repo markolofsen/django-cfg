@@ -36,17 +36,26 @@ def get_currency_choices() -> List[Tuple[str, str]]:
 
 def get_currency_rate(base: str, quote: str) -> Optional["CurrencyRate"]:
     """
-    Get a CurrencyRate instance for the given base/quote pair.
+    Get a CurrencyRate-like view for the given base/quote pair.
 
-    Returns None if the Currency app is not installed or the rate is not found.
+    Returns a thin object exposing ``.rate`` and ``.updated_at`` so existing
+    callers that read those two attributes keep working unchanged. The
+    lookup goes through the process-level TTL cache in django_currency to
+    avoid hammering the DB on every admin row render and to prevent
+    pgbouncer idle-in-transaction leaks (see
+    ``django_currency._rate_cache`` for the full story).
+
+    Returns ``None`` if the Currency app is not installed or the rate is
+    not found.
     """
     try:
-        from django_cfg.apps.tools.currency.models import CurrencyRate
-        return CurrencyRate.objects.filter(
-            base_currency=base.upper(),
-            quote_currency=quote.upper(),
-        ).first()
+        from django_cfg.modules.django_currency._rate_cache import get_cached_rate
     except ImportError:
         return None
+    try:
+        cached = get_cached_rate(base, quote)
     except Exception:
         return None
+    if cached is None:
+        return None
+    return cached  # CachedRate is duck-compatible: has .rate + .updated_at

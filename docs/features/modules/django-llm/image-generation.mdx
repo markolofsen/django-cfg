@@ -16,7 +16,7 @@ Generate images using DALL-E, FLUX, and other models with quality presets.
 ## Quick Start
 
 ```python
-from django_cfg.modules.django_llm.llm.image_gen import ImageGenClient
+from django_cfg.modules.django_llm.features.image_gen import ImageGenClient
 
 client = ImageGenClient()
 
@@ -160,7 +160,7 @@ response = await client.agenerate(
 ## Response Model
 
 ```python
-from django_cfg.modules.django_llm.llm.image_gen import (
+from django_cfg.modules.django_llm.features.image_gen import (
     ImageGenResponse,
     GeneratedImage,
 )
@@ -183,7 +183,7 @@ img.revised_prompt     # Model's revised prompt
 ## Request Model
 
 ```python
-from django_cfg.modules.django_llm.llm.image_gen import ImageGenRequest
+from django_cfg.modules.django_llm.features.image_gen import ImageGenRequest
 
 request = ImageGenRequest(
     prompt="A sunset",

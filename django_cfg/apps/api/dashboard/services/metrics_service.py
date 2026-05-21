@@ -26,7 +26,7 @@ class MetricsService:
     %%AI_HINT: Collects metrics from various sources in unified format%%
 
     TAGS: metrics, monitoring, dashboard, api
-    DEPENDS_ON: [django_llm_monitoring, django.core.cache]
+    DEPENDS_ON: [django_llm.monitoring, django.core.cache]
     """
 
     def __init__(self):
@@ -110,7 +110,7 @@ class MetricsService:
             Category data with provider balances
         """
         try:
-            from django_cfg.modules.django_llm_monitoring import BalanceChecker
+            from django_cfg.modules.django_llm.monitoring import BalanceChecker
 
             checker = BalanceChecker()
             balances = checker.check_all_balances(force=force_refresh)

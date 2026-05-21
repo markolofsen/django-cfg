@@ -176,6 +176,17 @@ def update_rates(
         "timestamp": datetime.now().isoformat(),
     }
 
+    # Invalidate the in-process rate cache used by MoneyField descriptors
+    # and admin widgets so the new rates are visible immediately instead of
+    # waiting for the TTL. Best-effort — never let a cache miss break the
+    # rate update itself.
+    if updated:
+        try:
+            from django_cfg.modules.django_currency._rate_cache import clear_rate_cache
+            clear_rate_cache()
+        except Exception:
+            logger.debug("rate cache invalidation failed", exc_info=True)
+
     logger.info(f"Currency update: {len(updated)} updated, {len(failed)} failed (batch mode)")
     return result
 

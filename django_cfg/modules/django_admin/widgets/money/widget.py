@@ -154,11 +154,14 @@ class MoneyFieldWidget(MultiWidget):
     def _get_all_rates(self) -> Dict[str, Dict[str, Any]]:
         rates: Dict[str, Dict[str, Any]] = {}
         try:
-            from django_cfg.apps.tools.currency.models import CurrencyRate
-            for rate_obj in CurrencyRate.objects.filter(quote_currency=self.target_currency.upper()):
-                rates[rate_obj.base_currency] = {
-                    "rate": float(rate_obj.rate),
-                    "updated_at": rate_obj.updated_at.isoformat() if rate_obj.updated_at else None,
+            from django_cfg.modules.django_currency._rate_cache import get_cached_rates_to
+        except ImportError:
+            return rates
+        try:
+            for base_currency, cached in get_cached_rates_to(self.target_currency).items():
+                rates[base_currency] = {
+                    "rate": float(cached.rate),
+                    "updated_at": cached.updated_at.isoformat() if cached.updated_at else None,
                 }
         except Exception:
             pass
