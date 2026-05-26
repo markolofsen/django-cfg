@@ -6,7 +6,7 @@ v5.3: Groups only in Target, no inheritance.
 
 from pathlib import Path
 
-from django_cfg.modules.django_codegen import (
+from django_cfg.modules.django_generator import (
     Config,
     OpenAPI,
     Target,

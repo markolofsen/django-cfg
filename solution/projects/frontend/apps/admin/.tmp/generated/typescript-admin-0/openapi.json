@@ -1,0 +1,2674 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Django CFG API",
+    "version": "1.0.0",
+    "description": "RESTful API with modern architecture"
+  },
+  "paths": {
+    "/apix/crypto/coins/": {
+      "get": {
+        "operationId": "crypto_coins_list",
+        "description": "ViewSet for cryptocurrency coins.",
+        "summary": "List coins",
+        "parameters": [
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCoinListList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/crypto/coins/{id}/": {
+      "get": {
+        "operationId": "crypto_coins_retrieve",
+        "description": "ViewSet for cryptocurrency coins.",
+        "summary": "Get coin details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this Coin.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Coin"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/crypto/coins/stats/": {
+      "get": {
+        "operationId": "crypto_coins_stats_retrieve",
+        "description": "Get cryptocurrency statistics.",
+        "summary": "Get coin statistics",
+        "tags": [
+          "crypto"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoinStats"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/crypto/exchanges/": {
+      "get": {
+        "operationId": "crypto_exchanges_list",
+        "description": "ViewSet for cryptocurrency exchanges.",
+        "summary": "List exchanges",
+        "parameters": [
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedExchangeList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/crypto/exchanges/{slug}/": {
+      "get": {
+        "operationId": "crypto_exchanges_retrieve",
+        "description": "ViewSet for cryptocurrency exchanges.",
+        "summary": "Get exchange details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Exchange"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/crypto/wallets/": {
+      "get": {
+        "operationId": "crypto_wallets_list",
+        "description": "ViewSet for user wallets.",
+        "summary": "List wallets",
+        "parameters": [
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedWalletList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/crypto/wallets/{id}/": {
+      "get": {
+        "operationId": "crypto_wallets_retrieve",
+        "description": "ViewSet for user wallets.",
+        "summary": "Get wallet details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Wallet"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/profiles/profiles/": {
+      "get": {
+        "operationId": "profiles_profiles_list",
+        "description": "Get a paginated list of all user profiles",
+        "summary": "List user profiles",
+        "parameters": [
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "profiles"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedUserProfileList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "post": {
+        "operationId": "profiles_profiles_create",
+        "description": "Create a new user profile",
+        "summary": "Create user profile",
+        "tags": [
+          "profiles"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProfileRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/profiles/profiles/{id}/": {
+      "get": {
+        "operationId": "profiles_profiles_retrieve",
+        "description": "Get detailed information about a specific user profile",
+        "summary": "Get user profile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this User Profile.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "profiles"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "put": {
+        "operationId": "profiles_profiles_update",
+        "description": "Update user profile information",
+        "summary": "Update user profile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this User Profile.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "profiles"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProfileUpdateRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileUpdate"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "patch": {
+        "operationId": "profiles_profiles_partial_update",
+        "description": "Partially update user profile information",
+        "summary": "Partially update user profile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this User Profile.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "profiles"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUserProfileUpdateRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileUpdate"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "delete": {
+        "operationId": "profiles_profiles_destroy",
+        "description": "Delete a user profile",
+        "summary": "Delete user profile",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this User Profile.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "profiles"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/profiles/profiles/me/": {
+      "get": {
+        "operationId": "profiles_profiles_me_retrieve",
+        "description": "Get current user's profile",
+        "summary": "Get my profile",
+        "tags": [
+          "profiles"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "put": {
+        "operationId": "profiles_profiles_me_update",
+        "description": "Get current user's profile",
+        "summary": "Get my profile",
+        "tags": [
+          "profiles"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserProfileRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "patch": {
+        "operationId": "profiles_profiles_me_partial_update",
+        "description": "Get current user's profile",
+        "summary": "Get my profile",
+        "tags": [
+          "profiles"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedUserProfileRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfile"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/profiles/profiles/stats/": {
+      "get": {
+        "operationId": "profiles_profiles_stats_retrieve",
+        "description": "Get comprehensive profile statistics",
+        "summary": "Get profile statistics",
+        "tags": [
+          "profiles"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileStats"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/trading/orders/": {
+      "get": {
+        "operationId": "trading_orders_list",
+        "description": "ViewSet for trading orders.",
+        "summary": "List orders",
+        "parameters": [
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "trading"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedOrderList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "post": {
+        "operationId": "trading_orders_create",
+        "description": "ViewSet for trading orders.",
+        "summary": "Create order",
+        "tags": [
+          "trading"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderCreate"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/trading/orders/{id}/": {
+      "get": {
+        "operationId": "trading_orders_retrieve",
+        "description": "ViewSet for trading orders.",
+        "summary": "Get order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this Order.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "trading"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "put": {
+        "operationId": "trading_orders_update",
+        "description": "ViewSet for trading orders.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this Order.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "trading"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "patch": {
+        "operationId": "trading_orders_partial_update",
+        "description": "ViewSet for trading orders.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this Order.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "trading"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedOrderRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "delete": {
+        "operationId": "trading_orders_destroy",
+        "description": "ViewSet for trading orders.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this Order.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "trading"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/trading/portfolios/": {
+      "get": {
+        "operationId": "trading_portfolios_list",
+        "description": "ViewSet for trading portfolios.",
+        "summary": "List portfolios",
+        "parameters": [
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "trading"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPortfolioList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/trading/portfolios/{id}/": {
+      "get": {
+        "operationId": "trading_portfolios_retrieve",
+        "description": "ViewSet for trading portfolios.",
+        "summary": "Get portfolio",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this Portfolio.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "trading"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Portfolio"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/trading/portfolios/me/": {
+      "get": {
+        "operationId": "trading_portfolios_me_retrieve",
+        "description": "Get current user's portfolio.",
+        "summary": "Get my portfolio",
+        "tags": [
+          "trading"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Portfolio"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/trading/portfolios/stats/": {
+      "get": {
+        "operationId": "trading_portfolios_stats_retrieve",
+        "description": "Get portfolio statistics.",
+        "summary": "Get portfolio statistics",
+        "tags": [
+          "trading"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioStats"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Coin": {
+        "type": "object",
+        "description": "Serializer for coins.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Coin symbol (e.g., BTC, ETH)",
+            "maxLength": 10
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name (e.g., Bitcoin, Ethereum)",
+            "maxLength": 100
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 100,
+            "pattern": "^[-a-zA-Z0-9_]+$"
+          },
+          "current_price_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
+            "description": "Current price in USD"
+          },
+          "market_cap_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$",
+            "description": "Market capitalization"
+          },
+          "volume_24h_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$",
+            "description": "24h trading volume"
+          },
+          "price_change_24h_percent": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$"
+          },
+          "price_change_7d_percent": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$"
+          },
+          "price_change_30d_percent": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$"
+          },
+          "logo_url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "whitepaper_url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "rank": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "description": "Market cap rank"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_tradeable": {
+            "type": "boolean"
+          },
+          "is_price_up_24h": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "is_price_up_24h",
+          "name",
+          "slug",
+          "symbol",
+          "updated_at"
+        ]
+      },
+      "CoinList": {
+        "type": "object",
+        "description": "Lightweight serializer for coin lists.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Coin symbol (e.g., BTC, ETH)",
+            "maxLength": 10
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name (e.g., Bitcoin, Ethereum)",
+            "maxLength": 100
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 100,
+            "pattern": "^[-a-zA-Z0-9_]+$"
+          },
+          "current_price_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
+            "description": "Current price in USD"
+          },
+          "market_cap_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$",
+            "description": "Market capitalization"
+          },
+          "price_change_24h_percent": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$"
+          },
+          "logo_url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "rank": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "description": "Market cap rank"
+          },
+          "is_price_up_24h": {
+            "type": "boolean",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "id",
+          "is_price_up_24h",
+          "name",
+          "slug",
+          "symbol"
+        ]
+      },
+      "CoinStats": {
+        "type": "object",
+        "description": "Serializer for coin statistics.",
+        "properties": {
+          "total_coins": {
+            "type": "integer"
+          },
+          "total_market_cap_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$"
+          },
+          "total_volume_24h_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$"
+          },
+          "trending_coins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoinList"
+            }
+          }
+        },
+        "required": [
+          "total_coins",
+          "total_market_cap_usd",
+          "total_volume_24h_usd",
+          "trending_coins"
+        ]
+      },
+      "Exchange": {
+        "type": "object",
+        "description": "Serializer for exchanges.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Exchange name",
+            "maxLength": 100
+          },
+          "slug": {
+            "type": "string",
+            "maxLength": 100,
+            "pattern": "^[-a-zA-Z0-9_]+$"
+          },
+          "code": {
+            "type": "string",
+            "description": "Exchange code (e.g., BINANCE, COINBASE)",
+            "maxLength": 20
+          },
+          "description": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "logo_url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "volume_24h_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$",
+            "description": "24h trading volume"
+          },
+          "num_markets": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "description": "Number of trading pairs"
+          },
+          "num_coins": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "description": "Number of supported coins"
+          },
+          "maker_fee_percent": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,1}(?:\\.\\d{0,4})?$"
+          },
+          "taker_fee_percent": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,1}(?:\\.\\d{0,4})?$"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "is_verified": {
+            "type": "boolean"
+          },
+          "supports_api": {
+            "type": "boolean"
+          },
+          "rank": {
+            "type": "integer",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "description": "Exchange rank by volume"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "code",
+          "created_at",
+          "id",
+          "name",
+          "slug",
+          "updated_at"
+        ]
+      },
+      "Order": {
+        "type": "object",
+        "description": "Serializer for orders.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "portfolio": {
+            "type": "integer"
+          },
+          "symbol": {
+            "type": "string",
+            "description": "Trading pair (e.g., BTC/USDT)",
+            "maxLength": 20
+          },
+          "order_type": {
+            "$ref": "#/components/schemas/OrderTypeEnum"
+          },
+          "side": {
+            "$ref": "#/components/schemas/SideEnum"
+          },
+          "quantity": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
+          },
+          "filled_quantity": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
+            "readOnly": true
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatusEnum"
+              }
+            ],
+            "readOnly": true
+          },
+          "total_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$",
+            "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "filled_quantity",
+          "id",
+          "portfolio",
+          "quantity",
+          "side",
+          "status",
+          "symbol",
+          "total_usd",
+          "updated_at"
+        ]
+      },
+      "OrderCreate": {
+        "type": "object",
+        "description": "Serializer for creating orders.",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "description": "Trading pair (e.g., BTC/USDT)",
+            "maxLength": 20
+          },
+          "order_type": {
+            "$ref": "#/components/schemas/OrderTypeEnum"
+          },
+          "side": {
+            "$ref": "#/components/schemas/SideEnum"
+          },
+          "quantity": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
+          }
+        },
+        "required": [
+          "quantity",
+          "side",
+          "symbol"
+        ]
+      },
+      "OrderCreateRequest": {
+        "type": "object",
+        "description": "Serializer for creating orders.",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Trading pair (e.g., BTC/USDT)",
+            "maxLength": 20
+          },
+          "order_type": {
+            "$ref": "#/components/schemas/OrderTypeEnum"
+          },
+          "side": {
+            "$ref": "#/components/schemas/SideEnum"
+          },
+          "quantity": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
+          }
+        },
+        "required": [
+          "quantity",
+          "side",
+          "symbol"
+        ]
+      },
+      "OrderRequest": {
+        "type": "object",
+        "description": "Serializer for orders.",
+        "properties": {
+          "portfolio": {
+            "type": "integer"
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Trading pair (e.g., BTC/USDT)",
+            "maxLength": 20
+          },
+          "order_type": {
+            "$ref": "#/components/schemas/OrderTypeEnum"
+          },
+          "side": {
+            "$ref": "#/components/schemas/SideEnum"
+          },
+          "quantity": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
+          }
+        },
+        "required": [
+          "portfolio",
+          "quantity",
+          "side",
+          "symbol"
+        ]
+      },
+      "OrderStatusEnum": {
+        "enum": [
+          "pending",
+          "filled",
+          "cancelled"
+        ],
+        "type": "string",
+        "description": "* `pending` - Pending\n* `filled` - Filled\n* `cancelled` - Cancelled"
+      },
+      "OrderTypeEnum": {
+        "enum": [
+          "market",
+          "limit",
+          "stop_loss"
+        ],
+        "type": "string",
+        "description": "* `market` - Market\n* `limit` - Limit\n* `stop_loss` - Stop Loss"
+      },
+      "PaginatedCoinListList": {
+        "type": "object",
+        "required": [
+          "count",
+          "page",
+          "pages",
+          "page_size",
+          "has_next",
+          "has_previous",
+          "results"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "example": 150
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (1-based)",
+            "example": 2
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 15
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "has_previous": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": true
+          },
+          "next_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Next page number (null if no next page)",
+            "example": 3
+          },
+          "previous_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Previous page number (null if no previous page)",
+            "example": 1
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoinList"
+            },
+            "description": "Array of items for current page"
+          }
+        }
+      },
+      "PaginatedExchangeList": {
+        "type": "object",
+        "required": [
+          "count",
+          "page",
+          "pages",
+          "page_size",
+          "has_next",
+          "has_previous",
+          "results"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "example": 150
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (1-based)",
+            "example": 2
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 15
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "has_previous": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": true
+          },
+          "next_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Next page number (null if no next page)",
+            "example": 3
+          },
+          "previous_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Previous page number (null if no previous page)",
+            "example": 1
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Exchange"
+            },
+            "description": "Array of items for current page"
+          }
+        }
+      },
+      "PaginatedOrderList": {
+        "type": "object",
+        "required": [
+          "count",
+          "page",
+          "pages",
+          "page_size",
+          "has_next",
+          "has_previous",
+          "results"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "example": 150
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (1-based)",
+            "example": 2
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 15
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "has_previous": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": true
+          },
+          "next_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Next page number (null if no next page)",
+            "example": 3
+          },
+          "previous_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Previous page number (null if no previous page)",
+            "example": 1
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            },
+            "description": "Array of items for current page"
+          }
+        }
+      },
+      "PaginatedPortfolioList": {
+        "type": "object",
+        "required": [
+          "count",
+          "page",
+          "pages",
+          "page_size",
+          "has_next",
+          "has_previous",
+          "results"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "example": 150
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (1-based)",
+            "example": 2
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 15
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "has_previous": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": true
+          },
+          "next_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Next page number (null if no next page)",
+            "example": 3
+          },
+          "previous_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Previous page number (null if no previous page)",
+            "example": 1
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Portfolio"
+            },
+            "description": "Array of items for current page"
+          }
+        }
+      },
+      "PaginatedUserProfileList": {
+        "type": "object",
+        "required": [
+          "count",
+          "page",
+          "pages",
+          "page_size",
+          "has_next",
+          "has_previous",
+          "results"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "example": 150
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (1-based)",
+            "example": 2
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 15
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "has_previous": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": true
+          },
+          "next_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Next page number (null if no next page)",
+            "example": 3
+          },
+          "previous_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Previous page number (null if no previous page)",
+            "example": 1
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserProfile"
+            },
+            "description": "Array of items for current page"
+          }
+        }
+      },
+      "PaginatedWalletList": {
+        "type": "object",
+        "required": [
+          "count",
+          "page",
+          "pages",
+          "page_size",
+          "has_next",
+          "has_previous",
+          "results"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "example": 150
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (1-based)",
+            "example": 2
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 15
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "has_previous": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": true
+          },
+          "next_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Next page number (null if no next page)",
+            "example": 3
+          },
+          "previous_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Previous page number (null if no previous page)",
+            "example": 1
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Wallet"
+            },
+            "description": "Array of items for current page"
+          }
+        }
+      },
+      "PatchedOrderRequest": {
+        "type": "object",
+        "description": "Serializer for orders.",
+        "properties": {
+          "portfolio": {
+            "type": "integer"
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Trading pair (e.g., BTC/USDT)",
+            "maxLength": 20
+          },
+          "order_type": {
+            "$ref": "#/components/schemas/OrderTypeEnum"
+          },
+          "side": {
+            "$ref": "#/components/schemas/SideEnum"
+          },
+          "quantity": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$"
+          }
+        }
+      },
+      "PatchedUserProfileRequest": {
+        "type": "object",
+        "description": "Serializer for user profiles.",
+        "properties": {
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "github": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "twitter": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "linkedin": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "job_title": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      },
+      "PatchedUserProfileUpdateRequest": {
+        "type": "object",
+        "description": "Serializer for updating user profiles.",
+        "properties": {
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "github": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "twitter": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "linkedin": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "job_title": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      },
+      "Portfolio": {
+        "type": "object",
+        "description": "Serializer for trading portfolios.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user_info": {
+            "type": "object",
+            "additionalProperties": {},
+            "readOnly": true
+          },
+          "total_balance_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$",
+            "readOnly": true,
+            "description": "Total portfolio value in USD"
+          },
+          "available_balance_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$",
+            "description": "Available balance for trading"
+          },
+          "total_profit_loss": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$",
+            "readOnly": true
+          },
+          "total_trades": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "winning_trades": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "losing_trades": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "win_rate": {
+            "type": "number",
+            "format": "double",
+            "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "losing_trades",
+          "total_balance_usd",
+          "total_profit_loss",
+          "total_trades",
+          "updated_at",
+          "user",
+          "user_info",
+          "win_rate",
+          "winning_trades"
+        ]
+      },
+      "PortfolioStats": {
+        "type": "object",
+        "description": "Serializer for portfolio statistics.",
+        "properties": {
+          "total_portfolios": {
+            "type": "integer"
+          },
+          "total_volume_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,18}(?:\\.\\d{0,2})?$"
+          },
+          "total_orders": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_orders",
+          "total_portfolios",
+          "total_volume_usd"
+        ]
+      },
+      "SideEnum": {
+        "enum": [
+          "buy",
+          "sell"
+        ],
+        "type": "string",
+        "description": "* `buy` - Buy\n* `sell` - Sell"
+      },
+      "UserProfile": {
+        "type": "object",
+        "description": "Serializer for user profiles.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user_info": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Get basic user information.",
+            "readOnly": true
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "github": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "twitter": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "linkedin": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "job_title": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "posts_count": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "comments_count": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "orders_count": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "comments_count",
+          "created_at",
+          "id",
+          "orders_count",
+          "posts_count",
+          "updated_at",
+          "user",
+          "user_info"
+        ]
+      },
+      "UserProfileRequest": {
+        "type": "object",
+        "description": "Serializer for user profiles.",
+        "properties": {
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "github": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "twitter": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "linkedin": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "job_title": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      },
+      "UserProfileStats": {
+        "type": "object",
+        "description": "Serializer for profile statistics.",
+        "properties": {
+          "total_profiles": {
+            "type": "integer"
+          },
+          "profiles_with_company": {
+            "type": "integer"
+          },
+          "profiles_with_social_links": {
+            "type": "integer"
+          },
+          "most_active_users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserProfile"
+            }
+          }
+        },
+        "required": [
+          "most_active_users",
+          "profiles_with_company",
+          "profiles_with_social_links",
+          "total_profiles"
+        ]
+      },
+      "UserProfileUpdate": {
+        "type": "object",
+        "description": "Serializer for updating user profiles.",
+        "properties": {
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "github": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "twitter": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "linkedin": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "job_title": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      },
+      "UserProfileUpdateRequest": {
+        "type": "object",
+        "description": "Serializer for updating user profiles.",
+        "properties": {
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 200
+          },
+          "github": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "twitter": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "linkedin": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "job_title": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      },
+      "Wallet": {
+        "type": "object",
+        "description": "Serializer for wallets.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "coin": {
+            "type": "integer"
+          },
+          "coin_info": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CoinList"
+              }
+            ],
+            "readOnly": true
+          },
+          "balance": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
+            "description": "Available balance"
+          },
+          "locked_balance": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
+            "readOnly": true,
+            "description": "Locked balance (in orders)"
+          },
+          "total_balance": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
+            "readOnly": true
+          },
+          "value_usd": {
+            "type": "string",
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,8})?$",
+            "readOnly": true
+          },
+          "address": {
+            "type": "string",
+            "description": "Deposit address",
+            "maxLength": 200
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "coin",
+          "coin_info",
+          "created_at",
+          "id",
+          "locked_balance",
+          "total_balance",
+          "updated_at",
+          "user",
+          "value_usd"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      },
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid"
+      },
+      "jwtAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "jwtAuthWithLastLogin": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000"
+    }
+  ]
+}

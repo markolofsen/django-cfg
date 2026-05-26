@@ -28,7 +28,6 @@ from django_cfg import (
     StorageConfig,
     CurrencyConfig,
     FrontendMonitorConfig,
-    StreamlitAdminConfig,
     CloudflareConfig,
     # Services
     EmailConfig,
@@ -368,13 +367,6 @@ class DjangoCfgConfig(DjangoConfig):
         NgrokConfig(enabled=True, compression=True)
         if env.debug
         else None
-    )
-
-    # Streamlit Admin
-    streamlit_admin: Optional[StreamlitAdminConfig] = StreamlitAdminConfig(
-        app_path="streamlit",
-        auto_start=True,
-        public_url="https://st.democfg.com" if not env.debug else None,
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

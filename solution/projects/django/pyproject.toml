@@ -40,8 +40,6 @@ dependencies = [
     "django-cfg[full]",
     # pydantic-ai is pulled by django-cfg automatically
 
-    # Fake data generation
-    "faker>=37.5.3,<38.0",
     # Markdown support
     "markdown>=3.9,<4.0",
     # ASGI server for async support
