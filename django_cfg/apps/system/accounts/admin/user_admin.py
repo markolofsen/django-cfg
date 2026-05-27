@@ -164,6 +164,13 @@ customuser_config = AdminConfig(
                     variant="secondary",
                     icon=Icons.CANCEL,
                 ),
+                BadgeRule(
+                    condition_field="is_email_verified",
+                    condition_value=True,
+                    label="Email verified",
+                    variant="success",
+                    icon=Icons.MARK_EMAIL_READ,
+                ),
             ],
         ),
         BooleanField(
@@ -188,12 +195,13 @@ customuser_config = AdminConfig(
     list_filter=[
         UserStatusFilter,
         FilterConfig(field="is_test_account", type="boolean"),
+        FilterConfig(field="is_email_verified", type="boolean"),
         FilterConfig(field="date_joined", type="range_date"),
     ],
     search_fields=["email", "first_name", "last_name"],
 
     # Readonly fields
-    readonly_fields=["date_joined", "last_login", "deleted_at"],
+    readonly_fields=["date_joined", "last_login", "deleted_at", "email_verified_at"],
 
     # Ordering
     ordering=["-date_joined"],
@@ -263,7 +271,7 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
             {
                 "fields": (
                     ("is_active", "is_staff", "is_superuser"),
-                    ("is_test_account",),
+                    ("is_test_account", "is_email_verified"),
                     ("groups",),
                     ("user_permissions",),
                 ),
@@ -272,7 +280,7 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
         (
             "Important Dates",
             {
-                "fields": ("last_login", "date_joined", "deleted_at"),
+                "fields": ("last_login", "date_joined", "deleted_at", "email_verified_at"),
                 "classes": ("collapse",),
             },
         ),

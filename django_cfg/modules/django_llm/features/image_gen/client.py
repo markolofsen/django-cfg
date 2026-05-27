@@ -9,7 +9,7 @@ from typing import Optional
 
 from openai import OpenAI, AsyncOpenAI
 
-from ..._integration import BaseCfgModule
+from ..._integration import BaseCfgModule, get_api_keys
 from typing import Literal
 
 from .models import (
@@ -51,11 +51,9 @@ class ImageGenClient(BaseCfgModule):
         """
         super().__init__()
 
-        # Auto-detect API key from config
+        # API key from the one integration seam.
         if api_key is None:
-            django_config = self.get_config()
-            if django_config and hasattr(django_config, 'api_keys') and django_config.api_keys:
-                api_key = django_config.api_keys.get_openrouter_key()
+            api_key = get_api_keys()["openrouter"]
 
         self.api_key = api_key
         self._default_model = default_model

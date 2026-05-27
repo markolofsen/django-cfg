@@ -48,19 +48,23 @@ class ModelsCache:
     CACHE_FILENAME = "openrouter_models.json"
 
     def __init__(self,
-                 api_key: str,
+                 api_key: Optional[str] = None,
                  cache_dir: Optional[Path] = None,
                  cache_ttl: int = DEFAULT_TTL,
                  max_cache_size: int = DEFAULT_CACHE_SIZE):
         """
         Initialize models cache
-        
+
         Args:
-            api_key: OpenRouter API key
+            api_key: OpenRouter API key — defaults to the central
+                     `_integration.get_api_keys()` accessor when omitted.
             cache_dir: Directory for persistent cache files
             cache_ttl: Cache TTL in seconds (default: 24 hours)
             max_cache_size: Maximum cache size
         """
+        if not api_key:
+            from .._integration import get_api_keys
+            api_key = get_api_keys()["openrouter"]
         self.api_key = api_key
         self.cache_ttl = cache_ttl
         self.max_cache_size = max_cache_size

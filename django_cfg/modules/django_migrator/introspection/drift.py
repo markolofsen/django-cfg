@@ -206,6 +206,11 @@ class DriftDetector:
             table = self._table_name_for_create(app_label, op)
             return schema.table_exists(table)
         if isinstance(op, dj_migrations.AddField):
+            # M2M fields live in a through-table, not as a column on the
+            # parent. column_exists() would always return False → false
+            # "recorded_missing" drift. Skip them.
+            if self._is_m2m_field(op.field):
+                return None
             model = self._resolve_model(app_label, op.model_name)
             if model is None:
                 return None
@@ -215,6 +220,10 @@ class DriftDetector:
                 return None
             return schema.column_exists(table, self._column_name_for_field(op))
         return None
+
+    @staticmethod
+    def _is_m2m_field(field) -> bool:
+        return bool(getattr(field, "many_to_many", False))
 
     # --- Helpers ---
 
@@ -293,6 +302,14 @@ class DriftDetector:
             (op.model_name.lower(), op.name.lower()) for op in later_ops
             if isinstance(op, dj_migrations.RemoveField)
         }
+        # A RenameField effectively cancels the *old* name on the parent
+        # model — the original column no longer exists under that name.
+        # Without this, e.g. token_blacklist.0002 (AddField jti_hex) →
+        # 0006 (RenameField jti_hex → jti) is flagged as drift forever.
+        renamed_from_fields = {
+            (op.model_name.lower(), op.old_name.lower()) for op in later_ops
+            if isinstance(op, dj_migrations.RenameField)
+        }
 
         for op in loaded.migration.operations:
             if isinstance(op, dj_migrations.CreateModel):
@@ -304,15 +321,23 @@ class DriftDetector:
                 if op.name.lower() not in deleted_models:
                     return False
             elif isinstance(op, dj_migrations.AddField):
+                # M2M lives in a through-table; nothing to check on the
+                # parent column. Treat as superseded-by-default.
+                if self._is_m2m_field(op.field):
+                    continue
                 model = self._resolve_model(loaded.app_label, op.model_name)
                 if schema is not None and model is not None:
                     col = self._column_name_for_field(op)
                     if schema.column_exists(model._meta.db_table, col):
                         continue  # Effect present — nothing to cancel.
                 key = (op.model_name.lower(), op.name.lower())
-                # AddField is cancelled either by RemoveField OR by the
-                # parent model being deleted later.
-                if key not in removed_fields and op.model_name.lower() not in deleted_models:
+                # AddField is cancelled by RemoveField, RenameField (of
+                # the old name), or the parent model being deleted later.
+                if (
+                    key not in removed_fields
+                    and key not in renamed_from_fields
+                    and op.model_name.lower() not in deleted_models
+                ):
                     return False
         return True
 

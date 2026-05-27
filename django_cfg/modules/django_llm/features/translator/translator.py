@@ -7,7 +7,7 @@ Auto-configuring translation service with language detection and JSON support.
 import logging
 from typing import Any, Dict, Optional
 
-from ..._integration import BaseCfgModule
+from ..._integration import BaseCfgModule, get_api_keys
 
 from ...client.client import LLMClient
 from .cache import TranslationCacheManager
@@ -64,16 +64,10 @@ class DjangoTranslator(BaseCfgModule):
                 # If client was passed directly, we're configured
                 if self._client is not None:
                     self._is_configured = True
-                # Otherwise check LLM config
-                elif hasattr(self.config, 'llm') and self.config.llm:
-                    llm_config = self.config.llm
-                    self._is_configured = (
-                        hasattr(llm_config, 'api_key') and
-                        llm_config.api_key and
-                        len(llm_config.api_key.strip()) > 0
-                    )
+                # Otherwise: configured if the integration seam yields a key.
                 else:
-                    self._is_configured = False
+                    keys = get_api_keys()
+                    self._is_configured = bool(keys["openrouter"] or keys["openai"])
             except Exception:
                 self._is_configured = False
 

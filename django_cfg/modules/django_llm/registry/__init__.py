@@ -11,6 +11,7 @@ from .pricing import (
     estimate_cost,
     get_cost_calculator,
 )
+from .free_models import ORModel, fetch_openrouter_models, find_free_structured_models
 
 __all__ = [
     'OpenRouterModel',
@@ -22,4 +23,7 @@ __all__ = [
     'calculate_embedding_cost',
     'estimate_cost',
     'get_cost_calculator',
+    'ORModel',
+    'fetch_openrouter_models',
+    'find_free_structured_models',
 ]

@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Literal, Optional, Type, TypeVar, Union, cas
 from openai import OpenAI, AsyncOpenAI
 from pydantic import BaseModel
 
-from ..._integration import BaseCfgModule
+from ..._integration import BaseCfgModule, get_api_keys
 from .image_encoder import ImageEncoder
 from .image_fetcher import ImageFetcher, ImageFetchError
 from .image_resizer import DetailMode
@@ -78,11 +78,9 @@ class VisionClient(BaseCfgModule):
         """
         super().__init__()
 
-        # Auto-detect API key from config if not provided
+        # API key from the one integration seam.
         if api_key is None:
-            django_config = self.get_config()
-            if django_config and hasattr(django_config, 'api_keys') and django_config.api_keys:
-                api_key = django_config.api_keys.get_openrouter_key()
+            api_key = get_api_keys()["openrouter"]
 
         self.api_key = api_key
         self._default_model = default_model

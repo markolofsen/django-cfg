@@ -9,6 +9,7 @@ from .client import LLMClient
 from .storage import LLMCache
 from .providers import LLMProvider
 from .features.translator import DjangoTranslator, TranslationError
+from .llm_router import LLMRouter, LLMRouterError
 
 
 # Convenience functions
@@ -69,6 +70,8 @@ __all__ = [
     'LLMClient',
     'LLMCache',
     'LLMProvider',
+    'LLMRouter',
+    'LLMRouterError',
     'TranslationError',
     'chat_completion',
     'translate_text',

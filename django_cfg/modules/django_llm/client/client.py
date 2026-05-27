@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .._integration import BaseCfgModule
+from .._integration import BaseCfgModule, get_api_keys
 from ..embeddings import MockEmbedder, OpenAIEmbedder
 from ..structured.extractor import JSONExtractor
 from ..core.types import (
@@ -62,20 +62,14 @@ class LLMClient(BaseCfgModule):
         """
         super().__init__()
 
-        # Auto-detect API keys from config if not provided
-        django_config = self.get_config()
-        if django_config:
-            if apikey_openai is None:
-                # Try new api_keys system first, then fallback to old attribute
-                if hasattr(django_config, 'api_keys') and django_config.api_keys:
-                    apikey_openai = django_config.api_keys.get_openai_key()
-                else:
-                    apikey_openai = getattr(django_config, 'openai_api_key', None)
-
+        # API keys come from the one integration seam — never read host
+        # config here directly (see _integration.get_api_keys).
+        if apikey_openrouter is None or apikey_openai is None:
+            _keys = get_api_keys()
             if apikey_openrouter is None:
-                # Try new api_keys system first
-                if hasattr(django_config, 'api_keys') and django_config.api_keys:
-                    apikey_openrouter = django_config.api_keys.get_openrouter_key()
+                apikey_openrouter = _keys["openrouter"]
+            if apikey_openai is None:
+                apikey_openai = _keys["openai"]
 
         # Initialize provider management
         self.provider_manager = ProviderManager(

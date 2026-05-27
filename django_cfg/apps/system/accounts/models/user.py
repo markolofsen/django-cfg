@@ -42,6 +42,22 @@ class CustomUser(AbstractUser):
         help_text="Test account bypasses OTP with static code (for App Store review, etc.)"
     )
 
+    # Email reachability — flipped to True the first time a user successfully
+    # consumes an OTP code for this address. Source of truth: the OTP
+    # service hook in accounts/services/otp_service.py.verify_otp.
+    # Downstream (CRM marketing, billing notifications) can read this to
+    # gate "we know the address physically works" decisions.
+    is_email_verified = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True once the user has successfully completed at least one OTP login.",
+    )
+    email_verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the email was first OTP-verified.",
+    )
+
     # Account deletion (soft delete)
     # When set, account is deactivated and personal data anonymized
     deleted_at = models.DateTimeField(

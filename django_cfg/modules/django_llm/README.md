@@ -32,13 +32,14 @@ django_llm/
 ├── providers/                 # Provider management (OpenAI, OpenRouter)
 ├── registry/                  # Model catalogue, pricing, cost calculation
 │   ├── models.py              # Model cache + pricing data
-│   └── pricing.py             # Cost calculation utilities
+│   ├── pricing.py             # Cost calculation utilities
+│   └── free_models.py         # OpenRouter free/structured model discovery
 ├── storage/                   # Response caching with TTL
 ├── structured/                # Structured output + JSON extraction
-│   ├── extractor.py           # JSONExtractor
-│   └── response_format.py     # JSON schema helpers
 ├── tokenizer.py               # Token counting utilities
+├── pipeline/                  # Retry, circuit breaker, rate limit, router
 ├── monitoring/                # LLM provider balance monitoring
+├── llm_router.py              # LLMRouter — cascading multi-model facade
 ├── features/
 │   ├── vision/                # VisionClient, OCR, image resize
 │   ├── image_gen/             # ImageGenClient
@@ -439,8 +440,10 @@ embedding = client.generate_embedding(
 from django_cfg.modules.django_llm.registry import calculate_chat_cost
 
 cost = calculate_chat_cost(
-    usage={"prompt_tokens": 100, "completion_tokens": 50},
     model="openai/gpt-4o-mini",
+    input_tokens=100,
+    output_tokens=50,
+    models_cache=models_cache
 )
 ```
 
@@ -462,6 +465,41 @@ from django_cfg.modules.django_llm.structured import JSONExtractor
 extractor = JSONExtractor()
 json_data = extractor.extract_json_from_response("Here's the data: {'name': 'John'}")
 ```
+
+---
+
+## LLM Router
+
+`LLMRouter` is a high-level facade over `LLMClient` + `pipeline.ModelRouter`.
+It runs a cascading model chain — one classified attempt per model, each with
+its own circuit breaker, falling through to the next on failure. When every
+model is exhausted it raises `LLMRouterError`.
+
+```python
+from django_cfg.modules.django_llm import LLMRouter, LLMRouterError
+
+router = LLMRouter(
+    model_chain=["openai/gpt-4o-mini", "google/gemini-2.0-flash-lite"],
+)
+
+# Structured output — pass a Pydantic schema, get a validated instance back
+result, model_used, usage = router.parse(
+    schema=MySchema,
+    messages=[{"role": "user", "content": "..."}],
+)
+# usage: {"tokens": int, "cost_usd": float}
+
+# Raw text completion
+text, model_used = router.complete(
+    messages=[{"role": "user", "content": "..."}],
+    max_tokens=1024,
+)
+```
+
+On a strict `json_schema` request to OpenRouter the router sets
+`provider.require_parameters` so the schema is enforced by the provider —
+a non-enforcing provider errors and the cascade falls through, rather than
+silently downgrading to plain `json_object`.
 
 ---
 
