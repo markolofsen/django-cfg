@@ -12,15 +12,19 @@ from django.contrib.auth.decorators import user_passes_test
 from django.core.management import call_command, get_commands
 from django.http import JsonResponse, StreamingHttpResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 logger = logging.getLogger(__name__)
 
 
 def is_staff_user(user):
-    """Check if user is staff member."""
+    """Check if user is staff member (read-only command listing)."""
     return user.is_authenticated and user.is_staff
+
+
+def is_superuser(user):
+    """Command execution requires superuser — matches the dashboard CommandsViewSet (DASHBOARD-003)."""
+    return user.is_authenticated and user.is_superuser
 
 
 @require_http_methods(["GET"])
@@ -77,9 +81,8 @@ def list_commands_view(request):
         }, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
-@user_passes_test(is_staff_user)
+@user_passes_test(is_superuser)
 def execute_command_view(request):
     """
     Execute a Django management command and stream output in real-time.
@@ -117,7 +120,7 @@ def execute_command_view(request):
             }, status=400)
 
         # Security check - use same filtering as dashboard
-        from django_cfg.modules.django_unfold.callbacks.base import is_command_allowed
+        from django_cfg.apps.api.dashboard.services.commands_security import is_command_allowed
 
         app_name = available_commands.get(command_name)
         if not is_command_allowed(command_name, app_name):

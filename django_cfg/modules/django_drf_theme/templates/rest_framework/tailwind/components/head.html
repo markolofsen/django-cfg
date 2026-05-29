@@ -1,0 +1,93 @@
+{% load static %}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="NONE,NOARCHIVE">
+<title>{% if name %}{{ name }} – {% endif %}{{ project_name|default:"API" }}</title>
+
+{% csrf_token %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+<script id="drf_csrf" type="application/json">{"csrfToken": "{{ csrf_token }}", "csrfHeaderName": "X-CSRFToken"}</script>
+
+{# Apply theme before paint to avoid a flash of the wrong colour scheme. #}
+<script>
+  (function () {
+    var t = "{{ theme|default:'auto' }}";
+    var dark = t === 'dark' ||
+      (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark', dark);
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+
+{% comment %}
+Tailwind CSS v4 — Play CDN (zero-build). The Play CDN does NOT support @apply,
+so all styling is plain utility classes in the templates. The only custom CSS it
+needs is the class-based dark variant (@variant works on the CDN).
+{% endcomment %}
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style type="text/tailwindcss">
+  @variant dark (&:where(.dark, .dark *));
+  /* Map @djangocfg/ui-core design tokens (defined in drf-theme.css) to utilities. */
+  @theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-border: var(--border);
+    --color-ring: var(--ring);
+    --color-code: var(--code);
+    --color-success: var(--success);
+    --color-success-bg: var(--success-background);
+    --color-success-fg: var(--success-foreground);
+    --color-success-border: var(--success-border);
+    --color-warning: var(--warning);
+    --color-warning-bg: var(--warning-background);
+    --color-warning-fg: var(--warning-foreground);
+    --color-warning-border: var(--warning-border);
+    --color-destructive: var(--destructive);
+    --color-destructive-bg: var(--destructive-background);
+    --color-destructive-fg: var(--destructive-foreground);
+    --color-destructive-border: var(--destructive-border);
+    --color-info: var(--info);
+    --color-info-bg: var(--info-background);
+    --color-info-fg: var(--info-foreground);
+    --color-info-border: var(--info-border);
+  }
+</style>
+
+{# Plain CSS for JS-generated nodes + form fields (not utility-scannable). #}
+<link rel="stylesheet" href="{% static 'django_drf_theme/css/drf-theme.css' %}">
+
+{# highlight.js (CDN) for Raw JSON + code snippets. Two themes toggled by .dark. #}
+<link rel="stylesheet" id="hljs-light" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/styles/github.min.css">
+<link rel="stylesheet" id="hljs-dark" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/styles/github-dark.min.css" disabled>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/highlight.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/languages/json.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/languages/bash.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.10.0/build/languages/python.min.js"></script>
+
+{# Lucide icons (CDN). Render <i data-lucide="name"> into SVG on load. #}
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+  function drfRenderIcons() { window.lucide && lucide.createIcons(); }
+  document.addEventListener('DOMContentLoaded', drfRenderIcons);
+  // Re-render after Alpine mounts, so icons inside x-show/x-for/x-if get converted too.
+  document.addEventListener('alpine:initialized', drfRenderIcons);
+</script>
+
+{# Theme Alpine components (decomposed); schema.js first (defines DRFTheme helpers). #}
+<script defer src="{% static 'django_drf_theme/js/schema.js' %}"></script>
+<script defer src="{% static 'django_drf_theme/js/app.js' %}"></script>
+<script defer src="{% static 'django_drf_theme/js/json-viewer.js' %}"></script>
+<script defer src="{% static 'django_drf_theme/js/endpoint-nav.js' %}"></script>
+<script defer src="{% static 'django_drf_theme/js/response-viewer.js' %}"></script>
+<script defer src="{% static 'django_drf_theme/js/request-console.js' %}"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+{% if code_style %}<style>{{ code_style }}</style>{% endif %}

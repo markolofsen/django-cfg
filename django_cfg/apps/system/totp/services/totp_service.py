@@ -174,12 +174,10 @@ class TOTPService:
 
         # Verify code with pyotp
         totp = pyotp.TOTP(device.secret)
-        expected_code = totp.now()
         is_valid = totp.verify(cleaned_code, valid_window=cls.VALID_WINDOW)
-        logger.info(
-            f"TOTP verify: device={device.id}, input_code={cleaned_code}, "
-            f"expected_code={expected_code}, secret={device.secret[:8]}..., is_valid={is_valid}"
-        )
+        # Never log the submitted code, the expected code (totp.now()), or the secret —
+        # a log reader could replay the live OTP within the window (TOTP-001).
+        logger.info(f"TOTP verify: device={device.id}, is_valid={is_valid}")
 
         if is_valid:
             if save_on_success:

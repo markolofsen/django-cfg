@@ -4,13 +4,17 @@ API Key management views.
 Provides endpoints for retrieving and regenerating the user's API key.
 """
 
+from django.core.exceptions import ValidationError
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from django_cfg.mixins import ClientAPIMixin
 
+from ..authentication import APIKeyAuthentication
 from ..models.api_key import UserAPIKey
 
 
@@ -55,6 +59,15 @@ class APIKeyViewSet(ClientAPIMixin, viewsets.GenericViewSet):
     - POST /cfg/accounts/api-key/regenerate/ — generate new key
     - POST /cfg/accounts/api-key/test/ — test an API key
     """
+
+    # Allow managing the key via the key itself (X-API-Key), in addition to the
+    # JWT/Session methods from ClientAPIMixin — otherwise a client holding only
+    # its API key cannot view or rotate it.
+    authentication_classes = [
+        JWTAuthentication,
+        SessionAuthentication,
+        APIKeyAuthentication,
+    ]
 
     serializer_class = APIKeySerializer
     queryset = UserAPIKey.objects.none()
@@ -148,7 +161,8 @@ class APIKeyViewSet(ClientAPIMixin, viewsets.GenericViewSet):
         try:
             api_key = UserAPIKey.objects.select_related("user").get(key=key)
             result = {"valid": True, "user_id": str(api_key.user_id)}
-        except UserAPIKey.DoesNotExist:
+        except (UserAPIKey.DoesNotExist, ValueError, ValidationError):
+            # Malformed UUID can never match — report invalid, don't 500.
             result = {"valid": False, "user_id": None}
 
         return Response(APIKeyTestResultSerializer(result).data)

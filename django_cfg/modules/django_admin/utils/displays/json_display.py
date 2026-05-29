@@ -130,7 +130,7 @@ class JSONDisplay:
             )
 
         except (json.JSONDecodeError, TypeError, ValueError):
-            return mark_safe(f"<code>Invalid JSON: {str(json_value)[:100]}</code>")
+            return mark_safe(f"<code>Invalid JSON: {html_lib.escape(str(json_value)[:100])}</code>")
 
     @classmethod
     def from_field(

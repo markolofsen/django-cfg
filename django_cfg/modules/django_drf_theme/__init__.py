@@ -1,17 +1,14 @@
 """
-🎨 Django DRF Tailwind Theme
+Django DRF Tailwind Theme
 
-Modern, user-friendly Tailwind CSS theme for Django REST Framework Browsable API.
+Lean Tailwind v4 + Alpine.js theme for the Django REST Framework Browsable API.
+Zero-build (Tailwind v4 Play CDN); decomposed into small template components.
 
 Features:
-- 🌓 Dark/Light mode with smooth transitions
-- 📱 Fully responsive design
-- ⌨️  Keyboard shortcuts
-- 🎯 Glass morphism UI
-- 🚀 Alpine.js powered interactivity
-- 💫 Smooth animations
-- 📋 One-click copy for JSON/URLs
-- 🔍 Advanced JSON tree viewer
+- Light / dark / auto theme (class-based, native v4 dark variant)
+- Interactive recursive JSON tree (Alpine, collapsible)
+- Pretty / Raw / Headers tabs, one-click copy
+- Method & status badges, filters, pagination, request forms, toasts
 """
 
 from .renderers import TailwindBrowsableAPIRenderer

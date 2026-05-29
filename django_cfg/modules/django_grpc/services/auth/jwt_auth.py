@@ -22,6 +22,7 @@ Go client sends:  metadata "authorization: Bearer <access_token>"
 from __future__ import annotations
 
 import asyncio
+import hmac
 import logging
 from typing import Optional
 
@@ -122,6 +123,19 @@ class JWTAuthInterceptor(_grpc_interceptor_base):  # type: ignore[misc]
             else _DEFAULT_PUBLIC_METHODS
         )
 
+        # GRPC-AUTH-004: loud warning if anonymous gRPC access is allowed in production.
+        # Does NOT change behaviour (require_auth default stays False) — only alerts the operator.
+        if not require_auth:
+            import os
+            env = (os.environ.get("DJANGO_ENV") or os.environ.get("ENVIRONMENT")
+                   or os.environ.get("ENV") or "").lower()
+            if env in ("prod", "production"):
+                logger.warning(
+                    "gRPC require_auth=False in a production environment — the server allows "
+                    "ANONYMOUS access. Set GrpcAuthConfig.require_auth=True unless this server "
+                    "is isolated (loopback/mTLS only)."
+                )
+
     def _build_effective_public_methods(self) -> frozenset:
         """Build effective public methods set, adding reflection if not auth-gated.
 
@@ -139,9 +153,10 @@ class JWTAuthInterceptor(_grpc_interceptor_base):  # type: ignore[misc]
                 # reflection is not auth-gated — add it back as public
                 return self.public_methods | frozenset({_REFLECTION_METHOD})
         except Exception as e:
-            # config not available → keep reflection public (safe default)
+            # Fail CLOSED: if config can't be loaded we must NOT expose reflection
+            # publicly (EXCEPTION-003). Reflection stays auth-gated on error.
             logger.warning("Failed to load gRPC config for reflection auth check: %s", e)
-            return self.public_methods | frozenset({_REFLECTION_METHOD})
+            return self.public_methods
         return self.public_methods
 
     async def intercept_service(self, continuation, handler_call_details):
@@ -167,7 +182,7 @@ class JWTAuthInterceptor(_grpc_interceptor_base):  # type: ignore[misc]
                 req_secret = metadata.get("x-internal-secret", "")
                 if isinstance(req_secret, bytes):
                     req_secret = req_secret.decode()
-                if req_secret == internal_secret:
+                if req_secret and hmac.compare_digest(req_secret, internal_secret):
                     return await continuation(handler_call_details)
         except Exception as e:
             logger.debug("Failed to check internal_secret: %s", e)
@@ -185,7 +200,7 @@ class JWTAuthInterceptor(_grpc_interceptor_base):  # type: ignore[misc]
                     request_key = metadata.get("x-admin-key", "")
                     if isinstance(request_key, bytes):
                         request_key = request_key.decode()
-                    if request_key == admin_key:
+                    if request_key and hmac.compare_digest(request_key, admin_key):
                         return await continuation(handler_call_details)
             except Exception as e:
                 logger.debug("Failed to check reflection_admin_key: %s", e)

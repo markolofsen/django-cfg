@@ -1,0 +1,98 @@
+{% comment %}
+Typed request console ("try it"): method tabs → schema-driven path/query fields +
+JSON body → Send via fetch (with the stored auth header) → live response inline.
+Replaces the old DRF page-reloading forms.
+{% endcomment %}
+{% load tailwind_tags %}
+<section x-data="requestConsole(
+    '{{ schema_url|default:'' }}',
+    '{{ request.path }}',
+    {{ allowed_methods_json|default:'[]' }}
+  )" x-init="init()">
+  <h2 class="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-4">Try it</h2>
+
+  {# Method selector — segmented control #}
+  <div class="inline-flex rounded-lg border border-border p-0.5 mb-5">
+    <template x-for="m in methods" :key="m">
+      <button @click="method = m; res = null"
+              class="px-3 py-1 text-[12px] font-medium rounded transition-colors"
+              :class="method === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'"
+              x-text="m"></button>
+    </template>
+  </div>
+
+  {# Path params #}
+  <div x-show="pathParams.length" x-cloak class="mb-4 space-y-2">
+    <span class="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Path</span>
+    <template x-for="p in pathParams" :key="p.name">
+      <label class="block">
+        <span class="flex items-center gap-1.5 mb-1 text-[12px]">
+          <span class="font-mono text-foreground" x-text="p.name"></span>
+          <span x-show="p.required" class="text-destructive font-bold">*</span>
+          <span class="font-mono text-[10px] text-muted-foreground/60" x-text="p.type"></span>
+        </span>
+        <input x-model="fields[p.name]" :placeholder="p.name"
+               class="w-full px-2.5 py-1.5 text-[13px] font-mono rounded-md border border-border bg-card text-foreground focus:outline-none focus:border-primary">
+      </label>
+    </template>
+  </div>
+
+  {# Query params #}
+  <div x-show="queryParams.length" x-cloak class="mb-4 space-y-2">
+    <span class="block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Query</span>
+    <template x-for="p in queryParams" :key="p.name">
+      <label class="block">
+        <span class="flex items-center gap-1.5 mb-1 text-[12px]">
+          <span class="font-mono text-foreground" x-text="p.name"></span>
+          <span x-show="p.required" class="text-destructive font-bold">*</span>
+          <span class="font-mono text-[10px] text-muted-foreground/60" x-text="p.type"></span>
+        </span>
+        <input x-model="fields[p.name]" :placeholder="p.name"
+               class="w-full px-2.5 py-1.5 text-[13px] font-mono rounded-md border border-border bg-card text-foreground focus:outline-none focus:border-primary">
+      </label>
+    </template>
+  </div>
+
+  {# Body #}
+  <div x-show="showBody" x-cloak class="mb-4">
+    <div class="flex items-center justify-between mb-1.5">
+      <span class="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Body (JSON)</span>
+      <button @click="prefillBody()" type="button"
+              class="text-[11px] text-muted-foreground hover:text-foreground transition-colors">Prefill</button>
+    </div>
+
+    {# Body schema — what the endpoint accepts (name : type, * = required) #}
+    <div x-show="bodyFields.length" class="mb-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-[12px] font-mono space-y-0.5">
+      <template x-for="f in bodyFields" :key="f.name">
+        <div class="flex items-center gap-1.5">
+          <span class="text-foreground" x-text="f.name"></span>
+          <span x-show="f.required" class="text-destructive font-bold leading-none">*</span>
+          <span class="text-muted-foreground/60" x-text="f.type"></span>
+        </div>
+      </template>
+    </div>
+
+    <textarea x-model="body" rows="6" spellcheck="false" placeholder='{ }'
+              class="w-full px-2.5 py-2 text-[13px] font-mono rounded-md border border-border bg-card text-foreground focus:outline-none focus:border-primary"></textarea>
+  </div>
+
+  {# Send #}
+  <button @click="send()" :disabled="sending"
+          class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-primary text-primary-foreground text-[13px] font-medium hover:opacity-90 disabled:opacity-50 transition">
+    <span x-show="!sending">Send</span>
+    <span x-show="sending" x-cloak>Sending…</span>
+  </button>
+
+  {# Live response #}
+  <div x-show="res" x-cloak class="mt-5">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-xs font-medium uppercase tracking-wider text-muted-foreground">Result</span>
+      <span class="font-mono text-[12px] font-semibold" :class="resClass()"
+            x-text="res ? (res.status + ' ' + res.statusText) : ''"></span>
+    </div>
+    <div class="rounded-xl border border-border bg-muted overflow-hidden">
+      <pre class="overflow-x-auto px-4 py-3.5 text-[13px] leading-6"><code class="language-json"
+        x-effect="if (res) { $el.textContent = res.json ? JSON.stringify(res.json, null, 2) : res.text; delete $el.dataset.highlighted; window.hljs && hljs.highlightElement($el); }"></code></pre>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,18 @@
+{% if paginator %}
+<div class="flex items-center justify-between text-[13px]">
+  <span class="text-muted-foreground font-mono">
+    {{ paginator.start_index }}–{{ paginator.end_index }} of {{ paginator.count }}
+  </span>
+  <div class="flex items-center gap-1.5">
+    {% if page.has_previous %}
+      <a href="?page={{ page.previous_page_number }}"
+         class="px-2.5 py-1 rounded-md border border-border hover:bg-muted transition-colors">Previous</a>
+    {% endif %}
+    <span class="px-2.5 py-1 rounded-md bg-primary text-primary-foreground font-medium">{{ page.number }}</span>
+    {% if page.has_next %}
+      <a href="?page={{ page.next_page_number }}"
+         class="px-2.5 py-1 rounded-md border border-border hover:bg-muted transition-colors">Next</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

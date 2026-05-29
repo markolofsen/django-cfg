@@ -9,6 +9,7 @@ or for views with AllowAny permission (public endpoints like OTP, OAuth).
 import logging
 
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from rest_framework import authentication, exceptions
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,15 @@ class APIKeyAuthentication(authentication.BaseAuthentication):
     """
 
     keyword = "X-API-Key"
+
+    def authenticate_header(self, request):
+        """Return a value for the WWW-Authenticate header.
+
+        DRF only emits 401 (rather than 403) for an unauthenticated request when
+        the first authenticator defines this. Without it, any view that falls
+        back to this authenticator first returns 403 for missing credentials.
+        """
+        return self.keyword
 
     def authenticate(self, request):
         key = self._extract_key(request)
@@ -77,7 +87,10 @@ class APIKeyAuthentication(authentication.BaseAuthentication):
 
         try:
             api_key = UserAPIKey.objects.select_related("user").get(key=key)
-        except UserAPIKey.DoesNotExist:
+        except (UserAPIKey.DoesNotExist, ValueError, ValidationError):
+            # ValueError / ValidationError: key is not a well-formed UUID, so it
+            # can never match — treat the same as a missing key (invalid auth),
+            # not an unhandled 500.
             logger.warning("API key authentication failed: invalid key")
             raise exceptions.AuthenticationFailed("Invalid API key.")
 

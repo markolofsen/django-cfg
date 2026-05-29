@@ -1,0 +1,57 @@
+{% load tailwind_tags %}
+<section x-data="responseViewer('{{ schema_url|default:'' }}', '{{ request.path }}')" x-init="init()">
+
+  {# Header row: section label + status + tabs (no card wrapper) #}
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center gap-3">
+      <h2 class="text-xs font-medium uppercase tracking-wider text-muted-foreground">Response</h2>
+      {% if response.status_code %}
+        <span class="{{ response.status_code|status_badge }}">{{ response.status_code }} {{ response.status_text }}</span>
+      {% endif %}
+    </div>
+    <div class="inline-flex rounded-lg border border-border p-0.5 text-[12px]">
+      {% with t="px-2.5 py-1 rounded-md font-medium transition-colors" %}
+      {% with on="bg-primary text-primary-foreground" off="text-muted-foreground hover:text-foreground" %}
+      <button @click="tab='pretty'" class="{{ t }}" :class="tab==='pretty' ? '{{ on }}' : '{{ off }}'">Pretty</button>
+      <button @click="tab='raw'" class="{{ t }}" :class="tab==='raw' ? '{{ on }}' : '{{ off }}'">Raw</button>
+      <button x-show="example" x-cloak @click="tab='example'" class="{{ t }}" :class="tab==='example' ? '{{ on }}' : '{{ off }}'">Example</button>
+      {% if response.items %}<button @click="tab='headers'" class="{{ t }}" :class="tab==='headers' ? '{{ on }}' : '{{ off }}'">Headers</button>{% endif %}
+      {% endwith %}{% endwith %}
+    </div>
+  </div>
+
+  {# Single code surface for all tabs #}
+  <div class="relative rounded-xl border border-border bg-muted overflow-hidden">
+    {% if content %}
+      <button @click="copy(JSON.stringify(JSON.parse(document.getElementById('drf-json-data').textContent), null, 2), 'Copied')"
+              class="absolute top-2.5 right-2.5 z-10 px-2 py-1 text-[11px] rounded-md border border-border bg-card text-muted-foreground hover:text-foreground transition-colors">Copy</button>
+      <script id="drf-json-data" type="application/json">{{ content|safe }}</script>
+
+      {# Pretty: interactive tree #}
+      <div x-show="tab==='pretty'" class="overflow-x-auto px-4 py-3.5 font-mono text-[13px] leading-6"
+           x-data="jsonViewer(JSON.parse(document.getElementById('drf-json-data').textContent))"></div>
+
+      {# Raw: highlighted #}
+      <pre x-show="tab==='raw'" x-cloak class="overflow-x-auto px-4 py-3.5 text-[13px] leading-6"><code class="language-json"
+        x-init="$el.textContent = JSON.stringify(JSON.parse(document.getElementById('drf-json-data').textContent), null, 2); window.hljs && hljs.highlightElement($el)"></code></pre>
+    {% else %}
+      <p x-show="tab!=='example'" class="px-4 py-10 text-center text-[13px] text-muted-foreground">No response data</p>
+    {% endif %}
+
+    {# Example: synthetic response built from the OpenAPI schema (no DB) #}
+    <pre x-show="tab==='example' && example" x-cloak class="overflow-x-auto px-4 py-3.5 text-[13px] leading-6"><code class="language-json"
+      x-effect="if (tab==='example' && example) { $el.textContent = JSON.stringify(example, null, 2); delete $el.dataset.highlighted; window.hljs && hljs.highlightElement($el); }"></code></pre>
+
+    {# Headers #}
+    {% if response.items %}
+      <div x-show="tab==='headers'" x-cloak class="px-4 py-3.5 font-mono text-[13px]">
+        {% for key, val in response.items %}
+          <div class="flex gap-3 py-1 border-b border-border/60 last:border-0">
+            <span class="text-foreground w-44 shrink-0 font-medium">{{ key }}</span>
+            <span class="text-muted-foreground break-all">{{ val }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>

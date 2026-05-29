@@ -29,9 +29,7 @@ class OTPRequestSerializer(serializers.Serializer):
     def validate_identifier(self, value):
         """Validate and normalize email address."""
         try:
-            # Syntax + suspicious patterns + disposable blocklist.
-            # MX check disabled here (sync serializer) — DNS is checked in OTPService
-            # on first OTP request so invalid domains are caught before user creation.
+            # RFC syntax check + normalization only (no blocklist, no MX/DNS).
             return validate_email_address(value)
         except EmailValidationError as exc:
             raise serializers.ValidationError(str(exc)) from exc

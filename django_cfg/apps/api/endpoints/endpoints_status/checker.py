@@ -379,7 +379,9 @@ def create_test_user_and_get_token() -> Optional[str]:
         )
 
         if created:
-            user.set_password('testpass123')
+            # No login password — the probe only needs a JWT minted via for_user().
+            # A static password would be a guessable backdoor account (DASHBOARD-001).
+            user.set_unusable_password()
             user.save()
 
         # Generate JWT token

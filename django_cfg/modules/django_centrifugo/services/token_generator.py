@@ -29,6 +29,15 @@ def get_user_channels(user) -> List[str]:
         - admin#notifications - Admin notifications
         - grpc#* - All gRPC bot events (admin only)
         - broadcast - Global broadcast channel
+
+    SECURITY (CENTRIFUGO-001): the returned list goes into the connection token's
+    ``channels`` claim, which Centrifugo treats as AUTO-SUBSCRIBE, NOT per-channel
+    authorization. Actual subscribe permission is enforced by the Centrifugo server
+    namespace config: namespaces MUST default to deny (``allow_subscribe_for_client``
+    unset/false) or use a subscribe proxy. Any namespace that sets
+    ``allow_subscribe_for_client: true`` (e.g. terminal_session) lets a valid-token
+    client subscribe to ANY channel in it regardless of this list — bind such channels
+    to the owner server-side. Do not rely on this claim alone for authorization.
     """
     channels = []
 
@@ -53,7 +62,7 @@ def get_user_channels(user) -> List[str]:
 
 def generate_centrifugo_token(
     user,
-    exp_seconds: int = 86400 * 30,  # 30 days
+    exp_seconds: Optional[int] = None,  # None = use config.token_ttl_seconds (default 30d)
     additional_channels: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
@@ -77,6 +86,10 @@ def generate_centrifugo_token(
     config = get_centrifugo_config()
     if not config or not config.enabled:
         raise ValueError("Centrifugo not configured or disabled")
+
+    # Resolve TTL: explicit arg wins, else operator-configurable token_ttl_seconds (default 30d).
+    if exp_seconds is None:
+        exp_seconds = getattr(config, "token_ttl_seconds", 86400 * 30)
 
     # Get user's allowed channels
     channels = get_user_channels(user)

@@ -16,14 +16,22 @@ class EndpointsStatusView(View):
 
     Checks all registered URL endpoints and returns their health status.
     Excludes health check endpoints to avoid recursion.
+
+    Staff-only: it discloses the full URL map and (with auto_auth) creates a probe
+    user, so it must never be reachable anonymously (DASHBOARD-001).
     """
 
     def get(self, request):
         """Return endpoints status data."""
+        # Staff-only — never expose the URL map or trigger probe-user creation to anon callers.
+        if not (request.user.is_authenticated and request.user.is_staff):
+            return JsonResponse({"detail": "Forbidden"}, status=403)
+
         # Get query parameters
         include_unnamed = request.GET.get('include_unnamed', 'false').lower() == 'true'
         timeout = int(request.GET.get('timeout', 5))
-        auto_auth = request.GET.get('auto_auth', 'true').lower() == 'true'
+        # auto_auth defaults OFF — opt-in only, never plant a probe user implicitly.
+        auto_auth = request.GET.get('auto_auth', 'false').lower() == 'true'
 
         # Check all endpoints
         status_data = check_all_endpoints(

@@ -66,7 +66,9 @@ def _resolve_error(error: Exception) -> tuple[grpc.StatusCode, str] | None:
     logger.error(
         "[gRPC Error] %s: %s", type(error).__name__, error, exc_info=True
     )
-    return grpc.StatusCode.INTERNAL, f"Internal server error: {error}"
+    # Do not echo the raw exception to the client — it can leak internal paths,
+    # SQL, or config (EXCEPTION-001). The detail is logged above for operators.
+    return grpc.StatusCode.INTERNAL, "Internal server error"
 
 
 class ErrorHandlingInterceptor(grpc.aio.ServerInterceptor):

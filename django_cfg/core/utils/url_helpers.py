@@ -142,12 +142,17 @@ def get_ticket_url(ticket_uuid: str, fallback: str = "#ticket") -> str:
         return f"{fallback}-{ticket_uuid}"
 
 
-def get_otp_url(otp_code: str, fallback: str = "#otp") -> str:
+def get_otp_url(otp_code: str, email: Optional[str] = None, fallback: str = "#otp") -> str:
     """
     Generate OTP verification URL on the fly from site_url.
 
+    When *email* is provided it is appended as a query param so the auth page
+    can auto-submit the code on a fresh browser/device — where the email is not
+    yet in local storage. The frontend strips both params from the URL after use.
+
     Args:
         otp_code: OTP verification code
+        email: Recipient email to embed in the link (URL-encoded). Optional.
         fallback: Fallback URL if config is not available (default: "#otp")
 
     Returns:
@@ -156,13 +161,19 @@ def get_otp_url(otp_code: str, fallback: str = "#otp") -> str:
     Example:
         >>> get_otp_url("123456")
         "https://yoursite.com/auth/?otp=123456"
+        >>> get_otp_url("123456", email="user@example.com")
+        "https://yoursite.com/auth/?otp=123456&email=user%40example.com"
     """
     try:
+        from urllib.parse import quote
         from django_cfg.core.state import get_current_config
         config = get_current_config()
 
         if config and hasattr(config, 'site_url'):
-            return f"{config.site_url}/auth/?otp={otp_code}"
+            url = f"{config.site_url}/auth/?otp={otp_code}"
+            if email:
+                url += f"&email={quote(email, safe='')}"
+            return url
         else:
             logger.warning("Config or site_url not available for OTP URL generation")
             return f"{fallback}-{otp_code}"

@@ -1,0 +1,56 @@
+{% load rest_framework tailwind_tags %}
+<nav class="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
+  <div class="px-5 h-14 flex items-center justify-between">
+
+    {# Branding + current method #}
+    <div class="flex items-center gap-3">
+      <a href="/" class="flex items-center gap-2 font-semibold tracking-tight text-foreground hover:opacity-70 transition-opacity">
+        <i data-lucide="zap" class="w-4 h-4 fill-current"></i>
+        {% block branding %}{{ project_name|default:"API" }}{% endblock %}
+      </a>
+      {% if request.method %}
+        <span class="text-muted-foreground/50">/</span>
+        <span class="{{ request.method|method_badge }}">{{ request.method }}</span>
+      {% endif %}
+    </div>
+
+    {# Actions #}
+    <div class="flex items-center gap-1">
+
+      {# Theme switcher #}
+      <div class="relative" x-data="{ open: false }">
+        <button @click="open = !open"
+                class="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted transition-colors"
+                title="Theme" aria-label="Theme">
+          <i x-show="theme === 'light'" data-lucide="sun" class="w-4 h-4"></i>
+          <i x-show="theme === 'dark'" data-lucide="moon" class="w-4 h-4"></i>
+          <i x-show="theme === 'auto'" data-lucide="monitor" class="w-4 h-4"></i>
+        </button>
+        <div x-show="open" @click.away="open = false" x-transition x-cloak
+             class="absolute right-0 mt-1.5 w-32 rounded-lg border border-border bg-card shadow-lg p-1 text-[13px]">
+          <template x-for="opt in ['light', 'dark', 'auto']" :key="opt">
+            <button @click="setTheme(opt); open = false"
+                    class="w-full text-left px-2.5 py-1.5 rounded-md capitalize hover:bg-muted transition-colors"
+                    :class="theme === opt ? 'text-foreground font-medium' : 'text-muted-foreground'"
+                    x-text="opt"></button>
+          </template>
+        </div>
+      </div>
+
+      {# User #}
+      {% if user.is_authenticated %}
+        <div class="flex items-center gap-2 ml-2 pl-3 border-l border-border">
+          <span class="h-7 w-7 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center justify-center">{{ user.username|first|upper }}</span>
+          <span class="hidden sm:block text-[13px] font-medium">{{ user.username }}</span>
+          {% if api_settings.LOGOUT_URL %}
+            <form action="{% url api_settings.LOGOUT_URL %}" method="post" class="ml-1">{% csrf_token %}
+              <button type="submit" class="text-[13px] text-muted-foreground hover:text-foreground transition-colors">Logout</button>
+            </form>
+          {% endif %}
+        </div>
+      {% else %}
+        <span class="ml-2 pl-3 border-l border-border text-[13px]">{% optional_login request %}</span>
+      {% endif %}
+    </div>
+  </div>
+</nav>

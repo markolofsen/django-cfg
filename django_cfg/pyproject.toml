@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.2.59"
+version = "2.2.60"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -99,7 +99,7 @@ dependencies = [
 
     # REST Framework
     "djangorestframework>=3.16.0,<4.0",
-    "djangorestframework-simplejwt>=5.5.0,<6.0",
+    "djangorestframework-simplejwt>=5.5.1,<6.0",  # 5.5.0 floor was vulnerable to CVE-2024-22513
     "drf-nested-routers>=0.95.0,<1.0",
     "django-filter>=25.0,<26.0",
     "django-ratelimit>=4.1.0,<5.0.0",
@@ -115,7 +115,7 @@ dependencies = [
     # Authentication & Security
     "pyotp>=2.9.0,<3.0",
     "qrcode>=8.2,<9.0",
-    "cryptography>=44.0.0",  # AES-256-GCM encryption for API responses
+    "cryptography>=46.0.7",  # AES-256-GCM encryption for API responses; floor covers CVE-2026-39892/-34073
     "email-validator>=2.3.0,<3.0",  # RFC-compliant email syntax validation
     
     # Notifications
@@ -123,11 +123,11 @@ dependencies = [
     "pywebpush>=2.0.0,<3.0",
     
     # HTTP & Parsing
-    "requests>=2.32.0,<3.0",
+    "requests>=2.33.0,<3.0",  # 2.33.0 fixes CVE-2026-25645
     "httpx>=0.28.1,<1.0",
     "beautifulsoup4>=4.13.0,<5.0",
-    "lxml>=6.0.0,<7.0",
-    "mistune>=3.1.4,<4.0",
+    "lxml>=6.1.0,<7.0",  # 6.1.0 fixes XXE CVE-2026-41066
+    "mistune>=3.2.1,<4.0",  # 3.2.1 fixes link-title ReDoS CVE-2026-33079
     
     # AI & ML
     "tiktoken>=0.11.0,<1.0",
@@ -139,7 +139,7 @@ dependencies = [
     
     # Rendering & Formatting
     "jinja2>=3.1.6,<4.0.0",
-    "Pygments>=2.19.0,<3.0",
+    "Pygments>=2.20.0,<3.0",  # 2.20.0 fixes ReDoS CVE-2026-4539
     "json-toon>=1.0.2,<2.0",
     
     # Logging
@@ -192,11 +192,11 @@ gen = [
 ]
 
 django52 = [
-    "django>=5.2,<6.0",
+    "django>=5.2.14,<6.0",  # 5.2.14 floor covers 2026 SQLi/DoS/session-fixation CVEs
 ]
 
 ai = [
-    "pydantic-ai-slim>=1.91.0,<2.0",
+    "pydantic-ai-slim>=1.99.0,<2.0",  # 1.99.0 fixes SSRF bypass CVE-2026-46678
 ]
 
 grpc = [
@@ -257,7 +257,7 @@ docs = [
 ]
 
 test = [
-    "django>=5.2,<6.0",
+    "django>=5.2.14,<6.0",  # 5.2.14 floor covers 2026 SQLi/DoS/session-fixation CVEs
     "pytest>=7.0",
     "pytest-django>=4.5",
     "pytest-cov>=4.0",
@@ -268,7 +268,7 @@ test = [
 ]
 
 dev = [
-    "django>=5.2,<6.0",
+    "django>=5.2.14,<6.0",  # 5.2.14 floor covers 2026 SQLi/DoS/session-fixation CVEs
     "pytest>=7.0",
     "pytest-django>=4.5",
     "pytest-cov>=4.0",
@@ -293,7 +293,7 @@ dev = [
 ]
 
 full = [
-    "django>=5.2,<6.0",
+    "django>=5.2.14,<6.0",  # 5.2.14 floor covers 2026 SQLi/DoS/session-fixation CVEs
     "pytest>=7.0",
     "pytest-django>=4.5",
     "pytest-cov>=4.0",
@@ -331,7 +331,7 @@ full = [
     "rq>=2.7.0",
     "rq-scheduler>=0.14.0",
     "hiredis>=2.0",
-    "pydantic-ai-slim>=1.91.0,<2.0",
+    "pydantic-ai-slim>=1.99.0,<2.0",  # 1.99.0 fixes SSRF bypass CVE-2026-46678
     # gen (django_generator)
     "openapi-python-client>=0.21,<1",
     "sqlmodel>=0.0.16,<1.0",
@@ -451,7 +451,7 @@ dev = [
     "rich>=14.1.0,<15.0",
     "questionary>=2.1.0,<3.0",
     "psutil>=7.0.0",
-    "aiohttp>=3.12.15,<4.0",
+    "aiohttp>=3.13.4,<4.0",  # 3.13.4 fixes client-side CVE-2026-34513/-34520
     "pytest-asyncio>=1.2.0,<2.0",
     "pytest>=8.4.2,<9.0",
     "pytest-django>=4.11.1,<5.0",
@@ -532,6 +532,24 @@ directory = "htmlcov"
 [tool.hatch.build.targets.wheel]
 packages = [ "src/django_cfg",]
 exclude = [
+    # internal / non-shippable — mirror the sdist target (SECRETS-001: keep secrets/@dev out of the wheel)
+    "@*",
+    "**/@dev",
+    "**/@dev/**",
+    "**/@docs",
+    "**/@docs/**",
+    "**/@debug",
+    "**/@debug/**",
+    "**/@doc-internal",
+    "**/@doc-internal/**",
+    "**/@archive",
+    "**/@archive/**",
+    "**/@vulnerabilities",
+    "**/@vulnerabilities/**",
+    "**/.env",
+    "**/.env.*",
+    "**/*.pem",
+    "**/*.key",
     "scripts/",
     "src/django_admin/",
     "**/.gitignore",

@@ -117,7 +117,8 @@ class SetupViewSet(viewsets.GenericViewSet):
         Activates the device and generates backup codes.
         """
         user = request.user
-        logger.info(f"2FA confirm request from user {user.email}, data: {request.data}")
+        # Do not log request.data — it contains the TOTP code (TOTP-001).
+        logger.info(f"2FA confirm request from user {user.email}")
 
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
@@ -126,7 +127,8 @@ class SetupViewSet(viewsets.GenericViewSet):
 
         device_id = serializer.validated_data["device_id"]
         code = serializer.validated_data["code"]
-        logger.info(f"2FA confirm: device_id={device_id}, code={code}, user={user.email}")
+        # Never log the submitted code (TOTP-001).
+        logger.info(f"2FA confirm: device_id={device_id}, user={user.email}")
 
         # Get device
         try:
@@ -135,7 +137,7 @@ class SetupViewSet(viewsets.GenericViewSet):
                 user=user,
                 status=DeviceStatus.PENDING,
             )
-            logger.info(f"Found pending device: {device.id}, secret={device.secret[:8]}...")
+            logger.info(f"Found pending device: {device.id}")
         except TOTPDevice.DoesNotExist:
             logger.warning(f"Device not found: device_id={device_id}, user={user.email}")
             return Response(

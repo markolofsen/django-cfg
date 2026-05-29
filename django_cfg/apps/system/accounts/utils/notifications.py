@@ -195,7 +195,7 @@ class AccountNotifications:
         """Send OTP notification via email"""
         if send_email:
             from ..services.otp_service import OTPService
-            otp_link = OTPService._get_otp_url(otp_code)
+            otp_link = OTPService._get_otp_url(otp_code, email=user.email)
             AccountNotifications._send_email(
                 user=user,
                 subject=f"Your OTP code: {otp_code}",

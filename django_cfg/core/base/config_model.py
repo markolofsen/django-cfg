@@ -549,7 +549,14 @@ class DjangoConfig(BaseModel):
         v_lower = v.lower()
         for pattern in insecure_patterns:
             if pattern in v_lower:
-                break  # Warning only, allow for development
+                import warnings
+                warnings.warn(
+                    f"SECRET_KEY contains an insecure pattern ('{pattern}'). "
+                    "Generate a strong random key for production.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                break  # warn only — still allowed (e.g. development)
 
         return v
 

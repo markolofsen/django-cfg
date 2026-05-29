@@ -1,0 +1,124 @@
+/*
+ * DRF Tailwind theme — semantic tokens mirrored from @djangocfg/ui-core
+ * (frontend design system) so the browsable API matches the product UI.
+ * Plain CSS only — the Tailwind v4 Play CDN maps these to utilities via the
+ * @theme block in head.html (bg-background, text-foreground, border-border, …).
+ */
+
+:root {
+  --background: hsl(0 0% 94%);
+  --foreground: hsl(0 0% 9%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 9%);
+  --primary: hsl(192 90% 35%);
+  --primary-foreground: hsl(0 0% 100%);
+  --muted: hsl(0 0% 96%);
+  --muted-foreground: hsl(0 0% 45%);
+  --accent: hsl(192 18% 94%);
+  --border: hsl(0 0% 90%);
+  --input: hsl(0 0% 90%);
+  --ring: hsl(192 90% 35%);
+  --code: hsl(0 0% 96%);
+  --code-foreground: hsl(0 0% 12%);
+  --sidebar: hsl(0 0% 97%);
+  --warning: hsl(38 92% 50%);
+  --warning-background: hsl(48 100% 96%);
+  --warning-foreground: hsl(26 90% 25%);
+  --warning-border: hsl(38 70% 65%);
+  --success: hsl(142 71% 45%);
+  --success-background: hsl(138 76% 97%);
+  --success-foreground: hsl(140 60% 20%);
+  --success-border: hsl(142 60% 65%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-background: hsl(0 100% 97%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --destructive-border: hsl(0 84% 70%);
+  --info: hsl(200 90% 40%);
+  --info-background: hsl(200 100% 97%);
+  --info-foreground: hsl(200 80% 20%);
+  --info-border: hsl(200 80% 65%);
+}
+
+.dark {
+  --background: hsl(0 0% 4%);
+  --foreground: hsl(0 0% 98%);
+  --card: hsl(0 0% 8%);
+  --card-foreground: hsl(0 0% 98%);
+  --primary: hsl(189 100% 50%);
+  --primary-foreground: hsl(0 0% 9%);
+  --muted: hsl(0 0% 10%);
+  --muted-foreground: hsl(0 0% 60%);
+  --accent: hsl(189 18% 17%);
+  --border: hsl(0 0% 15%);
+  --input: hsl(0 0% 15%);
+  --ring: hsl(189 100% 50%);
+  --code: hsl(0 0% 9%);
+  --code-foreground: hsl(0 0% 92%);
+  /* Side rails sit slightly above the page background for subtle depth
+     (Vercel-style: panels lifted, separated mainly by borders — not a hard black). */
+  --sidebar: hsl(0 0% 6.5%);
+  --warning: hsl(38 92% 50%);
+  --warning-background: hsl(38 80% 10%);
+  --warning-foreground: hsl(38 90% 75%);
+  --warning-border: hsl(38 60% 30%);
+  --success: hsl(142 60% 45%);
+  --success-background: hsl(142 60% 8%);
+  --success-foreground: hsl(142 70% 70%);
+  --success-border: hsl(142 50% 25%);
+  --destructive: hsl(0 84% 60%);
+  --destructive-background: hsl(0 80% 10%);
+  --destructive-foreground: hsl(0 0% 98%);
+  --destructive-border: hsl(0 70% 30%);
+  --info: hsl(200 80% 55%);
+  --info-background: hsl(200 80% 8%);
+  --info-foreground: hsl(200 80% 75%);
+  --info-border: hsl(200 60% 25%);
+}
+
+/* JSON tree token colours (set by drf-theme.js on generated nodes) */
+.json-key    { color: var(--foreground); }
+.json-string { color: var(--success); }
+.json-number { color: var(--warning); }
+.json-bool   { color: var(--info); }
+.json-null   { color: var(--muted-foreground); }
+.json-punct  { color: var(--muted-foreground); }
+
+/* DRF renders bare <input>/<select>/<textarea> — style via the design tokens. */
+.drf-field input[type="text"],
+.drf-field input[type="email"],
+.drf-field input[type="password"],
+.drf-field input[type="number"],
+.drf-field input[type="url"],
+.drf-field input[type="search"],
+.drf-field textarea,
+.drf-field select {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background-color: var(--card);
+  color: var(--foreground);
+  transition: border-color .15s, box-shadow .15s;
+}
+.drf-field input:focus,
+.drf-field textarea:focus,
+.drf-field select:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 1px var(--ring);
+}
+.drf-field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-bottom: 0.375rem;
+  color: var(--muted-foreground);
+}
+
+[x-cloak] { display: none !important; }
+
+/* highlight.js themes set their own background/padding on .hljs — strip it so
+   code blocks inherit our token surface (bg-muted / bg-card) instead of a second box. */
+.hljs { background: transparent !important; padding: 0 !important; }
+pre code.hljs { display: block; }

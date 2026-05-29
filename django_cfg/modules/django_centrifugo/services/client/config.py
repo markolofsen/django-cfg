@@ -82,7 +82,22 @@ class DjangoCfgCentrifugoConfig(BaseModel):
 
     centrifugo_token_hmac_secret: str | None = Field(
         default=None,
-        description="HMAC secret for JWT token generation (if None, uses Django SECRET_KEY)",
+        description=(
+            "Dedicated HMAC secret for Centrifugo JWT token generation. REQUIRED when the "
+            "token endpoint is used — there is intentionally no Django SECRET_KEY fallback "
+            "(avoids cross-protocol key reuse). If None, token generation raises."
+        ),
+    )
+
+    token_ttl_seconds: int = Field(
+        default=86400 * 30,  # 30 days — backward-compatible default
+        ge=60,
+        le=86400 * 30,
+        description=(
+            "Connection-token lifetime (seconds). Centrifugo tokens are stateless with no "
+            "revocation, so a shorter TTL (e.g. 3600) plus client-side refresh is more secure. "
+            "Default kept at 30d for compatibility (CENTRIFUGO-002)."
+        ),
     )
 
     # Timeout settings

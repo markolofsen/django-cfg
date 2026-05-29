@@ -1,0 +1,9 @@
+{% load django_cfg %}
+<footer class="border-t border-border">
+  <div class="px-6 h-12 flex items-center justify-between text-[12px] text-muted-foreground">
+    <span>{% lib_subtitle %}</span>
+    <a href="{% lib_site_url %}" target="_blank" rel="noopener noreferrer"
+       class="inline-flex items-center gap-1.5 hover:text-foreground transition-colors font-medium">
+      <i data-lucide="zap" class="w-3.5 h-3.5 fill-current"></i>{% lib_name %}</a>
+  </div>
+</footer>
