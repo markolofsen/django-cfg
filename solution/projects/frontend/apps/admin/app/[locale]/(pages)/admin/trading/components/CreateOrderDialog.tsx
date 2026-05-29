@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react';
 
-import { OrderOrderType, OrderSide } from '@/api/generated/trading/enums';
+import { SideEnum, OrderTypeEnum } from '@/api/generated/types.gen';
 import { useTrading } from '@/contexts';
 import { events } from '@djangocfg/ui-core';
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@djangocfg/ui-core';
 
 import { TRADING_DIALOG_EVENTS } from '../events';
 
-import type { OrderCreateRequest } from '@/api/generated/trading/trading__apix__trading/models';
+import type { OrderCreateRequest } from '@/api/generated/_trading';
 export function CreateOrderDialogComponent() {
   const { createOrder } = useTrading();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<OrderCreateRequest>({
     symbol: '',
-    side: OrderSide.BUY,
+    side: SideEnum.BUY,
     quantity: '',
-    order_type: OrderOrderType.MARKET,
+    order_type: OrderTypeEnum.MARKET,
   });
 
   // Subscribe to dialog events
@@ -31,9 +31,9 @@ export function CreateOrderDialogComponent() {
         setIsOpen(false);
         setFormData({
           symbol: '',
-          side: OrderSide.BUY,
+          side: SideEnum.BUY,
           quantity: '',
-          order_type: OrderOrderType.MARKET,
+          order_type: OrderTypeEnum.MARKET,
         });
       }
     });
@@ -41,8 +41,8 @@ export function CreateOrderDialogComponent() {
   }, []);
 
   const showPriceField =
-    formData.order_type === OrderOrderType.LIMIT ||
-    formData.order_type === OrderOrderType.STOP_LOSS;
+    formData.order_type === OrderTypeEnum.LIMIT ||
+    formData.order_type === OrderTypeEnum.STOP_LOSS;
 
   const submitButtonText = isLoading ? 'Creating...' : 'Create Order';
 
@@ -51,11 +51,11 @@ export function CreateOrderDialogComponent() {
   };
 
   const handleSideChange = (value: string) => {
-    setFormData({ ...formData, side: value as OrderSide });
+    setFormData({ ...formData, side: value as SideEnum });
   };
 
   const handleOrderTypeChange = (value: string) => {
-    setFormData({ ...formData, order_type: value as OrderOrderType });
+    setFormData({ ...formData, order_type: value as OrderTypeEnum });
   };
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,9 +77,9 @@ export function CreateOrderDialogComponent() {
       setIsOpen(false);
       setFormData({
         symbol: '',
-        side: OrderSide.BUY,
+        side: SideEnum.BUY,
         quantity: '',
-        order_type: OrderOrderType.MARKET,
+        order_type: OrderTypeEnum.MARKET,
       });
     } catch (error) {
       console.error('Failed to create order:', error);
@@ -118,8 +118,8 @@ export function CreateOrderDialogComponent() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={OrderSide.BUY}>Buy</SelectItem>
-                  <SelectItem value={OrderSide.SELL}>Sell</SelectItem>
+                  <SelectItem value={SideEnum.BUY}>Buy</SelectItem>
+                  <SelectItem value={SideEnum.SELL}>Sell</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -131,9 +131,9 @@ export function CreateOrderDialogComponent() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={OrderOrderType.MARKET}>Market</SelectItem>
-                  <SelectItem value={OrderOrderType.LIMIT}>Limit</SelectItem>
-                  <SelectItem value={OrderOrderType.STOP_LOSS}>Stop Loss</SelectItem>
+                  <SelectItem value={OrderTypeEnum.MARKET}>Market</SelectItem>
+                  <SelectItem value={OrderTypeEnum.LIMIT}>Limit</SelectItem>
+                  <SelectItem value={OrderTypeEnum.STOP_LOSS}>Stop Loss</SelectItem>
                 </SelectContent>
               </Select>
             </div>

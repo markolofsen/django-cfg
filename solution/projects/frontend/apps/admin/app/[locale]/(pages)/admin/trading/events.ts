@@ -1,6 +1,6 @@
 import { events } from '@djangocfg/ui-core';
 
-import type { OrderCreateRequest } from '@/api/generated/trading/trading__apix__trading/models';
+import type { OrderCreateRequest } from '@/api/generated/_trading';
 
 export const TRADING_DIALOG_EVENTS = {
   OPEN_CREATE_ORDER_DIALOG: 'OPEN_CREATE_ORDER_DIALOG',

@@ -1,24 +1,14 @@
-/**
- * Robots.txt Route
- *
- * Controls search engine crawler access
- * https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots
- */
+import { createRobots } from '@djangocfg/nextjs/sitemap';
 
-import type { MetadataRoute } from 'next';
 import { settings } from './_core/settings';
 
-export default function robots(): MetadataRoute.Robots {
-  const siteUrl = settings.app.siteUrl;
+// Index lives at /sitemap_index.xml (not /sitemap.xml) because Next.js
+// reserves /sitemap.xml for app/sitemap.ts (the chunk factory), even
+// when generateSitemaps() is used and the URL itself ends up 404.
+const host = settings.app.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
-  return {
-    rules: [
-      {
-        userAgent: '*',
-        allow: '/',
-        disallow: ['/api/', '/dashboard/'],
-      },
-    ],
-    sitemap: siteUrl ? `${siteUrl}/sitemap.xml` : undefined,
-  };
-}
+export default createRobots({
+  host,
+  disallow: ['/api/', '/dashboard/'],
+  sitemap: `${host}/sitemap_index.xml`,
+});

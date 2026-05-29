@@ -15,10 +15,9 @@ import consola from 'consola';
 
 import { settings } from '@core/settings';
 
-import { API as CryptoAPI, LocalStorageAdapter as CryptoStorage } from './generated/crypto';
-import { API as ProfilesAPI, LocalStorageAdapter as ProfilesStorage } from './generated/profiles';
-import { APIError } from './generated/profiles/errors';
-import { API as TradingAPI, LocalStorageAdapter as TradingStorage } from './generated/trading';
+import { API as CryptoAPI } from './generated/_crypto';
+import { API as ProfilesAPI, APIError } from './generated/_profiles';
+import { API as TradingAPI } from './generated/_trading';
 
 // Get base URL from environment
 const baseUrl = settings.api.baseUrl;
@@ -28,9 +27,9 @@ consola.log('[BaseClient] baseUrl', baseUrl);
 // Create singleton API instances for each group
 // NOTE: The generated clients already include the full path (e.g., /api/trading/orders/)
 // so we only pass the base URL without any prefixes
-const profilesApi = new ProfilesAPI(baseUrl, { storage: new ProfilesStorage() });
-const tradingApi = new TradingAPI(baseUrl, { storage: new TradingStorage() });
-const cryptoApi = new CryptoAPI(baseUrl, { storage: new CryptoStorage() });
+const profilesApi = new ProfilesAPI(baseUrl);
+const tradingApi = new TradingAPI(baseUrl);
+const cryptoApi = new CryptoAPI(baseUrl);
 
 export class BaseClient {
   /**

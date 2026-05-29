@@ -10,9 +10,9 @@ import { cryptoClient } from '@/api/BaseClient';
 
 import {
     useCryptoCoinsList, useCryptoCoinsStatsRetrieve, useCryptoExchangesList, useCryptoWalletsList
-} from '../../api/generated/crypto/_utils/hooks';
+} from '../../api/generated/_crypto/hooks';
 
-import type { API } from '../../api/generated/crypto';
+import type { API } from '../../api/generated/_crypto';
 import type { CryptoContextType } from './types';
 
 const CryptoContext = createContext<CryptoContextType | undefined>(undefined);
@@ -25,14 +25,14 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
     isLoading: coinsLoading,
     isValidating: coinsValidating,
     mutate: mutateCoins
-  } = useCryptoCoinsList({ page: 1, page_size: 100 }, cryptoClient as unknown as API);
+  } = useCryptoCoinsList({ query: { page: 1, page_size: 100 } });
 
 
   // Get coin statistics (SWR)
   const {
     data: coinStats,
     isLoading: statsLoading,
-  } = useCryptoCoinsStatsRetrieve(cryptoClient as unknown as API);
+  } = useCryptoCoinsStatsRetrieve();
 
   // Get exchanges list (SWR)
   const {
@@ -40,7 +40,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
     error: exchangesError,
     isLoading: exchangesLoading,
     mutate: mutateExchanges
-  } = useCryptoExchangesList({ page: 1, page_size: 100 }, cryptoClient as unknown as API);
+  } = useCryptoExchangesList({ query: { page: 1, page_size: 100 } });
 
   // Get wallets list (SWR)
   const {
@@ -48,7 +48,7 @@ export function CryptoProvider({ children }: { children: ReactNode }) {
     error: walletsError,
     isLoading: walletsLoading,
     mutate: mutateWallets
-  } = useCryptoWalletsList({ page: 1, page_size: 100 }, cryptoClient as unknown as API);
+  } = useCryptoWalletsList({ query: { page: 1, page_size: 100 } });
 
   const coins = coinsData?.results || [];
   const exchanges = exchangesData?.results || [];

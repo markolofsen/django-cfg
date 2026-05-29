@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { generateMetadata } from '@core/metadata';
-import { ProfileLayout } from '@djangocfg/layouts';
+import { ProfileForm } from '@djangocfg/layouts';
 
 export const metadata: Metadata = generateMetadata({
   title: 'Profile',
@@ -8,5 +8,5 @@ export const metadata: Metadata = generateMetadata({
 });
 
 export default function ProfilePage() {
-  return <ProfileLayout />;
+  return <ProfileForm />;
 }

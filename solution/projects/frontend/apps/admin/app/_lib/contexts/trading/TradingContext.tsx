@@ -9,11 +9,11 @@ import React, { createContext, ReactNode, useContext } from 'react';
 import { tradingClient } from '@/api/BaseClient';
 
 import {
-    useCreateTradingOrdersCreate, useDeleteTradingOrdersDestroy, useTradingOrdersList,
+    useTradingOrdersCreate, useTradingOrdersDestroy, useTradingOrdersList,
     useTradingPortfoliosMeRetrieve, useTradingPortfoliosStatsRetrieve
-} from '../../api/generated/trading/_utils/hooks/trading__apix__trading';
+} from '../../api/generated/_trading/hooks';
 
-import type { API } from '../../api/generated/trading';
+import type { API } from '../../api/generated/_trading';
 import type { OrderCreateRequest } from './types';
 import type { TradingContextType } from './types';
 
@@ -26,13 +26,13 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     error: portfolioError,
     isLoading: portfolioLoading,
     mutate: mutatePortfolio
-  } = useTradingPortfoliosMeRetrieve(tradingClient as unknown as API);
+  } = useTradingPortfoliosMeRetrieve();
 
   // Get portfolio statistics (SWR)
   const {
     data: portfolioStats,
     isLoading: statsLoading,
-  } = useTradingPortfoliosStatsRetrieve(tradingClient as unknown as API);
+  } = useTradingPortfoliosStatsRetrieve();
 
   // Get orders list (SWR)
   const {
@@ -40,11 +40,11 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     error: ordersError,
     isLoading: ordersLoading,
     mutate: mutateOrders
-  } = useTradingOrdersList({ page: 1, page_size: 100 }, tradingClient as unknown as API);
+  } = useTradingOrdersList({ query: { page: 1, page_size: 100 } });
 
   // Mutation hooks
-  const createOrderMutation = useCreateTradingOrdersCreate();
-  const deleteOrderMutation = useDeleteTradingOrdersDestroy();
+  const createOrderMutation = useTradingOrdersCreate();
+  const deleteOrderMutation = useTradingOrdersDestroy();
 
   const orders = ordersData?.results || [];
 
@@ -57,12 +57,12 @@ export function TradingProvider({ children }: { children: ReactNode }) {
     ordersLoading,
     ordersError: ordersError as Error | null,
     createOrder: async (data: OrderCreateRequest) => {
-      await createOrderMutation(data, tradingClient as unknown as API);
+      await createOrderMutation.trigger({ body: data });
       await mutateOrders();
       await mutatePortfolio();
     },
     cancelOrder: async (orderId: number) => {
-      await deleteOrderMutation(orderId, tradingClient as unknown as API);
+      await deleteOrderMutation.trigger({ path: { id: orderId } });
       await mutateOrders();
       await mutatePortfolio();
     },

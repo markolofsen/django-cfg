@@ -3,29 +3,31 @@
  * Single source of truth for trading-related types
  */
 
-// Re-export schema types from generated API
-export type {
+import type {
   Portfolio,
   PortfolioStats,
   Order,
-  OrderCreateRequest
-} from '../../api/generated/trading/trading__apix__trading/models';
+  OrderCreateRequest,
+} from '../../api/generated/_trading';
+
+// Re-export schema types from generated API
+export type { Portfolio, PortfolioStats, Order, OrderCreateRequest };
 
 // Context state types
 export interface TradingContextType {
   // Portfolio data
-  portfolio: import('../../api/generated/trading/trading__apix__trading/models').Portfolio | undefined;
-  portfolioStats: import('../../api/generated/trading/trading__apix__trading/models').PortfolioStats | undefined;
+  portfolio: Portfolio | undefined;
+  portfolioStats: PortfolioStats | undefined;
   portfolioLoading: boolean;
   portfolioError: Error | null;
 
   // Orders data
-  orders: import('../../api/generated/trading/trading__apix__trading/models').Order[];
+  orders: Order[];
   ordersLoading: boolean;
   ordersError: Error | null;
 
   // Actions
-  createOrder: (data: import('../../api/generated/trading/trading__apix__trading/models').OrderCreateRequest) => Promise<void>;
+  createOrder: (data: OrderCreateRequest) => Promise<void>;
   cancelOrder: (orderId: number) => Promise<void>;
   refreshPortfolio: () => Promise<void>;
   refreshOrders: () => Promise<void>;

@@ -2,7 +2,7 @@ import { Building2, Check, TrendingUp } from 'lucide-react';
 
 import { Badge, Card, CardContent } from '@djangocfg/ui-core';
 
-import type { Exchange } from '@/api/generated/crypto/_utils/schemas/Exchange.schema';
+import type { Exchange } from '@/api/generated/_crypto';
 
 interface ExchangeCardProps {
   exchange: Exchange;
