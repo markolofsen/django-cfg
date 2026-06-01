@@ -12,7 +12,7 @@ Django-CFG provides seamless integrations with essential third-party services an
 
 ### 🔄 Background Tasks
 
-### [Django-RQ Integration](../modules/django-rq/overview)
+### [Django-RQ Integration](/features/modules/django-rq)
 
 Production-ready Redis-based task queue with built-in monitoring:
 
@@ -26,16 +26,16 @@ Production-ready Redis-based task queue with built-in monitoring:
 - ✅ **Job dependencies** and retry logic with exponential backoff
 
 **Use Cases:**
-- Email sending and notifications ([Email Module](../modules/django-email/overview))
+- Email sending and notifications ([Email Module](/features/modules/django-email))
 - Document processing
 - Bulk operations (Newsletter campaigns, data imports)
 - Scheduled tasks (cleanup jobs, report generation)
 
-[**Full Django-RQ Guide →**](../modules/django-rq/overview)
+[**Full Django-RQ Guide →**](/features/modules/django-rq)
 
 ### 🔧 Development Tools
 
-### [Ngrok Integration](../modules/django-ngrok/overview)
+### [Ngrok Integration](/features/modules/django-ngrok)
 
 Secure tunnels for webhook testing in development:
 
@@ -51,7 +51,7 @@ Secure tunnels for webhook testing in development:
 - Third-party API webhooks
 - Mobile app development
 
-[**Full Ngrok Guide →**](../modules/django-ngrok/overview)
+[**Full Ngrok Guide →**](/features/modules/django-ngrok)
 
 ### 🔐 Authentication
 
@@ -133,7 +133,7 @@ queue = django_rq.get_queue('default')
 queue.enqueue('apps.myapp.tasks.send_welcome_email', user_id=123)
 ```
 
-[**Full Django-RQ Guide →**](../modules/django-rq/overview)
+[**Full Django-RQ Guide →**](/features/modules/django-rq)
 
 ### Enable Ngrok for Webhook Testing
 
@@ -150,7 +150,7 @@ ngrok:
 python manage.py runserver_ngrok
 ```
 
-[**Full Ngrok Guide →**](../modules/django-ngrok/overview)
+[**Full Ngrok Guide →**](/features/modules/django-ngrok)
 
 ---
 
@@ -158,7 +158,7 @@ python manage.py runserver_ngrok
 
 ### Type-Safe Configuration
 
-All integrations use [Pydantic v2](/docs/core/type-safety) for validation:
+All integrations use [Pydantic v2](/core/type-safety) for validation:
 
 ```python
 from django_cfg import DjangoConfig
@@ -186,7 +186,7 @@ class MyConfig(DjangoConfig):
 
 ### Environment-Based Enablement
 
-Enable integrations per environment using [environment detection](/docs/configuration/environment):
+Enable integrations per environment using [environment detection](/configuration/environment):
 
 ```python
 class MyConfig(DjangoConfig):
@@ -270,14 +270,14 @@ python manage.py runserver_ngrok --test
 ### Core Integrations
 
 **Background Processing:**
-- **[Django-RQ Overview](../modules/django-rq/overview)** - Complete task queue guide
+- **[Django-RQ Overview](/features/modules/django-rq)** - Complete task queue guide
 - **[Django-RQ Architecture](../modules/django-rq/architecture)** - System design and components
 - **[Django-RQ Configuration](../modules/django-rq/configuration)** - Setup and configuration
 - **[Django-RQ Examples](../modules/django-rq/examples)** - Real-world task patterns
 - **[Django-RQ Monitoring](../modules/django-rq/monitoring)** - Task monitoring and observability
 
 **Development Tools:**
-- **[Ngrok Overview](../modules/django-ngrok/overview)** - Webhook testing guide
+- **[Ngrok Overview](/features/modules/django-ngrok)** - Webhook testing guide
 - **[Ngrok Configuration](../modules/django-ngrok/configuration)** - Tunnel configuration
 
 **Authentication:**
@@ -285,56 +285,56 @@ python manage.py runserver_ngrok --test
 - **[User Management](../built-in-apps/user-management/accounts)** - Built-in user system
 
 **Communication:**
-- **[Telegram Module](../modules/django-telegram/overview)** - Bot notifications
-- **[Email Module](../modules/django-email/overview)** - Email sending
+- **[Telegram Module](/features/modules/django-telegram)** - Bot notifications
+- **[Email Module](/features/modules/django-email)** - Email sending
 
 ### Configuration & Setup
 
 **Getting Started:**
-- **[Configuration Guide](/docs/getting-started/configuration)** - Enable integrations
-- **[Configuration Models](/docs/configuration)** - Integration config API
-- **[Environment Detection](/docs/configuration/environment)** - Environment-specific integrations
+- **[Configuration Guide](/getting-started/configuration)** - Enable integrations
+- **[Configuration Models](/configuration)** - Integration config API
+- **[Environment Detection](/configuration/environment)** - Environment-specific integrations
 
 **Infrastructure:**
-- **[Redis Configuration](/docs/configuration/cache)** - Redis setup for Django-RQ
-- **[Security Settings](/docs/configuration/security)** - Webhook signature verification
-- **[Environment Variables](/docs/configuration/environment)** - Manage API keys securely
+- **[Redis Configuration](/configuration/cache)** - Redis setup for Django-RQ
+- **[Security Settings](/configuration/security)** - Webhook signature verification
+- **[Environment Variables](/configuration/environment)** - Manage API keys securely
 
 ### Related Features
 
 **Other Modules:**
 - **[Modules Overview](../modules/overview)** - All available modules
-- **[LLM Module](../modules/django-llm/overview)** - AI model integration
+- **[LLM Module](/features/modules/django-llm)** - AI model integration
 
 ### Tools & Guides
 
 **CLI Commands:**
-- **[CLI Introduction](/docs/cli/introduction)** - All CLI tools
+- **[CLI Introduction](/cli/introduction)** - All CLI tools
 
 **Guides:**
 - **[Integration Patterns](./patterns)** - Best practices
-- **[Production Config](/docs/guides/production-config)** - Production integration setup
-- **[Troubleshooting](/docs/guides/troubleshooting)** - Common integration issues
+- **[Production Config](/guides/production-config)** - Production integration setup
+- **[Troubleshooting](/guides/troubleshooting)** - Common integration issues
 
 ---
 
 ## Next Steps
 
 **New to Integrations?**
-1. Start with [Django-RQ Overview](../modules/django-rq/overview) for background tasks
-2. Try [Ngrok Overview](../modules/django-ngrok/overview) for webhook testing
+1. Start with [Django-RQ Overview](/features/modules/django-rq) for background tasks
+2. Try [Ngrok Overview](/features/modules/django-ngrok) for webhook testing
 3. Review [Integration Patterns](./patterns) for best practices
 
 **Ready for Production?**
-1. Review [Production Config](/docs/guides/production-config)
-2. Set up [Redis](/docs/configuration/cache) for Django-RQ
-3. Configure [environment variables](/docs/configuration/environment) for secrets
+1. Review [Production Config](/guides/production-config)
+2. Set up [Redis](/configuration/cache) for Django-RQ
+3. Configure [environment variables](/configuration/environment) for secrets
 4. Deploy workers using [Django-RQ Monitoring](../modules/django-rq/monitoring) guide
 
 **Need Help?**
-- [Troubleshooting Guide](/docs/guides/troubleshooting)
-- [FAQ](/docs/guides/faq)
-- [CLI Commands](/docs/cli/introduction)
+- [Troubleshooting Guide](/guides/troubleshooting)
+- [FAQ](/guides/faq)
+- [CLI Commands](/cli/introduction)
 
 ---
 

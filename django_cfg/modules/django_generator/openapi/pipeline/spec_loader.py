@@ -89,6 +89,70 @@ def _load_subprocess() -> dict[str, Any]:
         out.unlink(missing_ok=True)
 
 
+def _clean_identity(raw: str) -> str:
+    """Strip ``<class '...'>`` wrapping to keep messages readable."""
+    return raw.strip().removeprefix("<class '").removesuffix("'>")
+
+
+def _suggest_ref_name(identity: str) -> str | None:
+    """Derive a unique ``ref_name`` suggestion from a serializer identity.
+
+    ``identity`` looks like ``billing.serializers.SubscribeSerializer``. We
+    prefix the serializer's base name (``Serializer`` suffix stripped) with the
+    PascalCased leading module segment (the Django app label):
+
+        billing.serializers.SubscribeSerializer  ->  BillingSubscribe
+
+    Returns ``None`` when the heuristic cannot produce a sensible name (e.g. the
+    identity has no module path), so the caller can fall back to a placeholder.
+    """
+    parts = identity.split(".")
+    if len(parts) < 2:
+        return None
+
+    class_name = parts[-1]
+    app_segment = parts[0]
+    if not class_name or not app_segment:
+        return None
+
+    base_name = class_name
+    for suffix in ("Serializer", "Request", "Response"):
+        if base_name.endswith(suffix) and base_name != suffix:
+            base_name = base_name[: -len(suffix)]
+            break
+
+    app_pascal = "".join(w[:1].upper() + w[1:] for w in re.split(r"[_\-]+", app_segment) if w)
+    if not app_pascal or not base_name:
+        return None
+
+    # Avoid double-prefixing when the base name already starts with the app.
+    if base_name.lower().startswith(app_pascal.lower()):
+        return base_name
+    return f"{app_pascal}{base_name}"
+
+
+def _serializer_class_name(identity: str) -> str:
+    """Best-effort serializer class name from a dotted identity."""
+    tail = identity.rsplit(".", 1)[-1]
+    return tail or "YourSerializer"
+
+
+def _fix_snippet(identity: str) -> str:
+    """Render a copy-paste ``Meta.ref_name`` snippet for one serializer."""
+    cls = _serializer_class_name(identity)
+    suggested = _suggest_ref_name(identity)
+    if suggested is None:
+        ref = '"<UniqueComponentName>"  # replace with a globally-unique name'
+    else:
+        ref = f'"{suggested}"'
+    return (
+        f"        # in {identity}\n"
+        f"        class {cls}(...):\n"
+        f"            class Meta:\n"
+        f"                ref_name = {ref}"
+    )
+
+
 def _check_collisions(stderr_text: str) -> None:
     """Abort if drf-spectacular reported schema-name collisions.
 
@@ -100,27 +164,29 @@ def _check_collisions(stderr_text: str) -> None:
     seen: dict[str, set[str]] = {}
     for m in _COLLISION_RE.finditer(stderr_text):
         name = m.group("name")
-        # Strip "<class '...'>" wrapping to keep messages readable.
         identities = seen.setdefault(name, set())
         for raw in (m.group("a"), m.group("b")):
-            cleaned = raw.strip().removeprefix("<class '").removesuffix("'>")
-            identities.add(cleaned)
+            identities.add(_clean_identity(raw))
 
     if not seen:
         return
 
-    lines = []
+    blocks: list[str] = []
     for name, identities in sorted(seen.items()):
-        lines.append(f"  • {name}")
+        block = [f"  • component \"{name}\" is claimed by:"]
         for ident in sorted(identities):
-            lines.append(f"      from {ident}")
+            block.append(f"      - {ident}")
+        block.append("    Pick a unique `ref_name` for at least one of them, e.g.:")
+        for ident in sorted(identities):
+            block.append(_fix_snippet(ident))
+        blocks.append("\n".join(block))
 
     raise SpecLoadError(
         "Schema-name collision detected — drf-spectacular cannot emit a valid "
         "spec when two serializer classes resolve to the same component name:\n"
-        + "\n".join(lines)
-        + "\n\nFix: rename one of the conflicting serializer classes "
-          "(or set its `Meta.ref_name`) so each component name is unique."
+        + "\n\n".join(blocks)
+        + "\n\nFix: rename one of the conflicting serializer classes (or set its "
+          "`Meta.ref_name` as shown above) so each component name is unique."
     )
 
 

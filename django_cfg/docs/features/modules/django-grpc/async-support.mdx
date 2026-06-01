@@ -330,7 +330,7 @@ python manage.py rungrpc --asyncio-debug
 |-------|----------|
 | `RuntimeError: no running event loop` | Make method `async def` |
 | `SynchronousOnlyOperation` | Use `await asyncio.to_thread()` or async ORM |
-| Stream closes unexpectedly | See [Troubleshooting](./troubleshooting#connection-timeout-bug) |
+| Stream closes unexpectedly | See [Troubleshooting](./troubleshooting#critical-connection_timeout-bug) |
 | Memory usage growing | Check queue sizes and cleanup |
 
 ## Related Documentation

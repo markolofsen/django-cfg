@@ -10,7 +10,7 @@ Production-ready patterns for building reliable bidirectional gRPC streams.
 <Callout type="warning">
 **Critical: connection_timeout Bug**
 
-Never use `connection_timeout` on `anext()` calls in grpcio async streaming. This causes premature `StopAsyncIteration`. See [Troubleshooting](/docs/features/modules/django-grpc/troubleshooting#connection-timeout-bug) for details.
+Never use `connection_timeout` on `anext()` calls in grpcio async streaming. This causes premature `StopAsyncIteration`. See [Troubleshooting](/features/modules/django-grpc/troubleshooting#critical-connection_timeout-bug) for details.
 </Callout>
 
 ## BidirectionalStreamingService

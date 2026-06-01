@@ -3,8 +3,6 @@ title: AI MCP Integration
 description: Getting started with the Model Context Protocol (MCP) module — connect AI agents to your Django-CFG project in minutes.
 ---
 
-import { Cards, Card, Callout } from 'nextra/components'
-
 # AI MCP Integration
 
 The Model Context Protocol (MCP) is an open standard that lets AI agents discover and interact with external tools. The `django_mcp` module turns your Django-CFG project into an MCP server, giving agents structured access to your models, management commands, and custom tools — all behind a single access key.
@@ -38,16 +36,16 @@ The module is disabled by default (`enabled=False`). Set `enabled=True` and prov
 ## Full Documentation
 
 <Cards>
-  <Card title="Architecture" href="../features/modules/django-mcp/architecture">
+  <Card title="Architecture" href="/features/modules/django-mcp/architecture">
     How the MCP server is structured — endpoints, tool registry, security model.
   </Card>
-  <Card title="Configuration" href="../features/modules/django-mcp/configuration">
+  <Card title="Configuration" href="/features/modules/django-mcp/configuration">
     Full reference for `DjangoMCPModuleConfig` — introspection, model exposure, rate limiting.
   </Card>
-  <Card title="Tools" href="../features/modules/django-mcp/tools">
+  <Card title="Tools" href="/features/modules/django-mcp/tools">
     Built-in tools and how to write custom tools with `MCPTool`.
   </Card>
-  <Card title="Agent Chat" href="../features/modules/django-mcp/agent-chat">
+  <Card title="Agent Chat" href="/features/modules/django-mcp/agent-chat">
     The `POST /cfg/mcp/agent/` endpoint — conversational interface for AI agents.
   </Card>
 </Cards>

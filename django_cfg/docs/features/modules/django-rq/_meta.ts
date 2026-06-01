@@ -1,6 +1,6 @@
 export default {
   'README': { display: 'hidden' },
-  'overview': 'Overview',
+  index: { display: 'hidden' },
   'architecture': 'Architecture',
   'configuration': 'Configuration',
   'examples': 'Examples',

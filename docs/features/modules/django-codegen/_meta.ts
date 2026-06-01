@@ -1,5 +1,5 @@
 export default {
-  'overview': 'Overview',
+  index: { display: 'hidden' },
   'configuration': 'Configuration',
   'cli': 'CLI Commands',
 }

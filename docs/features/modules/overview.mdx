@@ -263,7 +263,7 @@ django_rq = DjangoRQConfig(
 
 **Features:** High performance (10K+ jobs/sec), cron & interval scheduling, built-in monitoring (Admin, REST API, Prometheus), job dependencies, retry logic, type-safe configuration, and production-ready error handling.
 
-**Learn more:** [Django-RQ Integration Documentation](./django-rq/overview)
+**Learn more:** [Django-RQ Integration Documentation](/features/modules/django-rq)
 
 ### 🔧 Development Tools
 
@@ -329,7 +329,7 @@ response = client.chat_completion(
 )
 ```
 
-**Note:** See [LLM Module Documentation](./django-llm/overview) for complete API reference.
+**Note:** See [LLM Module Documentation](/features/modules/django-llm) for complete API reference.
 
 
 ## 🔌 Creating Custom Modules
@@ -503,56 +503,56 @@ class MyProjectConfig(DjangoConfig):
 
 | Module | Description | Optional |
 |--------|-------------|----------|
-| [Cloudflare D1](./django-cf/overview) | Cloudflare D1 integration, auto user sync | Yes (cloudflare) |
-| [Monitor](./django-monitor/overview) | Application performance monitoring, D1 events | Yes (cloudflare) |
-| [Logging](./django-logging/overview) | Structured logging with D1 persistence | No |
-| [Health Checks](./django-health/overview) | Auto-configuring health check endpoints | No |
+| [Cloudflare D1](/features/modules/django-cf) | Cloudflare D1 integration, auto user sync | Yes (cloudflare) |
+| [Monitor](/features/modules/django-monitor) | Application performance monitoring, D1 events | Yes (cloudflare) |
+| [Logging](/features/modules/django-logging) | Structured logging with D1 persistence | No |
+| [Health Checks](/features/modules/django-health) | Auto-configuring health check endpoints | No |
 
 ### Communication & Real-time
 
 | Module | Description | Optional |
 |--------|-------------|----------|
-| [gRPC Server](./django-grpc/index) | Async gRPC with streaming, auth, D1 persistence | Yes (grpcio) |
-| [Centrifugo](./django-centrifugo/index) | Real-time WebSocket pub/sub via Centrifugo | Yes (cent) |
-| [Django-RQ](./django-rq/overview) | Redis Queue task processing and scheduling | Yes (rq) |
-| [Email](./django-email/overview) | Auto-configuring email service | No |
-| [Telegram](./django-telegram/overview) | Telegram bot notifications | Yes (httpx) |
+| [gRPC Server](./django-grpc) | Async gRPC with streaming, auth, D1 persistence | Yes (grpcio) |
+| [Centrifugo](./django-centrifugo) | Real-time WebSocket pub/sub via Centrifugo | Yes (cent) |
+| [Django-RQ](/features/modules/django-rq) | Redis Queue task processing and scheduling | Yes (rq) |
+| [Email](/features/modules/django-email) | Auto-configuring email service | No |
+| [Telegram](/features/modules/django-telegram) | Telegram bot notifications | Yes (httpx) |
 
 ### Admin & UI
 
 | Module | Description | Optional |
 |--------|-------------|----------|
-| [Django Admin](./django-admin/overview) | Type-safe admin with 2234 Material icons | No |
-| [Unfold Theme](./django-unfold/overview) | Modern admin interface theme | Yes (django-unfold) |
-| [DRF Theme](./django-drf-theme/overview) | Tailwind theme for DRF Browsable API | No |
+| [Django Admin](/features/modules/django-admin) | Type-safe admin with 2234 Material icons | No |
+| [Unfold Theme](/features/modules/django-unfold) | Modern admin interface theme | Yes (django-unfold) |
+| [DRF Theme](/features/modules/django-drf-theme) | Tailwind theme for DRF Browsable API | No |
 
 ### Code Generation
 
 | Module | Description | Optional |
 |--------|-------------|----------|
-| [Code Generation](./django-codegen/overview) | Unified client generation (TS, Python, etc.) | No |
-| [FastAPI ORM](./django-fastapi/overview) | Generate FastAPI/SQLModel from Django models | No |
-| [OG Images](./django-ogimage/overview) | OG image generation with PicTex/Pillow | No |
+| [Code Generation](/features/modules/django-codegen) | Unified client generation (TS, Python, etc.) | No |
+| [FastAPI ORM](/features/modules/django-fastapi) | Generate FastAPI/SQLModel from Django models | No |
+| [OG Images](/features/modules/django-ogimage) | OG image generation with PicTex/Pillow | No |
 
 ### AI & LLM
 
 | Module | Description | Optional |
 |--------|-------------|----------|
-| [LLM Integration](./django-llm/overview) | Multi-provider LLM client with caching | Yes |
+| [LLM Integration](/features/modules/django-llm) | Multi-provider LLM client with caching | Yes |
 | [LLM Balance Monitoring](./django-llm/balance-monitoring) | Provider balance monitoring with alerts | Yes |
 
 ### Data & Tools
 
 | Module | Description | Optional |
 |--------|-------------|----------|
-| [Currency](./django-currency/overview) | Multi-currency conversion with MoneyField | No |
-| [Import/Export](./django-import-export/overview) | Excel import/export integration | Yes (django-import-export) |
-| [Encryption](../../core/encryption/overview) | API payload encryption (AES) | No |
-| [File Cleanup](./django-cleanup/overview) | Auto file cleanup on model delete | No |
-| [Tailwind CSS](./django-tailwind/overview) | Tailwind layout templates and utilities | No |
+| [Currency](/features/modules/django-currency) | Multi-currency conversion with MoneyField | No |
+| [Import/Export](/features/modules/django-import-export) | Excel import/export integration | Yes (django-import-export) |
+| [Encryption](/core/encryption) | API payload encryption (AES) | No |
+| [File Cleanup](/features/modules/django-cleanup) | Auto file cleanup on model delete | No |
+| [Tailwind CSS](/features/modules/django-tailwind) | Tailwind layout templates and utilities | No |
 
 ### Networking
 
 | Module | Description | Optional |
 |--------|-------------|----------|
-| [Ngrok Tunnels](./django-ngrok/overview) | Development tunneling for webhooks | Yes (pyngrok) |
+| [Ngrok Tunnels](/features/modules/django-ngrok) | Development tunneling for webhooks | Yes (pyngrok) |

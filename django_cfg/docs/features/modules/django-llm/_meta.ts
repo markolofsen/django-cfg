@@ -1,5 +1,5 @@
 export default {
-  'overview': 'Overview',
+  index: { display: 'hidden' },
   'vision': 'Vision & OCR',
   'image-generation': 'Image Generation',
   'text-client': 'Text Client',

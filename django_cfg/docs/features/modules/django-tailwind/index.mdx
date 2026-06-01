@@ -1,0 +1,179 @@
+---
+title: Tailwind CSS Module
+description: Universal Tailwind CSS CDN layout templates and template tags for Django views, with dark mode support, navbar, theme toggle, and user menu components.
+---
+
+# Tailwind CSS Module
+
+Django-CFG's **Tailwind CSS Module** provides ready-to-use base templates, reusable UI components, and template tags for Django views that need Tailwind CSS styling. It uses Tailwind via CDN (no build step required) with Alpine.js for interactivity.
+
+<Callout type="info">
+This module supplies layout templates for standard Django server-rendered views. If you are looking for the DRF Browsable API theme, see [DRF Theme](/features/modules/django-drf-theme).
+</Callout>
+
+## Features
+
+- **CDN-based Tailwind** — zero-config Tailwind CSS v4 via CDN script tag, no PostCSS or build pipeline required
+- **Dark mode** — class-based dark mode initialized before page render (no flash)
+- **Base templates** — `base.html`, `app.html`, and `simple.html` ready to extend
+- **UI components** — navbar, theme toggle, and user dropdown as includable partials
+- **Template tags** — library metadata, form field utilities, admin URL resolver, user display helpers
+
+## App Configuration
+
+The module registers as a Django app:
+
+```python
+# App label: django_cfg_tailwind
+# App name: django_cfg.modules.django_tailwind
+```
+
+It is automatically added to `INSTALLED_APPS` by Django-CFG, making templates and template tags available without manual configuration.
+
+## Template Hierarchy
+
+```
+templates/django_tailwind/
+├── base.html               # Root: Tailwind CDN + Alpine.js + dark mode init
+├── app.html                # Extends base: adds navbar, footer with branding
+├── simple.html             # Extends base: minimal layout, no navbar
+└── components/
+    ├── navbar.html         # Responsive top navigation bar
+    ├── theme_toggle.html   # Dark / light mode toggle button
+    └── user_menu.html      # Authenticated user dropdown
+```
+
+### Extending Templates
+
+```html
+{% extends 'django_tailwind/app.html' %}
+{% load static tailwind_tags %}
+
+{% block title %}My Page{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Hello</h1>
+</div>
+{% endblock %}
+```
+
+Use `base.html` for fully custom layouts, `app.html` for pages with a standard navbar.
+
+### Including Components
+
+**Navbar:**
+
+```html
+{% include 'django_tailwind/components/navbar.html' with
+    title="My App"
+    nav_items=menu_items
+    show_theme_toggle=True
+    show_user_menu=True
+%}
+```
+
+`nav_items` format:
+
+```python
+menu_items = [
+    {"label": "Dashboard", "url": "/dashboard/", "active": True},
+    {"label": "Settings", "url": "/settings/"},
+]
+```
+
+**Theme toggle:**
+
+```html
+{% include 'django_tailwind/components/theme_toggle.html' %}
+```
+
+**User menu:**
+
+```html
+{% include 'django_tailwind/components/user_menu.html' with
+    profile_url="/profile/"
+    logout_url="/logout/"
+%}
+```
+
+## Dark Mode
+
+Dark mode uses Tailwind's `class` strategy. Before the page body renders, a JavaScript snippet reads `localStorage.getItem('darkMode')` and, if `true`, adds `dark` to `<html>`. This prevents a flash of the wrong theme on page load.
+
+Toggling is managed by Alpine.js:
+
+```html
+<body x-data="{ darkMode: localStorage.getItem('darkMode') === 'true' }"
+      x-init="$watch('darkMode', val => {
+          localStorage.setItem('darkMode', val);
+          document.documentElement.classList.toggle('dark', val);
+      })">
+```
+
+Use Tailwind's `dark:` variant in your templates:
+
+```html
+<div class="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+  Content
+</div>
+```
+
+## Template Tags
+
+### `tailwind_info` Library
+
+Load with `{% load tailwind_info %}`.
+
+| Tag / Filter | Returns | Description |
+| --- | --- | --- |
+| `{% tailwind_lib_name %}` | `"Django Tailwind Layouts"` | Library name string |
+| `{% tailwind_lib_version %}` | `"1.0.0"` | Library version string |
+| `{% tailwind_lib_description %}` | string | Full description |
+| `{% tailwind_lib_info as lib %}` | dict | All metadata in one dict |
+| `{% tailwind_powered_by %}` | HTML | "Powered by Django Tailwind Layouts v1.0.0" link |
+| `{% tailwind_footer_text %}` | HTML | Styled footer text with name and version |
+| `\|add_class:"classes"` | widget HTML | Adds CSS classes to a Django form field |
+| `{% get_admin_url as url %}` | string | Resolves Django admin URL (respects `ADMIN_URL` setting) |
+| `{% get_user_display_name as name %}` | string | Full name or username from `request.user` |
+| `{% get_user_initials as initials %}` | string | 2-letter initials from `request.user` |
+
+### Usage Examples
+
+```html
+{% load tailwind_info %}
+
+{# Footer #}
+<footer class="text-center py-4 text-sm text-gray-500">
+  {% tailwind_powered_by %}
+</footer>
+
+{# Form field with Tailwind classes #}
+<form>
+  {{ form.email|add_class:"border border-gray-300 rounded px-3 py-2 w-full dark:bg-gray-800 dark:border-gray-600" }}
+</form>
+
+{# User avatar initials #}
+<div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium">
+  {% get_user_initials as initials %}{{ initials }}
+</div>
+
+{# Admin link #}
+{% get_admin_url as admin_url %}
+<a href="{{ admin_url }}" class="text-blue-600 hover:underline">Admin</a>
+```
+
+## CDN Limitations
+
+Because this module uses Tailwind via CDN (runtime JIT), the following constraints apply:
+
+- **No custom config file** — configure via inline `<script>` only
+- **No PostCSS plugins** — pure Tailwind utility classes only
+- **No `@apply` directives** — write utility classes directly in HTML
+- **Dynamic class names must be complete** — `bg-{{ color }}-500` won't work; use `{% if %}` blocks with full class names
+
+For production apps that require custom tokens, extended themes, or `@apply`, migrate to compiled Tailwind via the `django-tailwind` package.
+
+## See Also
+
+- [DRF Theme](/features/modules/django-drf-theme) — Tailwind-styled DRF Browsable API renderer

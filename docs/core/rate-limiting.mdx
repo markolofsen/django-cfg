@@ -20,7 +20,7 @@ Rate limiting protects your API from abuse by restricting the number of requests
 
 ```mermaid
 graph TB
-    Request[Request] --> Decorator[@rate_limit]
+    Request[Request] --> Decorator["@rate_limit"]
     Decorator --> KeyGen[Generate Cache Key]
     KeyGen --> Redis[(Redis)]
     Redis --> Check{Limit Exceeded?}

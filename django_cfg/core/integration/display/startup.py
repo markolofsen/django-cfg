@@ -30,6 +30,10 @@ class StartupDisplayManager(BaseDisplayManager):
         # Always check and display ngrok info first if active
         self.ngrok_manager.display_if_active()
 
+        # Dev-only safety net: warn if the editable install was silently
+        # overwritten by the PyPI copy (e.g. after `uv sync`).
+        self._display_editable_warning()
+
         from django_cfg.core.config import StartupInfoMode
         mode = self.config.startup_info_mode
 
@@ -205,6 +209,60 @@ class StartupDisplayManager(BaseDisplayManager):
             print("🔍 TRACEBACK:")
             traceback.print_exc()
             exit(1)
+
+    def _display_editable_warning(self):
+        """
+        Warn (dev only) if django-cfg was loaded from the PyPI copy in
+        site-packages while a local editable source was expected.
+
+        Heuristic + non-fatal: only emits a warning, never raises. Triggered
+        when ~/djangocfg exists (or the editable env marker is set) but
+        django_cfg.__file__ resolves into site-packages.
+        """
+        try:
+            # Dev/DEBUG only — never nag in production.
+            is_dev = bool(self.config and getattr(self.config, "is_development", False))
+            debug = bool(self.config and getattr(self.config, "debug", False))
+            if not (is_dev or debug):
+                return
+
+            from ..editable_check import get_editable_status
+
+            status = get_editable_status()
+            if not status.mismatch:
+                return
+
+            warn_text = Text()
+            warn_text.append("⚠️  ", style="bold yellow")
+            warn_text.append(
+                "django-cfg loaded from PyPI copy (site-packages), not your editable source.",
+                style="bold yellow",
+            )
+            warn_text.append("\n   Loaded from: ", style="dim")
+            warn_text.append(str(status.loaded_path), style="red")
+            if status.expected_source:
+                warn_text.append("\n   Expected source: ", style="dim")
+                warn_text.append(str(status.expected_source), style="green")
+            warn_text.append("\n   Fix: ", style="dim")
+            warn_text.append("make install-local", style="bright_blue")
+            warn_text.append(" or ", style="dim")
+            warn_text.append("install_local_djangocfg.sh", style="bright_blue")
+            warn_text.append(
+                "\n   (a `uv sync` likely reinstalled the PyPI copy over your editable link)",
+                style="dim",
+            )
+
+            panel = self.create_panel(
+                warn_text,
+                title="🧩 Editable install overridden",
+                border_style="yellow",
+                width=None,
+            )
+            panel.padding = (0, 2)
+            self.console.print(panel)
+        except Exception:
+            # Diagnostics must never break startup.
+            pass
 
     def _display_update_notification_short(self):
         """Display update notification for SHORT mode."""

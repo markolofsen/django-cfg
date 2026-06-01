@@ -1,0 +1,111 @@
+---
+title: User Management Extensions
+description: Django-CFG user management extensions - authentication, JWT, OTP, OAuth, and two-factor authentication. Production-ready with type safety and seamless Django integration.
+---
+
+# User Management Extensions
+
+User Management extensions handle authentication, user profiles, and two-factor security for your Django-CFG projects.
+
+<Callout type="info">
+**These are [Extensions](/extensions)**
+Located in `extensions/apps/` folder. Enable/disable via `__cfg__.py` files.
+</Callout>
+
+## Extensions Overview
+
+| Extension | Location | Description |
+|-----------|----------|-------------|
+| **Accounts** | `extensions/apps/accounts/` | User authentication, profiles, JWT, OTP, OAuth |
+| **TOTP** | `extensions/apps/totp/` | Two-factor authentication |
+
+---
+
+## Accounts Extension
+
+**Complete user authentication and account management**
+
+- **Authentication** - Login, registration, password reset
+- **Social Login** - OAuth integration with major providers
+- **JWT** - Token-based API authentication
+- **OTP** - One-time password support
+- **Profile Management** - User profiles and preferences
+- **Security** - Session management, password policies
+
+### Configuration
+
+```python
+# extensions/apps/accounts/__cfg__.py
+from django_cfg.extensions.configs.apps.base import BaseExtensionSettings
+
+class AccountsSettings(BaseExtensionSettings):
+    name: str = "accounts"
+    oauth_providers: list[str] = ["google", "github"]
+
+settings = AccountsSettings()
+```
+
+### Usage
+
+```python
+# User registration
+from extensions.apps.accounts.services import UserRegistrationService
+
+service = UserRegistrationService()
+user = service.register_user(
+    email="user@example.com",
+    password="secure_password"
+)
+```
+
+---
+
+## TOTP Extension
+
+**Two-factor authentication using time-based one-time passwords**
+
+- **TOTP Setup** - QR code generation for authenticator apps
+- **Verification** - Token validation during login
+- **Recovery Codes** - Backup codes for account recovery
+- **Device Management** - Manage trusted devices
+
+### Configuration
+
+```python
+# extensions/apps/totp/__cfg__.py
+from django_cfg.extensions.configs.apps.base import BaseExtensionSettings
+
+class TOTPSettings(BaseExtensionSettings):
+    name: str = "totp"
+
+settings = TOTPSettings()
+```
+
+---
+
+## Enable/Disable Extensions
+
+Each extension is controlled by its `__cfg__.py` file:
+
+```python
+# To ENABLE - define settings
+settings = AccountsSettings()
+
+# To DISABLE - comment out settings
+# settings = AccountsSettings()
+```
+
+---
+
+## See Also
+
+### Extension Documentation
+
+- **[Accounts](./accounts)** - Authentication, profiles, JWT, OTP, OAuth
+
+### Configuration & Setup
+
+- **[Extensions System](/extensions)** - How extensions work
+- **[Backend Extensions](/extensions/backend-extensions)** - Creating custom extensions
+- **[Email Configuration](/features/modules/django-email)** - SMTP setup for notifications
+- **[Background Tasks](/features/modules/django-rq)** - Async email processing

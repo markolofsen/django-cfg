@@ -20,7 +20,7 @@ Django-CFG transforms Pydantic models into Django settings through a multi-stage
 
 ```mermaid
 graph TD
-    A[Configuration Definition<br/>Pydantic Model] --> B[Field Validation &<br/>Type Checking]
+    A[Configuration Definition<br/>Pydantic Model] --> B["Field Validation &<br/>Type Checking"]
     B --> C[Environment Variable<br/>Substitution]
     C --> D[Smart Defaults<br/>Application]
     D --> E[Django Settings<br/>Dictionary Generation]

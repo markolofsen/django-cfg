@@ -1,5 +1,5 @@
 export default {
-  'overview': 'Overview',
+  index: { display: 'hidden' },
   'quick-start': 'Quick Start',
   'money-field': 'MoneyField',
   'admin-integration': 'Admin Integration',

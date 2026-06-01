@@ -7,10 +7,10 @@ description: Pre-installed extensions in Django-CFG solution template. Productio
 
 <Callout type="info">
 **What are Bundled Extensions?**
-These are [Extensions](/docs/extensions) that come **pre-installed** in the Django-CFG solution template. They're fully functional, customizable Django apps ready to use out of the box.
+These are [Extensions](/extensions) that come **pre-installed** in the Django-CFG solution template. They're fully functional, customizable Django apps ready to use out of the box.
 </Callout>
 
-Django-CFG solution template includes production-ready extensions that use the modern [Extensions System](/docs/extensions) with auto-discovery and type-safe [Pydantic configuration](/docs/core/type-safety).
+Django-CFG solution template includes production-ready extensions that use the modern [Extensions System](/extensions) with auto-discovery and type-safe [Pydantic configuration](/core/type-safety).
 
 ## How Extensions Work
 
@@ -51,7 +51,7 @@ settings = AccountsSettings()  # ← This line ENABLES the extension
 # settings = AccountsSettings()  # Extension disabled
 ```
 
-[Learn more about Extensions System →](/docs/extensions)
+[Learn more about Extensions System →](/extensions)
 
 ---
 
@@ -68,7 +68,7 @@ Complete user lifecycle management - authentication, profiles, and security.
 
 **Use Cases:** SaaS registration, user authentication, two-factor security.
 
-[**Explore User Management →**](./user-management/overview)
+[**Explore User Management →**](/features/built-in-apps/user-management)
 
 ---
 
@@ -196,7 +196,7 @@ All extensions include:
 
 - **Input Validation** - Pydantic-based validation
 - **Authentication** - JWT/session auth support
-- **Rate Limiting** - API rate limiting (see [Rate Limiting](/docs/core/rate-limiting))
+- **Rate Limiting** - API rate limiting (see [Rate Limiting](/core/rate-limiting))
 - **Audit Logging** - Operation audit trails
 
 ### Performance Features
@@ -210,10 +210,10 @@ All extensions include:
 
 ## Related Documentation
 
-- [Extensions System](/docs/extensions) - How extensions work
-- [Backend Extensions](/docs/extensions/backend-extensions) - Creating extensions
-- [Frontend Extensions](/docs/extensions/frontend-extensions) - React/TypeScript extensions
-- [Migration Guide](/docs/extensions/migration-guide) - Migrating from legacy apps
+- [Extensions System](/extensions) - How extensions work
+- [Backend Extensions](/extensions/backend-extensions) - Creating extensions
+- [Frontend Extensions](/extensions/frontend-extensions) - React/TypeScript extensions
+- [Migration Guide](/extensions/migration-guide) - Migrating from legacy apps
 
 ---
 
@@ -221,7 +221,7 @@ All extensions include:
 
 <Callout type="success">
 **Discover More Extensions**
-Browse and install additional extensions from [hub.djangocfg.com](https://hub.djangocfg.com/)
+Browse and install additional extensions from the [django-cfg repository](https://github.com/markolofsen/django-cfg)
 
 ```bash
 django-cfg install <extension-name>

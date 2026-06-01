@@ -1,5 +1,5 @@
 export default {
-  'overview': 'Overview',
+  index: { display: 'hidden' },
   'configuration': 'Configuration',
   'server-capture': 'Server-Side Capture',
   'frontend-sdk': 'Frontend SDK',

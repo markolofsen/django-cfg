@@ -1,5 +1,5 @@
 export default {
-  'overview': 'Overview',
+  index: { display: 'hidden' },
   'presets': 'Presets',
   'layouts': 'Layouts',
   'branding': 'Branding & Icons',

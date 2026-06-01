@@ -1,5 +1,5 @@
 export default {
-  'overview': 'Overview',
+  index: { display: 'hidden' },
   'configuration': 'Configuration',
   'quick-start': 'Quick Start'
 }

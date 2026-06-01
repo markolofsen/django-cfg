@@ -1,5 +1,5 @@
 export default {
-  'overview': 'Overview',
+  index: { display: 'hidden' },
   'configuration': 'Configuration',
   'moneyfield': 'MoneyField',
   'models': 'Models',
