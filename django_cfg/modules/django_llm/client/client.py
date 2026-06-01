@@ -26,7 +26,7 @@ from ..storage.cache_manager import RequestCacheManager
 from ..structured.response_format import ResponseFormat
 from .response_builder import ResponseBuilder
 from .stats import StatsManager
-from ..tokenizer import Tokenizer
+from ..core.tokenizer import Tokenizer
 
 logger = logging.getLogger(__name__)
 

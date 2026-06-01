@@ -30,8 +30,10 @@ from .types import (
     TokenUsage,
     ValidationResult,
 )
+from .tokenizer import Tokenizer
 
 __all__ = [
+    "Tokenizer",
     # types
     'CacheInfo',
     'ChatChoice',

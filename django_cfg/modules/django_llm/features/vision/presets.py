@@ -4,15 +4,14 @@ Model quality presets and OCR modes for vision analysis.
 Provides automatic model selection based on quality/cost trade-offs.
 """
 
-from typing import Literal, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
+
+# ModelQuality / OCRMode are defined once in models.py (the schema module) and
+# re-exported here for backward-compatible imports from this module.
+from .models import ModelQuality, OCRMode
 
 if TYPE_CHECKING:
     from .vision_models import VisionModelsRegistry
-
-
-# Type aliases
-ModelQuality = Literal["fast", "balanced", "best"]
-OCRMode = Literal["tiny", "small", "base", "gundam"]
 
 
 # Vision model presets by quality level

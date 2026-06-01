@@ -6,7 +6,7 @@ Pydantic models, not Django ORM models.
 """
 
 from typing import Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BalanceResponse(BaseModel):
@@ -51,15 +51,15 @@ class BalanceResponse(BaseModel):
         description="Error message if request failed"
     )
 
-    class Config:
-        """Pydantic config."""
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "balance": 15.50,
                 "currency": "usd",
                 "usage": 134.50,
                 "limit": 150.00,
                 "status": "valid",
-                "note": "Remaining credit balance"
+                "note": "Remaining credit balance",
             }
         }
+    )

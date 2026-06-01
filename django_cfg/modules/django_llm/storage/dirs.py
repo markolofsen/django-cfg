@@ -43,7 +43,9 @@ class CacheDirectoryBuilder:
                 if cache_location and not cache_location.startswith(('redis://', 'rediss://')):
                     self._base_path = Path(cache_location).parent
                     self._cache_root = Path(cache_location).name
-        except:
+        except (ImportError, AttributeError, KeyError, TypeError, ValueError):
+            # Django absent, no CACHES, or an unusable LOCATION — fall back to
+            # the builder's defaults (intentionally non-fatal).
             pass
         return self
 

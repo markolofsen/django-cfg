@@ -39,13 +39,25 @@ class OpenRouterModel:
     output_modalities: List[str] = field(default_factory=list)
     max_completion_tokens: Optional[int] = None
     is_moderated: bool = False
+    # OpenRouter `supported_parameters` — e.g. "response_format",
+    # "structured_outputs", "tools", "reasoning". Drives the advisory layer.
+    supported_parameters: List[str] = field(default_factory=list)
+
+
+def _price_per_million(raw: Any) -> float:
+    """Convert an OpenRouter per-token price (a string like "0.00000015")
+    to a per-1M-token float — the unit ModelPricing and the cost math use."""
+    try:
+        return float(raw or 0.0) * 1_000_000
+    except (TypeError, ValueError):
+        return 0.0
 
 class ModelsCache:
     """Cache for OpenRouter models with pricing information"""
 
     DEFAULT_TTL = 86400  # 24 hours default
     DEFAULT_CACHE_SIZE = 100
-    CACHE_FILENAME = "openrouter_models.json"
+    CACHE_FILENAME = "openrouter_models_v2.json"  # v2: per-1M float pricing + supported_parameters
 
     def __init__(self,
                  api_key: Optional[str] = None,
@@ -78,6 +90,7 @@ class ModelsCache:
         self.cache = TTLCache(maxsize=max_cache_size, ttl=cache_ttl)
         self.last_fetch_time: Optional[datetime] = None
         self.models: Dict[str, OpenRouterModel] = {}
+        self._sync_fetch_done = False
 
         # Cache key for models list
         self.models_cache_key = "openrouter_models"
@@ -109,8 +122,8 @@ class ModelsCache:
             for model_id, model_data in models_data.items():
                 try:
                     pricing = ModelPricing(
-                        prompt_price=model_data['pricing']['prompt_price'],
-                        completion_price=model_data['pricing']['completion_price'],
+                        prompt_price=float(model_data['pricing'].get('prompt_price') or 0.0),
+                        completion_price=float(model_data['pricing'].get('completion_price') or 0.0),
                         currency=model_data['pricing']['currency'],
                         image_price=model_data['pricing'].get('image_price', 0.0)
                     )
@@ -127,7 +140,8 @@ class ModelsCache:
                         input_modalities=model_data.get('input_modalities', []),
                         output_modalities=model_data.get('output_modalities', []),
                         max_completion_tokens=model_data.get('max_completion_tokens'),
-                        is_moderated=model_data.get('is_moderated', False)
+                        is_moderated=model_data.get('is_moderated', False),
+                        supported_parameters=model_data.get('supported_parameters', [])
                     )
 
                     self.models[model_id] = model_info
@@ -175,7 +189,8 @@ class ModelsCache:
                     'input_modalities': model_info.input_modalities,
                     'output_modalities': model_info.output_modalities,
                     'max_completion_tokens': model_info.max_completion_tokens,
-                    'is_moderated': model_info.is_moderated
+                    'is_moderated': model_info.is_moderated,
+                    'supported_parameters': model_info.supported_parameters
                 }
 
             data = {
@@ -278,6 +293,51 @@ class ModelsCache:
                 return self.models
             raise
 
+    def _ensure_models(self) -> None:
+        """Lazily populate the catalogue on first real use.
+
+        ``__init__`` already tried the on-disk cache; if that was cold,
+        do one synchronous OpenRouter fetch. Attempted at most once per
+        instance so a failed fetch never hammers the API.
+        """
+        if self.models or self._sync_fetch_done:
+            return
+        self._sync_fetch_done = True
+        self._fetch_models_sync()
+
+    def _fetch_models_sync(self) -> None:
+        """Synchronous catalogue fetch — urllib, no event loop, callable
+        from any context (sync view, async threadpool). Best-effort: a
+        failure leaves models empty and cost calc falls back to the
+        hardcoded pricing table.
+        """
+        if not self.api_key:
+            return
+        import urllib.request
+        try:
+            request = urllib.request.Request(
+                "https://openrouter.ai/api/v1/models",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+            )
+            with urllib.request.urlopen(request, timeout=20) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            models: Dict[str, OpenRouterModel] = {}
+            for model_data in payload.get("data", []):
+                model_info = self._parse_model_data(model_data)
+                if model_info:
+                    models[model_info.id] = model_info
+            if models:
+                self.models = models
+                self.last_fetch_time = datetime.now()
+                self.cache[self.models_cache_key] = {
+                    "models": self.models,
+                    "fetch_time": self.last_fetch_time,
+                }
+                self._save_to_file()
+                logger.info("Fetched %d models from OpenRouter (sync)", len(models))
+        except Exception as e:
+            logger.warning("Sync model fetch failed: %s", e)
+
     def _parse_model_data(self, model_data: Dict[str, Any]) -> Optional[OpenRouterModel]:
         """Parse model data from API response"""
         try:
@@ -285,11 +345,12 @@ class ModelsCache:
             if not model_data.get("id") or not model_data.get("name"):
                 return None
 
-            # Extract pricing information
+            # Extract pricing — OpenRouter sends per-token strings; store
+            # per-1M-token floats so cost math never trips on a str.
             pricing_data = model_data.get("pricing", {})
             pricing = ModelPricing(
-                prompt_price=pricing_data.get("prompt", 0.0),
-                completion_price=pricing_data.get("completion", 0.0),
+                prompt_price=_price_per_million(pricing_data.get("prompt")),
+                completion_price=_price_per_million(pricing_data.get("completion")),
                 currency=pricing_data.get("currency", "USD"),
                 image_price=float(pricing_data.get("image", 0.0) or 0.0)
             )
@@ -311,7 +372,8 @@ class ModelsCache:
                 input_modalities=architecture.get("input_modalities", []),
                 output_modalities=architecture.get("output_modalities", []),
                 max_completion_tokens=top_provider.get("max_completion_tokens"),
-                is_moderated=top_provider.get("is_moderated", False)
+                is_moderated=top_provider.get("is_moderated", False),
+                supported_parameters=model_data.get("supported_parameters", [])
             )
 
             return model_info
@@ -321,7 +383,8 @@ class ModelsCache:
             return None
 
     def get_model(self, model_id: str) -> Optional[OpenRouterModel]:
-        """Get model information by ID"""
+        """Get model information by ID — lazily populates the catalogue."""
+        self._ensure_models()
         return self.models.get(model_id)
 
     def get_models_by_provider(self, provider: str) -> List[OpenRouterModel]:

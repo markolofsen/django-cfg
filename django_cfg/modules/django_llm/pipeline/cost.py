@@ -36,6 +36,17 @@ FINAL_SUCCESS_OUTCOMES = frozenset({"success"})
 # failure must not flood the channel.
 ALERT_THROTTLE_SECONDS = 600
 
+_COST_DISPLAY_PRECISION = Decimal("0.000001")
+
+
+def _format_cost_for_display(cost: Decimal) -> str:
+    """Round to micro-cents and strip trailing zeros for human-readable cost."""
+    quantized = cost.quantize(_COST_DISPLAY_PRECISION)
+    s = f"{quantized:f}"
+    if "." in s:
+        s = s.rstrip("0").rstrip(".")
+    return s or "0"
+
 
 @dataclass(slots=True)
 class CostEvent:
@@ -229,7 +240,7 @@ def alert_wasted_call(
         context = {
             "model": model,
             "tokens": tokens,
-            "cost_usd": str(cost),
+            "cost_usd": _format_cost_for_display(cost),
             "error": (error or "")[:300],
         }
         if provider:

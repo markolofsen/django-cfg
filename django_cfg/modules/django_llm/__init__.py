@@ -5,28 +5,45 @@ Auto-configuring LLM and translation service that integrates with DjangoConfig.
 """
 
 # from .service import DjangoLLM, LLMError, LLMConfigError  # Removed - using LLMClient directly
+from typing import TYPE_CHECKING
+
 from .client import LLMClient
 from .storage import LLMCache
 from .providers import LLMProvider
+
+if TYPE_CHECKING:
+    from .core.types import ChatCompletionResponse
 from .features.translator import DjangoTranslator, TranslationError
-from .llm_router import LLMRouter, LLMRouterError
+from .catalog import ModelRole
+from .routing import (
+    LLMRouter,
+    LLMRouterError,
+    extract,
+    extract_chat,
+    classify,
+    chat_with_tools,
+    escalate,
+)
 
 
 # Convenience functions
 def chat_completion(
     messages: list,
-    model: str = None,
+    model: str | None = None,
     temperature: float = 0.7,
-    max_tokens: int = None,
-    fail_silently: bool = False
-) -> dict:
-    """Send chat completion using LLMClient."""
+    max_tokens: int | None = None,
+) -> "ChatCompletionResponse":
+    """Send chat completion using LLMClient.
+
+    Returns a ``ChatCompletionResponse`` (use ``.content`` / ``.tokens_used`` /
+    ``.cost_usd``), not a dict.
+    """
     llm = LLMClient()
     return llm.chat_completion(
         messages=messages,
         model=model,
         temperature=temperature,
-        max_tokens=max_tokens
+        max_tokens=max_tokens,
     )
 
 def translate_text(
@@ -72,9 +89,16 @@ __all__ = [
     'LLMProvider',
     'LLMRouter',
     'LLMRouterError',
+    'ModelRole',
     'TranslationError',
     'chat_completion',
     'translate_text',
     'translate_json',
-    'get_available_models'
+    'get_available_models',
+    # Task presets — call an LLM by job, not by model (see presets.py).
+    'extract',
+    'extract_chat',
+    'classify',
+    'chat_with_tools',
+    'escalate',
 ]
