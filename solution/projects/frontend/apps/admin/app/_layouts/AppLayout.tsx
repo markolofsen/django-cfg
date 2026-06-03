@@ -3,98 +3,56 @@
 import { ReactNode } from 'react';
 
 import { settings } from '@core/settings';
-import { AppLayout as BaseAppLayout, AppLayoutProps } from '@djangocfg/layouts';
+import { BaseApp } from '@djangocfg/layouts';
 import { useLocaleSwitcher } from '@djangocfg/nextjs/i18n/client';
 import { routing } from '@djangocfg/nextjs/i18n/routing';
 import { routes } from '@routes/index';
 
-import { AdminLayout } from './AdminLayout';
-import { PrivateLayout } from './PrivateLayout';
-import { PublicLayout } from './PublicLayout';
-
-interface AppLayoutComponentProps {
-  children: ReactNode;
-}
-
-export function AppLayout({ children }: AppLayoutComponentProps) {
+/**
+ * Providers root — thin wrapper over `BaseApp` (theme, auth, i18n, analytics,
+ * centrifugo, error tracking, monitor). Mounted once in `[locale]/layout.tsx`.
+ *
+ * Per-section shells are chosen by native route-group `layout.tsx` files:
+ *   - `(pages)/private/layout.tsx` → `PrivateLayout`
+ *   - `(pages)/admin/layout.tsx`   → `AdminLayout` (PrivateLayout + admin menu)
+ *   - public pages wrap themselves in `PublicLayout`
+ *   - `/auth` stays fullscreen (no shell)
+ */
+export function AppLayout({ children }: { children: ReactNode }) {
   const { locale, locales, changeLocale } = useLocaleSwitcher();
 
-  const appLayoutProps: Omit<AppLayoutProps, 'children'> = {
-    layouts: {
-      public: {
-        component: PublicLayout,
-        enabledPath: ['/', '/legal'],
-      },
-      private: {
-        component: PrivateLayout,
-        enabledPath: ['/private', '/dashboard'],
-      },
-      admin: {
-        component: AdminLayout,
-        enabledPath: '/admin',
-      },
-    },
-    baseApp: {
-      // Theme configuration
-      theme: {
-        defaultTheme: 'system', // Use system preference
-        storageKey: 'djangocfg-theme',
-      },
-
-      // Auth provider configuration
-      auth: {
+  return (
+    <BaseApp
+      project={settings.app.name}
+      theme={{ defaultTheme: 'system', storageKey: 'djangocfg-theme' }}
+      auth={{
         apiUrl: settings.api.baseUrl,
         routes: {
           auth: routes.public.auth.path,
           defaultCallback: routes.private.home.path,
           defaultAuthCallback: routes.public.auth.path,
         },
-      },
-
-      // Analytics configuration
-      analytics: {
-        googleTrackingId: settings.analytics.googleTrackingId,
-      },
-
-      // Centrifugo configuration
-      centrifugo: {
-        enabled: true,
-        autoConnect: true,
-      },
-
-      // Error tracking configuration
-      errorTracking: {
+      }}
+      analytics={{ googleTrackingId: settings.analytics.googleTrackingId }}
+      centrifugo={{ enabled: true, autoConnect: true }}
+      errorTracking={{
         validation: { enabled: true, showToast: true },
         cors: { enabled: true, showToast: true },
         network: { enabled: true, showToast: true },
-        onError: (error) => {
-          console.error('AppLayout Error:', error);
-        },
-      },
-
-      // Error boundary configuration
-      errorBoundary: {
+        onError: (error) => console.error('AppLayout Error:', error),
+      }}
+      errorBoundary={{
         enabled: true,
         supportEmail: settings.contact.email,
-        onError: (error, errorInfo) => {
-          console.error('AppLayout ErrorBoundary caught:', error, errorInfo);
-        },
-      },
-
-      // Project name — used by monitor and debug panel
-      project: settings.app.name,
-    },
-    // i18n configuration for locale switcher.
-    // Passing `routing` (from `defineRouting()`) makes BaseApp build a
-    // locale-aware Link adapter so every <Link> rendered inside layouts keeps
-    // the active locale prefix on click.
-    i18n: {
-      locale,
-      locales,
-      onLocaleChange: changeLocale,
-      routing,
-    },
-  };
-
-  return <BaseAppLayout {...appLayoutProps}>{children}</BaseAppLayout>;
+        onError: (error, errorInfo) =>
+          console.error('AppLayout ErrorBoundary caught:', error, errorInfo),
+      }}
+      // Passing `routing` (from `defineRouting()`) makes BaseApp build a
+      // locale-aware Link adapter so every <Link> inside layouts keeps the
+      // active locale prefix on click.
+      i18n={{ locale, locales, onLocaleChange: changeLocale, routing }}
+    >
+      {children}
+    </BaseApp>
+  );
 }

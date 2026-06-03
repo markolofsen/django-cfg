@@ -1,6 +1,7 @@
 import { RedirectPage } from '@djangocfg/layouts/components';
 import { redirectToAuth, routes } from '@routes/index';
 
+import { PublicLayout } from '@layouts/PublicLayout';
 import {
     AIDocsSection, CTASectionComponent, FeaturesSection, HeroSection, QuickStartSection
 } from '../_components/landing';
@@ -19,12 +20,14 @@ export default function Page() {
   }
 
   return (
-    <main>
-      <HeroSection />
-      <QuickStartSection />
-      <AIDocsSection />
-      <FeaturesSection />
-      <CTASectionComponent />
-    </main>
+    <PublicLayout>
+      <main>
+        <HeroSection />
+        <QuickStartSection />
+        <AIDocsSection />
+        <FeaturesSection />
+        <CTASectionComponent />
+      </main>
+    </PublicLayout>
   )
 }

@@ -10,7 +10,7 @@
 import { ReactNode } from 'react';
 
 import {
-    AdminLayout as BaseAdminLayout, HeaderConfig, SidebarConfig, SidebarGroupConfig
+    PrivateLayout as BasePrivateLayout, HeaderConfig, SidebarConfig, SidebarGroupConfig
 } from '@djangocfg/layouts';
 import { adminMenuGroups, routes } from '@routes/index';
 
@@ -57,13 +57,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <BaseAdminLayout
+    <BasePrivateLayout
       sidebar={sidebarMenu}
       header={header}
       contentPadding="default"
     >
       {children}
-    </BaseAdminLayout>
+    </BasePrivateLayout>
   );
 }
 
