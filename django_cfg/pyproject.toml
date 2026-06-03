@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.2.64"
+version = "2.2.68"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -135,6 +135,7 @@ dependencies = [
     "tenacity>=9.1.2,<10.0.0",
     "json-repair>=0.30,<1.0",  # tolerant JSON repair for django_llm structured-output validate-and-repair
     "aiohttp>=3.13.4,<4.0",  # async OpenRouter /models fetch (django_llm registry); 3.13.4 fixes CVE-2026-34513/-34520
+    "aiometer>=1.0.0,<2.0",  # bounded concurrency for django_llm async fan-out (extract_many): max_at_once + max_per_second
 
     # Resilience
     "aiobreaker>=1.2.0,<2.0",

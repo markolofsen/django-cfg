@@ -2,11 +2,16 @@
 Custom JWT Authentication for Django CFG.
 
 Extends rest_framework_simplejwt.authentication.JWTAuthentication to automatically
-update user's last_login field on successful authentication.
+update user's last_login field on successful authentication, AND to enforce DPoP
+(RFC 9449) sender-constrained tokens when enabled (see `_verify_dpop_binding`).
 
 Also provides JWTAwareAuthenticationMixin for explicit use in project backends,
 and patches DRF's Request._authenticate so that any extra authentication backend
 automatically skips JWT tokens without requiring any changes in the project.
+
+⚠️ A view using STOCK `rest_framework_simplejwt...JWTAuthentication` bypasses the
+DPoP check — always use this class. Full chain + gotchas:
+    @docs/architecture/security/auth-logic-chain.md
 """
 
 import logging
@@ -214,6 +219,11 @@ class JWTAuthenticationWithLastLogin(JWTAuthentication):
         """
         Authenticate request and update last_login if needed.
 
+        When DPoP (RFC 9449) is enabled and the token is key-bound (carries
+        `cnf.jkt`), a valid DPoP proof is REQUIRED on this request — otherwise a
+        stolen token would still work. Tokens without `cnf` (CLI / server-to-
+        server) take the plain Bearer path unchanged, so mixed clients are fine.
+
         Args:
             request: Django HttpRequest object
 
@@ -225,10 +235,57 @@ class JWTAuthenticationWithLastLogin(JWTAuthentication):
 
         if result is not None:
             user, token = result
+            self._verify_dpop_binding(request, token)
             # Update last_login with throttling
             self._update_last_login(user)
 
         return result
+
+    def _verify_dpop_binding(self, request, validated_token):
+        """
+        Enforce the DPoP proof when the token is sender-constrained.
+
+        No-op unless `DJANGO_CFG_DPOP_ENABLED` is set AND the token has `cnf.jkt`.
+        Raises AuthenticationFailed if the proof is missing/invalid/mismatched.
+        """
+        from django.conf import settings
+
+        if not getattr(settings, "DJANGO_CFG_DPOP_ENABLED", False):
+            return
+
+        # Import lazily so the dependency only loads when DPoP is on.
+        from django_cfg.middleware.dpop import (
+            DPoPError,
+            build_request_htu,
+            get_token_cnf_jkt,
+            verify_proof,
+        )
+
+        expected_jkt = get_token_cnf_jkt(validated_token)
+        if expected_jkt is None:
+            # Token is not key-bound — plain Bearer (CLI/server clients). Allow.
+            return
+
+        proof = request.META.get("HTTP_DPOP")
+        if not proof:
+            logger.warning("DPoP-bound token presented without a DPoP proof header.")
+            raise exceptions.AuthenticationFailed(
+                "This token is DPoP-bound; a DPoP proof header is required.",
+                code="dpop_proof_required",
+            )
+
+        try:
+            verify_proof(
+                proof=proof,
+                http_method=request.method,
+                http_url=build_request_htu(request),
+                expected_jkt=expected_jkt,
+            )
+        except DPoPError as exc:
+            logger.warning("DPoP proof rejected: %s", exc)
+            raise exceptions.AuthenticationFailed(
+                "Invalid DPoP proof.", code="dpop_proof_invalid"
+            ) from exc
 
     def _update_last_login(self, user):
         """

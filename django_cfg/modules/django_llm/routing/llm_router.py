@@ -31,6 +31,7 @@ Usage — raw text completion:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TypeVar
 
@@ -310,6 +311,36 @@ class LLMRouter:
             return self._router().run(call)
         except AllProvidersFailedError as exc:
             raise _raise_router_error(exc) from exc
+
+    # ── Async twins ─────────────────────────────────────────────────────────────
+    #
+    # Deliberately thin: the sync cascade + validate-and-repair ladder are run in
+    # a worker thread via asyncio.to_thread. The GIL is released during the
+    # network wait, so this gives real concurrency (and a freed event loop) with
+    # ZERO duplicated cascade/ladder logic — there is exactly one of each.
+
+    async def aparse(
+        self,
+        schema: type[T],
+        messages: list[dict],
+        system: str | None = None,
+        max_tokens: int = 4096,
+    ) -> tuple[T, str, dict]:
+        """Async ``parse`` — awaits the sync cascade on a worker thread."""
+        return await asyncio.to_thread(
+            self.parse, schema, messages, system, max_tokens
+        )
+
+    async def acomplete(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        max_tokens: int = 4096,
+    ) -> tuple[str, str]:
+        """Async ``complete`` — awaits the sync cascade on a worker thread."""
+        return await asyncio.to_thread(
+            self.complete, messages, system, max_tokens
+        )
 
     # ── Internals ──────────────────────────────────────────────────────────────
 

@@ -115,6 +115,12 @@ Auto-captured after init:
 | Console warnings/errors | consola reporter or `console.*` patch |
 | `@djangocfg/api` Zod failures | `zod-validation-error` CustomEvent |
 
+> **Independent of console verbosity.** `@djangocfg/*` packages gate the browser
+> console by role (`applyRoleLogPolicy` from `@djangocfg/api` — quiet for regular
+> users in production, verbose for admins/dev). Monitor capture is unaffected:
+> errors are still captured and sent to the backend even when the console is
+> silenced, so production incidents stay diagnosable.
+
 ---
 
 ## Network Monitoring

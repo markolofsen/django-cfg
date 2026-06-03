@@ -13,6 +13,10 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 DR5HN_BASE = "https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master"
+# Large files (cities.json, ~25 MB gzipped) are not committed to the repo
+# — dr5hn ships them as release assets only. The latest tag's download
+# URL follows the pattern ``…/releases/latest/download/json-<name>.json.gz``.
+DR5HN_RELEASE_BASE = "https://github.com/dr5hn/countries-states-cities-database/releases/latest/download"
 
 
 class GeoDataLoader:
@@ -61,10 +65,14 @@ class GeoDataLoader:
             logger.info(f"Loading {filename} from cache")
             return json.loads(cache_path.read_text(encoding="utf-8"))
 
-        # Try regular JSON first, then gzipped
+        # Try regular JSON first, then gzipped from the repo, then the
+        # GitHub release asset as the final fallback for files that aren't
+        # committed (cities.json — too large for git).
+        stem = filename.split(".", 1)[0]  # cities.json → cities
         urls_to_try = [
             f"{DR5HN_BASE}/json/{filename}",
             f"{DR5HN_BASE}/json/{filename}.gz",
+            f"{DR5HN_RELEASE_BASE}/json-{stem}.json.gz",
         ]
 
         data = None

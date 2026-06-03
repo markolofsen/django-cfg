@@ -23,6 +23,13 @@ from .routing import (
     classify,
     chat_with_tools,
     escalate,
+    aextract,
+    aextract_chat,
+    aclassify,
+    achat_with_tools,
+    aescalate,
+    extract_many,
+    classify_many,
 )
 
 
@@ -101,4 +108,12 @@ __all__ = [
     'classify',
     'chat_with_tools',
     'escalate',
+    # Async twins + fan-out (asyncio.to_thread over the same sync logic).
+    'aextract',
+    'aextract_chat',
+    'aclassify',
+    'achat_with_tools',
+    'aescalate',
+    'extract_many',
+    'classify_many',
 ]

@@ -23,7 +23,7 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
     layouts: {
       public: {
         component: PublicLayout,
-        enabledPath: ['/', '/legal', '/contact'],
+        enabledPath: ['/', '/legal'],
       },
       private: {
         component: PrivateLayout,
@@ -79,15 +79,6 @@ export function AppLayout({ children }: AppLayoutComponentProps) {
         onError: (error, errorInfo) => {
           console.error('AppLayout ErrorBoundary caught:', error, errorInfo);
         },
-      },
-
-      // PWA install prompt configuration
-      pwaInstall: {
-        enabled: false,
-        showInstallHint: true,
-        logo: settings.app.media.logo192,
-        delayMs: 5000,
-        resetAfterDays: 7,
       },
 
       // Project name — used by monitor and debug panel

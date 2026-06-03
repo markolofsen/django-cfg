@@ -14,7 +14,6 @@ const { generateSitemaps, sitemap } = createDjangoSitemap({
   apiUrl: process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000',
   staticRoutes: [
     { path: routes.public.home.path, changeFrequency: 'daily', priority: 1.0 },
-    { path: routes.public.contact.path, changeFrequency: 'monthly', priority: 0.8 },
     { path: routes.public.privacy.path, changeFrequency: 'yearly', priority: 0.3 },
     { path: routes.public.terms.path, changeFrequency: 'yearly', priority: 0.3 },
     { path: routes.public.cookies.path, changeFrequency: 'yearly', priority: 0.3 },

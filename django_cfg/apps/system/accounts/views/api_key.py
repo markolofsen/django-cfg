@@ -10,7 +10,7 @@ from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.authentication import SessionAuthentication
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from django_cfg.middleware.authentication import JWTAuthenticationWithLastLogin as JWTAuthentication  # DPoP-aware JWT auth
 
 from django_cfg.mixins import ClientAPIMixin
 

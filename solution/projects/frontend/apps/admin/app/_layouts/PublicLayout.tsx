@@ -50,7 +50,8 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       {
         title: 'Cabinet',
         items: [
-          { label: 'Profile', href: routes.private.profile.path },
+          // Profile/settings now live in the global SettingsDialog (account
+          // menu inside PrivateLayout) — no public route for it anymore.
           { label: 'Dashboard', href: routes.private.home.path },
         ],
       },

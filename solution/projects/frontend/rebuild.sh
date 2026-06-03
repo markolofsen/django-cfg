@@ -12,7 +12,7 @@ echo "✅ Removed old build"
 echo ""
 
 echo "🏗️  Building fresh static export..."
-cd /Users/markinmatrix/Documents/htdocs/@CARAPIS/encar_parser_new/@projects/django-cfg/projects/django-cfg/src/@frontend
+cd /Users/markinmatrix/workspace/@projects/django-cfg/projects/django-cfg/src/@frontend
 make build-admin
 
 echo ""

@@ -21,23 +21,16 @@ export const home = defineRoute('/private', {
   order: 1,
 });
 
-export const profile = defineRoute('/private/profile', {
-  label: 'Profile',
-  description: 'User profile and settings',
-  icon: 'User',
-  protected: true,
-  group: 'account',
-  order: 1,
-});
-
+// NOTE: there is no standalone `/private/profile` route anymore — settings live
+// in the global SettingsDialog (mounted in PrivateLayout, opened from the
+// account menu). Use `accountAction: 'dialog'` on the layout header instead.
 
 // All routes as array
-export const allRoutes: RouteDefinition[] = [home, profile];
+export const allRoutes: RouteDefinition[] = [home];
 
 // Routes object (for backwards compatibility)
 export const routes = {
   home,
-  profile,
   allRoutes,
 };
 

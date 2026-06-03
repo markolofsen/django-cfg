@@ -184,6 +184,7 @@ class DjangoConfig(BaseModel):
             "x-api-token",
             "x-auth-retry",  # generated TS SDK marks refresh-and-retry requests
             "x-mcp-access-key",  # MCP agent access key
+            "dpop",  # RFC 9449 DPoP proof — sent per-request when dpop_enabled
 
             # Client locale/timezone headers
             # Sent by the generated TS SDK auth interceptor on every request so

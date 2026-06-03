@@ -46,15 +46,6 @@ export const auth = defineRoute('/auth', {
   protected: false,
 });
 
-export const contact = defineRoute('/contact', {
-  label: 'Contact',
-  description: 'Get in touch with us',
-  icon: 'Mail',
-  protected: false,
-  group: 'contact',
-  order: 1,
-});
-
 export const privacy = defineRoute('/legal/privacy', {
   label: 'Privacy Policy',
   description: 'Privacy policy and data protection',
@@ -97,7 +88,6 @@ export const allRoutes: RouteDefinition[] = [
   adminDemo,
   privateDemo,
   auth,
-  contact,
   privacy,
   terms,
   cookies,
@@ -110,7 +100,6 @@ export const routes = {
   adminDemo,
   privateDemo,
   auth,
-  contact,
   privacy,
   terms,
   cookies,
@@ -134,10 +123,6 @@ export function generateNavigation(): NavigationSection[] {
     {
       title: 'Demo',
       items: getGroupItems('demo'),
-    },
-    {
-      title: 'Contact',
-      items: getGroupItems('contact'),
     },
   ].filter((s) => s.items.length > 0);
 }

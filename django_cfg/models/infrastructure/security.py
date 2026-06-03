@@ -35,6 +35,7 @@ class SecurityConfig(BaseConfig):
             "user-agent",
             "x-csrftoken",
             "x-requested-with",
+            "dpop",  # RFC 9449 DPoP proof header
         ],
         description="CORS allowed headers with common defaults for API usage",
     )

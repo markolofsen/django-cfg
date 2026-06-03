@@ -23,7 +23,9 @@ last-resort fallbacks after the curated chain.
 
 from __future__ import annotations
 
-from typing import TypeVar
+import asyncio
+import functools
+from typing import Sequence, TypeVar
 
 from pydantic import BaseModel
 
@@ -147,10 +149,174 @@ def extract_chat(
     )
 
 
+# ── Async twins ──────────────────────────────────────────────────────────────
+#
+# Each async preset just awaits its sync counterpart on a worker thread
+# (asyncio.to_thread). The GIL is released during the network wait, so this is
+# real concurrency with ZERO duplicated logic — the sync cascade + repair ladder
+# are the single source of truth. Use from adrf async views, or as the unit of
+# work in the fan-out helpers below.
+
+
+async def aextract(
+    schema: type[T],
+    text: str,
+    *,
+    system: str | None = None,
+    max_tokens: int = 4096,
+    models: list[str] | None = None,
+    extra_models: list[str] | None = None,
+) -> tuple[T, str, dict]:
+    """Async ``extract`` — awaits the sync preset on a worker thread."""
+    return await asyncio.to_thread(
+        extract, schema, text,
+        system=system, max_tokens=max_tokens, models=models, extra_models=extra_models,
+    )
+
+
+async def aextract_chat(
+    schema: type[T],
+    messages: list[dict],
+    *,
+    system: str | None = None,
+    max_tokens: int = 4096,
+    models: list[str] | None = None,
+    extra_models: list[str] | None = None,
+) -> tuple[T, str, dict]:
+    """Async ``extract_chat``."""
+    return await asyncio.to_thread(
+        extract_chat, schema, messages,
+        system=system, max_tokens=max_tokens, models=models, extra_models=extra_models,
+    )
+
+
+async def aclassify(
+    schema: type[T],
+    text: str,
+    *,
+    system: str | None = None,
+    max_tokens: int = 1024,
+    models: list[str] | None = None,
+    extra_models: list[str] | None = None,
+) -> tuple[T, str, dict]:
+    """Async ``classify``."""
+    return await asyncio.to_thread(
+        classify, schema, text,
+        system=system, max_tokens=max_tokens, models=models, extra_models=extra_models,
+    )
+
+
+async def achat_with_tools(
+    messages: list[dict],
+    *,
+    system: str | None = None,
+    max_tokens: int = 4096,
+    models: list[str] | None = None,
+    extra_models: list[str] | None = None,
+) -> tuple[str, str]:
+    """Async ``chat_with_tools``."""
+    return await asyncio.to_thread(
+        chat_with_tools, messages,
+        system=system, max_tokens=max_tokens, models=models, extra_models=extra_models,
+    )
+
+
+async def aescalate(
+    messages: list[dict],
+    *,
+    system: str | None = None,
+    max_tokens: int = 4096,
+    models: list[str] | None = None,
+    extra_models: list[str] | None = None,
+) -> tuple[str, str]:
+    """Async ``escalate``."""
+    return await asyncio.to_thread(
+        escalate, messages,
+        system=system, max_tokens=max_tokens, models=models, extra_models=extra_models,
+    )
+
+
+# ── Fan-out ──────────────────────────────────────────────────────────────────
+
+
+async def extract_many(
+    schema: type[T],
+    texts: Sequence[str],
+    *,
+    system: str | None = None,
+    max_tokens: int = 4096,
+    models: list[str] | None = None,
+    extra_models: list[str] | None = None,
+    max_at_once: int = 8,
+    max_per_second: float | None = None,
+) -> list[tuple[T, str, dict]]:
+    """Extract ``schema`` from many ``texts`` concurrently (the headline async win).
+
+    Runs each text through ``aextract`` with bounded concurrency via aiometer:
+    ``max_at_once`` caps simultaneous in-flight calls; ``max_per_second`` (optional)
+    caps the spawn rate to respect provider RPM limits. Results are returned in
+    input order.
+
+    A per-item failure raises out of ``extract_many`` (aiometer propagates the
+    first exception and cancels the rest). Wrap a per-item try in your own
+    coroutine and pass it instead if you need partial results — this preset
+    keeps the simple all-or-nothing contract.
+    """
+    import aiometer  # local import: only the fan-out helpers need it
+
+    async def _one(text: str) -> tuple[T, str, dict]:
+        return await aextract(
+            schema, text, system=system, max_tokens=max_tokens,
+            models=models, extra_models=extra_models,
+        )
+
+    return await aiometer.run_all(
+        [functools.partial(_one, t) for t in texts],
+        max_at_once=max_at_once,
+        max_per_second=max_per_second,
+    )
+
+
+async def classify_many(
+    schema: type[T],
+    texts: Sequence[str],
+    *,
+    system: str | None = None,
+    max_tokens: int = 1024,
+    models: list[str] | None = None,
+    extra_models: list[str] | None = None,
+    max_at_once: int = 8,
+    max_per_second: float | None = None,
+) -> list[tuple[T, str, dict]]:
+    """Classify many ``texts`` concurrently — fan-out twin of ``classify``."""
+    import aiometer
+
+    async def _one(text: str) -> tuple[T, str, dict]:
+        return await aclassify(
+            schema, text, system=system, max_tokens=max_tokens,
+            models=models, extra_models=extra_models,
+        )
+
+    return await aiometer.run_all(
+        [functools.partial(_one, t) for t in texts],
+        max_at_once=max_at_once,
+        max_per_second=max_per_second,
+    )
+
+
 __all__ = [
     "extract",
     "extract_chat",
     "classify",
     "chat_with_tools",
     "escalate",
+    # async twins
+    "aextract",
+    "aextract_chat",
+    "aclassify",
+    "achat_with_tools",
+    "aescalate",
+    # fan-out
+    "extract_many",
+    "classify_many",
 ]

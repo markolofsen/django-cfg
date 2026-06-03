@@ -151,6 +151,24 @@ Two tiers of API clients:
 
 Extensions use `createExtensionAPI()` from `@djangocfg/ext-base` to share auth storage with the core API client. See [Extensions recipe](./recipes/extensions).
 
+## Auth token, DPoP & logging
+
+The generated client's auth interceptor (in `@djangocfg/api` `helpers/auth.ts`)
+handles tokens, headers, and refresh. Two behaviors worth knowing:
+
+- **DPoP (sender-constrained tokens).** When the backend runs
+  `JWTConfig(dpop_enabled=True)` and the app sets `createBaseNextConfig({ dpop: true })`,
+  the client holds a **non-extractable** Web Crypto key (IndexedDB) and signs a
+  per-request `DPoP` proof. A stolen token can't be replayed. `dpopEnabled` is
+  exported from `@djangocfg/api`. The token is still readable via
+  `auth.getToken()` — DPoP protects by *binding*, not hiding, so no proxy is
+  needed. Details: `@djangocfg/nextjs` → `@docs/DPOP.md`.
+- **Role-aware console logging.** All `@djangocfg/*` loggers share a runtime level
+  (`applyRoleLogPolicy` / `setLogLevel` from `@djangocfg/api`). `AuthProvider`
+  applies it automatically: admins (and dev) get debug logs, regular users in
+  production get a clean console (errors only). Errors still reach
+  `@djangocfg/monitor` regardless.
+
 ## Rules
 
 1. Never edit `generated/` directories — regenerate with `make api`

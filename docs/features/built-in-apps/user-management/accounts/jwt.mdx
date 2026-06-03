@@ -1,11 +1,13 @@
 ---
 title: JWT Configuration
-description: Type-safe JWT token configuration via JWTConfig — lifetimes, algorithms, rotation, environment-aware presets.
+description: Type-safe JWT token configuration via JWTConfig — secure defaults, lifetimes, rotation, and DPoP sender-constrained tokens.
 ---
 
 # JWT Configuration
 
-Django-CFG wraps `djangorestframework-simplejwt` in a type-safe `JWTConfig` Pydantic model. No manual `SIMPLE_JWT` dict needed.
+Django-CFG wraps `djangorestframework-simplejwt` in a type-safe `JWTConfig`
+Pydantic model. No manual `SIMPLE_JWT` dict needed — and it is **secure by
+default**, so most projects write nothing at all.
 
 ## Quick Start
 
@@ -13,13 +15,11 @@ Django-CFG wraps `djangorestframework-simplejwt` in a type-safe `JWTConfig` Pyda
 from django_cfg import DjangoConfig, JWTConfig
 
 class MyConfig(DjangoConfig):
-    jwt = JWTConfig(
-        access_token_lifetime_hours=24,
-        refresh_token_lifetime_days=30,
-    )
+    jwt = JWTConfig()  # 30-min access · 90-day refresh · rotation + blacklist on
 ```
 
-All other JWT settings are automatically configured with secure defaults.
+That bare `JWTConfig()` already gives the recommended posture. Override only if
+you have a specific reason.
 
 ---
 
@@ -29,12 +29,17 @@ All other JWT settings are automatically configured with secure defaults.
 
 ```python
 jwt = JWTConfig(
-    access_token_lifetime_hours=24,      # 1–8760 hours (1 year max)
-    refresh_token_lifetime_days=30,      # 1–365 days (1 year max)
-    rotate_refresh_tokens=True,          # Rotate on every refresh
-    blacklist_after_rotation=True,       # Blacklist old refresh token
+    access_token_lifetime_minutes=30,    # MINUTES. Default 30. None = max (1 year).
+    refresh_token_lifetime_days=90,      # Default 90. None = max (1 year).
+    rotate_refresh_tokens=True,          # Rotate on every refresh (default)
+    blacklist_after_rotation=True,       # Blacklist old refresh token (default)
 )
 ```
+
+> **Single access knob — minutes.** Access lifetime is expressed in
+> `access_token_lifetime_minutes` (there is no `_hours` field). Keep it short:
+> a leaked access token, sent on every request, then expires in minutes while
+> the long refresh token keeps the user logged in.
 
 ### Security Settings
 
@@ -60,33 +65,43 @@ jwt = JWTConfig(
 )
 ```
 
----
-
-## Environment-Aware Presets
+### DPoP — sender-constrained tokens (RFC 9449)
 
 ```python
-# Development: short tokens, relaxed leeway
-jwt_dev = jwt.configure_for_environment("development", debug=True)
-# → access: 1h, refresh: 7d, leeway: 30s
-
-# Production: standard tokens, strict
-jwt_prod = jwt.configure_for_environment("production", debug=False)
-# → access: 24h, refresh: 30d, leeway: 0s
-
-# Testing: fast expiry, no rotation (simpler test setup)
-jwt_test = jwt.configure_for_environment("testing")
-# → access: 1h, refresh: 1d, rotate: False
+jwt = JWTConfig(dpop_enabled=True)    # default: False
 ```
 
-Or adapt dynamically in your config:
+Binds each issued token to a **non-extractable** browser key, so a stolen token
+(XSS, logs, a copied cURL) **can't be replayed** — the attacker lacks the key
+and any proof they forge is rejected. No BFF/proxy needed. Pair with the frontend
+flag `createBaseNextConfig({ dpop: true })`. See the dedicated
+[DPoP & token security](#dpop--make-a-stolen-token-useless) section below and the
+`@djangocfg/nextjs` `@docs/DPOP.md` guide.
+
+---
+
+## Secure-by-default philosophy
+
+`JWTConfig` encodes the same layered model big SaaS platforms use — you inherit
+it for free:
+
+| Layer | What it does | Setting |
+|-------|--------------|---------|
+| Short access | small replay window for the most-exposed token | `access_token_lifetime_minutes=30` |
+| Long refresh | "log in once, stay logged in" | `refresh_token_lifetime_days=90` |
+| Rotation | every refresh issues a fresh refresh token | `rotate_refresh_tokens=True` |
+| Blacklist | a reused (stolen) refresh token is revoked | `blacklist_after_rotation=True` |
+| DPoP (opt-in) | a stolen token is unusable elsewhere | `dpop_enabled=True` |
+
+Per-environment overrides are just plain config — e.g. tighten in production:
 
 ```python
 class MyConfig(DjangoConfig):
     jwt: JWTConfig = JWTConfig()
 
     def model_post_init(self, __context):
-        env = "development" if self.debug else "production"
-        self.jwt = self.jwt.configure_for_environment(env, self.debug)
+        if not self.debug:  # production
+            self.jwt = JWTConfig(access_token_lifetime_minutes=15, dpop_enabled=True)
 ```
 
 ---
@@ -100,12 +115,12 @@ sequenceDiagram
     participant BL as Token Blacklist
 
     C->>API: POST /otp/verify/ → {access, refresh}
-    Note over C: access TTL: 24h, refresh TTL: 30d
+    Note over C: access TTL: 30m, refresh TTL: 90d
 
     C->>API: GET /profile/ Authorization: Bearer {access}
     API-->>C: 200 user data
 
-    Note over C: access token expires
+    Note over C: access token expires (~30m)
 
     C->>API: POST /token/refresh/ {refresh}
     API->>BL: blacklist old refresh token
@@ -113,7 +128,69 @@ sequenceDiagram
     Note over C: both tokens rotated on every refresh
 ```
 
-`ROTATE_REFRESH_TOKENS = True` + `BLACKLIST_AFTER_ROTATION = True` by default. Reusing a blacklisted token signals theft — rejected immediately.
+`ROTATE_REFRESH_TOKENS = True` + `BLACKLIST_AFTER_ROTATION = True` by default.
+Reusing a blacklisted token signals theft — rejected immediately.
+
+---
+
+## DPoP — make a stolen token useless
+
+> **Intuition — the stamp that can't be copied.** Think of the token as a *club
+> pass*. Normally "whoever holds the pass gets in" — so a stolen pass works.
+> DPoP gives you a magic *stamp* (a private key) that is glued to your desk: you
+> can stamp papers with it, but you can never take it out or copy it. The pass is
+> printed with "belongs to the owner of THIS stamp", and at the door you must
+> stamp a fresh paper on the spot. A thief who steals the pass can't stamp with
+> your stamp → the pass is a worthless piece of paper. That "glued stamp" is a
+> Web Crypto key with `extractable: false`.
+
+With `dpop_enabled=True`, the access token carries `cnf: { jkt }` binding it to a
+P-256 key the browser generates with `extractable: false` (Web Crypto, kept in
+IndexedDB — **JS, including XSS, can sign with it but never read it**). Every
+request sends a fresh `DPoP` proof signed by that key; the backend verifies the
+signature and that its thumbprint matches the token's `cnf.jkt`.
+
+### Full flow
+
+```mermaid
+sequenceDiagram
+    participant B as Browser (holds the key)
+    participant API as Django API
+
+    Note over B: generate P-256 key, extractable:false → IndexedDB
+
+    B->>API: login (OTP/2FA) + DPoP proof (public key inside)
+    API-->>B: token with cnf.jkt = thumbprint(public key)
+    Note over API: token is now BOUND to that key
+
+    loop every request
+        B->>API: Authorization: Bearer {token}<br/>DPoP: fresh proof signed by the key
+        API->>API: verify proof signature<br/>thumbprint(proof key) == token.cnf.jkt ?
+        API-->>B: 200 (match) / 401 (mismatch)
+    end
+```
+
+### Why a stolen token is useless
+
+```mermaid
+sequenceDiagram
+    participant A as Attacker (stole the token)
+    participant API as Django API
+    A->>API: Bearer {stolen} + forged DPoP proof (attacker's key)
+    API-->>A: 401 — proof key != token cnf.jkt
+    Note over A: token alone is worthless without the in-browser key
+```
+
+- **No BFF/proxy** — the frontend still calls Django directly, even cross-origin.
+- **Mixed clients OK** — tokens without `cnf` (CLI / server / `X-API-Key`) take
+  the plain Bearer path unchanged.
+- **For scripts**, use an API key (`X-API-Key`), not a browser token. A copied
+  Bearer under DPoP just returns 401 (the proof can't leave the browser).
+
+Backend mechanics live in `django_cfg/middleware/dpop.py` and the auth class
+`JWTAuthenticationWithLastLogin`. ⚠️ A view that hardcodes stock
+`rest_framework_simplejwt` `JWTAuthentication` bypasses DPoP — use the django-cfg
+auth class / built-in mixins.
 
 ---
 
@@ -125,15 +202,12 @@ sequenceDiagram
 | RSA (asymmetric) | `RS256`, `RS384`, `RS512` |
 | ECDSA (asymmetric) | `ES256`, `ES384`, `ES512` |
 
-For production, RSA is recommended for key rotation without secret sharing:
+The token's own signing algorithm is independent of DPoP (DPoP proofs always use
+the client's ES256 key), so keeping `HS256` for tokens is fine. For multi-service
+verification without sharing a secret, `RS256` is convenient:
 
 ```python
-jwt = JWTConfig(
-    algorithm="RS256",
-    leeway=0,
-    rotate_refresh_tokens=True,
-    blacklist_after_rotation=True,
-)
+jwt = JWTConfig(algorithm="RS256")
 ```
 
 ---
@@ -144,8 +218,8 @@ Before:
 ```python
 # settings.py
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=90),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     # ... 15+ more settings
@@ -155,11 +229,7 @@ SIMPLE_JWT = {
 After:
 ```python
 # config.py
-jwt = JWTConfig(
-    access_token_lifetime_hours=24,
-    refresh_token_lifetime_days=30,
-)
-# Everything else configured automatically.
+jwt = JWTConfig()   # secure defaults; everything configured automatically
 ```
 
 ---
@@ -167,15 +237,15 @@ jwt = JWTConfig(
 ## Introspection
 
 ```python
-# Check configured values
-info = config.jwt.get_token_info()
-# → {'access_token': '24 hours', 'refresh_token': '30 days', 'algorithm': 'HS256', 'rotation': 'enabled'}
+# Effective access-token lifetime (timedelta)
+config.jwt.get_effective_access_token_lifetime()
+# → datetime.timedelta(seconds=1800)   # 30 min
 
-# Access raw Django settings
-jwt_settings = config.jwt.to_django_settings(config.secret_key)
-jwt_settings['SIMPLE_JWT']['ACCESS_TOKEN_LIFETIME']
-# → datetime.timedelta(hours=24)
+# Raw Django settings (incl. the DPoP flag)
+settings = config.jwt.to_django_settings(config.secret_key)
+settings['SIMPLE_JWT']['ACCESS_TOKEN_LIFETIME']   # → timedelta(minutes=30)
+settings['DJANGO_CFG_DPOP_ENABLED']               # → False (or True)
 ```
 
-TAGS: jwt, JWTConfig, token rotation, simplejwt, token lifetime
+TAGS: jwt, JWTConfig, DPoP, token rotation, simplejwt, token lifetime, sender-constrained
 DEPENDS_ON: [index, otp]

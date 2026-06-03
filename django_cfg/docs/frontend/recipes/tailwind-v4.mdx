@@ -40,28 +40,35 @@ Theme configuration uses `@theme {}` blocks with CSS custom properties instead o
 }
 ```
 
-## Broken Opacity Modifiers
+## Opacity Modifiers
 
-<Callout type="warning">
-`bg-background/80` does NOT work with HSL color variables in Tailwind v4. This is a known issue.
+<Callout type="info">
+`bg-background/80` **works** with the ui-core token system. Tokens are wired via
+`@theme inline { --color-background: var(--background); }`, so the opacity
+modifier resolves through `color-mix(in oklab, …)`.
 </Callout>
 
 ```typescript
-// BROKEN — opacity modifier with CSS variable
+// ✅ Opacity modifiers work for every semantic token
 <div className="bg-background/80" />
-
-// CORRECT — inline HSL style
-<div style={{ backgroundColor: 'hsl(var(--background) / 0.8)' }} />
-
-// Also broken for borders
-// BROKEN
 <div className="border-border/30" />
+<div className="bg-card/40 text-foreground/60" />
 
-// CORRECT
-<div style={{ borderColor: 'hsl(var(--border) / 0.3)' }} />
+// ❌ Do NOT wrap tokens in hsl(var(--X)) — they are already full hsl(...)
+//    colors, so this double-wraps to hsl(hsl(...)) and falls back to default.
+<div style={{ backgroundColor: 'hsl(var(--background) / 0.8)' }} />
 ```
 
-Use inline `hsl()` styles whenever you need opacity on a CSS variable color.
+If you need opacity in an inline style or arbitrary value, use `color-mix` over
+the variable (the variable already holds a complete color):
+
+```tsx
+<div className="bg-[color-mix(in_oklab,var(--primary)_30%,transparent)]" />
+```
+
+> This replaces the old v4 advice to use inline `hsl(var(--X) / α)` workarounds —
+> that was needed before tokens moved to the `@theme inline` shape and is now
+> incorrect. See `@djangocfg/ui-core` styles README → *Token format*.
 
 ## Arbitrary Values
 
@@ -103,6 +110,6 @@ Mobile-first breakpoints are unchanged from v3:
 
 1. Use `@import 'tailwindcss'` — never `@tailwind base/components/utilities` directives
 2. Import `theme.css` before `tailwindcss` in `globals.css` — order matters
-3. Use inline `hsl(var(--color) / opacity)` styles for opacity on CSS variable colors — the `/80` modifier syntax is broken
+3. Use the opacity modifier (`bg-card/40`) for translucency — it works via `@theme inline` + `color-mix`; never wrap tokens as `hsl(var(--X))`
 4. Define reusable spacing and size values as tokens in `@theme {}` instead of using arbitrary values
 5. Keep breakpoints mobile-first — all utility classes apply from the specified breakpoint and up

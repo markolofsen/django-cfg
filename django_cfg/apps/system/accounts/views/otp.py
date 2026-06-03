@@ -194,6 +194,15 @@ class OTPViewSet(viewsets.GenericViewSet):
             # No 2FA - generate tokens directly
             refresh = RefreshToken.for_user(user)
 
+            # DPoP (RFC 9449): if enabled and the client sent a login proof, bind
+            # the tokens to the client's key (`cnf.jkt`). No-op otherwise.
+            from django_cfg.middleware.dpop import (
+                bind_refresh_token_to_request,
+                derive_access_with_cnf,
+            )
+            bind_refresh_token_to_request(refresh, request)
+            access = derive_access_with_cnf(refresh)
+
             # Fire auth signal (login alert, activity logging, etc.)
             from ..signals import user_authenticated
             user_authenticated.send(sender=self.__class__, user=user, request=request)
@@ -203,7 +212,7 @@ class OTPViewSet(viewsets.GenericViewSet):
                     "requires_2fa": False,
                     "session_id": None,
                     "refresh": str(refresh),
-                    "access": str(refresh.access_token),
+                    "access": str(access),
                     "user": UserSerializer(user, context={'request': request}).data,
                     "should_prompt_2fa": user.should_prompt_2fa,
                 },

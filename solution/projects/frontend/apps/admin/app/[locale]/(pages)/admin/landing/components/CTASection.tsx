@@ -65,10 +65,10 @@ export function CTASection() {
                   </Link>
                   <span className="text-muted-foreground/50">•</span>
                   <Link
-                    href={routes.private.profile.path}
+                    href={routes.private.home.path}
                     className="text-primary hover:underline font-medium"
                   >
-                    User Profile
+                    Dashboard
                   </Link>
                 </div>
               </div>

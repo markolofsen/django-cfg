@@ -6,15 +6,19 @@
 
 **Key Features:**
 - Multi-provider support (OpenAI, OpenRouter)
+- **Task presets** — call an LLM by *job* (`extract` / `classify` / `chat_with_tools` / `escalate`), not by model; async twins (`aextract` …) + bounded fan-out (`extract_many`)
+- Model catalog — role-based model selection with curated verdicts
+- Cascading multi-model router with retry, circuit breaker, and fallback
+- Strict structured output (provider-enforced JSON schema → Pydantic)
+- Advisory layer — warns on risky model/role mismatches
 - Vision analysis with model quality presets
 - **Automatic image resizing** for token optimization (90% cost savings)
 - OCR with multiple extraction modes
 - Image generation (DALL-E, FLUX, etc.)
 - Automatic cost calculation and tracking
-- Intelligent caching with TTL
+- Intelligent caching with TTL (SQLite-backed, fail-open)
 - Type-safe configuration with Pydantic 2
 - Token counting and usage analytics
-- JSON extraction utilities
 
 ---
 
@@ -34,24 +38,44 @@ django_llm/
 │   ├── models.py              # Model cache + pricing data
 │   ├── pricing.py             # Cost calculation utilities
 │   └── free_models.py         # OpenRouter free/structured model discovery
-├── storage/                   # Response caching with TTL
-├── structured/                # Structured output + JSON extraction
-├── tokenizer.py               # Token counting utilities
-├── pipeline/                  # Retry, circuit breaker, rate limit, router
+├── catalog/                   # Model selection by role + advisory
+│   ├── roles.py               # ModelRole + Verdict enums
+│   ├── models.py              # Curated per-model traits + recommend()
+│   └── advisories.py          # check() — risky model/role warnings
+├── core/                      # Shared types, errors, tokenizer (primitives)
+│   ├── types.py               # Pydantic response models
+│   ├── errors.py              # Typed error taxonomy + classify_exception()
+│   └── tokenizer.py           # Token counting utilities
+├── storage/                   # Response caching with TTL (SQLite, fail-open)
+├── structured/                # Structured output + JSON extraction + enum coercion
+├── pipeline/                  # Retry, circuit breaker, rate limit, cost, router
+├── routing/                   # Ergonomics layer — pick a job, not a model
+│   ├── llm_router.py          # LLMRouter — cascading multi-model facade + for_role()
+│   └── presets.py             # extract / classify / chat_with_tools / escalate
 ├── monitoring/                # LLM provider balance monitoring
-├── llm_router.py              # LLMRouter — cascading multi-model facade
 ├── features/
 │   ├── vision/                # VisionClient, OCR, image resize
 │   ├── image_gen/             # ImageGenClient
 │   └── translator/            # DjangoTranslator
+├── _integration.py            # Host seam — the only host-coupled file
 └── __init__.py                # Public API exports
 ```
+
+> Layering: `core/` (primitives) → `providers/` + `structured/` → `client/` →
+> `pipeline/` (reliability) → `routing/` (ergonomics) → `features/`. The module
+> root holds only `__init__.py` (public API) and `_integration.py` (host seam);
+> every other file lives in a subpackage.
 
 ### Architecture
 
 ```mermaid
 graph TD
-    A[LLMClient] --> B[Tokenizer]
+    PRE[Task presets<br/>extract / classify / chat_with_tools] --> RT[LLMRouter.for_role]
+    RT --> CAT[catalog.recommend role]
+    RT --> MR[pipeline.ModelRouter<br/>retry · circuit breaker · cost]
+    MR --> A[LLMClient]
+
+    A --> B[Tokenizer]
     A --> C[JSONExtractor]
     A --> D[LLMCache]
     A --> E[ModelsCache]
@@ -69,7 +93,7 @@ graph TD
     L --> N[Presets]
 
     B --> O[tiktoken]
-    D --> P[File Cache]
+    D --> P[SQLite Cache]
     E --> Q[OpenRouter API]
 ```
 
@@ -392,7 +416,7 @@ count = cache.cleanup_expired()  # Remove expired entries
 ## Configuration
 
 Clients are configured through their constructor arguments. API keys are
-auto-detected from `django_config.api_keys` when omitted (see [API Keys](#api-keys)).
+resolved through `_integration.get_api_keys()` when omitted (see [API Keys](#api-keys)).
 
 ```python
 from django_cfg.modules.django_llm.features.vision import VisionClient
@@ -437,20 +461,21 @@ embedding = client.generate_embedding(
 ### Cost Calculation
 
 ```python
-from django_cfg.modules.django_llm.registry import calculate_chat_cost
+from django_cfg.modules.django_llm.registry import estimate_cost
 
-cost = calculate_chat_cost(
-    model="openai/gpt-4o-mini",
+# Real pricing — the registry catalogue auto-populates on first use.
+cost = estimate_cost(
+    "openai/gpt-4o-mini",
     input_tokens=100,
     output_tokens=50,
-    models_cache=models_cache
+    models_cache=models_cache,
 )
 ```
 
 ### Tokenizer
 
 ```python
-from django_cfg.modules.django_llm.tokenizer import Tokenizer
+from django_cfg.modules.django_llm.core import Tokenizer  # also: core.tokenizer.Tokenizer
 
 tokenizer = Tokenizer()
 count = tokenizer.count_tokens("Hello world", "gpt-4o-mini")
@@ -468,19 +493,84 @@ json_data = extractor.extract_json_from_response("Here's the data: {'name': 'Joh
 
 ---
 
-## LLM Router
+## Task Presets — call an LLM by job, not by model
 
-`LLMRouter` is a high-level facade over `LLMClient` + `pipeline.ModelRouter`.
-It runs a cascading model chain — one classified attempt per model, each with
-its own circuit breaker, falling through to the next on failure. When every
-model is exhausted it raises `LLMRouterError`.
+The fastest way to use the module. Each preset picks the curated model chain
+for its **role** from the catalog (`recommend(role)`), so you never pass a
+model slug and never repeat the cascade / structured-output wiring.
 
 ```python
-from django_cfg.modules.django_llm import LLMRouter, LLMRouterError
+from django_cfg.modules.django_llm import extract, classify, chat_with_tools, escalate
 
-router = LLMRouter(
-    model_chain=["openai/gpt-4o-mini", "google/gemini-2.0-flash-lite"],
+# Structured extraction (EXTRACTION role) — strict json_schema → Pydantic
+car, model_used, usage = extract(CarListing, "2021 Hyundai Grandeur, 41k km...")
+
+# Cheap structured classification (CLASSIFY role)
+label, model_used, _ = classify(Sentiment, "the dealer never called back")
+
+# Agentic multi-tool chat (TOOL_CHAT role) → (text, model_used)
+text, model_used = chat_with_tools(messages)
+
+# Quality-over-cost for hard / customer-facing turns (ESCALATION role)
+text, model_used = escalate(messages)
+```
+
+`extract` / `classify` return `(parsed_pydantic, model_used, usage)`;
+`chat_with_tools` / `escalate` return `(text, model_used)`. Override the model
+choice when you must: `models=[...]` replaces the role chain, `extra_models=[...]`
+appends last-resort fallbacks.
+
+### Async + fan-out
+
+Every preset has an async twin (`aextract`, `aextract_chat`, `aclassify`,
+`achat_with_tools`, `aescalate`) plus `LLMRouter.aparse` / `acomplete`. They run
+the **same** sync cascade + validate-and-repair ladder on a worker thread
+(`asyncio.to_thread`), so the event loop stays free and there is **zero
+duplicated logic** — one cascade, one ladder, run concurrently. Use them from
+async (adrf) views:
+
+```python
+from django_cfg.modules.django_llm import aextract
+
+car, model_used, usage = await aextract(CarListing, "2021 Hyundai Grandeur...")
+```
+
+The headline win is **fan-out** — process many inputs concurrently with bounded
+parallelism (via [aiometer](https://github.com/florimondmanca/aiometer)):
+
+```python
+from django_cfg.modules.django_llm import extract_many, classify_many
+
+# 17 translations / a batch of listings in parallel instead of one-by-one
+results = await extract_many(
+    TranslatedFields, texts,
+    max_at_once=8,        # cap simultaneous in-flight calls
+    max_per_second=None,  # optional spawn-rate cap (respect provider RPM)
 )
+# results: list[(instance, model_used, usage)] in input order
+```
+
+`extract_many` / `classify_many` keep an all-or-nothing contract: a per-item
+failure raises out of the batch. Wrap each call yourself if you need partial
+results.
+
+---
+
+## LLM Router
+
+`LLMRouter` is the facade the presets are built on — over `LLMClient` +
+`pipeline.ModelRouter`. It runs a cascading model chain (one classified attempt
+per model, each with its own circuit breaker), falling through on failure and
+raising `LLMRouterError` when every model is exhausted.
+
+```python
+from django_cfg.modules.django_llm import LLMRouter, LLMRouterError, ModelRole
+
+# Build from the catalog's recommended chain for a role (preferred):
+router = LLMRouter.for_role(ModelRole.EXTRACTION)
+
+# …or pass an explicit chain:
+router = LLMRouter(model_chain=["openai/gpt-4o-mini", "google/gemini-2.5-flash-lite"])
 
 # Structured output — pass a Pydantic schema, get a validated instance back
 result, model_used, usage = router.parse(
@@ -500,6 +590,39 @@ On a strict `json_schema` request to OpenRouter the router sets
 `provider.require_parameters` so the schema is enforced by the provider —
 a non-enforcing provider errors and the cascade falls through, rather than
 silently downgrading to plain `json_object`.
+
+---
+
+## Model Catalog & Advisory
+
+`catalog/` is the single source of truth for **which model for what**.
+Models are graded per *role* — the same model earns a different verdict
+per job (Qwen3.5-Flash: fine for `classify`, a runaway for `extraction`,
+a narrate-after-first-call failure for `tool_chat`).
+
+```python
+from django_cfg.modules.django_llm.catalog import ModelRole, recommend, traits
+
+recommend(ModelRole.EXTRACTION)
+# ['google/gemini-2.5-flash-lite', 'openai/gpt-4o-mini', 'deepseek/deepseek-v4-flash']
+
+traits("qwen/qwen3.5-flash-02-23").verdict(ModelRole.EXTRACTION)   # Verdict.AVOID
+```
+
+The **advisory layer** warns — deduped, never blocks — when a model is
+used against a role or request shape it is known to fail.
+`LLMRouter.parse()` runs it over every chain model automatically:
+
+```python
+from django_cfg.modules.django_llm.catalog import check, ModelRole
+
+check("qwen/qwen3.5-flash-02-23", role=ModelRole.EXTRACTION)
+# warns: reasoning model in the EXTRACTION hot path; catalog grades it AVOID
+```
+
+Verdicts are curated from real benchmarks; the narrative lives in
+[`@docs/insights/`](./@docs/insights/), the design in
+[`@dev/v2/PLAN.md`](./@dev/v2/PLAN.md).
 
 ---
 
@@ -617,16 +740,22 @@ sequenceDiagram
 
 ## API Keys
 
-API keys are automatically detected from `django_config.api_keys`:
+Every client and the model registry read provider keys through one
+function — `_integration.get_api_keys()`, the single host seam. No
+client reads host config on its own.
 
 ```python
-# VisionClient and ImageGenClient auto-detect keys:
-client = VisionClient()  # Uses django_config.api_keys.get_openrouter_key()
-client = ImageGenClient()  # Uses django_config.api_keys.get_openrouter_key()
+# Clients resolve keys via _integration.get_api_keys() when omitted:
+client = VisionClient()       # OpenRouter key from the seam
+client = ImageGenClient()
+llm = LLMClient()             # openrouter + openai keys
 
 # Or provide explicitly:
 client = VisionClient(api_key="sk-or-v1-...")
 ```
+
+`_integration.py` is the **only** file that touches host config — to
+re-point where keys come from, change only `get_api_keys()` there.
 
 ---
 
@@ -634,6 +763,11 @@ client = VisionClient(api_key="sk-or-v1-...")
 
 | Term | Description |
 |------|-------------|
+| **Task preset** | `extract` / `classify` / `chat_with_tools` / `escalate` — call an LLM by job; the model chain is picked from the catalog. Async twins prefixed `a*`. |
+| **Fan-out** | `extract_many` / `classify_many` — run many inputs concurrently with bounded parallelism (aiometer `max_at_once` / `max_per_second`) |
+| **Role** | What a model is for: `extraction`, `classify`, `tool_chat`, `escalation`, `vision` — the catalog grades each model per role |
+| **LLMRouter** | Cascading multi-model facade; `for_role()` builds the chain from the catalog |
+| **Verdict** | A model's per-role grade: `good` / `ok` / `avoid` / `unknown` |
 | **LLM Client** | Main interface for text-based LLM operations |
 | **VisionClient** | Client for image analysis and OCR |
 | **ImageGenClient** | Client for image generation |

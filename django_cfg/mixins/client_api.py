@@ -5,7 +5,12 @@ Common configuration for client API endpoints (authenticated users).
 """
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
+
+# Use django_cfg's JWT auth (NOT stock simplejwt JWTAuthentication): it adds
+# last-login tracking, is_active checks, AND DPoP (RFC 9449) proof enforcement.
+# Hardcoding stock JWTAuthentication here silently bypassed DPoP for every
+# ClientAPIMixin endpoint.
+from django_cfg.middleware.authentication import JWTAuthenticationWithLastLogin
 
 
 class ClientAPIMixin:
@@ -33,7 +38,7 @@ class ClientAPIMixin:
     """
 
     authentication_classes = [
-        JWTAuthentication,      # JWT tokens (Bearer)
-        SessionAuthentication,  # Django session
+        JWTAuthenticationWithLastLogin,  # JWT (Bearer) + DPoP enforcement
+        SessionAuthentication,           # Django session
     ]
     permission_classes = [IsAuthenticated]

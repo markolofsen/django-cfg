@@ -203,7 +203,7 @@ def render_class(tag: str, operations: list[Operation]) -> str:
     Auth is selected at construction time:
 
     * ``token``    → ``Authorization: Bearer <token>`` via ``AuthenticatedClient``
-    * ``api_key``  → ``x-api-key`` header via ``Client(httpx_args=...)``
+    * ``api_key``  → ``x-api-key`` header via ``Client(headers=...)``
     * neither     → unauthenticated ``Client``
 
     Use as an async context manager or directly::
@@ -242,10 +242,15 @@ def render_class(tag: str, operations: list[Operation]) -> str:
                 **kwargs,
             )
         elif api_key:
+            # NOTE: pass ``headers=`` directly. Going through
+            # ``httpx_args={{"headers": ...}}`` collides with the Client's
+            # own ``_headers`` field — both end up in the final
+            # ``httpx.AsyncClient(headers=..., **httpx_args)`` call and
+            # httpx raises "got multiple values for keyword argument 'headers'".
             self._client = Client(
                 base_url=base_url,
                 timeout=client_timeout,
-                httpx_args={{"headers": {{"x-api-key": api_key}}}},
+                headers={{"x-api-key": api_key}},
                 **kwargs,
             )
         else:
@@ -261,10 +266,13 @@ def render_class(tag: str, operations: list[Operation]) -> str:
         """Replace auth with ``x-api-key`` header for subsequent calls."""
         base_url = self._client._base_url  # noqa: SLF001
         timeout = getattr(self._client, "_timeout", self.DEFAULT_TIMEOUT)
+        # NOTE: ``headers=`` directly, not ``httpx_args={{"headers": ...}}`` —
+        # see __init__ for the rationale (avoids httpx "got multiple values
+        # for 'headers'" at AsyncClient construction).
         self._client = Client(
             base_url=base_url,
             timeout=timeout,
-            httpx_args={{"headers": {{"x-api-key": api_key}}}},
+            headers={{"x-api-key": api_key}},
         )
 
     async def __aenter__(self) -> "{class_name}":

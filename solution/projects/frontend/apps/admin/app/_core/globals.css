@@ -1,42 +1,20 @@
 /**
- * Global styles for @djangocfg/market app
- * Single entry point for all styles
- *
- * CRITICAL: Import order matters for Tailwind CSS v4!
- * Theme variables MUST come BEFORE @import "tailwindcss"
+ * Global styles for @djangocfg/admin app
+ * Single entry point for all styles.
  */
 
-/* 1. Import UI package styles FIRST (contains theme variables) */
-@import "@djangocfg/ui-nextjs/styles";
+/* 1. ui-core golden path — Tailwind + tokens + base + utilities in the correct
+ *    cascade layers (replaces the removed @djangocfg/ui-nextjs/styles entry). */
+@import "@djangocfg/ui-core/styles/full";
 
-/* 2. Import layouts styles (may contain additional tokens) */
+/* 2. Layout primitives */
 @import "@djangocfg/layouts/styles";
 
-/* 3. Import ui-tools styles (for Tailwind class detection) */
+/* 3. ui-tools styles (for Tailwind class detection) */
 @import "@djangocfg/ui-tools/styles";
 
 /*
- * 3. CUSTOM THEME OVERRIDE (optional)
- *
- * To customize the theme, create a custom-theme.css file with your
- * theme overrides and import it here:
- *
- * @import "./custom-theme.css";
- *
- * You can generate custom theme CSS using the Tailwind Theme Configurator
- * in the playground: /tools/tailwind-theme-configurator
- *
- * Example custom-theme.css:
- *
- * :root {
- *   --primary: 265 89% 78%;
- *   --primary-foreground: 0 0% 100%;
- *   // ... other color overrides
- * }
+ * Custom theme override (optional): create custom-theme.css with token
+ * overrides and `@import "./custom-theme.css";` here. Example:
+ *   :root { --primary: 265 89% 78%; --primary-foreground: 0 0% 100%; }
  */
-
-/* 4. Import Tailwind CSS v4 (AFTER theme variables) */
-@import "tailwindcss";
-
-/* 5. Load tailwindcss-animate plugin */
-@plugin "tailwindcss-animate";

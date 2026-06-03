@@ -18,7 +18,6 @@ export default function AuthPage() {
   return (
     <AuthLayout
       sourceUrl={settings.app.siteUrl}
-      supportUrl={routes.public.contact?.path}
       termsUrl={routes.public.terms?.path}
       privacyUrl={routes.public.privacy?.path}
       enableGithubAuth={true}

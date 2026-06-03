@@ -80,9 +80,14 @@ class SpectacularConfig(BaseModel):
     #   - SystemHealthStatusEnum: used by SystemHealthItem.status and
     #     SystemHealth.overall_status. drf-spectacular picks an unstable
     #     hash suffix without an explicit override.
+    #
+    # NOTE: there is intentionally NO 'ValidationErrorEnum' entry. It used to
+    # point at `django.contrib.auth.models.ValidationError`, which is an
+    # *exception* class (not a TextChoices) and matches no enum in the schema —
+    # so drf-spectacular emitted "unable to load choice override" + an
+    # ENUM_NAME_OVERRIDES duplication error on every generate. Removed.
     enum_name_overrides: Dict[str, Any] = Field(
         default_factory=lambda: {
-            'ValidationErrorEnum': 'django.contrib.auth.models.ValidationError',
             'SystemHealthStatusEnum': (
                 'django_cfg.apps.api.dashboard.serializers.system.SystemHealthStatus'
             ),

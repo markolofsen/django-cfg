@@ -125,6 +125,75 @@ debug: true
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
+## JWT Authentication
+
+Django-CFG ships JWT auth (via SimpleJWT) configured through `JWTConfig`, with a
+**secure-by-default** posture — you usually don't set anything:
+
+```python
+from django_cfg import DjangoConfig
+from django_cfg.models.api.jwt import JWTConfig
+
+class MyConfig(DjangoConfig):
+    jwt = JWTConfig()  # 30-min access, 90-day refresh, rotation + blacklist on
+```
+
+| Setting | Default | Why |
+|---------|---------|-----|
+| `access_token_lifetime_minutes` | `30` | Short — a leaked access token expires fast. |
+| `refresh_token_lifetime_days` | `90` | Long — users "log in once", stay logged in. |
+| `rotate_refresh_tokens` | `True` | Each refresh issues a new refresh token. |
+| `blacklist_after_rotation` | `True` | A reused (stolen) refresh token is revoked. |
+| `dpop_enabled` | `False` | Opt-in sender-constrained tokens (see below). |
+
+> There is a single lifetime knob for access — **minutes** (the old `_hours`
+> field was removed). `None` means "max" (1 year). Override only if you must:
+> `JWTConfig(access_token_lifetime_minutes=15, refresh_token_lifetime_days=30)`.
+
+### Security principles we follow
+
+The design follows the same layered model used by large SaaS platforms — each
+layer reduces a different risk, so no single failure is catastrophic:
+
+1. **Short access + long refresh.** The access token (sent on every request) is
+   short-lived; the refresh token (used rarely) is long-lived. A stolen access
+   token is useless within minutes; the refresh token is rotated + blacklisted on
+   use, so replay is detected.
+2. **Attack the XSS root, not just the symptom.** A baseline **Content-Security-
+   Policy** + `X-Content-Type-Options`/`Referrer-Policy`/`X-Frame-Options` is
+   emitted on every frontend route (via `@djangocfg/nextjs`), so injected scripts
+   are far less likely to run in the first place.
+3. **Bind the token to the client (DPoP).** When enabled, even an XSS-stolen
+   token can't be used elsewhere — see below.
+4. **Clean console for users, full logs for admins.** Verbose logs are gated by
+   role at runtime; errors always reach the monitoring backend regardless.
+
+### DPoP — make a stolen token useless (RFC 9449)
+
+`dpop_enabled=True` turns on **sender-constrained tokens**. The browser holds a
+**non-extractable** key (Web Crypto, cannot be read even by your own JS) and signs
+a fresh proof per request; the backend binds the issued token to that key
+(`cnf.jkt`) and rejects any request whose proof doesn't match.
+
+> Mental model: the token is a club pass stamped "belongs to the owner of THIS
+> stamp"; the stamp (private key) is glued to your browser and can't be copied,
+> so a stolen pass is worthless. Full flow + diagrams: **JWT Configuration →
+> DPoP**.
+
+```python
+jwt = JWTConfig(dpop_enabled=True)
+```
+
+Pair it with the frontend flag `createBaseNextConfig({ dpop: true })`. Result: an
+attacker who steals the token (via XSS, logs, a copied cURL) **cannot use it** —
+they lack the private key, and any proof they forge is rejected. **No BFF/proxy
+is required**, so the frontend keeps calling Django directly even across origins.
+
+CLI / server-to-server clients (tokens without `cnf`, or `X-API-Key`) are
+unaffected — they take the plain Bearer path. For scripting the API, use an
+**API key** (`X-API-Key`), not a browser token. Full guide:
+`@djangocfg/nextjs` → `@docs/DPOP.md`.
+
 ## Security Headers
 
 | Header | Production | Development |

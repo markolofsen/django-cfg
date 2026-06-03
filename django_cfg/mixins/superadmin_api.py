@@ -6,7 +6,7 @@ More restrictive than AdminAPIMixin - requires is_superuser flag.
 """
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.permissions import BasePermission
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from django_cfg.middleware.authentication import JWTAuthenticationWithLastLogin as JWTAuthentication  # DPoP-aware JWT auth
 
 
 class IsSuperUser(BasePermission):

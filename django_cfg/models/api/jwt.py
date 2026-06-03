@@ -1,6 +1,12 @@
 """
 JWT Configuration for Django CFG
 Type-safe JWT authentication configuration with Pydantic v2
+
+This model is the START of the auth chain (config → Django settings → token
+mint → request verification → frontend client). For the full end-to-end map,
+DPoP (RFC 9449) flow, and the auth-class-bypass gotcha, see:
+    @docs/architecture/security/auth-logic-chain.md
+Related code: middleware/dpop.py, middleware/authentication.py.
 """
 
 from datetime import timedelta
@@ -23,18 +29,28 @@ class JWTConfig(BaseModel):
     )
 
     # === Token Lifetimes ===
-    access_token_lifetime_hours: Optional[int] = Field(
-        default=None,
+    # Secure-by-default: short access + long refresh. Consumers can just write
+    # `JWTConfig()` and inherit the recommended posture — no need to restate it.
+    access_token_lifetime_minutes: Optional[int] = Field(
+        default=30,
         ge=1,
-        le=8760,  # 1 year max
-        description="Access token lifetime in hours (None = maximum: 8760 hours/1 year)"
+        le=525600,  # 1 year max
+        description=(
+            "Access token lifetime in MINUTES (default 30; None = maximum 1 year). "
+            "Keep this short and pair it with a long refresh token: a stolen access "
+            "token expires fast while the user stays logged in via refresh."
+        )
     )
 
     refresh_token_lifetime_days: Optional[int] = Field(
-        default=None,
+        default=90,
         ge=1,
         le=365,  # 1 year max
-        description="Refresh token lifetime in days (None = maximum: 365 days/1 year)"
+        description=(
+            "Refresh token lifetime in days (default 90; None = maximum 365). "
+            "Long-lived so users 'log in once' and aren't logged out; rotation + "
+            "blacklist (below) revoke a reused/stolen refresh token."
+        )
     )
 
     # === Token Rotation ===
@@ -91,6 +107,20 @@ class JWTConfig(BaseModel):
         description="HTTP header name for authentication"
     )
 
+    # === DPoP (RFC 9449) — sender-constrained tokens ===
+    dpop_enabled: bool = Field(
+        default=False,
+        description=(
+            "Enable DPoP-lite (RFC 9449): bind access tokens to a client-held "
+            "non-extractable key so a stolen token is useless without the key. "
+            "Default OFF — opt-in per project. When ON, the mint endpoints embed "
+            "`cnf.jkt` from the login proof and the auth class requires a valid "
+            "DPoP proof on every request whose token carries `cnf.jkt`. "
+            "Tokens without `cnf` (CLI / server-to-server) keep working as plain "
+            "Bearer, so mixed clients are fine."
+        )
+    )
+
     # === Advanced Settings ===
     leeway: int = Field(
         default=0,
@@ -130,52 +160,17 @@ class JWTConfig(BaseModel):
             raise ValueError("At least one auth header type must be specified")
         return v
 
-    def configure_for_environment(self, environment: str, debug: bool = False) -> "JWTConfig":
+    def get_effective_access_token_lifetime(self) -> timedelta:
         """
-        Configure JWT settings based on environment.
-        
-        Args:
-            environment: Environment name (development, production, etc.)
-            debug: Debug mode flag
-            
-        Returns:
-            New JWTConfig instance with environment-specific settings
-        """
-        config_data = self.model_dump()
+        Effective access-token lifetime as a timedelta.
 
-        if environment == "development" or debug:
-            # Development: shorter tokens for security
-            config_data.update({
-                "access_token_lifetime_hours": 1,
-                "refresh_token_lifetime_days": 7,
-                "leeway": 30,  # More lenient for development
-            })
-        elif environment == "production":
-            # Production: longer tokens for user experience
-            config_data.update({
-                "access_token_lifetime_hours": 24,
-                "refresh_token_lifetime_days": 30,
-                "leeway": 0,  # Strict for production
-            })
-        elif environment == "testing":
-            # Testing: very short tokens
-            config_data.update({
-                "access_token_lifetime_hours": 1,
-                "refresh_token_lifetime_days": 1,
-                "rotate_refresh_tokens": False,  # Simpler for tests
-                "blacklist_after_rotation": False,
-            })
-
-        return self.__class__(**config_data)
-
-    def get_effective_access_token_hours(self) -> int:
+        `access_token_lifetime_minutes` is the single knob; None = the 1-year
+        maximum. This is the source of truth used by `to_django_settings`.
         """
-        Get effective access token lifetime in hours.
-        
-        Returns:
-            Access token lifetime (8760 hours if None = maximum)
-        """
-        return self.access_token_lifetime_hours if self.access_token_lifetime_hours is not None else 8760
+        minutes = self.access_token_lifetime_minutes
+        if minutes is None:
+            minutes = 525600  # 1 year
+        return timedelta(minutes=minutes)
 
     def get_effective_refresh_token_days(self) -> int:
         """
@@ -199,7 +194,7 @@ class JWTConfig(BaseModel):
         return {
             "SIMPLE_JWT": {
                 # Token lifetimes
-                "ACCESS_TOKEN_LIFETIME": timedelta(hours=self.get_effective_access_token_hours()),
+                "ACCESS_TOKEN_LIFETIME": self.get_effective_access_token_lifetime(),
                 "REFRESH_TOKEN_LIFETIME": timedelta(days=self.get_effective_refresh_token_days()),
 
                 # Token rotation
@@ -233,36 +228,13 @@ class JWTConfig(BaseModel):
                 "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
                 "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
                 "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
-                "SLIDING_TOKEN_LIFETIME": timedelta(hours=self.get_effective_access_token_hours()),
+                "SLIDING_TOKEN_LIFETIME": self.get_effective_access_token_lifetime(),
                 "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=self.get_effective_refresh_token_days()),
-            }
+            },
+            # Top-level flag the DPoP auth layer reads (SIMPLE_JWT is owned by
+            # simplejwt and ignores unknown keys, so DPoP config lives outside it).
+            "DJANGO_CFG_DPOP_ENABLED": self.dpop_enabled,
         }
-
-    def get_token_info(self) -> Dict[str, str]:
-        """
-        Get human-readable token lifetime information.
-        
-        Returns:
-            Dictionary with token lifetime descriptions
-        """
-        access_hours = self.get_effective_access_token_hours()
-        refresh_days = self.get_effective_refresh_token_days()
-
-        access_desc = f"{access_hours} hour{'s' if access_hours != 1 else ''}"
-        if self.access_token_lifetime_hours is None:
-            access_desc += " (maximum)"
-
-        refresh_desc = f"{refresh_days} day{'s' if refresh_days != 1 else ''}"
-        if self.refresh_token_lifetime_days is None:
-            refresh_desc += " (maximum)"
-
-        return {
-            "access_token": access_desc,
-            "refresh_token": refresh_desc,
-            "algorithm": self.algorithm,
-            "rotation": "enabled" if self.rotate_refresh_tokens else "disabled",
-        }
-
 
 # Export the main class
 __all__ = [

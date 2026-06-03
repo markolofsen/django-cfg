@@ -116,6 +116,17 @@ class VerifyViewSet(viewsets.GenericViewSet):
         user = session.user
         refresh = RefreshToken.for_user(user)
 
+        # DPoP (RFC 9449): bind tokens to the client key if a login proof is
+        # present. This is a token-mint point just like OTP verify, so it must
+        # bind too — otherwise 2FA users would get unbound tokens and DPoP
+        # enforcement would be silently skipped for them.
+        from django_cfg.middleware.dpop import (
+            bind_refresh_token_to_request,
+            derive_access_with_cnf,
+        )
+        bind_refresh_token_to_request(refresh, request)
+        access = derive_access_with_cnf(refresh)
+
         # Import UserSerializer from accounts app
         try:
             from django_cfg.apps.system.accounts.serializers import UserSerializer
@@ -141,7 +152,7 @@ class VerifyViewSet(viewsets.GenericViewSet):
         return Response(
             {
                 "message": "2FA verification successful",
-                "access_token": str(refresh.access_token),
+                "access_token": str(access),
                 "refresh_token": str(refresh),
                 "user": user_data,
             },
@@ -198,6 +209,15 @@ class VerifyViewSet(viewsets.GenericViewSet):
         user = session.user
         refresh = RefreshToken.for_user(user)
 
+        # DPoP (RFC 9449): bind tokens to the client key when a login proof is
+        # present (same as the TOTP and OTP mint points).
+        from django_cfg.middleware.dpop import (
+            bind_refresh_token_to_request,
+            derive_access_with_cnf,
+        )
+        bind_refresh_token_to_request(refresh, request)
+        access = derive_access_with_cnf(refresh)
+
         # Get remaining backup codes
         remaining_codes = BackupCodeService.get_remaining_count(user)
         warning = None
@@ -230,7 +250,7 @@ class VerifyViewSet(viewsets.GenericViewSet):
 
         response_data = {
             "message": "Backup code accepted",
-            "access_token": str(refresh.access_token),
+            "access_token": str(access),
             "refresh_token": str(refresh),
             "user": user_data,
             "remaining_backup_codes": remaining_codes,
