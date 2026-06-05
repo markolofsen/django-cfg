@@ -34,40 +34,36 @@ The `project` prop flows through to both `MonitorProvider` and the debug panel t
 ## Minimum Setup
 
 ```tsx
-// app/layout.tsx
-import { AppLayout } from '@djangocfg/layouts'
+// app/[locale]/layout.tsx — providers root (mounted once)
+import { BaseApp } from '@djangocfg/layouts'
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <AppLayout
-          layouts={{
-            public: { component: PublicLayout, enabledPath: ['/', '/about'] },
-            private: { component: DashboardLayout, enabledPath: '/dashboard' },
-          }}
-          baseApp={{
-            project: 'my-app',
-            auth: { apiUrl: process.env.NEXT_PUBLIC_API_URL },
-            theme: { defaultTheme: 'dark', storageKey: 'theme' },
-          }}
+        <BaseApp
+          project="my-app"
+          auth={{ apiUrl: process.env.NEXT_PUBLIC_API_URL }}
+          theme={{ defaultTheme: 'dark', storageKey: 'theme' }}
         >
           {children}
-        </AppLayout>
+        </BaseApp>
       </body>
     </html>
   )
 }
 ```
 
-That's it. Monitor is live — JS errors, unhandled rejections, and console errors flow to D1.
+That's it. Monitor is live — JS errors, unhandled rejections, and console errors
+flow to D1. Per-section shells (`PrivateLayout` / `PublicLayout`) are mounted in
+native route-group `layout.tsx` files, not here.
 
 ---
 
 ## Overriding Monitor Defaults
 
 ```tsx
-<AppLayout
+<BaseApp
   project="my-app"
   monitor={{
     baseUrl: 'https://api.example.com',   // if backend is on a different origin
@@ -95,29 +91,24 @@ const myTabs: CustomDebugTab[] = [
   { id: 'store', label: 'Stores', icon: Database, panel: StoreTab },
 ]
 
-<AppLayout debug={{ panel: { tabs: myTabs } }}>
+<BaseApp debug={{ panel: { tabs: myTabs } }}>
 ```
 
 To disable:
 
 ```tsx
-<AppLayout debug={{ enabled: false }}>
+<BaseApp debug={{ enabled: false }}>
 ```
 
 ---
 
-## `noLayoutPaths` — Fullscreen Pages
+## Fullscreen Pages
 
-Providers (auth, monitor, theme) remain active. Only the layout wrapper is skipped:
-
-```tsx
-<AppLayout
-  layouts={{
-    noLayoutPaths: ['/private/terminal', '/embed']
-    // auth pages (/auth/*) are always fullscreen — no extra config
-  }}
->
-```
+Providers (auth, monitor, theme) live in the root `BaseApp`, so they stay active
+on every route. To render a page **without** a shell (fullscreen terminal,
+embed, print, auth), simply place it in a route segment that has no
+`PrivateLayout` / `PublicLayout` wrapper — there's no `noLayoutPaths` config, the
+absence of a shell *is* the fullscreen.
 
 ---
 

@@ -39,33 +39,33 @@ Optional peer dependencies:
 If your app uses `@djangocfg/layouts`, you get monitor **for free** — no `MonitorProvider` needed.
 
 ```tsx
-// app/layout.tsx
-import { AppLayout } from '@djangocfg/layouts'
+// app/[locale]/layout.tsx
+import { BaseApp } from '@djangocfg/layouts'
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <AppLayout
+        <BaseApp
           project="my-app"
           auth={{ apiUrl: process.env.NEXT_PUBLIC_API_URL }}
           theme={{ defaultTheme: 'dark' }}
           // monitor is auto-enabled via `project` prop
         >
           {children}
-        </AppLayout>
+        </BaseApp>
       </body>
     </html>
   )
 }
 ```
 
-`AppLayout` (and `BaseApp`) include `MonitorProvider` automatically. The `project` prop is passed through to monitor as-is.
+`BaseApp` includes `MonitorProvider` automatically. The `project` prop is passed through to monitor as-is.
 
 To override monitor defaults:
 
 ```tsx
-<AppLayout
+<BaseApp
   project="my-app"
   monitor={{ baseUrl: 'https://api.example.com', captureConsole: false }}
 >

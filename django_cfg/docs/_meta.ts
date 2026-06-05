@@ -69,6 +69,19 @@ export default {
     href: 'https://ui.djangocfg.com',
   },
 
+  // ── Navbar: Contact (standalone marketing-style page — no TOC/sidebar) ──
+  contact: {
+    type: 'page',
+    title: 'Contact',
+    theme: {
+      toc: false,
+      sidebar: false,
+      breadcrumb: false,
+      pagination: false,
+      timestamp: false,
+    },
+  },
+
   // ── Navbar: Business ──
   business: {
     type: 'page',

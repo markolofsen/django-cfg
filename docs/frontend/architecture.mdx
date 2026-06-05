@@ -50,13 +50,14 @@ app/
 │   ├── private.ts               # Auth-required routes
 │   └── admin.ts                 # Admin routes
 │
-├── _layouts/                    # Layout wrappers
-│   ├── AppLayout.tsx            # Root (uses BaseAppLayout from @djangocfg/layouts)
-│   ├── PublicLayout.tsx
-│   ├── PrivateLayout.tsx
-│   ├── AdminLayout.tsx
-│   ├── DashboardLayout/
+├── _layouts/                    # Thin config wrappers over @djangocfg/layouts
+│   ├── AppLayout.tsx            # Providers root — wraps BaseApp (mounted once)
+│   ├── PublicLayout.tsx         # Public shell config (navbar/footer)
+│   ├── PrivateLayout.tsx        # Private shell config (sidebar/header)
 │   └── <Feature>Layout/         # Complex layouts with sub-providers
+│   # NOTE: shells are mounted by native route-group layout.tsx files under
+│   #       (pages)/<type>/ — there's no runtime layout-router. Admin = the
+│   #       private shell with an admin sidebar config.
 │
 ├── _components/                 # Feature UI components (colocated by domain)
 │   ├── <domain>/

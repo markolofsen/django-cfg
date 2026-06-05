@@ -105,6 +105,9 @@ export default async function LocaleLayout({ children, params }) {
     <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'} suppressHydrationWarning>
       <body>
         <I18nProvider locale={locale} messages={messages}>
+          {/* Your app's thin provider wrapper around `BaseApp` from
+              @djangocfg/layouts — passes i18n via useLocaleSwitcher().
+              See apps/demo/app/_layouts/AppLayout.tsx. */}
           <AppLayout>{children}</AppLayout>
         </I18nProvider>
       </body>

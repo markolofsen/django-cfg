@@ -36,30 +36,25 @@ In Next.js apps always import from `@djangocfg/ui-nextjs`, not `@djangocfg/ui-co
 | Data Display | 9 | Table, Accordion, Calendar, DatePicker, SSRPagination |
 | Interactive | 3 | Command (cmdk), Toggle, ToggleGroup |
 | Charts | 7 | ChartContainer + recharts (Area, Bar, Line, Pie, Donut, Radial) |
-| Animations | 8 | AnimatedBackground (aurora, mesh-gradient, floating-orbs, etc.) |
 | Hooks | 15 | useDebounce, useHotkey, useLocalStorage, useMediaQuery, useIsMobile |
-| Blocks | 8 | Hero, CTASection, FeatureSection, StatsSection (marketing) |
-| Layouts | 11 | AppLayout, AdminLayout, AuthDialog, AIChatWidget, PwaProvider |
+| Layouts | — | BaseApp (providers) + PrivateLayout / PublicLayout / AuthLayout (shells) |
 
 ## Import Patterns
 
 ```typescript
-// Components
-import { Button, Card, Badge, Dialog } from '@djangocfg/ui-nextjs';
-import { Sidebar, SidebarProvider, useSidebar } from '@djangocfg/ui-nextjs';
+// Components — ui-core is framework-agnostic, import directly
+import { Button, Card, Badge, Dialog } from '@djangocfg/ui-core/components';
+import { Sidebar, SidebarProvider, useSidebar } from '@djangocfg/ui-core/components';
 
 // Hooks
-import { useDebounce, useHotkey, useLocalStorage } from '@djangocfg/ui-nextjs';
-import { useQueryParams } from '@djangocfg/ui-nextjs/hooks';
+import { useDebounce, useHotkey, useLocalStorage } from '@djangocfg/ui-core/hooks';
+import { useQueryParams } from '@djangocfg/ui-core/hooks';
 
-// Blocks (marketing)
-import { Hero, CTASection } from '@djangocfg/ui-nextjs/blocks';
+// Next.js router adapter (Next apps only)
+import { NextRouterAdapter } from '@djangocfg/ui-core/adapters/nextjs';
 
-// Animations
-import { AnimatedBackground } from '@djangocfg/ui-nextjs/animations';
-
-// Layouts
-import { AppLayout, AdminLayout, AuthDialog } from '@djangocfg/layouts';
+// Layouts — BaseApp = providers (mount once); shells per route-group
+import { BaseApp, PrivateLayout, PublicLayout, AuthDialog } from '@djangocfg/layouts';
 import { AIChatWidget, AIChatProvider } from '@djangocfg/layouts/snippets';
 
 // Heavy tools (lazy-loaded)
@@ -123,8 +118,8 @@ Full sidebar with 17 exports for building navigation:
 
 ## Rules
 
-1. Import from `@djangocfg/ui-nextjs` in Next.js apps — never from `@djangocfg/ui-core` directly
+1. Import directly from `@djangocfg/ui-core` (framework-agnostic); in Next.js add the `@djangocfg/ui-core/adapters/nextjs` router adapter
 2. Use `@djangocfg/ui-tools` for heavy components (maps, code, mermaid) — they are lazy-loaded
-3. Use `@djangocfg/layouts` for app-level layouts (AppLayout, AdminLayout, AuthDialog)
+3. Use `@djangocfg/layouts` for app-level chrome: `BaseApp` (providers, once at root) + `PrivateLayout` / `PublicLayout` (shells, per route-group)
 4. Use `useDRFPagination` to convert DRF `count` responses into page state — do not compute pages manually
 5. Wrap sidebar navigation with `SidebarProvider` — use `useSidebar()` for programmatic open/close
