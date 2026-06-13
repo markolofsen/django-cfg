@@ -113,11 +113,16 @@ class ProviderManager:
                     f"falling back to auto-detection"
                 )
 
-        # Auto-detection: prefer OpenAI for better compatibility
-        if "openai" in self.clients:
-            return "openai"
-        elif "openrouter" in self.clients:
+        # Auto-detection: prefer OpenRouter — wider model catalog
+        # (Anthropic, Google, Mistral, open models, image-edit SKUs)
+        # and the project-canonical model IDs are OpenRouter-style.
+        # Callers that need OpenAI specifically pass
+        # ``preferred_provider="openai"`` or call
+        # ``LLMClient.activate_provider("openai")``.
+        if "openrouter" in self.clients:
             return "openrouter"
+        elif "openai" in self.clients:
+            return "openai"
         else:
             raise ValueError(
                 "At least one API key (openrouter or openai) must be provided"

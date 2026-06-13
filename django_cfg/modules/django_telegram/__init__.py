@@ -23,6 +23,7 @@ from .formatters import (
     EMOJI_MAP,
     format_message_with_context,
     format_to_yaml,
+    markdown_to_telegram_html,
 )
 from .queue import (
     MessagePriority,
@@ -62,6 +63,7 @@ __all__ = [
     "EMOJI_MAP",
     "format_to_yaml",
     "format_message_with_context",
+    "markdown_to_telegram_html",
     # Shortcuts
     "TelegramContext",
     "TelegramLinks",

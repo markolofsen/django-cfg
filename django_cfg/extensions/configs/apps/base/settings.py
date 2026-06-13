@@ -108,6 +108,35 @@ class BaseExtensionSettings(BaseModel):
         description="Middleware classes to add to MIDDLEWARE (full paths)"
     )
 
+    # Additional INSTALLED_APPS entries owned by this extension.
+    # Most extensions are a single Django app; multi-app extensions (e.g.
+    # a CRM with sub-apps for clients / conversations / chat / ...) list
+    # their extra app paths here so the loader appends them after the
+    # extension's own entry. Each item is a dotted Python path or an
+    # ``"<path>.AppConfig"`` reference, exactly the form Django accepts
+    # in INSTALLED_APPS.
+    extra_installed_apps: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Extra Django apps owned by this extension that must be added "
+            "to INSTALLED_APPS after the extension's own entry. Used by "
+            "multi-app extensions (CRM-style) to declare their sub-apps "
+            "without each consumer project copy-pasting the list."
+        ),
+    )
+
+    # OpenAPI groups exposed by this extension.
+    # When set, the framework appends these groups to the project's
+    # openapi_client.groups list so the extension's endpoints get their
+    # own client bundle without manual wiring in api/config.py.
+    openapi_groups: list[Any] = Field(
+        default_factory=list,
+        description=(
+            "OpenAPI groups (list[OpenAPIGroupConfig]) exposed by this "
+            "extension. Auto-merged into the project's openapi_client.groups."
+        ),
+    )
+
     class Config:
         """Pydantic config."""
         extra = "forbid"
@@ -128,6 +157,7 @@ class BaseExtensionSettings(BaseModel):
             has_migrations=self.has_migrations,
             requires=self.requires,
             pip_requires=self.pip_requires,
+            extra_installed_apps=list(self.extra_installed_apps),
         )
 
     def get_rq_schedules(self) -> list[Any]:

@@ -194,12 +194,21 @@ def build_textchoices_index() -> dict[frozenset, list[str]]:
         if not hasattr(module, "__path__"):
             continue
         for sub in pkgutil.walk_packages(module.__path__, prefix=module.__name__ + "."):
+            parts = sub.name.split(".")
             # Skip migrations — they pin frozen choices that drift over time.
-            if "migrations" in sub.name.split("."):
+            if "migrations" in parts:
+                continue
+            # Skip test modules — they never define production TextChoices, and
+            # may raise control-flow exceptions at import time (e.g.
+            # pytest.importorskip → Skipped, a BaseException, not Exception).
+            if "tests" in parts or any(p.startswith("test_") for p in parts):
                 continue
             try:
                 submod = importlib.import_module(sub.name)
-            except Exception:
+            # BaseException, not Exception: pytest.importorskip raises Skipped
+            # (an OutcomeException → BaseException) at module scope, which would
+            # otherwise abort the entire schema build.
+            except BaseException:
                 continue
             for attr_name in dir(submod):
                 try:

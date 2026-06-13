@@ -48,6 +48,12 @@ class ExtensionManifest(BaseModel):
     # Hooks
     on_ready: Optional[str] = Field(default=None)
 
+    # Multi-app extensions — extra INSTALLED_APPS entries this extension
+    # owns. Loader appends them after the extension's own entry so the
+    # consumer project doesn't have to copy-paste sub-apps. Used by
+    # CRM-style extensions with sub-apps (clients / conversations / chat / ...).
+    extra_installed_apps: List[str] = Field(default_factory=list)
+
     def get_django_app_label(self) -> str:
         """Get the Django app label, defaulting to extension name."""
         return self.django_app_label or self.name

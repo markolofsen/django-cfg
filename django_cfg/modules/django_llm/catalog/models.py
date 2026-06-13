@@ -5,8 +5,8 @@ Seeded from three knowledge sources that previously lived as drifting
 prose across two apps:
 
 - the normalizer strict-json_schema benchmark (28 real CJK listings);
-- carapis CRM tool-use production experience
-  (``apps/crm/@docs/insights/tier-based-llm-routing.md`` and
+- production tool-use experience from a host CRM (insights captured
+  in ``@docs/insights/tier-based-llm-routing.md`` and
   ``tool-use-hallucinations.md``);
 - the external research in ``@docs/research/``.
 

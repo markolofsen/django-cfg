@@ -223,36 +223,56 @@ class LLMRouter:
                 except LLMTruncationError as exc:
                     # Output cut off — bump max_tokens once and retry (do NOT
                     # repair a truncation; the data is genuinely missing).
-                    if resp is not None:
-                        alert_wasted_call(
-                            model, resp.tokens_used, resp.cost_usd or 0.0, str(exc)
-                        )
+                    # Alert only on terminal failure (recovery exhausted);
+                    # the first cut-off plus successful retry is logged but
+                    # does not Telegram-spam — the call is "wasted" in cost
+                    # but the listing still gets normalized.
                     if did_bump:
+                        if resp is not None:
+                            alert_wasted_call(
+                                model, resp.tokens_used, resp.cost_usd or 0.0, str(exc)
+                            )
                         logger.warning(
                             "LLMRouter.parse: model=%s truncated again after bump", model
                         )
                         raise
                     did_bump = True
                     attempt_max_tokens = min(attempt_max_tokens * 2, 32768)
-                    logger.info(
-                        "LLMRouter.parse: model=%s truncated; bumping max_tokens → %d",
-                        model, attempt_max_tokens,
-                    )
+                    if resp is not None:
+                        logger.warning(
+                            "LLMRouter.parse: model=%s truncated (billed $%.6f, tokens=%d); "
+                            "bumping max_tokens → %d and retrying",
+                            model, resp.cost_usd or 0.0, resp.tokens_used, attempt_max_tokens,
+                        )
+                    else:
+                        logger.info(
+                            "LLMRouter.parse: model=%s truncated; bumping max_tokens → %d",
+                            model, attempt_max_tokens,
+                        )
                     continue
 
                 except LLMValidationError as exc:
                     # Parsed but wrong shape — one bounded re-ask with the
                     # validation error injected so the model self-corrects.
-                    if resp is not None:
-                        alert_wasted_call(
-                            model, resp.tokens_used, resp.cost_usd or 0.0, str(exc)
-                        )
+                    # Alert only on terminal failure (re-ask exhausted); the
+                    # first invalid response plus successful re-ask is logged
+                    # but does not Telegram-spam.
                     if did_reask:
+                        if resp is not None:
+                            alert_wasted_call(
+                                model, resp.tokens_used, resp.cost_usd or 0.0, str(exc)
+                            )
                         logger.warning(
                             "LLMRouter.parse: model=%s still invalid after re-ask", model
                         )
                         raise
                     did_reask = True
+                    if resp is not None:
+                        logger.warning(
+                            "LLMRouter.parse: model=%s invalid (billed $%.6f, tokens=%d); "
+                            "re-asking with error injected",
+                            model, resp.cost_usd or 0.0, resp.tokens_used,
+                        )
                     attempt_messages = [
                         *attempt_messages,
                         {"role": "assistant", "content": resp.content if resp else ""},
@@ -265,10 +285,10 @@ class LLMRouter:
                             ),
                         },
                     ]
-                    logger.info("LLMRouter.parse: model=%s re-asking after validation error", model)
                     continue
 
                 except Exception as exc:
+                    # No recovery for these — always terminal, always alert.
                     logger.warning("LLMRouter.parse: model=%s failed: %s", model, exc)
                     if resp is not None:
                         alert_wasted_call(

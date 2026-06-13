@@ -5,6 +5,7 @@ Emoji mappings and message formatting utilities.
 """
 
 import html as _html_module
+import re
 from typing import Any, Dict
 
 import yaml
@@ -92,9 +93,92 @@ def format_message_with_context(
     return text
 
 
+_MD_FENCE_RE = re.compile(r"```([\w+\-.]*)\n?(.*?)```", re.DOTALL)
+_MD_INLINE_CODE_RE = re.compile(r"`([^`\n]+?)`")
+_MD_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+_MD_BOLD_RE = re.compile(r"(?<!\\)\*\*(?=\S)(.+?)(?<=\S)\*\*", re.DOTALL)
+_MD_BOLD_UNDER_RE = re.compile(r"(?<!\\)__(?=\S)(.+?)(?<=\S)__", re.DOTALL)
+_MD_ITALIC_RE = re.compile(r"(?<![\*\\\w])\*(?=\S)([^\*\n]+?)(?<=\S)\*(?!\*)")
+_MD_ITALIC_UNDER_RE = re.compile(r"(?<![_\\\w])_(?=\S)([^_\n]+?)(?<=\S)_(?!_)")
+_MD_STRIKE_RE = re.compile(r"~~(?=\S)(.+?)(?<=\S)~~", re.DOTALL)
+_MD_HEADING_RE = re.compile(r"^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$", re.MULTILINE)
+_MD_BULLET_RE = re.compile(r"^[ \t]*[-*+][ \t]+(.+)$", re.MULTILINE)
+_MD_BLOCKQUOTE_RE = re.compile(r"(?:^&gt;[ \t]?.*(?:\n|$))+", re.MULTILINE)
+_MD_BACKSLASH_ESC_RE = re.compile(r"\\([\\`*_{}\[\]()#+\-.!~>])")
+_MD_PLACEHOLDER_RE = re.compile(r"\x00P(\d+)\x00")
+
+_MD_SAFE_SCHEMES = ("http://", "https://", "tg://", "mailto:")
+
+
+def markdown_to_telegram_html(text: str) -> str:
+    """Convert Markdown to Telegram-safe HTML (``parse_mode=HTML``).
+
+    Use this on AI/LLM-generated message bodies before passing to
+    ``DjangoTelegram.send_message(parse_mode=HTML)``. Do NOT call this on
+    already-formatted HTML built by ``format_message_with_context`` or the
+    fail-silent shortcuts — they emit hand-crafted HTML that this function
+    would re-escape.
+
+    Allowed Telegram tags: b, strong, i, em, u, s, code, pre, a, blockquote,
+    tg-spoiler. Everything else is escaped.
+    """
+    if not text:
+        return ""
+
+    placeholders: list[str] = []
+
+    def _stash(html: str) -> str:
+        placeholders.append(html)
+        return f"\x00P{len(placeholders) - 1}\x00"
+
+    def _fence(m: "re.Match[str]") -> str:
+        body = m.group(2).rstrip("\n")
+        return _stash(f"<pre><code>{_html_module.escape(body, quote=False)}</code></pre>")
+
+    text = _MD_FENCE_RE.sub(_fence, text)
+
+    def _inline(m: "re.Match[str]") -> str:
+        return _stash(f"<code>{_html_module.escape(m.group(1), quote=False)}</code>")
+
+    text = _MD_INLINE_CODE_RE.sub(_inline, text)
+
+    def _link(m: "re.Match[str]") -> str:
+        label, url = m.group(1), m.group(2)
+        if not url.lower().startswith(_MD_SAFE_SCHEMES):
+            return _html_module.escape(m.group(0), quote=False)
+        href = _html_module.escape(url, quote=True)
+        return _stash(f'<a href="{href}">{_html_module.escape(label, quote=False)}</a>')
+
+    text = _MD_LINK_RE.sub(_link, text)
+
+    text = _html_module.escape(text, quote=False)
+
+    text = _MD_BOLD_RE.sub(lambda m: f"{_stash('<b>')}{m.group(1)}{_stash('</b>')}", text)
+    text = _MD_BOLD_UNDER_RE.sub(lambda m: f"{_stash('<b>')}{m.group(1)}{_stash('</b>')}", text)
+    text = _MD_STRIKE_RE.sub(lambda m: f"{_stash('<s>')}{m.group(1)}{_stash('</s>')}", text)
+    text = _MD_ITALIC_RE.sub(lambda m: f"{_stash('<i>')}{m.group(1)}{_stash('</i>')}", text)
+    text = _MD_ITALIC_UNDER_RE.sub(lambda m: f"{_stash('<i>')}{m.group(1)}{_stash('</i>')}", text)
+
+    text = _MD_HEADING_RE.sub(lambda m: _stash(f"<b>{m.group(1).strip()}</b>"), text)
+    text = _MD_BULLET_RE.sub(lambda m: f"• {m.group(1)}", text)
+
+    def _quote(m: "re.Match[str]") -> str:
+        lines = [
+            re.sub(r"^&gt;[ \t]?", "", line)
+            for line in m.group(0).rstrip("\n").splitlines()
+        ]
+        return _stash(f"<blockquote>{chr(10).join(lines)}</blockquote>") + "\n"
+
+    text = _MD_BLOCKQUOTE_RE.sub(_quote, text)
+    text = _MD_BACKSLASH_ESC_RE.sub(r"\1", text)
+    text = _MD_PLACEHOLDER_RE.sub(lambda m: placeholders[int(m.group(1))], text)
+    return text.strip("\n")
+
+
 __all__ = [
     "EMOJI_MAP",
     "escape_html",
     "format_to_yaml",
     "format_message_with_context",
+    "markdown_to_telegram_html",
 ]

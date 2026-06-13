@@ -12,7 +12,8 @@ Money is ``Decimal`` everywhere; never float arithmetic.
 
 ``alert_wasted_call`` is the cost-leak alarm: a billed-but-unusable
 response fires a throttled Telegram warning so a systemic failure surfaces
-where a human looks — generalized from carapis' ``_alert_wasted_llm_call``.
+where a human looks — generalized from an earlier host-app
+``_alert_wasted_llm_call`` shipped to production.
 Host coupling (Telegram) goes only through the ``_integration.py`` seam,
 and every telegram / throttle failure is swallowed: observability must
 never break a real request.

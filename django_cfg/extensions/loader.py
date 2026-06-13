@@ -89,7 +89,22 @@ class ExtensionLoader:
             # Build app path
             app_path = f"extensions.apps.{ext.name}"
             apps.append(app_path)
-            logger.info(f"Loaded extension: {ext.name} v{ext.manifest.version if ext.manifest else '?'}")
+
+            # Multi-app extensions (e.g. CRM with sub-apps for clients /
+            # conversations / chat / ...) declare extra INSTALLED_APPS
+            # entries on their BaseExtensionSettings — append them so
+            # the consumer project doesn't have to copy-paste sub-apps.
+            extras: list[str] = []
+            if ext.manifest is not None:
+                extras = list(getattr(ext.manifest, "extra_installed_apps", []) or [])
+            if extras:
+                apps.extend(extras)
+                logger.info(
+                    f"Loaded extension: {ext.name} v{ext.manifest.version if ext.manifest else '?'} "
+                    f"(+ {len(extras)} extra app{'s' if len(extras) != 1 else ''})"
+                )
+            else:
+                logger.info(f"Loaded extension: {ext.name} v{ext.manifest.version if ext.manifest else '?'}")
 
         self._installed_apps_cache = apps
         return apps

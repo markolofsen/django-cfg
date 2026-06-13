@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .._integration import BaseCfgModule, get_api_keys
-from ..embeddings import MockEmbedder, OpenAIEmbedder
+from ..embeddings import MockEmbedder, OpenAIEmbedder, OpenRouterEmbedder
 from ..structured.extractor import JSONExtractor
 from ..core.types import (
     ChatCompletionResponse,
@@ -109,6 +109,7 @@ class LLMClient(BaseCfgModule):
 
         # Initialize embedding strategies
         self.openai_embedder = OpenAIEmbedder(models_cache=self.models_cache)
+        self.openrouter_embedder = OpenRouterEmbedder(models_cache=self.models_cache)
         self.mock_embedder = MockEmbedder(models_cache=self.models_cache)
 
         # Initialize request handlers
@@ -126,6 +127,7 @@ class LLMClient(BaseCfgModule):
             cache_manager=self.cache_manager,
             stats_manager=self.stats_manager,
             openai_embedder=self.openai_embedder,
+            openrouter_embedder=self.openrouter_embedder,
             mock_embedder=self.mock_embedder
         )
 
@@ -136,6 +138,35 @@ class LLMClient(BaseCfgModule):
             f"LLMClient initialized with primary provider: "
             f"{self.provider_manager.primary_provider}"
         )
+
+    def activate_provider(self, provider: "LLMProviderType") -> "LLMClient":
+        """Switch the active provider on an existing client.
+
+        Useful when one orchestrator needs to fan calls across both
+        providers (e.g. embeddings on OpenAI, chat on OpenRouter)
+        without instantiating two clients. Returns ``self`` so the
+        call chains: ``LLMClient().activate_provider("openai")``.
+
+        Raises ``ValueError`` if the requested provider has no key
+        configured.
+        """
+        if isinstance(provider, LLMProvider):
+            provider = provider.value
+        provider = str(provider).strip().lower()
+        if provider not in self.provider_manager.clients:
+            available = sorted(self.provider_manager.clients.keys())
+            raise ValueError(
+                f"Provider {provider!r} not available — configured: {available}"
+            )
+        self.provider_manager.preferred_provider = provider
+        self.provider_manager.primary_provider = (
+            self.provider_manager._determine_primary_provider()
+        )
+        logger.info(
+            "LLMClient switched primary provider to %s",
+            self.provider_manager.primary_provider,
+        )
+        return self
 
     # Token counting (delegate to tokenizer)
     def count_tokens(self, text: str, model: str) -> int:
@@ -188,7 +219,9 @@ class LLMClient(BaseCfgModule):
     def generate_embedding(
         self,
         text: str,
-        model: str = "text-embedding-ada-002"
+        model: str = "text-embedding-ada-002",
+        *,
+        dimensions: int | None = None,
     ) -> EmbeddingResponse:
         """
         Generate embedding for text.
@@ -196,11 +229,15 @@ class LLMClient(BaseCfgModule):
         Args:
             text: Text to generate embedding for
             model: Embedding model to use
+            dimensions: Optional output dimension (v3 models truncate
+                natively — e.g. 1536 for text-embedding-3-large).
 
         Returns:
-            Dictionary with embedding data and metadata
+            EmbeddingResponse with embedding vector and metadata
         """
-        return self.embedding_handler.generate_embedding(text=text, model=model)
+        return self.embedding_handler.generate_embedding(
+            text=text, model=model, dimensions=dimensions,
+        )
 
     # Cost estimation
     def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:

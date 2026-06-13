@@ -35,8 +35,12 @@ class ProviderSelector:
         Returns:
             Provider name for the task
         """
-        # For embeddings, always prefer OpenAI if available
-        # OpenRouter doesn't have proper embedding support
+        # For embeddings, prefer a direct OpenAI key when present (lowest
+        # latency, no routing hop). Otherwise OpenRouter serves embeddings
+        # via its OpenAI-compatible /embeddings endpoint — a REAL call, not
+        # a mock. The project's canonical embedding models
+        # (openai/text-embedding-3-*) are OpenRouter slugs and both the
+        # OpenAI and OpenRouter embedders handle the prefix correctly.
         if task == "embedding" and self.provider_manager.has_provider("openai"):
             logger.debug("Selecting OpenAI for embedding task")
             return "openai"
@@ -48,7 +52,12 @@ class ProviderSelector:
 
     def should_use_mock_embedding(self, provider: str) -> bool:
         """
-        Determine if mock embedding should be used for provider.
+        Whether to fall back to the MD5 mock embedder.
+
+        Mock is now a LAST RESORT only — both OpenAI and OpenRouter have
+        real embedding paths (OpenRouter via its OpenAI-compatible
+        endpoint). Returns True only when the resolved provider has no
+        usable client (e.g. no API key configured at all).
 
         Args:
             provider: Provider name
@@ -56,5 +65,4 @@ class ProviderSelector:
         Returns:
             True if mock embedding should be used
         """
-        # OpenRouter doesn't support real embeddings
-        return provider == "openrouter"
+        return not self.provider_manager.has_provider(provider)

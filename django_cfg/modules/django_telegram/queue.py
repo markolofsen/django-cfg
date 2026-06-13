@@ -5,6 +5,7 @@ Singleton priority queue for rate-limited Telegram message delivery.
 """
 
 import itertools
+import os
 import queue
 import threading
 import time
@@ -63,13 +64,14 @@ class TelegramMessageQueue:
         self._initialized = True
         self._queue = queue.PriorityQueue()  # Priority queue for message ordering
         self._counter = itertools.count()  # Tie-breaker for same-priority items
+        self._owner_pid = os.getpid()
+        self._dropped_count = 0  # Track dropped messages
+        self._last_cleanup_warning = 0  # Timestamp of last warning
         self._worker = threading.Thread(
             target=self._process_queue,
             daemon=True,
             name="TelegramQueueWorker",
         )
-        self._dropped_count = 0  # Track dropped messages
-        self._last_cleanup_warning = 0  # Timestamp of last warning
         self._worker.start()
         logger.info(
             f"Telegram priority queue started: "
@@ -111,6 +113,19 @@ class TelegramMessageQueue:
             *args: Positional arguments for func
             **kwargs: Keyword arguments for func
         """
+        # We're in a forked child (RQ job runner, multiprocessing, …). The
+        # singleton's worker thread runs only in the parent — fork() copies
+        # just the calling thread, so a child enqueue would be dropped when
+        # the child exits. Send synchronously instead; one extra blocking
+        # HTTP call inside a worker job is the right trade for guaranteed
+        # delivery.
+        if os.getpid() != self._owner_pid:
+            try:
+                func(*args, **kwargs)
+            except Exception as e:
+                logger.error(f"Telegram sync send error in child pid={os.getpid()}: {e}")
+            return
+
         current_size = self._queue.qsize()
 
         # Check if we need to drop this message
