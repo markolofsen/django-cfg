@@ -15,6 +15,23 @@ from ..django_logging import get_logger
 logger = get_logger("django_cfg.telegram.queue")
 
 
+# When a parent process (an RQ worker, gunicorn pre-fork master, …) forks a
+# child, on Linux only the calling thread is copied. The singleton's daemon
+# worker thread runs only in the parent, so any enqueue() in the child sits
+# in the child's PriorityQueue with no consumer and dies when the child
+# exits. Register at module import so the flag is set regardless of whether
+# the singleton has been instantiated yet.
+_in_forked_child = False
+
+
+def _mark_forked_child() -> None:
+    global _in_forked_child
+    _in_forked_child = True
+
+
+os.register_at_fork(after_in_child=_mark_forked_child)
+
+
 class MessagePriority:
     """Message priority levels for Telegram queue."""
 
@@ -64,9 +81,14 @@ class TelegramMessageQueue:
         self._initialized = True
         self._queue = queue.PriorityQueue()  # Priority queue for message ordering
         self._counter = itertools.count()  # Tie-breaker for same-priority items
-        self._owner_pid = os.getpid()
         self._dropped_count = 0  # Track dropped messages
         self._last_cleanup_warning = 0  # Timestamp of last warning
+        # Skip the background worker thread in a forked child — enqueue()
+        # routes around it (sync send) anyway, and starting a daemon thread
+        # in a child that's about to exit is pure waste.
+        if _in_forked_child:
+            self._worker = None
+            return
         self._worker = threading.Thread(
             target=self._process_queue,
             daemon=True,
@@ -113,13 +135,13 @@ class TelegramMessageQueue:
             *args: Positional arguments for func
             **kwargs: Keyword arguments for func
         """
-        # We're in a forked child (RQ job runner, multiprocessing, …). The
-        # singleton's worker thread runs only in the parent — fork() copies
-        # just the calling thread, so a child enqueue would be dropped when
-        # the child exits. Send synchronously instead; one extra blocking
-        # HTTP call inside a worker job is the right trade for guaranteed
-        # delivery.
-        if os.getpid() != self._owner_pid:
+        # We're in a forked child (RQ job runner, gunicorn pre-fork worker,
+        # multiprocessing). The singleton's worker thread runs only in the
+        # parent — fork() copies just the calling thread, so a child enqueue
+        # would be dropped when the child exits. Send synchronously instead;
+        # one extra blocking HTTP call inside a worker job is the right
+        # trade for guaranteed delivery.
+        if _in_forked_child:
             try:
                 func(*args, **kwargs)
             except Exception as e:
