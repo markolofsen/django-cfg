@@ -149,12 +149,20 @@ def collect_queue_metrics(queue_name: str, orphan_sample_size: int = 200) -> Que
         # Depth
         metrics.depth = len(queue)
 
-        # Oldest queued job age
+        # Oldest queued job age — use ``enqueued_at`` (time the job entered
+        # *this* queue), not ``created_at`` (time the Job object was first
+        # instantiated). For RQ-scheduled periodic jobs ``created_at`` is
+        # frozen at scheduler-startup time, so the metric would falsely
+        # report an age of "process uptime" on every fire. ``enqueued_at``
+        # reflects the current iteration. Falls back to ``created_at`` only
+        # for one-shot legacy jobs that pre-date ``enqueued_at`` being set.
         if metrics.depth > 0:
             try:
                 jobs = queue.get_jobs(0, 1)
                 if jobs:
-                    metrics.oldest_job_age_sec = _age_seconds(jobs[0].created_at)
+                    job = jobs[0]
+                    ref_ts = getattr(job, "enqueued_at", None) or job.created_at
+                    metrics.oldest_job_age_sec = _age_seconds(ref_ts)
             except Exception as exc:
                 logger.warning(f"oldest-job lookup failed for '{queue_name}': {exc}")
 
