@@ -85,26 +85,41 @@ class NavigationManager(BaseCfgModule):
                     if not nav:
                         continue
 
-                    items = []
-                    for nav_item in nav.items:
-                        try:
-                            link = getattr(nav_item, "resolved_link", None) or nav_item.link
-                            if link and link != "#":
-                                icon = nav_item.icon if not isinstance(nav_item.icon, str) else getattr(Icons, nav_item.icon, Icons.EXTENSION)
-                                items.append(NavigationItem(title=nav_item.title, icon=icon, link=link))
-                        except Exception:
-                            logger.warning(f"Failed nav item in extension '{ext.name}':\n{traceback.format_exc()}")
+                    # ``navigation`` may be a single section or a list of
+                    # sections (multi-section extensions like CRM).
+                    nav_sections = nav if isinstance(nav, (list, tuple)) else [nav]
+                    for nav_section in nav_sections:
+                        items = []
+                        for nav_item in nav_section.items:
+                            try:
+                                # Prefer the raw string link (e.g. an
+                                # "admin:<app>_<model>_changelist" name) — Unfold
+                                # resolves it later via NavigationItem.to_dict().
+                                # ``resolved_link`` may be a deferred *callable*
+                                # (auto_resolve_url) which is not a valid ``link``
+                                # for the Unfold model, so only fall back to it
+                                # for the app+model shortcut where ``link`` is None
+                                # and it yields a plain string path.
+                                link = nav_item.link
+                                if not link:
+                                    resolved = getattr(nav_item, "resolved_link", None)
+                                    link = resolved if isinstance(resolved, str) else None
+                                if link and link != "#":
+                                    icon = nav_item.icon if not isinstance(nav_item.icon, str) else getattr(Icons, nav_item.icon, Icons.EXTENSION)
+                                    items.append(NavigationItem(title=nav_item.title, icon=icon, link=link))
+                            except Exception:
+                                logger.warning(f"Failed nav item in extension '{ext.name}':\n{traceback.format_exc()}")
 
-                    if items:
-                        section_icon = getattr(nav, "icon", None)
-                        if section_icon and isinstance(section_icon, str):
-                            section_icon = getattr(Icons, section_icon, Icons.EXTENSION)
-                        sections.append(NavigationSection(
-                            title=nav.title,
-                            separator=True,
-                            collapsible=getattr(nav, "collapsible", True),
-                            items=items,
-                        ))
+                        if items:
+                            section_icon = getattr(nav_section, "icon", None)
+                            if section_icon and isinstance(section_icon, str):
+                                section_icon = getattr(Icons, section_icon, Icons.EXTENSION)
+                            sections.append(NavigationSection(
+                                title=nav_section.title,
+                                separator=True,
+                                collapsible=getattr(nav_section, "collapsible", True),
+                                items=items,
+                            ))
                 except Exception:
                     logger.error(f"Extension '{ext.name}' nav failed:\n{traceback.format_exc()}")
         except Exception:

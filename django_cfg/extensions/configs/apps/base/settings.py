@@ -2,7 +2,7 @@
 Base extension settings class.
 """
 
-from typing import Any, Literal, Optional
+from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -85,9 +85,11 @@ class BaseExtensionSettings(BaseModel):
     pip_requires: list[str] = Field(default_factory=list, description="Required pip packages")
 
     # Admin Navigation
-    navigation: Optional[NavigationSection] = Field(
+    # A single section, or a list of sections for multi-section extensions
+    # (e.g. CRM groups Core / Outreach / AI / Lifecycle / Channels / KB).
+    navigation: Optional[Union[NavigationSection, list[NavigationSection]]] = Field(
         default=None,
-        description="Admin navigation section configuration"
+        description="Admin navigation: a NavigationSection or a list of them"
     )
 
     # Constance Dynamic Settings
@@ -106,6 +108,22 @@ class BaseExtensionSettings(BaseModel):
     middleware_classes: list[str] = Field(
         default_factory=list,
         description="Middleware classes to add to MIDDLEWARE (full paths)"
+    )
+
+    # Admin Dashboard Tabs
+    # Custom admin-index dashboard tabs owned by this extension. Auto-merged
+    # into the project's DashboardConfig.tabs at render time by
+    # ``django_cfg_dashboard.get_dashboard_config`` — the consumer project no
+    # longer lists extension tabs in its api/config.py. Each item is a
+    # ``DashboardTab`` (or a dict coercible to one). ``list[Any]`` avoids
+    # importing the dashboard model at settings-import time (same convention
+    # as ``schedules`` / ``openapi_groups``).
+    dashboard_tabs: list[Any] = Field(
+        default_factory=list,
+        description=(
+            "Admin dashboard tabs (list[DashboardTab]) owned by this "
+            "extension. Auto-merged into the project's DashboardConfig.tabs."
+        ),
     )
 
     # Additional INSTALLED_APPS entries owned by this extension.
