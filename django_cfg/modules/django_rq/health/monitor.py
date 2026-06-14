@@ -23,7 +23,14 @@ from django_cfg.models.django.rq_health import RQHealthConfig
 from django_cfg.utils import get_logger
 
 from .alerting import send_queue_alert, send_queue_recovery
-from .cooldown import is_alerting, mark_alerted, mark_recovered, should_alert
+from .cooldown import (
+    bump_breach_streak,
+    clear_breach_streak,
+    is_alerting,
+    mark_alerted,
+    mark_recovered,
+    should_alert,
+)
 from .evaluator import QueueStatus, Severity, evaluate
 from .metrics import collect_queue_metrics
 
@@ -204,6 +211,9 @@ class QueueHealthMonitor:
         queue = status.queue
 
         if status.is_healthy:
+            # Always clear the breach-streak counter on healthy — keeps next
+            # transient blip starting from zero rather than inheriting state.
+            clear_breach_streak(redis_conn, queue)
             # Recovery: only for queues that were actually alerting.
             if is_alerting(redis_conn, queue):
                 if not self.dry_run and config.telegram_alerts_enabled and config.send_recovery_alerts:
@@ -211,6 +221,25 @@ class QueueHealthMonitor:
                         summary["recoveries_sent"] = int(summary["recoveries_sent"]) + 1
                         logger.info(f"queue '{queue}' recovered — recovery alert sent")
                 mark_recovered(redis_conn, queue)
+            return
+
+        # Hysteresis: require N consecutive cycles in this severity before
+        # alerting. min_consecutive_breaches=1 (default) keeps the original
+        # "alert on first breach" behaviour; higher values absorb transient
+        # post-restart blips and one-cycle flaps without losing real signal.
+        streak = bump_breach_streak(redis_conn, queue, status.severity)
+        if streak < config.min_consecutive_breaches:
+            logger.info(
+                f"queue '{queue}' is {status.label} — breach streak "
+                f"{streak}/{config.min_consecutive_breaches}, holding alert",
+                extra={
+                    "queue": queue,
+                    "metric": "breach_streak",
+                    "value": streak,
+                    "threshold": config.min_consecutive_breaches,
+                    "status": status.label,
+                },
+            )
             return
 
         # Degraded — decide whether to alert (cooldown + escalation).

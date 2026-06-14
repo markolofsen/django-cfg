@@ -184,6 +184,20 @@ class RQHealthConfig(BaseModel):
         ),
     )
 
+    min_consecutive_breaches: int = Field(
+        default=1,
+        ge=1,
+        description=(
+            "Hysteresis: require N consecutive cycles in the same severity "
+            "before sending a Telegram alert. 1 = current behaviour (alert on "
+            "the first breach). Raise to 3 to filter transient post-restart "
+            "noise — a one-cycle blip never alerts, a sustained breach still "
+            "does. The streak counter clears on the next healthy cycle and "
+            "has a 1h TTL so a stalled monitor never gets stuck near the "
+            "threshold."
+        ),
+    )
+
     send_recovery_alerts: bool = Field(
         default=True,
         description="Send a recovery (success) message when a previously-alerting queue returns to healthy",

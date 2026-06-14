@@ -32,6 +32,10 @@ logger = get_logger("rq.health")
 
 _KEY_PREFIX = "dcfg:rq_health"
 
+# Breach-streak counters auto-expire so a missed monitor cycle (worker dead,
+# Redis disconnect) never permanently sticks a queue at a near-threshold count.
+_STREAK_TTL_SEC = 3600
+
 
 def _cooldown_key(queue: str, severity: Severity) -> str:
     return f"{_KEY_PREFIX}:alert_cooldown:{queue}:{severity.label}"
@@ -39,6 +43,10 @@ def _cooldown_key(queue: str, severity: Severity) -> str:
 
 def _alerting_key(queue: str) -> str:
     return f"{_KEY_PREFIX}:alerting:{queue}"
+
+
+def _streak_key(queue: str, severity: Severity) -> str:
+    return f"{_KEY_PREFIX}:breach_streak:{queue}:{severity.label}"
 
 
 def should_alert(redis_conn, queue: str, severity: Severity, cooldown_sec: int) -> bool:
@@ -93,7 +101,8 @@ def mark_recovered(redis_conn, queue: str) -> None:
     Clear all alert state for ``queue`` after it returns to healthy.
 
     Deletes the alerting marker and both severity cooldown keys so the next
-    degradation alerts immediately.
+    degradation alerts immediately. Breach-streak counters are cleared
+    separately via :func:`clear_breach_streak` (called on every healthy cycle).
     """
     try:
         redis_conn.delete(
@@ -105,9 +114,56 @@ def mark_recovered(redis_conn, queue: str) -> None:
         logger.warning(f"failed to clear alert state for '{queue}': {exc}")
 
 
+def bump_breach_streak(redis_conn, queue: str, severity: Severity) -> int:
+    """
+    Increment the consecutive-breach counter for ``(queue, severity)`` and
+    return the new count.
+
+    Used by the monitor's hysteresis gate (``min_consecutive_breaches``): a
+    breach alerts only after the count reaches the configured threshold.
+
+    The counter is INCR'd with a refreshed TTL each call. If Redis is
+    unavailable, returns ``sys.maxsize`` so the alert still fires — better a
+    duplicate alert than a missed one.
+
+    Args:
+        redis_conn: Redis connection.
+        queue: Queue name.
+        severity: The severity that breached this cycle.
+
+    Returns:
+        The new consecutive-breach count.
+    """
+    key = _streak_key(queue, severity)
+    try:
+        with redis_conn.pipeline() as pipe:
+            pipe.incr(key)
+            pipe.expire(key, _STREAK_TTL_SEC)
+            count, _ = pipe.execute()
+        return int(count)
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(f"breach-streak bump failed for '{queue}'/{severity.label}: {exc}")
+        # Fail open: treat as past-threshold so the alert is not silenced.
+        import sys
+        return sys.maxsize
+
+
+def clear_breach_streak(redis_conn, queue: str) -> None:
+    """Reset the consecutive-breach counters for ``queue`` (both severities)."""
+    try:
+        redis_conn.delete(
+            _streak_key(queue, Severity.WARNING),
+            _streak_key(queue, Severity.CRITICAL),
+        )
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(f"failed to clear breach streak for '{queue}': {exc}")
+
+
 __all__ = [
     "should_alert",
     "mark_alerted",
     "is_alerting",
     "mark_recovered",
+    "bump_breach_streak",
+    "clear_breach_streak",
 ]
