@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import uuid
 from datetime import date, datetime
 from typing import Any
 
@@ -45,4 +46,6 @@ def _jsonable(v: Any) -> Any:
         return v.isoformat()
     if isinstance(v, date):
         return v.isoformat()
+    if isinstance(v, uuid.UUID):
+        return str(v)
     return v

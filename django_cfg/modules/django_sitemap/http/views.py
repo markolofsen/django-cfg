@@ -8,6 +8,7 @@ time, never by browsers. Schema lives in
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -38,6 +39,8 @@ def _json(payload: dict[str, Any], status: int = 200, ttl: int | None = None) ->
 def _json_default(value: Any) -> Any:
     if isinstance(value, datetime):
         return value.isoformat()
+    if isinstance(value, uuid.UUID):
+        return str(value)
     raise TypeError(f"not JSON serialisable: {type(value).__name__}")
 
 
