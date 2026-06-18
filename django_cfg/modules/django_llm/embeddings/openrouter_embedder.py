@@ -27,6 +27,13 @@ logger = logging.getLogger(__name__)
 class OpenRouterEmbedder:
     """Generates real embeddings via OpenRouter's OpenAI-compatible API."""
 
+    #: Transient empty/failed embedding responses from OpenRouter are retried
+    #: with exponential backoff before giving up. OpenRouter's /embeddings
+    #: endpoint intermittently returns an empty ``data`` array under load;
+    #: a short retry recovers it instead of failing the whole call.
+    MAX_RETRIES = 3
+    BACKOFF_BASE = 0.6  # seconds: 0.6, 1.2, 2.4
+
     def __init__(self, models_cache=None):
         self.models_cache = models_cache
 
@@ -58,7 +65,30 @@ class OpenRouterEmbedder:
         if dimensions is not None:
             create_kwargs["dimensions"] = dimensions
 
-        response = client.embeddings.create(**create_kwargs)
+        # Retry transient empty/failed responses (OpenRouter intermittently
+        # returns no embedding data under load).
+        response = None
+        last_err: Exception | None = None
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                response = client.embeddings.create(**create_kwargs)
+                if response is not None and getattr(response, "data", None):
+                    break  # got data — done
+                last_err = RuntimeError("empty embedding data array")
+            except Exception as exc:  # noqa: BLE001 — retry any transient API error
+                last_err = exc
+            if attempt < self.MAX_RETRIES - 1:
+                delay = self.BACKOFF_BASE * (2 ** attempt)
+                logger.warning(
+                    "OpenRouter embedding attempt %d/%d failed (%s) — retrying in %.1fs",
+                    attempt + 1, self.MAX_RETRIES, last_err, delay,
+                )
+                time.sleep(delay)
+
+        if response is None or not getattr(response, "data", None):
+            raise RuntimeError(
+                f"OpenRouter embedding failed after {self.MAX_RETRIES} attempts: {last_err}"
+            )
 
         embedding_data = response.data[0]
         embedding_vector = embedding_data.embedding

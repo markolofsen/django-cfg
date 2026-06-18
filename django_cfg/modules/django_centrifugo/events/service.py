@@ -2,7 +2,7 @@
 django_centrifugo.events.service — CentrifugoD1Service.
 
 Pushes CentrifugoLogRow records to Cloudflare D1 (append-only).
-Provides read queries for the Streamlit dashboard.
+Provides read queries over the publish history.
 
 Inherits shared client, api_url resolution, and schema management
 from BaseD1Service — no separate credentials needed.

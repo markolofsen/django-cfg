@@ -266,7 +266,10 @@ def run_single(
     sliced = _resolve_and_slice(target, groups, global_spec, config)
     promote_inline_schemas(sliced)
 
-    if target.tool == "ogen":
+    if target.tool in ("ogen", "swift-openapi"):
+        # ogen needs 3.0-style nullable; swift-openapi SILENTLY DROPS fields whose
+        # schema is `anyOf:[{type:X},{type:null}]` (FastAPI/DRF Optional) unless they
+        # are collapsed to `nullable:true` first. Same transform serves both.
         nullable_3_1_to_3_0(sliced)
 
     spec_dir = cache_subdir or (cache / "runs" / target.name)
@@ -398,7 +401,10 @@ def _dispatch_tool(
 
     if tool == "swift-openapi":
         module = str(options.get("module_name", "API"))
-        swift_openapi.generate(spec_path, out_dir, module_name=module)
+        access_mod = str(options.get("access_modifier", "public"))
+        swift_openapi.generate(
+            spec_path, out_dir, module_name=module, access_modifier=access_mod
+        )
         return True, None
 
     if tool == "buf":

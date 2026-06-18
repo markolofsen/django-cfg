@@ -5,7 +5,6 @@ Full replacement for apps/integrations/centrifugo/. All Centrifugo logic lives h
 - Services: CentrifugoClient (httpx publish), CentrifugoLogger (D1-backed log)
 - D1 persistence: publish history via centrifugo_logs append-only table
 - Management commands: create_centrifugo_d1_schema, centrifugo_publish, generate_centrifugo_clients
-- Streamlit dashboard: Centrifugo Overview, Publishes, Channels
 - Code generation: multi-language client generators
 
 Data storage:

@@ -1,6 +1,6 @@
 <div align="center">
 
-![Django-CFG](https://raw.githubusercontent.com/markolofsen/assets/main/libs/djangocfg/django-cfg.webp)
+![Django-CFG](https://raw.githubusercontent.com/markolofsen/django-cfg/main/assets/django-cfg-hero.webp)
 
 # Django-CFG
 
@@ -12,7 +12,7 @@
 
 **The Modern Django Framework for Enterprise Applications**
 
-Type-safe configuration • Streamlit Admin • Real-time WebSockets • gRPC Streaming • AI-Native Docs • 8 Production Apps
+Type-safe configuration • Real-time WebSockets • gRPC Streaming • OpenAPI client generation • AI-Native Docs • 8 Production Apps
 
 [Get Started](https://djangocfg.com/docs/getting-started/intro) • [Live Demo](https://djangocfg.com/demo) • [Documentation](https://djangocfg.com/docs) • [MCP Server](https://djangocfg.com/mcp)
 
@@ -28,7 +28,7 @@ Type-safe configuration • Streamlit Admin • Real-time WebSockets • gRPC St
 
 - ✅ **Type-safe config** - Pydantic v2 validation catches errors before deployment
 - ✅ **90% less code** - Replace 200+ line settings.py with 30 lines
-- ✅ **Streamlit Admin** - Python-only admin panel, auto-starts with Django
+- ✅ **Typed API clients** - Generate TypeScript / Python / Go clients from your DRF OpenAPI schema
 - ✅ **Real-time WebSockets** - Centrifugo integration included
 - ✅ **gRPC streaming** - Bidirectional streaming with WebSocket bridge
 - ✅ **AI-native docs** - First Django framework with MCP server for AI assistants
@@ -58,9 +58,9 @@ poetry run python manage.py runserver
 ```
 
 **What you get instantly:**
-- 🎨 Django Admin → `http://127.0.0.1:8000/admin/`
-- 📊 Streamlit Dashboard → Auto-starts on port 8501
+- 🎨 Django Admin (Unfold) → `http://127.0.0.1:8000/admin/`
 - 📡 Real-time WebSockets → Live updates
+- 🔌 Auto-generated API clients → TypeScript / Python / Go
 - 🐳 Docker Ready → Production configs
 - 🖥️ Electron App → Desktop template
 
@@ -102,19 +102,13 @@ class MyConfig(DjangoConfig):
 ### 🔒 Type-Safe Configuration
 Pydantic v2 models replace error-prone `settings.py` - catch bugs before deployment.
 
-### 📊 Streamlit Admin
-Python-only admin panel that auto-starts with Django. No npm, no Node.js - just Python.
+### 🔌 Typed API Client Generation
+Generate fully-typed **TypeScript, Python, and Go** clients straight from your DRF
+OpenAPI schema — no hand-written API code, no drift between backend and frontend.
 
-```python
-from django_cfg import DjangoConfig
-from django_cfg.modules.streamlit_admin import StreamlitAdminConfig
-
-config = DjangoConfig(
-    streamlit_admin=StreamlitAdminConfig(
-        app_path="streamlit",
-        auto_start=True,  # Starts with Django, dies with Django
-    ),
-)
+```bash
+python manage.py gen          # generate clients from the live OpenAPI schema
+python manage.py gen --ts     # TypeScript only
 ```
 
 ### 📡 Real-Time WebSockets
@@ -146,10 +140,10 @@ User auth • Support tickets • Newsletter • CRM • AI agents • Knowledge
 - REST API with auto TypeScript generation
 
 **Admin:**
-- Streamlit admin (Python-only)
 - Django Unfold for CRUD
 - JWT authentication
 - Dark theme by default
+- Constance-backed dynamic settings
 
 **DevOps:**
 - Docker Compose setup
@@ -169,7 +163,7 @@ User auth • Support tickets • Newsletter • CRM • AI agents • Knowledge
 
 - **[Getting Started](https://djangocfg.com/docs/getting-started/intro)** - Quick setup guide
 - **[Configuration](https://djangocfg.com/docs/getting-started/configuration)** - Type-safe config
-- **[Streamlit Admin](https://djangocfg.com/docs/features/modules/streamlit-admin/overview)** - Python admin panel
+- **[API Generation](https://djangocfg.com/docs/features/api-generation/cli-usage)** - Typed TS/Python/Go clients
 - **[Real-Time](https://djangocfg.com/docs/features/integrations/centrifugo)** - WebSockets setup
 - **[gRPC](https://djangocfg.com/docs/features/integrations/grpc)** - Microservices
 - **[AI Agents](https://djangocfg.com/docs/ai-agents/introduction)** - Automation
@@ -195,7 +189,7 @@ MIT License - Free for commercial use
 
 <div align="center">
 
-**Django-CFG** - Modern Django framework with type-safe configuration, AI-native docs, Streamlit admin, gRPC streaming, real-time WebSockets, and 8 production-ready apps.
+**Django-CFG** - Modern Django framework with type-safe configuration, AI-native docs, typed API client generation, gRPC streaming, real-time WebSockets, and 8 production-ready apps.
 
 Made with ❤️ for the Django community
 

@@ -33,7 +33,12 @@ def generate(
     out_dir: Path,
     *,
     module_name: str = "API",
+    access_modifier: str = "public",
 ) -> SwiftOpenAPIResult:
+    """`access_modifier` ("public" by default) maps to `--access-modifier`.
+    Without it the generated types come out `internal` and CANNOT cross an SPM
+    module boundary into the app's feature targets — useless for a standalone
+    generated `API` target."""
     del module_name  # Apple's CLI doesn't accept this — module is set by SwiftPM.
     binary = shutil.which("swift-openapi-generator")
     if binary is None:
@@ -49,6 +54,7 @@ def generate(
         binary, "generate", str(spec_path),
         "--mode", "types",
         "--mode", "client",
+        "--access-modifier", access_modifier,
         "--output-directory", str(out_dir),
     ]
     try:

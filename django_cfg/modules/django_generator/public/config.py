@@ -355,9 +355,6 @@ class GeneratorOptions(BaseModel):
     dry_run: bool = False
     verbose: bool = False
 
-    # Streamlit integration
-    streamlit: bool = False  # Copy Python clients to Streamlit
-
     # External generators
     external_go: bool = False  # Use oapi-codegen instead of built-in
     external_python: bool = False  # Use openapi-python-client
@@ -397,8 +394,6 @@ class GeneratorOptions(BaseModel):
             opts["dry_run"] = True
         if self.verbose:
             opts["verbose"] = True
-        if self.streamlit:
-            opts["streamlit"] = True
         if self.external_go:
             opts["external_go"] = True
         if self.external_python:

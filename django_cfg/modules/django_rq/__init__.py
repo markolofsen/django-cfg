@@ -6,7 +6,6 @@ Full replacement for apps/integrations/rq/. All RQ logic lives here:
 - Tasks: maintenance, demo_tasks
 - Management commands: rqworker, rqworker_pool, rqscheduler, rqstats, rq_cleanup_locks
 - D1 persistence: job events + worker heartbeats via Cloudflare D1
-- Streamlit dashboard: RQ Overview, RQ Jobs, RQ Workers
 
 Data storage:
 - Redis  — real-time state (queues, workers, active jobs)

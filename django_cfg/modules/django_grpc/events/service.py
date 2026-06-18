@@ -9,7 +9,7 @@ Write operations:
   - grpc_request_logs:  insert_request_log, batch_insert_request_logs
   - grpc_server_status: upsert_server_status
 
-Read operations (for Streamlit dashboard):
+Read operations:
   - get_recent_request_logs, get_request_stats
   - get_server_status
 """

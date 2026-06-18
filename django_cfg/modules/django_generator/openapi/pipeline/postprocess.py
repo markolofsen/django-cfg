@@ -134,6 +134,12 @@ def nullable_3_1_to_3_0(spec: dict[str, Any]) -> None:
 
     Walks the entire spec; converts:
       - `type: ["string", "null"]` → `type: "string", nullable: true`
+      - `anyOf: [{...}, {type: "null"}]` → the surviving branch + `nullable: true`
+        (FastAPI / DRF-spectacular's Optional encoding). **This shape is the one
+        Apple's swift-openapi-generator silently SKIPS** — it drops the whole
+        field, so the generated struct loses every Optional (e.g. all the
+        device-flow / 2FA token fields). Collapsing it makes the field generate
+        as a Swift optional. Kept generator-agnostic — ogen needs this too.
       - parameter schemas with type-array nulls.
     Idempotent.
     """
@@ -142,6 +148,7 @@ def nullable_3_1_to_3_0(spec: dict[str, Any]) -> None:
 
 def _walk(node: Any) -> None:
     if isinstance(node, dict):
+        # `type: [X, "null"]` array form.
         types = node.get("type")
         if isinstance(types, list) and "null" in types:
             non_null = [t for t in types if t != "null"]
@@ -151,11 +158,49 @@ def _walk(node: Any) -> None:
             else:
                 node["type"] = non_null
                 node["nullable"] = True
+        # `anyOf: [{...}, {type: "null"}]` form (FastAPI / drf-spectacular Optional).
+        _flatten_anyof_null(node)
         for v in node.values():
             _walk(v)
     elif isinstance(node, list):
         for v in node:
             _walk(v)
+
+
+def _flatten_anyof_null(schema: dict[str, Any]) -> None:
+    """Collapse an `anyOf` whose branches include a `{type: "null"}` into the
+    surviving branch + `nullable: true`. Mirrors cmdop_server's
+    `openapi_compat._flatten_or_strip_null` so both generators emit identical
+    Swift. Handles three shapes:
+      - bare `$ref` survivor  → wrap in single-element `allOf` (a `$ref` ignores
+        sibling keywords, so `nullable` next to it would be dropped);
+      - inline scalar/object  → flatten its keys up into the parent;
+      - multi-branch union    → keep the union, drop only the null branch.
+    """
+    branches = schema.get("anyOf")
+    if not isinstance(branches, list) or len(branches) < 2:
+        return
+    null_branches = [b for b in branches if isinstance(b, dict) and b.get("type") == "null"]
+    if not null_branches:
+        return
+    other = [b for b in branches if not (isinstance(b, dict) and b.get("type") == "null")]
+    if not other:
+        schema.pop("anyOf")
+        schema["nullable"] = True
+        return
+    if len(other) == 1 and isinstance(other[0], dict):
+        survivor = other[0]
+        schema.pop("anyOf")
+        if "$ref" in survivor:
+            schema["allOf"] = [survivor]
+            schema["nullable"] = True
+        else:
+            for k, v in survivor.items():
+                schema.setdefault(k, v)
+            schema["nullable"] = True
+        return
+    schema["anyOf"] = other
+    schema["nullable"] = True
 
 
 __all__ = [

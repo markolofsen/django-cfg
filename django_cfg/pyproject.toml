@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.2.83"
+version = "2.2.84"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -416,6 +416,37 @@ module = [
 ]
 ignore_missing_imports = true
 
+[tool.pyright]
+# Merged from the former standalone pyrightconfig.json.
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.12"
+include = ["src/django_cfg"]
+exclude = ["@dev", "@debug", "@doc-internal", "tests", "src/django_cfg/stubs"]
+typeCheckingMode = "basic"
+reportMissingImports = "warning"
+reportMissingModuleSource = "none"
+reportAttributeAccessIssue = "none"
+reportCallIssue = "none"
+reportOptionalMemberAccess = "none"
+reportIncompatibleMethodOverride = "none"
+reportIncompatibleVariableOverride = "none"
+reportArgumentType = "none"
+reportReturnType = "none"
+reportAssignmentType = "none"
+reportIndexIssue = "none"
+reportOperatorIssue = "none"
+reportGeneralTypeIssues = "none"
+reportFunctionMemberAccess = "none"
+reportOptionalSubscript = "none"
+reportOptionalCall = "none"
+reportOptionalOperand = "none"
+reportOptionalIterable = "none"
+reportAbstractUsage = "none"
+reportInvalidTypeForm = "none"
+reportUndefinedVariable = "none"
+reportPossiblyUnbound = "none"
+
 [tool.ruff]
 target-version = "py39"
 line-length = 100
@@ -438,13 +469,25 @@ ignore = [
 ]
 
 [tool.bandit]
+# Merged from the former standalone .bandit config.
 exclude_dirs = [
     "tests",
     "migrations",
+    "examples",
+    "opensource/examples",
+    "@sources",
+    "@archive",
+    "__pycache__",
+    ".pytest_cache",
+    "build",
+    "dist",
 ]
+confidence = ["MEDIUM", "HIGH"]
+level = ["LOW", "MEDIUM", "HIGH"]
 skips = [
-    "B101",
-    "B601",
+    "B101",  # assert_used (common in tests)
+    "B601",  # paramiko_calls
+    "B602",  # subprocess_popen_with_shell_equals_true
 ]
 
 [dependency-groups]
@@ -481,27 +524,30 @@ default-groups = ["dev"]
 allow-direct-references = true
 
 [tool.pytest.ini_options]
-addopts = [
-    "--cov=django_cfg",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-    "--cov-report=xml",
-    "--cov-fail-under=50",
-    "--strict-markers",
-    "--strict-config",
-    "--verbose",
-]
-testpaths = ["tests"]
+# Merged from the former pytest.ini (the version pytest actually used).
+# Coverage is opt-in: run `pytest --cov=django_cfg --cov-report=term-missing`
+# (requires the `test` extra / pytest-cov). It is intentionally NOT in addopts
+# so the bare `pytest` command works without pytest-cov installed.
+DJANGO_SETTINGS_MODULE = "tests.settings"
+testpaths = ["tests", "src"]
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+python_classes = ["Test*", "*Tests"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers --import-mode=importlib"
+norecursedirs = ["tests_archived", "__pycache__", ".git", ".pytest_cache", "build", "dist", "*.egg-info", "@*", ".*"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "core: marks tests as core framework tests",
     "django_db: marks tests that require database access",
 ]
 filterwarnings = [
-    "error",
-    "ignore::UserWarning",
-    "ignore::DeprecationWarning",
+    "ignore::DeprecationWarning:pydantic",
+    "ignore::DeprecationWarning:django",
+    "ignore:The default scheme will be changed:django.utils.deprecation.RemovedInDjango61Warning",
+    "ignore:datetime.datetime.utcnow:DeprecationWarning",
+    "ignore:`min_items` is deprecated:DeprecationWarning",
 ]
 
 [tool.coverage.run]
@@ -547,7 +593,7 @@ exclude = [
     "**/@doc-internal/**",
     "**/@archive",
     "**/@archive/**",
-    "**/@vulnerabilities",
+    "**/@vulnerabilities",      # moved to projects/django-cfg/security/; kept as defense-in-depth
     "**/@vulnerabilities/**",
     "**/.env",
     "**/.env.*",
@@ -573,7 +619,6 @@ include = [
     "LICENSE",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
-    "requirements*.txt",
     "MANIFEST.in",
 ]
 exclude = [

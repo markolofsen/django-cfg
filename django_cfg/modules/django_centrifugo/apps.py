@@ -23,7 +23,6 @@ class DjangoCentrifugoConfig(AppConfig):
     - Async client for publishing messages to Centrifugo
     - ACK tracking for delivery confirmation
     - D1-backed append-only publish log (centrifugo_logs)
-    - Streamlit dashboard for publish history
     - Multi-language code generation (codegen/)
     """
 

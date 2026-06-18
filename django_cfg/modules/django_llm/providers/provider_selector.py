@@ -35,17 +35,16 @@ class ProviderSelector:
         Returns:
             Provider name for the task
         """
-        # For embeddings, prefer a direct OpenAI key when present (lowest
-        # latency, no routing hop). Otherwise OpenRouter serves embeddings
-        # via its OpenAI-compatible /embeddings endpoint — a REAL call, not
-        # a mock. The project's canonical embedding models
-        # (openai/text-embedding-3-*) are OpenRouter slugs and both the
-        # OpenAI and OpenRouter embedders handle the prefix correctly.
-        if task == "embedding" and self.provider_manager.has_provider("openai"):
-            logger.debug("Selecting OpenAI for embedding task")
-            return "openai"
-
-        # For other tasks, use primary provider
+        # Route every task — including embeddings — through the primary
+        # provider. The old policy hard-pinned embeddings to OpenAI when
+        # an OpenAI key was present, which surfaced as a hard outage the
+        # moment the OpenAI account's quota was exhausted (429); OpenRouter
+        # serves embeddings via its OpenAI-compatible /embeddings endpoint
+        # and is happy to carry the load.
+        #
+        # A deployment that wants the direct-OpenAI hop for latency sets
+        # its primary provider to OpenAI on its side — that's the explicit
+        # knob; we don't override it here for one task family.
         provider = self.provider_manager.primary_provider
         logger.debug(f"Selecting {provider} for {task} task")
         return provider
