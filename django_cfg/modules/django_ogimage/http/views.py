@@ -14,18 +14,35 @@ import base64
 import json
 import logging
 
-from django.http import FileResponse, HttpResponseBadRequest
+from django.conf import settings
+from django.http import FileResponse, HttpResponse, HttpResponseBadRequest
 from django.views import View
 
-from ..core.params import OGImageParams
+from ..core.params import OGImageParams, compute_cache_key
 from ..core.service import _cache_path, get_or_create_og_url
 from ..cache._config import get_og_config
 
 logger = logging.getLogger(__name__)
 
 
+def _render_error_response(exc: Exception) -> HttpResponse:
+    """500 for a render failure.
+
+    Always logs the full traceback. The response body carries the real
+    exception type+message only when DEBUG is on — in production it stays a
+    neutral string so internals (paths, missing .so names) aren't leaked to
+    crawlers, while ops still get the traceback from the logs.
+    """
+    logger.exception("OG image render failed")
+    if settings.DEBUG:
+        body = f"OG image render failed: {type(exc).__name__}: {exc}"
+    else:
+        body = "OG image render failed"
+    return HttpResponse(body, status=500, content_type="text/plain; charset=utf-8")
+
+
 class OGImageRenderView(View):
-    """GET /og/<b64params>/"""
+    """GET /cfg/og/<b64params>/"""
 
     def get(self, request, b64params: str):
         # 1. Decode
@@ -46,26 +63,19 @@ class OGImageRenderView(View):
         if not cfg.cache_enabled:
             # Force re-render by rendering directly
             from ..core.renderer import render
-            from ..core.params import compute_cache_key
             try:
                 png_bytes = render(params)
             except Exception as exc:
-                logger.error("OG image render failed: %s", exc)
-                from django.http import HttpResponse
-                return HttpResponse("Render failed", status=500)
-            cache_key = compute_cache_key(params)
-            abs_path, _ = _cache_path(cache_key)
+                return _render_error_response(exc)
+            abs_path, _ = _cache_path(compute_cache_key(params))
             abs_path.parent.mkdir(parents=True, exist_ok=True)
             abs_path.write_bytes(png_bytes)
         else:
             try:
                 get_or_create_og_url(params)
             except Exception as exc:
-                logger.error("OG image generation failed: %s", exc)
-                from django.http import HttpResponse
-                return HttpResponse("Render failed", status=500)
+                return _render_error_response(exc)
 
-        from ..core.params import compute_cache_key
         abs_path, _ = _cache_path(compute_cache_key(params))
 
         # 4. Serve
