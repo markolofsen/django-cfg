@@ -20,7 +20,7 @@ def _has_required_args(op: IROperation) -> bool:
     return any(p.required for p in op.query_params)
 
 
-def render_query(op: IROperation, hook: str) -> str:
+def render_query(op: IROperation, hook: str, *, sdk_import_prefix: str = "../..") -> str:
     fn_name = sdk_fn_name(op)
     cls_name = sdk_class_name(op)
     data_t, resp_t = sdk_type_names(op)
@@ -51,8 +51,8 @@ def render_query(op: IROperation, hook: str) -> str:
 
 import useSWR from "swr";
 import type {{ SWRConfiguration }} from "swr";
-import {{ {cls_name} }} from "../../sdk.gen";
-import type {{ {data_t}, {resp_t} }} from "../../types.gen";
+import {{ {cls_name} }} from "{sdk_import_prefix}/sdk.gen";
+import type {{ {data_t}, {resp_t} }} from "{sdk_import_prefix}/types.gen";
 {validation.imports}
 
 type Result = {resp_t}[keyof {resp_t}];

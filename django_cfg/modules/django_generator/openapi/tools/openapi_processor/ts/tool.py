@@ -4,19 +4,39 @@ Reads a (sliced) OpenAPI spec and emits zod schemas + SWR hooks +
 the events bridge file into subfolders of `out_dir`. Intended to run
 after Hey API has produced models + client into the same target dir.
 
-Outputs:
-    out_dir/schemas/<SchemaName>.ts
-    out_dir/schemas/index.ts
-    out_dir/hooks/<hookName>.ts
-    out_dir/hooks/index.ts
-    out_dir/events.ts
-    out_dir/sdk.gen.ts          ← re-export shim → "../sdk.gen"
-    out_dir/types.gen.ts        ← re-export shim → "../types.gen"
+Two layouts are supported (the caller picks via the ``flat`` flag):
+
+PER-GROUP (``flat=False``, the default) — ts_extras runs into
+``target_root/_<group>/``; hey-api's real SDK sits one level up at
+``target_root/sdk.gen.ts``:
+
+    target_root/sdk.gen.ts      ← REAL hey-api SDK (written by hey-api)
+    target_root/_<group>/schemas/<SchemaName>.ts
+    target_root/_<group>/hooks/<hookName>.ts   ← import "../../sdk.gen"
+    target_root/_<group>/events.ts
+    target_root/_<group>/sdk.gen.ts    ← re-export shim → "../sdk.gen"
+    target_root/_<group>/types.gen.ts  ← re-export shim → "../types.gen"
 
 The two shim files exist so app code can import classes/types via
 ``@api/generated/_<group>/sdk.gen`` (group-scoped path) instead of
 having to know that everything lives at the top-level ``sdk.gen`` /
 ``types.gen``.
+
+FLAT (``flat=True``) — ts_extras runs into ``target_root`` itself, the
+SAME dir hey-api just wrote its real SDK into. There is no ``_<group>/``
+nesting, so:
+  • the up-pointing shim is WRONG by construction — it would clobber
+    hey-api's real ``target_root/sdk.gen.ts`` with a re-export pointing
+    at a nonexistent ``../sdk.gen`` (one dir above target_root). So in
+    flat mode we DO NOT write the shim — hey-api's real SDK stays put and
+    app code imports ``target_root/sdk.gen.ts`` directly.
+  • hooks live at ``target_root/hooks/`` (one level below the SDK), so
+    they must import ``"../sdk.gen"`` (one up), not ``"../../sdk.gen"``.
+    The depth-correct prefix is threaded down via ``sdk_import_prefix``.
+
+Invariant: after a flat-layout run, ``target_root/sdk.gen.ts`` is the
+REAL hey-api SDK, and any emitted hooks resolve their SDK/types imports
+correctly.
 """
 
 from __future__ import annotations
@@ -66,6 +86,7 @@ def generate(
     *,
     extras: list[str],
     enum_prefix: str = "",
+    flat: bool = False,
 ) -> TsExtrasResult:
     """Generate the requested extras into `out_dir`.
 
@@ -79,18 +100,35 @@ def generate(
     ``<PascalPrefix><BaseName>Enum`` (e.g. ``CrmStatusEnum``) before any
     files are written. This makes enum names stable across regenerations
     and avoids cryptic hash suffixes in generated TypeScript.
+
+    `flat` — layout selector (see the module docstring). ``False`` (default)
+    is the per-group layout (out_dir == ``target_root/_<group>/``); the real
+    SDK is one level up, hooks import ``"../../sdk.gen"``, and re-export shims
+    are written so group-scoped imports resolve. ``True`` is the flat layout
+    (out_dir == ``target_root``, where hey-api's real SDK already lives); we
+    do NOT write the up-pointing shim (it would clobber the real SDK), and
+    hooks import ``"../sdk.gen"`` so they resolve against the real SDK.
     """
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
     promote_inline_schemas(spec)
     ir = build_ir(spec)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Depth from out_dir/hooks/ back to the real hey-api SDK:
+    #   group:  target_root/_<group>/hooks/  → ../../sdk.gen
+    #   flat:   target_root/hooks/           → ../sdk.gen
+    sdk_import_prefix = ".." if flat else "../.."
+
     files: list[Path] = []
     if "zod" in extras:
         files.extend(generate_schemas(ir, out_dir / "schemas", enum_prefix=enum_prefix))
     if "hooks" in extras:
-        files.extend(generate_hooks(ir, out_dir / "hooks"))
+        files.extend(generate_hooks(ir, out_dir / "hooks", sdk_import_prefix=sdk_import_prefix))
     if "events" in extras:
         files.extend(generate_events(out_dir))
-    files.extend(_write_shims(out_dir))
+    # FLAT layout: the real hey-api SDK already sits at out_dir/sdk.gen.ts —
+    # writing the up-pointing shim would clobber it AND dangle (nothing one
+    # dir above target_root). Only the per-group layout needs the shim.
+    if not flat:
+        files.extend(_write_shims(out_dir))
     return TsExtrasResult(output_dir=out_dir, files=files)

@@ -32,7 +32,15 @@ from ..naming import hook_name
 _QUERY_METHODS = {"get"}
 
 
-def generate_hooks(ir: IR, out_dir: Path) -> list[Path]:
+def generate_hooks(ir: IR, out_dir: Path, *, sdk_import_prefix: str = "../..") -> list[Path]:
+    """Emit one hook file per operation into ``out_dir``.
+
+    ``sdk_import_prefix`` is the relative path from ``out_dir`` (the hooks
+    dir) back to the directory holding hey-api's real ``sdk.gen.ts`` /
+    ``types.gen.ts``. Per-group layout: ``"../.."`` (hooks at
+    ``target_root/_<group>/hooks/``, SDK at ``target_root/``). Flat layout:
+    ``".."`` (hooks at ``target_root/hooks/``, SDK at ``target_root/``).
+    """
     if out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True)
@@ -45,7 +53,7 @@ def generate_hooks(ir: IR, out_dir: Path) -> list[Path]:
 
         if op.method in _QUERY_METHODS:
             # Always emit a page-based query hook for any GET (paginated or not).
-            text = render_query(op, hook)
+            text = render_query(op, hook, sdk_import_prefix=sdk_import_prefix)
             file_name = f"{hook}.ts"
             (out_dir / file_name).write_text(text, encoding="utf-8")
             files.append(out_dir / file_name)
@@ -54,13 +62,13 @@ def generate_hooks(ir: IR, out_dir: Path) -> list[Path]:
             # For paginated endpoints, additionally emit an infinite-scroll variant.
             if op.is_paginated:
                 inf_hook = f"{hook}Infinite"
-                inf_text = render_infinite_query(op, inf_hook)
+                inf_text = render_infinite_query(op, inf_hook, sdk_import_prefix=sdk_import_prefix)
                 inf_file = f"{inf_hook}.ts"
                 (out_dir / inf_file).write_text(inf_text, encoding="utf-8")
                 files.append(out_dir / inf_file)
                 entries.append((inf_file, inf_hook))
         else:
-            text = render_mutation(op, hook)
+            text = render_mutation(op, hook, sdk_import_prefix=sdk_import_prefix)
             file_name = f"{hook}.ts"
             (out_dir / file_name).write_text(text, encoding="utf-8")
             files.append(out_dir / file_name)

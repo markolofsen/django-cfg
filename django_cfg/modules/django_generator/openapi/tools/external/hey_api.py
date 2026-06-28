@@ -19,6 +19,12 @@ from ...pipeline.errors import ToolExecutionError, ToolNotInstalledError
 
 INSTALL_HINT = "ensure node + npx are on PATH (Node 18+)"
 
+# Pinned, NOT @latest: an unpinned generator makes builds nondeterministic
+# (a new hey-api release can silently change SDK/type naming, enum output, or
+# file layout between two runs of the same spec). Bump deliberately + re-verify
+# the generated clients when raising this. (W2.1)
+HEY_API_VERSION = "0.99.0"
+
 
 @dataclass(slots=True)
 class HeyApiResult:
@@ -59,7 +65,7 @@ def generate(
 
     config_path = _write_config(spec_path, out_dir, client, plugins, sdk_strategy)
 
-    cmd = ["npx", "-y", "@hey-api/openapi-ts@latest", "-f", str(config_path)]
+    cmd = ["npx", "-y", f"@hey-api/openapi-ts@{HEY_API_VERSION}", "-f", str(config_path)]
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError as e:
