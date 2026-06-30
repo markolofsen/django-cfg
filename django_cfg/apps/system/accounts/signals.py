@@ -94,10 +94,10 @@ def send_user_profile_update_email(sender, instance, **kwargs):
 
 @receiver(post_save, sender=User)
 def create_user_api_key(sender, instance, created, **kwargs):
-    """Auto-generate API key for new users."""
+    """Auto-generate the user's single API key on creation."""
     if created:
         from .models.api_key import UserAPIKey
-        UserAPIKey.objects.get_or_create(user=instance)
+        UserAPIKey.objects.for_user(instance)
 
 
 @receiver(post_save, sender=User)

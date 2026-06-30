@@ -90,6 +90,7 @@ profile_patterns = [
 # API key-related URLs
 api_key_patterns = [
     path('', APIKeyViewSet.as_view({'get': 'retrieve_key'}), name='api_key_detail'),
+    path('reveal/', APIKeyViewSet.as_view({'post': 'reveal'}), name='api_key_reveal'),
     path('regenerate/', APIKeyViewSet.as_view({'post': 'regenerate'}), name='api_key_regenerate'),
     path('test/', APIKeyViewSet.as_view({'post': 'test_key'}), name='api_key_test'),
 ]

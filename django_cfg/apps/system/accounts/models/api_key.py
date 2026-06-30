@@ -11,8 +11,30 @@ import uuid
 from django.db import models
 
 
+class UserAPIKeyManager(models.Manager):
+    """Manager for UserAPIKey — the one place "get this user's key" lives.
+
+    The 1:1 invariant (one durable key per user, reused by all of that user's
+    agents) means "fetch or lazily create the user's key" is the canonical
+    operation. Centralizing it here keeps the signal, the view, and any other
+    caller from each hand-rolling `get_or_create(user=...)`.
+    """
+
+    def for_user(self, user) -> "UserAPIKey":
+        """Return the user's API key, creating it if missing. No rotation.
+
+        Idempotent: the existing key is returned unchanged (its value is
+        stable — that's the contract agents rely on). Use ``regenerate()`` to
+        rotate. This also backfills a user who somehow lacks a key.
+        """
+        api_key, _ = self.get_or_create(user=user)
+        return api_key
+
+
 class UserAPIKey(models.Model):
     """Per-user API key for automated/service access."""
+
+    objects = UserAPIKeyManager()
 
     user = models.OneToOneField(
         "django_cfg_accounts.CustomUser",
@@ -48,6 +70,17 @@ class UserAPIKey(models.Model):
         self.reissued_at = timezone.now()
         self.save(update_fields=["key", "reissued_at"])
         return self
+
+    @property
+    def full_key(self) -> str:
+        """Return the full key as a string — the copyable inference credential.
+
+        The semantic counterpart to ``masked_key``: callers that genuinely need
+        the real value (a reveal action, an agent paste flow) use this so the
+        intent reads explicitly, instead of reaching for ``str(obj.key)``. The
+        default display path should still prefer ``masked_key``.
+        """
+        return str(self.key)
 
     @property
     def masked_key(self) -> str:

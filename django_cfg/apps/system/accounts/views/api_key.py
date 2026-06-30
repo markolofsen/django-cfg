@@ -35,6 +35,16 @@ class APIKeyRegenerateSerializer(serializers.Serializer):
     reissued_at = serializers.DateTimeField(help_text="When the key was regenerated")
 
 
+class APIKeyRevealSerializer(serializers.Serializer):
+    """Serializer for revealing the current (unrotated) full API key."""
+
+    key = serializers.CharField(help_text="Full API key (current value, not rotated)")
+    created_at = serializers.DateTimeField(help_text="When the key was created")
+    reissued_at = serializers.DateTimeField(
+        allow_null=True, help_text="When the key was last regenerated"
+    )
+
+
 class APIKeyTestSerializer(serializers.Serializer):
     """Serializer for testing an API key."""
 
@@ -56,6 +66,7 @@ class APIKeyViewSet(ClientAPIMixin, viewsets.GenericViewSet):
 
     Endpoints:
     - GET /cfg/accounts/api-key/ — retrieve masked key details
+    - POST /cfg/accounts/api-key/reveal/ — return the full key without rotating
     - POST /cfg/accounts/api-key/regenerate/ — generate new key
     - POST /cfg/accounts/api-key/test/ — test an API key
     """
@@ -90,6 +101,33 @@ class APIKeyViewSet(ClientAPIMixin, viewsets.GenericViewSet):
                 "key": api_key.masked_key,
                 "reissued_at": api_key.reissued_at,
                 "created_at": api_key.created_at,
+            }
+        )
+        return Response(serializer.data)
+
+    @extend_schema(
+        tags=["cfg_accounts_api_key"],
+        summary="Reveal API key",
+        description=(
+            "Return the current full API key WITHOUT rotating it. The same "
+            "durable value every one of the user's agents uses — for the "
+            "signed-in user to copy and paste into agent onboarding. Default "
+            "GET stays masked; this is the explicit reveal action."
+        ),
+        responses={
+            200: APIKeyRevealSerializer,
+            401: {"description": "Authentication credentials were not provided."},
+        },
+    )
+    @action(detail=False, methods=["post"], url_path="reveal")
+    def reveal(self, request):
+        """Return the current full (unrotated) API key for the signed-in user."""
+        api_key = self._get_or_create_key(request.user)
+        serializer = APIKeyRevealSerializer(
+            {
+                "key": api_key.full_key,
+                "created_at": api_key.created_at,
+                "reissued_at": api_key.reissued_at,
             }
         )
         return Response(serializer.data)
@@ -168,6 +206,5 @@ class APIKeyViewSet(ClientAPIMixin, viewsets.GenericViewSet):
         return Response(APIKeyTestResultSerializer(result).data)
 
     def _get_or_create_key(self, user) -> UserAPIKey:
-        """Get or auto-create API key for user."""
-        api_key, _ = UserAPIKey.objects.get_or_create(user=user)
-        return api_key
+        """Get or auto-create the user's API key (via the manager seam)."""
+        return UserAPIKey.objects.for_user(user)
