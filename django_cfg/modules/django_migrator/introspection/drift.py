@@ -96,6 +96,7 @@ class DriftDetector:
                     loaded,
                     plan=plans.get(loaded.app_label, []),
                     by_name=by_app_migrations.get(loaded.app_label, {}),
+                    schema=schema,
                 ):
                     # A later migration removes everything this migration
                     # created — the missing DDL is intentional, not drift.

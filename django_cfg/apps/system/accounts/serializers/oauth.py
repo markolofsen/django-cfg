@@ -104,10 +104,14 @@ class OAuthTokenResponseSerializer(serializers.Serializer):
     )
 
     is_new_user = serializers.BooleanField(
+        required=False,
+        default=False,
         help_text="True if a new user was created during this OAuth flow"
     )
 
     is_new_connection = serializers.BooleanField(
+        required=False,
+        default=False,
         help_text="True if a new OAuth connection was created"
     )
 
