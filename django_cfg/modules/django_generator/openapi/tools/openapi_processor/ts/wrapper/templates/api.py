@@ -259,6 +259,14 @@ export class API {{
   ): void {{
     auth.setRefreshHandler(fn);
   }}
+  /**
+   * Proactively refresh now via the registered handler, sharing the single
+   * 401-recovery flight (rotation + dedup + rotated-token persistence).
+   * See `auth.refreshNow`.
+   */
+  refreshNow(): Promise<string | null> {{
+    return auth.refreshNow();
+  }}
 }}
 
 export {{ {sdk_reexports} }};

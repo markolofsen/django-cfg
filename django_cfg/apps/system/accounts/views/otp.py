@@ -88,9 +88,21 @@ class OTPViewSet(viewsets.GenericViewSet):
             )
 
         if result.success:
-            return Response(
-                {"message": "OTP sent to your email address"}, status=status.HTTP_200_OK
-            )
+            payload = {"message": "OTP sent to your email address"}
+
+            # Webmail deep-link (best-effort, never blocks login). Lets the
+            # frontend show an "Open Gmail / Mail.ru / …" button that jumps
+            # straight to a search for our login email.
+            try:
+                from ..services import WebmailService
+
+                link = WebmailService.resolve(identifier)
+                if link is not None:
+                    payload["webmail"] = link.model_dump(mode="json")
+            except Exception as e:  # pragma: no cover - defensive
+                logger.warning(f"Webmail link resolution failed for {identifier}: {e}")
+
+            return Response(payload, status=status.HTTP_200_OK)
 
         if result.error_code == "invalid_email":
             logger.warning(f"Invalid identifier provided: {identifier}")

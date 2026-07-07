@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from ..models import CustomUser, OTPSecret
 from ..services.email_validator import validate_email_address, EmailValidationError
+from ..services.webmail import WebmailProvider
 from .profile import UserSerializer
 
 
@@ -118,10 +119,39 @@ class OTPVerifyResponseSerializer(serializers.Serializer):
     )
 
 
+class WebmailLinkSerializer(serializers.Serializer):
+    """
+    Deep-link that opens the user's webmail on a search for our login email.
+
+    Present only when the recipient's email domain maps to a known webmail
+    provider (Gmail, Outlook, Mail.ru, Yandex, iCloud, …). For unknown/corporate
+    domains this whole object is null and the frontend shows no button.
+    """
+
+    provider = serializers.ChoiceField(
+        choices=[(m.value, m.value) for m in WebmailProvider],
+        help_text="Provider slug (e.g. 'gmail', 'outlook', 'mail_ru'). Also selects the brand icon on the frontend.",
+    )
+    provider_name = serializers.CharField(
+        help_text="Human-facing provider name, e.g. 'Gmail'."
+    )
+    url = serializers.URLField(
+        help_text="Absolute URL to open in a new tab (a sender-filtered search, or the inbox as fallback)."
+    )
+    is_search = serializers.BooleanField(
+        help_text="True if the URL opens a search filtered to our sender; False if it only opens the inbox."
+    )
+
+
 class OTPRequestResponseSerializer(serializers.Serializer):
     """OTP request response."""
 
     message = serializers.CharField(help_text="Success message")
+    webmail = WebmailLinkSerializer(
+        required=False,
+        allow_null=True,
+        help_text="Webmail deep-link for the recipient's provider, or null if the domain is unknown.",
+    )
 
 
 class OTPErrorResponseSerializer(serializers.Serializer):

@@ -292,6 +292,18 @@ export const auth = {{
   setRefreshHandler(fn: RefreshHandler | null): void {{
     _refreshHandler = fn;
   }},
+
+  /**
+   * Proactively run the registered refresh handler right now, reusing the
+   * SAME single-flight promise as the 401-recovery interceptor. Callers
+   * (e.g. an expiry timer / focus / reconnect) get token rotation,
+   * de-duplication and rotated-token persistence for free — they must NOT
+   * re-implement any of it. Returns the fresh access token, or null if
+   * there is no handler / no refresh token / the refresh failed.
+   */
+  refreshNow(): Promise<string | null> {{
+    return tryRefresh();
+  }},
 }};
 
 /**
