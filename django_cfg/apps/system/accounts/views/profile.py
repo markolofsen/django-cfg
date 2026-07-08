@@ -2,7 +2,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import generics, permissions, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, parser_classes, permission_classes
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -74,6 +75,7 @@ class UserProfileUpdateView(ClientAPIMixin, generics.UpdateAPIView):
     Requires authenticated user (JWT or Session).
     """
     serializer_class = CfgUserUpdateSerializer
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_object(self):
         return self.request.user
@@ -123,6 +125,7 @@ class UserProfilePartialUpdateView(ClientAPIMixin, generics.UpdateAPIView):
     Requires authenticated user (JWT or Session).
     """
     serializer_class = CfgUserUpdateSerializer
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_object(self):
         return self.request.user
@@ -164,6 +167,7 @@ class UserProfilePartialUpdateView(ClientAPIMixin, generics.UpdateAPIView):
 )
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
 def upload_avatar(request):
     """Upload avatar for current user."""
     if 'avatar' not in request.FILES:
