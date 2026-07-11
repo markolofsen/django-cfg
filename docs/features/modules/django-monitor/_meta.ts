@@ -1,8 +1,5 @@
 export default {
   index: { display: 'hidden' },
-  'configuration': 'Configuration',
-  'server-capture': 'Server-Side Capture',
-  'frontend-sdk': 'Frontend SDK',
-  'layouts-integration': '@djangocfg/layouts',
+  'devtools': 'Frontend devtools',
   'management-commands': 'Management Commands',
 }

@@ -270,14 +270,6 @@ class DjangoConfig(BaseModel):
         default=None,
         description="DRF Spectacular OpenAPI configuration",
     )
-    grpc: Optional[GRPCConfig] = Field(
-        default=None,
-        description="gRPC server configuration",
-    )
-    grpc_module: Optional[DjangoGrpcModuleConfig] = Field(
-        default=None,
-        description="D1-backed gRPC module configuration",
-    )
     api_keys: Optional[ApiKeys] = Field(
         default=None,
         description="External API keys (OpenAI, OpenRouter, etc.)",
@@ -320,14 +312,6 @@ class DjangoConfig(BaseModel):
     streamlit_admin: Optional[StreamlitAdminConfig] = Field(
         default=None,
         description="Streamlit admin panel (auto-starts with Django)",
-    )
-    frontend_monitor: Optional[FrontendMonitorConfig] = Field(
-        default=None,
-        description="Frontend error monitoring configuration",
-    )
-    cloudflare: Optional[CloudflareConfig] = Field(
-        default=None,
-        description="Cloudflare D1 integration configuration",
     )
 
     # ══════════════════════════════════════════════════════════════
@@ -904,6 +888,5 @@ config = MyConfig(
 ### Integrations
 - [**Django-RQ**](/features/modules/django-rq) - Background task queue
 - [**Centrifugo**](../features/modules/django-centrifugo) - WebSocket pub/sub
-- [**gRPC**](../features/modules/django-grpc) - gRPC server configuration
 - [**Ngrok**](/features/modules/django-ngrok) - Development tunneling
 - [**OAuth**](../features/integrations/oauth) - Social authentication

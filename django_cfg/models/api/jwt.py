@@ -227,9 +227,9 @@ class JWTConfig(BaseModel):
                 "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
                 "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
                 "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
-                "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
-                "SLIDING_TOKEN_LIFETIME": self.get_effective_access_token_lifetime(),
-                "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=self.get_effective_refresh_token_days()),
+                # Sliding tokens deliberately NOT configured: AUTH_TOKEN_CLASSES
+                # only accepts AccessToken and no sliding views are wired —
+                # emitting SLIDING_* keys here was dead config.
             },
             # Top-level flag the DPoP auth layer reads (SIMPLE_JWT is owned by
             # simplejwt and ignores unknown keys, so DPoP config lives outside it).

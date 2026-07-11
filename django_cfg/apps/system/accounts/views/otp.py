@@ -7,7 +7,6 @@ from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from django_cfg.apps.system.totp.services import TOTPService, TwoFactorSessionService
 from django_cfg.modules.base import BaseCfgModule
@@ -203,17 +202,9 @@ class OTPViewSet(viewsets.GenericViewSet):
                     status=status.HTTP_200_OK,
                 )
 
-            # No 2FA - generate tokens directly
-            refresh = RefreshToken.for_user(user)
-
-            # DPoP (RFC 9449): if enabled and the client sent a login proof, bind
-            # the tokens to the client's key (`cnf.jkt`). No-op otherwise.
-            from django_cfg.middleware.dpop import (
-                bind_refresh_token_to_request,
-                derive_access_with_cnf,
-            )
-            bind_refresh_token_to_request(refresh, request)
-            access = derive_access_with_cnf(refresh)
+            # No 2FA — mint tokens (DPoP-bound when a login proof is present).
+            from django_cfg.middleware.dpop import mint_tokens_for_request
+            refresh, access = mint_tokens_for_request(user, request)
 
             # Fire auth signal (login alert, activity logging, etc.)
             from ..signals import user_authenticated

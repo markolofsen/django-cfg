@@ -1,9 +1,9 @@
 """
 django_monitor.capture.log_handler — ERROR+ logging handler.
 
-Attaches to root logger and ships ERROR/CRITICAL records to D1.
-Thread-local reentrancy guard prevents recursion when httpx/httpcore
-log at ERROR level during D1 API calls.
+Attaches to root logger and captures ERROR/CRITICAL records.
+Thread-local reentrancy guard prevents recursion when transports
+(httpx, telegram) log at ERROR level during alert delivery.
 """
 
 from __future__ import annotations
@@ -11,11 +11,9 @@ from __future__ import annotations
 import logging
 import threading
 
-from django_cfg.modules.django_cf import is_ready
-
 logger = logging.getLogger(__name__)
 
-# Thread-local flag — prevents recursive emit() during D1 API calls
+# Thread-local flag — prevents recursive emit() during alert delivery
 _emit_local = threading.local()
 
 
@@ -29,17 +27,18 @@ def connect_logging_handler() -> None:
 
 
 class _MonitorLoggingHandler(logging.Handler):
-    """Ships ERROR+ log records to D1. Never raises — silently suppresses."""
+    """Captures ERROR+ log records. Never raises — silently suppresses."""
 
     def emit(self, record: logging.LogRecord) -> None:
-        if not is_ready():
+        from django_cfg.modules.django_monitor import is_enabled
+        if not is_enabled():
             return
 
         # Skip our own loggers to avoid obvious recursion
         if record.name.startswith("django_monitor") or record.name.startswith("django_cfg"):
             return
 
-        # Thread-local guard: httpx/httpcore may log at ERROR during D1 HTTP calls
+        # Thread-local guard: transports may log at ERROR during alert delivery
         if getattr(_emit_local, "in_emit", False):
             return
         _emit_local.in_emit = True
@@ -84,5 +83,5 @@ class _MonitorLoggingHandler(logging.Handler):
         ev.first_seen = None
         ev.last_seen = None
 
-        from django_cfg.modules.django_monitor import get_service
-        get_service().push_server_event(ev)
+        from django_cfg.modules.django_monitor import capture_server_event
+        capture_server_event(ev)

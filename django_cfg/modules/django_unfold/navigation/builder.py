@@ -21,7 +21,7 @@ Usage:
     item = NavBuilder.url_item("Overview", Icons.DASHBOARD, "admin:index")
 
     # Hardcoded path
-    item = NavBuilder.direct_item("Dashboard", Icons.MONITOR_HEART, "/cfg/admin/dashboard/grpc/")
+    item = NavBuilder.direct_item("Dashboard", Icons.MONITOR_HEART, "/cfg/admin/dashboard/")
 """
 
 

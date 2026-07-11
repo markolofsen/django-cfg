@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.2.94"
+__version__ = "2.2.96"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -94,9 +94,9 @@ from .models.django.django_rq import DjangoRQConfig, RQQueueConfig, RQScheduleCo
 from .models.django.rq_health import QueueHealthThresholds, RQHealthConfig
 from .modules.django_logging.__cfg__ import DjangoLoggingConfig
 from .models.django.currency import CurrencyConfig
+from .models.django.payments import PaymentsConfig
 from .models.django.geo import GeoConfig
 from .models.django.simple_history import SimpleHistoryConfig
-from .models.django.frontend_monitor import FrontendMonitorConfig
 from .models.django.constance import ConstanceConfig, ConstanceField
 from .models.django.storage import StorageConfig
 from .models.django.openapi import OpenAPIClientConfig
@@ -229,47 +229,10 @@ except ImportError:
     get_effective_tunnel_url = None  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
-# [OPTIONAL] Cloudflare D1  (requires: cloudflare)
-# ---------------------------------------------------------------------------
-try:
-    from .modules.django_cf import CloudflareConfig
-except ImportError:
-    CloudflareConfig = None  # type: ignore[assignment]
-
-# ---------------------------------------------------------------------------
 # [OPTIONAL] Django import-export  (requires: django-import-export)
 # NOTE: imports Django models (AppRegistryNotReady if done before django.setup()),
 # so these remain lazy — accessed via __getattr__ below.
 # ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# [OPTIONAL] gRPC  (requires: grpcio)
-# ---------------------------------------------------------------------------
-try:
-    from .modules.django_grpc.__cfg__ import DjangoGrpcModuleConfig
-    from .modules.django_grpc.config.server import GrpcServerConfig, GrpcKeepaliveConfig
-    from .modules.django_grpc.config.auth import GrpcAuthConfig
-    from .modules.django_grpc.config.pool import GrpcPoolConfig
-    from .modules.django_grpc.config.resilience import ResilienceConfig as GrpcResilienceConfig
-    from .modules.django_grpc.config.observability import (
-        ObservabilityConfig as GrpcObservabilityConfig,
-        TelegramNotifyConfig as GrpcTelegramNotifyConfig,
-        CentrifugoPublishConfig as GrpcCentrifugoPublishConfig,
-    )
-    from .modules.django_grpc.config.metrics import MetricsConfig as GrpcMetricsConfig
-    from .modules.django_grpc.config.tls import TLSConfig as GrpcTLSConfig
-except ImportError:
-    DjangoGrpcModuleConfig = None  # type: ignore[assignment]
-    GrpcServerConfig = None  # type: ignore[assignment]
-    GrpcKeepaliveConfig = None  # type: ignore[assignment]
-    GrpcAuthConfig = None  # type: ignore[assignment]
-    GrpcPoolConfig = None  # type: ignore[assignment]
-    GrpcResilienceConfig = None  # type: ignore[assignment]
-    GrpcObservabilityConfig = None  # type: ignore[assignment]
-    GrpcTelegramNotifyConfig = None  # type: ignore[assignment]
-    GrpcCentrifugoPublishConfig = None  # type: ignore[assignment]
-    GrpcMetricsConfig = None  # type: ignore[assignment]
-    GrpcTLSConfig = None  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
 # [OPTIONAL] MCP (Model Context Protocol for AI agents)
@@ -350,7 +313,7 @@ __all__ = [
     "DjangoRQConfig", "RQQueueConfig", "RQScheduleConfig",
     "RQHealthConfig", "QueueHealthThresholds",
     "DjangoLoggingConfig",
-    "CurrencyConfig", "GeoConfig", "SimpleHistoryConfig", "FrontendMonitorConfig",
+    "CurrencyConfig", "PaymentsConfig", "GeoConfig", "SimpleHistoryConfig",
     "ConstanceConfig", "ConstanceField", "StorageConfig", "OpenAPIClientConfig",
     "EmailConfig", "TelegramConfig",
     # middleware (lazy — DRF reads settings at import time)
@@ -382,19 +345,11 @@ __all__ = [
     "get_tunnel_url", "get_webhook_url", "get_api_url",
     "get_tunnel_url_from_env", "get_ngrok_host_from_env",
     "is_ngrok_available_from_env", "is_tunnel_active", "get_effective_tunnel_url",
-    # optional: cloudflare
-    "CloudflareConfig",
     # optional: import-export (lazy — imports Django admin models)
     "ImportForm", "ExportForm", "SelectableFieldsExportForm",
     "ImportExportMixin", "ImportExportModelAdmin",
     "ExportMixin", "ImportMixin", "BaseResource",
-    # optional: grpc
-    "DjangoGrpcModuleConfig", "GrpcServerConfig", "GrpcKeepaliveConfig", "GrpcAuthConfig", "GrpcPoolConfig",
-    "GrpcResilienceConfig", "GrpcObservationConfig", "GrpcObservabilityConfig", "GrpcTelegramNotifyConfig",
-    "GrpcCentrifugoPublishConfig", "GrpcMetricsConfig", "GrpcTLSConfig",
     "DjangoMCPModuleConfig", "MCPConfigBuilder",
     "MCPIntrospectionConfig", "MCPAppMCPConfig", "MCPModelMCPConfig",
     "MCPCommandMCPConfig", "MCPRedactionConfig",
-    "GrpcResilienceConfig", "GrpcObservabilityConfig", "GrpcTelegramNotifyConfig",
-    "GrpcCentrifugoPublishConfig", "GrpcMetricsConfig", "GrpcTLSConfig",
 ]

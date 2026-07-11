@@ -48,28 +48,51 @@ class TOTPService:
 
         Device is created in PENDING status until confirmed with a valid TOTP code.
 
+        Restarting setup reuses the user's existing PENDING device (its secret is
+        regenerated) instead of inserting a new row — otherwise every "start setup"
+        click would leave an orphaned PENDING device behind and users would
+        accumulate dozens of unconfirmed authenticators.
+
         Args:
             user: User to create device for
             name: Device name for identification
             make_primary: Whether to make this the primary device
 
         Returns:
-            Created TOTPDevice instance
+            Created (or reused) TOTPDevice instance
         """
         secret = cls.generate_secret()
 
-        device = TOTPDevice.objects.create(
-            user=user,
-            name=name,
-            secret=secret,
-            status=DeviceStatus.PENDING,
-            is_primary=False,
+        # Reuse a single pending device across setup restarts; collapse any extra
+        # pending rows left over from before this fix into that one.
+        pending = list(
+            TOTPDevice.objects.filter(
+                user=user, status=DeviceStatus.PENDING
+            ).order_by("created_at")
         )
+        if pending:
+            device = pending[0]
+            for stale in pending[1:]:
+                stale.delete()
+            device.name = name
+            device.secret = secret
+            device.failed_attempts = 0
+            device.last_verified_code = ""
+            device.save(update_fields=["name", "secret", "failed_attempts", "last_verified_code"])
+            logger.info(f"Reused pending TOTP device '{name}' for user {user.email}")
+        else:
+            device = TOTPDevice.objects.create(
+                user=user,
+                name=name,
+                secret=secret,
+                status=DeviceStatus.PENDING,
+                is_primary=False,
+            )
+            logger.info(f"Created TOTP device '{name}' for user {user.email}")
 
         if make_primary:
             device.make_primary()
 
-        logger.info(f"Created TOTP device '{name}' for user {user.email}")
         return device
 
     @classmethod

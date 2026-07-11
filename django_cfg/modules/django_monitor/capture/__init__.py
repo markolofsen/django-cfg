@@ -8,7 +8,7 @@ Sub-modules:
   log_handler — root logging handler → LOG_ERROR (with reentrancy guard)
   slow_query  — DB execute_wrapper → SLOW_QUERY (with SQL normalization)
   rq          — RQ_EXCEPTION_HANDLERS injection → RQ_FAILURE
-  notify      — Telegram alerts after D1 push
+  notify      — batched Telegram alerts
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def connect_capture() -> None:
 
     Skipped when a test runner is detected (manage.py test, pytest,
     or explicit ``IS_TEST=true``) so test failures don't ship to
-    D1/Telegram.
+    the log pipeline/Telegram.
     """
     global _connected
     if _connected:

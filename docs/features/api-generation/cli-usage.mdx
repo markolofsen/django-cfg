@@ -1,6 +1,6 @@
 ---
 title: CLI Usage
-description: Django-CFG management commands for generating type-safe API clients. Command-line interface for creating TypeScript, Python, Go, Swift, and Protocol Buffer client libraries.
+description: Django-CFG management commands for generating type-safe API clients. Command-line interface for creating TypeScript, Python, Go, and Swift client libraries.
 ---
 
 # CLI Usage
@@ -21,7 +21,7 @@ This command:
 1. Reads groups from your Django-CFG `openapi` configuration
 2. Generates OpenAPI schemas for each group
 3. Parses schemas to IR (Intermediate Representation)
-4. Creates TypeScript, Python, Go, Swift, and Proto clients for each group
+4. Creates TypeScript, Python, Go, and Swift clients for each group
 5. Outputs clients to the configured directory
 
 **Options:**
@@ -32,14 +32,12 @@ This command:
 | `--typescript` | Generate TypeScript client only |
 | `--python` | Generate Python client only |
 | `--go` | Generate Go client only |
-| `--proto` | Generate Protocol Buffer definitions only |
 | `--swift` | Generate Swift client (uses apple/swift-openapi-generator) |
 | `--swift-codable` | Generate simple Swift Codable types without OpenAPIRuntime dependency |
 | **Skip Languages** | |
 | `--no-typescript` | Skip TypeScript generation |
 | `--no-python` | Skip Python generation |
 | `--no-go` | Skip Go generation |
-| `--no-proto` | Skip Protocol Buffer generation |
 | **External Generators** | |
 | `--external-go` | Use oapi-codegen instead of built-in Go generator |
 | `--external-python` | Use openapi-python-client instead of built-in Python generator |
@@ -64,9 +62,6 @@ python manage.py generate_client --typescript
 
 # Generate for specific groups
 python manage.py generate_client --groups core shop
-
-# Generate Proto files only for one group
-python manage.py generate_client --groups profiles --proto
 
 # Generate Swift client (uses apple/swift-openapi-generator)
 python manage.py generate_client --swift
@@ -188,9 +183,6 @@ python manage.py generate_client --python
 # Go only
 python manage.py generate_client --go
 
-# Proto only
-python manage.py generate_client --proto
-
 # Swift only (external generator)
 python manage.py generate_client --swift
 ```
@@ -260,9 +252,6 @@ python manage.py generate_client --swift
 
 # Generate simple Swift Codable types (no OpenAPIRuntime dependency)
 python manage.py generate_client --swift-codable
-
-# Or generate proto for Swift gRPC
-python manage.py generate_client --proto
 ```
 
 <Callout type="info">
@@ -309,7 +298,6 @@ Languages:
   → Python (built-in)
   → TypeScript (built-in)
   → Go (built-in)
-  → Protocol Buffers (built-in)
 
 ============================================================
 
@@ -322,7 +310,6 @@ Languages:
   ✅ Python: openapi/clients/python/core (12 files)
   ✅ TypeScript: openapi/clients/typescript/core (28 files)
   ✅ Go: openapi/clients/go/core (8 files)
-  ✅ Proto: openapi/clients/proto/core (6 files)
   → Archiving...
   ✅ Archived
 
@@ -365,69 +352,6 @@ Summary:
 
 Run with --fix to auto-fix 1 issue(s)
 ```
-
-## Compiling Proto Files
-
-After generation, compile proto files for your target language:
-
-### Python (grpcio-tools)
-```bash
-# Install dependencies
-pip install grpcio grpcio-tools
-
-# Compile proto files
-cd openapi/clients/proto/profiles
-python -m grpc_tools.protoc -I. \
-  --python_out=. \
-  --grpc_python_out=. \
-  api__profiles/*.proto
-```
-
-### Go
-```bash
-# Install dependencies
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-
-# Compile proto files
-cd openapi/clients/proto/profiles
-protoc -I. \
-  --go_out=. \
-  --go-grpc_out=. \
-  api__profiles/*.proto
-```
-
-### TypeScript (ts-proto)
-```bash
-# Install dependencies
-npm install ts-proto
-
-# Compile proto files
-cd openapi/clients/proto/profiles
-protoc -I. \
-  --plugin=./node_modules/.bin/protoc-gen-ts_proto \
-  --ts_proto_out=. \
-  api__profiles/*.proto
-```
-
-### Swift
-```bash
-# Install dependencies
-brew install protobuf swift-protobuf grpc-swift
-
-# Compile proto files
-cd openapi/clients/proto/profiles
-protoc -I. \
-  --swift_out=. \
-  --swift_opt=Visibility=Public \
-  api__profiles/*.proto
-```
-
-<Callout type="info">
-**Auto-Generated README**
-
-Each generated proto group includes a README.md with detailed compilation commands for all supported languages.
-</Callout>
 
 ## Troubleshooting
 
@@ -576,7 +500,6 @@ This creates:
 - `openapi/clients/python/` - Python clients
 - `openapi/clients/typescript/` - TypeScript clients
 - `openapi/clients/go/` - Go clients
-- `openapi/clients/proto/` - Protocol Buffer files
 - `openapi/clients/swift/` - Swift clients (when --swift used)
 - `openapi/archive/` - Archived versions (when enabled)
 

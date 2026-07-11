@@ -131,6 +131,14 @@ sequenceDiagram
 `ROTATE_REFRESH_TOKENS = True` + `BLACKLIST_AFTER_ROTATION = True` by default.
 Reusing a blacklisted token signals theft — rejected immediately.
 
+### Logout — server-side revocation
+
+`POST /cfg/accounts/token/blacklist/` with `{refresh}` blacklists the refresh
+token immediately. The `@djangocfg/api` `logout()` calls it best-effort (local
+logout never blocks on the network) — without it, "logout" would only clear
+browser storage and a stolen refresh token would survive until its 90-day
+expiry.
+
 ---
 
 ## DPoP — make a stolen token useless

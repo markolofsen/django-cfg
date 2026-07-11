@@ -84,6 +84,11 @@ def run_ts_wrapper(target: GenerationTarget, out_root: Path) -> None:
     Best-effort — wrapper failures are not fatal. The wrapper proxies
     into Hey API SDK classes; if it can't be emitted, callers just
     import from the per-group barrels directly.
+
+    The emitted auth store is chosen AUTOMATICALLY from the target's
+    sliced ``openapi.json``: zero secured operations → token-free public
+    store (e.g. the frontend monitor's ingest API); anything else → the
+    full JWT store with auto-refresh. No per-target configuration.
     """
     try:
         generate_ts_wrapper(Path(out_root))

@@ -113,9 +113,6 @@ All deployment methods require:
 
 [Django-RQ Integration →](/features/modules/django-rq)
 
-### gRPC Server (Optional)
-- **django-grpc** - Built-in gRPC support (requires `grpc` feature)
-
 ### Reverse Proxy
 - **Nginx** - Recommended
 - **Apache** - Alternative
@@ -133,15 +130,6 @@ python manage.py rqworker default high low
 
 # Start RQ scheduler (for cron/interval tasks)
 python manage.py rqscheduler
-```
-
-## gRPC Server
-
-If the `grpc` feature is enabled, start the gRPC server alongside Django:
-
-```bash
-# Start gRPC server
-python manage.py rungrpc
 ```
 
 ---

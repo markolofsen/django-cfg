@@ -35,7 +35,7 @@ class MonitorIngestViewSet(viewsets.GenericViewSet):
     """
     Ingest endpoint for browser-side errors, logs, and metrics.
 
-    Designed to be called by the @djangocfg/monitor JS SDK.
+    Designed to be called by the @djangocfg/devtools JS SDK.
     Supports both authenticated and anonymous visitors.
     """
 
@@ -54,7 +54,7 @@ class MonitorIngestViewSet(viewsets.GenericViewSet):
     )
     @action(detail=False, methods=["post"], url_path="ingest")
     def ingest(self, request):
-        """Accept a batch of frontend events and forward to D1."""
+        """Accept a batch of frontend events and store them (JSONL + alerts)."""
         # IP throttle: 60 ingest calls/minute — prevents runaway SDK loops
         if is_ratelimited(request, group="monitor_ingest", key="ip", rate="60/m", increment=True):
             return Response(status=status.HTTP_429_TOO_MANY_REQUESTS)
@@ -68,40 +68,12 @@ class MonitorIngestViewSet(viewsets.GenericViewSet):
         if request.user and request.user.is_authenticated:
             user_id = str(request.user.pk)
 
-        events = serializer.validated_data["events"]
-        self._forward_to_d1(request, events, ip_address, user_id)
+        from django_cfg.modules.django_monitor.services import ingest_frontend_events
+
+        ingest_frontend_events(
+            serializer.validated_data["events"],
+            ip_address=ip_address,
+            user_id=user_id,
+        )
 
         return Response(status=status.HTTP_202_ACCEPTED)
-
-    def _forward_to_d1(self, request, events: list[dict], ip_address: str, user_id: str | None) -> None:
-        """Forward validated events to D1 via django_monitor capture."""
-        from django_cfg.modules.django_monitor import is_enabled, get_service
-        from django_cfg.modules.django_monitor.events.types import FrontendEventSyncData
-
-        if not is_enabled():
-            return
-
-        try:
-            service = get_service()
-        except Exception:
-            return
-
-        try:
-            api_url = service._get_api_url()
-        except Exception:
-            # Fallback: infer from the incoming request host when config not available
-            scheme = "https" if request.is_secure() else "http"
-            api_url = f"{scheme}://{request.get_host()}"
-
-        batch: list = []
-        for ev in events:
-            try:
-                batch.append(FrontendEventSyncData.from_ingest(ev, api_url, ip_address, user_id))
-            except Exception:
-                logger.exception("django_monitor: failed to build FrontendEventSyncData")
-
-        if batch:
-            try:
-                service.push_frontend_events_batch(batch)
-            except Exception:
-                logger.exception("django_monitor: failed to push frontend events batch to D1")

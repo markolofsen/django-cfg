@@ -5,7 +5,6 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from django_cfg.utils import get_logger
 
@@ -114,18 +113,9 @@ class VerifyViewSet(viewsets.GenericViewSet):
 
         # Issue tokens
         user = session.user
-        refresh = RefreshToken.for_user(user)
-
-        # DPoP (RFC 9449): bind tokens to the client key if a login proof is
-        # present. This is a token-mint point just like OTP verify, so it must
-        # bind too — otherwise 2FA users would get unbound tokens and DPoP
-        # enforcement would be silently skipped for them.
-        from django_cfg.middleware.dpop import (
-            bind_refresh_token_to_request,
-            derive_access_with_cnf,
-        )
-        bind_refresh_token_to_request(refresh, request)
-        access = derive_access_with_cnf(refresh)
+        # Mint tokens (DPoP-bound when a login proof is present).
+        from django_cfg.middleware.dpop import mint_tokens_for_request
+        refresh, access = mint_tokens_for_request(user, request)
 
         # Import UserSerializer from accounts app
         try:
@@ -207,16 +197,9 @@ class VerifyViewSet(viewsets.GenericViewSet):
 
         # Issue tokens
         user = session.user
-        refresh = RefreshToken.for_user(user)
-
-        # DPoP (RFC 9449): bind tokens to the client key when a login proof is
-        # present (same as the TOTP and OTP mint points).
-        from django_cfg.middleware.dpop import (
-            bind_refresh_token_to_request,
-            derive_access_with_cnf,
-        )
-        bind_refresh_token_to_request(refresh, request)
-        access = derive_access_with_cnf(refresh)
+        # Mint tokens (DPoP-bound when a login proof is present).
+        from django_cfg.middleware.dpop import mint_tokens_for_request
+        refresh, access = mint_tokens_for_request(user, request)
 
         # Get remaining backup codes
         remaining_codes = BackupCodeService.get_remaining_count(user)

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import logging
 
-from django_cfg.modules.django_cf import is_ready
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +46,8 @@ def _push_rq_failure(job, exc_type, exc_value, exc_tb) -> None:
     import hashlib
     import traceback as tb_module
 
-    if not is_ready():
+    from django_cfg.modules.django_monitor import is_enabled
+    if not is_enabled():
         return
 
     try:
@@ -103,5 +103,5 @@ def _push_rq_failure(job, exc_type, exc_value, exc_tb) -> None:
     ev.first_seen = None
     ev.last_seen = None
 
-    from django_cfg.modules.django_monitor import get_service
-    get_service().push_server_event(ev)
+    from django_cfg.modules.django_monitor import capture_server_event
+    capture_server_event(ev)

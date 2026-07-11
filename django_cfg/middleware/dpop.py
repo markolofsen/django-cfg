@@ -267,6 +267,22 @@ def derive_access_with_cnf(refresh):
     return access
 
 
+def mint_tokens_for_request(user, request):
+    """Mint a `(refresh, access)` pair for ``user`` — DPoP-bound when applicable.
+
+    The ONE token-mint helper for every login flow (OTP verify, TOTP verify,
+    backup-code verify). Owns the DPoP ``cnf`` binding so mint points cannot
+    drift: a new login flow that forgets to bind would silently skip DPoP
+    enforcement for its users. No proof / DPoP disabled → plain tokens.
+    """
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    refresh = RefreshToken.for_user(user)
+    bind_refresh_token_to_request(refresh, request)
+    access = derive_access_with_cnf(refresh)
+    return refresh, access
+
+
 def rebind_refresh_response(data: dict, refresh_payload_cnf, request) -> dict:
     """
     Re-apply `cnf` to a token-refresh response so the rotated tokens stay bound.

@@ -5,7 +5,7 @@ description: Generated API client examples for TypeScript, Python, Swift, Go, an
 
 # Using Generated Clients
 
-After generating clients with `python manage.py generate_client`, you'll have type-safe TypeScript, Python, Go, Swift, and Protocol Buffer clients ready to use in your applications.
+After generating clients with `python manage.py generate_client`, you'll have type-safe TypeScript, Python, Go, and Swift clients ready to use in your applications.
 
 ## TypeScript Clients
 
@@ -74,37 +74,79 @@ const newUser = await client.users.create({
 
 ### Authentication
 
-#### Bearer Token
+Every generated TypeScript client ships a global `auth` store
+(`helpers/auth.ts`) that is wired into the HTTP client automatically. It is
+**self-sufficient out of the box**:
+
+- **Auto-refresh** — when the target's API exposes the SimpleJWT refresh
+  endpoint (`/cfg/accounts/token/refresh/`), the client registers a default
+  refresh handler at import time. A 401 transparently refreshes and retries —
+  no app wiring needed. Override with `auth.setRefreshHandler(...)` if your
+  backend differs.
+- **Cross-store safety** — several generated clients in one app (a local
+  client + `@djangocfg/api` + others) share the same storage keys. Refreshes
+  are serialized through a `navigator.locks` mutex, so token rotation
+  (`ROTATE_REFRESH_TOKENS`) never races between stores.
+- **Reactive session** — the store owns "am I logged in" (JWT `exp`-aware)
+  and pushes changes on token writes, refresh results, expiry, and cross-tab
+  / cross-store events.
+
+#### Session (login / logout)
 
 ```typescript
-// Set access and refresh tokens
-api.setToken('access-token', 'refresh-token');
+import { auth } from './generated';
 
-// Check if authenticated
-if (api.isAuthenticated()) {
-  console.log('User is logged in');
-}
+// The ONE write path after any login flow (atomic pair + notification):
+auth.setSession({ access, refresh });
 
-// Clear tokens
-api.clearToken();
+// Logout:
+auth.clearSession();
+
+// exp-aware check (expired access + live refresh still counts as logged in):
+auth.isAuthenticated();
+```
+
+#### React — subscribe to the session
+
+```tsx
+import { useSyncExternalStore } from 'react';
+import { auth } from './generated';
+
+const session = useSyncExternalStore(
+  auth.subscribe,
+  auth.getSnapshot,
+  auth.getServerSnapshot,
+);
+const isAuthenticated = session.status === 'authenticated';
+// (@djangocfg/api exports this as the `useSession()` hook.)
+```
+
+#### Terminal 401 (session died)
+
+```typescript
+// Fires ONLY when the refresh path is exhausted. The store has already
+// cleared the session — the handler just routes to login. Returns an
+// unsubscribe function; multiple handlers compose.
+const unsubscribe = auth.onSessionExpired(() => {
+  window.location.replace('/auth');
+});
 ```
 
 #### API Key
 
 ```typescript
-// Set API key
-api.setApiKey('your-api-key');
+// Set API key (sent as X-API-Key; falls back to NEXT_PUBLIC_API_KEY)
+auth.setApiKey('your-api-key');
 ```
 
-#### Custom Headers
+#### Public clients (no auth) — automatic
 
-```typescript
-// Add custom headers
-api.setHeaders({
-  'X-Custom-Header': 'value',
-  'X-Request-ID': 'unique-id'
-});
-```
+If a target's sliced OpenAPI spec contains **zero secured operations** (for
+example a public ingest API), the generator automatically emits a token-free
+minimal store instead: no `Authorization` header, no token storage, no refresh
+machinery. This also prevents a logged-in user's Bearer token from leaking
+onto public endpoints. No configuration needed — the mode is derived from the
+spec's `security` requirements.
 
 ### Multiple Groups
 
@@ -654,244 +696,6 @@ do {
 - ✅ **Middleware support** - Authentication, logging, retry
 - ✅ **Combine compatible** - Works with publishers
 - ✅ **SwiftUI ready** - Use with @State, @StateObject
-
-## Protocol Buffer/gRPC Clients
-
-Django-CFG can generate Protocol Buffer definitions and gRPC service definitions from your OpenAPI specification. This is useful when you need high-performance RPC communication or want to use gRPC instead of REST.
-
-
-<Callout type="info">
-**Compilation Required**
-
-Proto files must be compiled with `protoc` before use. Each generated group includes a README.md with detailed compilation instructions for Python, Go, TypeScript, and other languages.
-
-</Callout>
-
-### Installation
-
-Install gRPC tools for your language:
-
-#### Python
-```bash
-pip install grpcio grpcio-tools
-```
-
-#### Go
-```bash
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-```
-
-#### TypeScript
-```bash
-npm install ts-proto
-```
-
-### Generating Proto Files
-
-```bash
-# Generate Protocol Buffers for specific group
-python manage.py generate_client --groups trading --proto
-
-# Or generate all clients including proto
-python manage.py generate_client  # Proto enabled by default
-```
-
-### Compilation
-
-Proto files must be compiled to your target language:
-
-#### Python
-```bash
-cd openapi/clients/proto/trading
-python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. api__trading/*.proto
-```
-
-#### Go
-```bash
-cd openapi/clients/proto/trading
-protoc -I. --go_out=. --go-grpc_out=. api__trading/*.proto
-```
-
-#### TypeScript
-```bash
-cd openapi/clients/proto/trading
-protoc -I. --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=. api__trading/*.proto
-```
-
-See the generated `README.md` in each proto group for complete compilation instructions.
-
-### Basic Usage (Python)
-
-```python
-import grpc
-from trading.api__trading import service_pb2, service_pb2_grpc
-
-# Create insecure channel (for development)
-channel = grpc.insecure_channel('localhost:50051')
-
-# Create service stub
-stub = service_pb2_grpc.TradingServiceStub(channel)
-
-# List wallets
-request = service_pb2.WalletsListRequest(
-    page=1,
-    page_size=10
-)
-response = stub.WalletsList(request)
-
-print(f"Found {response.data.count} wallets")
-for wallet in response.data.results:
-    print(f"- {wallet.currency}: {wallet.balance}")
-
-# Create order
-create_request = service_pb2.OrdersCreateRequest(
-    body=service_pb2.OrderCreate(
-        symbol="BTC/USDT",
-        side="buy",
-        amount=0.1,
-        price=45000
-    )
-)
-new_order = stub.OrdersCreate(create_request)
-print(f"Created order: {new_order.data.id}")
-```
-
-### Basic Usage (Go)
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "log"
-    "google.golang.org/grpc"
-    pb "your-module/trading/api__trading"
-)
-
-func main() {
-    // Create connection
-    conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
-    if err != nil {
-        log.Fatalf("did not connect: %v", err)
-    }
-    defer conn.Close()
-
-    // Create client
-    client := pb.NewTradingServiceClient(conn)
-
-    // List wallets
-    resp, err := client.WalletsList(context.Background(), &pb.WalletsListRequest{
-        Page:     proto.Int64(1),
-        PageSize: proto.Int64(10),
-    })
-    if err != nil {
-        log.Fatalf("could not list: %v", err)
-    }
-
-    fmt.Printf("Found %d wallets\n", resp.Data.Count)
-    for _, wallet := range resp.Data.Results {
-        fmt.Printf("- %s: %s\n", wallet.Currency, wallet.Balance)
-    }
-}
-```
-
-### Authentication
-
-gRPC uses interceptors for authentication instead of HTTP headers:
-
-```python
-import grpc
-
-# Create credentials interceptor
-class AuthInterceptor(grpc.UnaryUnaryClientInterceptor):
-    def __init__(self, token):
-        self._token = token
-
-    def intercept_unary_unary(self, continuation, client_call_details, request):
-        metadata = []
-        if client_call_details.metadata is not None:
-            metadata = list(client_call_details.metadata)
-        metadata.append(('authorization', f'Bearer {self._token}'))
-
-        new_details = client_call_details._replace(metadata=metadata)
-        return continuation(new_details, request)
-
-# Use interceptor
-channel = grpc.insecure_channel('localhost:50051')
-intercepted_channel = grpc.intercept_channel(channel, AuthInterceptor('your-token'))
-stub = service_pb2_grpc.TradingServiceStub(intercepted_channel)
-```
-
-### Error Handling
-
-gRPC uses status codes instead of HTTP status codes:
-
-```python
-import grpc
-
-try:
-    response = stub.WalletsRetrieve(request)
-except grpc.RpcError as e:
-    if e.code() == grpc.StatusCode.NOT_FOUND:
-        print("Wallet not found")
-    elif e.code() == grpc.StatusCode.PERMISSION_DENIED:
-        print("Permission denied")
-    else:
-        print(f"RPC failed: {e.code()}: {e.details()}")
-```
-
-### Features
-
-- ✅ **Type-safe messages** - Proto3 message definitions with full type safety
-- ✅ **gRPC services** - Complete gRPC service definitions with all operations
-- ✅ **Multi-language support** - Compile to Python, Go, TypeScript, C++, Java, Rust, etc.
-- ✅ **Binary serialization** - Efficient Protocol Buffer encoding
-- ✅ **Cross-platform** - Works with any gRPC implementation
-- ✅ **All OpenAPI features** - Enums, arrays, nested objects, pagination
-
-### Generated Files
-
-For each service, the proto generator creates:
-
-```
-openapi/clients/proto/profiles/
-├── api__profiles/
-│   ├── messages.proto          # Message definitions (models, enums)
-│   ├── service.proto           # gRPC service and RPC methods
-│   ├── messages_pb2.py         # Compiled Python messages
-│   ├── messages_pb2_grpc.py    # Empty (no services in messages)
-│   ├── service_pb2.py          # Request/Response message classes
-│   └── service_pb2_grpc.py     # gRPC client stubs and server servicers
-└── README.md                    # Compilation instructions
-```
-
-### Limitations
-
-Proto generation has some limitations compared to REST clients:
-
-- **File uploads**: Multipart/form-data is converted to `bytes` fields (streaming not auto-generated)
-- **Authentication**: Must be implemented via gRPC interceptors (not auto-generated)
-- **Error codes**: Uses gRPC status codes instead of HTTP status codes
-- **No hooks/fetchers**: Proto clients require manual integration (no SWR hooks equivalent)
-- **Compilation step**: Proto files must be compiled with `protoc` before use
-
-### When to Use gRPC vs REST
-
-**Use gRPC/Proto when:**
-- ✅ You need high performance and low latency
-- ✅ Building microservices that communicate internally
-- ✅ Need bi-directional streaming
-- ✅ Working with polyglot services (multiple languages)
-- ✅ Binary efficiency is important
-
-**Use REST when:**
-- ✅ Building web/mobile applications with HTTP clients
-- ✅ Need browser compatibility without extra tooling
-- ✅ Want simpler debugging with HTTP tools
-- ✅ Working with third-party integrations
-- ✅ Need standard HTTP features (caching, CDN, etc.)
 
 ## Type Safety
 

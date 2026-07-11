@@ -194,10 +194,6 @@ MODULES_REGISTRY = {
     # Centrifugo WebSocket
     "DjangoCfgCentrifugoConfig": ("django_cfg.apps.integrations.centrifugo.services.client.config", "DjangoCfgCentrifugoConfig"),
 
-    # gRPC
-    "GRPCConfig": ("django_cfg.models.api.grpc", "GRPCConfig"),
-    "GRPCServerConfig": ("django_cfg.models.api.grpc", "GRPCServerConfig"),
-
     # Streamlit Admin
     "StreamlitAdminConfig": ("django_cfg.modules.streamlit_admin", "StreamlitAdminConfig"),
 
@@ -305,9 +301,9 @@ Components may have optional dependencies:
 
 ```python
 try:
-    from django_cfg import GRPCConfig
+    from django_cfg import NgrokConfig
 except ImportError:
-    GRPCConfig = None  # grpcio not installed
+    NgrokConfig = None  # ngrok not installed
 ```
 
 ## Extending the Registry

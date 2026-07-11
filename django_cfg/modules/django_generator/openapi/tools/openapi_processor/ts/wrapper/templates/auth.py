@@ -5,7 +5,15 @@ baseUrl. Exposes `installAuthOnClient(client)` — called by `client.gen.ts`
 synchronously right after `createClient()` (post-processed). No circular
 import: `auth.ts` does NOT import `client.gen`.
 
-Storage modes:
+Two render modes (selected per target via `auth_mode`):
+  • `render_auth_ts` (jwt, default) — full store: token storage, reactive
+    session snapshot (`getSnapshot`/`subscribe` for useSyncExternalStore),
+    single write path (`setSession`), cross-store Web-Locks refresh,
+    auto-registered refresh handler, terminal-401 `onSessionExpired`, DPoP.
+  • `render_auth_public_ts` (public) — token-free minimal store for clients
+    that only call public endpoints (no Authorization, no refresh, no DPoP).
+
+Storage modes (jwt store only):
   • 'localStorage' (default) — JS-readable, simple, survives reload.
   • 'cookie'                 — JS-readable cookie (NOT HttpOnly).
                                Useful when you need SSR to see the
@@ -18,13 +26,195 @@ Switch via `auth.setStorageMode('cookie')` early in app bootstrap.
 from __future__ import annotations
 
 
+# ── Shared TS fragments ──────────────────────────────────────────────────────
+# Emitted verbatim into BOTH auth stores (JWT + public). Single source for
+# every line that must not drift between the two modes. Plain strings —
+# single braces — interpolated into the f-string templates below.
+
+_ENV_HELPERS_TS = '''\
+/** Detect locale from `NEXT_LOCALE` cookie or `navigator.language`. */
+function detectLocale(): string | null {
+  try {
+    if (typeof document !== 'undefined') {
+      const m = document.cookie.match(/(?:^|;\\s*)NEXT_LOCALE=([^;]*)/);
+      if (m) return decodeURIComponent(m[1]);
+    }
+    if (typeof navigator !== 'undefined' && navigator.language) {
+      return navigator.language;
+    }
+  } catch {}
+  return null;
+}
+
+/** Default baseUrl.
+ *
+ * Browser: uses NEXT_PUBLIC_API_PROXY_URL if set (empty string = same-origin
+ * Next.js proxy), otherwise falls back to NEXT_PUBLIC_API_URL directly.
+ * Set NEXT_PUBLIC_API_PROXY_URL='' in apps that proxy /apix/* via Next.js
+ * Route Handler; leave it unset in apps that hit Django directly.
+ *
+ * Server (SSR / RSC / Edge): use NEXT_PUBLIC_API_URL so server-side fetch
+ * reaches Django directly (proxy is a same-origin HTTP round-trip on server).
+ */
+function defaultBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    try {
+      if (typeof process !== 'undefined' && process.env) {
+        if (process.env.NEXT_PUBLIC_STATIC_BUILD === 'true') return '';
+        // NEXT_PUBLIC_API_PROXY_URL='' means same-origin proxy (e.g. /apix/* route handler).
+        // Next.js inlines defined vars as their value; undefined means the var was not set.
+        if (process.env.NEXT_PUBLIC_API_PROXY_URL !== undefined)
+          return process.env.NEXT_PUBLIC_API_PROXY_URL;
+        return process.env.NEXT_PUBLIC_API_URL || '';
+      }
+    } catch {}
+    return '';
+  }
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      if (process.env.NEXT_PUBLIC_STATIC_BUILD === 'true') return '';
+      return process.env.NEXT_PUBLIC_API_URL || '';
+    }
+  } catch {}
+  return '';
+}
+
+/** Default API key fallback from `NEXT_PUBLIC_API_KEY`.
+ *
+ * Both browser and server: if NEXT_PUBLIC_API_KEY is set it is used as a
+ * global fallback (e.g. a public demo key). When not set, returns null so
+ * per-request keys passed via options.headers take effect unobstructed.
+ */
+function defaultApiKey(): string | null {
+  try {
+    if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_KEY) {
+      return process.env.NEXT_PUBLIC_API_KEY;
+    }
+  } catch {}
+  return null;
+}
+'''
+
+_HEY_CLIENT_TS = '''\
+/**
+ * Captured reference to the shared Hey API client. Set exactly once by
+ * `installAuthOnClient(client)` (called from client.gen.ts). All `auth.set*`
+ * methods that mutate transport config (baseUrl / credentials) push through
+ * this reference. Until installed, those mutations are silently buffered as
+ * in-memory state — the next request after install will pick them up.
+ */
+type HeyClient = {
+  setConfig(opts: Record<string, unknown>): void;
+  interceptors: {
+    request: { use(fn: (req: Request) => Request | Promise<Request>): void };
+    response: { use(fn: (res: Response, req: Request) => Response | Promise<Response>): void };
+    error: { use(fn: (err: unknown, res: Response | undefined, req: Request | undefined, opts: unknown) => unknown): void };
+  };
+};
+let _client: HeyClient | null = null;
+
+function pushClientConfig(): void {
+  if (!_client) return;
+  _client.setConfig({
+    baseUrl: auth.getBaseUrl(),
+    credentials: _withCredentials ? 'include' : 'same-origin',
+  });
+}
+'''
+
+# Locale / API-key / timezone / client-time header wiring — the part of the
+# request interceptor common to both modes (indented for the interceptor body).
+_COMMON_REQUEST_HEADERS_TS = '''\
+    const locale = auth.getLocale();
+    if (locale) request.headers.set('Accept-Language', locale);
+
+    // Only set X-API-Key from global store if NOT already present on the
+    // request — per-request headers take precedence.
+    const apiKey = auth.getApiKey();
+    if (apiKey && !request.headers.has('X-API-Key')) request.headers.set('X-API-Key', apiKey);
+
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) request.headers.set('X-Timezone', tz);
+    } catch {}
+    request.headers.set('X-Client-Time', new Date().toISOString());
+'''
+
+# Wrap raw JSON error objects (thrown by hey-api on non-2xx responses) into
+# APIError so callers can do `error instanceof APIError` and read
+# `error.statusCode` / `error.response` consistently.
+_ERROR_INTERCEPTOR_TS = '''\
+  client.interceptors.error.use((err, res, req) => {
+    if (err instanceof APIError) return err;
+    const url = (req as Request | undefined)?.url ?? '';
+    const status = (res as Response | undefined)?.status ?? 0;
+    const statusText = (res as Response | undefined)?.statusText ?? '';
+    return new APIError(status, statusText, err, url);
+  });
+'''
+
+
 def render_auth_ts(
     *,
     access_key: str = "cfg.access_token",
     refresh_key: str = "cfg.refresh_token",
     api_key_storage_key: str = "cfg.api_key",
+    refresh_path: str | None = "/cfg/accounts/token/refresh/",
 ) -> str:
-    """Render `helpers/auth.ts` — the global auth store + interceptor installer."""
+    """Render `helpers/auth.ts` — the global auth store + interceptor installer.
+
+    ``refresh_path`` — endpoint of the SimpleJWT refresh view. A default
+    refresh handler POSTing to it via raw ``fetch`` is auto-registered at
+    import time, so EVERY jwt-mode client refreshes on 401 with no app wiring —
+    including targets whose own SDK slice doesn't contain the accounts group
+    (the endpoint lives on the server regardless of client slicing). Raw fetch
+    also avoids any import cycle with ``sdk.gen``. An app can override via
+    ``auth.setRefreshHandler(...)`` (last write wins); pass ``None`` to skip
+    emission for non-django_cfg backends.
+    """
+
+    auto_refresh_import = ""
+    auto_refresh_block = ""
+    if refresh_path:
+        auto_refresh_block = f'''
+// ── Default refresh handler (auto-registered) ──────────────────────────────
+//
+// POSTs straight to the SimpleJWT refresh endpoint so a 401 transparently
+// refreshes and retries. Registered at import time; an app can override it
+// afterwards with `auth.setRefreshHandler(...)` (last write wins). Returns the
+// ROTATED refresh token so the store persists it — `ROTATE_REFRESH_TOKENS`
+// blacklists the old one, so reusing it would 401 on the next refresh.
+//
+// Raw fetch, NOT the SDK: the endpoint exists on the server even when this
+// target's sliced SDK doesn't include the accounts group, and importing
+// sdk.gen here would close the cycle auth.ts → sdk.gen → client.gen → auth.ts.
+const REFRESH_ENDPOINT = '{refresh_path}';
+
+auth.setRefreshHandler(async (refresh) => {{
+  try {{
+    const url = `${{auth.getBaseUrl()}}${{REFRESH_ENDPOINT}}`;
+    const headers: Record<string, string> = {{ 'Content-Type': 'application/json' }};
+    // Bound tokens (`cnf.jkt`) require a DPoP proof on the refresh call too.
+    if (dpopEnabled() && typeof window !== 'undefined') {{
+      const proof = await _makeDpopProof('POST', url);
+      if (proof) headers['DPoP'] = proof;
+    }}
+    const res = await fetch(url, {{
+      method: 'POST',
+      headers,
+      credentials: auth.getWithCredentials() ? 'include' : 'same-origin',
+      body: JSON.stringify({{ refresh }}),
+    }});
+    if (!res.ok) return null;
+    const data = (await res.json()) as {{ access?: string; refresh?: string }} | null;
+    return data?.access
+      ? {{ access: data.access, refresh: data.refresh ?? refresh }}
+      : null;
+  }} catch {{
+    return null;
+  }}
+}});
+'''
 
     return f'''\
 // AUTO-GENERATED by django_generator / ts_extras.wrapper
@@ -34,7 +224,7 @@ def render_auth_ts(
 // DO NOT EDIT — re-run `make gen`.
 
 import {{ APIError }} from './errors';
-
+{auto_refresh_import}
 const ACCESS_KEY = '{access_key}';
 const REFRESH_KEY = '{refresh_key}';
 const API_KEY_KEY = '{api_key_storage_key}';
@@ -94,68 +284,7 @@ const cookieBackend: KVStore = {{
 let _storage: KVStore = localStorageBackend;
 let _storageMode: StorageMode = 'localStorage';
 
-/** Detect locale from `NEXT_LOCALE` cookie or `navigator.language`. */
-function detectLocale(): string | null {{
-  try {{
-    if (typeof document !== 'undefined') {{
-      const m = document.cookie.match(/(?:^|;\\s*)NEXT_LOCALE=([^;]*)/);
-      if (m) return decodeURIComponent(m[1]);
-    }}
-    if (typeof navigator !== 'undefined' && navigator.language) {{
-      return navigator.language;
-    }}
-  }} catch {{}}
-  return null;
-}}
-
-/** Default baseUrl.
- *
- * Browser: uses NEXT_PUBLIC_API_PROXY_URL if set (empty string = same-origin
- * Next.js proxy), otherwise falls back to NEXT_PUBLIC_API_URL directly.
- * Set NEXT_PUBLIC_API_PROXY_URL='' in apps that proxy /apix/* via Next.js
- * Route Handler; leave it unset in apps that hit Django directly.
- *
- * Server (SSR / RSC / Edge): use NEXT_PUBLIC_API_URL so server-side fetch
- * reaches Django directly (proxy is a same-origin HTTP round-trip on server).
- */
-function defaultBaseUrl(): string {{
-  if (typeof window !== 'undefined') {{
-    try {{
-      if (typeof process !== 'undefined' && process.env) {{
-        if (process.env.NEXT_PUBLIC_STATIC_BUILD === 'true') return '';
-        // NEXT_PUBLIC_API_PROXY_URL='' means same-origin proxy (e.g. /apix/* route handler).
-        // Next.js inlines defined vars as their value; undefined means the var was not set.
-        if (process.env.NEXT_PUBLIC_API_PROXY_URL !== undefined)
-          return process.env.NEXT_PUBLIC_API_PROXY_URL;
-        return process.env.NEXT_PUBLIC_API_URL || '';
-      }}
-    }} catch {{}}
-    return '';
-  }}
-  try {{
-    if (typeof process !== 'undefined' && process.env) {{
-      if (process.env.NEXT_PUBLIC_STATIC_BUILD === 'true') return '';
-      return process.env.NEXT_PUBLIC_API_URL || '';
-    }}
-  }} catch {{}}
-  return '';
-}}
-
-/** Default API key fallback from `NEXT_PUBLIC_API_KEY`.
- *
- * Both browser and server: if NEXT_PUBLIC_API_KEY is set it is used as a
- * global fallback (e.g. a public demo key). When not set, returns null so
- * per-request keys passed via options.headers take effect unobstructed.
- */
-function defaultApiKey(): string | null {{
-  try {{
-    if (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_KEY) {{
-      return process.env.NEXT_PUBLIC_API_KEY;
-    }}
-  }} catch {{}}
-  return null;
-}}
-
+{_ENV_HELPERS_TS}
 // ── In-memory overrides (win over storage / env) ───────────────────────────
 let _localeOverride: string | null = null;
 let _apiKeyOverride: string | null = null;
@@ -178,31 +307,124 @@ let _refreshInflight: Promise<string | null> | null = null;
 /** Marker header — set on retried requests so we never loop on 401. */
 const RETRY_MARKER = 'X-Auth-Retry';
 
-/**
- * Captured reference to the shared Hey API client. Set exactly once by
- * `installAuthOnClient(client)` (called from client.gen.ts). All `auth.set*`
- * methods that mutate transport config (baseUrl / credentials) push through
- * this reference. Until installed, those mutations are silently buffered as
- * in-memory state — the next request after install will pick them up.
- */
-type HeyClient = {{
-  setConfig(opts: Record<string, unknown>): void;
-  interceptors: {{
-    request: {{ use(fn: (req: Request) => Request | Promise<Request>): void }};
-    response: {{ use(fn: (res: Response, req: Request) => Response | Promise<Response>): void }};
-    error: {{ use(fn: (err: unknown, res: Response | undefined, req: Request | undefined, opts: unknown) => unknown): void }};
-  }};
-}};
-let _client: HeyClient | null = null;
+// ── Reactive session snapshot ───────────────────────────────────────────────
+//
+// The store is the single source of truth for "am I logged in". React (or any
+// listener) subscribes via `auth.subscribe` + `auth.getSnapshot` — designed to
+// plug straight into `useSyncExternalStore`. The snapshot flips automatically
+// on: token writes, refresh success/failure, cross-tab storage events, and an
+// internal timer armed to the next JWT `exp` boundary.
 
-function pushClientConfig(): void {{
-  if (!_client) return;
-  _client.setConfig({{
-    baseUrl: auth.getBaseUrl(),
-    credentials: _withCredentials ? 'include' : 'same-origin',
-  }});
+export type SessionStatus = 'authenticated' | 'anonymous';
+
+export type SessionSnapshot = {{
+  /** 'authenticated' = a live access token OR a live refresh token exists. */
+  status: SessionStatus;
+  /** ms-epoch expiry of the current access token (null: no token / no exp). */
+  accessExpiresAt: number | null;
+}};
+
+/** Decode a JWT `exp` claim to ms epoch. Null on any malformed input. */
+function jwtExpMs(token: string): number | null {{
+  try {{
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const json = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof json.exp === 'number' ? json.exp * 1000 : null;
+  }} catch {{ return null; }}
 }}
 
+function computeSnapshot(): SessionSnapshot {{
+  const access = _storage.get(ACCESS_KEY);
+  const refresh = _storage.get(REFRESH_KEY);
+  const now = Date.now();
+  const accessExp = access ? jwtExpMs(access) : null;
+  const accessAlive = access !== null && (accessExp === null || accessExp > now);
+  const refreshExp = refresh ? jwtExpMs(refresh) : null;
+  const refreshAlive = refresh !== null && (refreshExp === null || refreshExp > now);
+  return {{
+    status: accessAlive || refreshAlive ? 'authenticated' : 'anonymous',
+    accessExpiresAt: accessExp,
+  }};
+}}
+
+/** Stable object for SSR — `useSyncExternalStore` needs referential equality. */
+const SERVER_SNAPSHOT: SessionSnapshot = {{ status: 'anonymous', accessExpiresAt: null }};
+
+/** Same-tab, cross-store sync channel. An app can host several copies of this
+ * generated store (separate JS modules) sharing the same storage keys; the
+ * `storage` event only fires in OTHER tabs, so a window event bridges them
+ * synchronously within the tab (login in one store flips all of them). */
+const SESSION_SYNC_EVENT = `cfg-auth:changed:${{ACCESS_KEY}}`;
+
+let _snapshot: SessionSnapshot = computeSnapshot();
+const _sessionListeners = new Set<() => void>();
+let _expiryTimer: ReturnType<typeof setTimeout> | null = null;
+let _storageListenerInstalled = false;
+
+/** Re-arm the timer that flips the snapshot exactly when a token expires. */
+function scheduleExpiryFlip(): void {{
+  if (!isBrowser) return;
+  if (_expiryTimer !== null) {{ clearTimeout(_expiryTimer); _expiryTimer = null; }}
+  if (_sessionListeners.size === 0) return;
+  const now = Date.now();
+  const exps: number[] = [];
+  const access = _storage.get(ACCESS_KEY);
+  const refresh = _storage.get(REFRESH_KEY);
+  const accessExp = access ? jwtExpMs(access) : null;
+  const refreshExp = refresh ? jwtExpMs(refresh) : null;
+  if (accessExp !== null && accessExp > now) exps.push(accessExp);
+  if (refreshExp !== null && refreshExp > now) exps.push(refreshExp);
+  if (!exps.length) return;
+  // +250ms grace so the token is REALLY expired when we flip; clamp to the
+  // max signed-32-bit setTimeout delay (~24.8 days).
+  const delay = Math.min(Math.min(...exps) - now + 250, 0x7fffffff);
+  _expiryTimer = setTimeout(notifySessionChanged, delay);
+}}
+
+/** Recompute the snapshot; notify subscribers only when it actually changed. */
+function notifySessionChanged(): void {{
+  const next = computeSnapshot();
+  const changed =
+    next.status !== _snapshot.status ||
+    next.accessExpiresAt !== _snapshot.accessExpiresAt;
+  if (changed) _snapshot = next;
+  scheduleExpiryFlip();
+  if (!changed) return;
+  for (const listener of Array.from(_sessionListeners)) {{
+    try {{ listener(); }} catch {{}}
+  }}
+  // Wake sibling stores in this tab. Re-entrant but convergent: a store that
+  // recomputes to the SAME snapshot doesn't re-dispatch, so the cascade stops
+  // after every store has caught up.
+  if (isBrowser) {{
+    try {{ window.dispatchEvent(new Event(SESSION_SYNC_EVENT)); }} catch {{}}
+  }}
+}}
+
+/** Cross-tab + cross-store sync — `storage` events only fire in OTHER tabs;
+ * the window event covers sibling stores in THIS tab. Either way a login or
+ * logout anywhere flips every snapshot reading the same keys. */
+function ensureStorageSync(): void {{
+  if (!isBrowser || _storageListenerInstalled) return;
+  _storageListenerInstalled = true;
+  window.addEventListener('storage', (e) => {{
+    if (e.key === null || e.key === ACCESS_KEY || e.key === REFRESH_KEY) {{
+      notifySessionChanged();
+    }}
+  }});
+  window.addEventListener(SESSION_SYNC_EVENT, () => notifySessionChanged());
+}}
+
+/**
+ * Terminal-401 subscribers. Unlike the single `onUnauthorized` slot these
+ * compose: each registration returns its own unsubscribe, so StrictMode
+ * double-mounts and multiple packages can't clobber each other.
+ */
+type SessionExpiredHandler = (response: Response) => void;
+const _sessionExpiredHandlers = new Set<SessionExpiredHandler>();
+
+{_HEY_CLIENT_TS}
 /**
  * Global auth/config store. All getters read live state every call —
  * the interceptor below uses these to attach headers per-request.
@@ -223,15 +445,79 @@ export const auth = {{
   setStorageMode(mode: StorageMode): void {{
     _storageMode = mode;
     _storage = mode === 'cookie' ? cookieBackend : localStorageBackend;
+    notifySessionChanged();
   }},
 
   // ── Bearer token ──────────────────────────────────────────────────
   getToken(): string | null {{ return _storage.get(ACCESS_KEY); }},
-  setToken(token: string | null): void {{ _storage.set(ACCESS_KEY, token); }},
+  setToken(token: string | null): void {{
+    _storage.set(ACCESS_KEY, token);
+    notifySessionChanged();
+  }},
   getRefreshToken(): string | null {{ return _storage.get(REFRESH_KEY); }},
-  setRefreshToken(token: string | null): void {{ _storage.set(REFRESH_KEY, token); }},
-  clearTokens(): void {{ _storage.set(ACCESS_KEY, null); _storage.set(REFRESH_KEY, null); }},
-  isAuthenticated(): boolean {{ return _storage.get(ACCESS_KEY) !== null; }},
+  setRefreshToken(token: string | null): void {{
+    _storage.set(REFRESH_KEY, token);
+    notifySessionChanged();
+  }},
+  clearTokens(): void {{
+    _storage.set(ACCESS_KEY, null);
+    _storage.set(REFRESH_KEY, null);
+    notifySessionChanged();
+  }},
+  /** Session-aware: token PRESENT and not past its `exp` (or a live refresh
+   * token exists that can mint one). Prefer `getSnapshot().status` in React. */
+  isAuthenticated(): boolean {{ return computeSnapshot().status === 'authenticated'; }},
+
+  // ── Session (the ONE write path for login/logout flows) ──────────
+  /**
+   * Persist a token pair atomically. Every login flow (OTP verify, 2FA,
+   * OAuth callback) and the refresh handler should end here — do NOT
+   * scatter `setToken`/`setRefreshToken` pairs through app code.
+   * `refresh: undefined` keeps the current refresh token (access-only
+   * rotation); `refresh: null` explicitly drops it.
+   */
+  setSession(tokens: {{ access: string; refresh?: string | null }}): void {{
+    _storage.set(ACCESS_KEY, tokens.access);
+    if (tokens.refresh !== undefined) _storage.set(REFRESH_KEY, tokens.refresh);
+    notifySessionChanged();
+  }},
+  clearSession(): void {{ auth.clearTokens(); }},
+
+  // ── Reactive snapshot (for useSyncExternalStore) ──────────────────
+  /**
+   * @example React:
+   *   const session = useSyncExternalStore(
+   *     auth.subscribe, auth.getSnapshot, auth.getServerSnapshot,
+   *   );
+   *   const isAuthenticated = session.status === 'authenticated';
+   */
+  getSnapshot(): SessionSnapshot {{ return _snapshot; }},
+  getServerSnapshot(): SessionSnapshot {{ return SERVER_SNAPSHOT; }},
+  subscribe(listener: () => void): () => void {{
+    ensureStorageSync();
+    _sessionListeners.add(listener);
+    // Sync state & arm the expiry timer now that someone is listening.
+    notifySessionChanged();
+    return () => {{
+      _sessionListeners.delete(listener);
+      if (_sessionListeners.size === 0 && _expiryTimer !== null) {{
+        clearTimeout(_expiryTimer);
+        _expiryTimer = null;
+      }}
+    }};
+  }},
+
+  /**
+   * Fired on TERMINAL 401 — after the refresh+retry path is exhausted.
+   * The store has already cleared the session before calling back, so
+   * handlers only need to route to login (no clear-then-redirect
+   * ordering to get wrong). Returns an unsubscribe function; multiple
+   * handlers compose (unlike the legacy single-slot `onUnauthorized`).
+   */
+  onSessionExpired(cb: SessionExpiredHandler): () => void {{
+    _sessionExpiredHandlers.add(cb);
+    return () => {{ _sessionExpiredHandlers.delete(cb); }};
+  }},
 
   // ── API key ───────────────────────────────────────────────────────
   getApiKey(): string | null {{
@@ -307,23 +593,53 @@ export const auth = {{
 }};
 
 /**
- * Run the user-supplied refresh handler under single-flight, persist
- * the new tokens, and return the fresh access token (or null on any
- * failure path). All concurrent 401s share the same in-flight promise.
+ * Run the user-supplied refresh handler, persist the rotated tokens, and
+ * return the fresh access token (or null on any failure path).
+ *
+ * TWO layers of coordination, because a single app can host MULTIPLE copies of
+ * this generated store (e.g. `@djangocfg/api` + a locally-generated client +
+ * `@djangocfg/monitor`), all sharing the SAME refresh token in storage:
+ *
+ *   1. Per-store single-flight (`_refreshInflight`) — concurrent 401s WITHIN
+ *      this module coalesce onto one promise. Fast path, no lock.
+ *   2. Cross-store mutex (`navigator.locks`) keyed on the refresh-token storage
+ *      key — serializes refreshes across EVERY store in the app. The refresh
+ *      token is re-read INSIDE the lock, so if another store already rotated it
+ *      (SimpleJWT `ROTATE_REFRESH_TOKENS` blacklists the old one), the loser
+ *      picks up the fresh access token instead of re-POSTing a blacklisted
+ *      refresh token and getting a spurious 401 → logout.
+ *
+ * Web Locks is browser-only; on SSR / older runtimes we degrade gracefully to
+ * layer 1 alone (correct whenever at most one store refreshes).
  */
 async function tryRefresh(): Promise<string | null> {{
   if (_refreshInflight) return _refreshInflight;
   if (!_refreshHandler) return null;
-  const refresh = auth.getRefreshToken();
-  if (!refresh) return null;
+
+  // The critical section — re-reads the refresh token every time it runs, so a
+  // rotation performed by another store (or by us on a prior attempt) is always
+  // observed. Returns the fresh access token, or null on any failure.
+  const runRefresh = async (): Promise<string | null> => {{
+    const refresh = auth.getRefreshToken();
+    if (!refresh) return null;
+    const result = await _refreshHandler!(refresh);
+    if (!result?.access) return null;
+    auth.setToken(result.access);
+    if (result.refresh) auth.setRefreshToken(result.refresh);
+    return result.access;
+  }};
 
   _refreshInflight = (async () => {{
     try {{
-      const result = await _refreshHandler!(refresh);
-      if (!result?.access) return null;
-      auth.setToken(result.access);
-      if (result.refresh) auth.setRefreshToken(result.refresh);
-      return result.access;
+      // Serialize across all stores in this app when Web Locks is available.
+      const locks =
+        typeof navigator !== 'undefined'
+          ? (navigator as Navigator & {{ locks?: LockManager }}).locks
+          : undefined;
+      if (locks?.request) {{
+        return await locks.request(`${{REFRESH_KEY}}:refresh`, runRefresh);
+      }}
+      return await runRefresh();
     }} catch {{
       return null;
     }} finally {{
@@ -332,6 +648,23 @@ async function tryRefresh(): Promise<string | null> {{
   }})();
 
   return _refreshInflight;
+}}
+
+/**
+ * Terminal 401 — no refresh path can recover this session. The store clears
+ * its own tokens FIRST (subscribers flip to 'anonymous' via the snapshot),
+ * then notifies `onSessionExpired` subscribers and the legacy
+ * `onUnauthorized` slot. Apps only route to login; they never own the
+ * clear-before-redirect ordering.
+ */
+function expireSession(response: Response): void {{
+  auth.clearTokens();
+  for (const cb of Array.from(_sessionExpiredHandlers)) {{
+    try {{ cb(response); }} catch {{}}
+  }}
+  if (_onUnauthorized) {{
+    try {{ _onUnauthorized(response); }} catch {{}}
+  }}
 }}
 
 /**
@@ -501,20 +834,7 @@ export function installAuthOnClient(client: HeyClient): void {{
     const token = auth.getToken();
     if (token) request.headers.set('Authorization', `Bearer ${{token}}`);
 
-    const locale = auth.getLocale();
-    if (locale) request.headers.set('Accept-Language', locale);
-
-    // Only set X-API-Key from global store if NOT already present on the
-    // request — per-request headers (option 1 above) take precedence.
-    const apiKey = auth.getApiKey();
-    if (apiKey && !request.headers.has('X-API-Key')) request.headers.set('X-API-Key', apiKey);
-
-    try {{
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (tz) request.headers.set('X-Timezone', tz);
-    }} catch {{}}
-    request.headers.set('X-Client-Time', new Date().toISOString());
-
+{_COMMON_REQUEST_HEADERS_TS}
     // DPoP proof — sign a fresh per-request proof with the non-extractable key.
     // Only in a browser, only when enabled. Failure is non-fatal (proof null).
     if (dpopEnabled() && typeof window !== 'undefined') {{
@@ -525,33 +845,20 @@ export function installAuthOnClient(client: HeyClient): void {{
     return request;
   }});
 
-  // Wrap raw JSON error objects (thrown by hey-api on non-2xx responses) into
-  // APIError so callers can do `error instanceof APIError` and read
-  // `error.statusCode` / `error.response` consistently.
-  client.interceptors.error.use((err, res, req) => {{
-    if (err instanceof APIError) return err;
-    const url = (req as Request | undefined)?.url ?? '';
-    const status = (res as Response | undefined)?.status ?? 0;
-    const statusText = (res as Response | undefined)?.statusText ?? '';
-    return new APIError(status, statusText, err, url);
-  }});
+{_ERROR_INTERCEPTOR_TS}
 
   client.interceptors.response.use(async (response, request) => {{
     if (response.status !== 401) return response;
 
     // Already retried once — give up to avoid loops.
     if (request.headers.get(RETRY_MARKER)) {{
-      if (_onUnauthorized) {{
-        try {{ _onUnauthorized(response); }} catch {{}}
-      }}
+      expireSession(response);
       return response;
     }}
 
     const newToken = await tryRefresh();
     if (!newToken) {{
-      if (_onUnauthorized) {{
-        try {{ _onUnauthorized(response); }} catch {{}}
-      }}
+      expireSession(response);
       return response;
     }}
 
@@ -569,22 +876,122 @@ export function installAuthOnClient(client: HeyClient): void {{
     }}
     try {{
       const retried = await fetch(retry);
-      if (retried.status === 401 && _onUnauthorized) {{
-        try {{ _onUnauthorized(retried); }} catch {{}}
-      }}
+      if (retried.status === 401) expireSession(retried);
       return retried;
     }} catch {{
-      // Network error on retry — surface the original 401.
-      if (_onUnauthorized) {{
-        try {{ _onUnauthorized(response); }} catch {{}}
-      }}
+      // Network error on the retry. The refresh SUCCEEDED (we hold a fresh
+      // token), so the session is alive — a transient network blip must NOT
+      // log the user out. Surface the original 401 to the caller only.
       return response;
     }}
   }});
 }}
+{auto_refresh_block}
+export type Auth = typeof auth;
+'''
+
+
+def render_auth_public_ts() -> str:
+    """Render the PUBLIC-mode `helpers/auth.ts` — a token-free minimal store.
+
+    For generated clients that only call public endpoints (e.g. a frontend
+    monitor's ingest API). Emits baseUrl / locale / timezone / API-key wiring
+    and the APIError interceptor, but NO token storage, NO Authorization
+    header, NO refresh machinery, NO DPoP (~450 lines less than JWT mode).
+
+    The `auth` surface keeps the same method NAMES as JWT mode (token methods
+    are inert no-ops) so the per-group `class API` facade compiles unchanged.
+    A public client also never attaches a logged-in user's Bearer token to
+    public requests — even when another JWT-mode store in the same app has
+    persisted tokens under the shared storage keys.
+    """
+
+    return f'''\
+// AUTO-GENERATED by django_generator / ts_extras.wrapper (authMode: public)
+// Token-free store for public-endpoint clients: no Authorization header, no
+// token storage, no refresh, no DPoP. Wired into the shared `client` from
+// `client.gen.ts` via `installAuthOnClient(client)`.
+// DO NOT EDIT — re-run `make gen`.
+
+import {{ APIError }} from './errors';
+
+export type StorageMode = 'localStorage' | 'cookie';
+
+{_ENV_HELPERS_TS}
+// ── In-memory overrides (win over env) ─────────────────────────────────────
+let _localeOverride: string | null = null;
+let _apiKeyOverride: string | null = null;
+let _baseUrlOverride: string | null = null;
+let _withCredentials = true;
+
+{_HEY_CLIENT_TS}
+/**
+ * Public-mode store. Token/session methods exist for facade compatibility
+ * but are inert: this client NEVER reads, writes, or sends tokens — even
+ * when a JWT-mode store in the same app has persisted tokens in storage.
+ */
+export const auth = {{
+  // ── Inert token/session surface (public client has no session) ─────
+  getStorageMode(): StorageMode {{ return 'localStorage'; }},
+  setStorageMode(_mode: StorageMode): void {{}},
+  getToken(): string | null {{ return null; }},
+  setToken(_token: string | null): void {{}},
+  getRefreshToken(): string | null {{ return null; }},
+  setRefreshToken(_token: string | null): void {{}},
+  clearTokens(): void {{}},
+  isAuthenticated(): boolean {{ return false; }},
+  onUnauthorized(_cb: ((response: Response) => void) | null): void {{}},
+  setRefreshHandler(
+    _fn: ((refreshToken: string) => Promise<{{ access: string; refresh?: string }} | null>) | null,
+  ): void {{}},
+  refreshNow(): Promise<string | null> {{ return Promise.resolve(null); }},
+
+  // ── API key (in-memory override + env fallback; never persisted) ───
+  getApiKey(): string | null {{ return _apiKeyOverride ?? defaultApiKey(); }},
+  setApiKey(key: string | null): void {{ _apiKeyOverride = key; }},
+  setApiKeyPersist(key: string | null): void {{ _apiKeyOverride = key; }},
+  clearApiKey(): void {{ _apiKeyOverride = null; }},
+
+  // ── Locale ────────────────────────────────────────────────────────
+  getLocale(): string | null {{ return _localeOverride ?? detectLocale(); }},
+  setLocale(locale: string | null): void {{ _localeOverride = locale; }},
+
+  // ── Base URL ──────────────────────────────────────────────────────
+  getBaseUrl(): string {{
+    const url = (_baseUrlOverride ?? defaultBaseUrl());
+    return url.replace(/\\/$/, '');
+  }},
+  setBaseUrl(url: string | null): void {{
+    _baseUrlOverride = url ? url.replace(/\\/$/, '') : null;
+    pushClientConfig();
+  }},
+
+  // ── Credentials toggle ────────────────────────────────────────────
+  getWithCredentials(): boolean {{ return _withCredentials; }},
+  setWithCredentials(value: boolean): void {{
+    _withCredentials = value;
+    pushClientConfig();
+  }},
+}};
+
+export function installAuthOnClient(client: HeyClient): void {{
+  if (_client) return; // idempotent
+  _client = client;
+
+  client.setConfig({{
+    baseUrl: auth.getBaseUrl(),
+    credentials: _withCredentials ? 'include' : 'same-origin',
+  }});
+
+  client.interceptors.request.use((request) => {{
+{_COMMON_REQUEST_HEADERS_TS}
+    return request;
+  }});
+
+{_ERROR_INTERCEPTOR_TS}}}
 
 export type Auth = typeof auth;
 '''
 
 
-__all__ = ["render_auth_ts"]
+__all__ = ["render_auth_ts", "render_auth_public_ts"]

@@ -123,7 +123,7 @@ class ConfigService:
             return {'error': 'Config not available'}
 
         # Use Pydantic's model_dump_for_django to get full structure
-        # This includes all nested models (grpc, centrifugo, databases, etc.)
+        # This includes all nested models (centrifugo, databases, etc.)
         # Uses mode='python' which handles Python objects properly
         config_dict = config.model_dump_for_django(
             exclude={

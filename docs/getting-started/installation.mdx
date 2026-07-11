@@ -14,15 +14,14 @@ pip install django-cfg
 Or with optional dependency groups:
 
 ```bash
-pip install "django-cfg[grpc]"       # gRPC support
-pip install "django-cfg[full]"       # All enterprise features
+pip install "django-cfg[centrifugo]"  # Real-time messaging
+pip install "django-cfg[full]"        # All enterprise features
 ```
 
 ## Optional Dependency Groups
 
 | Group | What it adds |
 |-------|-------------|
-| `grpc` | gRPC server support (grpcio, grpcio-tools) |
 | `centrifugo` | Real-time messaging (cent) |
 | `rq` | Redis Queue tasks (rq, django-rq) |
 | `ai` | Pydantic AI agents |

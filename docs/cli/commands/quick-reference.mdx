@@ -26,8 +26,6 @@ Fast reference guide for all Django-CFG management commands. Perfect for quick l
 | Show URLs | `cli show-urls` | List all registered URLs |
 | Test email | `cli test-email --to admin@test.com` | Send test email |
 | Start worker | `rearq main:rearq worker` | Start background task worker |
-| Start gRPC server | `python manage.py rungrpc` | Start async gRPC server |
-| D1 status | `python manage.py cf_status` | Check Cloudflare D1 connection |
 | Streamlit admin | `python manage.py run_streamlit` | Start Streamlit admin server |
 | RQ stats | `python manage.py rqstats` | Show queue statistics |
 | LLM balance | `python manage.py check_llm_balance` | Check API credit balance |
@@ -188,41 +186,6 @@ python manage.py check_settings --verbose
 python manage.py clear_constance
 ```
 
-## 🌐 gRPC / Communication
-
-```bash
-# Start async gRPC server
-python manage.py rungrpc
-
-# Compile .proto files
-python manage.py compile_proto
-
-# Generate proto definitions from Django models
-python manage.py generate_protos
-
-# Create D1 schema tables for gRPC
-python manage.py create_grpc_d1_schema
-```
-
-## ☁️ Cloudflare D1
-
-```bash
-# Show D1 connection status
-python manage.py cf_status
-
-# Sync Django users to D1
-python manage.py cf_sync_users
-
-# View D1 operation logs
-python manage.py d1_logs
-
-# Create D1 schema for RQ events
-python manage.py create_rq_d1_schema
-
-# Create D1 schema for Centrifugo logs
-python manage.py create_centrifugo_d1_schema
-```
-
 ## 📡 Centrifugo
 
 ```bash
@@ -328,8 +291,6 @@ python manage.py runserver_ngrok
 | **Testing** | 4 | Endpoint health, email, telegram, OTP |
 | **Background Tasks** | 9 | Django-RQ workers, scheduler, stats |
 | **Development** | 8 | Server, ngrok, scripts, testing |
-| **gRPC** | 4 | gRPC server, proto compilation |
-| **Cloudflare D1** | 5 | D1 status, sync, logs, schemas |
 | **Centrifugo** | 3 | WebSocket clients, publishing |
 | **Streamlit** | 3 | Admin panel scaffolding, server |
 | **Code Generation** | 2 | FastAPI, API client generation |

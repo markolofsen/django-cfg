@@ -32,6 +32,7 @@ Type-safe configuration • Real-time WebSockets • gRPC Streaming • OpenAPI 
 - ✅ **Real-time WebSockets** - Centrifugo integration included
 - ✅ **gRPC streaming** - Bidirectional streaming with WebSocket bridge
 - ✅ **AI-native docs** - First Django framework with MCP server for AI assistants
+- ✅ **Stripe payments** - Checkout, webhooks, refunds out of the box (`django-cfg[payments]`)
 - ✅ **8 enterprise apps** - Save 18+ months of development
 
 ---
@@ -117,6 +118,25 @@ Production-ready Centrifugo integration - live updates, notifications, presence 
 ### 🌐 gRPC Microservices
 Bidirectional streaming with automatic WebSocket bridge - perfect for real-time architectures.
 
+### 💳 Payments Engine
+Stripe-first payments app, production-lifted from a live SaaS: one-time checkout
+with idempotency, signature-verified webhooks with replay, refunds,
+reconciliation, and an in-memory fake provider for tests. Host couplings are
+config seams (owner model, fulfillment hook) — plug in your own billing objects.
+
+```python
+from django_cfg import DjangoConfig, PaymentsConfig
+
+class MyConfig(DjangoConfig):
+    payments = PaymentsConfig(
+        fulfillment_hook="apps.orders.hooks.activate_order",
+    )
+```
+
+```bash
+pip install 'django-cfg[payments]'   # adds the Stripe SDK
+```
+
 ### 🤖 AI-Native Documentation
 First Django framework with MCP server - AI assistants can access docs instantly.
 
@@ -136,6 +156,7 @@ User auth • Support tickets • Newsletter • CRM • AI agents • Knowledge
 - PostgreSQL, Redis, Centrifugo
 - gRPC server with streaming
 - 8 production-ready apps
+- Stripe payments engine (checkout, webhooks, refunds)
 - AI agent framework
 - REST API with auto TypeScript generation
 

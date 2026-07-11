@@ -49,6 +49,7 @@ from .templates import (
     LOGGER_TS,
     STORAGE_TS,
     VALIDATION_EVENTS_TS,
+    render_auth_public_ts,
     render_auth_ts,
     render_group_api_ts,
     render_group_index_ts,
@@ -58,6 +59,55 @@ from .templates.api import GroupSpec, OpRoute
 
 
 _SDK_CLASS_RE = re.compile(r"export\s+class\s+([A-Z][A-Za-z0-9_]*)\b")
+
+# Endpoint of django_cfg's SimpleJWT refresh view (`CustomTokenRefreshView`).
+# The generated store's default refresh handler POSTs here via raw fetch —
+# deliberately NOT via the SDK: the endpoint exists on the server even when a
+# target's sliced SDK doesn't include the accounts group, and an SDK import
+# would create the auth.ts → sdk.gen → client.gen → auth.ts cycle.
+DEFAULT_REFRESH_PATH = "/cfg/accounts/token/refresh/"
+
+
+_HTTP_METHODS = {"get", "put", "post", "delete", "options", "head", "patch", "trace"}
+
+
+def _detect_auth_mode(target_dir: Path) -> str:
+    """Pick the auth store from the target's own sliced OpenAPI spec.
+
+    `'public'` when NO operation in `<target>/openapi.json` carries a security
+    requirement (neither per-operation nor via the spec's global `security`) —
+    such a client can never need tokens, so it gets the token-free store and
+    never attaches a logged-in user's Bearer token to public endpoints.
+    Any secured operation (or a missing/unreadable spec) → `'jwt'`.
+
+    Fully automatic — no per-target configuration. The spec is written next to
+    the SDK by the pipeline, so the decision is derived from the same source
+    of truth the SDK itself was generated from.
+    """
+    spec_file = target_dir / "openapi.json"
+    try:
+        spec = json.loads(spec_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "jwt"  # no spec on disk → conservative default
+    if not isinstance(spec, dict):
+        return "jwt"
+    global_security = spec.get("security") or []
+    paths = spec.get("paths")
+    if not isinstance(paths, dict) or not paths:
+        return "jwt"
+    saw_operation = False
+    for ops in paths.values():
+        if not isinstance(ops, dict):
+            continue
+        for method, op in ops.items():
+            if method.lower() not in _HTTP_METHODS or not isinstance(op, dict):
+                continue
+            saw_operation = True
+            security = op.get("security", global_security)
+            # A non-empty requirement object means "some auth scheme applies".
+            if security and any(security):
+                return "jwt"
+    return "public" if saw_operation else "jwt"
 
 
 def _extract_sdk_classes(sdk_file: Path) -> list[str]:
@@ -134,10 +184,23 @@ def generate(
     *,
     access_key: str = "cfg.access_token",
     refresh_key: str = "cfg.refresh_token",
+    refresh_path: str | None = DEFAULT_REFRESH_PATH,
+    auth_mode: str = "auto",
 ) -> WrapperResult:
     """Emit shared utilities + per-group `class API` wrapper.
 
     No-op (returns empty result) if no per-group SDKs are found.
+
+    The jwt-mode `helpers/auth.ts` self-registers a default refresh handler
+    POSTing to `refresh_path` (django_cfg's SimpleJWT refresh view) via raw
+    fetch — so EVERY client refreshes on 401 out of the box, even when its own
+    SDK slice doesn't contain the accounts group. Pass `refresh_path=None` for
+    non-django_cfg backends without that endpoint.
+
+    `auth_mode` — `'auto'` (default) inspects the target's sliced
+    `openapi.json`: a spec with zero secured operations gets the token-free
+    public store, anything else the full JWT store. No configuration needed;
+    `'jwt'`/`'public'` force a mode (tests / non-django_cfg backends).
     """
     target_dir = Path(target_dir)
     groups_by_dir = discover_group_dirs(target_dir)
@@ -146,6 +209,18 @@ def generate(
 
     written: list[Path] = []
 
+    if auth_mode == "auto":
+        auth_mode = _detect_auth_mode(target_dir)
+
+    if auth_mode == "public":
+        auth_ts = render_auth_public_ts()
+    else:
+        auth_ts = render_auth_ts(
+            access_key=access_key,
+            refresh_key=refresh_key,
+            refresh_path=refresh_path,
+        )
+
     # Shared utilities — one copy per target, written to helpers/.
     helpers_dir = target_dir / "helpers"
     helpers_dir.mkdir(parents=True, exist_ok=True)
@@ -153,10 +228,7 @@ def generate(
     written.append(_write(helpers_dir / "errors.ts", ERRORS_TS))
     written.append(_write(helpers_dir / "logger.ts", LOGGER_TS))
     written.append(_write(helpers_dir / "validation-events.ts", VALIDATION_EVENTS_TS))
-    written.append(_write(
-        helpers_dir / "auth.ts",
-        render_auth_ts(access_key=access_key, refresh_key=refresh_key),
-    ))
+    written.append(_write(helpers_dir / "auth.ts", auth_ts))
     written.append(_write(helpers_dir / "index.ts", _SHARED_BARREL))
 
     # Patch client.gen.ts so the auth interceptor installs as a

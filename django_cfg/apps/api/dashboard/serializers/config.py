@@ -42,24 +42,6 @@ class EmailConfigSerializer(serializers.Serializer):
     default_from = serializers.CharField(required=False, allow_null=True)
 
 
-class GRPCConfigDashboardSerializer(serializers.Serializer):
-    """gRPC configuration for dashboard."""
-    enabled = serializers.BooleanField(required=False, allow_null=True)
-    host = serializers.CharField(required=False, allow_null=True)
-    port = serializers.IntegerField(required=False, allow_null=True)
-    public_url = serializers.CharField(required=False, allow_null=True)
-    enable_reflection = serializers.BooleanField(required=False, allow_null=True)
-    package_prefix = serializers.CharField(required=False, allow_null=True)
-    output_dir = serializers.CharField(required=False, allow_null=True)
-    handlers_hook = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
-    auto_register_apps = serializers.BooleanField(required=False, allow_null=True)
-    enabled_apps = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
-    custom_services = serializers.DictField(required=False, allow_null=True)
-    server = serializers.JSONField(required=False, allow_null=True)
-    auth = serializers.JSONField(required=False, allow_null=True)
-    proto = serializers.JSONField(required=False, allow_null=True)
-    observability = serializers.JSONField(required=False, allow_null=True)
-
 
 class CentrifugoConfigSerializer(serializers.Serializer):
     """Centrifugo configuration."""
@@ -253,7 +235,6 @@ class DjangoConfigSerializer(serializers.Serializer):
 
     # Integrations
     email = EmailConfigSerializer(required=False, allow_null=True)
-    grpc = GRPCConfigDashboardSerializer(required=False, allow_null=True)
     centrifugo = CentrifugoConfigSerializer(required=False, allow_null=True)
     django_rq = DjangoRQConfigSerializer(required=False, allow_null=True)
     drf = DRFConfigSerializer(required=False, allow_null=True)

@@ -3,13 +3,11 @@ export default {
   'overview': 'Overview',
 
   // ── Core Infrastructure ──────────────────────────────────────
-  'django-cf': 'Cloudflare D1',
   'django-monitor': 'Monitor',
   'django-logging': 'Logging',
   'django-health': 'Health Checks',
 
   // ── Communication ────────────────────────────────────────────
-  'django-grpc': 'gRPC Server',
   'django-centrifugo': 'Centrifugo WebSocket',
   'django-rq': 'Background Tasks (RQ)',
   'django-email': 'Email',

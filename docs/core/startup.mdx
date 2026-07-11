@@ -15,7 +15,7 @@ These hooks run automatically from `DjangoCfgConfig.ready()`. They are each isol
 
 `validate_registry()` walks every entry in `DJANGO_CFG_REGISTRY` and confirms that the module can be imported and the expected attribute exists on it.
 
-- Optional-dependency entries (gRPC, Centrifugo, ngrok, import-export, Unfold, Cloudflare) that fail with `ImportError` are logged at `DEBUG` level only — these failures are expected when the optional package is not installed.
+- Optional-dependency entries (Centrifugo, ngrok, import-export, Unfold) that fail with `ImportError` are logged at `DEBUG` level only — these failures are expected when the optional package is not installed.
 - Required entries that fail (missing attribute or unexpected error) are logged as `ERROR` and collected into a summary warning.
 - The check is read-only and idempotent — calling it multiple times is safe.
 

@@ -17,6 +17,7 @@ from django_cfg.modules.django_unfold.navigation.sections import (
     build_currency_section,
     build_dashboard_section,
     build_geo_section,
+    build_payments_section,
     build_totp_section,
 )
 
@@ -53,6 +54,9 @@ class NavigationManager(BaseCfgModule):
 
         if self.is_geo_enabled():
             sections.append(build_geo_section())
+
+        if self.is_payments_enabled():
+            sections.append(build_payments_section())
 
         sections.append(build_accounts_section(
             is_github_oauth_enabled=self.is_github_oauth_enabled()

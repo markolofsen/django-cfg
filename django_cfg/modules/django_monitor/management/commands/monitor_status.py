@@ -1,5 +1,5 @@
 """
-monitor_status — show D1 monitor event statistics.
+monitor_status — show monitor alerting state and event log location.
 
 Usage:
     python manage.py monitor_status
@@ -10,31 +10,22 @@ from django_cfg.management.utils import SafeCommand
 
 class Command(SafeCommand):
     command_name = "monitor_status"
-    help = "Show Cloudflare D1 monitor event statistics"
+    help = "Show django_monitor alerting state and event log location"
 
     def handle(self, *args, **options):
-        from django_cfg.modules.django_monitor import is_enabled
+        from pathlib import Path
 
-        if not is_enabled():
-            self.stdout.write(self.style.ERROR("django_monitor: django_cf is not ready — check CloudflareConfig"))
-            return
+        from django_cfg.modules.django_monitor.capture.notify import _is_alerts_enabled
 
-        try:
-            from django_cfg.modules.django_monitor import get_service
-            service = get_service()
-            service._ensure_schema()  # create tables if not exist
-            client = service._get_client()
+        self.stdout.write(self.style.SUCCESS("Status: ENABLED (zero-config)"))
+        alerts = "on (TelegramConfig set)" if _is_alerts_enabled() else "off (no TelegramConfig)"
+        self.stdout.write(f"  Telegram alerts : {alerts}")
 
-            r_srv = client.execute("SELECT COUNT(*) as cnt FROM server_events")
-            r_unresolved = client.execute("SELECT COUNT(*) as cnt FROM server_events WHERE is_resolved = '0'")
-            r_fe = client.execute("SELECT COUNT(*) as cnt FROM frontend_events")
-
-            srv_total = r_srv.results[0].get("cnt", 0) if r_srv.results else 0
-            srv_open = r_unresolved.results[0].get("cnt", 0) if r_unresolved.results else 0
-            fe_total = r_fe.results[0].get("cnt", 0) if r_fe.results else 0
-
-            self.stdout.write(self.style.SUCCESS("Status: CONNECTED"))
-            self.stdout.write(f"  Server events  : {srv_total} total, {srv_open} open")
-            self.stdout.write(f"  Frontend events: {fe_total} total")
-        except Exception as exc:
-            self.stdout.write(self.style.ERROR(f"Status: ERROR — {exc}"))
+        log_path = Path.cwd() / "logs" / "djangocfg" / "monitor.log"
+        self.stdout.write(f"  Event log       : {log_path}")
+        if log_path.exists():
+            with log_path.open("rb") as f:
+                lines = sum(1 for _ in f)
+            self.stdout.write(f"  Today           : {lines} event(s), {log_path.stat().st_size / 1024:.1f} KB")
+        else:
+            self.stdout.write("  Today           : no events yet")

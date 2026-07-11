@@ -200,7 +200,7 @@ Development server and productivity tools.
 <details>
   <summary>
 
-### 📡 Centrifugo / WebSocket — 3 commands
+### 📡 Centrifugo / WebSocket — 2 commands
 
   </summary>
 
@@ -210,7 +210,6 @@ Real-time messaging and WebSocket RPC client generation.
 |---------|-------------|
 | `centrifugo_publish` | Publish messages to Centrifugo channels for testing |
 | `generate_centrifugo_clients` | Generate type-safe WebSocket RPC clients (Python, TypeScript, Go, Swift) |
-| `create_centrifugo_d1_schema` | Create Cloudflare D1 schema for Centrifugo logs |
 
 **[Full Documentation →](/features/modules/django-centrifugo/cli-commands)**
 
@@ -238,43 +237,6 @@ Django-RQ worker management, scheduling, and monitoring.
 | `rq_cleanup_locks` | Clean stale RQ job locks |
 
 **[Full Documentation →](/features/modules/django-rq)**
-
-</details>
-
-<details>
-  <summary>
-
-### 🌐 gRPC / Communication — 4 commands
-
-  </summary>
-
-gRPC server, protocol buffer compilation, and schema generation.
-
-| Command | Description |
-|---------|-------------|
-| `rungrpc` | Start async gRPC server |
-| `compile_proto` | Compile .proto files to Python stubs |
-| `generate_protos` | Generate .proto definitions from Django models |
-| `create_grpc_d1_schema` | Create Cloudflare D1 schema tables for gRPC |
-
-</details>
-
-<details>
-  <summary>
-
-### ☁️ Cloudflare D1 — 5 commands
-
-  </summary>
-
-Cloudflare D1 database integration, sync, and logging.
-
-| Command | Description |
-|---------|-------------|
-| `cf_status` | Show Cloudflare D1 connection status |
-| `cf_sync_users` | Sync Django users to D1 |
-| `d1_logs` | View D1 operation logs |
-| `create_rq_d1_schema` | Create D1 schema for RQ events |
-| `create_centrifugo_d1_schema` | Create D1 schema for Centrifugo logs |
 
 </details>
 
@@ -506,9 +468,7 @@ python manage.py check_endpoints --json
 | Set up a new project | **[Core Commands](./core-commands)** |
 | Monitor API health | **[Testing & Monitoring](./testing-monitoring)** |
 | Start development | **[Development Tools](./development)** |
-| Run gRPC server | **gRPC / Communication** (above) |
 | Manage background tasks | **Background Tasks** (above) |
-| Use Cloudflare D1 | **Cloudflare D1** (above) |
 | Generate code | **Code Generation** (above) |
 
 ---

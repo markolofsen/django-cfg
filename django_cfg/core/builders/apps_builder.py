@@ -124,8 +124,6 @@ class InstalledAppsBuilder:
         if self.config.centrifugo and self.config.centrifugo.enabled:
             apps.append("django_cfg.modules.django_centrifugo")
 
-        if hasattr(self.config, "grpc_module") and self.config.grpc_module and self.config.grpc_module.enabled:
-            apps.append("django_cfg.modules.django_grpc")
 
         if self.config.crypto_fields and self.config.crypto_fields.enabled:
             apps.append("django_crypto_fields.apps.AppConfig")
@@ -138,17 +136,17 @@ class InstalledAppsBuilder:
         if self.config.geo and self.config.geo.enabled:
             apps.append("django_cfg.apps.tools.geo")
 
+        # Payments engine (checkout, webhooks, refunds — Stripe-first)
+        if self.config.payments and self.config.payments.enabled:
+            apps.append("django_cfg.apps.payments")
+
         # django-simple-history audit log (opt-in)
         if self.config.simple_history and self.config.simple_history.enabled:
             apps.append("simple_history")
 
         # Monitor module — always included (ingest URL needed for OpenAPI + JS SDK).
-        # Actual D1 forwarding is a no-op when cloudflare is not configured.
+        # Capture/storage are no-ops when MonitorConfig(enabled=False).
         apps.append("django_cfg.modules.django_monitor")
-
-        # Cloudflare D1 backend (only when explicitly enabled)
-        if self.config.cloudflare and self.config.cloudflare.enabled:
-            apps.append("django_cfg.modules.django_cf")
 
         # MCP module (AI agent integration)
         if self.config.mcp and self.config.mcp.enabled:

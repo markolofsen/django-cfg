@@ -8,6 +8,8 @@ from typing import Any, Dict, List
 
 from pydantic import Field, field_validator
 
+from django_cfg.core.constants import DEFAULT_DRF_AUTHENTICATION_CLASSES
+
 from ..base import BaseConfig
 
 
@@ -98,11 +100,10 @@ class APIConfig(BaseConfig):
                 'PAGE_SIZE': self.page_size,
                 'MAX_PAGE_SIZE': self.max_page_size,
 
-                'DEFAULT_AUTHENTICATION_CLASSES': [
-                    'rest_framework_simplejwt.authentication.JWTAuthentication',
-                    'rest_framework.authentication.TokenAuthentication',
-                    # SessionAuthentication removed (requires CSRF)
-                ],
+                # Single canonical list — see core/constants.py. This copy
+                # used to ship stock SimpleJWT JWTAuthentication, silently
+                # bypassing the DPoP binding check.
+                'DEFAULT_AUTHENTICATION_CLASSES': list(DEFAULT_DRF_AUTHENTICATION_CLASSES),
 
                 'DEFAULT_PERMISSION_CLASSES': [
                     'rest_framework.permissions.IsAuthenticated',

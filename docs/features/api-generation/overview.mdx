@@ -1,11 +1,11 @@
 ---
 title: API Client Generation Overview
-description: Auto-generate type-safe TypeScript, Python, Go, Swift, and Protocol Buffer clients from Django REST Framework. Built for Next.js, React, React Native, iOS, modern Python backends, and gRPC services.
+description: Auto-generate type-safe TypeScript, Python, Go, and Swift clients from Django REST Framework. Built for Next.js, React, React Native, iOS, and modern Python backends.
 ---
 
 # API Client Generation
 
-Django-CFG includes **integrated API client generation** that automatically creates type-safe **TypeScript**, **Python**, **Go**, **Swift**, and **Protocol Buffer/gRPC** clients from your Django REST Framework API using OpenAPI specifications.
+Django-CFG includes **integrated API client generation** that automatically creates type-safe **TypeScript**, **Python**, **Go**, and **Swift** clients from your Django REST Framework API using OpenAPI specifications.
 
 ## What is API Client Generation?
 
@@ -29,7 +29,6 @@ Generate fully typed clients with:
 - **Python**: Pydantic 2 models, async/await client, type hints
 - **Go**: Structs, interfaces, typed HTTP client
 - **Swift**: Native Swift types via apple/swift-openapi-generator or simple Codable structs
-- **Protocol Buffers**: Proto3 messages, gRPC service definitions
 
 ### 🏗️ Group-Based Organization
 
@@ -58,7 +57,6 @@ Each group gets its own:
 - Generated Python client
 - Generated Go client
 - Generated Swift client (optional)
-- Generated Protocol Buffer definitions
 
 ### ⚙️ Auto-Generated Clients
 
@@ -120,20 +118,6 @@ struct Wallet: Codable {
 // Use with any networking library (URLSession, Alamofire, etc.)
 let (data, _) = try await URLSession.shared.data(from: url)
 let wallets = try JSONDecoder().decode([Wallet].self, from: data)
-```
-
-**gRPC Client (Protocol Buffers):**
-```python
-import grpc
-from trading.api__trading import service_pb2, service_pb2_grpc
-
-# Create gRPC channel
-channel = grpc.insecure_channel('localhost:50051')
-stub = service_pb2_grpc.TradingServiceStub(channel)
-
-# Make gRPC call with type-safe proto messages
-request = service_pb2.WalletsListRequest(currency="BTC", page_size=10)
-response = stub.WalletsList(request)
 ```
 
 ## Why Use API Client Generation?
@@ -214,41 +198,9 @@ backend/api_client/
 └── index.py                       # Main entry point
 ```
 
-### Protocol Buffers Output
-
-```
-openapi/clients/proto/
-├── core/                          # Group name
-│   ├── users/
-│   │   ├── messages.proto         # Message definitions (models, enums)
-│   │   ├── service.proto          # gRPC service definitions
-│   │   ├── messages_pb2.py        # Compiled Python messages
-│   │   ├── messages_pb2_grpc.py   # gRPC stubs (empty)
-│   │   ├── service_pb2.py         # Request/Response messages
-│   │   └── service_pb2_grpc.py    # gRPC client & server stubs
-│   │
-│   ├── api_keys/
-│   │   └── ...                    # Same structure
-│   │
-│   └── README.md                  # Compilation instructions
-│
-├── trading/                       # Another group
-│   └── ...
-│
-└── README.md                      # Root compilation guide
-```
-
-
-<Callout type="info">
-**Compilation Required**
-
-Proto files must be compiled with `protoc` before use. Each group includes a README.md with language-specific compilation commands for Python, Go, TypeScript, and other languages.
-
-</Callout>
-
 ## Generated Features
 
-✅ **Type-safe API calls** - Full TypeScript/Python/Go/Swift/Proto types
+✅ **Type-safe API calls** - Full TypeScript/Python/Go/Swift types
 ✅ **Authentication** - Bearer tokens, API keys, custom headers
 ✅ **Error handling** - Proper error types and validation
 ✅ **Async support** - Both sync and async methods
@@ -298,14 +250,13 @@ class CryptoConfig(DjangoConfig):
 ### 2. Generate Clients
 
 ```bash
-# Generate all clients (TypeScript, Python, Go, Proto)
+# Generate all clients (TypeScript, Python, Go, Swift)
 python manage.py generate_client
 
 # Generate specific languages only
 python manage.py generate_client --typescript
 python manage.py generate_client --python
 python manage.py generate_client --go
-python manage.py generate_client --proto
 python manage.py generate_client --swift
 python manage.py generate_client --swift-codable
 

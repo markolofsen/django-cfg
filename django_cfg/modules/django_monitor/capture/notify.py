@@ -2,14 +2,13 @@
 django_monitor.capture.notify — Telegram notifications for monitor events.
 
 Batched alerting: events are accumulated in an in-memory buffer and flushed
-as a single Telegram message every N seconds (telegram_batch_interval_sec).
-
-When a new fingerprint appears for the first time, it is flushed immediately
-if telegram_alert_on_new=True (default).
+as a single Telegram message every 60 seconds. A new fingerprint (first
+occurrence) is flushed immediately.
 
 All functions fail silently — never break the capture flow.
 
-Requires django_telegram module and CloudflareConfig.telegram_alerts_enabled=True.
+Alerts are enabled automatically when TelegramConfig is set on DjangoConfig —
+no separate switch.
 """
 
 from __future__ import annotations
@@ -20,11 +19,9 @@ from dataclasses import dataclass, field
 from time import time
 from typing import Dict
 
-from django_cfg.modules.django_cf import _get_config
-
 logger = logging.getLogger(__name__)
 
-_ALERT_EVENT_TYPES = frozenset({"UNHANDLED_EXCEPTION", "SERVER_ERROR", "RQ_FAILURE", "LOG_ERROR"})
+_ALERT_EVENT_TYPES = frozenset({"UNHANDLED_EXCEPTION", "SERVER_ERROR", "RQ_FAILURE", "LOG_ERROR", "FRONTEND_ERROR"})
 _SLOW_QUERY_ALERT_MS: float = 5000.0
 
 
@@ -42,11 +39,20 @@ class _BatchEntry:
 
 
 class _AlertBatch:
-    """Thread-safe in-memory buffer; flushes on timer or on new fingerprint."""
+    """Thread-safe in-memory buffer; flushes on timer or on new fingerprint.
+
+    "New" is judged against fingerprints alerted within the last
+    ``NEW_FINGERPRINT_TTL_SEC`` — NOT against the current buffer (which is
+    cleared on every flush; judging by the buffer would make every repeat
+    of the same error flush immediately and defeat batching entirely).
+    """
+
+    NEW_FINGERPRINT_TTL_SEC = 600  # re-alert the same fingerprint immediately at most every 10 min
 
     def __init__(self) -> None:
         self._lock:    threading.Lock           = threading.Lock()
         self._buffer:  Dict[str, _BatchEntry]   = {}
+        self._recent:  Dict[str, float]         = {}
         self._timer:   threading.Timer | None   = None
 
     # ── public ────────────────────────────────────────────────────────────────
@@ -58,8 +64,8 @@ class _AlertBatch:
         message:     str,
         api_url:     str,
     ) -> None:
-        """Add event to buffer; flush immediately if it's a new fingerprint."""
-        is_new = False
+        """Add event to buffer; flush immediately if the fingerprint is new."""
+        now = time()
         with self._lock:
             if fingerprint in self._buffer:
                 self._buffer[fingerprint].count += 1
@@ -69,7 +75,12 @@ class _AlertBatch:
                     message=message,
                     api_url=api_url,
                 )
-                is_new = True
+            is_new = now - self._recent.get(fingerprint, 0.0) > self.NEW_FINGERPRINT_TTL_SEC
+            if is_new:
+                self._recent[fingerprint] = now
+                if len(self._recent) > 500:
+                    cutoff = now - self.NEW_FINGERPRINT_TTL_SEC
+                    self._recent = {k: v for k, v in self._recent.items() if v > cutoff}
             self._ensure_timer()
 
         if is_new and _alert_on_new():
@@ -116,7 +127,7 @@ def notify_server_event(
     api_url:     str = "",
 ) -> None:
     """
-    Called after a successful D1 push — never raises.
+    Called from capture after the event is stored — never raises.
     Accumulates in batch; flushes on new fingerprint or timer.
     """
     try:
@@ -148,27 +159,21 @@ def notify_server_event(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _is_alerts_enabled() -> bool:
+    """Alerts are on exactly when Telegram is configured."""
     try:
-        config = _get_config()
-        return bool(config and getattr(config, "telegram_alerts_enabled", False))
+        from django_cfg.core.state.registry import get_current_config
+        cfg = get_current_config()
+        return bool(cfg and getattr(cfg, "telegram", None))
     except Exception:
         return False
 
 
 def _batch_interval() -> int:
-    try:
-        config = _get_config()
-        return int(getattr(config, "telegram_batch_interval_sec", 60))
-    except Exception:
-        return 60
+    return 60
 
 
 def _alert_on_new() -> bool:
-    try:
-        config = _get_config()
-        return bool(getattr(config, "telegram_alert_on_new", True))
-    except Exception:
-        return True
+    return True
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -180,6 +185,7 @@ _LEVEL_ICON: dict[str, str] = {
     "SERVER_ERROR":        "🔴",
     "RQ_FAILURE":          "🟠",
     "LOG_ERROR":           "🟡",
+    "FRONTEND_ERROR":      "🌐",
     "SLOW_QUERY":          "🐢",
 }
 

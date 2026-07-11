@@ -69,7 +69,6 @@ class ServerStartupTimer:
 _django_startup_timer: Optional[ServerStartupTimer] = None
 
 # Global startup timer for gRPC server
-_grpc_startup_timer: Optional[ServerStartupTimer] = None
 
 
 def start_django_timer() -> ServerStartupTimer:
@@ -84,17 +83,6 @@ def start_django_timer() -> ServerStartupTimer:
     return _django_startup_timer
 
 
-def start_grpc_timer() -> ServerStartupTimer:
-    """
-    Start tracking gRPC server startup time.
-
-    Returns:
-        ServerStartupTimer instance
-    """
-    global _grpc_startup_timer
-    _grpc_startup_timer = ServerStartupTimer()
-    return _grpc_startup_timer
-
 
 def get_django_timer() -> Optional[ServerStartupTimer]:
     """
@@ -105,15 +93,6 @@ def get_django_timer() -> Optional[ServerStartupTimer]:
     """
     return _django_startup_timer
 
-
-def get_grpc_timer() -> Optional[ServerStartupTimer]:
-    """
-    Get gRPC server startup timer.
-
-    Returns:
-        ServerStartupTimer instance or None if not started
-    """
-    return _grpc_startup_timer
 
 
 def get_django_startup_time() -> Optional[str]:
@@ -128,24 +107,10 @@ def get_django_startup_time() -> Optional[str]:
     return None
 
 
-def get_grpc_startup_time() -> Optional[str]:
-    """
-    Get formatted gRPC server startup time.
-
-    Returns:
-        Formatted string like "1.23s" or None if timer not started
-    """
-    if _grpc_startup_timer:
-        return _grpc_startup_timer.format_elapsed()
-    return None
-
 
 __all__ = [
     'ServerStartupTimer',
     'start_django_timer',
-    'start_grpc_timer',
     'get_django_timer',
-    'get_grpc_timer',
     'get_django_startup_time',
-    'get_grpc_startup_time',
 ]

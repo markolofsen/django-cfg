@@ -1,15 +1,13 @@
 """
 django_monitor.capture.request — unhandled Django exception capture.
 
-Hooks into got_request_exception signal → pushes UNHANDLED_EXCEPTION to D1.
+Hooks into got_request_exception signal → captures UNHANDLED_EXCEPTION.
 """
 
 from __future__ import annotations
 
 import logging
 import sys
-
-from django_cfg.modules.django_cf import is_ready
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +24,8 @@ def connect_request_exception_signal() -> None:
 
 
 def _on_request_exception(sender, request=None, **kwargs) -> None:
-    if not is_ready():
+    from django_cfg.modules.django_monitor import is_enabled
+    if not is_enabled():
         return
 
     exc_info = sys.exc_info()
@@ -34,12 +33,12 @@ def _on_request_exception(sender, request=None, **kwargs) -> None:
         return
 
     try:
-        _capture_exception_to_d1(exc_info, request=request)
+        _capture_exception(exc_info, request=request)
     except Exception as e:
         logger.debug("django_monitor: _on_request_exception suppressed — %s", e)
 
 
-def _capture_exception_to_d1(exc_info, request=None) -> None:
+def _capture_exception(exc_info, request=None) -> None:
     import hashlib
     import traceback
 
@@ -87,5 +86,5 @@ def _capture_exception_to_d1(exc_info, request=None) -> None:
     ev.first_seen = None
     ev.last_seen = None
 
-    from django_cfg.modules.django_monitor import get_service
-    get_service().push_server_event(ev)
+    from django_cfg.modules.django_monitor import capture_server_event
+    capture_server_event(ev)

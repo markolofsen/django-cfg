@@ -2,6 +2,18 @@
 
 from typing import List
 
+# Canonical DRF authentication classes — the SINGLE source every settings
+# builder must use (smart_defaults, DRFConfig, APIConfig). Three divergent
+# copies used to exist; one of them shipped stock SimpleJWT `JWTAuthentication`,
+# which silently BYPASSES the DPoP binding check (see middleware/authentication).
+# `JWTAuthenticationWithLastLogin` = stock JWT + is_active gate + DPoP
+# enforcement + throttled last_login. TokenAuthentication stays for DRF tokens
+# (`rest_framework.authtoken` is in DEFAULT_APPS).
+DEFAULT_DRF_AUTHENTICATION_CLASSES: List[str] = [
+    "django_cfg.middleware.authentication.JWTAuthenticationWithLastLogin",
+    "rest_framework.authentication.TokenAuthentication",
+]
+
 # Default Django apps installed by django-cfg
 DEFAULT_APPS: List[str] = [
     # WhiteNoise for static files (must be before django.contrib.staticfiles)

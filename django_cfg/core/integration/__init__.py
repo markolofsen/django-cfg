@@ -48,11 +48,8 @@ from .version_checker import get_current_version, get_latest_version, get_versio
 from .timing import (
     ServerStartupTimer,
     start_django_timer,
-    start_grpc_timer,
     get_django_timer,
-    get_grpc_timer,
     get_django_startup_time,
-    get_grpc_startup_time,
 )
 
 __all__ = [
@@ -70,9 +67,6 @@ __all__ = [
     # Timing utilities
     "ServerStartupTimer",
     "start_django_timer",
-    "start_grpc_timer",
     "get_django_timer",
-    "get_grpc_timer",
     "get_django_startup_time",
-    "get_grpc_startup_time",
 ]

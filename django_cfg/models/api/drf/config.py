@@ -6,6 +6,8 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
+from django_cfg.core.constants import DEFAULT_DRF_AUTHENTICATION_CLASSES
+
 
 class DRFConfig(BaseModel):
     """
@@ -16,12 +18,10 @@ class DRFConfig(BaseModel):
 
     # Authentication
     authentication_classes: List[str] = Field(
-        default_factory=lambda: [
-            'django_cfg.middleware.authentication.JWTAuthenticationWithLastLogin',
-            'rest_framework.authentication.TokenAuthentication',
-            # SessionAuthentication removed from defaults (requires CSRF)
-            # Add it manually in your config if you need Browsable API with session auth
-        ],
+        # Single canonical list — see core/constants.py. SessionAuthentication
+        # stays out of defaults (requires CSRF); add it in your config if you
+        # need the Browsable API with session auth.
+        default_factory=lambda: list(DEFAULT_DRF_AUTHENTICATION_CLASSES),
         description="Default authentication classes (JWT with auto last_login update)"
     )
 

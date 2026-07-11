@@ -565,21 +565,6 @@ class DjangoRQConfig(BaseModel):
         except Exception:
             pass
 
-        # django_rq D1 cleanup (daily at 3am)
-        try:
-            from django_cfg.modules.django_rq import is_enabled
-            if is_enabled():
-                from django_cfg.modules.django_rq.__cfg__ import settings as rq_module_settings
-                schedules.append(RQScheduleConfig(
-                    func="django_cfg.modules.django_rq.events.tasks.cleanup_old_rq_events",
-                    cron="0 3 * * *",
-                    queue="default",
-                    kwargs={"days": rq_module_settings.retention_days},
-                    description="Cleanup old RQ job events from D1",
-                ))
-        except Exception:
-            pass
-
         return schedules
 
     def _collect_extension_schedules(self, config: Any) -> list["RQScheduleConfig"]:

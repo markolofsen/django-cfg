@@ -44,6 +44,10 @@ def get_enabled_cfg_apps() -> List[str]:
     if base_module.should_enable_rq():
         enabled_apps.append("django_cfg.modules.django_rq")
 
+    # Payments engine (checkout, webhooks, refunds)
+    if base_module.is_payments_enabled():
+        enabled_apps.append("django_cfg.apps.payments")
+
     return enabled_apps
 
 
@@ -131,16 +135,19 @@ if base_module.is_centrifugo_enabled():
 if base_module.is_geo_enabled():
     urlpatterns.append(path('cfg/geo/', include('django_cfg.apps.tools.geo.urls')))
 
+# Payments engine (checkout, webhooks, refunds) — the app's own urls.py keeps
+# the webhook route (specific patterns) before the generic viewset routes.
+if base_module.is_payments_enabled():
+    urlpatterns.append(path('cfg/payments/', include('django_cfg.apps.payments.urls')))
+
 # Monitor ingest endpoint — always mounted for OpenAPI visibility.
-# POST /cfg/monitor/ingest/ — used by @djangocfg/monitor JS SDK.
-# ViewSet returns 503 gracefully if cloudflare is not configured.
-# Server-side capture hooks are connected only when cloudflare is ready.
+# POST /cfg/monitor/ingest/ — used by the @djangocfg/devtools JS SDK.
 urlpatterns.append(
     path('cfg/monitor/', include('django_cfg.modules.django_monitor.urls'))
 )
 try:
-    from django_cfg.modules.django_cf import is_ready as _cf_ready
-    if _cf_ready():
+    from django_cfg.modules.django_monitor import is_enabled as _monitor_enabled
+    if _monitor_enabled():
         from django_cfg.modules.django_monitor.capture import connect_capture as _cc
         _cc()
 except Exception:

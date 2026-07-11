@@ -83,7 +83,10 @@ class OpenAPIConfig(BaseModel):
     generate_zod_schemas: bool = True
     generate_fetchers: bool = True
     generate_swr_hooks: bool = True
-    generate_events_bridge: bool = True
+    # events.ts registered a SECOND response/error interceptor pair emitting
+    # `cmdop:network-error` CustomEvents — audited across all consumers
+    # (2026-07): nothing imports it. Off by default; opt back in per project.
+    generate_events_bridge: bool = False
 
     client_structure: Literal["flat", "namespaced"] = "namespaced"
 

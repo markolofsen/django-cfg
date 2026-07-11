@@ -184,17 +184,6 @@ class BaseCfgModule(ABC):
 
         return False
 
-    def is_grpc_enabled(self) -> bool:
-        """
-        Check if django-cfg gRPC module is enabled.
-
-        Returns:
-            True if grpc_module is configured and enabled, False otherwise
-        """
-        grpc_module = self._get_config_key('grpc_module', None)
-        if grpc_module and hasattr(grpc_module, 'enabled'):
-            return grpc_module.enabled
-        return False
 
     def is_currency_enabled(self) -> bool:
         """
@@ -226,19 +215,20 @@ class BaseCfgModule(ABC):
 
         return False
 
-    def is_frontend_monitor_enabled(self) -> bool:
+    def is_payments_enabled(self) -> bool:
         """
-        Check if django-cfg Frontend Monitor is enabled.
+        Check if the django-cfg Payments app is enabled.
 
         Returns:
-            True if Frontend Monitor is enabled, False otherwise
+            True if Payments is enabled, False otherwise
         """
-        config = self._get_config_key('frontend_monitor', None)
+        payments_config = self._get_config_key('payments', None)
 
-        if config and hasattr(config, 'enabled'):
-            return config.enabled
+        if payments_config and hasattr(payments_config, 'enabled'):
+            return payments_config.enabled
 
         return False
+
 
     def is_totp_enabled(self) -> bool:
         """

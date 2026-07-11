@@ -503,16 +503,14 @@ class MyProjectConfig(DjangoConfig):
 
 | Module | Description | Optional |
 |--------|-------------|----------|
-| [Cloudflare D1](/features/modules/django-cf) | Cloudflare D1 integration, auto user sync | Yes (cloudflare) |
-| [Monitor](/features/modules/django-monitor) | Application performance monitoring, D1 events | Yes (cloudflare) |
-| [Logging](/features/modules/django-logging) | Structured logging with D1 persistence | No |
+| [Monitor](/features/modules/django-monitor) | Application performance monitoring | No |
+| [Logging](/features/modules/django-logging) | Structured logging | No |
 | [Health Checks](/features/modules/django-health) | Auto-configuring health check endpoints | No |
 
 ### Communication & Real-time
 
 | Module | Description | Optional |
 |--------|-------------|----------|
-| [gRPC Server](./django-grpc) | Async gRPC with streaming, auth, D1 persistence | Yes (grpcio) |
 | [Centrifugo](./django-centrifugo) | Real-time WebSocket pub/sub via Centrifugo | Yes (cent) |
 | [Django-RQ](/features/modules/django-rq) | Redis Queue task processing and scheduling | Yes (rq) |
 | [Email](/features/modules/django-email) | Auto-configuring email service | No |

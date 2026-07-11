@@ -15,12 +15,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
 
-try:
-    from django_cfg.modules.django_grpc.__cfg__ import DjangoGrpcModuleConfig  # noqa: F401
-except ImportError:
-    DjangoGrpcModuleConfig = None  # type: ignore[assignment,misc]
 if TYPE_CHECKING:
-    from django_cfg.modules.django_grpc.__cfg__ import DjangoGrpcModuleConfig
     from django_cfg.modules.django_mcp.__cfg__ import DjangoMCPModuleConfig
 
 # MCP module is always available within django_cfg
@@ -37,8 +32,8 @@ from ...models import (
     DjangoRQConfig,
     DRFConfig,
     EmailConfig,
-    FrontendMonitorConfig,
     GeoConfig,
+    PaymentsConfig,
     SimpleHistoryConfig,
     GitHubOAuthConfig,
     LimitsConfig,
@@ -49,12 +44,7 @@ from ...models import (
     UnfoldConfig,
 )
 from ..encryption.config import EncryptionConfig
-try:
-    from ...models.api.grpc import GRPCConfig  # noqa: F401  (needed for Pydantic forward-ref resolution)
-except ImportError:
-    GRPCConfig = None  # type: ignore[assignment,misc]
 from ...models.ngrok import NgrokConfig
-from ...modules.django_cf import CloudflareConfig
 from ...modules.django_dashboard.models import DashboardConfig
 from ..exceptions import ConfigurationError
 from ..types.enums import EnvironmentMode, StartupInfoMode
@@ -373,16 +363,6 @@ class DjangoConfig(BaseModel):
         description="DRF Spectacular OpenAPI configuration",
     )
 
-    grpc: Optional[GRPCConfig] = Field(
-        default=None,
-        description="gRPC server configuration",
-    )
-
-    grpc_module: Optional["DjangoGrpcModuleConfig"] = Field(
-        default=None,
-        description="New D1-backed gRPC module configuration",
-    )
-
     api_keys: Optional[ApiKeys] = Field(
         default=None,
         description="External API keys (OpenAI, OpenRouter, etc.)",
@@ -411,6 +391,11 @@ class DjangoConfig(BaseModel):
         description="Currency conversion and exchange rates",
     )
 
+    payments: Optional[PaymentsConfig] = Field(
+        default=None,
+        description="Payments engine: provider-agnostic checkout, webhooks, refunds (Stripe-first)",
+    )
+
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                          GEOGRAPHIC DATA                                  ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
@@ -423,20 +408,6 @@ class DjangoConfig(BaseModel):
     simple_history: Optional[SimpleHistoryConfig] = Field(
         default=None,
         description="django-simple-history audit log: field-level diff tracking with admin integration",
-    )
-
-    # ╔══════════════════════════════════════════════════════════════════════════╗
-    # ║                       FRONTEND MONITORING                                 ║
-    # ╚══════════════════════════════════════════════════════════════════════════╝
-
-    frontend_monitor: Optional[FrontendMonitorConfig] = Field(
-        default=None,
-        description="Frontend error monitoring (Sentry-like browser event collection)",
-    )
-
-    cloudflare: Optional[CloudflareConfig] = Field(
-        default=None,
-        description="Cloudflare D1 integration — user sync and monitor events",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
@@ -853,7 +824,6 @@ class DjangoConfig(BaseModel):
 __all__ = ["DjangoConfig"]
 
 # Rebuild after optional imports are resolved
-# grpc_module uses a forward-ref string; grpc uses try/except import above
 try:
     DjangoConfig.model_rebuild()
 except Exception:

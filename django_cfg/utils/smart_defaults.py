@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from django_cfg.core.constants import DEFAULT_DRF_AUTHENTICATION_CLASSES
+
 
 def get_log_filename() -> str:
     """
@@ -455,10 +457,8 @@ class SmartDefaults:
     def get_rest_framework_defaults() -> Dict[str, Any]:
         """Get Django REST Framework defaults."""
         return {
-            'DEFAULT_AUTHENTICATION_CLASSES': [
-                'django_cfg.middleware.authentication.JWTAuthenticationWithLastLogin',
-                # SessionAuthentication removed (requires CSRF)
-            ],
+            # Single canonical list — see core/constants.py.
+            'DEFAULT_AUTHENTICATION_CLASSES': list(DEFAULT_DRF_AUTHENTICATION_CLASSES),
             'DEFAULT_PERMISSION_CLASSES': [
                 'rest_framework.permissions.IsAuthenticated',
             ],

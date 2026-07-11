@@ -1,0 +1,83 @@
+---
+title: Frontend devtools (@djangocfg/devtools)
+description: One frontend package for django-cfg apps — browser error/console capture, batched ingest to django_monitor, and an in-app debug panel.
+---
+
+# Frontend devtools — `@djangocfg/devtools`
+
+`@djangocfg/devtools` is the browser counterpart to [`django_monitor`](/features/modules/django-monitor).
+One package, one event stream:
+
+- **Capture** — `window.onerror`, unhandled promise rejections, `console.warn` /
+  `console.error`, and zod validation events from `@djangocfg/api` clients.
+- **Ingest** — errors and warnings are batched to `POST /cfg/monitor/ingest/`
+  (handled by `django_monitor`) with dedupe, a keepalive flush on page unload,
+  and a circuit breaker that backs off if the endpoint is failing.
+- **Debug panel** — a floating button (automatic in development, `?debug=1` in
+  production, or ⌘D) opening a filterable log feed plus any app-defined custom
+  tabs.
+
+<Callout type="info">
+`@djangocfg/devtools` replaces the retired `@djangocfg/monitor` and
+`@djangocfg/debuger` packages — a single dependency in place of the old pair.
+</Callout>
+
+---
+
+## Setup
+
+Mount `<Devtools>` once in your root layout — that is the entire setup:
+
+```tsx
+import { Devtools } from '@djangocfg/devtools'
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        {children}
+        <Devtools project="my-app" environment={process.env.NODE_ENV} />
+      </body>
+    </html>
+  )
+}
+```
+
+Nothing else is required — capture starts on mount and ingest points at
+`/cfg/monitor/ingest/` on the same origin.
+
+---
+
+## Imperative API
+
+```ts
+import { devtools } from '@djangocfg/devtools'
+
+// Goes to both the panel feed AND the backend ingest:
+devtools.error('Payment widget crashed', { orderId })
+
+// Component-scoped local logger — panel feed only, never sent to the backend:
+const log = devtools.log('CheckoutForm')
+log.info('step changed', { step })
+```
+
+In the browser console the same API is available as `window.devtools`
+(`window.devtools.status()`, `window.devtools.error('test')`).
+
+---
+
+## Server-side reporting
+
+For route handlers and React Server Components, the server entry reports errors
+straight to the ingest endpoint:
+
+```ts
+import { serverDevtools } from '@djangocfg/devtools/server'
+
+serverDevtools.configure({ project: 'my-app', baseUrl: process.env.API_URL })
+await serverDevtools.captureError(err, { url: req.url })
+```
+
+---
+
+TAGS: devtools, frontend, error-tracking, debug-panel, ingest

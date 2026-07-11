@@ -9,9 +9,9 @@ from .constance import ConstanceConfig, ConstanceField
 from .currency import CurrencyConfig
 from .django_rq import DjangoRQConfig, RQQueueConfig
 from .environment import EnvironmentConfig
-from .frontend_monitor import FrontendMonitorConfig
 from .geo import GeoConfig
 from .openapi import OpenAPIClientConfig
+from .payments import PaymentsConfig
 from .rq_health import QueueHealthThresholds, RQHealthConfig
 
 __all__ = [
@@ -23,8 +23,8 @@ __all__ = [
     "RQQueueConfig",
     "RQHealthConfig",
     "QueueHealthThresholds",
-    "FrontendMonitorConfig",
     "GeoConfig",
     "OpenAPIClientConfig",
+    "PaymentsConfig",
     "AxesConfig",
 ]

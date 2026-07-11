@@ -1,7 +1,7 @@
 from django.urls import include, path
 from drf_spectacular.utils import extend_schema
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
 
 from .views import OTPViewSet
 from .views.oauth import (
@@ -74,8 +74,19 @@ class CustomTokenRefreshView(TokenRefreshView):
         return response
 
 
+@extend_schema(tags=["cfg_accounts_auth"])
+class CustomTokenBlacklistView(TokenBlacklistView):
+    """Revoke a refresh token (logout).
+
+    Blacklists the posted refresh token so it can never mint another access
+    token. Called best-effort by the client's logout — without it, "logout"
+    is purely client-side and a stolen refresh token survives until expiry.
+    """
+
+
 token_patterns = [
     path('refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
+    path('blacklist/', CustomTokenBlacklistView.as_view(), name='token_blacklist'),
 ]
 
 # Profile-related URLs

@@ -2,7 +2,7 @@
 django_monitor.capture.slow_query — slow query detection via execute_wrapper.
 
 Normalizes SQL before fingerprinting so the same query with different
-parameter values deduplicates via D1 occurrence_count upsert.
+parameter values shares one fingerprint (dedup in alerts/analysis).
 
 Safety:
 - Never logs SQL params (PII risk)
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 _SLOW_QUERY_THRESHOLD_MS: float = 2000.0  # 2 seconds
 
-# Thread-local guard: prevents recursive capture when the D1 push
+# Thread-local guard: prevents recursive capture when storing the event
 # itself triggers a DB query on the same connection
 _reentrant = threading.local()
 
@@ -72,9 +72,9 @@ def _slow_query_wrapper(execute, sql, params, many, context):
 
 def _push_slow_query(sql: str, elapsed_ms: float) -> None:
     import hashlib
-    from django_cfg.modules.django_cf import is_ready
+    from django_cfg.modules.django_monitor import is_enabled
 
-    if not is_ready():
+    if not is_enabled():
         return
 
     normalized = _normalize_sql(sql)
@@ -103,5 +103,5 @@ def _push_slow_query(sql: str, elapsed_ms: float) -> None:
     ev.first_seen = None
     ev.last_seen = None
 
-    from django_cfg.modules.django_monitor import get_service
-    get_service().push_server_event(ev)
+    from django_cfg.modules.django_monitor import capture_server_event
+    capture_server_event(ev)

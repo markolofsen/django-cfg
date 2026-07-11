@@ -1,9 +1,7 @@
 """
 django_monitor — Django AppConfig.
 
-Connects capture hooks at startup if django_cf is ready.
-Can be used standalone (without django_cf AppConfig) — e.g. when
-django_monitor is added to INSTALLED_APPS explicitly.
+Connects capture hooks at startup (log pipeline + Telegram alerts).
 """
 
 from __future__ import annotations
@@ -18,7 +16,7 @@ logger = logging.getLogger("django_cfg.django_monitor")
 class DjangoMonitorConfig(AppConfig):
     name = "django_cfg.modules.django_monitor"
     label = "django_monitor"
-    verbose_name = "Monitor (D1)"
+    verbose_name = "Monitor"
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self) -> None:

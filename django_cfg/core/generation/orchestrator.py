@@ -81,8 +81,8 @@ class SettingsOrchestrator:
             settings.update(self._generate_api_settings())
             settings.update(self._generate_oauth_settings())
             settings.update(self._generate_django_rq_settings())
-            settings.update(self._generate_grpc_settings())
             settings.update(self._generate_tailwind_settings())
+            settings.update(self._generate_payments_settings())
 
             # Apply additional settings (user overrides)
             settings.update(self._get_additional_settings())
@@ -91,6 +91,20 @@ class SettingsOrchestrator:
 
         except Exception as e:
             raise ConfigurationError(f"Failed to generate settings: {e}") from e
+
+    def _generate_payments_settings(self) -> Dict[str, Any]:
+        """Generate payments app settings (owner-model seam).
+
+        CFG_PAYMENTS_OWNER_MODEL is the swappable FK target for Payment.owner —
+        the app's migrations reference it via SettingsReference (the
+        AUTH_USER_MODEL mechanism), so it must exist whenever the app is on.
+        """
+        payments = getattr(self.config, "payments", None)
+        if not (payments and payments.enabled):
+            return {}
+        return {
+            "CFG_PAYMENTS_OWNER_MODEL": payments.owner_model or "django_cfg_accounts.CustomUser",
+        }
 
     def _generate_core_settings(self) -> Dict[str, Any]:
         """Generate core Django settings."""
@@ -257,14 +271,6 @@ class SettingsOrchestrator:
         except Exception as e:
             raise ConfigurationError(f"Failed to generate Django-RQ settings: {e}") from e
 
-    def _generate_grpc_settings(self) -> Dict[str, Any]:
-        """Generate gRPC framework settings."""
-        try:
-            from .integration_generators.grpc_generator import GRPCSettingsGenerator
-            generator = GRPCSettingsGenerator(self.config)
-            return generator.generate()
-        except Exception as e:
-            raise ConfigurationError(f"Failed to generate gRPC settings: {e}") from e
 
     def _generate_tailwind_settings(self) -> Dict[str, Any]:
         """Generate Tailwind CSS settings."""

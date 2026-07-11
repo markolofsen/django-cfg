@@ -1,20 +1,13 @@
 """
 django_centrifugo — Centrifugo module for django-cfg.
 
-Full replacement for apps/integrations/centrifugo/. All Centrifugo logic lives here:
-- Services: CentrifugoClient (httpx publish), CentrifugoLogger (D1-backed log)
-- D1 persistence: publish history via centrifugo_logs append-only table
-- Management commands: create_centrifugo_d1_schema, centrifugo_publish, generate_centrifugo_clients
+All Centrifugo logic lives here:
+- Services: CentrifugoClient (httpx publish)
+- Management commands: centrifugo_publish, generate_centrifugo_clients
 - Code generation: multi-language client generators
-
-Data storage:
-- D1     — publish history (centrifugo_logs)
-
-No PostgreSQL used.
 
 Public API:
     from django_cfg.modules.django_centrifugo import get_client, is_enabled
-    from django_cfg.modules.django_centrifugo.services.logging import CentrifugoLogger
     from django_cfg.modules.django_centrifugo.services.token_generator import generate_centrifugo_token
 """
 
@@ -33,10 +26,10 @@ _client_instance: Optional["CentrifugoClient"] = None
 
 
 def is_enabled() -> bool:
-    """Return True when django_cf is configured and ready."""
+    """Return True when Centrifugo is configured on DjangoConfig."""
     try:
-        from django_cfg.modules.django_cf import is_ready
-        return is_ready()
+        from .services.config_helper import get_centrifugo_config
+        return get_centrifugo_config() is not None
     except Exception:
         return False
 

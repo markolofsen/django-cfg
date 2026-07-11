@@ -39,10 +39,10 @@ from .django.axes import AxesConfig
 from .django.constance import ConstanceConfig, ConstanceField
 from .django.crypto_fields import CryptoFieldsConfig
 from .django.currency import CurrencyConfig
+from .django.payments import PaymentsConfig
 from .django.django_rq import DjangoRQConfig, RQQueueConfig
 from .django.storage import StorageConfig
 from .django.environment import EnvironmentConfig
-from .django.frontend_monitor import FrontendMonitorConfig
 from .django.geo import GeoConfig
 from .django.openapi import OpenAPIClientConfig
 from .django.simple_history import SimpleHistoryConfig
@@ -87,9 +87,9 @@ __all__ = [
     "ConstanceConfig",
     "ConstanceField",
     "CurrencyConfig",
+    "PaymentsConfig",
     "DjangoRQConfig",
     "RQQueueConfig",
-    "FrontendMonitorConfig",
     "GeoConfig",
     "SimpleHistoryConfig",
     "StorageConfig",
