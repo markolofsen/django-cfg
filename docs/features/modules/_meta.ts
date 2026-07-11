@@ -13,6 +13,9 @@ export default {
   'django-email': 'Email',
   'django-telegram': 'Telegram Bot',
 
+  // ── Commerce ─────────────────────────────────────────────────
+  'django-payments': 'Payments',
+
   // ── Admin & UI ───────────────────────────────────────────────
   'django-admin': 'Django Admin',
   'django-unfold': 'Unfold Theme',

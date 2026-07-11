@@ -1,0 +1,127 @@
+---
+title: Checkout & API
+description: The payments REST API — creating a checkout, listing payments, the owner resolution seam, and confirming a PaymentIntent from the frontend.
+---
+
+# Checkout & API
+
+The app mounts its REST API at `/cfg/payments/` when `PaymentsConfig.enabled` is
+on. Three endpoints, plus the read-only payment resource.
+
+| Method | Path | View | Auth |
+| --- | --- | --- | --- |
+| `POST` | `/cfg/payments/checkout/` | `CheckoutCreateView` | JWT (authenticated) |
+| `GET` | `/cfg/payments/payments/` | `PaymentViewSet` (list) | JWT (authenticated) |
+| `GET` | `/cfg/payments/payments/{short_id}/` | `PaymentViewSet` (retrieve) | JWT (authenticated) |
+| `POST` | `/cfg/payments/webhook/stripe/` | `StripeWebhookView` | Stripe signature |
+
+The webhook endpoint is covered in [Webhooks](/features/modules/django-payments/webhooks).
+
+---
+
+## Create a checkout
+
+`POST /cfg/payments/checkout/`
+
+### Request body
+
+| Field | Type | Required | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `amount` | integer | yes | — | **Minor units**, `min_value = 1`. |
+| `currency` | string | no | config default | ISO code, ≤ 8 chars. |
+| `reference_kind` | string | no | `""` | What is being paid for. |
+| `reference_id` | string | no | `""` | The loose reference id. |
+| `provider` | string | no | `"stripe"` | Provider key. |
+| `idempotency_key` | string | no | derived | ≤ 128 chars. See below. |
+
+### Response (`200 OK`)
+
+```json
+{
+  "payment_short_id": "pay_a1b2c3",
+  "provider": "stripe",
+  "status": "processing",
+  "amount": 1000,
+  "currency": "usd",
+  "client_secret": "pi_..._secret_...",
+  "redirect_url": null,
+  "publishable_key": "pk_test_..."
+}
+```
+
+`client_secret` and `publishable_key` are what the frontend needs to confirm the
+PaymentIntent with Stripe.js. A validation/service error returns `400` with
+`{"detail": "..."}`.
+
+### Idempotency
+
+The engine picks a checkout idempotency key in this order:
+
+1. An explicit `idempotency_key` in the request wins.
+2. Otherwise, if `reference_id` is present, a **deterministic** key is derived:
+   `checkout-{owner.pk}-{reference_kind}-{reference_id}-{provider}` — so retrying
+   a checkout for the same order re-uses the same `Payment` instead of creating a
+   duplicate.
+3. Otherwise the service mints a random key.
+
+<Callout type="tip">
+Send an explicit `idempotency_key` (or a stable `reference_id`) so a
+double-clicked "Pay" button re-uses the existing payment rather than charging
+twice.
+</Callout>
+
+---
+
+## List & retrieve payments
+
+`PaymentViewSet` is a **read-only** resource (`list` + `retrieve` only), keyed by
+`short_id`. The queryset is **owner-scoped** — a request only ever sees payments
+belonging to its resolved owner.
+
+`GET /cfg/payments/payments/` returns each payment with these read-only fields:
+`short_id`, `owner`, `reference_kind`, `reference_id`, `provider`, `status`,
+`amount`, `currency`, `amount_refunded`, `created_at`, `updated_at`.
+
+`GET /cfg/payments/payments/pay_a1b2c3/` retrieves one by its `short_id`.
+
+---
+
+## Owner resolution
+
+Every authenticated endpoint maps the request to a billable **owner** via
+`resolve_owner(request)`, in this order:
+
+1. If `PaymentsConfig.owner_resolver` is set, its `fn(request) -> owner` is called.
+2. Else if the owner model **is** `AUTH_USER_MODEL`, `request.user` is returned.
+3. Else `ImproperlyConfigured` is raised, telling you to set `owner_resolver`.
+
+<Callout type="warning">
+Org-level billing (`owner_model` ≠ user model) requires an `owner_resolver`. The
+resolver is where you map the requesting user to their organization.
+</Callout>
+
+---
+
+## Frontend confirmation (Stripe.js)
+
+The backend creates a **PaymentIntent**; the client confirms it. A minimal flow:
+
+```js
+// 1. Ask your backend to create the checkout
+const res = await fetch("/cfg/payments/checkout/", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
+  body: JSON.stringify({ amount: 1000, currency: "usd", reference_kind: "order", reference_id: "ord_abc123" }),
+});
+const { client_secret, publishable_key } = await res.json();
+
+// 2. Confirm the PaymentIntent with Stripe.js
+const stripe = Stripe(publishable_key);
+const { error } = await stripe.confirmPayment({
+  clientSecret: client_secret,
+  confirmParams: { return_url: "https://app.example.com/pay/done" },
+});
+```
+
+The actual settlement to `succeeded` happens server-side when Stripe delivers the
+webhook — see [Webhooks](/features/modules/django-payments/webhooks).

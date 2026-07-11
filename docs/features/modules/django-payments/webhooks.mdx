@@ -1,0 +1,101 @@
+---
+title: Payments Webhooks
+description: How Stripe webhooks are verified, made idempotent, processed asynchronously via RQ, and replayed after a handler fix.
+---
+
+# Webhooks
+
+Stripe notifies your app of the real payment outcome by calling
+`/cfg/payments/webhook/stripe/`. This is where a `pending`/`processing` payment
+actually becomes `succeeded`, `failed`, or `refunded`.
+
+---
+
+## The endpoint
+
+`POST /cfg/payments/webhook/stripe/` — served by `StripeWebhookView`.
+
+- **Not JWT-authenticated.** Authentication is the **Stripe signature**:
+  `authentication_classes = []`, `permission_classes = [AllowAny]`, and the view
+  is CSRF-exempt.
+- The **raw request body is never re-parsed** (`parser_classes = []`) — signature
+  verification must run against the exact bytes Stripe sent.
+- Excluded from the generated OpenAPI client (`@extend_schema(exclude=True)`) —
+  it is not a client-callable API.
+
+### Signature verification
+
+The view reads the raw `request.body` and the `Stripe-Signature` header and calls
+the provider's `verify_and_parse_webhook`. On a bad or absent signature it returns
+`400 {"detail": "Invalid signature."}`.
+
+Verification iterates over **every** configured webhook secret (the
+comma-separated `stripe_webhook_secret`), so a
+[rotation](/features/modules/django-payments/configuration#stripe-credentials)
+never drops a delivery.
+
+---
+
+## Idempotent processing
+
+On a valid signature the view enqueues the RQ task
+`django_cfg.apps.payments.tasks.process_webhook_event` on the `"default"` queue
+and immediately returns `200 {"received": True}`.
+
+<Callout type="info">
+**RQ optional, with a synchronous fallback.** If RQ/Redis is unavailable, the
+view falls back to processing the event **inline** in the request. Either path
+ends in the same idempotent `PaymentService.handle_webhook`.
+</Callout>
+
+`handle_webhook` is idempotent on the Stripe **event id**:
+
+1. `get_or_create` a `PaymentEvent` on the unique `event_id`. A replayed event
+   that is already processed is a no-op.
+2. Link the related `Payment` and apply the event:
+   - `payment.succeeded` → status `succeeded`, run fulfillment, emit
+     `payment_succeeded`.
+   - `payment.failed` → status `failed`, emit `payment_failed`.
+   - `refund` → set `amount_refunded`, status `refunded`.
+3. On success, stamp `processed_at`. On a handler exception, record the message on
+   the event's `error` field **and re-raise** so the delivery can be retried.
+
+<Callout type="info">
+Subscription-lifecycle events are parsed and **acknowledged** (the event is marked
+processed and a `200` returned) but perform no DB action today — subscription
+fulfillment is a later phase.
+</Callout>
+
+---
+
+## Local development
+
+Use the Stripe CLI to forward live test webhooks to your dev server:
+
+```bash
+python manage.py payments_listen
+```
+
+This wrapper fetches the CLI signing secret (`stripe listen --print-secret`),
+prints it as `STRIPE__WEBHOOK_SECRET=whsec_...` for you to set, then foregrounds
+`stripe listen --forward-to <your webhook url>`. See
+[Management Commands](/features/modules/django-payments/management-commands#payments_listen).
+
+---
+
+## Replaying a stored event
+
+Because the raw `payload` is stored on every `PaymentEvent`, an event can be
+re-processed after you fix a handler bug — no need to ask Stripe to resend.
+
+```bash
+# no-op if already processed
+python manage.py payments_replay_webhook evt_1ABC...
+
+# re-apply even if already processed (clears processed_at/error first)
+python manage.py payments_replay_webhook evt_1ABC... --force
+```
+
+Under the hood this is `WebhookService.replay(event_id=..., force=...)`, which
+re-parses the stored payload through the provider's parser and runs the same
+idempotent `handle_webhook`. It raises if no stored event matches the id.

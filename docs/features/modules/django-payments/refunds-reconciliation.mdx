@@ -1,0 +1,103 @@
+---
+title: Refunds & Reconciliation
+description: Full and partial refunds, and the reconciliation safety net that recovers payments stuck in processing when a webhook is missed.
+---
+
+# Refunds & Reconciliation
+
+Two service-layer flows that keep your payment records true to the provider:
+**refunds** (money back) and **reconciliation** (recover a missed outcome).
+
+---
+
+## Refunds
+
+`RefundService.refund` issues a full or partial refund against a settled payment.
+
+```python
+from django_cfg.apps.payments.services import RefundService
+from django_cfg.apps.payments.models import Payment
+
+payment = Payment.objects.get(short_id="pay_a1b2c3")
+
+# Full refund
+RefundService.refund(payment=payment)
+
+# Partial refund — minor units
+RefundService.refund(payment=payment, amount=250)   # $2.50
+```
+
+### Rules
+
+The service validates before calling the provider — a bad refund raises
+`RefundError`:
+
+- The payment must have an `external_id` (a provider intent to refund).
+- Status must be `succeeded` or `refunded` (partial refunds accumulate).
+- The remaining refundable amount (`amount - amount_refunded`) must be `> 0`.
+- A partial `amount` must not exceed the remaining refundable amount.
+
+On success it calls the provider, adds to `amount_refunded`, and flips the status
+to `refunded` once fully refunded. The whole operation is atomic.
+
+### From the CLI
+
+```bash
+python manage.py payments_refund pay_a1b2c3            # full refund (prompts)
+python manage.py payments_refund pay_a1b2c3 --amount 250 --yes   # partial, no prompt
+```
+
+See [Management Commands](/features/modules/django-payments/management-commands#payments_refund).
+
+---
+
+## Reconciliation
+
+Webhooks can be missed — a deploy blip, a Redis outage, a transient 500.
+Reconciliation is the safety net: it **polls the provider** for the real status
+of payments stuck in `processing` and applies it.
+
+```python
+from django_cfg.apps.payments.services import ReconciliationService
+
+# Reconcile everything stuck in `processing` older than the cutoff
+result = ReconciliationService.reconcile_stuck(older_than_hours=1, limit=100)
+print(result.checked, result.updated, result.activated, result.skipped, result.errors)
+
+# Reconcile one payment object
+ReconciliationService.reconcile_payment(payment)
+```
+
+`ReconcileResult` reports `checked`, `updated`, `activated`, `skipped`, and a list
+of `errors`.
+
+### Behaviour
+
+- Payments with no `external_id`, or whose provider doesn't support reconciliation
+  (`ProviderNotSupported`), are **skipped**.
+- A provider status of succeeded → status `succeeded` **and run fulfillment**
+  (same success path as a webhook, so your `fulfillment_hook` and
+  `payment_succeeded` signal fire exactly once).
+- A provider status of failed → status `failed` and `payment_failed` emitted.
+- Payments already in a terminal state are left untouched — reconciliation is
+  **idempotent**.
+
+<Callout type="info">
+Reconciliation and webhooks converge on the **same** `run_fulfillment` path, so a
+payment settled by either route runs your fulfillment hook and signal once — never
+zero times, never twice.
+</Callout>
+
+### Scheduled & on demand
+
+A background task `reconcile_pending_payments` runs
+`reconcile_stuck(older_than_hours=1, limit=200)` on a schedule (see
+[Signals & Tasks](/features/modules/django-payments/signals-tasks)). You can also
+run it by hand:
+
+```bash
+python manage.py payments_reconcile --hours 1 --limit 100
+python manage.py payments_reconcile --short-id pay_a1b2c3   # one payment, ignores --hours
+```
+
+See [Management Commands](/features/modules/django-payments/management-commands#payments_reconcile).

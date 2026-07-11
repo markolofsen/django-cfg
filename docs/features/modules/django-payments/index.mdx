@@ -1,0 +1,129 @@
+---
+title: Payments
+description: Provider-agnostic one-time payments for django-cfg — Stripe-first checkout, idempotent webhooks, refunds, and reconciliation, wired through a single PaymentsConfig.
+---
+
+# Payments
+
+Built-in payments engine for django-cfg (`django_cfg.apps.payments`): a
+provider-agnostic, one-time checkout flow (Stripe-first) with idempotent webhook
+ingestion, refunds, and reconciliation. Everything is configured from a single
+`PaymentsConfig` field on your `DjangoConfig`.
+
+<Callout type="info">
+The Stripe SDK is an **optional extra**. Install it with `pip install django-cfg[payments]`.
+</Callout>
+
+---
+
+## Design at a glance
+
+The engine is built around three deliberate seams so it stays decoupled from
+your domain models:
+
+- **Amounts are integer minor units.** Every amount — request, storage, refund —
+  is an integer in the currency's smallest unit (e.g. cents). No floats, no
+  `Decimal` drift.
+- **The provider is the only vendor-aware layer.** The `stripe` SDK is imported
+  in exactly one place (`providers/stripe.py`). Adding PayPal/crypto later means
+  writing one provider class — nothing else changes.
+- **Ownership and "what was paid for" are seams, not FKs.** A payment belongs to
+  an **owner** (the billable party — a user by default, or your org model). What
+  it was paid *for* is a loose `(reference_kind, reference_id)` string pair, so
+  the engine carries zero knowledge of your order/plan models.
+
+<Callout type="info">
+Subscriptions are a later phase. The provider layer already implements the Stripe
+subscription methods, but the service layer today only fulfills **one-time
+payments** — subscription webhook events are parsed and acknowledged, not acted on.
+</Callout>
+
+---
+
+## Quick start
+
+### 1. Install the extra
+
+```bash
+pip install django-cfg[payments]
+```
+
+### 2. Enable it in your config
+
+```python
+from django_cfg import DjangoConfig, PaymentsConfig
+
+class MyConfig(DjangoConfig):
+    payments = PaymentsConfig(
+        # owner defaults to AUTH_USER_MODEL — set this only for org-level billing
+        # owner_model="organizations.Organization",
+        # owner_resolver="apps.billing.owner.resolve",
+        fulfillment_hook="apps.orders.hooks.activate_order",
+    )
+```
+
+Enabling `payments` installs the `cfg_payments` app, its migrations, and mounts
+its URLs at `/cfg/payments/`.
+
+### 3. Provide Stripe credentials
+
+Secrets fall back to the environment, so hosts that already follow the
+`STRIPE__*` convention need no explicit values in config:
+
+```bash
+STRIPE__SECRET_KEY=sk_test_...
+STRIPE__PUBLISHABLE_KEY=pk_test_...
+STRIPE__WEBHOOK_SECRET=whsec_...
+```
+
+### 4. Run migrations
+
+```bash
+python manage.py migrate
+```
+
+### 5. Verify the wiring
+
+```bash
+python manage.py payments_doctor
+```
+
+`payments_doctor` checks that the provider resolves, credentials are present, and
+no payments are stuck or events unprocessed.
+
+---
+
+## How a payment flows
+
+<Callout type="tip">
+Amounts below are all in **minor units** — `1000` = $10.00 USD.
+</Callout>
+
+1. **Checkout.** Your frontend `POST`s to `/cfg/payments/checkout/` with an
+   amount. The engine creates a `Payment` row (status `pending`), asks the
+   provider to create a Stripe PaymentIntent, stores its id, and returns the
+   `client_secret` for the client to confirm.
+2. **Confirmation.** The client confirms the PaymentIntent with Stripe.js using
+   the returned `client_secret` and `publishable_key`.
+3. **Webhook.** Stripe calls `/cfg/payments/webhook/stripe/`. The engine verifies
+   the signature, records a `PaymentEvent` (idempotent on the Stripe event id),
+   flips the `Payment` to `succeeded`, runs your `fulfillment_hook`, and emits the
+   `payment_succeeded` signal.
+4. **Reconciliation (safety net).** If a webhook is ever missed, a scheduled job
+   polls the provider for payments stuck in `processing` and applies the real
+   status.
+
+---
+
+## Where to go next
+
+<Cards>
+  <Card title="Configuration" href="/features/modules/django-payments/configuration">The `PaymentsConfig` model — provider registry, currency, ownership and fulfillment seams, Stripe credentials.</Card>
+  <Card title="Data Model" href="/features/modules/django-payments/models">`Payment` and `PaymentEvent` — fields, status lifecycle, minor-units, idempotency.</Card>
+  <Card title="Checkout & API" href="/features/modules/django-payments/checkout">The REST API, owner resolution, and confirming a PaymentIntent from the frontend.</Card>
+  <Card title="Webhooks" href="/features/modules/django-payments/webhooks">Signature verification, idempotent processing, and replaying a stored event.</Card>
+  <Card title="Refunds & Reconciliation" href="/features/modules/django-payments/refunds-reconciliation">Full/partial refunds and the safety net for missed webhooks.</Card>
+  <Card title="Providers" href="/features/modules/django-payments/providers">The `PaymentProvider` interface, the Stripe implementation, and custom providers.</Card>
+  <Card title="Management Commands" href="/features/modules/django-payments/management-commands">The five `payments_*` commands: doctor, listen, reconcile, refund, replay.</Card>
+  <Card title="Signals & Tasks" href="/features/modules/django-payments/signals-tasks">`payment_succeeded` / `payment_failed` signals and the RQ background tasks.</Card>
+</Cards>

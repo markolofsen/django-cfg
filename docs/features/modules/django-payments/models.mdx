@@ -1,0 +1,120 @@
+---
+title: Payments Data Model
+description: The Payment and PaymentEvent models — fields, the status lifecycle, minor-units amounts, the ownership seam, and idempotency constraints.
+---
+
+# Data Model
+
+Two models, both in the `cfg_payments` app label.
+
+<Callout type="info">
+**Amounts are always integer minor units** (cents). `amount = 1000` with
+`currency = "usd"` means $10.00. This keeps the model provider-agnostic and free
+of floating-point drift.
+</Callout>
+
+---
+
+## `Payment`
+
+One provider-neutral payment attempt. Table: `cfg_payments_payment`, ordered by
+`-created_at`.
+
+### Status lifecycle
+
+`Payment.Status` is a `TextChoices` enum:
+
+| Value | Label |
+| --- | --- |
+| `pending` | Pending |
+| `processing` | Processing |
+| `requires_action` | Requires action |
+| `succeeded` | Succeeded |
+| `failed` | Failed |
+| `refunded` | Refunded |
+| `cancelled` | Cancelled |
+
+A payment is created `pending`, moves to `processing` once the provider intent
+exists, and settles into `succeeded` / `failed` / `refunded` via webhook or
+reconciliation.
+
+### Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | `UUIDField` | Primary key, `uuid4`, non-editable. |
+| `short_id` | `CharField(24)` | Human/lookup id, auto-set to `pay_XXXXXX` on save. Indexed. |
+| `owner` | `FK → owner model` | The billable party (see [ownership seam](#the-ownership-seam)). `related_name="cfg_payments"`. |
+| `reference_kind` | `CharField(32)` | What was paid for, in your vocabulary (e.g. `"order"`). Blank for standalone payments. |
+| `reference_id` | `CharField(64)` | The loose reference id (e.g. `"ord_abc123"`). |
+| `created_by` | `FK → AUTH_USER_MODEL` | Nullable; who initiated it. `SET_NULL` on delete. |
+| `provider` | `CharField(32)` | e.g. `"stripe"`. |
+| `external_id` | `CharField(128)` | Provider intent/charge id (Stripe PaymentIntent `pi_…`). Indexed. |
+| `status` | `CharField(20)` | One of the status values above. Default `pending`. |
+| `amount` | `BigIntegerField` | Authoritative amount in **minor units**. |
+| `currency` | `CharField(8)` | ISO currency, default `"usd"`. |
+| `amount_refunded` | `BigIntegerField` | Minor units refunded so far. Default `0`. |
+| `idempotency_key` | `CharField(128)` | **Unique.** Client→server dedupe for double-clicked checkout. |
+| `created_at` | `DateTimeField` | `auto_now_add`. |
+| `updated_at` | `DateTimeField` | `auto_now`. |
+
+### Constraints & indexes
+
+- **Unique** `(provider, external_id)` where `external_id` is set — one payment
+  row per provider intent.
+- **Unique** `idempotency_key`.
+- Indexes on `(owner, status)`, `(short_id)`, and `(reference_kind, reference_id)`.
+
+<Callout type="tip">
+`Payment` inherits a truncating mixin whose `save()` clips every `CharField`
+to its `max_length` first — external provider strings can't blow up a save with
+a right-truncation error.
+</Callout>
+
+### The ownership seam
+
+`Payment.owner` targets the model named by `CFG_PAYMENTS_OWNER_MODEL` (emitted
+from `PaymentsConfig.owner_model`), falling back to `AUTH_USER_MODEL`. Point it
+at your org model for org-level billing — and remember to set `owner_resolver`
+when it's not the user model (see
+[Configuration](/features/modules/django-payments/configuration#ownership-seam)).
+
+### The reference pair
+
+`(reference_kind, reference_id)` records *what* a payment was for **without a
+foreign key**. The engine never imports your order/plan models; you interpret the
+pair on your side (e.g. in the `fulfillment_hook`). Both are blank for standalone
+payments and top-ups.
+
+---
+
+## `PaymentEvent`
+
+Inbound provider webhook log **and** the idempotency guard. Table:
+`cfg_payments_event`, ordered by `-received_at`.
+
+### Fields
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | `UUIDField` | Primary key. |
+| `provider` | `CharField(32)` | e.g. `"stripe"`. |
+| `event_id` | `CharField(128)` | **Unique.** Provider event id (Stripe `evt_…`). |
+| `event_type` | `CharField(64)` | Provider event type. |
+| `payment` | `FK → Payment` | Nullable; linked once resolved. `related_name="events"`. |
+| `payload` | `JSONField` | Raw event stored verbatim for audit/debug and replay. |
+| `received_at` | `DateTimeField` | `auto_now_add`. |
+| `processed_at` | `DateTimeField` | Set when handling completes; `null` until then. |
+| `error` | `TextField` | Set when a handler raised, kept for retry/debug. |
+
+### Idempotency
+
+<Callout type="info">
+The `event_id` unique constraint **is** the webhook idempotency mechanism. The
+handler does a `get_or_create(event_id=…)`; a replayed delivery of the same
+Stripe event short-circuits instead of double-applying. The raw `payload` is kept
+so an event can be [replayed](/features/modules/django-payments/webhooks#replaying-a-stored-event)
+after a handler bug is fixed.
+</Callout>
+
+An index on `(provider, event_type)` supports filtering the event log.

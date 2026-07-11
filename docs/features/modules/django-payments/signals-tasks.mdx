@@ -1,0 +1,101 @@
+---
+title: Payments Signals & Tasks
+description: The payment_succeeded / payment_failed signals and the RQ background tasks that process webhooks and reconcile stuck payments.
+---
+
+# Signals & Tasks
+
+Two integration points for your app: **signals** to react to payment outcomes,
+and the **RQ tasks** that do the async work.
+
+---
+
+## Signals
+
+The engine emits two Django signals, both with `sender=Payment` and a `payment`
+keyword argument.
+
+| Signal | Fired when |
+| --- | --- |
+| `payment_succeeded` | A payment reaches `succeeded` (webhook- or reconciliation-driven). |
+| `payment_failed` | A payment reaches `failed`. |
+
+```python
+from django.dispatch import receiver
+from django_cfg.apps.payments.signals import payment_succeeded, payment_failed
+from django_cfg.apps.payments.models import Payment
+
+
+@receiver(payment_succeeded, sender=Payment)
+def on_paid(sender, payment, **kwargs):
+    # payment.reference_kind / payment.reference_id tell you WHAT was paid for
+    grant_access(payment.owner, payment.reference_id)
+
+
+@receiver(payment_failed, sender=Payment)
+def on_failed(sender, payment, **kwargs):
+    notify_owner(payment.owner, payment)
+```
+
+<Callout type="info">
+`payment_succeeded` is emitted by the shared `run_fulfillment` path, so it fires
+whether the payment settled via webhook **or** reconciliation — exactly once, never
+twice.
+</Callout>
+
+<Callout type="warning">
+**Signal receivers vs. the fulfillment hook.** A receiver exception **propagates**
+into the webhook's record-and-retry path (so Stripe retries the delivery). A
+`fulfillment_hook` exception, by contrast, is logged and recorded on the event but
+**not** re-raised. Put must-not-fail side effects behind the hook and
+retry-desirable ones behind a signal — or make receivers defensive.
+</Callout>
+
+### Signals vs. the fulfillment hook
+
+Both fire on success. The [`fulfillment_hook`](/features/modules/django-payments/configuration#fulfillment-seam)
+is a single configured `fn(payment)` for "the" fulfillment action; signals are the
+fan-out for any number of independent listeners. They are complementary — use
+whichever fits, or both.
+
+---
+
+## Background tasks (RQ)
+
+The app uses **django-rq** (not dramatiq). Tasks are enqueued by dotted path onto
+the `"default"` queue.
+
+### `process_webhook_event`
+
+```
+django_cfg.apps.payments.tasks.process_webhook_event(
+    provider_name, event_id, event_type, external_id, amount, currency, raw
+)
+```
+
+Enqueued by the webhook view on a valid signature. It reconstructs the normalized
+`WebhookResult` and calls the idempotent `PaymentService.handle_webhook`.
+
+<Callout type="info">
+If RQ/Redis is unavailable, the webhook view runs `handle_webhook` **inline**
+instead — the async task is an optimization, not a hard dependency. See
+[Webhooks](/features/modules/django-payments/webhooks#idempotent-processing).
+</Callout>
+
+### `reconcile_pending_payments`
+
+```
+django_cfg.apps.payments.tasks.reconcile_pending_payments()
+```
+
+A scheduled job that runs `ReconciliationService.reconcile_stuck(older_than_hours=1,
+limit=200)` and logs a warning when anything was updated or errored. This is the
+automated form of the
+[`payments_reconcile`](/features/modules/django-payments/management-commands#payments_reconcile)
+command — schedule it to catch any webhook the app ever misses.
+
+<Callout type="tip">
+Schedule `reconcile_pending_payments` on a regular cadence (e.g. every few
+minutes) via your RQ scheduler. It is idempotent and cheap when there's nothing
+stuck.
+</Callout>

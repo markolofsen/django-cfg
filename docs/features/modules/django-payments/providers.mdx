@@ -1,0 +1,119 @@
+---
+title: Payment Providers
+description: The provider abstraction — the PaymentProvider interface, the Stripe implementation, and how to register a custom provider.
+---
+
+# Providers
+
+The provider layer is the **only** vendor-aware part of the engine. Everything
+above it — models, services, API — speaks a normalized, provider-neutral vocabulary.
+Adding a new payment vendor means writing one provider class.
+
+---
+
+## The `PaymentProvider` interface
+
+A provider is a subclass of `PaymentProvider` with a `name` class attribute and
+these methods.
+
+### Required
+
+| Method | Signature | Returns |
+| --- | --- | --- |
+| `create_checkout` | `(*, payment, idempotency_key)` | `CheckoutSession` |
+| `verify_and_parse_webhook` | `(*, payload: bytes, signature: str)` | `WebhookResult` |
+| `refund` | `(*, payment, amount: int \| None = None)` | `RefundResult` |
+
+`create_checkout` creates the provider-side payment for an existing `Payment`
+row (amount is authoritative, in minor units). `verify_and_parse_webhook` must
+verify the signature against the **raw** body and raise `ProviderWebhookError` on
+a bad/absent signature. `refund` does a full refund when `amount` is `None`, else
+a partial refund in minor units.
+
+### Optional
+
+These default to raising `ProviderNotSupported`, so a provider implements only
+what it supports:
+
+- `retrieve_payment(*, external_id) -> PaymentSnapshot` — the provider's current
+  view of a payment; used by reconciliation.
+- `ensure_customer(*, external_ref, email, name="") -> str`
+- `create_subscription(...) -> SubscriptionSession`
+- `cancel_subscription(*, stripe_subscription_id, at_period_end=True) -> None`
+- `set_subscription_quantity(*, stripe_subscription_id, quantity) -> None`
+- `create_billing_portal_session(*, customer_id, return_url) -> str`
+- `capabilities() -> dict[str, bool]` — advertises what the provider supports.
+
+### Normalized DTOs
+
+Providers return frozen dataclasses so the services never touch a vendor object:
+`CheckoutSession`, `WebhookResult`, `RefundResult`, `PaymentSnapshot`,
+`SubscriptionSession`, `SubscriptionEventData`. Webhook events are normalized to
+constants like `payment.succeeded`, `payment.failed`, and `refund`.
+
+### Exceptions
+
+- `ProviderError` — an upstream API call failed.
+- `ProviderWebhookError` — signature/parse failure.
+- `ProviderNotSupported` — an optional capability isn't implemented.
+
+---
+
+## The Stripe provider
+
+`StripeProvider` (`name = "stripe"`) is the built-in implementation and the only
+file that imports the `stripe` SDK (lazily — a missing SDK raises
+`ImproperlyConfigured` with the `pip install django-cfg[payments]` hint).
+
+<Callout type="info">
+It uses an **instance-based** `stripe.StripeClient(secret)` rather than mutating
+the global `stripe.api_key` — safe across concurrent RQ workers.
+</Callout>
+
+Key behaviours:
+
+- **Checkout** uses Stripe **PaymentIntents** (not Checkout Sessions). It passes
+  `amount`, `currency`, metadata (`payment_short_id`, `reference_kind`,
+  `reference_id`, `owner_id`), `automatic_payment_methods`, and the
+  `idempotency_key`, returning the intent id and `client_secret`.
+- **Webhook verification** tries each configured secret via
+  `Webhook.construct_event` (key rotation), then normalizes via a single
+  `parse_event_dict` path shared by live delivery and replay.
+- **Refunds** call `refunds.create` against the PaymentIntent.
+- **Reconciliation** (`retrieve_payment`) retrieves the PaymentIntent, sums
+  `amount_refunded` across charges, and maps the Stripe status to a normalized one.
+- **Capabilities**: `client_confirm`, `partial_refund`, `reconcile`, and
+  `subscriptions` are `True`; `hosted_redirect` is `False`.
+
+<Callout type="info">
+The Stripe provider fully implements the subscription methods, but the service
+layer doesn't invoke them yet — one-time payments only, for now.
+</Callout>
+
+---
+
+## Registering a custom provider
+
+Add a key → dotted-path entry to the provider registry, then reference it by key.
+
+```python
+from django_cfg import DjangoConfig, PaymentsConfig
+
+class MyConfig(DjangoConfig):
+    payments = PaymentsConfig(
+        provider_registry={
+            "stripe": "django_cfg.apps.payments.providers.stripe.StripeProvider",
+            "paypal": "apps.billing.providers.PayPalProvider",
+        },
+        default_provider="stripe",
+    )
+```
+
+A checkout can then request `"provider": "paypal"`. The factory `get_provider`
+resolves the dotted path (Django settings `PAYMENTS_PROVIDER_REGISTRY` /
+`PAYMENTS_DEFAULT_PROVIDER` win over config, which is what test fixtures use), and
+raises `ValueError` for an unknown provider name.
+
+Your class must subclass `PaymentProvider`, set a unique `name`, and implement the
+three required methods. Implement the optional ones (especially `retrieve_payment`)
+to opt into reconciliation.

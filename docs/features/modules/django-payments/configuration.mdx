@@ -1,0 +1,115 @@
+---
+title: Payments Configuration
+description: The PaymentsConfig model — provider registry, currency, the ownership and fulfillment seams, and Stripe credentials.
+---
+
+# Configuration
+
+The payments engine reads **all** of its configuration from a single
+`PaymentsConfig` field on your `DjangoConfig`. There is no separate settings
+block — the config object emits the Django settings the app needs.
+
+```python
+from django_cfg import DjangoConfig, PaymentsConfig
+
+class MyConfig(DjangoConfig):
+    payments = PaymentsConfig(
+        owner_model="organizations.Organization",
+        owner_resolver="apps.billing.owner.resolve",
+        fulfillment_hook="apps.orders.hooks.activate_order",
+    )
+```
+
+---
+
+## Fields
+
+### Core
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `enabled` | `bool` | `True` | Enable the payments app. When on, the app, its migrations, and URLs are installed. |
+| `default_provider` | `str` | `"stripe"` | Provider key used when a checkout does not name one. |
+| `provider_registry` | `dict[str, str]` | `{"stripe": "…providers.stripe.StripeProvider"}` | Provider key → dotted class path. Hosts may add or override entries. |
+| `default_currency` | `str` | `"usd"` | ISO currency code used when a checkout omits one. |
+
+### Ownership seam
+
+Payments belong to an **owner** — the billable party.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `owner_model` | `str \| None` | `None` | Billable owner model as `"app_label.Model"`. `None` → `AUTH_USER_MODEL`. |
+| `owner_resolver` | `str \| None` | `None` | Dotted path to `fn(request) -> owner instance`, used by the API views. |
+
+The `owner_model` value is emitted as the `CFG_PAYMENTS_OWNER_MODEL` setting so
+the `Payment.owner` foreign key and migrations resolve it lazily.
+
+<Callout type="warning">
+If `owner_model` points at anything **other than** the user model, you **must**
+also set `owner_resolver` — otherwise the API views cannot map a request to an
+owner and will raise `ImproperlyConfigured`. When the owner is the user model,
+the default resolver returns `request.user` and no resolver is needed.
+</Callout>
+
+### Fulfillment seam
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `fulfillment_hook` | `str \| None` | `None` | Dotted path to `fn(payment) -> None`, invoked when a payment **succeeds** (webhook- or reconciliation-driven). |
+
+The engine emits `payment_succeeded` / `payment_failed` signals **regardless** of
+whether a hook is configured — the hook is an additional convenience, not the only
+notification path. See [Signals & Tasks](/features/modules/django-payments/signals-tasks).
+
+<Callout type="info">
+Hook exceptions are logged and recorded on the event's `error` field, but are
+**not** re-raised — a broken fulfillment hook will not cause Stripe to retry the
+webhook. Signal-receiver exceptions, by contrast, **do** propagate into the
+webhook's record-and-retry path.
+</Callout>
+
+### Dunning seam (subscriptions, later phase)
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `dunning_mailer` | `str \| None` | `None` | Dotted path to `fn(subscription_data)` for failed-renewal email. `None` = built-in no-op. |
+
+The hook is stable, but subscription billing lands in a later phase.
+
+### Stripe credentials
+
+All three fall back to the environment, so no explicit values are needed if you
+follow the `STRIPE__*` convention.
+
+| Field | Type | Env fallback | Description |
+| --- | --- | --- | --- |
+| `stripe_secret_key` | `str` | `STRIPE__SECRET_KEY` | `sk_test_…` / `sk_live_…` (backend only). |
+| `stripe_publishable_key` | `str` | `STRIPE__PUBLISHABLE_KEY` | `pk_test_…` / `pk_live_…` (safe client-side). |
+| `stripe_webhook_secret` | `str` | `STRIPE__WEBHOOK_SECRET` | `whsec_…`. **Comma-separate to rotate** — old and new are both verified. |
+
+<Callout type="tip">
+**Webhook secret rotation.** `stripe_webhook_secret` accepts a comma-separated
+list. During a rotation, set both the old and new `whsec_…` values; the provider
+tries each until one verifies, so no delivery is dropped mid-rotation. The
+`stripe_webhook_secrets` property exposes the parsed list.
+</Callout>
+
+---
+
+## Environment example
+
+```bash
+# .env
+STRIPE__SECRET_KEY=sk_test_51ABC...
+STRIPE__PUBLISHABLE_KEY=pk_test_51ABC...
+STRIPE__WEBHOOK_SECRET=whsec_oldsecret,whsec_newsecret   # mid-rotation
+PAYMENTS_DEFAULT_CURRENCY=usd
+```
+
+<Callout type="info">
+For tests, `PAYMENTS_PROVIDER_REGISTRY`, `PAYMENTS_DEFAULT_PROVIDER`, and
+`PAYMENTS_DEFAULT_CURRENCY` Django settings take precedence over the pydantic
+config, so a fake provider can be injected with pytest-django's `settings`
+fixture without touching the config object.
+</Callout>

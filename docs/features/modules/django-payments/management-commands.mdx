@@ -1,0 +1,112 @@
+---
+title: Payments Management Commands
+description: The five payments_* management commands — doctor, listen, reconcile, refund, and replay_webhook.
+---
+
+# Management Commands
+
+The app ships five `payments_*` management commands.
+
+---
+
+## `payments_doctor`
+
+Read-only health check backing your CI/ops smoke test. Verifies the default
+provider resolves, Stripe credentials are present, and no payments are stuck or
+events unprocessed.
+
+```bash
+python manage.py payments_doctor
+python manage.py payments_doctor --stuck-hours 2
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--stuck-hours` | `1` | How old a `processing` payment must be to count as "stuck". |
+
+Exits with a pass/problems summary — good first call after enabling the app.
+
+---
+
+## `payments_listen`
+
+Local-dev only. Wraps the Stripe CLI to forward test webhooks to your dev server.
+It fetches the CLI signing secret (`stripe listen --print-secret`), prints it as
+`STRIPE__WEBHOOK_SECRET=whsec_...` for you to set, then foregrounds
+`stripe listen --forward-to <webhook url>`. The forward URL is derived from the
+webhook route.
+
+```bash
+python manage.py payments_listen
+python manage.py payments_listen --host localhost:8000 --events payment_intent.succeeded,charge.refunded
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--host` | `localhost:8000` | Host to build the forward URL from. |
+| `--events` | all mapped types | Comma-separated Stripe event types to forward. |
+
+<Callout type="warning">
+Requires the [Stripe CLI](https://stripe.com/docs/stripe-cli) installed and
+authenticated. This is a development helper — do not use it in production.
+</Callout>
+
+---
+
+## `payments_reconcile`
+
+Polls the provider for payments stuck in `processing` and applies the real status.
+See [Refunds & Reconciliation](/features/modules/django-payments/refunds-reconciliation#reconciliation).
+
+```bash
+python manage.py payments_reconcile
+python manage.py payments_reconcile --hours 1 --limit 100
+python manage.py payments_reconcile --short-id pay_a1b2c3
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--hours` | `1` | Reconcile payments stuck longer than this. |
+| `--limit` | `100` | Max payments to check in one run. |
+| `--short-id` | — | Reconcile a single payment (ignores `--hours`). |
+
+Prints `checked / updated / activated / skipped / errors`.
+
+---
+
+## `payments_refund`
+
+Full or partial refund of a settled payment. See
+[Refunds](/features/modules/django-payments/refunds-reconciliation#refunds).
+
+```bash
+python manage.py payments_refund pay_a1b2c3               # full refund (prompts)
+python manage.py payments_refund pay_a1b2c3 --amount 250  # partial ($2.50)
+python manage.py payments_refund pay_a1b2c3 --yes         # skip the confirmation
+```
+
+| Argument / flag | Description |
+| --- | --- |
+| `short_id` (positional) | The payment to refund. |
+| `--amount` | Partial amount in **minor units**; omit for a full refund. |
+| `--yes` | Skip the confirmation prompt. |
+
+---
+
+## `payments_replay_webhook`
+
+Re-process a stored `PaymentEvent` by its provider event id — useful after fixing
+a handler bug, since the raw payload is stored. See
+[Replaying a stored event](/features/modules/django-payments/webhooks#replaying-a-stored-event).
+
+```bash
+python manage.py payments_replay_webhook evt_1ABC...
+python manage.py payments_replay_webhook evt_1ABC... --force
+```
+
+| Argument / flag | Description |
+| --- | --- |
+| `event_id` (positional) | The provider event id to replay. |
+| `--force` | Re-apply even if already processed (clears `processed_at`/`error` first). |
+
+Prints the resulting status message; errors if no stored event matches the id.
