@@ -9,7 +9,7 @@
 # - [tool.uv.sources] configures local editable path
 # - uv sync automatically uses the local path when available
 
-.PHONY: help install install-local env test commit kill-ports kill-grpc kill-all dev dev-ngrok asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api api-ws gen gen-ts gen-py gen-admin gen-dry gen-list claude
+.PHONY: help install install-local env test commit kill-ports kill-grpc kill-all dev dev-ngrok asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api api-ws gen gen-ts gen-py gen-admin gen-dry gen-list claude codex
 
 # uv binary
 UV := $(shell which uv || echo $(HOME)/.local/bin/uv)
@@ -214,6 +214,10 @@ api-ws:
 # Start Claude Code with dangerously-skip-permissions flag
 claude:
 	claude --dangerously-skip-permissions --chrome
+
+# Start Codex CLI with bypassed approvals and sandbox
+codex:
+	codex --dangerously-bypass-approvals-and-sandbox
 
 # RQ Workers and Scheduler (macOS optimized - uses SimpleWorker to prevent fork crashes)
 rq: rq-clear
