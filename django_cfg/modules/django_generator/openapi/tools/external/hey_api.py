@@ -75,8 +75,30 @@ def generate(
         # run nor the user's source tree carries stale build artefacts.
         config_path.unlink(missing_ok=True)
 
+    _normalize_whitespace_only_lines(out_dir)
     files = sorted(p for p in out_dir.rglob("*") if p.is_file())
     return HeyApiResult(output_dir=out_dir, files=files)
+
+
+def _normalize_whitespace_only_lines(output: Path) -> None:
+    """Remove indentation from otherwise-empty generated text lines.
+
+    Hey API 0.99.0 emits spaces on some separator lines in ``sdk.gen.ts``.
+    Normalizing those lines keeps generated output friendly to ``git diff
+    --check`` without touching non-empty lines, where trailing whitespace can
+    be meaningful inside a TypeScript template literal.
+    """
+    paths = (output,) if output.is_file() else output.rglob("*")
+    for path in paths:
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        normalized = "\n".join("" if line.isspace() else line for line in text.split("\n"))
+        if normalized != text:
+            path.write_text(normalized, encoding="utf-8")
 
 
 def _write_config(
