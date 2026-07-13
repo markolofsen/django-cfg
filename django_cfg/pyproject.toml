@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.2.97"
+version = "2.2.100"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -198,7 +198,8 @@ django52 = [
 ]
 
 ai = [
-    "pydantic-ai-slim>=2.1.0,<3.0",  # >=1.99 fixed SSRF bypass CVE-2026-46678; 2.1 is the floor for pydantic-ai-harness
+    "pydantic-ai-slim>=2.1.0,<3.0",  # >=1.99 fixed SSRF bypass CVE-2026-46678; 2.1 is the floor required by pydantic-ai-harness
+    "pydantic-ai-harness>=0.6.0,<1.0",
 ]
 
 centrifugo = [
@@ -308,7 +309,8 @@ full = [
     "rq>=2.7.0",
     "rq-scheduler>=0.14.0",
     "hiredis>=2.0",
-    "pydantic-ai-slim>=2.1.0,<3.0",  # >=1.99 fixed SSRF bypass CVE-2026-46678; 2.1 is the floor for pydantic-ai-harness
+    "pydantic-ai-slim>=2.1.0,<3.0",  # >=1.99 fixed SSRF bypass CVE-2026-46678; 2.1 is the floor required by pydantic-ai-harness
+    "pydantic-ai-harness>=0.6.0,<1.0",
     # payments (django_cfg.apps.payments)
     "stripe>=15.3.0,<16.0",
     # gen (django_generator)
