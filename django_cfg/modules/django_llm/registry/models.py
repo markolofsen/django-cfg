@@ -1,6 +1,6 @@
 """
 OpenRouter Models Cache - Fetch and cache available models with pricing
-Adapted for django-cfg from unreal_llm
+Originally adapted from unreal_llm; now part of cmdop_utils.llm.
 """
 
 import asyncio
@@ -18,11 +18,39 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ModelPricing:
-    """Model pricing information"""
-    prompt_price: float  # Price per 1M input tokens
-    completion_price: float  # Price per 1M output tokens
+    """Model pricing — the single source of truth for token cost.
+
+    UNITS (pinned): ``prompt_price`` and ``completion_price`` are USD per
+    **1M tokens** (e.g. gpt-4o-mini prompt=0.15 == $0.15/1M). OpenRouter's
+    ``/models`` API returns USD **per token** as a string (e.g.
+    "0.00000015"); ``_price_per_million`` multiplies by 1e6 at the
+    population site so EVERYTHING downstream is per-1M. Cost math lives in
+    :meth:`cost` — call it, never re-derive the ``/ 1e6`` division.
+    """
+    prompt_price: float  # USD per 1M input tokens
+    completion_price: float  # USD per 1M output tokens
     currency: str = "USD"
-    image_price: float = 0.0  # Price per image (per token, raw OpenRouter unit)
+    # OpenRouter's `image` field — documented as a per-IMAGE fee (schema:
+    # "pricing per 1 image"), stored RAW (unscaled), unlike prompt/completion
+    # which are ×1e6 → per-1M. Deliberately NOT used in `cost()`: the only
+    # models that set it are Gemini, where it equals the per-token prompt rate
+    # because Gemini image input is already counted in `prompt_tokens` — so
+    # `cost(prompt_tokens, ...)` already bills it. Adding it would double-count.
+    # See @docs/pricing-units-audit.md "Universality audit".
+    image_price: float = 0.0
+
+    def cost(self, tokens_input: int, tokens_output: int) -> float:
+        """USD cost for the given token counts (per-1M pricing → USD).
+
+        The ONE place token-cost arithmetic lives. Both the registry and
+        the vision client route through this so the ``/ 1_000_000`` unit
+        conversion can never drift (the bug that booked an 8.5k-token OCR
+        as ~$1294 instead of ~$0.0013).
+        """
+        return (
+            (tokens_input / 1_000_000) * self.prompt_price
+            + (tokens_output / 1_000_000) * self.completion_price
+        )
 
 @dataclass
 class OpenRouterModel:
@@ -42,6 +70,67 @@ class OpenRouterModel:
     # OpenRouter `supported_parameters` — e.g. "response_format",
     # "structured_outputs", "tools", "reasoning". Drives the advisory layer.
     supported_parameters: List[str] = field(default_factory=list)
+    # True when this entry came from OpenRouter's `/embeddings/models`
+    # endpoint (or its output modality is "embedding"). Embedding models
+    # have a prompt price but no completion price; the pricing-sync uses
+    # this flag to write `capabilities.embeddings=True` rows into the DB.
+    is_embedding: bool = False
+
+    # ── Derived capability getters (centralized here so every consumer —
+    #    the gateway catalog ingest, a future SDK, django — reads the SAME
+    #    capability logic instead of re-deriving it from raw fields). ──
+
+    @property
+    def vendor(self) -> str:
+        """Real vendor from the slug prefix (OpenRouter rarely sends `provider`).
+        `anthropic/claude-3.5-haiku` → `anthropic`."""
+        return self.id.split("/", 1)[0] if "/" in self.id else (self.provider or "")
+
+    @property
+    def supports_tools(self) -> bool:
+        return "tools" in self.supported_parameters
+
+    @property
+    def supports_vision(self) -> bool:
+        return "image" in self.input_modalities
+
+    @property
+    def supports_structured(self) -> bool:
+        return any(
+            p in self.supported_parameters
+            for p in ("structured_outputs", "response_format")
+        )
+
+    @property
+    def supports_reasoning(self) -> bool:
+        return "reasoning" in self.supported_parameters
+
+    @property
+    def is_text_chat(self) -> bool:
+        """Usable for a prose/tool chat turn: text in, text out (or unspecified).
+        Excludes image-only / audio-only / embedding-only entries."""
+        return "text" in self.input_modalities and (
+            "text" in self.output_modalities or not self.output_modalities
+        )
+
+    @property
+    def max_price_per_1m(self) -> float:
+        """The higher of prompt/completion $/1M — the figure a price cap checks."""
+        return max(self.pricing.prompt_price or 0.0, self.pricing.completion_price or 0.0)
+
+
+@dataclass
+class EndpointStats:
+    """Per-model speed/health from OpenRouter's `/models/{slug}/endpoints`,
+    computed by OpenRouter over real fleet traffic (rolling 30m). The best
+    endpoint's figures — latency in ms, throughput in tok/s, uptime as a fraction.
+    Any field may be None when OpenRouter hasn't measured it."""
+
+    model_id: str
+    latency_p50_ms: Optional[float] = None
+    latency_p90_ms: Optional[float] = None
+    throughput_tok_s: Optional[float] = None
+    uptime_1d: Optional[float] = None
 
 
 def _price_per_million(raw: Any) -> float:
@@ -57,7 +146,12 @@ class ModelsCache:
 
     DEFAULT_TTL = 86400  # 24 hours default
     DEFAULT_CACHE_SIZE = 100
-    CACHE_FILENAME = "openrouter_models_v2.json"  # v2: per-1M float pricing + supported_parameters
+    # v3: includes the 26 embedding models merged from OpenRouter's
+    # /api/v1/embeddings/models endpoint (is_embedding flag). The version bump
+    # invalidates a pre-fix v2 cache automatically, so a deployed node picks up
+    # embeddings on its next fetch instead of serving a stale chat-only cache for
+    # up to the 24h TTL.
+    CACHE_FILENAME = "openrouter_models_v3.json"
 
     def __init__(self,
                  api_key: Optional[str] = None,
@@ -141,7 +235,8 @@ class ModelsCache:
                         output_modalities=model_data.get('output_modalities', []),
                         max_completion_tokens=model_data.get('max_completion_tokens'),
                         is_moderated=model_data.get('is_moderated', False),
-                        supported_parameters=model_data.get('supported_parameters', [])
+                        supported_parameters=model_data.get('supported_parameters', []),
+                        is_embedding=model_data.get('is_embedding', False)
                     )
 
                     self.models[model_id] = model_info
@@ -190,7 +285,8 @@ class ModelsCache:
                     'output_modalities': model_info.output_modalities,
                     'max_completion_tokens': model_info.max_completion_tokens,
                     'is_moderated': model_info.is_moderated,
-                    'supported_parameters': model_info.supported_parameters
+                    'supported_parameters': model_info.supported_parameters,
+                    'is_embedding': model_info.is_embedding
                 }
 
             data = {
@@ -265,6 +361,12 @@ class ModelsCache:
                         if model_info:
                             self.models[model_info.id] = model_info
 
+                    # Merge the dedicated embeddings catalogue. OpenRouter
+                    # exposes embedding models on a SEPARATE endpoint that the
+                    # chat `/models` list omits; without this the DB has no
+                    # embedding prices and the gateway bills `DEFAULT_PRICING`.
+                    await self._fetch_embedding_models(session)
+
                     # Update cache
                     self.last_fetch_time = datetime.now()
                     self.cache[self.models_cache_key] = {
@@ -293,6 +395,45 @@ class ModelsCache:
                 return self.models
             raise
 
+    async def _fetch_embedding_models(
+        self, session: "aiohttp.ClientSession"
+    ) -> None:
+        """Merge OpenRouter's embeddings catalogue into ``self.models``.
+
+        OpenRouter lists embedding models on a SEPARATE endpoint
+        (``/api/v1/embeddings/models``) that the chat ``/models`` response
+        does NOT include. Each entry has the same object shape (per-token
+        string ``pricing.prompt``), so it reuses ``_parse_model_data`` with
+        ``is_embedding=True``. The merged entry keeps OpenRouter's id (e.g.
+        ``openai/text-embedding-3-small``), which is exactly the model_id the
+        gateway charges on.
+
+        Best-effort: any failure logs and leaves the chat models intact — an
+        embeddings outage must never break the whole sync.
+        """
+        try:
+            async with session.get(
+                "https://openrouter.ai/api/v1/embeddings/models",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                timeout=aiohttp.ClientTimeout(total=30),
+            ) as response:
+                response.raise_for_status()
+                data = await response.json()
+        except Exception as e:  # noqa: BLE001 — embeddings are additive
+            logger.warning(f"Failed to fetch embedding models: {e}")
+            return
+
+        added = 0
+        for model_data in data.get("data", []):
+            model_info = self._parse_model_data(model_data, is_embedding=True)
+            if model_info:
+                self.models[model_info.id] = model_info
+                added += 1
+        logger.info(f"Merged {added} embedding models from OpenRouter")
+
     def _ensure_models(self) -> None:
         """Lazily populate the catalogue on first real use.
 
@@ -308,8 +449,9 @@ class ModelsCache:
     def _fetch_models_sync(self) -> None:
         """Synchronous catalogue fetch — urllib, no event loop, callable
         from any context (sync view, async threadpool). Best-effort: a
-        failure leaves models empty and cost calc falls back to the
-        hardcoded pricing table.
+        failure leaves models empty, so cost estimation returns 0.0 + a
+        warning (there is no static fallback price table — the catalogue is
+        the single source of truth).
         """
         if not self.api_key:
             return
@@ -326,6 +468,20 @@ class ModelsCache:
                 model_info = self._parse_model_data(model_data)
                 if model_info:
                     models[model_info.id] = model_info
+            # Merge embedding catalogue (separate endpoint). Best-effort.
+            try:
+                emb_request = urllib.request.Request(
+                    "https://openrouter.ai/api/v1/embeddings/models",
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                )
+                with urllib.request.urlopen(emb_request, timeout=20) as emb_response:
+                    emb_payload = json.loads(emb_response.read().decode("utf-8"))
+                for model_data in emb_payload.get("data", []):
+                    model_info = self._parse_model_data(model_data, is_embedding=True)
+                    if model_info:
+                        models[model_info.id] = model_info
+            except Exception as e:  # noqa: BLE001 — embeddings are additive
+                logger.warning("Sync embedding fetch failed: %s", e)
             if models:
                 self.models = models
                 self.last_fetch_time = datetime.now()
@@ -338,8 +494,19 @@ class ModelsCache:
         except Exception as e:
             logger.warning("Sync model fetch failed: %s", e)
 
-    def _parse_model_data(self, model_data: Dict[str, Any]) -> Optional[OpenRouterModel]:
-        """Parse model data from API response"""
+    def _parse_model_data(
+        self, model_data: Dict[str, Any], *, is_embedding: bool = False
+    ) -> Optional[OpenRouterModel]:
+        """Parse model data from an OpenRouter `/models` or
+        `/embeddings/models` entry.
+
+        Both endpoints share the same object shape (``id``, ``name``,
+        ``pricing`` with per-token string prices, ``architecture``), so the
+        embedding path reuses this parser. ``is_embedding`` marks rows that
+        came from the embeddings endpoint; it is OR-ed with an
+        ``"embedding"`` output modality so either signal flags the model.
+        Embedding models have a prompt price but no completion price.
+        """
         try:
             # Check required fields
             if not model_data.get("id") or not model_data.get("name"):
@@ -358,6 +525,8 @@ class ModelsCache:
             # Capabilities from architecture / top_provider blocks
             architecture = model_data.get("architecture", {})
             top_provider = model_data.get("top_provider", {})
+            output_modalities = architecture.get("output_modalities", [])
+            embedding = is_embedding or ("embedding" in output_modalities)
 
             # Create model info
             model_info = OpenRouterModel(
@@ -370,10 +539,11 @@ class ModelsCache:
                 tags=model_data.get("tags", []),
                 is_available=model_data.get("available", True),
                 input_modalities=architecture.get("input_modalities", []),
-                output_modalities=architecture.get("output_modalities", []),
+                output_modalities=output_modalities,
                 max_completion_tokens=top_provider.get("max_completion_tokens"),
                 is_moderated=top_provider.get("is_moderated", False),
-                supported_parameters=model_data.get("supported_parameters", [])
+                supported_parameters=model_data.get("supported_parameters", []),
+                is_embedding=embedding
             )
 
             return model_info
@@ -381,6 +551,58 @@ class ModelsCache:
         except Exception as e:
             logger.warning(f"Failed to parse model data: {e}")
             return None
+
+    async def fetch_endpoint_stats(self, slug: str) -> Optional[EndpointStats]:
+        """Fetch per-model speed/health from OpenRouter's
+        `/models/{slug}/endpoints` (latency/throughput/uptime percentiles, computed
+        over real fleet traffic — far more representative than a self-probe, and
+        free on the same key). Returns the BEST endpoint's figures (lowest p50
+        latency), or None on any failure. Percentiles are only visible when
+        authenticated, which we are.
+
+        `slug` is the OpenRouter id WITHOUT any local prefix, e.g.
+        "anthropic/claude-3.5-haiku" (strip a leading "openrouter/" first)."""
+        slug = slug.removeprefix("openrouter/")
+        url = f"https://openrouter.ai/api/v1/models/{slug}/endpoints"
+        try:
+            connector = aiohttp.TCPConnector(ssl=False)
+            async with aiohttp.ClientSession(connector=connector) as session:
+                async with session.get(
+                    url,
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    timeout=aiohttp.ClientTimeout(total=15),
+                ) as response:
+                    response.raise_for_status()
+                    data = await response.json()
+        except Exception as e:  # noqa: BLE001 — best-effort signal
+            logger.warning(f"Failed to fetch endpoint stats for {slug}: {e}")
+            return None
+
+        endpoints = (data.get("data") or {}).get("endpoints") or []
+        if not endpoints:
+            return None
+
+        def _p50(ep: dict) -> float:
+            lat = ep.get("latency_last_30m") or {}
+            return float(lat.get("p50") or float("inf"))
+
+        best = min(endpoints, key=_p50)
+        lat = best.get("latency_last_30m") or {}
+        tp = best.get("throughput_last_30m") or {}
+
+        def _f(v: Any) -> Optional[float]:
+            try:
+                return float(v) if v is not None else None
+            except (TypeError, ValueError):
+                return None
+
+        return EndpointStats(
+            model_id=slug,
+            latency_p50_ms=_f(lat.get("p50")),
+            latency_p90_ms=_f(lat.get("p90")),
+            throughput_tok_s=_f(tp.get("p50")),
+            uptime_1d=_f(best.get("uptime_last_1d")),
+        )
 
     def get_model(self, model_id: str) -> Optional[OpenRouterModel]:
         """Get model information by ID — lazily populates the catalogue."""
@@ -434,6 +656,60 @@ class ModelsCache:
         """Get premium models (price >= min_price)"""
         return self.get_models_by_price_range(min_price, float('inf'))
 
+    def eligible_models(
+        self,
+        *,
+        max_price_per_1m: float = float('inf'),
+        require_tools: bool = False,
+        require_vision: bool = False,
+        text_chat_only: bool = True,
+        available_only: bool = True,
+    ) -> List[OpenRouterModel]:
+        """The CENTRAL model-selection surface: live catalogue filtered by the
+        policies every consumer needs (price cap, capability requirements, chat
+        usability). Sorted cheapest-first. The gateway catalog ingest, the coding
+        picker, and a future SDK all call THIS instead of re-deriving filters.
+
+        - max_price_per_1m: drop "ugly-expensive" models above this $/1M ceiling.
+        - require_tools / require_vision: keep only capable models.
+        - text_chat_only: exclude image/audio/embedding-only entries.
+        """
+        out = [
+            m
+            for m in self.models.values()
+            if (not available_only or m.is_available)
+            and (not text_chat_only or m.is_text_chat)
+            and (not require_tools or m.supports_tools)
+            and (not require_vision or m.supports_vision)
+            and m.max_price_per_1m <= max_price_per_1m
+        ]
+        out.sort(key=lambda m: m.pricing.prompt_price or 0.0)
+        return out
+
+    def embedding_models(self, *, available_only: bool = True) -> List[OpenRouterModel]:
+        """All embedding models in the catalogue (from OpenRouter's
+        ``/embeddings/models`` endpoint). These are excluded from
+        ``eligible_models`` (which is text-chat-only) so the pricing-sync
+        pulls them through THIS accessor to write embedding rows to the DB.
+        Sorted cheapest-first by prompt price."""
+        out = [
+            m
+            for m in self.models.values()
+            if m.is_embedding and (not available_only or m.is_available)
+        ]
+        out.sort(key=lambda m: m.pricing.prompt_price or 0.0)
+        return out
+
+    def coding_models(
+        self, *, max_price_per_1m: float = float('inf')
+    ) -> List[OpenRouterModel]:
+        """Tool-capable text-chat models under a price cap, cheapest-first — the
+        ready coding/agent picker surface. Quality ranking (e.g. an Artificial
+        Analysis coding index) is layered by the caller when available."""
+        return self.eligible_models(
+            max_price_per_1m=max_price_per_1m, require_tools=True
+        )
+
     def search_models(self, query: str) -> List[OpenRouterModel]:
         """Search models by name, description, or tags"""
         query_lower = query.lower()
@@ -476,11 +752,7 @@ class ModelsCache:
         if not model:
             return None
 
-        # Calculate cost
-        input_cost = (input_tokens / 1_000_000) * model.pricing.prompt_price
-        output_cost = (output_tokens / 1_000_000) * model.pricing.completion_price
-
-        return input_cost + output_cost
+        return model.pricing.cost(input_tokens, output_tokens)
 
     def calculate_cost_from_usage(self, model_id: str, usage: Dict[str, int]) -> Optional[float]:
         """
@@ -500,11 +772,7 @@ class ModelsCache:
         prompt_tokens = usage.get('prompt_tokens', 0)
         completion_tokens = usage.get('completion_tokens', 0)
 
-        # Calculate cost
-        input_cost = (prompt_tokens / 1_000_000) * model.pricing.prompt_price
-        output_cost = (completion_tokens / 1_000_000) * model.pricing.completion_price
-
-        return input_cost + output_cost
+        return model.pricing.cost(prompt_tokens, completion_tokens)
 
     def get_cache_info(self) -> Dict[str, Any]:
         """Get cache information"""

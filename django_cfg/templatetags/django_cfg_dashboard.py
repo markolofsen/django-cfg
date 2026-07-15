@@ -20,37 +20,15 @@ def get_dashboard_config(context):
         {% endif %}
     """
     try:
-        from django_cfg.core.config import get_current_config
-        config = get_current_config()
-        if not config:
-            return None
-
         request = context.get('request')
         if not request or not getattr(request.user, 'is_staff', False):
             return None
 
-        dashboard = getattr(config, 'dashboard', None)
-        config_tabs = list(dashboard.tabs) if dashboard else []
+        # The merge lives in ONE place — see modules/django_dashboard/resolver.py.
+        # It used to be duplicated here, and the copy in views/tab.py disagreed,
+        # so extension tabs rendered in this bar and then 404'd when clicked.
+        from django_cfg.modules.django_dashboard.resolver import get_dashboard_config
 
-        # Merge tabs declared by auto-discovered extensions. Config-level tabs
-        # win on slug collision (the consumer project stays authoritative).
-        from django_cfg.modules.django_dashboard.extension_tabs import (
-            get_extension_dashboard_tabs,
-        )
-        known_slugs = {t.slug for t in config_tabs}
-        ext_tabs = [t for t in get_extension_dashboard_tabs() if t.slug not in known_slugs]
-
-        merged_tabs = config_tabs + ext_tabs
-        if not merged_tabs:
-            return None
-
-        if not ext_tabs:
-            return dashboard
-
-        # Build a merged DashboardConfig without mutating the project config.
-        from django_cfg.modules.django_dashboard.models import DashboardConfig
-        if dashboard:
-            return dashboard.model_copy(update={"tabs": merged_tabs})
-        return DashboardConfig(tabs=merged_tabs)
+        return get_dashboard_config()
     except Exception:
         return None

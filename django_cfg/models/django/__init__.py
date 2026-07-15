@@ -4,6 +4,7 @@ Django-specific configuration models for django_cfg.
 Django integrations and extensions.
 """
 
+from .analytics import AnalyticsConfig
 from .axes import AxesConfig
 from .constance import ConstanceConfig, ConstanceField
 from .currency import CurrencyConfig
@@ -27,4 +28,5 @@ __all__ = [
     "OpenAPIClientConfig",
     "PaymentsConfig",
     "AxesConfig",
+    "AnalyticsConfig",
 ]

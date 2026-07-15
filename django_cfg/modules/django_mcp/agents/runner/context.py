@@ -30,24 +30,6 @@ class AgentContext:
         self.messages.append(AgentMessage(role=role, content=content, **kwargs))
 
     def can_call_tool(self) -> bool:
+        # Kept for callers that still consult it; the harness enforces its own
+        # per-run ceiling (UsageLimits) inside run_agent_sync/stream_agent_run.
         return self.tool_call_count < self.max_tool_calls
-
-    def to_llm_messages(self, system_prompt: str) -> List[Dict[str, Any]]:
-        """Convert to django_llm message format."""
-        messages = [{"role": "system", "content": system_prompt}]
-        for msg in self.messages:
-            if msg.role == "tool" and msg.tool_call_id:
-                messages.append({
-                    "role": "tool",
-                    "content": msg.content,
-                    "tool_call_id": msg.tool_call_id,
-                })
-            elif msg.tool_calls:
-                messages.append({
-                    "role": "assistant",
-                    "content": msg.content,
-                    "tool_calls": msg.tool_calls,
-                })
-            else:
-                messages.append({"role": msg.role, "content": msg.content})
-        return messages

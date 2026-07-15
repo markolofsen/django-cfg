@@ -215,6 +215,20 @@ class BaseCfgModule(ABC):
 
         return False
 
+    def is_analytics_enabled(self) -> bool:
+        """
+        Check if the django-cfg Analytics app is enabled.
+
+        Returns:
+            True if Analytics is enabled, False otherwise
+        """
+        analytics_config = self._get_config_key('analytics', None)
+
+        if analytics_config and hasattr(analytics_config, 'enabled'):
+            return analytics_config.enabled
+
+        return False
+
     def is_payments_enabled(self) -> bool:
         """
         Check if the django-cfg Payments app is enabled.

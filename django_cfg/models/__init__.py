@@ -44,6 +44,7 @@ from .django.django_rq import DjangoRQConfig, RQQueueConfig
 from .django.storage import StorageConfig
 from .django.environment import EnvironmentConfig
 from .django.geo import GeoConfig
+from .django.analytics import AnalyticsConfig
 from .django.openapi import OpenAPIClientConfig
 from .django.simple_history import SimpleHistoryConfig
 from .infrastructure.cache import CacheConfig
@@ -91,6 +92,7 @@ __all__ = [
     "DjangoRQConfig",
     "RQQueueConfig",
     "GeoConfig",
+    "AnalyticsConfig",
     "SimpleHistoryConfig",
     "StorageConfig",
     "OpenAPIClientConfig",

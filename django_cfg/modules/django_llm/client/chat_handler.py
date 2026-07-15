@@ -55,6 +55,7 @@ class ChatRequestHandler:
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         response_format: Optional[ResponseFormat] = None,
+        provider: Optional[str] = None,
         **kwargs
     ) -> ChatCompletionResponse:
         """
@@ -67,6 +68,14 @@ class ChatRequestHandler:
             temperature: Temperature for generation
             response_format: ``"json_object"``, a ready API dict, or a
                 Pydantic model class for strict provider-enforced output
+            provider: Serve this ONE call from this provider, instead of the
+                client's ``primary_provider``. Per-call and stateless — nothing
+                on the client is mutated — so concurrent callers may each pick a
+                different provider on the same ``LLMClient`` (``LLMRouter``
+                relies on this: the provider is a property of the MODEL, and one
+                chain can span providers). Silently ignored if the provider has
+                no key configured — we fall back to the primary rather than hard-
+                fail a call the primary could well serve.
             **kwargs: Additional parameters
 
         Returns:
@@ -79,9 +88,21 @@ class ChatRequestHandler:
         # cache key and the API call see one stable, serializable value.
         response_format = build_response_format(response_format)
 
-        # Get client and provider
-        client = self.provider_manager.primary_client
-        provider = self.provider_manager.primary_provider
+        # Resolve the provider for THIS call. An explicit `provider` (from the
+        # model's catalog entry) wins when its key is configured; otherwise the
+        # client's primary. get_client() (not primary_client) so the gonka key
+        # pool round-robins per call — concurrent race legs ride distinct keys.
+        if provider and self.provider_manager.has_provider(provider):
+            client = self.provider_manager.get_client(provider)
+        else:
+            if provider:
+                logger.warning(
+                    "Provider %r requested for model %r but no key is configured; "
+                    "falling back to primary provider %r",
+                    provider, model, self.provider_manager.primary_provider,
+                )
+            provider = self.provider_manager.primary_provider
+            client = self.provider_manager.get_client()
 
         if not client:
             raise RuntimeError("OpenAI client not initialized")
@@ -89,6 +110,18 @@ class ChatRequestHandler:
         # Use default model if needed
         if model is None:
             model = ConfigBuilder.get_default_model(provider)
+
+        # If gonka is the primary provider and the model slug has an openai/
+        # prefix, bypass gonka and use the direct OpenAI client instead.
+        # OpenRouter handles openai/ slugs natively — only bypass for gonka.
+        if (
+            model
+            and model.startswith("openai/")
+            and provider == "gonkagate"
+            and self.provider_manager.has_provider("openai")
+        ):
+            provider = "openai"
+            client = self.provider_manager.get_client("openai")
 
         # Prepare API model (remove prefix for OpenAI)
         api_model = self._prepare_api_model(model, provider)

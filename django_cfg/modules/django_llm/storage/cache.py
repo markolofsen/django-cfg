@@ -36,7 +36,7 @@ class LLMCache:
             max_size: Maximum number of items in the persistent store and L1 cache
         """
         if cache_dir is None:
-            # Default cache directory inside the django_llm module structure.
+            # Default cache directory inside the llm module structure.
             module_dir = Path(__file__).parent.parent
             default_cache_dir = module_dir / ".cache" / "llm"
             default_cache_dir.mkdir(parents=True, exist_ok=True)

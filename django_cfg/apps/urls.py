@@ -48,6 +48,10 @@ def get_enabled_cfg_apps() -> List[str]:
     if base_module.is_payments_enabled():
         enabled_apps.append("django_cfg.apps.payments")
 
+    # Analytics (ingest endpoint -> generated TS client)
+    if base_module.is_analytics_enabled():
+        enabled_apps.append("django_cfg.apps.tools.analytics")
+
     return enabled_apps
 
 
@@ -134,6 +138,11 @@ if base_module.is_centrifugo_enabled():
 # Geo app (countries, states, cities)
 if base_module.is_geo_enabled():
     urlpatterns.append(path('cfg/geo/', include('django_cfg.apps.tools.geo.urls')))
+
+# Analytics ingest (pageviews, sessions). The path *under* cfg/analytics/ is
+# configurable — ad-blocker filter lists match on path, not domain.
+if base_module.is_analytics_enabled():
+    urlpatterns.append(path('cfg/analytics/', include('django_cfg.apps.tools.analytics.urls')))
 
 # Payments engine (checkout, webhooks, refunds) — the app's own urls.py keeps
 # the webhook route (specific patterns) before the generic viewset routes.

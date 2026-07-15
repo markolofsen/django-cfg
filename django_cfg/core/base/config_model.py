@@ -27,6 +27,7 @@ from ...models import (
     AxesConfig,
     CacheConfig,
     CryptoFieldsConfig,
+    AnalyticsConfig,
     CurrencyConfig,
     DatabaseConfig,
     DjangoRQConfig,
@@ -403,6 +404,17 @@ class DjangoConfig(BaseModel):
     geo: Optional[GeoConfig] = Field(
         default=None,
         description="Geographic data (countries, states, cities)",
+    )
+
+    # ALWAYS ON. Unlike every other app here, this defaults to an *instance*, not
+    # None — analytics is a built-in capability, not an opt-in integration, and a
+    # project that has to remember to switch it on will simply have no data for
+    # the period before someone remembered. Ingest costs ~0.1ms and adds no
+    # process, so there is nothing to protect the user from.
+    # Opt out explicitly with `analytics = AnalyticsConfig(enabled=False)`.
+    analytics: AnalyticsConfig = Field(
+        default_factory=AnalyticsConfig,
+        description="First-party analytics: pageviews, sessions, user attribution",
     )
 
     simple_history: Optional[SimpleHistoryConfig] = Field(

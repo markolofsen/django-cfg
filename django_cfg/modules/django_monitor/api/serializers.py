@@ -64,7 +64,7 @@ class FrontendEventIngestSerializer(serializers.Serializer):
 
 
 class IngestBatchSerializer(serializers.Serializer):
-    """Batch of up to 50 browser events."""
+    """Batch of up to 25 browser events."""
 
     events = serializers.ListField(
         child=FrontendEventIngestSerializer(),

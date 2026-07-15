@@ -16,12 +16,33 @@ from django_ratelimit.core import is_ratelimited
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import JSONParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from .serializers import IngestBatchSerializer
 
 logger = logging.getLogger(__name__)
+
+
+class PlainTextJSONParser(JSONParser):
+    """Parse a JSON body that arrives labelled text/plain.
+
+    The devtools SDK flushes on page unload. A cross-origin unload flush CANNOT
+    carry `application/json`: that type is not CORS-safelisted, so it triggers an
+    OPTIONS preflight which usually cannot complete before the document dies —
+    and the POST is then never sent, silently. The events lost that way are the
+    ones that mattered most (whatever crashed the page).
+
+    `text/plain` IS CORS-safelisted, so the flush is delivered with no preflight.
+    The body is still JSON; only the label differs.
+
+    Additive and scoped to THIS view: it does not touch the global
+    DEFAULT_PARSER_CLASSES (JSONParser-only, deliberately), so the OpenAPI schema
+    and generated clients stay clean.
+    """
+
+    media_type = "text/plain"
 
 
 def _get_client_ip(request) -> str:
@@ -42,12 +63,15 @@ class MonitorIngestViewSet(viewsets.GenericViewSet):
     permission_classes = [AllowAny]
     authentication_classes = []
 
+    # text/plain is required for the SDK's page-unload flush to survive CORS.
+    parser_classes = [JSONParser, PlainTextJSONParser]
+
     @extend_schema(
         request=IngestBatchSerializer,
         responses={202: OpenApiResponse(description="Accepted")},
         summary="Ingest browser events",
         description=(
-            "Accepts a batch of up to 50 frontend events. "
+            "Accepts a batch of up to 25 frontend events. "
             "No authentication required — anonymous visitors can send events."
         ),
         tags=["cfg_monitor"],

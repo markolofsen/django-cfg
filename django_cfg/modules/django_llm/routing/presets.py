@@ -5,7 +5,7 @@ preset picks the curated model chain for its role from the catalog
 (``catalog.recommend``), so callers never pass a model slug and never repeat
 the cascade/structured-output wiring:
 
-    from django_cfg.modules.django_llm import extract, classify, chat_with_tools, escalate
+    from cmdop_utils.llm import extract, classify, chat_with_tools, escalate
 
     car, model, usage = extract(CarListing, "2021 Hyundai Grandeur, 41k km, ...")
     label, model = classify(Sentiment, "the dealer never called back")
@@ -36,7 +36,13 @@ T = TypeVar("T", bound=BaseModel)
 
 
 def _router(role: ModelRole, models: list[str] | None, extra_models: list[str] | None) -> LLMRouter:
-    """A router for ``role`` — explicit ``models`` win over the role default."""
+    """A router for ``role`` — explicit ``models`` win over the role default.
+
+    No ``preferred_provider``: the router derives each model's provider from the
+    catalog as it walks the chain. Pinning the whole chain to OpenRouter (as this
+    used to) was wrong the moment a chain contained a gonka-only model — it sent
+    kimi to a provider that does not serve it.
+    """
     if models:
         return LLMRouter(models)
     return LLMRouter.for_role(role, extra_models=extra_models)
@@ -142,6 +148,33 @@ def extract_chat(
     For multi-turn or role-tagged inputs where a single ``text`` won't do.
     """
     return _router(ModelRole.EXTRACTION, models, extra_models).parse(
+        schema=schema,
+        messages=messages,
+        system=system,
+        max_tokens=max_tokens,
+    )
+
+
+def extract_chat_gonka(
+    schema: type[T],
+    messages: list[dict],
+    *,
+    system: str | None = None,
+    max_tokens: int = 4096,
+) -> tuple[T, str, dict]:
+    """Structured extraction via Gonka (free tier) with automatic racing.
+
+    Fires two parallel legs to ``moonshotai/kimi-k2.6`` via Gonka and takes the
+    first clean response. Gonka's random-host assignment gives 8–55 s per single
+    leg; racing cuts the P99 tail significantly. Falls back to ``gpt-4o-mini``
+    via OpenRouter if both Gonka legs fail.
+
+    Use this instead of ``extract_chat`` when cost matters more than latency —
+    bulk ingestion, offline normalization, batch processing. Do NOT use it on
+    interactive paths where a user is waiting for a response.
+    """
+    router = LLMRouter(["moonshotai/kimi-k2.6", "openai/gpt-4o-mini"])
+    return router.parse(
         schema=schema,
         messages=messages,
         system=system,
@@ -307,6 +340,7 @@ async def classify_many(
 __all__ = [
     "extract",
     "extract_chat",
+    "extract_chat_gonka",
     "classify",
     "chat_with_tools",
     "escalate",

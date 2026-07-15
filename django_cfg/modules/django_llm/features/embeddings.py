@@ -26,10 +26,14 @@ embedder (never the MD5 mock unless no provider key exists at all).
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 
 from ..client import LLMClient
 from ..core.types import EmbeddingResponse
+from ..embeddings.mock_embedder import is_mock_embedding
+
+logger = logging.getLogger(__name__)
 
 # Project-canonical embedding models (OpenRouter slugs). 1536 everywhere.
 FAST_MODEL = "openai/text-embedding-3-small"
@@ -43,13 +47,38 @@ def _client() -> LLMClient:
     return LLMClient()
 
 
+def _vector_or_empty(response: EmbeddingResponse) -> list[float]:
+    """Bare vector — unless it is MD5 noise, in which case ``[]``.
+
+    This is the guard that keeps a mock out of every pgvector column in the
+    project, and it lives HERE, at the one public seam, rather than in each app
+    that persists a vector. Apps already treat ``[]`` as "no embedding, skip the
+    write", so a keyless environment degrades to "this row has no vector" —
+    visible, recoverable, and honest — instead of "this row has a vector that
+    means nothing", which looks like a working system and is not.
+    """
+    if is_mock_embedding(response):
+        logger.error(
+            "Refusing to return a MOCK embedding as a real vector — no provider "
+            "key is configured. This row will have NO embedding. Set "
+            "OPENROUTER_API_KEY (or OPENAI_API_KEY) and re-run.",
+        )
+        return []
+    return list(response.embedding)
+
+
 def embed_response(
     text: str,
     *,
     model: str = FAST_MODEL,
     dimensions: int | None = EMBEDDING_DIMENSIONS,
 ) -> EmbeddingResponse:
-    """Embed one text and return the full response (vector + cost + tokens)."""
+    """Embed one text and return the full response (vector + cost + tokens).
+
+    Unlike :func:`embed_text`, this hands back the raw response — a mock
+    included. Check :func:`~..embeddings.mock_embedder.is_mock_embedding` before
+    persisting anything you get from here.
+    """
     return _client().generate_embedding(
         text=text, model=model, dimensions=dimensions,
     )
@@ -63,11 +92,12 @@ def embed_text(
 ) -> list[float]:
     """Low-level: embed one text with an explicit model → bare vector.
 
-    Returns ``[]`` for empty input (callers treat that as "skip").
+    Returns ``[]`` for empty input, and ``[]`` for a mock (callers treat that as
+    "skip" in both cases — see :func:`_vector_or_empty`).
     """
     if not text:
         return []
-    return list(embed_response(text, model=model, dimensions=dimensions).embedding)
+    return _vector_or_empty(embed_response(text, model=model, dimensions=dimensions))
 
 
 def embed_texts(
@@ -78,12 +108,26 @@ def embed_texts(
 ) -> list[list[float]]:
     """Low-level: embed a batch with an explicit model → list of vectors.
 
-    One-by-one under the hood (the handler caches per text). Empty strings
-    map to ``[]`` so the output index lines up with the input.
+    ONE request for all cache misses (not N — see
+    ``EmbeddingRequestHandler.generate_embeddings``). Empty strings map to ``[]``
+    without costing a token, so the output index always lines up with the input.
     """
-    return [
-        embed_text(t, model=model, dimensions=dimensions) for t in texts
-    ]
+    if not texts:
+        return []
+
+    # The provider rejects an empty input and an empty text has no embedding, so
+    # the empties never leave here — they are re-inserted as `[]` on the way out.
+    fillable = [(index, text) for index, text in enumerate(texts) if text]
+    vectors: list[list[float]] = [[] for _ in texts]
+    if not fillable:
+        return vectors
+
+    responses = _client().generate_embeddings(
+        texts=[text for _, text in fillable], model=model, dimensions=dimensions,
+    )
+    for (index, _), response in zip(fillable, responses):
+        vectors[index] = _vector_or_empty(response)
+    return vectors
 
 
 # ── Ready methods ────────────────────────────────────────────────────

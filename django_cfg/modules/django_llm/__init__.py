@@ -1,28 +1,24 @@
-"""django_llm — single LLM transport surface for any host Django app.
+"""cmdop_utils.llm — single LLM transport surface (framework-neutral).
 
-Every model call in the host project funnels through this package:
-chat, structured extraction, vision, image generation, image edit,
-embeddings, translation. Apps stay thin — they import an
-``LLMClient`` / ``LLMRouter`` / ``ImageEditClient`` and let the
-module own HTTP, auth, cost, retry, structured-output repair,
-provider-policy adaptation, and registry math.
+Every model call funnels through this package: chat, structured
+extraction, vision, image generation, image edit, embeddings,
+translation. Callers stay thin — they import an ``LLMClient`` /
+``LLMRouter`` / ``ImageEditClient`` and let the module own HTTP, auth,
+cost, retry, structured-output repair, provider-policy adaptation, and
+registry math.
 
-The host project re-exports everything below via a thin shim
-(``modules/llm_router.py`` in the host's package). Apps then write::
+    from cmdop_utils.llm import LLMClient, LLMRouter, ...
 
-    from modules.llm_router import LLMClient, sanitize_edit_prompt, ...
-
-The shim only exists so a single env var (``DJANGO_LLM_SOURCE``)
-switches between this sandbox copy and the published
-``django_cfg.modules.django_llm`` copy. The public surface is
-identical on both sides, so app code never knows which one is live.
+Ported from ``django_cfg/modules/django_llm`` into the ``cmdop-server``
+umbrella package (plan50 §12); the single host-config seam is
+``cmdop_utils._compat`` (env-driven keys, no Django).
 
 # Adding a new public symbol
 
 1. Implement it in the right submodule (``features/``, ``core/``, …).
 2. Add it to the appropriate ``from .X import Y`` block below.
 3. Add the name to ``__all__``.
-4. Done — the host shim re-exports it automatically via ``__all__``.
+4. Done — ``from cmdop_utils.llm import YourThing`` works.
 
 See ``CLAUDE.md`` next to this file for the full contract.
 """
@@ -53,7 +49,7 @@ from .catalog import ModelRole
 from .storage import LLMCache
 
 # Provider abstraction.
-from .providers import LLMProvider
+from .providers import PROVIDER_BASE_URLS, LLMProvider
 
 # Routing — cascade engine + presets (sync + async twins + fan-out).
 from .routing import (
@@ -70,6 +66,7 @@ from .routing import (
     escalate,
     extract,
     extract_chat,
+    extract_chat_gonka,
     extract_many,
 )
 
@@ -113,7 +110,7 @@ from .features.embeddings import (
     embed_texts,
 )
 from .core.types import EmbeddingResponse
-from .embeddings import OpenRouterEmbedder
+from .embeddings import MOCK_WARNING, OpenRouterEmbedder, is_mock_embedding
 
 # Structured-output repair — exposed for callers that drive their own
 # ``chat_completion`` loop and want the same parse→repair→re-validate
@@ -204,6 +201,7 @@ __all__ = [
     "LLMCache",
     # Providers
     "LLMProvider",
+    "PROVIDER_BASE_URLS",
     # Routing
     "LLMRouter",
     "LLMRouterError",
@@ -213,6 +211,7 @@ __all__ = [
     "escalate",
     "extract",
     "extract_chat",
+    "extract_chat_gonka",
     "extract_many",
     "aclassify",
     "achat_with_tools",
@@ -252,6 +251,8 @@ __all__ = [
     "EMBEDDING_QUALITY_MODEL",
     "EmbeddingResponse",
     "OpenRouterEmbedder",
+    "MOCK_WARNING",
+    "is_mock_embedding",
     "embed_fast",
     "embed_fast_many",
     "embed_quality",

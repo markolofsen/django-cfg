@@ -36,13 +36,16 @@ class GeoAppConfig(AppConfig):
         if any(cmd in sys.argv for cmd in skip_commands):
             return
 
-        # Check if auto_populate is enabled via DjangoConfig
+        # Check if auto_populate is enabled via DjangoConfig.
+        # NOTE: get_current_config, not get_config — the latter has never
+        # existed. The ImportError was being swallowed by the except below, so
+        # auto_populate silently never ran.
         try:
-            from django_cfg.core import get_config
+            from django_cfg.core import get_current_config
 
-            config = get_config()
+            config = get_current_config()
 
-            if config.geo and config.geo.enabled and config.geo.auto_populate:
+            if config and config.geo and config.geo.enabled and config.geo.auto_populate:
                 # Run population in background thread to not block startup
                 thread = threading.Thread(
                     target=self._populate_if_empty,

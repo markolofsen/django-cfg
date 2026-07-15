@@ -37,7 +37,7 @@ from pydantic import BaseModel, ValidationError
 
 from ..core.errors import LLMTruncationError, LLMValidationError
 
-logger = logging.getLogger("django_cfg.django_llm.repair")
+logger = logging.getLogger("cmdop_utils.llm.repair")
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -45,6 +45,24 @@ T = TypeVar("T", bound=BaseModel)
 # lockstep with structured/extractor.py and the router so all three normalise
 # identically before parsing.
 _QUOTE_FIXES = (("“", '"'), ("”", '"'), ("„", '"'), ("‟", '"'))
+
+
+def _unwrap_to_mapping(obj):
+    """Some models wrap the object in a list — ``[{...}]`` or even nested
+    ``[[['id'], {...}]]``. Unwrap to the first dict so it still validates;
+    return ``obj`` untouched when no dict is found (pydantic then raises the
+    original, informative error)."""
+    if isinstance(obj, dict):
+        return obj
+    if isinstance(obj, list):
+        for item in obj:
+            if isinstance(item, dict):
+                return item
+        for item in obj:
+            found = _unwrap_to_mapping(item)
+            if isinstance(found, dict):
+                return found
+    return obj
 
 
 def _strip_fences(content: str) -> str:
@@ -95,7 +113,7 @@ def parse_into_schema(
 
     # 2. Happy path — strict parse + validate.
     try:
-        return schema.model_validate(json.loads(cleaned))
+        return schema.model_validate(_unwrap_to_mapping(json.loads(cleaned)))
     except json.JSONDecodeError as exc:
         first_error: Exception = exc
     except ValidationError as exc:
@@ -109,7 +127,7 @@ def parse_into_schema(
     if repair:
         try:
             repaired = repair_json(cleaned)  # returns a JSON *string*
-            obj = json.loads(repaired)
+            obj = _unwrap_to_mapping(json.loads(repaired))
             instance = schema.model_validate(obj)
             logger.debug("parse_into_schema: recovered %s via json-repair", schema.__name__)
             return instance

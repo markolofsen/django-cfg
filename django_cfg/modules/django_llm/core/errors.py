@@ -1,5 +1,5 @@
 """
-Typed error taxonomy for django_llm.
+Typed error taxonomy for cmdop_utils.llm.
 
 Every failure the module surfaces is an ``LLMError``. Raw provider /
 openai-SDK exceptions are mapped into this hierarchy by
@@ -17,7 +17,7 @@ from typing import Any
 
 
 class LLMError(Exception):
-    """Base for every django_llm failure.
+    """Base for every cmdop_utils.llm failure.
 
     Attributes:
         retryable: class-level — whether a retry might plausibly succeed.
@@ -164,7 +164,7 @@ def classify_exception(
     model: str | None = None,
     attempt: int | None = None,
 ) -> LLMError:
-    """Map any exception to the django_llm taxonomy.
+    """Map any exception to the cmdop_utils.llm taxonomy.
 
     An already-typed ``LLMError`` is returned unchanged, with missing
     call context filled in. Everything else is inspected by HTTP status,

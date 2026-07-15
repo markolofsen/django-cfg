@@ -112,3 +112,118 @@ class OpenRouterEmbedder:
             dimension=len(embedding_vector),
             response_time=response_time,
         )
+
+    def generate_batch(
+        self,
+        client,
+        texts: list[str],
+        model: str,
+        *,
+        dimensions: int | None = None,
+    ) -> list[EmbeddingResponse]:
+        """Embed MANY texts in ONE request. Same contract as :meth:`generate`.
+
+        The ``/embeddings`` endpoint has always accepted ``input: list[str]``;
+        only our signature was scalar. For a backfill this is the difference
+        between one round-trip and N.
+
+        Returns one response per input, **in input order**.
+
+        Args:
+            client: OpenRouter client (OpenAI SDK pointed at openrouter.ai).
+            texts: Texts to embed. Must be non-empty and contain no empty
+                strings — the provider rejects an empty input, and callers
+                already have to special-case "" anyway (it means "skip").
+            model: Embedding model slug (keep the ``openai/`` prefix).
+            dimensions: Optional output dimension.
+        """
+        if not texts:
+            return []
+        if any(not t for t in texts):
+            raise ValueError(
+                "generate_batch does not accept empty strings — filter them out "
+                "and re-align the results (an empty text has no embedding)."
+            )
+
+        start_time = time.time()
+
+        create_kwargs: dict = {"input": list(texts), "model": model}
+        if dimensions is not None:
+            create_kwargs["dimensions"] = dimensions
+
+        last_err: Exception | None = None
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                response = client.embeddings.create(**create_kwargs)
+                data = getattr(response, "data", None)
+                # A SHORT batch is as broken as an empty one: silently dropping
+                # inputs would misalign every downstream zip(texts, vectors).
+                if data and len(data) == len(texts):
+                    return self._batch_responses(
+                        data=data,
+                        texts=texts,
+                        model=model,
+                        usage_tokens=response.usage.total_tokens,
+                        response_time=time.time() - start_time,
+                    )
+                last_err = RuntimeError(
+                    f"expected {len(texts)} embeddings, got {len(data) if data else 0}"
+                )
+            except Exception as exc:  # noqa: BLE001 — retry any transient API error
+                last_err = exc
+            if attempt < self.MAX_RETRIES - 1:
+                delay = self.BACKOFF_BASE * (2 ** attempt)
+                logger.warning(
+                    "OpenRouter batch embedding attempt %d/%d failed (%s) — "
+                    "retrying in %.1fs",
+                    attempt + 1, self.MAX_RETRIES, last_err, delay,
+                )
+                time.sleep(delay)
+
+        raise RuntimeError(
+            f"OpenRouter batch embedding failed after {self.MAX_RETRIES} "
+            f"attempts: {last_err}"
+        )
+
+    def _batch_responses(
+        self,
+        *,
+        data,
+        texts: list[str],
+        model: str,
+        usage_tokens: int,
+        response_time: float,
+    ) -> list[EmbeddingResponse]:
+        """Pair each returned vector with its input text, in input order."""
+        # The API does not promise `data` comes back in input order — it
+        # promises each item carries its `index`. Sort by it rather than trust
+        # the sequence, or a reordered response silently pairs every vector
+        # with the wrong text (a corruption no test would notice).
+        ordered = sorted(data, key=lambda item: item.index)
+
+        # `usage.total_tokens` covers the WHOLE batch. Apportioning it per item
+        # would be a fiction; charging it to every item would multiply the cost
+        # by N. Attribute it once, to the first response, and leave the rest at
+        # zero — the sum over the batch is then exactly what we were billed.
+        total_cost = calculate_embedding_cost(usage_tokens, model, self.models_cache)
+
+        logger.debug(
+            "OpenRouter batch embedding: model=%s n=%d tokens=%s cost=$%.6f %.2fs",
+            model, len(texts), usage_tokens, total_cost, response_time,
+        )
+
+        results: list[EmbeddingResponse] = []
+        for position, (item, text) in enumerate(zip(ordered, texts)):
+            vector = item.embedding
+            results.append(
+                EmbeddingResponse(
+                    embedding=vector,
+                    tokens=usage_tokens if position == 0 else 0,
+                    cost=total_cost if position == 0 else 0.0,
+                    model=model,
+                    text_length=len(text),
+                    dimension=len(vector),
+                    response_time=response_time,
+                )
+            )
+        return results

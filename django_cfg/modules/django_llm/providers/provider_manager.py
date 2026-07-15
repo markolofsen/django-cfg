@@ -4,13 +4,15 @@ Provider manager for LLM client.
 Manages initialization and access to LLM provider clients.
 """
 
+import itertools
 import logging
+import threading
 from enum import Enum
-from typing import Any, Dict, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from openai import OpenAI
 
-from .config_builder import ConfigBuilder
+from .config_builder import PROVIDER_BASE_URLS, ConfigBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +21,11 @@ class LLMProvider(str, Enum):
     """Available LLM providers."""
     OPENAI = "openai"
     OPENROUTER = "openrouter"
+    GONKA = "gonkagate"
 
 
 # Type alias for provider selection
-LLMProviderType = Union[LLMProvider, Literal["openai", "openrouter"]]
+LLMProviderType = Union[LLMProvider, Literal["openai", "openrouter", "gonkagate"]]
 
 
 class ProviderManager:
@@ -32,6 +35,7 @@ class ProviderManager:
         self,
         apikey_openrouter: Optional[str] = None,
         apikey_openai: Optional[str] = None,
+        apikey_gonka: Optional[str] = None,
         preferred_provider: Optional[LLMProviderType] = None,
         django_config: Optional[Any] = None
     ):
@@ -41,11 +45,13 @@ class ProviderManager:
         Args:
             apikey_openrouter: OpenRouter API key
             apikey_openai: OpenAI API key
-            preferred_provider: Preferred provider ("openai" or "openrouter")
+            apikey_gonka: gonka (gonkagate) API key
+            preferred_provider: Preferred provider ("openai", "openrouter", "gonkagate")
             django_config: Django configuration object
         """
         self.apikey_openrouter = apikey_openrouter
         self.apikey_openai = apikey_openai
+        self.apikey_gonka = apikey_gonka
         # Normalize preferred_provider to string
         if isinstance(preferred_provider, LLMProvider):
             self.preferred_provider = preferred_provider.value
@@ -59,6 +65,7 @@ class ProviderManager:
         # Initialize clients for available providers
         self._init_openrouter_client()
         self._init_openai_client()
+        self._init_gonka_client()
 
         # Determine primary provider
         self.primary_provider = self._determine_primary_provider()
@@ -74,7 +81,7 @@ class ProviderManager:
             try:
                 headers = ConfigBuilder.get_openrouter_headers(self.django_config)
                 self.clients["openrouter"] = OpenAI(
-                    base_url="https://openrouter.ai/api/v1",
+                    base_url=PROVIDER_BASE_URLS["openrouter"],
                     api_key=self.apikey_openrouter,
                     default_headers=headers
                 )
@@ -91,6 +98,47 @@ class ProviderManager:
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
 
+    def _init_gonka_client(self):
+        """Initialize gonka (gonkagate) client(s) if API key(s) available.
+
+        gonka is OpenAI-compatible — same SDK, just a different base_url. It
+        serves the gonka network's chat models (e.g. ``minimaxai/minimax-m2.7``,
+        ``moonshotai/kimi-k2.6``). No embeddings API.
+
+        ``apikey_gonka`` may be a single key OR a POOL (list). With a pool,
+        ``get_client('gonkagate')`` round-robins across one OpenAI client per
+        key, so concurrent race legs each ride a different key — sidestepping
+        gonka's per-key rate limit (50 concurrent / 600 RPM) and its
+        near-identical-burst guard.
+        """
+        keys = self.apikey_gonka
+        if isinstance(keys, str):
+            keys = [keys]
+        keys = [k for k in (keys or []) if k]
+        if not keys:
+            return
+        try:
+            self._gonka_pool: List[OpenAI] = [
+                OpenAI(base_url=PROVIDER_BASE_URLS["gonkagate"], api_key=k)
+                for k in keys
+            ]
+            self._gonka_cycle = itertools.cycle(range(len(self._gonka_pool)))
+            self._gonka_lock = threading.Lock()
+            # Expose the first as the named client (has_provider / primary detection).
+            self.clients["gonkagate"] = self._gonka_pool[0]
+            logger.info("Gonka (gonkagate) client initialized (pool size=%d)", len(self._gonka_pool))
+        except Exception as e:
+            logger.error(f"Failed to initialize gonka client: {e}")
+
+    def _next_gonka_client(self) -> OpenAI:
+        """Round-robin the gonka key pool (thread-safe)."""
+        pool = getattr(self, "_gonka_pool", None)
+        if not pool:
+            return self.clients["gonkagate"]
+        with self._gonka_lock:
+            idx = next(self._gonka_cycle)
+        return pool[idx]
+
     def _determine_primary_provider(self) -> str:
         """
         Determine primary provider based on preference and available keys.
@@ -103,10 +151,8 @@ class ProviderManager:
         """
         # If preferred provider is explicitly set and available, use it
         if self.preferred_provider:
-            if self.preferred_provider == "openai" and "openai" in self.clients:
-                return "openai"
-            elif self.preferred_provider == "openrouter" and "openrouter" in self.clients:
-                return "openrouter"
+            if self.preferred_provider in self.clients:
+                return self.preferred_provider
             else:
                 logger.warning(
                     f"Preferred provider '{self.preferred_provider}' not available, "
@@ -141,6 +187,10 @@ class ProviderManager:
         Raises:
             ValueError: If provider is not available
         """
+        name = provider or self.primary_provider
+        # gonka: round-robin the key pool so concurrent race legs use distinct keys.
+        if name == "gonkagate" and getattr(self, "_gonka_pool", None):
+            return self._next_gonka_client()
         if provider:
             if provider not in self.clients:
                 raise ValueError(f"Provider '{provider}' not available")

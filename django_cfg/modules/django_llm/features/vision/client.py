@@ -6,6 +6,7 @@ Supports structured output with Pydantic schemas.
 Includes automatic image resizing for token optimization.
 """
 
+import asyncio
 import base64
 import json
 import logging
@@ -17,6 +18,7 @@ from openai import OpenAI, AsyncOpenAI
 from pydantic import BaseModel
 
 from ..._integration import BaseCfgModule, get_api_keys
+from ...providers import PROVIDER_BASE_URLS
 from .image_encoder import ImageEncoder
 from .image_fetcher import ImageFetcher, ImageFetchError
 from .image_resizer import DetailMode
@@ -47,7 +49,7 @@ class VisionClient(BaseCfgModule):
     Client for image analysis using vision-language models.
 
     Uses OpenRouter API for access to multiple vision models.
-    Auto-detects API key from django-cfg config if not provided.
+    Auto-detects API key via cmdop_utils._compat config if not provided.
     """
 
     # Default model (fallback if registry not loaded)
@@ -108,11 +110,11 @@ class VisionClient(BaseCfgModule):
     def _init_client(self):
         """Initialize OpenAI clients for OpenRouter."""
         self._client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
+            base_url=PROVIDER_BASE_URLS["openrouter"],
             api_key=self.api_key,
         )
         self._async_client = AsyncOpenAI(
-            base_url="https://openrouter.ai/api/v1",
+            base_url=PROVIDER_BASE_URLS["openrouter"],
             api_key=self.api_key,
         )
         logger.info("VisionClient initialized with OpenRouter")
@@ -273,9 +275,16 @@ class VisionClient(BaseCfgModule):
         should_resize = resize if resize is not None else self.auto_resize
         detail_mode = detail if detail is not None else self.default_detail
 
-        # Prepare image URL
-        image_url = self.image_encoder.prepare_image_url(
-            image_source, resize=should_resize, detail=cast(DetailMode, detail_mode)
+        # Prepare image URL. `prepare_image_url` does a SYNC download + resize (requests +
+        # Pillow) when given an http(s) source, so on the async path run it in a worker
+        # thread — otherwise it blocks the event loop for the whole download+resize (and
+        # in an ASGI server that stalls every other in-flight request). The sync `analyze`
+        # path calls it directly.
+        image_url = await asyncio.to_thread(
+            self.image_encoder.prepare_image_url,
+            image_source,
+            should_resize,
+            cast(DetailMode, detail_mode),
         )
 
         # Build messages
@@ -331,6 +340,57 @@ class VisionClient(BaseCfgModule):
         except Exception as e:
             logger.error(f"Async vision analysis failed: {e}")
             raise
+
+    async def aanalyze_many(
+        self,
+        image_sources: list[str],
+        query: str,
+        *,
+        model: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        system_prompt: Optional[str] = None,
+        resize: Optional[bool] = None,
+        detail: Optional[DetailMode] = None,
+        per_image_timeout_s: float = 20.0,
+    ) -> list[Optional[VisionResponse]]:
+        """Analyze MANY images CONCURRENTLY with the same query/settings.
+
+        Each image runs `aanalyze(...)` in parallel (`asyncio.gather`), bounded
+        by its OWN `asyncio.wait_for(per_image_timeout_s)`.
+
+        BEST-EFFORT contract: one image timing out or raising NEVER fails the
+        batch — that slot becomes `None` (a warning is logged) while the others
+        still return. The result list has the SAME LENGTH and SAME ORDER as
+        `image_sources` (slot i corresponds to `image_sources[i]`).
+        """
+
+        async def _one(source: str) -> VisionResponse:
+            return await asyncio.wait_for(
+                self.aanalyze(
+                    image_source=source,
+                    query=query,
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    system_prompt=system_prompt,
+                    resize=resize,
+                    detail=detail,
+                ),
+                timeout=per_image_timeout_s,
+            )
+
+        results = await asyncio.gather(
+            *(_one(src) for src in image_sources), return_exceptions=True
+        )
+        out: list[Optional[VisionResponse]] = []
+        for i, res in enumerate(results):
+            if isinstance(res, BaseException):
+                logger.warning("aanalyze_many: image %d failed: %r", i, res)
+                out.append(None)
+            else:
+                out.append(res)
+        return out
 
     def describe(
         self,
@@ -512,11 +572,12 @@ No preamble. No markdown. Just JSON."""
             logger.warning(f"Model {model} not found in registry, using 0 cost")
             return 0.0
 
-        pricing = model_info.pricing
-        input_cost = tokens_input * pricing.prompt
-        output_cost = tokens_output * pricing.completion
-
-        total_cost = input_cost + output_cost
+        # Single source of truth for token-cost arithmetic. `pricing.prompt`
+        # / `.completion` are USD per 1M tokens; `VisionModelPricing.cost`
+        # owns the `/ 1e6` conversion (mirrors `registry.ModelPricing.cost`).
+        # Multiplying raw token counts here once overstated every vision cost
+        # by 1,000,000x (an 8.5k-token OCR booked as ~$1294 vs ~$0.0013).
+        total_cost = model_info.pricing.cost(tokens_input, tokens_output)
         logger.debug(f"Vision cost for {model}: ${total_cost:.6f} ({tokens_input} in, {tokens_output} out)")
         return total_cost
 

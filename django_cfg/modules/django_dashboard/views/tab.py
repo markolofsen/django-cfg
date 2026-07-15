@@ -7,9 +7,15 @@ from ..registry import TabRegistry
 
 
 def _get_dashboard_config():
-    from django_cfg.core.config import get_current_config
-    config = get_current_config()
-    return getattr(config, "dashboard", None)
+    """Every tab source, merged. See ../resolver.py.
+
+    This used to read `config.dashboard` directly, which omitted extension and
+    built-in app tabs — so those tabs rendered in the tab bar (which DID merge
+    them) and then 404'd here. One resolver now serves both.
+    """
+    from ..resolver import get_dashboard_config
+
+    return get_dashboard_config()
 
 
 @staff_member_required

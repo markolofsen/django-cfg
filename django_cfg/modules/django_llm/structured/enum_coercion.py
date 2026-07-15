@@ -21,9 +21,10 @@ from __future__ import annotations
 import re
 from typing import Iterable, Optional, Union
 
-# A choices source: a Django ``TextChoices``/``Choices`` class (anything
-# exposing a ``.choices`` list of ``(value, label)`` pairs) or a plain
-# iterable of ``(value, label)`` pairs.
+# A choices source: any class exposing a ``.choices`` list of
+# ``(value, label)`` pairs (e.g. a Django ``TextChoices``/``Choices``, but
+# nothing Django-specific is required) or a plain iterable of
+# ``(value, label)`` pairs.
 ChoicesSource = Union[type, Iterable[tuple[object, object]]]
 
 _SEPARATORS = re.compile(r"[\s/_-]+")
@@ -37,9 +38,9 @@ def _norm_key(s: str) -> str:
 def _iter_pairs(source: ChoicesSource) -> Iterable[tuple[object, object]]:
     """Yield ``(value, label)`` pairs from a choices source.
 
-    Duck-typed: if the source exposes a ``.choices`` attribute (Django
-    ``TextChoices``/``Choices``) that is used; otherwise the source is
-    treated directly as an iterable of pairs. No Django import required.
+    Duck-typed: if the source exposes a ``.choices`` attribute (such as a
+    Django ``TextChoices``/``Choices``) that is used; otherwise the source
+    is treated directly as an iterable of pairs. No Django import required.
     """
     choices = getattr(source, "choices", None)
     return choices if choices is not None else source  # type: ignore[return-value]
@@ -71,8 +72,9 @@ class EnumCoercer:
         """Build the lookup from a choices source.
 
         Args:
-            choices: A Django ``TextChoices``/``Choices`` class or a plain
-                iterable of ``(value, label)`` pairs.
+            choices: Any class exposing ``.choices`` (e.g. a Django
+                ``TextChoices``/``Choices``) or a plain iterable of
+                ``(value, label)`` pairs.
             slang: Extra ``{normalized_input: canonical_value}`` synonyms
                 that match neither a value nor a label (e.g.
                 ``{"petrol": "gasoline"}``). Keys are normalized on input.

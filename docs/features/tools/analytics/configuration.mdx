@@ -1,0 +1,152 @@
+---
+title: Configuration
+description: AnalyticsConfig fields, defaults, and the trade-off behind each one.
+---
+
+# Configuration
+
+Analytics works with **no configuration at all**. Every field below has a default that is correct for most projects.
+
+```python
+from django_cfg import DjangoConfig, AnalyticsConfig
+
+class MyConfig(DjangoConfig):
+    analytics = AnalyticsConfig()   # this is also the default — you can omit it
+```
+
+## Why it is on by default
+
+Unlike every other app in django-cfg, `analytics` defaults to an **instance**, not `None`:
+
+```python
+analytics: AnalyticsConfig = Field(default_factory=AnalyticsConfig)
+```
+
+A project that has to remember to switch analytics on will simply have no data for the period before someone remembered — and you cannot backfill a pageview. Ingest costs ~0.1 ms and adds no process, so there is nothing to protect you from.
+
+To turn it off:
+
+```python
+class MyConfig(DjangoConfig):
+    analytics = AnalyticsConfig(enabled=False)
+```
+
+## Fields
+
+| Field | Default | What it does |
+|---|---|---|
+| `enabled` | `True` | Adds the app to `INSTALLED_APPS` and mounts the ingest URL. |
+| `ingest_path` | `"collect"` | Path segment under `/cfg/analytics/`. |
+| `max_batch_size` | `25` | Max events per POST. |
+| `fast_commit` | `True` | Run the INSERT under `SET LOCAL synchronous_commit = off`. |
+| `session_timeout_minutes` | `30` | Idle gap that ends a session. |
+| `salt_rotation_days` | `1` | How often the visitor-id salt rotates. |
+| `respect_dnt` | `False` | Drop events when the browser sends `DNT: 1`. |
+| `store_user_id` | `True` | Attribute events to the authenticated user. |
+
+## The ones with a real trade-off
+
+### `fast_commit`
+
+```python
+AnalyticsConfig(fast_commit=True)   # default
+```
+
+Runs the ingest INSERT under `SET LOCAL synchronous_commit = off` — **~19x faster** on real durable storage (1.895 ms → 0.098 ms).
+
+**The trade:** on a hard crash (power loss, kernel panic) you lose the last ~200 ms of events. For analytics that is entirely acceptable.
+
+Unlike `UNLOGGED` tables, this is per-transaction: the rest of your database stays fully crash-safe and replication-safe. PostgreSQL only — it is a no-op on other backends.
+
+### `ingest_path`
+
+```python
+AnalyticsConfig(ingest_path="metrics")   # -> /cfg/analytics/metrics/
+```
+
+Configurable **on purpose**. Ad-blocker filter lists (EasyPrivacy and friends) match on **path**, not domain — PostHog's `/ingest/` and Plausible's `/js/script.js` are both hand-blocked. A fixed path shipped in an open-source package gets filter-listed once, for everyone. Changing it is the only durable defence.
+
+### `salt_rotation_days`
+
+```python
+AnalyticsConfig(salt_rotation_days=1)   # default
+```
+
+The visitor id is a hash salted from `SECRET_KEY` and the current day. After rotation, the same person is a **new visitor** — which is the point: it bounds how long a pseudonym can be correlated.
+
+The previous period's salt is kept live, so a rotation at midnight does not split an in-flight session in two.
+
+*(For comparison: Umami rotates monthly, which is a far weaker pseudonym.)*
+
+### `store_user_id`
+
+```python
+AnalyticsConfig(store_user_id=False)   # strictly anonymous deployment
+```
+
+This is the differentiator — turning it off gives up the one thing hosted analytics cannot do. Only set it to `False` if you have a policy reason.
+
+## Multiple frontends, one backend
+
+Several frontends can share one django-cfg backend. **The domain is the identifier** — each one gets its own `AnalyticsSite`, and their events never mix.
+
+```python
+class MyConfig(DjangoConfig):
+    security_domains = [
+        "example.com",              # marketing site
+        "app.example.com",          # the product
+        "docs.example.com",         # documentation
+    ]
+```
+
+Nothing else to configure. Each site row is created **automatically** on the first event from that domain, and the admin dashboard has a site picker.
+
+`security_domains` already declares which domains belong to this project (it drives `ALLOWED_HOSTS`, CORS, and CSRF), so analytics derives from it rather than asking you to restate the same fact somewhere it can drift.
+
+A domain **not** in that list is rejected. That is the tenant boundary: auto-registering anything that POSTs at you would let a stranger's traffic into your database.
+
+### How the domain is determined
+
+The SDK sends a `site` field in the request body — but **that field is not trusted**, because anyone can POST `{"site": "yourdomain.com"}` from anywhere and inject pageviews that never happened.
+
+The backend reads the domain from the **`Origin`** (or `Referer`) header instead. Those are *forbidden headers*: page JavaScript cannot set them, the browser fills them from the document's real origin. When present, they win over the body.
+
+| Request | Domain used | Result |
+|---|---|---|
+| Browser on `app.example.com` | `Origin: app.example.com` | ✅ recorded against `app.example.com` |
+| Attacker on `evil.com` claiming `site: example.com` | `Origin: evil.com` | ❌ dropped — `evil.com` is not trusted |
+| Server-side call, no `Origin` | falls back to the body | ✅ only if the domain is in `security_domains` |
+
+<Callout type="info">
+The endpoint always answers `202`, including for a rejected batch. Telling an attacker they were caught just teaches them to adjust.
+</Callout>
+
+### Timezone
+
+Reports fold UTC timestamps into each site's **local** day, so a site in Berlin and a site in Tokyo each see their own calendar:
+
+```python
+AnalyticsSite.objects.filter(domain="example.com").update(timezone="Europe/Berlin")
+```
+
+Changing this is free — the timestamps stay in UTC and only the read-time fold changes.
+
+## Rate limiting
+
+The ingest endpoint is `AllowAny` and unauthenticated. Rate-limit it at the **proxy**, not in DRF:
+
+```nginx
+limit_req_zone $binary_remote_addr zone=analytics:10m rate=30r/s;
+
+location /cfg/analytics/ {
+    limit_req zone=analytics burst=20 nodelay;
+    limit_req_status 429;
+    proxy_pass http://django;
+}
+```
+
+DRF's own documentation says its throttling is *"open to race conditions"* and *"should not be considered a security measure"* — it is a non-atomic read-modify-write of a pickled list of timestamps, so the rate limiter itself becomes the memory-exhaustion vector.
+
+<Callout type="warning">
+`$binary_remote_addr` is the **peer** address. Behind Cloudflare that is the proxy, so you would rate-limit the entire internet as one client. Set `set_real_ip_from` to your proxy CIDRs only.
+</Callout>

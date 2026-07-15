@@ -14,6 +14,7 @@ from django_cfg.modules.base import BaseCfgModule
 from django_cfg.modules.django_unfold.models.navigation import NavigationSection
 from django_cfg.modules.django_unfold.navigation.sections import (
     build_accounts_section,
+    build_analytics_section,
     build_currency_section,
     build_dashboard_section,
     build_geo_section,
@@ -58,6 +59,15 @@ class NavigationManager(BaseCfgModule):
         if self.is_payments_enabled():
             sections.append(build_payments_section())
 
+        # Analytics is enabled in EVERY django-cfg project, so gating this on
+        # `enabled` alone would put an Analytics section — with three empty
+        # tables — in the sidebar of every project that has never sent an event.
+        # A site row is created automatically on the first event from a trusted
+        # domain, so "a site exists" is exactly "traffic has arrived".
+        # Same rule as the dashboard tab (apps/tools/analytics/dashboard.py).
+        if self.is_analytics_enabled() and self._has_analytics_data():
+            sections.append(build_analytics_section())
+
         sections.append(build_accounts_section(
             is_github_oauth_enabled=self.is_github_oauth_enabled()
         ))
@@ -68,6 +78,20 @@ class NavigationManager(BaseCfgModule):
         sections.extend(self._get_extension_navigation())
 
         return [s.to_dict() for s in sections]
+
+    def _has_analytics_data(self) -> bool:
+        """True once any analytics site is registered.
+
+        Runs on every admin page render, so it must be cheap and must NEVER
+        raise: navigation is built before `migrate` has necessarily run, and a
+        missing table here would take the entire admin down.
+        """
+        try:
+            from django_cfg.apps.tools.analytics.models import AnalyticsSite
+
+            return AnalyticsSite.objects.exists()
+        except Exception:
+            return False
 
     def _get_extension_navigation(self) -> List[NavigationSection]:
         """Load navigation from auto-discovered extensions."""

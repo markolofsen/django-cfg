@@ -15,17 +15,41 @@ circuit breaker, cost) and the public API:
 
 from .llm_router import LLMRouter, LLMRouterError
 from .presets import (
-    extract, extract_chat, classify, chat_with_tools, escalate,
-    aextract, aextract_chat, aclassify, achat_with_tools, aescalate,
-    extract_many, classify_many,
+    achat_with_tools,
+    aclassify,
+    aescalate,
+    aextract,
+    aextract_chat,
+    chat_with_tools,
+    classify,
+    classify_many,
+    escalate,
+    extract,
+    extract_chat,
+    extract_chat_gonka,
+    extract_many,
+)
+from .providers import (
+    BALANCED,
+    CHEAPEST,
+    THROUGHPUT,
+    ProviderPolicy,
+    ProviderSort,
 )
 
 __all__ = [
     "LLMRouter",
     "LLMRouterError",
+    # provider routing policy (which upstream serves a model)
+    "ProviderPolicy",
+    "ProviderSort",
+    "BALANCED",
+    "THROUGHPUT",
+    "CHEAPEST",
     # sync presets
     "extract",
     "extract_chat",
+    "extract_chat_gonka",
     "classify",
     "chat_with_tools",
     "escalate",

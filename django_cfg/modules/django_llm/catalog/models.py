@@ -22,6 +22,33 @@ from dataclasses import dataclass, field
 
 from .roles import ModelRole, Verdict
 
+# ── Providers ────────────────────────────────────────────────────────
+#
+# Which provider actually SERVES a model is an intrinsic property of the
+# model, not of the call site — so it lives here, in the catalog, with
+# everything else we know about a slug.
+#
+# These strings are the VALUES of ``providers.LLMProvider`` and must stay
+# in sync with it (``test_catalog.py`` pins that). They are kept as plain
+# strings on purpose: ``providers/`` pulls in the OpenAI SDK, and the
+# catalog is a pure data layer that must import cheaply and cycle-free.
+# The router maps string -> ``LLMProvider`` at its own seam.
+
+PROVIDER_OPENROUTER = "openrouter"
+PROVIDER_OPENAI = "openai"
+PROVIDER_GONKA = "gonkagate"
+
+#: Provider for a slug the catalog does not know.
+#:
+#: OpenRouter, deliberately: it is the AGGREGATOR — it fronts OpenAI,
+#: Anthropic, Google, Meta, DeepSeek, Qwen and friends behind one
+#: `vendor/model` slug namespace, which is exactly the namespace every
+#: slug in this file is written in. gonka, by contrast, serves only a
+#: small fixed set of models (see ``providers/provider_manager.py``
+#: ``_init_gonka_client``), so defaulting an unknown slug to gonka would
+#: send it to a provider that has never heard of it.
+DEFAULT_PROVIDER = PROVIDER_OPENROUTER
+
 
 @dataclass(frozen=True)
 class ModelTraits:
@@ -30,6 +57,7 @@ class ModelTraits:
     slug: str
     reasoning: bool                          # reasoning / thinking model
     reasoning_disablable: bool               # reasoning can be cleanly turned off
+    provider: str = DEFAULT_PROVIDER         # which provider SERVES this slug
     roles: dict[ModelRole, Verdict] = field(default_factory=dict)
     issues: tuple[str, ...] = ()             # operational pitfalls
 
@@ -164,6 +192,29 @@ _CATALOG: dict[str, ModelTraits] = {
         },
         issues=("recency bias — drops tools described early in a long prompt",),
     ),
+    "moonshotai/kimi-k2.6": ModelTraits(
+        slug="moonshotai/kimi-k2.6",
+        reasoning=False, reasoning_disablable=True,
+        # THE gonka model. Verified from two places in the code, not guessed:
+        #   - providers/provider_manager.py::_init_gonka_client — "serves the
+        #     gonka network's chat models (e.g. minimaxai/minimax-m2.7,
+        #     moonshotai/kimi-k2.6)";
+        #   - providers/config_builder.py::get_default_model — gonkagate's
+        #     default model IS "moonshotai/kimi-k2.6".
+        # It was already the only slug any caller ever paired with
+        # preferred_provider=GONKA (marketplace ingestion reviewer).
+        provider=PROVIDER_GONKA,
+        roles={
+            ModelRole.EXTRACTION: Verdict.OK,
+            ModelRole.CLASSIFY: Verdict.OK,
+        },
+        issues=(
+            "gonka random-host latency 11–57s — RACE it (see races()); a single "
+            "leg's tail latency is the whole call's latency",
+            "gonka availability is not underwritten — 502s observed for a whole "
+            "run; always keep an openrouter model ahead of or behind it in the chain",
+        ),
+    ),
 }
 
 
@@ -174,18 +225,30 @@ _CATALOG: dict[str, ModelTraits] = {
 
 _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
     ModelRole.EXTRACTION: (
-        "google/gemini-2.5-flash-lite",   # $0.10/$0.40 — cheapest reliable strict-json
-        "openai/gpt-4o-mini",             # cross-provider fallback (OpenAI), 28/28 strict
-        "deepseek/deepseek-v4-flash",
+        "openai/gpt-4o-mini",         # openrouter — primary; strict json_schema reliable
+        "google/gemini-2.5-flash",    # openrouter fallback
+        "moonshotai/kimi-k2.6",       # gonka — tertiary (when gonka is up)
     ),
     ModelRole.TOOL_CHAT: (
-        "google/gemini-2.5-flash",        # $0.30/$2.50 — clears multi-tool chains, thinking off
-        "google/gemini-3.5-flash",        # stronger reasoning for hard chains (pricier)
-        "anthropic/claude-sonnet-4.6",    # premium escalation fallback
+        # THIS TUPLE IS THE LIVE `auto`+tools PICK. The dispatcher
+        # (`dispatcher/core.py::_resolve_auto`) now takes element [0] DIRECTLY for
+        # any tool-using `auto` turn — preset-first, bypassing the DB priority
+        # picker (which mis-served coding turns with a cheap model). So [0] here
+        # IS the model your agent codes with. Reorder to retune.
+        #
+        # Sonnet leads: agentic CODING is the bar here, and a Flash-class model
+        # mis-reads its own tool results / loses the plan on multi-step coding
+        # tasks (observed: "package.json not found" right after a glob that listed
+        # it). Sonnet is the strongest tool-chat reasoner — worth the cost for the
+        # `auto`+tools (coding) path. Flash stays as the cheaper fallback.
+        "anthropic/claude-sonnet-4.6",    # strongest tool-chat reasoning — coding default
+        "google/gemini-3.5-flash",        # strong Flash fallback for hard chains
+        "google/gemini-2.5-flash",        # cheaper Flash fallback
     ),
     ModelRole.CLASSIFY: (
-        "google/gemini-2.5-flash-lite",
-        "openai/gpt-4o-mini",
+        "openai/gpt-4o-mini",         # openrouter — primary
+        "google/gemini-2.5-flash",    # openrouter fallback
+        "moonshotai/kimi-k2.6",       # gonka — tertiary (when gonka is up)
     ),
     ModelRole.ESCALATION: (
         "anthropic/claude-sonnet-4.6",
@@ -204,6 +267,34 @@ def known_issues(slug: str) -> tuple[str, ...]:
     """Operational pitfalls for ``slug`` — empty tuple if none/uncatalogued."""
     entry = _CATALOG.get(slug)
     return entry.issues if entry else ()
+
+
+def provider_for(slug: str) -> str:
+    """Which provider serves ``slug`` — the single source of provider truth.
+
+    Returns an ``LLMProvider`` *value* (``"openrouter"`` / ``"openai"`` /
+    ``"gonkagate"``), never an enum, so importing the catalog stays free of the
+    OpenAI SDK that ``providers/`` drags in. Callers that need the enum do
+    ``LLMProvider(provider_for(slug))``.
+
+    An uncatalogued slug gets ``DEFAULT_PROVIDER`` (openrouter, the
+    aggregator) — we never guess a slug onto gonka, which serves only a
+    small fixed model set.
+    """
+    entry = _CATALOG.get(slug)
+    return entry.provider if entry else DEFAULT_PROVIDER
+
+
+def races(slug: str) -> bool:
+    """Whether ``slug`` should be RACED (parallel legs, first clean wins).
+
+    A property of the MODEL's provider, not of the call. gonka assigns each
+    request to a random network host, so per-call latency is 11–57s with a long
+    tail; two staggered legs plus first-clean-wins cuts that tail and survives an
+    empty/errored leg. Every other provider serves from one endpoint at
+    predictable latency — racing there would just double the bill for nothing.
+    """
+    return provider_for(slug) == PROVIDER_GONKA
 
 
 def recommend(role: ModelRole) -> list[str]:

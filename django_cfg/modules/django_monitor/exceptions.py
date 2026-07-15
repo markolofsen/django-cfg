@@ -29,7 +29,7 @@ class MonitorConfigError(MonitorError):
 
 
 class MonitorSyncError(MonitorError):
-    """Raised when a D1 push operation fails."""
+    """Raised when pushing a captured event downstream fails."""
 
 
 __all__ = [

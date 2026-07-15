@@ -1,7 +1,9 @@
 """
-Django Translator Service orchestrator for django_llm.
+Translator service orchestrator for cmdop_utils.llm.
 
 Auto-configuring translation service with language detection and JSON support.
+(Class name kept as ``DjangoTranslator`` for import parity; ported from
+django_llm, plan50 §12 — config now via cmdop_utils._compat, no Django.)
 """
 
 import logging
@@ -23,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class DjangoTranslator(BaseCfgModule):
     """
-    Translation service orchestrator for django_cfg.
+    Translation service orchestrator for cmdop_utils.llm.
 
     Coordinates translation using specialized components:
     - ScriptDetector: Script-based language detection
@@ -53,7 +55,7 @@ class DjangoTranslator(BaseCfgModule):
 
     @property
     def config(self):
-        """Get the DjangoConfig instance."""
+        """Get the host config instance (via cmdop_utils._compat)."""
         return self.get_config()
 
     @property

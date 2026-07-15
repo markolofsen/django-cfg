@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 
 import httpx
 
-logger = logging.getLogger("django_cfg.django_llm.registry")
+logger = logging.getLogger("cmdop_utils.llm.registry")
 
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 

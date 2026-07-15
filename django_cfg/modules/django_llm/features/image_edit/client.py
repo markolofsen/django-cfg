@@ -11,8 +11,8 @@ client talks to the REST endpoint with ``httpx`` directly.
 
 Why this lives here (not in the host app)
 -----------------------------------------
-Every caller of an LLM in the project funnels through django_llm.
-Putting the multimodal-edit transport inside django_llm means apps
+Every caller of an LLM in the project funnels through cmdop_utils.llm.
+Putting the multimodal-edit transport inside cmdop_utils.llm means apps
 (real-estate AIPhoto today, vehicle ai_photo, others later) don't
 reimplement HTTP, auth, cost, or pricing — they pass an
 ``ImageEditRequest`` and get an ``ImageEditResponse`` back.
@@ -39,6 +39,7 @@ from typing import Any
 import httpx
 
 from ..._integration import BaseCfgModule, get_api_keys
+from ...providers import PROVIDER_BASE_URLS
 from .errors import ImageEditError, NoImageReturnedError
 from .models import (
     DEFAULT_EDIT_MODEL,
@@ -51,15 +52,15 @@ from .response_parser import extract_image_bytes, extract_text
 logger = logging.getLogger(__name__)
 
 
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_BASE_URL = PROVIDER_BASE_URLS["openrouter"]
 
 
 class ImageEditClient(BaseCfgModule):
     """Sync image-edit client over OpenRouter.
 
-    Auto-detects the OpenRouter key from the django_llm integration
-    seam (``get_api_keys()["openrouter"]``); the host doesn't pass
-    keys around.
+    Auto-detects the OpenRouter key via the integration seam
+    (``get_api_keys()["openrouter"]``, which reads config through
+    ``cmdop_utils._compat``); the host doesn't pass keys around.
     """
 
     def __init__(

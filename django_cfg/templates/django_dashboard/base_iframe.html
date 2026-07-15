@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ current_tab.title }}</title>
-    {# Material Icons (used by existing templates) #}
+    {# Both icon families — tab templates use either; a missing one renders the glyph name as text. #}
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
     {# Tailwind CDN #}
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -54,6 +55,16 @@
         html.dark body {
             background-color: rgb(17 24 39);
         }
+
+        /* The gutter lives HERE, once, for every tab.
+           Without it each tab has to invent its own padding — and any tab that
+           forgets renders flush against the iframe edge. */
+        .dashboard-tab-content {
+            padding: 24px 28px 32px;
+        }
+        @media (max-width: 640px) {
+            .dashboard-tab-content { padding: 16px 16px 24px; }
+        }
     </style>
     <script>
     /* Inherit dark mode from parent Unfold page */
@@ -68,6 +79,8 @@
     </script>
 </head>
 <body>
-    {% block tab_content %}{% endblock %}
+    <div class="dashboard-tab-content">
+        {% block tab_content %}{% endblock %}
+    </div>
 </body>
 </html>

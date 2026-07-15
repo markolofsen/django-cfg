@@ -1,0 +1,54 @@
+<div class="an-card">
+  <div class="an-card__head">
+    <span>{{ title }}</span>
+  </div>
+
+  {% if rows %}
+    <div class="an-rows">
+      {% for row in rows %}
+        <div class="an-row">
+          <div class="an-row__bar" style="width: {{ row.share }}%"></div>
+          <span class="an-row__label">{{ row.label|default:"—" }}</span>
+          <span class="an-row__count">{{ row.count }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="an-card__empty">No data</div>
+  {% endif %}
+</div>
+
+<style>
+  .an-rows { padding: 4px 0; }
+
+  .an-row {
+    position: relative;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 16px; font-size: 13px;
+  }
+
+  /* Width = share of the top row, so the eye ranks the list without reading a
+     single number. */
+  .an-row__bar {
+    position: absolute; inset: 2px auto 2px 8px;
+    background: rgba(0, 112, 243, 0.14);
+    border-radius: 4px;
+  }
+
+  .an-row__label {
+    position: relative; color: #a1a1a1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    padding-right: 12px;
+  }
+  .an-row:hover .an-row__label { color: #ededed; }
+
+  .an-row__count {
+    position: relative; color: #ededed; font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .an-card__empty {
+    padding: 32px 16px; text-align: center;
+    font-size: 13px; color: #666;
+  }
+</style>

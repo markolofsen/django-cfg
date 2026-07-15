@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.2.101"
+version = "2.2.102"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -152,7 +152,14 @@ dependencies = [
 
     # Geographic
     "geopy>=2.4.0,<3.0",
-    
+
+    # Analytics
+    # UA parsing for the analytics app. Apache-2.0. The [regex] extra pulls the
+    # compiled backend: benchmarked 81k parses/sec vs ~1.8k for the pure-Python
+    # fallback, on a public ingest endpoint that runs this per request.
+    # NOT device_detector — it is LGPL-3.0 *and* 8.9ms/parse (113/sec).
+    "ua-parser[regex]>=1.0.0,<2.0",
+
     # Type Checking
     "mypy>=1.18.2,<2.0.0",
     "django-stubs[compatible-mypy]>=5.2.9,<6.0",
@@ -208,7 +215,17 @@ ai = [
     "pydantic-ai-slim[openai]>=2.1.0,<3.0",  # >=1.99 fixed SSRF bypass CVE-2026-46678; 2.1 is the floor required by pydantic-ai-harness
     # 0.x — pin the minor: upstream breaks on minor bumps by their own stated
     # policy, and consumers import from pydantic_ai_harness.experimental.
-    "pydantic-ai-harness>=0.6.0,<0.7",
+    #
+    # [code-mode] pulls pydantic-monty, the Rust sandbox CodeMode runs model-written
+    # Python in. Taken through the harness's own extra rather than pinning
+    # pydantic-monty directly: the harness owns which monty it is compatible with,
+    # and monty is 0.0.x — that decision should live in one place, not two.
+    "pydantic-ai-harness[code-mode]>=0.6.0,<0.7",
+    # TOON serializer the agent plane's tool output uses (agent/tools/core/_serialize.py).
+    # Distinct from `json-toon` above — the harness imports `toon_format`. Optional at
+    # runtime (the plane falls back to JSON if absent), declared here so the token
+    # savings are actually available. Matches cmdop's pin.
+    "toon_format>=0.9.0b1,<1.0",
 ]
 
 centrifugo = [
@@ -325,7 +342,14 @@ full = [
     "pydantic-ai-slim[openai]>=2.1.0,<3.0",  # >=1.99 fixed SSRF bypass CVE-2026-46678; 2.1 is the floor required by pydantic-ai-harness
     # 0.x — pin the minor: upstream breaks on minor bumps by their own stated
     # policy, and consumers import from pydantic_ai_harness.experimental.
-    "pydantic-ai-harness>=0.6.0,<0.7",
+    # [code-mode] is REQUIRED, not optional: the agent plane's streaming path hard-imports
+    # capabilities.code_mode at module load, which pulls pydantic_ai_harness.code_mode +
+    # pydantic_monty. Without the extra the whole agent plane fails to import under `full`.
+    "pydantic-ai-harness[code-mode]>=0.6.0,<0.7",
+    # TOON serializer the agent plane's tool output uses (falls back to JSON if absent,
+    # but `full` is batteries-included — ship the token savings). Import name is
+    # `toon_format`, distinct from the `json-toon` core dep.
+    "toon_format>=0.9.0b1,<1.0",
     # payments (django_cfg.apps.payments)
     "stripe>=15.3.0,<16.0",
     # gen (django_generator)

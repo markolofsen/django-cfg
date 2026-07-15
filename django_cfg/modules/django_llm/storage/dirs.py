@@ -1,5 +1,5 @@
 """
-Cache Directory Builder for Django LLM.
+Cache Directory Builder for the cmdop_utils LLM module.
 
 Centralized cache directory management with smart defaults.
 """
@@ -34,19 +34,9 @@ class CacheDirectoryBuilder:
         return self
 
     def from_django_settings(self) -> "CacheDirectoryBuilder":
-        """Try to use Django cache location if available."""
-        try:
-            from django.conf import settings
-            if hasattr(settings, 'CACHES') and 'default' in settings.CACHES:
-                cache_location = settings.CACHES['default'].get('LOCATION')
-                # Only use cache_location if it's a file path, not a Redis URL
-                if cache_location and not cache_location.startswith(('redis://', 'rediss://')):
-                    self._base_path = Path(cache_location).parent
-                    self._cache_root = Path(cache_location).name
-        except (ImportError, AttributeError, KeyError, TypeError, ValueError):
-            # Django absent, no CACHES, or an unusable LOCATION — fall back to
-            # the builder's defaults (intentionally non-fatal).
-            pass
+        """No-op in the framework-neutral package (plan50 §12 — the Django cache
+        probe was dropped). Kept for API parity; the builder falls back to its
+        own defaults (cwd-based cache dir). A host can call `with_base_path(...)`."""
         return self
 
     def build(self) -> Path:
@@ -75,7 +65,7 @@ def get_default_llm_cache_dir(cache_dir: Optional[Path] = None) -> Path:
 
     Priority:
     1. Provided cache_dir
-    2. Django CACHES setting (if file-based)
+    2. Optional host-supplied base path (`with_base_path`)
     3. .cache/django_llm in current directory
 
     Args:

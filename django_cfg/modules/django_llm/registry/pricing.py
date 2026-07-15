@@ -18,28 +18,18 @@ class CostCalculator:
     def __init__(self, models_cache: Optional[ModelsCache] = None):
         """
         Initialize cost calculator.
-        
+
         Args:
             models_cache: ModelsCache instance for dynamic pricing
+
+        There are NO hardcoded price maps here any more. The catalogue
+        (``ModelsCache``, fed from OpenRouter's chat AND embeddings
+        endpoints) is the single source of truth; on a cache miss the
+        estimators return ``0.0`` + a warning rather than a stale static
+        price. This is a client-side ESTIMATE path — the cost-of-record is
+        computed by the gateway's ``cost.calculate_cost`` against the DB.
         """
         self.models_cache = models_cache
-
-        # Fallback pricing for common models (per 1M tokens)
-        self.fallback_chat_prices = {
-            "gpt-4o-mini": {"prompt": 0.15, "completion": 0.6},
-            "gpt-4o": {"prompt": 5.0, "completion": 15.0},
-            "gpt-3.5-turbo": {"prompt": 0.5, "completion": 1.5},
-            "claude-3-haiku": {"prompt": 0.25, "completion": 1.25},
-            "claude-3-sonnet": {"prompt": 3.0, "completion": 15.0},
-            "claude-3-opus": {"prompt": 15.0, "completion": 75.0}
-        }
-
-        # Fallback embedding pricing (per 1K tokens)
-        self.fallback_embedding_prices = {
-            "text-embedding-ada-002": 0.0001 / 1000,
-            "text-embedding-3-small": 0.00002 / 1000,
-            "text-embedding-3-large": 0.00013 / 1000,
-        }
 
     def calculate_chat_cost(self, usage: Dict[str, int], model: str) -> float:
         """
@@ -60,12 +50,15 @@ class CostCalculator:
                     logger.debug(f"Using models cache pricing for chat {model}: ${cost:.6f}")
                     return cost
                 else:
-                    logger.debug(f"Model {model} not found in models cache, using fallback pricing")
+                    logger.debug(f"Model {model} not found in models cache")
             except Exception as e:
                 logger.warning(f"Failed to calculate chat cost from models cache: {e}")
 
-        # Fallback to hardcoded pricing
-        return self._calculate_chat_cost_fallback(usage, model)
+        # No static fallback: the catalogue is the single source of truth.
+        # An unknown model yields a 0.0 estimate + warning (this is a
+        # client-side estimate, not the cost-of-record billed by the gateway).
+        logger.warning(f"No catalogue price for chat model {model!r}; returning 0.0 estimate")
+        return 0.0
 
     def calculate_embedding_cost(self, tokens: int, model: str) -> float:
         """
@@ -91,39 +84,15 @@ class CostCalculator:
                     logger.debug(f"Using models cache pricing for embedding {model}: ${cost:.6f}")
                     return cost
                 else:
-                    logger.debug(f"Embedding model {model} not found in models cache, using fallback pricing")
+                    logger.debug(f"Embedding model {model} not found in models cache")
             except Exception as e:
                 logger.warning(f"Failed to calculate embedding cost from models cache: {e}")
 
-        # Fallback to hardcoded pricing
-        return self._calculate_embedding_cost_fallback(tokens, model)
-
-    def _calculate_chat_cost_fallback(self, usage: Dict[str, int], model: str) -> float:
-        """Calculate chat cost using fallback pricing."""
-        total_tokens = usage.get('total_tokens', 0)
-        prompt_tokens = usage.get('prompt_tokens', 0)
-        completion_tokens = usage.get('completion_tokens', 0)
-
-        # Find matching model cost
-        for model_pattern, costs in self.fallback_chat_prices.items():
-            if model_pattern in model.lower():
-                prompt_cost = (prompt_tokens / 1_000_000) * costs["prompt"]
-                completion_cost = (completion_tokens / 1_000_000) * costs["completion"]
-                total_cost = prompt_cost + completion_cost
-                logger.debug(f"Using fallback chat pricing for {model}: ${total_cost:.6f}")
-                return total_cost
-
-        # Default cost (using total tokens with average rate)
-        default_cost = (total_tokens / 1_000_000) * 0.5
-        logger.debug(f"Using default chat pricing for {model}: ${default_cost:.6f}")
-        return default_cost
-
-    def _calculate_embedding_cost_fallback(self, tokens: int, model: str) -> float:
-        """Calculate embedding cost using fallback pricing."""
-        price_per_token = self.fallback_embedding_prices.get(model, 0.0001 / 1000)
-        cost = tokens * price_per_token
-        logger.debug(f"Using fallback embedding pricing for {model}: ${cost:.6f}")
-        return cost
+        # No static fallback: embedding prices now come from the catalogue
+        # (OpenRouter `/embeddings/models`). Unknown model → 0.0 estimate +
+        # warning (client-side estimate, not the gateway cost-of-record).
+        logger.warning(f"No catalogue price for embedding model {model!r}; returning 0.0 estimate")
+        return 0.0
 
     def estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float:
         """
@@ -145,17 +114,13 @@ class CostCalculator:
                     logger.debug(f"Using models cache cost estimate for {model}: ${cost:.6f}")
                     return cost
                 else:
-                    logger.debug(f"Model {model} not found in models cache for cost estimation, using fallback")
+                    logger.debug(f"Model {model} not found in models cache for cost estimation")
             except Exception as e:
                 logger.warning(f"Failed to estimate cost from models cache: {e}")
 
-        # Fallback to internal calculation
-        usage_dict = {
-            'total_tokens': input_tokens + output_tokens,
-            'prompt_tokens': input_tokens,
-            'completion_tokens': output_tokens
-        }
-        return self._calculate_chat_cost_fallback(usage_dict, model)
+        # No static fallback: unknown model → 0.0 estimate + warning.
+        logger.warning(f"No catalogue price for model {model!r} estimate; returning 0.0")
+        return 0.0
 
 
 # Global cost calculator instance

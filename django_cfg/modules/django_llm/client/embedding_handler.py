@@ -8,6 +8,7 @@ import logging
 from typing import TYPE_CHECKING, Optional
 
 from ..core.types import EmbeddingResponse
+from ..embeddings.mock_embedder import is_mock_embedding
 
 if TYPE_CHECKING:
     from ..embeddings import MockEmbedder, OpenAIEmbedder, OpenRouterEmbedder
@@ -115,8 +116,13 @@ class EmbeddingRequestHandler:
                 )
                 result = self.mock_embedder.generate(text, model)
 
-            # Cache response
-            self.cache_manager.cache_embedding_response(result, text, cache_model)
+            # Cache response — EXCEPT a mock. A mock vector cached under a
+            # (text, model) key outlives the missing key that produced it: it
+            # would still be served after real credentials were restored, and
+            # nothing downstream could tell it from a real embedding. A cache
+            # miss is recoverable; a poisoned cache is not.
+            if not is_mock_embedding(result):
+                self.cache_manager.cache_embedding_response(result, text, cache_model)
 
             # Update stats
             self.stats_manager.record_success(
@@ -131,5 +137,113 @@ class EmbeddingRequestHandler:
         except Exception as e:
             self.stats_manager.record_failure()
             error_msg = f"Embedding generation failed: {e}"
+            logger.error(error_msg)
+            raise RuntimeError(error_msg) from e
+
+    def generate_embeddings(
+        self,
+        texts: list[str],
+        model: str = "text-embedding-ada-002",
+        *,
+        dimensions: int | None = None,
+    ) -> list[EmbeddingResponse]:
+        """Embed MANY texts, sending only the cache misses, in ONE request.
+
+        Same cache keys, same stats, same provider routing as
+        :meth:`generate_embedding` — this is that method's batch twin, not a
+        second embedding path. Returns one response per input, in input order.
+
+        Only the OpenRouter embedder has a real batch endpoint wired up (it is
+        the project's provider). Every other route falls back to a serial loop,
+        which is exactly the old behaviour — correct, just not fast.
+
+        Args:
+            texts: Texts to embed. Must not contain empty strings; an empty text
+                has no embedding, and callers that may produce one must filter it
+                out and re-align (``features.embeddings.embed_texts`` does this).
+            model: Embedding model to use.
+            dimensions: Optional output dimension.
+
+        Raises:
+            RuntimeError: If embedding generation fails.
+            ValueError: If any text is empty.
+        """
+        if not texts:
+            return []
+        if any(not t for t in texts):
+            raise ValueError(
+                "generate_embeddings does not accept empty strings — an empty "
+                "text has no embedding. Filter and re-align before calling."
+            )
+
+        cache_model = model if dimensions is None else f"{model}@{dimensions}"
+
+        # Resolve from cache first. Only what is left over costs a round-trip —
+        # this is what makes a re-run of a backfill nearly free.
+        resolved: list[EmbeddingResponse | None] = []
+        missing_indices: list[int] = []
+        for index, text in enumerate(texts):
+            cached = self.cache_manager.get_cached_embedding(text, cache_model)
+            if cached:
+                self.stats_manager.record_cache_hit()
+                resolved.append(cached)
+            else:
+                self.stats_manager.record_cache_miss()
+                resolved.append(None)
+                missing_indices.append(index)
+
+        if not missing_indices:
+            return [item for item in resolved if item is not None]
+
+        missing_texts = [texts[i] for i in missing_indices]
+        self.stats_manager.record_request()
+        provider = self.provider_selector.get_provider_for_task("embedding")
+
+        try:
+            client = self.provider_manager.get_client(provider)
+
+            if provider == "openrouter" and self.openrouter_embedder is not None:
+                logger.debug(
+                    "Batch-embedding %d texts via OpenRouter (model=%s)",
+                    len(missing_texts), model,
+                )
+                fresh = self.openrouter_embedder.generate_batch(
+                    client, missing_texts, model, dimensions=dimensions,
+                )
+            elif provider == "openai" and client is not None:
+                # The OpenAI embedder has no batch method (and no `dimensions`
+                # parameter). Serial, as before — no provider is worse off than
+                # it was, and the one we actually use is faster.
+                fresh = [
+                    self.openai_embedder.generate(client, text, model)
+                    for text in missing_texts
+                ]
+            else:
+                logger.warning(
+                    "No real embedding provider for %r — falling back to mock",
+                    provider,
+                )
+                fresh = [
+                    self.mock_embedder.generate(text, model) for text in missing_texts
+                ]
+
+            for index, text, result in zip(missing_indices, missing_texts, fresh):
+                # Same rule as the scalar path: a mock never enters the cache.
+                if not is_mock_embedding(result):
+                    self.cache_manager.cache_embedding_response(result, text, cache_model)
+                resolved[index] = result
+
+            self.stats_manager.record_success(
+                tokens=sum(item.tokens for item in fresh),
+                cost=sum(item.cost for item in fresh),
+                model=model,
+                provider=provider,
+            )
+
+            return [item for item in resolved if item is not None]
+
+        except Exception as e:
+            self.stats_manager.record_failure()
+            error_msg = f"Batch embedding generation failed: {e}"
             logger.error(error_msg)
             raise RuntimeError(error_msg) from e

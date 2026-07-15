@@ -20,11 +20,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class VisionModelPricing:
-    """Pricing information for a vision model."""
+    """Pricing for a vision model — a vision-shaped view over the canonical
+    :class:`registry.ModelPricing`.
 
-    prompt: float  # Price per token (input)
-    completion: float  # Price per token (output)
-    image: float = 0.0  # Price per image
+    UNITS (pinned): ``prompt`` and ``completion`` are USD per **1M tokens**
+    (copied verbatim from ``ModelPricing.prompt_price`` /
+    ``completion_price`` in :meth:`VisionModel.from_catalogue`). ``image``
+    is USD per 1M image-input tokens. Cost math lives in :meth:`cost`.
+    """
+
+    prompt: float  # USD per 1M input tokens
+    completion: float  # USD per 1M output tokens
+    image: float = 0.0  # USD per 1M image-input tokens
     currency: str = "USD"
 
     @property
@@ -34,13 +41,24 @@ class VisionModelPricing:
 
     @property
     def cost_per_1m_input(self) -> float:
-        """Cost per 1M input tokens."""
-        return self.prompt * 1_000_000
+        """Cost per 1M input tokens (``prompt`` is already per-1M)."""
+        return self.prompt
 
     @property
     def cost_per_1m_output(self) -> float:
-        """Cost per 1M output tokens."""
-        return self.completion * 1_000_000
+        """Cost per 1M output tokens (``completion`` is already per-1M)."""
+        return self.completion
+
+    def cost(self, tokens_input: int, tokens_output: int) -> float:
+        """USD cost for the given token counts (per-1M pricing → USD).
+
+        Mirrors :meth:`registry.ModelPricing.cost` so the vision path and
+        the registry share one unit convention.
+        """
+        return (
+            (tokens_input / 1_000_000) * self.prompt
+            + (tokens_output / 1_000_000) * self.completion
+        )
 
 
 @dataclass

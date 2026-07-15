@@ -10,6 +10,7 @@ from typing import Optional
 from openai import OpenAI, AsyncOpenAI
 
 from ..._integration import BaseCfgModule, get_api_keys
+from ...providers import PROVIDER_BASE_URLS
 from typing import Literal
 
 from .models import (
@@ -34,7 +35,7 @@ class ImageGenClient(BaseCfgModule):
     Client for image generation using AI models.
 
     Uses OpenRouter API for access to multiple image generation models.
-    Auto-detects API key from django-cfg config if not provided.
+    Auto-detects API key via cmdop_utils._compat config if not provided.
     """
 
     def __init__(
@@ -69,11 +70,11 @@ class ImageGenClient(BaseCfgModule):
     def _init_client(self):
         """Initialize OpenAI clients for OpenRouter."""
         self._client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
+            base_url=PROVIDER_BASE_URLS["openrouter"],
             api_key=self.api_key,
         )
         self._async_client = AsyncOpenAI(
-            base_url="https://openrouter.ai/api/v1",
+            base_url=PROVIDER_BASE_URLS["openrouter"],
             api_key=self.api_key,
         )
         logger.info("ImageGenClient initialized with OpenRouter")

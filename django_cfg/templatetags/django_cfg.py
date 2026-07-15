@@ -222,18 +222,28 @@ def can_view_admin_dashboard(context):
 
 @register.simple_tag(takes_context=True)
 def get_dashboard_config(context):
+    """Every dashboard tab, from every source. See django_dashboard/resolver.py.
+
+    This used to read `config.dashboard` DIRECTLY, which returned only the tabs
+    the consumer project declared in its Pydantic config — silently omitting
+    tabs contributed by extensions and by built-in django-cfg apps. Those tabs
+    existed, resolved, and rendered when visited by URL; they just never appeared
+    in the tab bar, so nobody could reach them.
+
+    `admin/index.html` loads {% load django_cfg %}, so THIS is the tag that
+    actually renders the admin tab bar — not the identically-named one in
+    django_cfg_dashboard.py. Both now delegate to the one resolver.
+    """
     try:
-        from django_cfg.core.config import get_current_config
-        config = get_current_config()
-        if not config:
-            return None
-        dashboard = getattr(config, 'dashboard', None)
-        if not dashboard or not dashboard.tabs:
-            return None
         request = context.get('request')
         if not request or not getattr(request.user, 'is_staff', False):
             return None
-        return dashboard
+
+        from django_cfg.modules.django_dashboard.resolver import (
+            get_dashboard_config as _resolve,
+        )
+
+        return _resolve()
     except Exception:
         return None
 

@@ -10,6 +10,23 @@ from typing import Any, Dict, Optional
 logger = logging.getLogger(__name__)
 
 
+PROVIDER_BASE_URLS: Dict[str, str] = {
+    "openrouter": "https://openrouter.ai/api/v1",
+    "openai": "https://api.openai.com/v1",
+    "gonkagate": "https://api.gonkagate.com/v1",
+}
+"""Provider -> OpenAI-compatible base URL. The single source of truth.
+
+``ProviderManager`` builds its clients from this, ``get_provider_config`` returns
+it, and callers outside this module (the CRM chat agent needs a base URL to hand
+pydantic-ai) read it rather than hardcoding a URL of their own. The string was
+previously repeated in both places here plus every consumer.
+
+A provider absent from this map has no OpenAI-compatible endpoint and cannot be
+served by ``OpenAI(base_url=...)``.
+"""
+
+
 class ConfigBuilder:
     """Builds configuration for LLM providers."""
 
@@ -58,14 +75,15 @@ class ConfigBuilder:
             ValueError: If provider is not supported
         """
         base_configs = {
-            "openrouter": {
-                "base_url": "https://openrouter.ai/api/v1",
-                "headers": ConfigBuilder.get_openrouter_headers(django_config)
-            },
-            "openai": {
-                "base_url": "https://api.openai.com/v1",
-                "headers": {}
+            name: {
+                "base_url": url,
+                "headers": (
+                    ConfigBuilder.get_openrouter_headers(django_config)
+                    if name == "openrouter"
+                    else {}
+                ),
             }
+            for name, url in PROVIDER_BASE_URLS.items()
         }
 
         if provider not in base_configs:
@@ -98,6 +116,7 @@ class ConfigBuilder:
         """
         default_models = {
             "openrouter": "openai/gpt-4o-mini",
-            "openai": "gpt-4o-mini"
+            "openai": "gpt-4o-mini",
+            "gonkagate": "moonshotai/kimi-k2.6"
         }
         return default_models.get(provider, "gpt-4o-mini")

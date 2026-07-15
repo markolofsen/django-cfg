@@ -1,0 +1,122 @@
+---
+title: Frontend
+description: "@djangocfg/analytics — one route listener, N transports. Next.js App Router and React, with GA4 as an optional destination."
+---
+
+# Frontend
+
+`@djangocfg/analytics` sends pageviews and events to your django-cfg backend.
+
+**One route listener, N transports.** The package owns route detection once and fans out to every destination — the first-party backend, GA4, or anything you add. Two listeners would double-fire with drifting event names.
+
+## With `@djangocfg/layouts`
+
+If you use `BaseApp`, it is already wired. Pageviews, sessions, and user attribution work with no code.
+
+```tsx
+<BaseApp analytics={{ googleTrackingId: 'G-XXXXXXXXXX' }}>
+  {children}
+</BaseApp>
+```
+
+The GA4 id is **optional** — omit it to run first-party only. `react-ga4` is a lazy, optional dependency, so a project without a tracking id never loads the library at all.
+
+## Standalone
+
+```tsx
+import {
+  AnalyticsProvider,
+  PageviewTracker,
+  djangocfg,
+  ga4,
+} from '@djangocfg/analytics'
+
+export function Providers({ children, user, locale }) {
+  return (
+    <AnalyticsProvider
+      transports={[djangocfg(), ga4({ trackingId: 'G-XXXXXXXXXX' })]}
+      userId={user?.id ? String(user.id) : null}
+    >
+      <PageviewTracker route="/[locale]/blog/[slug]" locale={locale} />
+      {children}
+    </AnalyticsProvider>
+  )
+}
+```
+
+## Custom events
+
+```tsx
+import { useAnalytics } from '@djangocfg/analytics'
+
+function CheckoutButton() {
+  const { event } = useAnalytics()
+
+  return (
+    <button onClick={() => event('checkout_started', { plan: 'pro' })}>
+      Upgrade
+    </button>
+  )
+}
+```
+
+Custom properties land in the `props` JSONB column and are queryable.
+
+## The `route` prop
+
+Next.js does not expose the templated route to client components, so pass it:
+
+```tsx
+<PageviewTracker route="/[locale]/blog/[slug]" locale={locale} />
+```
+
+Without it, `/en/pricing` and `/ru/pricing` are counted as **two different pages**, and the top-pages report is meaningless on a locale-prefixed site.
+
+If you use `@djangocfg/layouts`, the locale is read automatically and the locale prefix is stripped — so the worst case is already handled without any work.
+
+## `userId`
+
+```tsx
+<AnalyticsProvider userId={user?.id ? String(user.id) : null} ...>
+```
+
+Two rules, both load-bearing:
+
+- Send an **opaque id, never an email**.
+- Send `null` on logout. A stale `user_id` attached to the next anonymous session is a real privacy leak, not a cosmetic bug.
+
+## Delivery
+
+Events are batched and flushed on `visibilitychange → hidden` and `pagehide`.
+
+Deliberately **not** `unload` (it disqualifies the page from the bfcache) and **not** `beforeunload` (also bfcache-hostile, and iOS Safari may never fire it — so a `beforeunload`-only flush loses every mobile Safari session).
+
+<Callout type="warning">
+**The `sendBeacon` trap.** The obvious unload flush is `navigator.sendBeacon(url, new Blob([json], {type: 'application/json'}))`. It **silently loses data**: `application/json` is not a CORS-safelisted content type, so the request triggers an OPTIONS preflight that usually cannot complete during unload — the POST is never sent, while `sendBeacon` still returns `true`.
+
+The package sends a raw string (`text/plain`, which **is** safelisted) and the backend accepts it with a parser scoped to that one view. You do not have to think about this — but do not "fix" it back.
+</Callout>
+
+## Adding a transport
+
+```ts
+import type { AnalyticsTransport } from '@djangocfg/analytics'
+
+export function myTransport(): AnalyticsTransport {
+  return {
+    name: 'mine',
+    pageview: (e) => console.log('pageview', e.pathname),
+    event: (e) => console.log('event', e.event_name),
+    identify: (userId) => console.log('user', userId),
+    flush: (final) => {},
+  }
+}
+```
+
+Pass it alongside the others. The route listener is shared.
+
+## Development
+
+The package tracks in **development too**, by default.
+
+The old GA4 layer was `isProd`-gated, so it was silent in dev and you could not tell whether tracking worked until you shipped. Self-hosting removes the reason for that gate — your dev traffic goes to your own database, which is arguably the entire point.

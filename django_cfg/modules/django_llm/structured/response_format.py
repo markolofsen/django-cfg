@@ -25,18 +25,53 @@ ResponseFormat = Union[str, dict, type[BaseModel]]
 
 _JSON_ALIASES = frozenset({"json", "json_object"})
 
+# JSON Schema validation keywords for bounds — validated by Pydantic on the
+# Python side after parsing, not needed in the wire schema.
+_VALIDATION_BOUNDS = frozenset({
+    "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum",
+    "minLength", "maxLength", "minItems", "maxItems", "multipleOf",
+})
+
 
 def to_strict_json_schema(model: type[BaseModel]) -> dict:
-    """Convert a Pydantic model to an OpenAI/OpenRouter strict JSON Schema.
+    """Convert a Pydantic model to a provider-compatible strict JSON Schema.
 
-    Strict structured outputs require every object to be closed
-    (``additionalProperties: false``) with every property listed in
-    ``required``. Pydantic's own schema satisfies neither, so the schema
-    is walked and rewritten in place.
+    Three transforms applied in order:
+    1. Inline $ref/$defs — not all providers support reference resolution.
+    2. Strictify — close every object (additionalProperties: false, all
+       properties required), remove default values and validation bounds.
+    3. anyOf simplification — drop regex-pattern branches (Decimal, date,
+       etc.) that exist only for Pydantic coercion; unwrap single survivors.
     """
     schema = model.model_json_schema()
+    schema = _inline_refs(schema)
     _strictify(schema)
     return schema
+
+
+def _inline_refs(schema: dict) -> dict:
+    """Replace every $ref with its inlined definition and drop $defs."""
+    defs = schema.get("$defs", {})
+    result = _resolve(schema, defs)
+    if isinstance(result, dict):
+        result.pop("$defs", None)
+        result.pop("definitions", None)
+    return result
+
+
+def _resolve(node: object, defs: dict) -> object:
+    if isinstance(node, list):
+        return [_resolve(item, defs) for item in node]
+    if not isinstance(node, dict):
+        return node
+    if "$ref" in node:
+        ref = node["$ref"]
+        if ref.startswith("#/$defs/"):
+            name = ref[len("#/$defs/"):]
+            if name in defs:
+                return _resolve(dict(defs[name]), defs)
+        return node
+    return {k: _resolve(v, defs) for k, v in node.items() if k not in ("$defs", "definitions")}
 
 
 def _strictify(node: object) -> None:
@@ -44,9 +79,25 @@ def _strictify(node: object) -> None:
     if not isinstance(node, dict):
         return
 
-    # `default` is emitted by Pydantic for every optional field and is
-    # rejected by strict structured-output validators.
-    node.pop("default", None)
+    for key in ("default", "title", "description", "examples", "deprecated"):
+        node.pop(key, None)
+    for key in _VALIDATION_BOUNDS:
+        node.pop(key, None)
+
+    # Drop regex-only branches from anyOf (Pydantic emits these for Decimal /
+    # date / constrained strings). If a single clean branch remains, unwrap it.
+    if "anyOf" in node:
+        branches = node["anyOf"]
+        if isinstance(branches, list):
+            clean = [b for b in branches if not (isinstance(b, dict) and "pattern" in b)]
+            if not clean:
+                clean = branches
+            if len(clean) == 1:
+                branch = {k: v for k, v in clean[0].items() if k not in _VALIDATION_BOUNDS}
+                del node["anyOf"]
+                node.update(branch)
+            elif len(clean) < len(branches):
+                node["anyOf"] = clean
 
     if node.get("type") == "object" and isinstance(node.get("properties"), dict):
         node["additionalProperties"] = False
@@ -54,16 +105,9 @@ def _strictify(node: object) -> None:
         for child in node["properties"].values():
             _strictify(child)
 
-    for container in ("$defs", "definitions"):
-        defs = node.get(container)
-        if isinstance(defs, dict):
-            for child in defs.values():
-                _strictify(child)
-
     for key in ("items", "not", "if", "then", "else"):
         _strictify(node.get(key))
 
-    # A typed `additionalProperties` sub-schema (dict[str, X] fields).
     if isinstance(node.get("additionalProperties"), dict):
         _strictify(node["additionalProperties"])
 

@@ -1,0 +1,125 @@
+---
+title: Privacy
+description: What analytics collects, what it never stores, and what you still have to decide for GDPR.
+---
+
+# Privacy
+
+Analytics is **on by default**. This page tells you exactly what that means, so you can decide whether it is right for your project.
+
+## What is never stored
+
+**The IP address and the User-Agent string never reach the database.**
+
+They are inputs to a one-way hash and are then discarded. There is no column holding them, and no way to recover them from what is stored.
+
+```python
+visitor_id = uuid5(sha256(f"{site_id}|{ip}|{user_agent}|{salt}"))
+```
+
+The `salt` is derived from `SECRET_KEY` and **rotates daily**. After rotation, the same person is a new visitor — which bounds how long any pseudonym can be correlated.
+
+This is a deliberately stronger posture than the common implementations:
+
+| Project | Salt | Consequence |
+|---|---|---|
+| **django-cfg** | `SECRET_KEY`-derived, rotates **daily** | Not recomputable by an outsider |
+| Umami | `sha256(date)` — a nonce, rotates monthly | Recomputable ⇒ effectively unsalted |
+| Shynet | `AGGRESSIVE_HASH_SALTING = False` by default | **No secret salt at all** |
+
+<Callout type="info">
+The raw User-Agent is also never stored — it is reduced to `(browser, os, device)` at ingest and discarded. Unique-UA cardinality is what blew up GoatCounter's database; keeping the string would hand us the same problem.
+</Callout>
+
+## What is stored
+
+| Data | Example | Why |
+|---|---|---|
+| Path | `/en/pricing` | The page that was viewed |
+| Templated route | `/[locale]/pricing` | So locales do not fragment the report |
+| Referrer **domain** | `google.com` | Where the visit came from |
+| Channel | `organic_search` | Resolved at write time |
+| UTM parameters | `utm_source=newsletter` | Campaign attribution |
+| Browser / OS / device | `Chrome`, `macOS`, `desktop` | Parsed from the UA, which is then dropped |
+| Country | `DE` | Optional; requires a GeoIP database |
+| **Visitor id** | a UUID | A daily-rotating pseudonym |
+| **User id** | FK to your user table | **Only when the visitor is signed in** |
+
+## Cookies
+
+**None.** The visitor id is derived, not stored on the device. Analytics sets no cookies and reads none.
+
+This matters for the ePrivacy Directive (the "cookie law"), which is about *storage on the device* — not about processing. No cookie banner is required **for the mechanism**.
+
+It does not, by itself, settle GDPR.
+
+## GDPR — what you still have to decide
+
+<Callout type="warning">
+**django-cfg cannot make this decision for you, and this page is not legal advice.**
+</Callout>
+
+Two things are true at once:
+
+**1. The anonymous case is strong.** No cookies, no IP stored, no UA stored, a daily-rotating pseudonym, no data leaving your infrastructure, no third party. Regulators have accepted cookieless, IP-less analytics as legitimate interest in several jurisdictions. This is roughly the posture Plausible and GoatCounter argue from.
+
+**2. `store_user_id` changes the picture.** The moment an event carries a foreign key to your user table, it is **personal data by definition** — it is directly linked to an identified person. That is not a grey area.
+
+This is also the entire point of the feature. It is what hosted analytics cannot do, and it is why `Signed in` appears on your dashboard.
+
+### So what do you do
+
+If you already process user data lawfully (you have an account system, a privacy policy, and a legal basis), then **attributing that user's pageviews to them is usually within the same basis** — it is first-party, self-hosted, and never leaves your infrastructure. Say so in your privacy policy.
+
+If you cannot make that argument for your jurisdiction or your users:
+
+```python
+class MyConfig(DjangoConfig):
+    analytics = AnalyticsConfig(store_user_id=False)
+```
+
+Everything else keeps working. You get pageviews, sessions, referrers, and breakdowns — you just do not get the one column that ties them to a person.
+
+And if you want none of it:
+
+```python
+class MyConfig(DjangoConfig):
+    analytics = AnalyticsConfig(enabled=False)
+```
+
+## Do Not Track
+
+```python
+AnalyticsConfig(respect_dnt=True)
+```
+
+Off by default, because DNT is deprecated and unreliable — Safari removed it entirely, and the signal was never widely honoured. Turn it on if you want to honour it anyway.
+
+## Data you still leak elsewhere
+
+Analytics does not store IPs. **Your other infrastructure probably does.**
+
+- nginx / Cloudflare access logs
+- Sentry and error trackers
+- `django_monitor` (it captures the request IP with the error)
+
+Audit the whole path, not just this app. A privacy posture is only as strong as its weakest log file.
+
+## Retention
+
+There is no automatic deletion. Events accumulate.
+
+To purge:
+
+```python
+from datetime import timedelta
+from django.utils import timezone
+from django_cfg.apps.tools.analytics.models import AnalyticsEvent
+
+cutoff = timezone.now() - timedelta(days=90)
+AnalyticsEvent.objects.filter(ts__lt=cutoff).delete()
+```
+
+<Callout type="warning">
+A `DELETE` of tens of millions of rows leaves that many dead tuples for autovacuum and **does not return the space to the OS**. At large volume, monthly table partitioning turns retention into a `DROP TABLE` — milliseconds, and the space comes back immediately. The event table's primary key is `(id, ts)` precisely so that partitioning stays a cheap change later.
+</Callout>

@@ -259,6 +259,17 @@ class DjangoConfig(BaseModel):
     )
 
     # ══════════════════════════════════════════════════════════════
+    #                          ANALYTICS
+    # ══════════════════════════════════════════════════════════════
+
+    # NOTE: not Optional. Analytics defaults to an INSTANCE, so it is on in every
+    # project without being configured. Opt out with AnalyticsConfig(enabled=False).
+    analytics: AnalyticsConfig = Field(
+        default_factory=AnalyticsConfig,
+        description="First-party analytics: pageviews, sessions, user attribution",
+    )
+
+    # ══════════════════════════════════════════════════════════════
     #                            API
     # ══════════════════════════════════════════════════════════════
 

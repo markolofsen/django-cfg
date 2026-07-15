@@ -19,20 +19,24 @@ care about the terminal taxonomy, which IS standardised here:
 
 from __future__ import annotations
 
-from django.db import models
+from enum import StrEnum
+
+# Ported from Django's TextChoices → stdlib StrEnum (plan50 §12). The human
+# labels TextChoices carried were only for Django admin; dropped here. `.value`
+# and string-equality behave the same.
 
 
-class LLMJobStatus(models.TextChoices):
+class LLMJobStatus(StrEnum):
     """Lifecycle states for any LLM-driven job."""
 
-    PENDING = "pending", "Pending"
-    PROCESSING = "processing", "Processing"
+    PENDING = "pending"
+    PROCESSING = "processing"
 
     # ── terminal ──
-    COMPLETED = "completed", "Completed"
-    SKIPPED = "skipped", "Skipped"
-    REFUSED = "refused", "Refused"
-    FAILED = "failed", "Failed"
+    COMPLETED = "completed"
+    SKIPPED = "skipped"
+    REFUSED = "refused"
+    FAILED = "failed"
 
     @classmethod
     def terminal_values(cls) -> frozenset[str]:

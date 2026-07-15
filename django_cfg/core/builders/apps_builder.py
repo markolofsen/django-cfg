@@ -136,6 +136,10 @@ class InstalledAppsBuilder:
         if self.config.geo and self.config.geo.enabled:
             apps.append("django_cfg.apps.tools.geo")
 
+        # Analytics app (pageviews, sessions, user attribution)
+        if self.config.analytics and self.config.analytics.enabled:
+            apps.append("django_cfg.apps.tools.analytics")
+
         # Payments engine (checkout, webhooks, refunds — Stripe-first)
         if self.config.payments and self.config.payments.enabled:
             apps.append("django_cfg.apps.payments")
@@ -145,7 +149,7 @@ class InstalledAppsBuilder:
             apps.append("simple_history")
 
         # Monitor module — always included (ingest URL needed for OpenAPI + JS SDK).
-        # Capture/storage are no-ops when MonitorConfig(enabled=False).
+        # Capture hooks self-disable under test runners; see capture/__init__.py.
         apps.append("django_cfg.modules.django_monitor")
 
         # MCP module (AI agent integration)

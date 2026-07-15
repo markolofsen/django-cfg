@@ -34,7 +34,7 @@ def connect_rq_exception_handler() -> None:
 
 
 def rq_exception_handler(job, exc_type, exc_value, traceback) -> bool:
-    """RQ exception handler — captures failed job to D1. Returns True to allow fallthrough."""
+    """RQ exception handler — captures the failed job. Returns True to allow fallthrough."""
     try:
         _push_rq_failure(job, exc_type, exc_value, traceback)
     except Exception as e:

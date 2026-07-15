@@ -39,7 +39,7 @@ class OpenAIProvider(BaseLLMProvider):
 
     def _get_api_key(self) -> str:
         """
-        Get API key from Django config.
+        Get API key from the host config (cmdop_utils._compat).
 
         Returns:
             API key string

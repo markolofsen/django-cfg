@@ -1,5 +1,5 @@
 """
-LLM Client for django_llm.
+LLM Client for cmdop_utils.llm.
 
 Universal LLM client supporting multiple providers with caching and token optimization.
 """
@@ -38,6 +38,7 @@ class LLMClient(BaseCfgModule):
         self,
         apikey_openrouter: Optional[str] = None,
         apikey_openai: Optional[str] = None,
+        apikey_gonka: Optional[str] = None,
         cache_dir: Optional[Path] = None,
         cache_ttl: int = 3600,
         max_cache_size: int = 1000,
@@ -51,11 +52,12 @@ class LLMClient(BaseCfgModule):
         Args:
             apikey_openrouter: API key for OpenRouter (auto-detected if not provided)
             apikey_openai: API key for OpenAI (auto-detected if not provided)
+            apikey_gonka: API key for gonka/gonkagate (auto-detected if not provided)
             cache_dir: Cache directory path
             cache_ttl: Cache TTL in seconds
             max_cache_size: Maximum cache size
             models_cache_ttl: Models cache TTL in seconds (default: 24 hours)
-            config: DjangoConfig instance for getting headers and settings
+            config: optional host config object for headers and settings (see cmdop_utils._compat)
             preferred_provider: Preferred provider (LLMProvider.OPENAI or LLMProvider.OPENROUTER).
                                Also accepts strings "openai" or "openrouter".
                                If None, auto-detects based on available API keys.
@@ -64,17 +66,22 @@ class LLMClient(BaseCfgModule):
 
         # API keys come from the one integration seam — never read host
         # config here directly (see _integration.get_api_keys).
-        if apikey_openrouter is None or apikey_openai is None:
+        if apikey_openrouter is None or apikey_openai is None or apikey_gonka is None:
             _keys = get_api_keys()
             if apikey_openrouter is None:
                 apikey_openrouter = _keys["openrouter"]
             if apikey_openai is None:
                 apikey_openai = _keys["openai"]
+            if apikey_gonka is None:
+                # Prefer the key POOL (round-robined across race legs); fall back
+                # to the single key.
+                apikey_gonka = _keys.get("gonkagate_pool") or _keys.get("gonkagate")
 
         # Initialize provider management
         self.provider_manager = ProviderManager(
             apikey_openrouter=apikey_openrouter,
             apikey_openai=apikey_openai,
+            apikey_gonka=apikey_gonka,
             preferred_provider=preferred_provider,
             django_config=config
         )
@@ -185,6 +192,7 @@ class LLMClient(BaseCfgModule):
         max_tokens: Optional[int] = None,
         temperature: Optional[float] = None,
         response_format: Optional[ResponseFormat] = None,
+        provider: Optional[str] = None,
         **kwargs
     ) -> ChatCompletionResponse:
         """
@@ -201,6 +209,11 @@ class LLMClient(BaseCfgModule):
                 - a Pydantic ``BaseModel`` subclass — strict
                   provider-enforced structured output (the model cannot
                   emit an invalid enum value or omit a required field)
+            provider: Serve this ONE call from this provider instead of the
+                client's primary. Stateless and per-call (unlike
+                ``activate_provider``, which mutates the client), so two threads
+                may target different providers on the same client concurrently.
+                Falls back to the primary if the provider has no key.
             **kwargs: Additional parameters
 
         Returns:
@@ -212,6 +225,7 @@ class LLMClient(BaseCfgModule):
             max_tokens=max_tokens,
             temperature=temperature,
             response_format=response_format,
+            provider=provider,
             **kwargs
         )
 
@@ -237,6 +251,33 @@ class LLMClient(BaseCfgModule):
         """
         return self.embedding_handler.generate_embedding(
             text=text, model=model, dimensions=dimensions,
+        )
+
+    def generate_embeddings(
+        self,
+        texts: list[str],
+        model: str = "text-embedding-ada-002",
+        *,
+        dimensions: int | None = None,
+    ) -> list[EmbeddingResponse]:
+        """
+        Generate embeddings for MANY texts — one request, cache misses only.
+
+        The batch twin of :meth:`generate_embedding`: same cache, same stats,
+        same provider routing. Returns one response per input, in input order.
+
+        Args:
+            texts: Texts to embed. No empty strings — an empty text has no
+                embedding (see ``features.embeddings.embed_texts``, which
+                filters and re-aligns for callers).
+            model: Embedding model to use
+            dimensions: Optional output dimension
+
+        Returns:
+            One EmbeddingResponse per input text, in input order.
+        """
+        return self.embedding_handler.generate_embeddings(
+            texts=texts, model=model, dimensions=dimensions,
         )
 
     # Cost estimation
