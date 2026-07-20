@@ -11,7 +11,7 @@ class CacheDirectoryBuilder:
     """Builder for cache directories with smart defaults."""
 
     DEFAULT_CACHE_ROOT = ".cache"
-    DEFAULT_DJANGO_LLM_DIR = "django_llm"
+    DEFAULT_DJANGO_LLM_DIR = "django_cfg.modules.django_llm"
 
     def __init__(self):
         self._cache_root: Optional[Path] = None
@@ -66,7 +66,7 @@ def get_default_llm_cache_dir(cache_dir: Optional[Path] = None) -> Path:
     Priority:
     1. Provided cache_dir
     2. Optional host-supplied base path (`with_base_path`)
-    3. .cache/django_llm in current directory
+    3. .cache/django_cfg.modules.django_llm in current directory
 
     Args:
         cache_dir: Optional cache directory override
@@ -85,7 +85,7 @@ def get_default_llm_cache_dir(cache_dir: Optional[Path] = None) -> Path:
         CacheDirectoryBuilder()
         .from_django_settings()
         .with_cache_root(".cache")
-        .with_subdir("django_llm")
+        .with_subdir("django_cfg.modules.django_llm")
         .build()
     )
 

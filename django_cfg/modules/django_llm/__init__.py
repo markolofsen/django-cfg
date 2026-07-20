@@ -1,4 +1,4 @@
-"""cmdop_utils.llm — single LLM transport surface (framework-neutral).
+"""django_cfg.modules.django_llm — single LLM transport surface (framework-neutral).
 
 Every model call funnels through this package: chat, structured
 extraction, vision, image generation, image edit, embeddings,
@@ -7,18 +7,17 @@ translation. Callers stay thin — they import an ``LLMClient`` /
 cost, retry, structured-output repair, provider-policy adaptation, and
 registry math.
 
-    from cmdop_utils.llm import LLMClient, LLMRouter, ...
+    from django_cfg.modules.django_llm import LLMClient, LLMRouter, ...
 
-Ported from ``django_cfg/modules/django_llm`` into the ``cmdop-server``
-umbrella package (plan50 §12); the single host-config seam is
-``cmdop_utils._compat`` (env-driven keys, no Django).
+Extracted as a standalone package with a single configuration seam:
+``django_cfg.modules.django_llm.config`` (explicit arguments, environment fallback, no Django).
 
 # Adding a new public symbol
 
 1. Implement it in the right submodule (``features/``, ``core/``, …).
 2. Add it to the appropriate ``from .X import Y`` block below.
 3. Add the name to ``__all__``.
-4. Done — ``from cmdop_utils.llm import YourThing`` works.
+4. Done — ``from django_cfg.modules.django_llm import YourThing`` works.
 
 See ``CLAUDE.md`` next to this file for the full contract.
 """
@@ -29,6 +28,7 @@ from typing import TYPE_CHECKING
 # config object. Exposed so callers that want to bypass the clients
 # (rare) can still read API keys from the same place clients do.
 from ._integration import BaseCfgModule, get_api_keys
+from .config import LLMConfig, reset_config, set_config, set_notification_handler
 
 # Core primitives — used directly by apps that prepare bytes / track
 # lifecycles without going through a client.
@@ -91,7 +91,21 @@ from .features.image_edit import (
     resolve_model,
     sanitize_edit_prompt,
 )
-from .features.image_gen import ImageGenClient
+from .features.image_gen import (
+    GeneratedImage,
+    ImageGenerationError,
+    ImageGenClient,
+    ImageGenRequest,
+    ImageGenResponse,
+    NoImageGeneratedError,
+)
+from .features.image_input import (
+    ALLOWED_IMAGE_MIMES,
+    ImageInputError,
+    ImageInputSource,
+    NormalizedImageInput,
+    normalize_image_input,
+)
 from .features.translator import DjangoTranslator, TranslationError
 from .features.vision import VisionClient
 
@@ -116,6 +130,24 @@ from .embeddings import MOCK_WARNING, OpenRouterEmbedder, is_mock_embedding
 # ``chat_completion`` loop and want the same parse→repair→re-validate
 # ladder ``LLMRouter.parse`` uses internally.
 from .structured.repair import parse_into_schema
+from .media.publication import (
+    PublishedMedia,
+    SdkRouterPublisher,
+    TemporaryMediaPublisher,
+    TemporaryPublicationError,
+)
+from .media.transport import (
+    MediaLease,
+    MediaPolicyError,
+    MediaSource,
+    MediaSourceError,
+    MediaTarget,
+    MediaTransportError,
+    MediaTransportKind,
+    MediaTransportPolicy,
+    MediaTransportRouter,
+    PreparedMedia,
+)
 
 if TYPE_CHECKING:
     from .core.types import ChatCompletionResponse
@@ -184,7 +216,11 @@ def get_available_models() -> list:
 __all__ = [
     # Host integration seam
     "BaseCfgModule",
+    "LLMConfig",
     "get_api_keys",
+    "reset_config",
+    "set_config",
+    "set_notification_handler",
     # Core
     "EDIT_MAX_SIDE",
     "EDIT_MAX_SIDE_BY_QUALITY",
@@ -239,7 +275,33 @@ __all__ = [
     "resolve_model",
     "sanitize_edit_prompt",
     # Image-gen feature
+    "GeneratedImage",
+    "ImageGenerationError",
     "ImageGenClient",
+    "ImageGenRequest",
+    "ImageGenResponse",
+    "NoImageGeneratedError",
+    # Shared image-input normalization
+    "ALLOWED_IMAGE_MIMES",
+    "ImageInputError",
+    "ImageInputSource",
+    "NormalizedImageInput",
+    "normalize_image_input",
+    # Temporary provider-media publication
+    "PublishedMedia",
+    "SdkRouterPublisher",
+    "TemporaryMediaPublisher",
+    "TemporaryPublicationError",
+    "MediaLease",
+    "MediaPolicyError",
+    "MediaSource",
+    "MediaSourceError",
+    "MediaTarget",
+    "MediaTransportError",
+    "MediaTransportKind",
+    "MediaTransportPolicy",
+    "MediaTransportRouter",
+    "PreparedMedia",
     # Vision feature
     "VisionClient",
     # Translator feature

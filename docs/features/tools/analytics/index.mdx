@@ -7,7 +7,7 @@ description: First-party, self-hosted analytics for django-cfg. Pageviews, cooki
 
 Django-CFG ships **first-party analytics**: pageviews, cookieless sessions, and — the thing hosted analytics structurally cannot give you — **attribution to your signed-in users**.
 
-It is **on by default** and needs **no configuration**. A site registers itself on the first event, the admin tab appears once data arrives, and nothing else runs.
+It is **on by default** and needs **no configuration**. The admin tab appears as soon as migrations are applied and renders zero-filled metrics until the first event registers a site. Nothing else runs.
 
 ## Why it exists
 
@@ -38,7 +38,7 @@ class MyConfig(DjangoConfig):
     security_domains = ["example.com"]   # this is all analytics needs
 ```
 
-Run migrations, and the first pageview from `example.com` registers the site and starts collecting.
+Run migrations to make the Analytics tab available. The first pageview from `example.com` then registers the site and starts collecting.
 
 To send events from a Next.js or React frontend, see [Frontend](/features/tools/analytics/frontend).
 

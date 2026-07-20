@@ -7,11 +7,11 @@ are low based on configurable thresholds.
 
 import logging
 from typing import Dict, Optional
-from django.core.cache import cache
+from ..config import cache
 
 from .schemas import BalanceResponse
 
-logger = logging.getLogger("cmdop_utils.llm.monitoring")
+logger = logging.getLogger("django_cfg.modules.django_llm.monitoring")
 
 
 class LLMBalanceNotifier:

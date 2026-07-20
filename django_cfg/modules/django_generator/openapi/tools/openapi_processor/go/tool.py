@@ -220,7 +220,11 @@ type apiKeyTransport struct {{
 func (t *apiKeyTransport) RoundTrip(req *http.Request) (*http.Response, error) {{
 \tr := req.Clone(req.Context())
 \tr.Header.Set("X-Api-Key", t.key)
-\treturn t.wrap.RoundTrip(r)
+\twrap := t.wrap
+\tif wrap == nil {{
+\t\twrap = http.DefaultTransport
+\t}}
+\treturn wrap.RoundTrip(r)
 }}
 
 // ── DjangoClient ─────────────────────────────────────────────────────────────

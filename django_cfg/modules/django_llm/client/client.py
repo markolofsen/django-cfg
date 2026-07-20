@@ -1,5 +1,5 @@
 """
-LLM Client for cmdop_utils.llm.
+LLM Client for django_cfg.modules.django_llm.
 
 Universal LLM client supporting multiple providers with caching and token optimization.
 """
@@ -57,7 +57,7 @@ class LLMClient(BaseCfgModule):
             cache_ttl: Cache TTL in seconds
             max_cache_size: Maximum cache size
             models_cache_ttl: Models cache TTL in seconds (default: 24 hours)
-            config: optional host config object for headers and settings (see cmdop_utils._compat)
+            config: optional host config object for headers and settings (see django_cfg.modules.django_llm.config)
             preferred_provider: Preferred provider (LLMProvider.OPENAI or LLMProvider.OPENROUTER).
                                Also accepts strings "openai" or "openrouter".
                                If None, auto-detects based on available API keys.
@@ -83,7 +83,7 @@ class LLMClient(BaseCfgModule):
             apikey_openai=apikey_openai,
             apikey_gonka=apikey_gonka,
             preferred_provider=preferred_provider,
-            django_config=config
+            config=config
         )
         self.provider_selector = ProviderSelector(self.provider_manager)
 
@@ -367,4 +367,3 @@ class LLMClient(BaseCfgModule):
     def clear_models_cache(self):
         """Clear the models cache."""
         self.models_api.clear_models_cache()
-

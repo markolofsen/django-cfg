@@ -1,8 +1,8 @@
 """AgentMessage and AgentContext dataclasses."""
 
 import logging
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,8 @@ class AgentContext:
     tools: Dict[str, Any] = field(default_factory=dict)
     session_key: str = ""
     config: Any = None
+    user: Any = None
+    request: Any = None
 
     def add_message(self, role: str, content: str, **kwargs) -> None:
         self.messages.append(AgentMessage(role=role, content=content, **kwargs))

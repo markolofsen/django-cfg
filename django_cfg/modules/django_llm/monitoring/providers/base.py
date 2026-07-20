@@ -7,11 +7,11 @@ All provider implementations should inherit from this base class.
 import logging
 from abc import ABC, abstractmethod
 
-from django.core.cache import cache
+from ...config import cache
 
 from ..schemas import BalanceResponse
 
-logger = logging.getLogger("cmdop_utils.llm.monitoring")
+logger = logging.getLogger("django_cfg.modules.django_llm.monitoring")
 
 
 class BaseLLMProvider(ABC):

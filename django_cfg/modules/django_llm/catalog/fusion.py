@@ -35,7 +35,7 @@ DEFAULT_PRESET = "budget"
 #: SLOWEST node, so a slow provider of one panelist (e.g. a laggy Kimi endpoint)
 #: stalls the whole turn — speed dominates price here. Kept as a plain dict so
 #: the catalog stays free of a routing-package import; mirrors
-#: ``cmdop_utils.llm.routing.providers.THROUGHPUT.to_dict()``.
+#: ``django_cfg.modules.django_llm.routing.providers.THROUGHPUT.to_dict()``.
 _PANEL_FAST: dict[str, Any] = {"sort": "throughput", "allow_fallbacks": True}
 
 

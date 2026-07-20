@@ -49,7 +49,7 @@ class VisionClient(BaseCfgModule):
     Client for image analysis using vision-language models.
 
     Uses OpenRouter API for access to multiple vision models.
-    Auto-detects API key via cmdop_utils._compat config if not provided.
+    Auto-detects API key via django_cfg.modules.django_llm.config config if not provided.
     """
 
     # Default model (fallback if registry not loaded)

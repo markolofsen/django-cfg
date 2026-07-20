@@ -79,6 +79,8 @@ class MCPAgentChatView(generics.GenericAPIView):
             session_id=serializer.validated_data.get("session_id", "agent-session"),
             model=serializer.validated_data.get("model") or None,
             mcp_config=mcp_config,
+            user=user,
+            request=request,
         )
 
         return Response(result)
@@ -158,7 +160,13 @@ class MCPAgentStreamView(View):
         history = store.get_history()
 
         tools = {tool.name: tool for tool in tool_registry.get_all_tools(None)}
-        context = AgentContext(tools=tools, session_key=session_id, config=mcp_config)
+        context = AgentContext(
+            tools=tools,
+            session_key=session_id,
+            config=mcp_config,
+            user=request.user,
+            request=request,
+        )
 
         for entry in history:
             context.add_message(entry["role"], entry["content"])

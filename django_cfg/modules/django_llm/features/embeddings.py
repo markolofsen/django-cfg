@@ -2,7 +2,7 @@
 
 Apps call these through the host shim::
 
-    from modules.llm_router import embed_fast, embed_quality
+    from django_cfg.modules.django_llm import embed_fast, embed_quality
 
 Two ready methods, both multilingual (EN/RU out of the box) and both
 **1536-dim** so every pgvector column in the project stays uniform:

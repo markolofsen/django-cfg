@@ -5,6 +5,7 @@ Supports OpenRouter image generation models (FLUX, Gemini, etc.)
 """
 
 from .client import ImageGenClient
+from .errors import ImageGenerationError, NoImageGeneratedError
 from .models import (
     ImageGenRequest,
     ImageGenResponse,
@@ -18,6 +19,8 @@ from .models import (
 
 __all__ = [
     "ImageGenClient",
+    "ImageGenerationError",
+    "NoImageGeneratedError",
     "ImageGenRequest",
     "ImageGenResponse",
     "GeneratedImage",

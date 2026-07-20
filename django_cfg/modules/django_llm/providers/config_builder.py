@@ -31,22 +31,22 @@ class ConfigBuilder:
     """Builds configuration for LLM providers."""
 
     @staticmethod
-    def get_openrouter_headers(django_config: Optional[Any] = None) -> Dict[str, str]:
+    def get_openrouter_headers(config: Optional[Any] = None) -> Dict[str, str]:
         """
         Build headers for OpenRouter API.
 
         Args:
-            django_config: Django configuration object
+            config: Optional host configuration object.
 
         Returns:
             Dictionary of headers for OpenRouter
         """
         headers = {}
 
-        if django_config:
+        if config:
             try:
-                site_url = getattr(django_config, 'site_url', 'http://localhost:8000')
-                project_name = getattr(django_config, 'project_name', 'Django CFG')
+                site_url = getattr(config, "site_url", "http://localhost:8000")
+                project_name = getattr(config, "project_name", "cmdop-llm")
                 headers.update({
                     "HTTP-Referer": site_url,
                     "X-Title": project_name
@@ -59,14 +59,14 @@ class ConfigBuilder:
     @staticmethod
     def get_provider_config(
         provider: str,
-        django_config: Optional[Any] = None
+        config: Optional[Any] = None
     ) -> Dict[str, Any]:
         """
         Get full provider configuration.
 
         Args:
             provider: Provider name ("openai" or "openrouter")
-            django_config: Django configuration object
+            config: Optional host configuration object.
 
         Returns:
             Provider configuration dictionary
@@ -78,7 +78,7 @@ class ConfigBuilder:
             name: {
                 "base_url": url,
                 "headers": (
-                    ConfigBuilder.get_openrouter_headers(django_config)
+                    ConfigBuilder.get_openrouter_headers(config)
                     if name == "openrouter"
                     else {}
                 ),
@@ -92,10 +92,10 @@ class ConfigBuilder:
         config = base_configs[provider].copy()
 
         # Add custom headers from LLM config if available
-        if django_config:
+        if config:
             try:
-                if hasattr(django_config, 'llm') and django_config.llm:
-                    llm_config = django_config.llm
+                if hasattr(config, "llm") and config.llm:
+                    llm_config = config.llm
                     if hasattr(llm_config, 'custom_headers'):
                         config["headers"].update(llm_config.custom_headers)
             except Exception as e:

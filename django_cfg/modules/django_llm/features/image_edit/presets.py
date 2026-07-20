@@ -16,17 +16,15 @@ from __future__ import annotations
 
 from typing import Literal
 
+from ..image_models import NANO_BANANA_MODELS, resolve_image_model
+
 
 # Mirrors ``features/image_gen.ModelQuality`` (intent enum, not the
 # OUTPUT resolution preset — that's ``OutputQuality`` below).
 ModelQuality = Literal["fast", "balanced", "premium"]
 
 
-IMAGE_EDIT_MODELS: dict[str, str] = {
-    "fast":     "google/gemini-2.5-flash-image",
-    "balanced": "google/gemini-3.1-flash-image-preview",
-    "premium":  "google/gemini-3-pro-image-preview",
-}
+IMAGE_EDIT_MODELS: dict[str, str] = dict(NANO_BANANA_MODELS)
 
 
 # Default when no explicit model and no quality preset is given.
@@ -50,13 +48,4 @@ def resolve_model(
     Priority:
         explicit ``model`` (full id) > ``quality`` preset > default.
     """
-    if model:
-        return model
-    if quality:
-        if quality not in IMAGE_EDIT_MODELS:
-            raise ValueError(
-                f"unknown image-edit quality preset {quality!r}; "
-                f"expected one of {list(IMAGE_EDIT_MODELS)}"
-            )
-        return IMAGE_EDIT_MODELS[quality]
-    return IMAGE_EDIT_MODELS[DEFAULT_MODEL_QUALITY]
+    return resolve_image_model(model=model, quality=quality or DEFAULT_MODEL_QUALITY)

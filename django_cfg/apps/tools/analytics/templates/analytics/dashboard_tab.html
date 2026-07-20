@@ -112,53 +112,21 @@
     gap: 16px; margin-top: 24px;
   }
 
-  /* Empty state */
-  .an-empty {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; padding: 88px 24px; text-align: center;
-  }
-  .an-empty__icon {
-    font-family: 'Material Symbols Outlined', sans-serif;
-    font-size: 32px; color: #444; margin-bottom: 16px;
-  }
-  .an-empty__title { font-size: 14px; font-weight: 500; color: #ededed; }
-  .an-empty__hint {
-    font-size: 13px; color: #8f8f8f; margin-top: 8px;
-    max-width: 420px; line-height: 1.6;
-  }
-  .an-empty code {
-    background: #1a1a1a; border: 1px solid #2e2e2e;
-    padding: 1px 5px; border-radius: 4px; font-size: 12px;
-  }
 </style>
 
 <div class="an">
-
-{% if not site %}
-  {# No site row = no traffic has ever arrived. Say so, rather than show zeros. #}
-  <div class="an-empty">
-    <span class="an-empty__icon">insights</span>
-    <div class="an-empty__title">No analytics data yet</div>
-    <div class="an-empty__hint">
-      A site registers itself automatically on the first event from a domain
-      listed in <code>security_domains</code>.
-    </div>
-  </div>
-
-{% else %}
-
   <div class="an-head">
     <div class="an-head__left">
-      <span class="an-site">{{ site.domain }}</span>
+      <span class="an-site">{% if site %}{{ site.domain }}{% else %}All traffic{% endif %}</span>
       {% if online_now %}
         <span class="an-live"><span class="an-live__dot"></span>{{ online_now }} online</span>
       {% endif %}
     </div>
     <div class="an-seg">
-      <a href="?site={{ site.domain }}&days=1{% if is_iframe %}&iframe=1{% endif %}"  class="{% if days == 1 %}is-active{% endif %}">24h</a>
-      <a href="?site={{ site.domain }}&days=7{% if is_iframe %}&iframe=1{% endif %}"  class="{% if days == 7 %}is-active{% endif %}">7d</a>
-      <a href="?site={{ site.domain }}&days=30{% if is_iframe %}&iframe=1{% endif %}" class="{% if days == 30 %}is-active{% endif %}">30d</a>
-      <a href="?site={{ site.domain }}&days=90{% if is_iframe %}&iframe=1{% endif %}" class="{% if days == 90 %}is-active{% endif %}">90d</a>
+      <a href="?{% if site %}site={{ site.domain }}&{% endif %}days=1{% if is_iframe %}&iframe=1{% endif %}"  class="{% if days == 1 %}is-active{% endif %}">24h</a>
+      <a href="?{% if site %}site={{ site.domain }}&{% endif %}days=7{% if is_iframe %}&iframe=1{% endif %}"  class="{% if days == 7 %}is-active{% endif %}">7d</a>
+      <a href="?{% if site %}site={{ site.domain }}&{% endif %}days=30{% if is_iframe %}&iframe=1{% endif %}" class="{% if days == 30 %}is-active{% endif %}">30d</a>
+      <a href="?{% if site %}site={{ site.domain }}&{% endif %}days=90{% if is_iframe %}&iframe=1{% endif %}" class="{% if days == 90 %}is-active{% endif %}">90d</a>
     </div>
   </div>
 
@@ -213,9 +181,6 @@
     {% include "analytics/_table.html" with title="Browsers"  rows=browsers %}
     {% include "analytics/_table.html" with title="Devices"   rows=devices %}
   </div>
-
-{% endif %}
-
 </div>
 
 {% endblock %}

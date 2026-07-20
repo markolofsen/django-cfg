@@ -1,6 +1,6 @@
 """The agent plane — pydantic-ai harness: tool loop, HITL, streaming.
 
-`django_llm` has two planes, and the distinction is load-bearing:
+`django_cfg.modules.django_llm` has two planes, and the distinction is load-bearing:
 
 | plane | what it does | depends on |
 |---|---|---|
@@ -29,7 +29,7 @@ impossible to notice, so it is a test rather than a convention.
 A sibling `django_agent/` would need its own sync script, its own version skew
 against the transport it depends on for provider keys, and would have to be released
 in lockstep with it anyway. **Two packages that must ship together are one package.**
-One package also means `sync_django_llm.sh` carries the harness into django-cfg for
+One package also means `sync_cmdop_llm.sh` carries the harness into django-cfg for
 free.
 
 ## What belongs here — and what does not

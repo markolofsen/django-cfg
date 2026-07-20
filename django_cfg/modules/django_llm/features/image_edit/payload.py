@@ -9,15 +9,11 @@ tokens shipping it to Nano Banana, which can't use detail above
 
 from __future__ import annotations
 
-import base64
-import logging
 from typing import Any
 
-from ...core.image_io import EDIT_MAX_SIDE, EDIT_MAX_SIDE_BY_QUALITY, compress_image
+from ...core.image_io import EDIT_MAX_SIDE, EDIT_MAX_SIDE_BY_QUALITY
+from ..image_input import normalize_image_input
 from .models import ImageEditRequest
-
-logger = logging.getLogger(__name__)
-
 
 def build_payload(
     request: ImageEditRequest,
@@ -42,32 +38,19 @@ def build_payload(
     override per call. See `@docs/insights/image-edit/input-
     resolution.md` for the rationale.
     """
-    image_bytes = request.source_image_bytes
-    image_mime = request.source_image_mime
-
+    effective_max_side = None
     if auto_compress:
         effective_max_side = (
             max_side
             if max_side is not None
             else EDIT_MAX_SIDE_BY_QUALITY.get(request.model_quality, EDIT_MAX_SIDE)
         )
-        original_len = len(image_bytes)
-        image_bytes, image_mime = compress_image(
-            image_bytes, image_mime,
-            max_side=effective_max_side,
-            quality=compress_quality,
-        )
-        if len(image_bytes) < original_len:
-            logger.debug(
-                "image_edit.payload: compressed input %dB → %dB (-%.0f%%) "
-                "max_side=%d quality=%s q=%d",
-                original_len, len(image_bytes),
-                100.0 * (original_len - len(image_bytes)) / original_len,
-                effective_max_side, request.model_quality, compress_quality,
-            )
-
-    b64 = base64.b64encode(image_bytes).decode("ascii")
-    data_url = f"data:{image_mime};base64,{b64}"
+    normalized = normalize_image_input(
+        request.resolved_source(),
+        declared_mime=request.source_image_mime,
+        resize_max_side=effective_max_side,
+        compress_quality=compress_quality,
+    )
 
     prompt = request.prompt
     if request.output_quality == "hd":
@@ -83,7 +66,7 @@ def build_payload(
         "messages": [{
             "role": "user",
             "content": [
-                {"type": "image_url", "image_url": {"url": data_url}},
+                {"type": "image_url", "image_url": {"url": normalized.value}},
                 {"type": "text", "text": prompt},
             ],
         }],

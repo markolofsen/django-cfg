@@ -7,6 +7,7 @@ analytics enabled — which it is, by default. There is nothing to wire up.
 
 from __future__ import annotations
 
+from django.db import DatabaseError, transaction
 from django.http import HttpRequest
 
 from django_cfg.modules.django_dashboard.models import DashboardTab
@@ -18,16 +19,13 @@ TAB_SLUG = "analytics"
 
 
 def get_dashboard_tabs() -> list[DashboardTab]:
-    """The analytics tab — but only once there is something to show.
+    """The analytics tab, once its database schema is ready.
 
-    Analytics is enabled by default in every django-cfg project, so an
-    unconditional tab would appear for everyone, including projects that never
-    send a single event. A tab whose only content is an empty state is noise.
-
-    A site row is created automatically on the first event from a trusted domain
-    (services/sites.py), so "a site exists" is exactly "traffic has arrived".
+    The tab owns a useful empty state, so it should be visible before the first
+    event arrives.  It stays hidden only while migrations have not created the
+    analytics tables yet.
     """
-    if not _has_data():
+    if not _schema_ready():
         return []
 
     return [
@@ -41,19 +39,24 @@ def get_dashboard_tabs() -> list[DashboardTab]:
     ]
 
 
-def _has_data() -> bool:
-    """True once any site is registered.
+def _schema_ready() -> bool:
+    """Return whether the analytics tables are queryable.
 
     Runs on every dashboard render, so it must be cheap and must never raise —
     an unmigrated database (during `migrate`, or in a project that has not run
     it yet) would otherwise take the whole admin down.
     """
-    from django.db import DatabaseError
-
     try:
-        return AnalyticsSite.objects.exists()
+        # Dashboard views commonly run inside ATOMIC_REQUESTS.  PostgreSQL
+        # marks that whole transaction as failed after an unmigrated-table
+        # error, even when DatabaseError is caught.  A nested atomic block
+        # gives this probe its own savepoint so the outer request transaction
+        # remains usable by extension-provided tabs.
+        with transaction.atomic():
+            AnalyticsSite.objects.exists()
     except DatabaseError:
         return False
+    return True
 
 
 def tab_context(request: HttpRequest) -> dict:
@@ -65,9 +68,32 @@ def tab_context(request: HttpRequest) -> dict:
     """
     site = _selected_site(request)
     if site is None:
-        # No site yet means no traffic has ever arrived. Say so plainly rather
-        # than rendering a wall of zeros that looks like a broken install.
-        return {"sites": [], "site": None, "days": 7}
+        days = _selected_days(request)
+        period = Period.last_days(days)
+        series = _empty_timeseries(period)
+        return {
+            "sites": [],
+            "site": None,
+            "days": days,
+            "summary": {
+                "visitors": 0,
+                "pageviews": 0,
+                "events": 0,
+                "known_users": 0,
+                "sessions": 0,
+                "bounce_rate": 0.0,
+                "views_per_session": 0.0,
+            },
+            "bounce_pct": 0,
+            "timeseries": series,
+            "top_pages": [],
+            "top_referrers": [],
+            "channels": [],
+            "devices": [],
+            "browsers": [],
+            "countries": [],
+            "online_now": 0,
+        }
 
     days = _selected_days(request)
     period = Period.last_days(days)
@@ -118,6 +144,19 @@ def _rank(rows: list[dict], label_key: str, count_key: str) -> list[dict]:
         }
         for row in rows
     ]
+
+
+def _empty_timeseries(period: Period) -> list[dict]:
+    """Zero-filled UTC series for a dashboard that has no registered site."""
+    from datetime import timedelta
+
+    day = period.start.date()
+    end = period.end.date()
+    rows = []
+    while day <= end:
+        rows.append({"date": day, "pageviews": 0, "visitors": 0, "share": 0})
+        day += timedelta(days=1)
+    return rows
 
 
 def _selected_site(request: HttpRequest) -> AnalyticsSite | None:

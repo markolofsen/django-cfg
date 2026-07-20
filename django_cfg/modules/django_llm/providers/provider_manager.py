@@ -37,7 +37,7 @@ class ProviderManager:
         apikey_openai: Optional[str] = None,
         apikey_gonka: Optional[str] = None,
         preferred_provider: Optional[LLMProviderType] = None,
-        django_config: Optional[Any] = None
+        config: Optional[Any] = None
     ):
         """
         Initialize provider manager.
@@ -47,7 +47,7 @@ class ProviderManager:
             apikey_openai: OpenAI API key
             apikey_gonka: gonka (gonkagate) API key
             preferred_provider: Preferred provider ("openai", "openrouter", "gonkagate")
-            django_config: Django configuration object
+            config: Optional host configuration object.
         """
         self.apikey_openrouter = apikey_openrouter
         self.apikey_openai = apikey_openai
@@ -57,7 +57,7 @@ class ProviderManager:
             self.preferred_provider = preferred_provider.value
         else:
             self.preferred_provider = preferred_provider
-        self.django_config = django_config
+        self.config = config
 
         # Initialize clients dictionary
         self.clients: Dict[str, OpenAI] = {}
@@ -79,7 +79,7 @@ class ProviderManager:
         """Initialize OpenRouter client if API key is available."""
         if self.apikey_openrouter:
             try:
-                headers = ConfigBuilder.get_openrouter_headers(self.django_config)
+                headers = ConfigBuilder.get_openrouter_headers(self.config)
                 self.clients["openrouter"] = OpenAI(
                     base_url=PROVIDER_BASE_URLS["openrouter"],
                     api_key=self.apikey_openrouter,

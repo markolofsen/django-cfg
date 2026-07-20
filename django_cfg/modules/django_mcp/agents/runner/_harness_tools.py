@@ -4,8 +4,8 @@ The old hand-rolled runner built OpenAI ``{"type":"function",...}`` dicts and
 duck-typed the provider's tool-call wire format itself. The harness owns that loop
 now, so instead we hand it real ``pydantic_ai.Tool`` objects. Each wraps one
 ``MCPTool``: the JSON ``input_schema`` becomes the tool's parameter schema via
-``Tool.from_schema``, and the callable runs ``tool.execute(config, arguments)`` with
-the MCP config pulled off the run's deps.
+``Tool.from_schema``, and the callable runs ``tool.execute(context, arguments)`` with
+the full MCP context pulled off the run's deps.
 
 ``MCPTool.execute`` is synchronous and may touch the ORM, so it runs in a thread
 (``sync_to_async``) — a pydantic-ai tool coroutine that blocked on the DB would stall
@@ -27,21 +27,21 @@ def build_harness_tools(tools: dict[str, Any]) -> list[Tool]:
     """Turn a ``{name: MCPTool}`` map into pydantic-ai ``Tool`` objects.
 
     The harness calls these like any other tool; the deps injected into the run
-    carry the MCP config each ``MCPTool.execute`` needs.
+    carry the MCP context each ``MCPTool.execute`` needs.
     """
     return [_wrap_one(name, tool) for name, tool in tools.items()]
 
 
 def _wrap_one(name: str, mcp_tool: Any) -> Tool:
     async def _run(ctx: RunContext[Any], **kwargs: Any) -> str:
-        # The MCP config lives on the deps; execute is sync + ORM-touching, so hop
+        # The MCP context lives on the deps; execute is sync + ORM-touching, so hop
         # to a thread. Errors become a tool-result string (never raise into the loop)
         # — the same contract the old runner's _execute_tool had, so the model can
         # read the failure and recover instead of the whole run dying.
-        config = getattr(ctx.deps, "config", None)
+        mcp_context = getattr(ctx.deps, "context", None)
         try:
             return await sync_to_async(mcp_tool.execute, thread_sensitive=True)(
-                config, kwargs,
+                mcp_context, kwargs,
             )
         except Exception as exc:  # noqa: BLE001 - surfaced to the model, not swallowed
             logger.exception("[django_mcp] tool %s failed", name)

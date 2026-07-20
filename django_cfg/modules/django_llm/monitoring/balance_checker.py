@@ -11,7 +11,7 @@ from typing import Dict
 from .schemas import BalanceResponse
 from .providers import OpenAIProvider, OpenRouterProvider
 
-logger = logging.getLogger("cmdop_utils.llm.monitoring")
+logger = logging.getLogger("django_cfg.modules.django_llm.monitoring")
 
 
 class BalanceChecker:

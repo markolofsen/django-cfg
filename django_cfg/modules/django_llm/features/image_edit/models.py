@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Literal, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 from .presets import DEFAULT_MODEL_QUALITY, ModelQuality, resolve_model
 
@@ -39,7 +40,8 @@ class ImageEditRequest(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    source_image_bytes: bytes
+    source_image_bytes: Optional[bytes] = None
+    source_image: bytes | str | Path | None = None
     source_image_mime: str = "image/jpeg"
     prompt: str
 
@@ -57,6 +59,20 @@ class ImageEditRequest(BaseModel):
 
     # Pass-through knobs (e.g. ``seed`` for repro) merged into payload root.
     extra: Optional[Dict[str, Any]] = None
+
+    @model_validator(mode="after")
+    def validate_source_choice(self) -> "ImageEditRequest":
+        if self.source_image is not None and self.source_image_bytes is not None:
+            raise ValueError("provide source_image or source_image_bytes, not both")
+        if self.source_image is None and self.source_image_bytes is None:
+            raise ValueError("an image source is required")
+        return self
+
+    def resolved_source(self) -> bytes | str | Path:
+        """Resolve the generic source while retaining the legacy bytes API."""
+        source = self.source_image if self.source_image is not None else self.source_image_bytes
+        assert source is not None  # guaranteed by validate_source_choice
+        return source
 
     def resolved_model(self) -> str:
         """The OpenRouter id the client will actually call."""

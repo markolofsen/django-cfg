@@ -30,8 +30,9 @@ image-edit endpoint rejects even when the bytes ARE valid pixels.
 from __future__ import annotations
 
 import logging
+from io import BytesIO
 from pathlib import Path
-from typing import Protocol, Tuple, Union, runtime_checkable
+from typing import Collection, Protocol, Tuple, Union, runtime_checkable
 
 import httpx
 
@@ -63,6 +64,14 @@ _MIME_BY_SUFFIX = {
     ".webp": "image/webp",
     ".gif": "image/gif",
     ".bmp": "image/bmp",
+}
+
+SUPPORTED_RASTER_MIMES = frozenset({
+    "image/png", "image/jpeg", "image/webp", "image/gif",
+})
+_MIME_BY_PIL_FORMAT = {
+    "PNG": "image/png", "JPEG": "image/jpeg",
+    "WEBP": "image/webp", "GIF": "image/gif",
 }
 
 
@@ -162,6 +171,40 @@ def load_image(
         f"load_image: unsupported source type {type(source).__name__}; "
         "expected bytes / str / Path / FieldFile-like"
     )
+
+
+def validate_raster_image(
+    data: bytes,
+    *,
+    max_bytes: int,
+    allowed_mimes: Collection[str] = SUPPORTED_RASTER_MIMES,
+) -> str:
+    """Fail closed unless ``data`` is a supported, decodable raster.
+
+    Returns the MIME derived from decoded pixels rather than trusting a file
+    suffix or HTTP/data-URL declaration.
+    """
+    from PIL import Image
+
+    if max_bytes <= 0:
+        raise ValueError("max_bytes must be positive")
+    if not data:
+        raise ValueError("image input is empty")
+    if len(data) > max_bytes:
+        raise ValueError(f"image input is {len(data)} bytes; maximum is {max_bytes}")
+    try:
+        with Image.open(BytesIO(data)) as image:
+            image_format = (image.format or "").upper()
+            image.verify()
+    except (OSError, ValueError) as exc:
+        raise ValueError("image input is not a decodable raster") from exc
+    mime = _MIME_BY_PIL_FORMAT.get(image_format)
+    if mime is None or mime not in allowed_mimes:
+        raise ValueError(
+            f"unsupported image format {image_format or 'unknown'}; "
+            f"allowed MIME types: {', '.join(sorted(allowed_mimes))}"
+        )
+    return mime
 
 
 # Recommended caps per use case. Pinned to the provider's actual

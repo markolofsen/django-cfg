@@ -5,7 +5,7 @@ preset picks the curated model chain for its role from the catalog
 (``catalog.recommend``), so callers never pass a model slug and never repeat
 the cascade/structured-output wiring:
 
-    from cmdop_utils.llm import extract, classify, chat_with_tools, escalate
+    from django_cfg.modules.django_llm import extract, classify, chat_with_tools, escalate
 
     car, model, usage = extract(CarListing, "2021 Hyundai Grandeur, 41k km, ...")
     label, model = classify(Sentiment, "the dealer never called back")

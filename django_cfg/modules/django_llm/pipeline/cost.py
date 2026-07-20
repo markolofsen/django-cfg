@@ -1,7 +1,7 @@
 """
 Cost observability — per-attempt cost tracking and the wasted-spend metric.
 
-``cmdop_utils.llm``'s success-only logging hides a real leak: a response that
+``django_cfg.modules.django_llm``'s success-only logging hides a real leak: a response that
 arrives and is billed, then fails JSON / schema validation, is retried on
 a pricier model — and that spend is recorded nowhere. This layer makes
 every attempt (success *or* failure) emit a structured ``CostEvent``, so

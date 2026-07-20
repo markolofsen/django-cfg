@@ -439,17 +439,15 @@ def _clock_only_os(fn: Any, args: Any, kwargs: Any) -> Any:
     today. See ``code_mode/README.md`` -- "``datetime.now()`` / ``date.today()``
     become available with an ``os_access`` handler".
     """
-    from datetime import datetime
-
-    from django.utils import timezone
+    from datetime import date, datetime
     from pydantic_monty import NOT_HANDLED
 
     if fn == "date.today":
-        return timezone.localdate()
+        return date.today()
     if fn == "datetime.now":
         # Naive local time: the CRM's own date fields are naive, so handing the
         # sandbox an aware datetime would make `task['due_date'] < now` raise.
-        return timezone.localtime().replace(tzinfo=None)
+        return datetime.now()
     return NOT_HANDLED
 
 

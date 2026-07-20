@@ -19,9 +19,11 @@ from typing import Any, Dict, Generator, List
 
 from asgiref.sync import async_to_sync
 
-from .context import AgentContext
+from django_cfg.modules.django_mcp.services.context import MCPContext
+
 from ._deps import MCPAgentDeps
 from ._harness_tools import build_harness_tools
+from .context import AgentContext
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +82,17 @@ class MCPAgentRunner:
             [{"role": m.role, "content": m.content} for m in context.messages]
         )
 
+    def _build_deps(self, context: AgentContext) -> MCPAgentDeps:
+        """Build the full context expected by every MCPTool.execute call."""
+        return MCPAgentDeps(
+            context=MCPContext(
+                user=context.user,
+                request=context.request,
+                session_key=context.session_key,
+                config=context.config,
+            )
+        )
+
     def run(
         self,
         user_message: str,
@@ -98,7 +111,7 @@ class MCPAgentRunner:
 
         agent = self._build_agent(context, model)
         history = self._prior_history(context)
-        deps = MCPAgentDeps(config=context.config)
+        deps = self._build_deps(context)
 
         result = async_to_sync(run_agent_sync)(
             agent=agent,
@@ -135,7 +148,7 @@ class MCPAgentRunner:
         """
         agent = self._build_agent(context, model)
         history = self._prior_history(context)
-        deps = MCPAgentDeps(config=context.config)
+        deps = self._build_deps(context)
 
         yield from _drain_stream(agent, deps, user_message, history)
 

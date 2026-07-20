@@ -7,8 +7,8 @@ Handles agent execution logic separately from the view layer.
 import logging
 from typing import Any, Dict, Optional
 
-from django_cfg.modules.django_mcp.handlers.tools import tool_registry
 from django_cfg.modules.django_mcp.agents.runner import AgentContext, agent_runner
+from django_cfg.modules.django_mcp.handlers.tools import tool_registry
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,8 @@ class MCPAgentService:
         session_id: str = "agent-session",
         model: Optional[str] = None,
         mcp_config: Any = None,
+        user: Any = None,
+        request: Any = None,
     ) -> Dict[str, Any]:
         """
         Execute an agent query.
@@ -37,6 +39,8 @@ class MCPAgentService:
             session_id: Session identifier
             model: LLM model override (uses config default if None)
             mcp_config: MCP configuration for context
+            user: Authenticated caller passed to permission-aware tools
+            request: Current Django request passed to request-aware tools
 
         Returns:
             dict with response, tool_calls, session_id
@@ -51,6 +55,8 @@ class MCPAgentService:
             tools=tools,
             session_key=session_id,
             config=mcp_config,
+            user=user,
+            request=request,
         )
 
         # Determine model
