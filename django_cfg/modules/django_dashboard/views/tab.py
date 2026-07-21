@@ -2,6 +2,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from ..registry import TabRegistry
 
@@ -18,6 +19,7 @@ def _get_dashboard_config():
     return get_dashboard_config()
 
 
+@xframe_options_sameorigin
 @staff_member_required
 def dashboard_index(request: HttpRequest) -> HttpResponse:
     """Redirect to the first tab the user has access to."""
@@ -33,6 +35,7 @@ def dashboard_index(request: HttpRequest) -> HttpResponse:
     return redirect("django_cfg_dashboard_tab", slug=slug)
 
 
+@xframe_options_sameorigin
 @staff_member_required
 def dashboard_tab(request: HttpRequest, slug: str) -> HttpResponse:
     config = _get_dashboard_config()
