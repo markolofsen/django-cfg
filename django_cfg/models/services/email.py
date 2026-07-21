@@ -6,7 +6,7 @@ Django email settings with Pydantic 2.
 
 from typing import Any, Dict, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from ..base import BaseConfig
 
@@ -14,7 +14,7 @@ from ..base import BaseConfig
 class EmailConfig(BaseConfig):
     """
     📧 Email Configuration - Django email settings
-    
+
     Supports SMTP, console, file, and other email backends
     with environment-aware defaults.
     """
@@ -22,7 +22,7 @@ class EmailConfig(BaseConfig):
     # Email backend
     backend: str = Field(
         default="console",
-        description="Email backend (smtp/console/file/memory)"
+        description="Email backend (smtp/console/file/memory/gateway)"
     )
 
     # SMTP settings
@@ -82,14 +82,39 @@ class EmailConfig(BaseConfig):
         description="Path for file-based email backend"
     )
 
+    # HTTP email-gateway settings (backend="gateway").
+    # The gateway owns the provider integration (ESP choice, sender identity
+    # pinning, rate limits); Django holds no provider credentials.
+    gateway_url: Optional[str] = Field(
+        default=None,
+        description="Email gateway send endpoint (e.g. https://email-api.example.com/send)"
+    )
+
+    gateway_secret: Optional[str] = Field(
+        default=None,
+        repr=False,
+        description="Shared secret presented to the gateway as a Bearer token"
+    )
+
     @field_validator('backend')
     @classmethod
     def validate_backend(cls, v: str) -> str:
         """Validate email backend."""
-        valid_backends = ['smtp', 'console', 'file', 'memory', 'dummy']
+        valid_backends = ['smtp', 'console', 'file', 'memory', 'dummy', 'gateway']
         if v not in valid_backends:
             raise ValueError(f"Email backend must be one of: {valid_backends}")
         return v
+
+    @model_validator(mode='after')
+    def validate_gateway_credentials(self):
+        """The gateway backend is unusable without both settings."""
+        if self.backend == 'gateway' and not (
+            self.gateway_url and self.gateway_secret
+        ):
+            raise ValueError(
+                "backend='gateway' requires gateway_url and gateway_secret"
+            )
+        return self
 
     @field_validator('default_from')
     @classmethod
@@ -156,6 +181,15 @@ class EmailConfig(BaseConfig):
         elif self.backend == 'dummy':
             settings = {
                 'EMAIL_BACKEND': 'django.core.mail.backends.dummy.EmailBackend',
+                'DEFAULT_FROM_EMAIL': self.default_from,
+            }
+
+        elif self.backend == 'gateway':
+            settings = {
+                'EMAIL_BACKEND': 'django_cfg.core.backends.gateway.GatewayEmailBackend',
+                'EMAIL_GATEWAY_URL': self.gateway_url,
+                'EMAIL_GATEWAY_SECRET': self.gateway_secret,
+                'EMAIL_TIMEOUT': self.timeout,
                 'DEFAULT_FROM_EMAIL': self.default_from,
             }
 
