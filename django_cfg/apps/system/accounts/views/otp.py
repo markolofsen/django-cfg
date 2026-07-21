@@ -12,6 +12,7 @@ from django_cfg.apps.system.totp.services import TOTPService, TwoFactorSessionSe
 from django_cfg.modules.base import BaseCfgModule
 
 from ..serializers.otp import (
+    ConsentPolicySerializer,
     OTPErrorResponseSerializer,
     OTPRequestResponseSerializer,
     OTPRequestSerializer,
@@ -35,6 +36,22 @@ def _consent_jurisdiction_hint(request) -> str:
     """Normalized CF-IPCountry header (strip/upper, 2-8 chars) or ''."""
     raw = (request.headers.get("CF-IPCountry") or "").strip().upper()
     return raw if 2 <= len(raw) <= 8 else ""
+
+
+# Jurisdictions where a pre-ticked marketing checkbox is not valid consent
+# (GDPR/EEA + UK GDPR + Swiss nDSG, conservatively). Single source of truth
+# for the checkbox default — the SAME CF-IPCountry signal is stored as the
+# consent evidence's jurisdiction_hint, so decision and evidence can't drift.
+EXPLICIT_CONSENT_COUNTRIES = frozenset({
+    # EU 27
+    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR",
+    "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK",
+    "SI", "ES", "SE",
+    # EEA
+    "IS", "LI", "NO",
+    # UK + CH
+    "GB", "CH",
+})
 
 
 
@@ -157,6 +174,30 @@ class OTPViewSet(viewsets.GenericViewSet):
                 {"error": "Failed to send OTP", "error_code": "internal_error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+    @extend_schema(
+        responses={200: ConsentPolicySerializer},
+        tags=["cfg_accounts"],
+    )
+    @action(detail=False, methods=["get"], url_path="consent-policy", url_name="consent-policy")
+    def consent_policy(self, request):
+        """
+        Marketing-consent checkbox policy for the caller's jurisdiction.
+
+        Derived from the edge-provided CF-IPCountry — the same signal stored
+        as consent evidence at request time. Unknown country fails safe to
+        "unchecked".
+        """
+        country = _consent_jurisdiction_hint(request)
+        default = (
+            "unchecked"
+            if not country or country in EXPLICIT_CONSENT_COUNTRIES
+            else "checked"
+        )
+        return Response(
+            {"country": country, "marketing_consent_default": default},
+            status=status.HTTP_200_OK,
+        )
 
     @extend_schema(
         request=OTPVerifySerializer,

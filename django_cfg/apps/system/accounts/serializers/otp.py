@@ -155,6 +155,19 @@ class WebmailLinkSerializer(serializers.Serializer):
     )
 
 
+class ConsentPolicySerializer(serializers.Serializer):
+    """Marketing-consent UI policy derived from the request's geo context."""
+
+    country = serializers.CharField(
+        allow_blank=True,
+        help_text="Country code seen by the edge (CF-IPCountry), '' if unknown",
+    )
+    marketing_consent_default = serializers.ChoiceField(
+        choices=["checked", "unchecked"],
+        help_text="Default state for the marketing-consent checkbox",
+    )
+
+
 class OTPRequestResponseSerializer(serializers.Serializer):
     """OTP request response."""
 
