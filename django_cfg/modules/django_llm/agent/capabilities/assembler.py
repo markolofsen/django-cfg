@@ -66,7 +66,7 @@ def build_capabilities(spec: CapabilitySpec) -> list[Any]:
     `lenient_json_args` is always first and always present. The rest are appended in
     the fixed order above when the spec asks for them.
     """
-    from django_cfg.modules.django_llm.agent.capabilities import (
+    from modules.django_llm.agent.capabilities import (
         intent_router_capability,
         lenient_json_args_capability,
         per_turn_call_cap_capability,
@@ -84,7 +84,7 @@ def build_capabilities(spec: CapabilitySpec) -> list[Any]:
         caps.append(spec.compaction)
 
     if spec.sandboxed_tools:
-        from django_cfg.modules.django_llm.agent.capabilities.code_mode import (
+        from modules.django_llm.agent.capabilities.code_mode import (
             build_code_mode_capability,
         )
 

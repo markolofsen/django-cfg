@@ -37,7 +37,7 @@ from pydantic import BaseModel, ValidationError
 
 from ..core.errors import LLMTruncationError, LLMValidationError
 
-logger = logging.getLogger("django_cfg.modules.django_llm.repair")
+logger = logging.getLogger("modules.django_llm.repair")
 
 T = TypeVar("T", bound=BaseModel)
 

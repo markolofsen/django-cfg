@@ -62,7 +62,7 @@ def build_toolsets(
     from pydantic_ai.toolsets import FunctionToolset
 
     try:
-        from django_cfg.modules.django_llm.agent.tools.core import get_sandbox_callable
+        from modules.django_llm.agent.tools.core import get_sandbox_callable
 
         projected = base
         if sandboxed:

@@ -227,7 +227,6 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
     ModelRole.EXTRACTION: (
         "openai/gpt-4o-mini",         # openrouter — primary; strict json_schema reliable
         "google/gemini-2.5-flash",    # openrouter fallback
-        "moonshotai/kimi-k2.6",       # gonka — tertiary (when gonka is up)
     ),
     ModelRole.TOOL_CHAT: (
         # THIS TUPLE IS THE LIVE `auto`+tools PICK. The dispatcher
@@ -248,7 +247,6 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
     ModelRole.CLASSIFY: (
         "openai/gpt-4o-mini",         # openrouter — primary
         "google/gemini-2.5-flash",    # openrouter fallback
-        "moonshotai/kimi-k2.6",       # gonka — tertiary (when gonka is up)
     ),
     ModelRole.ESCALATION: (
         "anthropic/claude-sonnet-4.6",

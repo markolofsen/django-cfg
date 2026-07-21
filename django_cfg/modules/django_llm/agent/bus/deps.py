@@ -89,7 +89,7 @@ class AgentDeps:
         base builds a plain context from the two ``max_*`` fields.
         """
         if self.search_ctx is None:
-            from django_cfg.modules.django_llm.agent.bus.context import AgentSearchContext
+            from modules.django_llm.agent.bus.context import AgentSearchContext
 
             self.search_ctx = AgentSearchContext(
                 max_searches=self.max_rag_searches,

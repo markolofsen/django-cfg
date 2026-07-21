@@ -1,4 +1,4 @@
-"""Standalone configuration and host integration for :mod:`django_cfg.modules.django_llm`.
+"""Standalone configuration and host integration for :mod:`modules.django_llm`.
 
 Clients use a hybrid configuration model:
 
@@ -223,7 +223,7 @@ def notify(*, subject: str, message: str, context: dict[str, Any]) -> dict[str, 
             "telegram": False,
         }
     except Exception:
-        logging.getLogger("django_cfg.modules.django_llm").exception("Notification handler failed")
+        logging.getLogger("modules.django_llm").exception("Notification handler failed")
         return {"email": False, "telegram": False}
 
 

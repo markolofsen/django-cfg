@@ -1,4 +1,4 @@
-"""django_cfg.modules.django_llm — single LLM transport surface (framework-neutral).
+"""modules.django_llm — single LLM transport surface (framework-neutral).
 
 Every model call funnels through this package: chat, structured
 extraction, vision, image generation, image edit, embeddings,
@@ -7,17 +7,17 @@ translation. Callers stay thin — they import an ``LLMClient`` /
 cost, retry, structured-output repair, provider-policy adaptation, and
 registry math.
 
-    from django_cfg.modules.django_llm import LLMClient, LLMRouter, ...
+    from modules.django_llm import LLMClient, LLMRouter, ...
 
 Extracted as a standalone package with a single configuration seam:
-``django_cfg.modules.django_llm.config`` (explicit arguments, environment fallback, no Django).
+``modules.django_llm.config`` (explicit arguments, environment fallback, no Django).
 
 # Adding a new public symbol
 
 1. Implement it in the right submodule (``features/``, ``core/``, …).
 2. Add it to the appropriate ``from .X import Y`` block below.
 3. Add the name to ``__all__``.
-4. Done — ``from django_cfg.modules.django_llm import YourThing`` works.
+4. Done — ``from modules.django_llm import YourThing`` works.
 
 See ``CLAUDE.md`` next to this file for the full contract.
 """

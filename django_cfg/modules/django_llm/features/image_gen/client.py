@@ -52,7 +52,7 @@ class ImageGenClient(BaseCfgModule):
         *,
         base_url: str = PROVIDER_BASE_URLS["openrouter"],
         timeout: float = 300.0,
-        app_title: str = "django_cfg.modules.django_llm-image_gen",
+        app_title: str = "modules.django_llm-image_gen",
         app_url: str = "https://cmdop.com/",
         transport: httpx.BaseTransport | None = None,
     ) -> None:

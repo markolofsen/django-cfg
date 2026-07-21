@@ -5,7 +5,7 @@ preset picks the curated model chain for its role from the catalog
 (``catalog.recommend``), so callers never pass a model slug and never repeat
 the cascade/structured-output wiring:
 
-    from django_cfg.modules.django_llm import extract, classify, chat_with_tools, escalate
+    from modules.django_llm import extract, classify, chat_with_tools, escalate
 
     car, model, usage = extract(CarListing, "2021 Hyundai Grandeur, 41k km, ...")
     label, model = classify(Sentiment, "the dealer never called back")
@@ -162,18 +162,13 @@ def extract_chat_gonka(
     system: str | None = None,
     max_tokens: int = 4096,
 ) -> tuple[T, str, dict]:
-    """Structured extraction via Gonka (free tier) with automatic racing.
-
-    Fires two parallel legs to ``moonshotai/kimi-k2.6`` via Gonka and takes the
-    first clean response. Gonka's random-host assignment gives 8–55 s per single
-    leg; racing cuts the P99 tail significantly. Falls back to ``gpt-4o-mini``
-    via OpenRouter if both Gonka legs fail.
+    """Structured extraction for bulk/offline workloads (cost over latency).
 
     Use this instead of ``extract_chat`` when cost matters more than latency —
     bulk ingestion, offline normalization, batch processing. Do NOT use it on
     interactive paths where a user is waiting for a response.
     """
-    router = LLMRouter(["moonshotai/kimi-k2.6", "openai/gpt-4o-mini"])
+    router = LLMRouter(["openai/gpt-4o-mini"])
     return router.parse(
         schema=schema,
         messages=messages,
