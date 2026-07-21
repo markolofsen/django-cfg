@@ -96,6 +96,13 @@ class EmailConfig(BaseConfig):
         description="Shared secret presented to the gateway as a Bearer token"
     )
 
+    # Optional one-click subscribe link rendered as a P.S. footer in system
+    # emails (templates get it as `subscribe_url`). None/empty = no footer.
+    subscribe_url: Optional[str] = Field(
+        default=None,
+        description="Newsletter subscribe URL for the system-email P.S. footer"
+    )
+
     @field_validator('backend')
     @classmethod
     def validate_backend(cls, v: str) -> str:
@@ -195,5 +202,8 @@ class EmailConfig(BaseConfig):
 
         else:
             raise ValueError(f"Unsupported email backend: {self.backend}")
+
+        if self.subscribe_url:
+            settings['EMAIL_SUBSCRIBE_URL'] = self.subscribe_url
 
         return settings

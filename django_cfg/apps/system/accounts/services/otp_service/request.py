@@ -20,7 +20,7 @@ from ...models import CustomUser, OTPSecret
 from ...utils.notifications import AccountNotifications
 from ..brute_force_service import OTPRequestThrottle
 from ..email_validator import EmailValidationError, validate_email_address
-from .types import OTPRequestResult
+from .types import ConsentCapture, OTPRequestResult
 
 logger = get_logger(__name__)
 
@@ -30,6 +30,7 @@ def request_otp(
     email: str,
     source_url: Optional[str] = None,
     accept_language: Optional[str] = None,
+    consent: Optional[ConsentCapture] = None,
 ) -> OTPRequestResult:
     """Generate and send OTP to email. Returns OTPRequestResult."""
     cleaned_email = CustomUser.objects.clean_email(email)
@@ -83,13 +84,27 @@ def request_otp(
     if existing_otp and existing_otp.is_valid:
         otp_code = existing_otp.secret
         logger.info(f"Reusing active OTP for {cleaned_email}")
+        # Latest explicit consent choice wins; a consent-less resend keeps it.
+        if consent and consent.marketing_consent is not None:
+            existing_otp.marketing_consent = consent.marketing_consent
+            existing_otp.consent_disclosure_version = consent.disclosure_version
+            existing_otp.consent_jurisdiction_hint = consent.jurisdiction_hint
+            existing_otp.save(update_fields=[
+                "marketing_consent", "consent_disclosure_version", "consent_jurisdiction_hint",
+            ])
     else:
         # Invalidate old OTPs
         OTPSecret.objects.filter(email__iexact=cleaned_email, is_used=False).update(
             is_used=True
         )
         otp_code = OTPSecret.generate_otp()
-        OTPSecret.objects.create(email=cleaned_email, secret=otp_code)
+        OTPSecret.objects.create(
+            email=cleaned_email,
+            secret=otp_code,
+            marketing_consent=consent.marketing_consent if consent else None,
+            consent_disclosure_version=consent.disclosure_version if consent else "",
+            consent_jurisdiction_hint=consent.jurisdiction_hint if consent else "",
+        )
         logger.info(f"Generated new OTP for {cleaned_email}")
 
     # Send email using AccountNotifications

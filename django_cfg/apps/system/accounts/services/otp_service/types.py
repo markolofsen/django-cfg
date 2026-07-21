@@ -3,6 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class ConsentCapture:
+    """Marketing-consent intent captured alongside an OTP request.
+
+    ``marketing_consent`` is ``None`` when the client sent no choice —
+    distinguishable from an explicit ``False`` (declined).
+    """
+
+    marketing_consent: Optional[bool] = None
+    disclosure_version: str = ""
+    jurisdiction_hint: str = ""  # normalized CF-IPCountry, or ""
 
 
 @dataclass

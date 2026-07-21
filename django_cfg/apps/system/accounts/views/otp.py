@@ -21,6 +21,7 @@ from ..serializers.otp import (
 from ..serializers.profile import UserSerializer
 from ..services import OTPService
 from ..services.otp_service import OTPRequestResult
+from ..services.otp_service.types import ConsentCapture
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,12 @@ logger = logging.getLogger(__name__)
 def _is_ip_limited(request, group: str, rate: str) -> bool:
     """Check IP-based rate limit using django-ratelimit's core function."""
     return is_ratelimited(request, group=group, key='ip', rate=rate, increment=True)
+
+
+def _consent_jurisdiction_hint(request) -> str:
+    """Normalized CF-IPCountry header (strip/upper, 2-8 chars) or ''."""
+    raw = (request.headers.get("CF-IPCountry") or "").strip().upper()
+    return raw if 2 <= len(raw) <= 8 else ""
 
 
 
@@ -70,13 +77,18 @@ class OTPViewSet(viewsets.GenericViewSet):
 
         identifier: str = serializer.validated_data["identifier"]  # type: ignore[index]
         source_url: str | None = serializer.validated_data.get("source_url")  # type: ignore[union-attr]
+        consent = ConsentCapture(
+            marketing_consent=serializer.validated_data.get("marketing_consent"),  # type: ignore[union-attr]
+            disclosure_version=serializer.validated_data.get("consent_disclosure_version") or "",  # type: ignore[union-attr]
+            jurisdiction_hint=_consent_jurisdiction_hint(request),
+        )
 
         accept_language = request.META.get('HTTP_ACCEPT_LANGUAGE', '') or ''
         logger.debug(f"Starting OTP request for: {identifier}, source: {source_url}")
 
         try:
             result: OTPRequestResult = OTPService.request_otp(  # type: ignore[assignment]
-                identifier, source_url, accept_language=accept_language
+                identifier, source_url, accept_language=accept_language, consent=consent
             )
         except Exception as e:
             logger.error(f"OTP request failed with exception: {str(e)}")

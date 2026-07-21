@@ -26,6 +26,18 @@ class OTPRequestSerializer(serializers.Serializer):
         allow_blank=True,
         help_text="Source URL for tracking registration (e.g., https://my.djangocfg.com)",
     )
+    marketing_consent = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="Marketing-consent choice made at signup (absent/null = not asked, false = declined)",
+    )
+    consent_disclosure_version = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=64,
+        help_text="Version of the consent disclosure text shown (e.g. product-updates-reg-v1)",
+    )
 
     def validate_identifier(self, value):
         """Validate and normalize email address."""

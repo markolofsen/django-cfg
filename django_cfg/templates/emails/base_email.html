@@ -282,6 +282,7 @@
 
         <!-- Footer -->
         <div class="email-footer">
+          {% if subscribe_url %}<p>P.S. Want {{ project_name }} product updates? <a href="{{ subscribe_url }}">One click — subscribe</a>.</p>{% endif %}
           <p>&copy; {% now "Y" %} {{ project_name }}. All rights reserved.</p>
           <p>You received this email because it relates to your account.</p>
           {% if site_url %}<p><a href="{{ site_url }}">{{ site_url }}</a></p>{% endif %}

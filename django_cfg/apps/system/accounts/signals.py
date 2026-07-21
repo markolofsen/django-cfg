@@ -22,6 +22,15 @@ logger = logging.getLogger(__name__)
 user_authenticated = Signal()
 
 
+# Fired on every successful OTP verification (mailbox ownership proven), not
+# only the first one, so consent granted at a later login is still delivered.
+# Provides: user, consent — consent is the marketing-consent context captured
+# at request time ({marketing_consent, disclosure_version, jurisdiction_hint,
+# verified_at}) or None when the request carried no consent data. Receivers
+# must accept **kwargs; the payload may gain keys.
+user_email_verified = Signal()
+
+
 # @receiver(post_save, sender=User)
 # def send_user_registration_email(sender, instance, created, **kwargs):
 #     """Send welcome email when new user is created - DISABLED for manual control."""

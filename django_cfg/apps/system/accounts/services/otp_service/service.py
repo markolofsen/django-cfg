@@ -18,7 +18,7 @@ from django_cfg.core.utils import get_otp_url
 
 from ...models import CustomUser
 from .request import request_otp as _request_otp
-from .types import OTPRequestResult
+from .types import ConsentCapture, OTPRequestResult
 from .verify import verify_otp as _verify_otp
 
 
@@ -33,9 +33,12 @@ class OTPService:
         email: str,
         source_url: Optional[str] = None,
         accept_language: Optional[str] = None,
+        consent: Optional[ConsentCapture] = None,
     ) -> OTPRequestResult:
         """Generate and send OTP to email. Returns OTPRequestResult."""
-        return _request_otp(email, source_url=source_url, accept_language=accept_language)
+        return _request_otp(
+            email, source_url=source_url, accept_language=accept_language, consent=consent
+        )
 
     @staticmethod
     def verify_otp(

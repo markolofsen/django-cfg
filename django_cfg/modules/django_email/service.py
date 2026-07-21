@@ -440,6 +440,13 @@ class DjangoEmailService(BaseCfgModule):
         if 'site_url' not in updated_context:
             updated_context['site_url'] = self.config.site_url
 
+        # Auto-add subscribe_url (P.S. footer) — absent unless configured
+        if 'subscribe_url' not in updated_context:
+            subscribe_url = getattr(self.email_config, 'subscribe_url', None) \
+                or getattr(settings, 'EMAIL_SUBSCRIBE_URL', None)
+            if subscribe_url:
+                updated_context['subscribe_url'] = subscribe_url
+
         # Add tracking URLs if email_log_id is provided
         if email_log_id:
             base_url = self.config.api_url.rstrip('/')

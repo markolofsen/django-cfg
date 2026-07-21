@@ -19,6 +19,12 @@ class OTPSecret(models.Model):
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)
 
+    # Marketing-consent intent captured with the OTP request (null = not asked).
+    # Handed to the email-verified hook once the address is proven on verify.
+    marketing_consent = models.BooleanField(null=True, blank=True, default=None)
+    consent_disclosure_version = models.CharField(max_length=64, blank=True, default="")
+    consent_jurisdiction_hint = models.CharField(max_length=8, blank=True, default="")
+
     def save(self, *args, **kwargs):
         if not self.expires_at:
             self.expires_at = timezone.now() + timedelta(minutes=10)

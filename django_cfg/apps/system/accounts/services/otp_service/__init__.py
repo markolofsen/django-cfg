@@ -7,6 +7,6 @@ External imports keep working unchanged:
 """
 
 from .service import OTPService
-from .types import OTPRequestResult
+from .types import ConsentCapture, OTPRequestResult
 
-__all__ = ["OTPService", "OTPRequestResult"]
+__all__ = ["OTPService", "OTPRequestResult", "ConsentCapture"]

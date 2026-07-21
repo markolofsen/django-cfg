@@ -19,18 +19,49 @@ from django_cfg.modules.django_telegram import DjangoTelegram
 from django_cfg.utils import get_logger
 
 from ...models import CustomUser, OTPSecret
-from ...signals import notify_failed_otp_attempt
+from ...signals import notify_failed_otp_attempt, user_email_verified
 from ..brute_force_service import OTPVerifyThrottle
 
 logger = get_logger(__name__)
 
 
-def _mark_user_verified(user: CustomUser) -> None:
-    """Flip the sticky ``is_email_verified`` flag on first successful OTP."""
+def _mark_user_verified(user: CustomUser, consent: Optional[dict] = None) -> None:
+    """Flip the sticky ``is_email_verified`` flag and announce the verification.
+
+    The sticky flag flips only on the first successful OTP; the
+    ``user_email_verified`` signal fires on every call so downstream
+    consumers also see consent granted at a later login. ``consent`` is the
+    context captured at request time (see ``_consent_context``) or ``None``.
+    """
     if not user.is_email_verified:
         user.is_email_verified = True
         user.email_verified_at = timezone.now()
         user.save(update_fields=["is_email_verified", "email_verified_at"])
+    user_email_verified.send(sender=CustomUser, user=user, consent=consent)
+
+
+def _consent_context(otp_secret: OTPSecret) -> dict:
+    """Consent evidence stored on the OTP row, stamped with the verify moment."""
+    return {
+        "marketing_consent": otp_secret.marketing_consent,
+        "disclosure_version": otp_secret.consent_disclosure_version,
+        "jurisdiction_hint": otp_secret.consent_jurisdiction_hint,
+        "verified_at": timezone.now().isoformat(),
+    }
+
+
+def _latest_consent_context(cleaned_email: str) -> Optional[dict]:
+    """Consent context from the newest OTP row for bypass verify paths.
+
+    The dev and test-account bypasses skip OTPSecret validation entirely, but
+    a consent captured at request time must still reach the
+    ``user_email_verified`` signal — otherwise dev behavior diverges from the
+    real-OTP path.
+    """
+    otp_secret = (
+        OTPSecret.objects.filter(email=cleaned_email).order_by("-created_at").first()
+    )
+    return _consent_context(otp_secret) if otp_secret else None
 
 
 def _link_source(user: CustomUser, source_url: Optional[str]) -> None:
@@ -66,13 +97,13 @@ def verify_otp(
     # 1. Development mode bypass — accept any OTP
     dev_user = _try_dev_bypass(cleaned_email, source_url)
     if dev_user is not None:
-        _mark_user_verified(dev_user)
+        _mark_user_verified(dev_user, consent=_latest_consent_context(cleaned_email))
         return dev_user
 
     # 2. Test account bypass — any OTP works for ``is_test_account=True`` users
     test_user = _try_test_account_bypass(cleaned_email, source_url, ip_address)
     if test_user is not None:
-        _mark_user_verified(test_user)
+        _mark_user_verified(test_user, consent=_latest_consent_context(cleaned_email))
         return test_user
 
     # 3. Normal validation against OTPSecret
@@ -211,7 +242,7 @@ def _verify_real_otp(
                 )
                 return None
 
-            _mark_user_verified(user)
+            _mark_user_verified(user, consent=_consent_context(otp_secret))
             _link_source(user, source_url)
 
             try:
