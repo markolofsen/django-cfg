@@ -1,13 +1,13 @@
 ---
 title: OTP Authentication & Brute-Force Protection
-description: How OTP login works internally — request/verify flow, 4-layer brute-force protection, anti-enumeration, soft delete, and cleanup jobs.
+description: How OTP login works internally — request/verify flow, marketing-consent capture, 4-layer brute-force protection, anti-enumeration, soft delete, and cleanup jobs.
 ---
 
 import { Callout } from 'nextra/components'
 
 # OTP Authentication & Brute-Force Protection
 
-Email → 6-digit code → JWT tokens. No passwords.
+Email → 4-digit code → JWT tokens. No passwords.
 
 ## Authentication Flow
 
@@ -20,7 +20,7 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant E as Email
 
-    C->>V: POST /otp/request/ {identifier}
+    C->>V: POST /otp/request/ {identifier, marketing_consent?}
     V->>V: is_ratelimited(IP, 10/min)?
     V->>T: check_email(email)
     T-->>V: allowed / cooldown / hourly_limit / daily_limit
@@ -41,6 +41,7 @@ sequenceDiagram
         V-->>C: 401 {error: "Authentication failed"}
     else OTP valid
         S->>DB: mark OTP as used
+        S->>S: fire user_email_verified(user, consent)
         S->>S: record_success → clear lockout
         V-->>C: 200 {access, refresh, user, requires_2fa}
     end
@@ -52,6 +53,63 @@ sequenceDiagram
 - **OTP reuse** — if a valid unexpired OTP exists, a re-request returns the same code. Reduces SMTP load, avoids confusing users with multiple codes in inbox.
 - **Active-only lookup** — `OTPService` always filters `deleted_at__isnull=True`. Soft-deleted accounts cannot authenticate.
 - **Test account bypass** — users with `is_test_account=True` accept any OTP code. Intended for App Store review / CI environments where real email delivery isn't available.
+
+---
+
+## Marketing Consent Capture
+
+The OTP flow doubles as the consent-capture point for marketing email: the choice is made at request time, but only becomes evidence once the address is **proven** at verify time.
+
+### Request — optional consent fields
+
+`POST /cfg/accounts/otp/request/` accepts two optional fields alongside `identifier`:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `marketing_consent` | `bool \| null` | Choice made at signup. Absent/`null` = not asked, `false` = declined |
+| `consent_disclosure_version` | `str` (≤ 64) | Version tag of the disclosure copy shown (e.g. `product-updates-reg-v1`) |
+
+The pair is stored on the `OTPSecret` row (migration `0024_otpsecret_consent_capture`) together with a **jurisdiction hint** — the normalized `CF-IPCountry` header seen by the edge. On a re-request for an existing valid OTP, the latest explicit choice wins; a consent-less resend keeps the stored one.
+
+### Verify — the `user_email_verified` signal
+
+On **every** successful verify (not just the first), the accounts app fires a Django signal:
+
+```python
+from django_cfg.apps.system.accounts.signals import user_email_verified
+
+# Fired as: user_email_verified.send(sender=CustomUser, user=user, consent=consent)
+# consent = {
+#     "marketing_consent": True | False | None,
+#     "disclosure_version": "product-updates-reg-v1",
+#     "jurisdiction_hint": "DE",          # normalized CF-IPCountry, or ""
+#     "verified_at": "2026-07-21T12:00:00+00:00",
+# }  — or None when the request carried no consent data
+```
+
+Consumers subscribe to bridge consent into their own systems — the framework itself stores **no subscription state on the user model**, deliberately:
+
+```python
+from django.dispatch import receiver
+from django_cfg.apps.system.accounts.signals import user_email_verified
+
+@receiver(user_email_verified)
+def bridge_marketing_consent(sender, user, consent, **kwargs):
+    if consent and consent["marketing_consent"]:
+        enqueue_newsletter_subscribe(user.email, evidence=consent)
+```
+
+Receivers must accept `**kwargs` — the payload may gain keys. The dev-mode and test-account verify bypasses also forward the latest stored consent for the email, so dev behavior does not diverge from the real-OTP path.
+
+### Consent policy endpoint
+
+`GET /cfg/accounts/otp/consent-policy/` tells the frontend how the consent checkbox should default for the caller's jurisdiction:
+
+```json
+{"country": "DE", "marketing_consent_default": "unchecked"}
+```
+
+The default is derived from the edge-provided `CF-IPCountry` header against the server-side `EXPLICIT_CONSENT_COUNTRIES` constant (EU-27 + EEA + UK + CH → `"unchecked"`; unknown country → `"unchecked"` fail-safe; everywhere else → `"checked"`). Because the **same** `CF-IPCountry` signal is stored as the consent evidence's `jurisdiction_hint`, the UI decision and the recorded evidence cannot drift apart.
 
 ---
 
@@ -120,7 +178,7 @@ Default limits (override via settings):
 
 ### OTPVerifyThrottle — prevent brute-forcing
 
-Brute-forcing a 6-digit code space (10^6 combinations) requires stopping after repeated failures.
+Brute-forcing a 4-digit code space (10^4 combinations) requires stopping after repeated failures.
 
 ```python
 from django_cfg.apps.system.accounts.services.brute_force_service import OTPVerifyThrottle
@@ -201,11 +259,17 @@ cleanup_jwt_blacklist()
 
 ```python
 from django_cfg.apps.system.accounts.services.otp_service import OTPService
+from django_cfg.apps.system.accounts.services.otp_service.types import ConsentCapture
 
 # Request OTP
 result = OTPService.request_otp(
     email="user@example.com",
     source_url="https://myapp.com",
+    consent=ConsentCapture(               # optional — see Marketing Consent Capture
+        marketing_consent=True,
+        disclosure_version="product-updates-reg-v1",
+        jurisdiction_hint="DE",
+    ),
 )
 # result.success: bool
 # result.error_code: "invalid_email" | "cooldown" | "hourly_limit" | "daily_limit"
@@ -227,13 +291,15 @@ user = OTPService.verify_otp(
 
 | File | Role |
 |------|------|
-| `accounts/views/otp.py` | OTP request + verify endpoints |
-| `accounts/services/otp_service.py` | Core auth logic |
+| `accounts/views/otp.py` | OTP request + verify + consent-policy endpoints |
+| `accounts/services/otp_service/` | Core auth logic (`request.py`, `verify.py`, `types.py`) |
 | `accounts/services/brute_force_service.py` | `OTPRequestThrottle`, `OTPVerifyThrottle` |
 | `accounts/services/cleanup_service.py` | RQ cleanup jobs |
+| `accounts/signals.py` | `user_email_verified`, `user_authenticated` signals |
 | `accounts/models/user.py` | `CustomUser`, soft-delete |
-| `accounts/models/auth.py` | `OTPSecret` |
+| `accounts/models/auth.py` | `OTPSecret` (incl. consent fields) |
 | `accounts/migrations/0015_*.py` | Partial unique email constraint |
+| `accounts/migrations/0024_otpsecret_consent_capture.py` | Consent fields on `OTPSecret` |
 
-TAGS: otp, brute-force, OTPRequestThrottle, OTPVerifyThrottle, soft-delete, cleanup
+TAGS: otp, brute-force, OTPRequestThrottle, OTPVerifyThrottle, soft-delete, cleanup, marketing-consent, user_email_verified
 DEPENDS_ON: [index, jwt, two-factor]

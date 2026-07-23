@@ -212,6 +212,42 @@ class SecurityBuilder:
             ),
 
             # === Security: All enabled ===
+            # Trust the reverse proxy's X-Forwarded-Proto.
+            #
+            # Production is HTTPS by definition, but SSL is terminated at the
+            # proxy (nginx/traefik/Cloudflare/ALB) — see _should_enable_ssl_redirect.
+            # Django therefore sees a plain-HTTP request and request.is_secure()
+            # returns False, so EVERY absolute URL it builds comes out as http://:
+            # request.build_absolute_uri() (avatar/media URLs in DRF serializers),
+            # password-reset and email links, OAuth redirect_uri, sitemaps.
+            # A browser on an https page then blocks those as mixed content.
+            #
+            # Set unconditionally in prod rather than behind a flag: there is no
+            # prod topology where https is not wanted, and leaving it opt-in
+            # produces http:// URLs that only surface as a broken image in the
+            # navbar. Safe because ALLOWED_HOSTS/CSRF are already whitelisted
+            # above, so a spoofed header from a non-proxied client is rejected
+            # before this is read.
+            'SECURE_PROXY_SSL_HEADER': ('HTTP_X_FORWARDED_PROTO', 'https'),
+
+            # NOTE: USE_X_FORWARDED_HOST is deliberately NOT set.
+            #
+            # It is not needed: a standard reverse proxy passes the public
+            # domain in the ordinary Host header (nginx's default
+            # `proxy_set_header Host $host`), so get_host() is already correct.
+            #
+            # And it would be unsafe HERE specifically, because
+            # _get_prod_allowed_hosts() widens ALLOWED_HOSTS with private IP
+            # ranges, '.svc' and '.cluster.local' whenever we detect Docker —
+            # entries meant for health checks arriving on the internal network.
+            # Unlike X-Forwarded-For, nginx does NOT overwrite an inbound
+            # X-Forwarded-Host, so with this flag on, an external client could
+            # send `X-Forwarded-Host: 10.0.0.5`, pass the widened whitelist, and
+            # poison the host in password-reset links and other generated URLs.
+            #
+            # Only enable it on a deployment whose proxy explicitly sets
+            # X-Forwarded-Host, and pair it with a strict ALLOWED_HOSTS.
+
             'SECURE_SSL_REDIRECT': self._should_enable_ssl_redirect(),
             'SESSION_COOKIE_SECURE': True,
             'CSRF_COOKIE_SECURE': True,

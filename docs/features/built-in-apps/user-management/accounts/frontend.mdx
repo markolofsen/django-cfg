@@ -55,6 +55,7 @@ identifier  →  otp  →  [2fa]  →  [2fa-setup]  →  success → redirect
 | `termsUrl` | `string` | — | Terms of service link |
 | `privacyUrl` | `string` | — | Privacy policy link |
 | `supportUrl` | `string` | — | Support page link |
+| `marketingConsent` | `AuthMarketingConsentConfig` | — | Opt-in marketing checkbox on the identifier step (absent ⇒ no checkbox) |
 | `children` | `ReactNode` | — | Custom header — rendered on `identifier` step only |
 
 ### Callbacks
@@ -75,6 +76,35 @@ import { useAuthFormContext } from '@djangocfg/layouts'
 
 const { step, identifier, isLoading } = useAuthFormContext()
 ```
+
+### Marketing-consent checkbox
+
+Pass `marketingConsent` to render an opt-in checkbox inside the identifier form. The checkbox value is sent with the OTP request as `marketing_consent` + `consent_disclosure_version` and surfaces backend-side through the `user_email_verified` signal once the email is verified — see [OTP & Brute-Force Protection](./otp#marketing-consent-capture).
+
+```tsx
+import { AuthLayout } from '@djangocfg/layouts'
+import { useCfgAccountsOtpConsentPolicyRetrieve } from '@djangocfg/api/hooks'
+
+export default function LoginPage() {
+  // Server-decided default from GET /cfg/accounts/otp/consent-policy/
+  // (CF-IPCountry → "checked" | "unchecked")
+  const { data: policy } = useCfgAccountsOtpConsentPolicyRetrieve()
+
+  return (
+    <AuthLayout
+      sourceUrl="https://myapp.com"
+      marketingConsent={{
+        enabled: true,
+        disclosureVersion: 'product-updates-reg-v1',
+        label: 'Send me product updates',   // your own i18n — the package ships no copy
+        defaultChecked: policy ? policy.marketing_consent_default === 'checked' : undefined,
+      }}
+    />
+  )
+}
+```
+
+Default resolution: an explicit `defaultChecked` (typically the server policy) always wins; while it is `undefined` (policy loading/unavailable) a browser-timezone heuristic is the fallback (`Europe/*` ⇒ unchecked). A user's own toggle is never overridden by either.
 
 ---
 
@@ -121,7 +151,7 @@ const { user, isAuthenticated, isLoading, requestOTP, verifyOTP, logout } = useA
 | `user` | `UserProfile \| null` | Current user |
 | `isAuthenticated` | `boolean` | — |
 | `isLoading` | `boolean` | Initial auth check in progress |
-| `requestOTP` | `fn` | Send OTP to email |
+| `requestOTP` | `fn` | Send OTP to email — `requestOTP(identifier, sourceUrl?, consent?)`; optional `consent` = `{ marketingConsent, disclosureVersion }` |
 | `verifyOTP` | `fn` | Verify code → stores JWT |
 | `logout` | `fn` | Clears tokens |
 
@@ -285,5 +315,5 @@ NEXT_PUBLIC_GITHUB_CLIENT_ID=Iv1.abc123  # OAuth only
 - **[Two-Factor Auth](./two-factor)** — TOTP enforcement and backup codes
 - **[JWT Configuration](./jwt)** — token lifetimes, rotation
 
-TAGS: accounts, frontend, AuthLayout, useAuth, useAuthForm, @djangocfg/api, @djangocfg/layouts
+TAGS: accounts, frontend, AuthLayout, useAuth, useAuthForm, marketing-consent, @djangocfg/api, @djangocfg/layouts
 DEPENDS_ON: [accounts/index]

@@ -1,6 +1,6 @@
 ---
 title: Email Configuration
-description: Complete reference for EmailConfig fields, backend options, and provider-specific SMTP setups for Gmail, SendGrid, Mailgun, and AWS SES.
+description: Complete reference for EmailConfig fields, backend options (SMTP, HTTP gateway), and provider-specific SMTP setups for Gmail, SendGrid, Mailgun, and AWS SES.
 ---
 
 # Email Configuration
@@ -22,6 +22,7 @@ from django_cfg.models.services.email import EmailConfig
 | Value | Django class | Use case |
 | --- | --- | --- |
 | `"smtp"` | `django.core.mail.backends.smtp.EmailBackend` | Production SMTP |
+| `"gateway"` | `django_cfg.core.backends.gateway.GatewayEmailBackend` | Production via trusted HTTP gateway (no provider credentials in Django) |
 | `"console"` | `django.core.mail.backends.console.EmailBackend` | Print to stdout (development) |
 | `"file"` | `django.core.mail.backends.filebased.EmailBackend` | Write to files (testing) |
 | `"memory"` | `django.core.mail.backends.locmem.EmailBackend` | Store in memory (unit tests) |
@@ -61,6 +62,58 @@ If `DjangoConfig.project_name` is set, the from address is automatically formatt
 | `file_path` | `str` | `"emails/"` | Directory for file backend output |
 
 Only used when `backend="file"`.
+
+### HTTP Email Gateway
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `gateway_url` | `Optional[str]` | `None` | Gateway send endpoint (e.g. `https://email-api.example.com/send`) |
+| `gateway_secret` | `Optional[str]` | `None` | Shared secret presented to the gateway as a Bearer token |
+
+Only used when `backend="gateway"`. Both fields are required for that backend — the model validator raises `ValueError` if either is missing.
+
+```python
+email = EmailConfig(
+    backend="gateway",
+    gateway_url="https://email-api.example.com/send",
+    gateway_secret="${EMAIL_GATEWAY_SECRET}",
+    default_from="noreply@example.com",
+)
+```
+
+`GatewayEmailBackend` POSTs each Django `EmailMessage` as one JSON request to `gateway_url` with `Authorization: Bearer <gateway_secret>`. The gateway owns the provider integration — which ESP is used, which sender identities are allowed, what rate limits apply. The Django app never holds provider credentials and never knows which provider sits behind the gateway. A typical gateway is a Cloudflare Worker with an Email Sending binding.
+
+**Wire contract (gateway payload v1)** — deliberately mirrors the Cloudflare Email Sending REST shape so a thin Worker can forward it to a provider binding without re-modelling:
+
+| Payload field | Content |
+| --- | --- |
+| `to` / `cc` / `bcc` | Lists of address strings |
+| `from` / `reply_to` | String or `{address, name}` object (parsed from `"Name <a@b>"`) |
+| `subject` | Message subject |
+| `text` / `html` | Message bodies — at least one present (HTML alternatives are lifted into `html`) |
+| `attachments` | `{content (base64), filename, type, disposition[, content_id]}` — inline attachments with a `Content-ID` get `disposition: "inline"` |
+| `headers` | Passthrough of `extra_headers` |
+
+**Response envelope** expected from the gateway:
+
+```json
+{"success": true, "errors": [], "result": {"delivered": [], "permanent_bounces": [], "queued": []}}
+```
+
+Behavior details:
+
+- Only transient statuses (`429`, `500`, `502`, `503`, `504`) and network errors are retried — up to 3 attempts with exponential backoff. `4xx` validation/auth errors are permanent.
+- `success: false` raises `GatewayEmailError` (respects `fail_silently`).
+- `permanent_bounces` in a successful response are **logged as warnings, not raised** — the message was accepted, but some recipients are suppressed on the provider side.
+- `timeout` (the shared `EmailConfig` field) applies to the HTTP request; one `httpx.Client` is reused across a `send_messages()` batch.
+
+### Subscribe Footer
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `subscribe_url` | `Optional[str]` | `None` | Newsletter subscribe URL for the system-email P.S. footer |
+
+Works with any backend. When set, the shared system-email template (`templates/emails/base_email.html`) renders a footer line — `P.S. Want {project_name} product updates? One click — subscribe` — linking to this URL. `DjangoEmailService` injects `subscribe_url` into the template context automatically; unset means no footer.
 
 ## DjangoConfig Fields
 
@@ -175,6 +228,9 @@ email = EmailConfig(backend="file", file_path="sent_emails/")
 | `username` | `EMAIL_HOST_USER` |
 | `password` | `EMAIL_HOST_PASSWORD` |
 | `default_from` | `DEFAULT_FROM_EMAIL` |
+| `gateway_url` | `EMAIL_GATEWAY_URL` (gateway backend only) |
+| `gateway_secret` | `EMAIL_GATEWAY_SECRET` (gateway backend only) |
+| `subscribe_url` | `EMAIL_SUBSCRIBE_URL` (only when set) |
 
 You do not call `to_django_settings()` directly — django-cfg applies it during configuration loading.
 

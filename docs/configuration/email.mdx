@@ -1,6 +1,6 @@
 ---
 title: Email Models
-description: EmailConfig model for SMTP and Console email backends
+description: EmailConfig model for SMTP, Console, and HTTP-gateway email backends
 ---
 
 # Email Models
@@ -22,7 +22,7 @@ Type-safe email service configuration.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `backend` | `Literal["smtp", "console", "file", "memory", "dummy"]` | `"console"` | Email backend type |
+| `backend` | `Literal["smtp", "console", "file", "memory", "dummy", "gateway"]` | `"console"` | Email backend type |
 | `host` | `str` | `"localhost"` | SMTP server hostname |
 | `port` | `int` | `587` | SMTP server port (1-65535) |
 | `username` | `str \| None` | `None` | SMTP username |
@@ -33,12 +33,15 @@ Type-safe email service configuration.
 | `default_from` | `str` | `"noreply@example.com"` | Default FROM email address |
 | `file_path` | `str` | `"emails/"` | Path for file-based email backend |
 | `timeout` | `int` | `30` | Email send timeout in seconds (≥1) |
+| `gateway_url` | `str \| None` | `None` | Email gateway send endpoint (required for `backend="gateway"`) |
+| `gateway_secret` | `str \| None` | `None` | Shared secret sent to the gateway as a Bearer token (required for `backend="gateway"`) |
+| `subscribe_url` | `str \| None` | `None` | Newsletter subscribe URL for the system-email P.S. footer |
 
 ### Methods
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `to_django_config()` | `dict` | Convert to Django email settings |
+| `to_django_settings()` | `dict` | Convert to Django email settings |
 
 ### Backend Comparison
 
@@ -46,6 +49,7 @@ Type-safe email service configuration.
 |---------|----------|----------|
 | `console` | Development | Prints emails to console, no actual delivery |
 | `smtp` | Production | Standard SMTP delivery (Gmail, SES, Mailgun) |
+| `gateway` | Production | POSTs each message as JSON to a trusted HTTP gateway — no provider credentials in Django |
 | `file` | Development/staging | Writes emails to files on disk |
 | `memory` | Testing | Stores emails in memory (accessible via `outbox`) |
 | `dummy` | Testing | Discards all emails silently |
@@ -141,6 +145,43 @@ EMAIL_TIMEOUT = 30
 - Use app-specific passwords (not account passwords)
 - Enable TLS encryption (`use_tls=True`)
 - Store credentials in secure secrets manager
+
+</Callout>
+
+### Gateway (HTTP Email Gateway)
+
+```python
+class MyConfig(DjangoConfig):
+    secret_key: str = "your-secret-key"
+    debug: bool = False
+
+    email: EmailConfig = EmailConfig(
+        backend="gateway",
+        gateway_url="https://email-api.example.com/send",
+        gateway_secret="your-shared-secret",
+        default_from="noreply@myapp.com",
+    )
+```
+
+**Generated Django settings:**
+```python
+EMAIL_BACKEND = 'django_cfg.core.backends.gateway.GatewayEmailBackend'
+EMAIL_GATEWAY_URL = 'https://email-api.example.com/send'
+EMAIL_GATEWAY_SECRET = 'your-shared-secret'
+EMAIL_TIMEOUT = 30
+DEFAULT_FROM_EMAIL = 'noreply@myapp.com'
+```
+
+Each `EmailMessage` is POSTed as JSON to `gateway_url` with an `Authorization: Bearer` header. The gateway owns the provider integration (which ESP, sender identities, rate limits) — Django holds **no provider credentials**. See the [Email Configuration reference](/features/modules/django-email/configuration#http-email-gateway) for the wire contract and retry behavior.
+
+<Callout type="info">
+**Gateway Backend Use Case**
+
+The gateway backend is ideal when:
+- Provider credentials must not live in the Django app (e.g. the ESP is bound to a Cloudflare Worker)
+- One gateway serves several apps with centralized sender-identity and rate-limit policy
+
+`backend="gateway"` requires both `gateway_url` and `gateway_secret` — validation fails otherwise.
 
 </Callout>
 
@@ -680,9 +721,10 @@ class MyConfig(DjangoConfig):
 
 EmailConfig validates:
 
-- **Backend** - Must be one of: `smtp`, `console`, `file`, `memory`, `dummy`
+- **Backend** - Must be one of: `smtp`, `console`, `file`, `memory`, `dummy`, `gateway`
 - **Port** - Must be 1-65535
 - **Timeout** - Must be ≥ 1 second
+- **Gateway credentials** - `backend="gateway"` requires both `gateway_url` and `gateway_secret`
 
 **Example validation error:**
 

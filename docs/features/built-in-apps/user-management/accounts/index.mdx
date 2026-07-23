@@ -39,12 +39,12 @@ flowchart LR
 
 | Feature | Description |
 |---|---|
-| **OTP Login** | Passwordless email — 6-digit codes, 10-min expiry |
+| **OTP Login** | Passwordless email — 4-digit codes, 10-min expiry |
 | **JWT Tokens** | Access + refresh with rotation and blacklist |
 | **2FA (TOTP)** | Google Auth, Authy, any TOTP app |
 | **OAuth** | GitHub social login |
 | **Brute-force protection** | 4-layer defense — IP rate limits, per-email throttle, lockout |
-| **Email validation** | 5-layer pipeline: syntax → TLD → specials → disposable blocklist → MX |
+| **Email validation** | RFC syntax check + normalization (no blocklist, no MX/DNS lookups) |
 | **Soft delete** | GDPR-safe account archive |
 | **Cleanup jobs** | RQ tasks for expired OTPs and JWT blacklist |
 

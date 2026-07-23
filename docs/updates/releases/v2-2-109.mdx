@@ -1,0 +1,49 @@
+---
+title: "Release v2.2.109"
+description: "HTTP email-gateway backend, system-email subscribe footer, and marketing-consent capture through the OTP flow"
+---
+
+import { Callout } from 'nextra/components'
+
+# Release v2.2.109
+
+**Released:** July 21, 2026
+
+## Highlights
+
+- **New `gateway` email backend** — `EmailConfig(backend="gateway", gateway_url=..., gateway_secret=...)` POSTs each message as JSON to a trusted HTTP gateway (e.g. a Cloudflare Worker with an Email Sending binding). The Django app holds **no provider credentials**. See [Email Configuration](/features/modules/django-email/configuration#http-email-gateway).
+- **`EmailConfig.subscribe_url`** — optional one-click newsletter link rendered as a "P.S." footer in all system emails built on the shared base template. See [Subscribe Footer](/features/modules/django-email/configuration#subscribe-footer).
+- **Marketing-consent capture in the OTP flow** — `POST /cfg/accounts/otp/request/` accepts optional `marketing_consent` and `consent_disclosure_version`; on every successful verify the new `user_email_verified` signal delivers the consent evidence (choice, disclosure version, jurisdiction hint, verify timestamp) to your receivers. The framework stores no subscription state on the user model. See [Marketing Consent Capture](/features/built-in-apps/user-management/accounts/otp#marketing-consent-capture).
+- **New endpoint `GET /cfg/accounts/otp/consent-policy/`** — server-decided default for the consent checkbox (`checked` / `unchecked`), derived from the edge-provided `CF-IPCountry` header (EU/EEA/UK/CH and unknown → `unchecked`).
+- **Frontend consent support** — `AuthLayout` gained a `marketingConsent` prop rendering the opt-in checkbox on the identifier step; `requestOTP()` accepts an optional consent payload; the generated `useCfgAccountsOtpConsentPolicyRetrieve` hook is re-exported from `@djangocfg/api/hooks`. See [Frontend Integration](/features/built-in-apps/user-management/accounts/frontend#marketing-consent-checkbox).
+
+## Updated Packages
+
+| Package | Version | Changes |
+|---------|---------|---------|
+| `django-cfg` (PyPI) | 2.2.109 | Gateway email backend, `subscribe_url`, OTP consent capture, `user_email_verified` signal, consent-policy endpoint |
+| `@djangocfg/api` | 2.1.478 | `requestOTP(identifier, sourceUrl?, consent?)`, `marketingConsent` form state, `useCfgAccountsOtpConsentPolicyRetrieve` |
+| `@djangocfg/layouts` | 2.1.478 | `AuthLayout` `marketingConsent` prop (checkbox in the identifier step) |
+
+## Upgrade
+
+```bash
+pip install -U django-cfg
+python manage.py migrate  # accounts migration 0024_otpsecret_consent_capture
+```
+
+```bash
+pnpm update @djangocfg/api @djangocfg/layouts
+```
+
+<Callout type="info">
+All new behavior is opt-in: without `gateway`/`subscribe_url` config, without the consent fields in the OTP request, and without the `marketingConsent` prop, nothing changes.
+</Callout>
+
+## Breaking Changes
+
+None. The consent fields are optional; existing OTP request bodies remain valid.
+
+## Full Changelog
+
+See the [GitHub release](https://github.com/markolofsen/django-cfg/releases) for the complete list of changes.
