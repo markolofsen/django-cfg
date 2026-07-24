@@ -23,7 +23,7 @@ services:
     networks:
       - dokploy-network
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/healthz"]
       interval: 10s
       timeout: 3s
       retries: 5
