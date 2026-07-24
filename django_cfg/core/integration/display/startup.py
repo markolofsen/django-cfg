@@ -170,7 +170,7 @@ class StartupDisplayManager(BaseDisplayManager):
             info_table.add_row("🆘 Support", LIB_SUPPORT_URL)
 
             # Use full URL for health endpoint
-            health_url = f"{self.get_base_url()}/cfg/health/"
+            health_url = f"{self.get_base_url()}/healthz"
             info_table.add_row("❤️ Health", health_url)
 
             # Create main panel with full width

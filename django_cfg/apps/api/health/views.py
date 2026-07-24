@@ -20,6 +20,31 @@ from django.views import View
 from django_cfg.core.integration import get_current_version
 
 
+def _base_health_payload() -> Dict[str, Any]:
+    """Return fields shared by all health surfaces."""
+    try:
+        config = getattr(settings, 'config', None)
+        service = config.project_name if config else "Django CFG"
+    except Exception:
+        service = "Django CFG"
+
+    return {
+        "status": "ok",
+        "ok": True,
+        "timestamp": timezone.now().isoformat(),
+        "service": service,
+        "version": get_current_version(),
+    }
+
+
+class LiveHealthView(View):
+    """Dependency-free process liveness for load balancers and CLI probes."""
+
+    def get(self, request):
+        """Return minimal process health status."""
+        return JsonResponse(_base_health_payload())
+
+
 class HealthCheckView(View):
     """
     Django CFG comprehensive health check endpoint.
@@ -33,26 +58,9 @@ class HealthCheckView(View):
 
     def get(self, request):
         """Return comprehensive health check data."""
-        # Get DjangoConfig instance
-        try:
-            from django.conf import settings
-            config = getattr(settings, 'config', None)
-
-            health_data = {
-                "status": "healthy",
-                "timestamp": timezone.now().isoformat(),
-                "service": config.project_name if config else "Django CFG",
-                "version": get_current_version(),
-                "checks": {}
-            }
-        except Exception:
-            health_data = {
-                "status": "healthy",
-                "timestamp": timezone.now().isoformat(),
-                "service": "Django CFG",
-                "version": get_current_version(),
-                "checks": {}
-            }
+        health_data = _base_health_payload()
+        health_data["status"] = "healthy"
+        health_data["checks"] = {}
 
         # Database connectivity check
         try:
@@ -228,27 +236,3 @@ class HealthCheckView(View):
                 "status": "error",
                 "error": str(e)
             }
-
-
-class QuickHealthView(View):
-    """Quick health check for load balancers."""
-
-    def get(self, request):
-        """Return minimal health status."""
-        try:
-            # Just check main database
-            conn = connections["default"]
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT 1")
-
-            return JsonResponse({
-                "status": "ok",
-                "timestamp": timezone.now().isoformat(),
-            })
-
-        except Exception as e:
-            return JsonResponse({
-                "status": "error",
-                "error": str(e),
-                "timestamp": timezone.now().isoformat(),
-            }, status=503)

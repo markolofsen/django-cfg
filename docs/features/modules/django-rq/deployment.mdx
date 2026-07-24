@@ -131,7 +131,7 @@ services:
     depends_on:
       - redis
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz/ready"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -405,7 +405,7 @@ spec:
             cpu: "1000m"
         livenessProbe:
           httpGet:
-            path: /cfg/health/
+            path: /healthz/ready
             port: 8000
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -745,7 +745,7 @@ class ProductionConfig(DjangoConfig):
 
 ```bash
 # HTTP health check
-curl http://localhost:8000/cfg/health/
+curl http://localhost:8000/healthz/ready
 
 # Expected response
 {"status": "healthy", "checks": {"database": "ok", "redis": "ok"}}

@@ -127,7 +127,7 @@ curl http://localhost:8000/cfg/endpoints/drf/
 URLs list endpoint доступен из health check:
 
 ```bash
-curl http://localhost:8000/cfg/health/drf/
+curl http://localhost:8000/healthz/ready/drf/
 ```
 
 ```json
@@ -138,7 +138,8 @@ curl http://localhost:8000/cfg/health/drf/
     "urls_list": "http://localhost:8000/cfg/endpoints/urls/",
     "urls_list_compact": "http://localhost:8000/cfg/endpoints/urls/compact/",
     "endpoints_status": "http://localhost:8000/cfg/endpoints/drf/",
-    "quick_health": "http://localhost:8000/cfg/health/drf/quick/"
+    "health": "http://localhost:8000/healthz/drf/",
+    "ready_health": "http://localhost:8000/healthz/ready/drf/"
   }
 }
 ```

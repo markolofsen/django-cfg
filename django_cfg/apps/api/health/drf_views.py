@@ -22,7 +22,8 @@ from rest_framework.views import APIView
 
 from django_cfg.core.integration import get_current_version
 
-from .serializers import HealthCheckSerializer, QuickHealthSerializer
+from .serializers import HealthCheckSerializer, LiveHealthSerializer
+from .views import _base_health_payload
 
 
 class DRFHealthCheckView(APIView):
@@ -108,7 +109,8 @@ class DRFHealthCheckView(APIView):
             "urls_list": request.build_absolute_uri(reverse('urls_list')),
             "urls_list_compact": request.build_absolute_uri(reverse('urls_list_compact')),
             "endpoints_status": request.build_absolute_uri(reverse('endpoints_status_drf')),
-            "quick_health": request.build_absolute_uri(reverse('django_cfg_drf_quick_health')),
+            "health": request.build_absolute_uri(reverse('django_cfg_drf_health')),
+            "ready_health": request.build_absolute_uri(reverse('django_cfg_drf_ready_health')),
         }
 
         # Add OpenAPI schema links
@@ -274,32 +276,16 @@ class DRFHealthCheckView(APIView):
             }
 
 
-class DRFQuickHealthView(APIView):
+class DRFLiveHealthView(APIView):
     """
-    Quick health check for load balancers with DRF Browsable API.
+    Dependency-free process liveness endpoint with DRF Browsable API.
 
     This endpoint uses DRF Browsable API with Tailwind CSS theme! 🎨
     """
 
     permission_classes = [AllowAny]  # Public endpoint
-    serializer_class = QuickHealthSerializer  # For schema generation
+    serializer_class = LiveHealthSerializer  # For schema generation
 
     def get(self, request):
         """Return minimal health status."""
-        try:
-            # Just check main database
-            conn = connections["default"]
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT 1")
-
-            return Response({
-                "status": "ok",
-                "timestamp": timezone.now(),
-            })
-
-        except Exception as e:
-            return Response({
-                "status": "error",
-                "error": str(e),
-                "timestamp": timezone.now(),
-            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(_base_health_payload())

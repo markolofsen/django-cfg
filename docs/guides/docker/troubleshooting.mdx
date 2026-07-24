@@ -197,7 +197,7 @@ docker inspect container-name | grep -A 10 Health
 
 **Test health endpoint manually**:
 ```bash
-docker exec container-name curl -f http://localhost:8000/cfg/health/
+docker exec container-name curl -f http://localhost:8000/healthz/ready
 ```
 
 ---

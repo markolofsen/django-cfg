@@ -28,7 +28,7 @@ class DRFEndpointsStatusView(APIView):
     This endpoint uses DRF Browsable API with Tailwind CSS theme! 🎨
 
     **IMPORTANT**: Admin-only for security (shows all endpoint statuses).
-    For public health checks, use /cfg/health/ instead.
+    For public health checks, use /healthz instead.
     """
 
     permission_classes = [IsAdminUser]  # Admin-only for security

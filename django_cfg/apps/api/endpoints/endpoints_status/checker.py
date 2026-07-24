@@ -21,7 +21,7 @@ def get_url_group(url_pattern: str, depth: int = 3) -> str:
 
     Examples:
         /api/accounts/profile/ → api/accounts
-        /cfg/health/drf/ → cfg/health/drf
+        /healthz/ready/drf/ → healthz/ready/drf
         /admin/auth/user/ → admin/auth/user
 
     Args:
@@ -64,7 +64,7 @@ def should_check_endpoint(url_pattern: str, url_name: Optional[str] = None) -> b
         r'^/?static/',
         r'^/?media/',
         r'^/?admin/',
-        r'^/?cfg/health/',  # Exclude health endpoints (recursion prevention)
+        r'^/?healthz(?:/|$)',  # Exclude health endpoints (recursion prevention)
         r'^/?cfg/api/endpoints/',  # Exclude ourselves
         r'^/__debug__/',
         r'^/__reload__/',
@@ -83,9 +83,10 @@ def should_check_endpoint(url_pattern: str, url_name: Optional[str] = None) -> b
     # Exclude URL names
     exclude_names = [
         'django_cfg_health',
-        'django_cfg_quick_health',
+        'django_cfg_live_health',
+        'django_cfg_ready_health',
         'django_cfg_drf_health',
-        'django_cfg_drf_quick_health',
+        'django_cfg_drf_ready_health',
         'endpoints_status',
         'endpoints_status_drf',
     ]

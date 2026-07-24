@@ -129,7 +129,7 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
     Automatically add django_cfg URLs and all integrations to the main URL configuration.
 
     This function adds:
-    - Django CFG management URLs (/cfg/, /health/, etc.)
+    - Django CFG management URLs (/cfg/, /healthz, etc.)
     - Django Client URLs (if available)
     - Static files serving (DEBUG mode only)
     - Media files serving (all environments via serve view)
@@ -156,7 +156,7 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
         urlpatterns = add_django_cfg_urls(urlpatterns)
     """
     # Add django_cfg API URLs
-    # Note: URL prefixes (cfg/, health/, etc.) are defined in django_cfg.apps.urls
+    # Note: URL prefixes (cfg/, healthz, etc.) are defined in django_cfg.apps.urls
     new_patterns = urlpatterns + [
         path("", include("django_cfg.apps.urls")),
     ]

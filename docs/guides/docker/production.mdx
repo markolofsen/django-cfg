@@ -163,7 +163,7 @@ DRAMATIQ_REDIS_DB=2
 
 **Configuration:**
 - **Port:** 8001 (external) → 8000 (internal)
-- **Health Check:** `GET /cfg/health/`
+- **Health Check:** `GET /healthz/ready`
 - **Features:** Auto migrations, static files, Django-CFG integration
 
 ```yaml
@@ -188,7 +188,7 @@ carapis-django:
       condition: service_healthy
   command: ["runserver"]
   healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/"]
+    test: ["CMD", "curl", "-f", "http://localhost:8000/healthz/ready"]
     interval: 30s
     timeout: 10s
     retries: 3
@@ -284,7 +284,7 @@ RUN chmod +x /app/docker/scripts/entrypoint.sh && \
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/cfg/health/ || exit 1
+    CMD curl -f http://localhost:8000/healthz/ready || exit 1
 
 # Entrypoint and default command
 ENTRYPOINT ["/app/docker/scripts/entrypoint.sh"]
@@ -494,7 +494,7 @@ EMAIL_HOST_PASSWORD=your-app-password  # ⚠️ Use app-specific password, not a
 
 ```bash
 # Application health
-curl http://localhost:8001/cfg/health/
+curl http://localhost:8001/healthz/ready
 
 # Database health
 docker compose exec carapis_postgres pg_isready -U carapis

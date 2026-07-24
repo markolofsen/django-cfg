@@ -37,16 +37,21 @@ class HealthCheckSerializer(serializers.Serializer):
     )
 
 
-class QuickHealthSerializer(serializers.Serializer):
-    """Serializer for quick health check response."""
+class LiveHealthSerializer(serializers.Serializer):
+    """Serializer for dependency-free liveness response."""
 
     status = serializers.CharField(
-        help_text="Quick health status: ok or error"
+        help_text="Liveness status: ok"
+    )
+    ok = serializers.BooleanField(
+        help_text="Whether the process is alive"
     )
     timestamp = serializers.DateTimeField(
         help_text="Timestamp of the health check"
     )
-    error = serializers.CharField(
-        required=False,
-        help_text="Error message if health check failed"
+    service = serializers.CharField(
+        help_text="Service name"
+    )
+    version = serializers.CharField(
+        help_text="Django-CFG version"
     )

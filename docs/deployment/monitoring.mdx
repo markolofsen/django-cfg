@@ -33,7 +33,7 @@ Django-CFG includes built-in health check endpoints for monitoring service statu
 Basic liveness probe for container orchestration:
 
 ```bash
-GET /cfg/health/quick/
+GET /healthz
 ```
 
 **Response:**
@@ -54,7 +54,7 @@ GET /cfg/health/quick/
 Detailed system status with metrics:
 
 ```bash
-GET /cfg/health/
+GET /healthz/ready
 ```
 
 **Response:**
@@ -213,7 +213,7 @@ services:
   django:
     image: your-django-app
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/quick/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -231,13 +231,13 @@ spec:
     image: your-django-app
     livenessProbe:
       httpGet:
-        path: /cfg/health/quick/
+        path: /healthz
         port: 8000
       initialDelaySeconds: 30
       periodSeconds: 10
     readinessProbe:
       httpGet:
-        path: /cfg/health/
+        path: /healthz/ready
         port: 8000
       initialDelaySeconds: 10
       periodSeconds: 5
@@ -256,7 +256,7 @@ Integrate with external monitoring services:
 - Pingdom
 - StatusCake
 
-Configure to check `/cfg/health/quick/` endpoint every 1-5 minutes.
+Configure to check `/healthz` endpoint every 1-5 minutes.
 
 **Error Tracking:**
 ```python
@@ -314,8 +314,8 @@ INSTALLED_APPS += ['django_prometheus']
 Before deploying to production:
 
 ### Health Checks
-- [ ] `/cfg/health/quick/` endpoint returns 200 OK
-- [ ] `/cfg/health/` shows all systems healthy
+- [ ] `/healthz` endpoint returns 200 OK
+- [ ] `/healthz/ready` shows all systems healthy
 - [ ] Database connectivity verified
 - [ ] Cache availability verified
 

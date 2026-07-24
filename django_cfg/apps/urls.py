@@ -113,7 +113,7 @@ def get_default_cfg_group():
 urlpatterns = [
     path('cfg/og/', include('django_cfg.modules.django_ogimage.http.urls')),
     path('cfg/sitemap/', include('django_cfg.modules.django_sitemap.http.urls')),
-    path('cfg/health/', include('django_cfg.apps.api.health.urls')),
+    path('', include('django_cfg.apps.api.health.urls')),
     path('cfg/endpoints/', include('django_cfg.apps.api.endpoints.urls')),
     path('cfg/commands/', include('django_cfg.apps.api.commands.urls')),
     path('cfg/openapi/', include('django_cfg.modules.django_generator.urls')),

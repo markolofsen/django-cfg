@@ -47,7 +47,7 @@ LIB_NAME = "django-cfg"
 LIB_SITE_URL = "https://djangocfg.com"
 LIB_GITHUB_URL = "https://github.com/markolofsen/django-cfg"
 LIB_SUPPORT_URL = "https://djangocfg.com/demo"
-LIB_HEALTH_URL = "/cfg/health/"
+LIB_HEALTH_URL = "/healthz"
 
 # Template configuration for create-project command
 TEMPLATE_ARCHIVE_URL = f"{LIB_GITHUB_URL}/archive/refs/heads/main.zip"
@@ -83,4 +83,3 @@ def get_default_dropdown_items() -> List[SiteDropdownItem]:
             link=LIB_SITE_URL,
         ),
     ]
-

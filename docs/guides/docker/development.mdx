@@ -134,13 +134,13 @@ django:
     DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/djangocfg
     REDIS_URL: redis://redis:6379/0
   healthcheck:
-    test: ["CMD", "curl", "-f", "http://localhost:8000/cfg/health/"]
+    test: ["CMD", "curl", "-f", "http://localhost:8000/healthz/ready"]
     interval: 30s
 ```
 
 **Key features**:
 - Auto-runs migrations on startup
-- Health check endpoint at `/cfg/health/`
+- Health check endpoint at `/healthz/ready`
 - Volume-mounted media files
 - Hot-reload enabled
 

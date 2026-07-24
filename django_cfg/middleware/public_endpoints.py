@@ -36,8 +36,7 @@ class PublicEndpointsMiddleware(MiddlewareMixin):
         r'^/cfg/accounts/otp/',           # CFG OTP endpoints
         r'^/api/accounts/token/refresh/', # Token refresh
         r'^/cfg/accounts/token/refresh/', # CFG Token refresh
-        r'^/api/health/',                 # Health check endpoints
-        r'^/cfg/api/health/',             # CFG Health check endpoints
+        r'^/healthz(?:/|$)',              # Health check endpoints
         r'^/admin/login/',                # Django admin login
         r'^/api/schema/',                 # API schema endpoints
         r'^/api/docs/',                   # API documentation

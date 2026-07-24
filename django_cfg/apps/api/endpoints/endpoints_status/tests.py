@@ -58,9 +58,10 @@ class ShouldCheckEndpointTests(TestCase):
 
     def test_should_exclude_health_endpoints(self):
         """Health endpoints should be excluded to avoid recursion."""
-        self.assertFalse(should_check_endpoint('/cfg/health/'))
-        self.assertFalse(should_check_endpoint('/cfg/health/drf/'))
-        self.assertFalse(should_check_endpoint('/cfg/health/quick/'))
+        self.assertFalse(should_check_endpoint('/healthz'))
+        self.assertFalse(should_check_endpoint('/healthz/live'))
+        self.assertFalse(should_check_endpoint('/healthz/ready'))
+        self.assertFalse(should_check_endpoint('/healthz/ready/drf/'))
 
     def test_should_exclude_endpoints_endpoints(self):
         """Endpoints status endpoints should be excluded to avoid recursion."""
