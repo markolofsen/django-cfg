@@ -36,6 +36,7 @@ class TwoFactorSessionService:
         user: User,
         request: Optional[HttpRequest] = None,
         lifetime_minutes: Optional[int] = None,
+        remember_me: bool = False,
     ) -> TwoFactorSession:
         """
         Create pending 2FA session after primary auth.
@@ -44,6 +45,7 @@ class TwoFactorSessionService:
             user: User who completed primary authentication
             request: HTTP request for context (IP, user agent)
             lifetime_minutes: Session validity in minutes (default: 5)
+            remember_me: Persist the completed browser login for 30 days
 
         Returns:
             Created TwoFactorSession instance
@@ -54,6 +56,7 @@ class TwoFactorSessionService:
             user=user,
             request=request,
             lifetime_minutes=lifetime,
+            remember_me=remember_me,
         )
 
         logger.info(

@@ -70,6 +70,11 @@ class TwoFactorSession(models.Model):
         help_text="Lock session after N failures",
     )
 
+    remember_me = models.BooleanField(
+        default=False,
+        help_text="Whether the completed login should persist for 30 days",
+    )
+
     class Meta:
         app_label = "django_cfg_totp"
         verbose_name = "Two-Factor Session"
@@ -147,6 +152,7 @@ class TwoFactorSession(models.Model):
         user,
         request=None,
         lifetime_minutes: int = 5,
+        remember_me: bool = False,
     ) -> "TwoFactorSession":
         """Create a new 2FA session for user."""
         ip_address = None
@@ -158,6 +164,7 @@ class TwoFactorSession(models.Model):
 
         return cls.objects.create(
             user=user,
+            remember_me=remember_me,
             ip_address=ip_address,
             user_agent=user_agent,
             expires_at=timezone.now() + timedelta(minutes=lifetime_minutes),

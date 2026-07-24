@@ -50,6 +50,8 @@ class IROperation:
     request_body_schema_ref: str | None = None  # e.g. "FleetCreate"
     response_schema_ref: str | None = None       # 200/201 ref, or None
     is_paginated: bool = False        # True when response_schema_ref starts with "Paginated"
+    has_2xx_response: bool = True
+    response_media_types: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -152,6 +154,7 @@ def build_ir(spec: dict[str, Any]) -> IR:
                 op.get("responses"),
                 op_id=op.get("operationId") or f"{method.upper()} {path}",
             )
+            has_2xx, media_types = _response_facts(op.get("responses"))
             ir.operations.append(
                 IROperation(
                     operation_id=operation_id,
@@ -169,6 +172,8 @@ def build_ir(spec: dict[str, Any]) -> IR:
                     ),
                     response_schema_ref=response_ref,
                     is_paginated=isinstance(response_ref, str) and response_ref.startswith("Paginated"),
+                    has_2xx_response=has_2xx,
+                    response_media_types=media_types,
                 )
             )
 
@@ -185,6 +190,21 @@ def build_ir(spec: dict[str, Any]) -> IR:
                 )
 
     return ir
+
+
+def _response_facts(responses: Any) -> tuple[bool, list[str]]:
+    """Return the success-response facts needed to gate generated SWR hooks."""
+    if not isinstance(responses, dict):
+        return False, []
+    media: list[str] = []
+    has_2xx = False
+    for code, response in responses.items():
+        if not (isinstance(code, str) and code.startswith("2")):
+            continue
+        has_2xx = True
+        if isinstance(response, dict) and isinstance(response.get("content"), dict):
+            media.extend(str(media_type) for media_type in response["content"])
+    return has_2xx, media
 
 
 def _parse_params(params: list[dict[str, Any]]) -> tuple[list[IRParam], list[IRParam]]:

@@ -27,10 +27,14 @@ import base64
 import hashlib
 import json
 import time
+from datetime import timedelta
 from typing import Any, Optional
 
 import jwt
 from jwt.algorithms import ECAlgorithm, RSAAlgorithm
+
+
+REMEMBER_ME_LIFETIME = timedelta(days=30)
 
 # Accepted proof signing algorithms. ES256 (P-256) is the browser-friendly default
 # (Web Crypto generates it natively); RS256 allowed for non-browser clients.
@@ -267,7 +271,7 @@ def derive_access_with_cnf(refresh):
     return access
 
 
-def mint_tokens_for_request(user, request):
+def mint_tokens_for_request(user, request, *, refresh_lifetime=None):
     """Mint a `(refresh, access)` pair for ``user`` — DPoP-bound when applicable.
 
     The ONE token-mint helper for every login flow (OTP verify, TOTP verify,
@@ -278,8 +282,16 @@ def mint_tokens_for_request(user, request):
     from rest_framework_simplejwt.tokens import RefreshToken
 
     refresh = RefreshToken.for_user(user)
+    if refresh_lifetime is not None:
+        # Keep the remembered-session deadline absolute across refresh rotation.
+        refresh.set_exp(lifetime=refresh_lifetime)
+        refresh["cfg_session_expires_at"] = int(refresh["exp"])
     bind_refresh_token_to_request(refresh, request)
     access = derive_access_with_cnf(refresh)
+    if refresh_lifetime is not None:
+        default_seconds = max(0, int(access["exp"]) - int(access["iat"]))
+        session_seconds = max(0, int(refresh["exp"]) - int(access["iat"]))
+        access.set_exp(lifetime=timedelta(seconds=min(default_seconds, session_seconds)))
     return refresh, access
 
 

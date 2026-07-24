@@ -15,6 +15,7 @@ Two render modes (selected per target via `auth_mode`):
 
 Storage modes (jwt store only):
   • 'localStorage' (default) — JS-readable, simple, survives reload.
+  • 'sessionStorage'         — JS-readable, cleared when the browser session ends.
   • 'cookie'                 — JS-readable cookie (NOT HttpOnly).
                                Useful when you need SSR to see the
                                token via `cookies()` in Next.js, or
@@ -37,7 +38,8 @@ function detectLocale(): string | null {
   try {
     if (typeof document !== 'undefined') {
       const m = document.cookie.match(/(?:^|;\\s*)NEXT_LOCALE=([^;]*)/);
-      if (m) return decodeURIComponent(m[1]);
+      const locale = m?.[1];
+      if (locale !== undefined) return decodeURIComponent(locale);
     }
     if (typeof navigator !== 'undefined' && navigator.language) {
       return navigator.language;
@@ -231,7 +233,7 @@ const API_KEY_KEY = '{api_key_storage_key}';
 
 const isBrowser = typeof window !== 'undefined';
 
-export type StorageMode = 'localStorage' | 'cookie';
+export type StorageMode = 'localStorage' | 'sessionStorage' | 'cookie';
 
 // ── Storage backends (browser-only; server-side reads return null) ─────────
 
@@ -254,6 +256,20 @@ const localStorageBackend: KVStore = {{
   }},
 }};
 
+const sessionStorageBackend: KVStore = {{
+  get(key) {{
+    if (!isBrowser) return null;
+    try {{ return window.sessionStorage.getItem(key); }} catch {{ return null; }}
+  }},
+  set(key, value) {{
+    if (!isBrowser) return;
+    try {{
+      if (value === null) window.sessionStorage.removeItem(key);
+      else window.sessionStorage.setItem(key, value);
+    }} catch {{}}
+  }},
+}};
+
 /** 30 days, matches typical refresh-token lifetime. */
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
@@ -263,7 +279,8 @@ const cookieBackend: KVStore = {{
     try {{
       const re = new RegExp(`(?:^|;\\\\s*)${{encodeURIComponent(key)}}=([^;]*)`);
       const m = document.cookie.match(re);
-      return m ? decodeURIComponent(m[1]) : null;
+      const value = m?.[1];
+      return value === undefined ? null : decodeURIComponent(value);
     }} catch {{ return null; }}
   }},
   set(key, value) {{
@@ -444,7 +461,11 @@ export const auth = {{
   getStorageMode(): StorageMode {{ return _storageMode; }},
   setStorageMode(mode: StorageMode): void {{
     _storageMode = mode;
-    _storage = mode === 'cookie' ? cookieBackend : localStorageBackend;
+    _storage = mode === 'cookie'
+      ? cookieBackend
+      : mode === 'sessionStorage'
+        ? sessionStorageBackend
+        : localStorageBackend;
     notifySessionChanged();
   }},
 
@@ -781,7 +802,7 @@ function _getDpopKeyPair(): Promise<CryptoKeyPair> {{
 function _b64urlFromBytes(bytes: ArrayBuffer | Uint8Array): string {{
   const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   let s = '';
-  for (let i = 0; i < arr.length; i++) s += String.fromCharCode(arr[i]);
+  for (let i = 0; i < arr.length; i++) s += String.fromCharCode(arr[i] ?? 0);
   return btoa(s).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
 }}
 
@@ -803,7 +824,8 @@ async function _makeDpopProof(method: string, url: string): Promise<string | nul
     const jwk = await _publicJwk(pair.publicKey);
     const header = {{ typ: 'dpop+jwt', alg: 'ES256', jwk }};
     // htu = scheme://authority/path without query/fragment.
-    const htu = url.split('#')[0].split('?')[0];
+    const withoutFragment = url.split('#')[0] ?? url;
+    const htu = withoutFragment.split('?')[0] ?? withoutFragment;
     const jti =
       (crypto.randomUUID && crypto.randomUUID()) ||
       _b64urlFromBytes(crypto.getRandomValues(new Uint8Array(16)));

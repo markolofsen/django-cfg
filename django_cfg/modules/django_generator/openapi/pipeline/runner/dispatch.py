@@ -206,13 +206,16 @@ def run_target(
             run_ts_wrapper(target, out_root)
             return True, None, all_hit
 
-        # Other tools (ogen / openapi-python-client / swift-openapi):
-        # single output, optional multi-group slice union.
-        if len(target.groups) <= 1:
+        # Swift and TypeScript generators emit one module-level client from the
+        # union of their selected groups. Splitting a Swift target produces
+        # duplicate `Client`/`Components` declarations in the same SwiftPM
+        # module; the group boundary belongs in the sliced spec, not the output
+        # directory tree.
+        if target.tool == "swift-openapi" or len(target.groups) <= 1:
             ok, err, hit = run_single(target, target.groups, out_root, global_spec, config, cache)
             return ok, err, hit
 
-        # Multi-group split for non-TS tools: keep legacy behavior.
+        # Multi-group split for ogen / openapi-python-client: keep legacy behavior.
         target_root = out_root
         all_hit = True
         for group_name in target.groups:

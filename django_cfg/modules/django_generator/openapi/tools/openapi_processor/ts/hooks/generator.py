@@ -32,6 +32,14 @@ from ..naming import hook_name
 _QUERY_METHODS = {"get"}
 
 
+def _hookable(op) -> bool:
+    """Exclude WebSocket upgrades and SSE streams from request/response hooks."""
+    return op.has_2xx_response and not any(
+        media_type.startswith("text/event-stream")
+        for media_type in op.response_media_types
+    )
+
+
 def generate_hooks(ir: IR, out_dir: Path, *, sdk_import_prefix: str = "../..") -> list[Path]:
     """Emit one hook file per operation into ``out_dir``.
 
@@ -49,6 +57,8 @@ def generate_hooks(ir: IR, out_dir: Path, *, sdk_import_prefix: str = "../..") -
     entries: list[tuple[str, str]] = []  # (file_name, hook_fn_name)
 
     for op in ir.operations:
+        if not _hookable(op):
+            continue
         hook = hook_name(op.operation_id, method=op.method)
 
         if op.method in _QUERY_METHODS:

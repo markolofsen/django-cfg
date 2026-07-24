@@ -101,4 +101,23 @@ def fix_enum_value_none_guard(text: str) -> tuple[str, bool]:
     return new_text, n > 0
 
 
-__all__ = ["fix_enum_value_none_guard", "fix_unset_import"]
+_DATETIME_ISOFORMAT_RE = re.compile(
+    r"^(?P<prefix>[ \t]*\w+\s*=\s*self\.\w+\.isoformat\(\))$",
+    re.MULTILINE,
+)
+
+
+def fix_datetime_utc_suffix(text: str) -> tuple[str, bool]:
+    """Serialize UTC datetimes using the canonical JSON ``Z`` suffix."""
+    new_text, n = _DATETIME_ISOFORMAT_RE.subn(
+        r'\g<prefix>.replace("+00:00", "Z")',
+        text,
+    )
+    return new_text, n > 0
+
+
+__all__ = [
+    "fix_datetime_utc_suffix",
+    "fix_enum_value_none_guard",
+    "fix_unset_import",
+]

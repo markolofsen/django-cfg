@@ -15,7 +15,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .fixes import fix_enum_value_none_guard, fix_unset_import
+from .fixes import (
+    fix_datetime_utc_suffix,
+    fix_enum_value_none_guard,
+    fix_unset_import,
+)
 
 
 @dataclass(slots=True)
@@ -26,7 +30,7 @@ class PythonExtrasResult:
 
 # All fixers run in order. Each returns (new_text, changed). The file is
 # rewritten only if at least one fixer reports a change.
-_FIXERS = (fix_unset_import, fix_enum_value_none_guard)
+_FIXERS = (fix_unset_import, fix_enum_value_none_guard, fix_datetime_utc_suffix)
 
 
 def generate(out_dir: Path) -> PythonExtrasResult:

@@ -114,8 +114,12 @@ class VerifyViewSet(viewsets.GenericViewSet):
         # Issue tokens
         user = session.user
         # Mint tokens (DPoP-bound when a login proof is present).
-        from django_cfg.middleware.dpop import mint_tokens_for_request
-        refresh, access = mint_tokens_for_request(user, request)
+        from django_cfg.middleware.dpop import REMEMBER_ME_LIFETIME, mint_tokens_for_request
+        refresh, access = mint_tokens_for_request(
+            user,
+            request,
+            refresh_lifetime=REMEMBER_ME_LIFETIME if session.remember_me else None,
+        )
 
         # Import UserSerializer from accounts app
         try:
@@ -145,6 +149,7 @@ class VerifyViewSet(viewsets.GenericViewSet):
                 "access_token": str(access),
                 "refresh_token": str(refresh),
                 "user": user_data,
+                "persistent_session": session.remember_me,
             },
             status=status.HTTP_200_OK,
         )
@@ -198,8 +203,12 @@ class VerifyViewSet(viewsets.GenericViewSet):
         # Issue tokens
         user = session.user
         # Mint tokens (DPoP-bound when a login proof is present).
-        from django_cfg.middleware.dpop import mint_tokens_for_request
-        refresh, access = mint_tokens_for_request(user, request)
+        from django_cfg.middleware.dpop import REMEMBER_ME_LIFETIME, mint_tokens_for_request
+        refresh, access = mint_tokens_for_request(
+            user,
+            request,
+            refresh_lifetime=REMEMBER_ME_LIFETIME if session.remember_me else None,
+        )
 
         # Get remaining backup codes
         remaining_codes = BackupCodeService.get_remaining_count(user)
@@ -237,6 +246,7 @@ class VerifyViewSet(viewsets.GenericViewSet):
             "refresh_token": str(refresh),
             "user": user_data,
             "remaining_backup_codes": remaining_codes,
+            "persistent_session": session.remember_me,
         }
 
         if warning:

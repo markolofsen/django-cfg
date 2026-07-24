@@ -14,7 +14,6 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from django_cfg.apps.system.totp.services import TOTPService, TwoFactorSessionService
 from django_cfg.modules.base import BaseCfgModule
@@ -181,6 +180,7 @@ class GitHubCallbackView(APIView):
 
         code = serializer.validated_data['code']
         state = serializer.validated_data['state']
+        remember_me: bool = serializer.validated_data['remember_me']
 
         # Get redirect_uri from request or auto-generate from config
         redirect_uri = serializer.validated_data.get('redirect_uri')
@@ -250,7 +250,7 @@ class GitHubCallbackView(APIView):
 
             if is_2fa_enabled and has_device:
                 # Create 2FA session
-                session = TwoFactorSessionService.create_session(user, request)
+                session = TwoFactorSessionService.create_session(user, request, remember_me=remember_me)
                 logger.info(f"2FA required for OAuth user {user.email}, session {session.id}")
 
                 return Response({
@@ -262,10 +262,16 @@ class GitHubCallbackView(APIView):
                     'is_new_user': user_created,
                     'is_new_connection': connection_created,
                     'should_prompt_2fa': False,
+                    'persistent_session': remember_me,
                 })
 
-            # Generate JWT tokens
-            refresh = RefreshToken.for_user(user)
+            # Generate JWT tokens. Remembered sessions are capped at 30 days.
+            from django_cfg.middleware.dpop import REMEMBER_ME_LIFETIME, mint_tokens_for_request
+            refresh, access = mint_tokens_for_request(
+                user,
+                request,
+                refresh_lifetime=REMEMBER_ME_LIFETIME if remember_me else None,
+            )
 
             # Fire auth signal (login alert, activity logging, etc.)
             from ..signals import user_authenticated
@@ -274,7 +280,7 @@ class GitHubCallbackView(APIView):
             return Response({
                 'requires_2fa': False,
                 'session_id': None,
-                'access': str(refresh.access_token),
+                'access': str(access),
                 'refresh': str(refresh),
                 'user': {
                     'id': user.pk,
@@ -286,6 +292,7 @@ class GitHubCallbackView(APIView):
                 'is_new_user': user_created,
                 'is_new_connection': connection_created,
                 'should_prompt_2fa': user.should_prompt_2fa,
+                'persistent_session': remember_me,
             })
 
         except GitHubOAuthError as e:

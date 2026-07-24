@@ -75,7 +75,10 @@ class UserProfileUpdateView(ClientAPIMixin, generics.UpdateAPIView):
     Requires authenticated user (JWT or Session).
     """
     serializer_class = CfgUserUpdateSerializer
-    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    # Avatar upload is a distinct multipart endpoint below. The profile fields
+    # themselves are JSON scalars, so advertising multipart here creates an
+    # invalid multi-content OpenAPI shape for typed clients.
+    parser_classes = [JSONParser]
 
     def get_object(self):
         return self.request.user
@@ -125,7 +128,9 @@ class UserProfilePartialUpdateView(ClientAPIMixin, generics.UpdateAPIView):
     Requires authenticated user (JWT or Session).
     """
     serializer_class = CfgUserUpdateSerializer
-    parser_classes = [JSONParser, MultiPartParser, FormParser]
+    # Keep this in lockstep with the full update: file input belongs only to
+    # `upload_avatar`, never to the profile document.
+    parser_classes = [JSONParser]
 
     def get_object(self):
         return self.request.user
