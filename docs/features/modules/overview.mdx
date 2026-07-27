@@ -155,8 +155,8 @@ Django-CFG provides health check views:
 from django_cfg.modules.django_health import HealthCheckView, SimpleHealthView
 
 urlpatterns = [
-    path('health/', HealthCheckView.as_view(), name='health-check'),
-    path('health/simple/', SimpleHealthView.as_view(), name='health-simple'),
+    path('healthz/ready', HealthCheckView.as_view(), name='health-check'),
+    path('healthz', SimpleHealthView.as_view(), name='health-simple'),
 ]
 ```
 

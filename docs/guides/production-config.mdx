@@ -420,7 +420,7 @@ class ProductionConfig(DjangoConfig):
 - ✅ Feature flags from environment (not hardcoded)
 - ✅ **Static files collected**: `python manage.py collectstatic --noinput`
 - ✅ **Migrations applied**: `python manage.py migrate --noinput`
-- ✅ **Health check working**: `/health/` returns 200 OK
+- ✅ **Health check working**: `/healthz` returns 200 OK
 - ✅ **Logs configured**: Check application writes to production logs
 - ✅ **Secrets validated**: All required environment variables set
 
@@ -974,7 +974,7 @@ def health_check(request):
 
 <Callout type="info">
 **Health Check Endpoint**
-Expose `/health/` endpoint for monitoring systems (Kubernetes, AWS ELB, etc.). Return HTTP 503 for unhealthy state.
+Expose `/healthz` and `/healthz/ready` endpoints for monitoring systems (Kubernetes, AWS ELB, etc.). Return HTTP 503 for unhealthy state.
 
 </Callout>
 

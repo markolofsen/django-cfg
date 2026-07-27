@@ -70,7 +70,7 @@ poetry run python manage.py runserver
 Access your application:
 - Admin: http://localhost:8000/admin/
 - API Docs: http://localhost:8000/api/docs/
-- Health Check: http://localhost:8000/cfg/health/
+- Health Check: http://localhost:8000/healthz/ready
 
 ## Next Steps
 

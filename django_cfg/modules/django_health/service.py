@@ -21,7 +21,7 @@ class HealthCheckView(View):
     """
     Health check endpoint that validates system components.
     
-    GET /health/ returns:
+    GET /healthz/ready returns:
     - Database connectivity
     - Cache availability
     - System resources
@@ -267,6 +267,6 @@ def get_health_urls():
     from django.urls import path
 
     return [
-        path('health/', HealthCheckView.as_view(), name='health-check'),
-        path('health/simple/', SimpleHealthView.as_view(), name='simple-health'),
+        path('healthz', SimpleHealthView.as_view(), name='simple-health'),
+        path('healthz/ready', HealthCheckView.as_view(), name='health-check'),
     ]

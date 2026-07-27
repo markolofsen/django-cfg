@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.2.112"
+version = "2.2.113"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -221,6 +221,9 @@ ai = [
     # pydantic-monty directly: the harness owns which monty it is compatible with,
     # and monty is 0.0.x — that decision should live in one place, not two.
     "pydantic-ai-harness[code-mode]>=0.6.0,<0.7",
+    # Harness 0.6.0 imports MontyRepl, which was removed from pydantic-monty
+    # 0.0.19. Keep the transitive extra on the API used by the harness.
+    "pydantic-monty>=0.0.16,<0.0.19",
     # TOON serializer the agent plane's tool output uses (agent/tools/core/_serialize.py).
     # Distinct from `json-toon` above — the harness imports `toon_format`. Optional at
     # runtime (the plane falls back to JSON if absent), declared here so the token
@@ -346,6 +349,9 @@ full = [
     # capabilities.code_mode at module load, which pulls pydantic_ai_harness.code_mode +
     # pydantic_monty. Without the extra the whole agent plane fails to import under `full`.
     "pydantic-ai-harness[code-mode]>=0.6.0,<0.7",
+    # Harness 0.6.0 imports MontyRepl, which was removed from pydantic-monty
+    # 0.0.19. Keep the transitive extra on the API used by the harness.
+    "pydantic-monty>=0.0.16,<0.0.19",
     # TOON serializer the agent plane's tool output uses (falls back to JSON if absent,
     # but `full` is batteries-included — ship the token savings). Import name is
     # `toon_format`, distinct from the `json-toon` core dep.

@@ -298,8 +298,30 @@ const cookieBackend: KVStore = {{
   }},
 }};
 
-let _storage: KVStore = localStorageBackend;
+function backendFor(mode: StorageMode): KVStore {{
+  return mode === 'cookie'
+    ? cookieBackend
+    : mode === 'sessionStorage'
+      ? sessionStorageBackend
+      : localStorageBackend;
+}}
+
+/**
+ * The session backend. `localStorage` by default and for every login path.
+ *
+ * `setStorageMode` exists for a host that must relocate the whole session once
+ * at bootstrap — e.g. 'cookie' so Next.js `cookies()` can read the token during
+ * SSR. It is NOT a per-login switch: this value lives in module memory and
+ * resets to the default on every page load, so tokens written to a non-default
+ * backend after startup would be stranded — present in the browser, invisible
+ * to the client, and every request would go out unauthenticated.
+ *
+ * Session LENGTH is therefore not a client concern. The server decides it when
+ * minting the refresh token (`remember_me`); the client just stores whatever it
+ * was given, in one place.
+ */
 let _storageMode: StorageMode = 'localStorage';
+let _storage: KVStore = backendFor(_storageMode);
 
 {_ENV_HELPERS_TS}
 // ── In-memory overrides (win over storage / env) ───────────────────────────
@@ -459,13 +481,12 @@ const _sessionExpiredHandlers = new Set<SessionExpiredHandler>();
 export const auth = {{
   // ── Storage mode ──────────────────────────────────────────────────
   getStorageMode(): StorageMode {{ return _storageMode; }},
+  /** Relocate the session backend. Call once at bootstrap, before any sign-in:
+   *  the mode is module state and resets on reload, so a later switch strands
+   *  whatever was written after it. */
   setStorageMode(mode: StorageMode): void {{
     _storageMode = mode;
-    _storage = mode === 'cookie'
-      ? cookieBackend
-      : mode === 'sessionStorage'
-        ? sessionStorageBackend
-        : localStorageBackend;
+    _storage = backendFor(mode);
     notifySessionChanged();
   }},
 
@@ -481,8 +502,13 @@ export const auth = {{
     notifySessionChanged();
   }},
   clearTokens(): void {{
-    _storage.set(ACCESS_KEY, null);
-    _storage.set(REFRESH_KEY, null);
+    // Clear every backend, not just the active one. Sign-out must leave nothing
+    // behind anywhere — including tokens an older build stranded in
+    // sessionStorage — or the next page load could resurrect a dead session.
+    for (const backend of [localStorageBackend, sessionStorageBackend, cookieBackend]) {{
+      backend.set(ACCESS_KEY, null);
+      backend.set(REFRESH_KEY, null);
+    }}
     notifySessionChanged();
   }},
   /** Session-aware: token PRESENT and not past its `exp` (or a live refresh

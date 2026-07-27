@@ -37,7 +37,7 @@ urlpatterns = [
 ]
 
 # This adds:
-# - /cfg/health/ (Health check endpoint)
+# - /healthz/ready (Health check endpoint)
 # - /cfg/commands/ (Management commands interface)
 # - /admin/rpc/ (RPC Dashboard - if django_cfg_rpc is enabled)
 # - Django Client URLs (OpenAPI client endpoints - if available)

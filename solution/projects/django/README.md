@@ -190,7 +190,7 @@ One line replaces hundreds of configuration lines!
 
 - **Swagger UI**: http://127.0.0.1:8000/api/schema/swagger-ui/
 - **ReDoc**: http://127.0.0.1:8000/api/schema/redoc/
-- **Health Check**: http://127.0.0.1:8000/cfg/health/
+- **Health Check**: http://127.0.0.1:8000/healthz/ready
 
 ## Useful Links
 
