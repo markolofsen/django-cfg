@@ -229,37 +229,48 @@
             const decoder = new TextDecoder();
             let buf = '';
 
+            function handleSsePart(part) {
+                if (!part.trim()) return;
+                let eventType = 'message', dataStr = '';
+                for (const line of part.split('\n')) {
+                    if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+                    if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
+                }
+                let data = {};
+                try { data = JSON.parse(dataStr); } catch {}
+
+                if (eventType === 'tool_start') {
+                    thinking.remove();
+                    addMsg(`⚙ ${data.name}(${JSON.stringify(data.args || {})})`, 'mcp-msg mcp-msg-tool');
+                } else if (eventType === 'tool_result') {
+                    thinking.remove();
+                    const preview = (data.result || '').slice(0, 200);
+                    addMsg(`→ ${preview}${data.result && data.result.length > 200 ? '…' : ''}`, 'mcp-msg mcp-msg-tool');
+                } else if (eventType === 'text') {
+                    thinking.remove();
+                    if (data.content) assistantDiv = addMsg(data.content, 'mcp-msg-assistant');
+                } else if (eventType === 'error') {
+                    thinking.remove();
+                    addMsg(data.message || 'Unknown error', 'mcp-msg-error');
+                }
+            }
+
             while (true) {
                 const {done, value} = await reader.read();
                 if (done) break;
                 buf += decoder.decode(value, {stream: true});
                 const parts = buf.split('\n\n');
                 buf = parts.pop();
-                for (const part of parts) {
-                    if (!part.trim()) continue;
-                    let eventType = 'message', dataStr = '';
-                    for (const line of part.split('\n')) {
-                        if (line.startsWith('event: ')) eventType = line.slice(7).trim();
-                        if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
-                    }
-                    let data = {};
-                    try { data = JSON.parse(dataStr); } catch {}
+                for (const part of parts) handleSsePart(part);
+            }
 
-                    if (eventType === 'tool_start') {
-                        thinking.remove();
-                        addMsg(`⚙ ${data.name}(${JSON.stringify(data.args || {})})`, 'mcp-msg mcp-msg-tool');
-                        thinking.remove = () => {};
-                    } else if (eventType === 'tool_result') {
-                        const preview = (data.result || '').slice(0, 200);
-                        addMsg(`→ ${preview}${data.result && data.result.length > 200 ? '…' : ''}`, 'mcp-msg mcp-msg-tool');
-                    } else if (eventType === 'text') {
-                        thinking.remove();
-                        assistantDiv = addMsg(data.content || '', 'mcp-msg-assistant');
-                    } else if (eventType === 'error') {
-                        thinking.remove();
-                        addMsg(data.message || 'Unknown error', 'mcp-msg-error');
-                    }
-                }
+            // Flush a final unterminated SSE frame. Some WSGI/dev-server
+            // combinations deliver the last frame together with `done=true`.
+            buf += decoder.decode();
+            if (buf.trim()) handleSsePart(buf);
+            if (!assistantDiv && !messages.querySelector('.mcp-msg-error')) {
+                thinking.remove();
+                addMsg('The agent returned an empty response. Please try again.', 'mcp-msg-error');
             }
         } catch (err) {
             thinking.remove();

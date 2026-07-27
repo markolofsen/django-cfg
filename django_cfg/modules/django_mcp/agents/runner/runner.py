@@ -214,6 +214,14 @@ def _drain_stream(agent, deps, user_message, history) -> Generator[Dict[str, Any
             elif isinstance(ev, DoneEvent):
                 pass  # text flushed below, then our own done
     finally:
+        # ``_agen`` owns pydantic-ai's async event stream. Close it while its
+        # private loop is still alive; otherwise Python schedules ``aclose()``
+        # after the loop has already been closed and emits
+        # ``Task was destroyed while it is pending``. In the SSE path that can
+        # also discard the final text event, leaving the browser with an empty
+        # assistant message.
+        loop.run_until_complete(agen.aclose())
+        loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()
 
     yield {"event": "text", "content": "".join(text_parts)}

@@ -114,7 +114,7 @@ class MCPAgentStreamView(View):
     Body: {"message": "...", "session_id": "...", "model": "..."}
 
     Requires active Django session (user must be authenticated in admin).
-    Streams SSE events: tool_start, tool_result, text, error, done.
+    Returns the response through SSE events: text, error, done.
     """
 
     def post(self, request, *args, **kwargs):
@@ -172,12 +172,32 @@ class MCPAgentStreamView(View):
             context.add_message(entry["role"], entry["content"])
 
         def event_stream():
-            assistant_chunks: list[str] = []
-            for event in agent_runner.stream(message, context, model=model):
-                yield _sse_line(event)
-                if event.get("event") == "text":
-                    assistant_chunks.append(event.get("content", ""))
-            assistant_reply = "".join(assistant_chunks)
+            # Keep the SSE wire contract for the existing admin UI, but use one
+            # synchronous agent run. OpenRouter's streaming response currently
+            # completes without text deltas, which otherwise causes a duplicate
+            # provider request through the fallback path.
+            try:
+                assistant_reply = agent_runner.run(message, context, model=model)
+            except Exception:
+                logger.exception("MCP agent run failed")
+                assistant_reply = ""
+                yield _sse_line(
+                    {
+                        "event": "error",
+                        "message": "The agent could not generate a response. Please try again.",
+                    }
+                )
+
+            if assistant_reply:
+                yield _sse_line({"event": "text", "content": assistant_reply})
+            else:
+                yield _sse_line(
+                    {
+                        "event": "error",
+                        "message": "The agent returned an empty response. Please try again.",
+                    }
+                )
+            yield _sse_line({"event": "done"})
             store.append_message("user", message)
             if assistant_reply:
                 store.append_message("assistant", assistant_reply)

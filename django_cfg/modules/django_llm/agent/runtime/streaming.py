@@ -439,8 +439,18 @@ async def stream_agent_run(
                     except Exception:
                         logger.exception("[stream] usage/cost collection failed")
 
-                    # Handle deferred / HITL approval
                     output = run_result.output
+
+                    # Some OpenAI-compatible providers return a successful
+                    # non-delta response: the answer is present on the final
+                    # run result, but no PartStartEvent/PartDeltaEvent was
+                    # emitted. Preserve that answer instead of sending an
+                    # empty ``text`` SSE frame to the client.
+                    if not text_buf and isinstance(output, str) and output:
+                        text_buf.append(output)
+                        yield TextDeltaEvent(delta=output)
+
+                    # Handle deferred / HITL approval
                     if isinstance(output, DeferredToolRequests):
                         out.last_deferred = output
                         try:

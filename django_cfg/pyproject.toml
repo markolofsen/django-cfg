@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.2.113"
+version = "2.2.114"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -212,7 +212,7 @@ ai = [
     # pydantic_ai.models.openai / .providers.openai imports need. Without the
     # extra a resolver may satisfy the bare "openai>=1.107" above with 1.x and
     # the OpenAI model backend breaks at import time, not at install time.
-    "pydantic-ai-slim[openai]>=2.1.0,<3.0",  # >=1.99 fixed SSRF bypass CVE-2026-46678; 2.1 is the floor required by pydantic-ai-harness
+    "pydantic-ai-slim[openai]>=2.10.0,<3.0",  # Keep the harness on the streaming API covered by the current lock.
     # 0.x — pin the minor: upstream breaks on minor bumps by their own stated
     # policy, and consumers import from pydantic_ai_harness.experimental.
     #
@@ -342,7 +342,7 @@ full = [
     # pydantic_ai.models.openai / .providers.openai imports need. Without the
     # extra a resolver may satisfy the bare "openai>=1.107" above with 1.x and
     # the OpenAI model backend breaks at import time, not at install time.
-    "pydantic-ai-slim[openai]>=2.1.0,<3.0",  # >=1.99 fixed SSRF bypass CVE-2026-46678; 2.1 is the floor required by pydantic-ai-harness
+    "pydantic-ai-slim[openai]>=2.10.0,<3.0",  # Keep the harness on the streaming API covered by the current lock.
     # 0.x — pin the minor: upstream breaks on minor bumps by their own stated
     # policy, and consumers import from pydantic_ai_harness.experimental.
     # [code-mode] is REQUIRED, not optional: the agent plane's streaming path hard-imports
