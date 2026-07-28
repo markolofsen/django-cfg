@@ -99,7 +99,11 @@ class MyConfig(DjangoConfig):
     ]
 ```
 
-Nothing else to configure. Each site row is created **automatically** on the first event from that domain, and the admin dashboard has a site picker.
+Nothing else to configure. Each site row is created **automatically** on the first event from that domain. Related hosts also join an automatic logical property: the broadest trusted suffix is the property name. In the example, `example.com`, `app.example.com`, and `docs.example.com` report together as the `example.com` property, while the dashboard still lets you select one host.
+
+This uses `security_domains` as the only grouping authority — not a public-suffix guess or a second analytics setting — so projects never have to maintain the same ownership list twice.
+
+Successful OTP, OAuth, and TOTP-completion logins are also recorded automatically against their trusted `Origin` or `Referer`. This gives `Signed in` a server-confirmed value even when the frontend stores JWTs in `localStorage` and unload-safe beacons cannot attach `Authorization` headers. The login fact does **not** create a pageview, visitor, session, bounce, or online user.
 
 `security_domains` already declares which domains belong to this project (it drives `ALLOWED_HOSTS`, CORS, and CSRF), so analytics derives from it rather than asking you to restate the same fact somewhere it can drift.
 

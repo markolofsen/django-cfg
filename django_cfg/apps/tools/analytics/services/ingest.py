@@ -64,6 +64,7 @@ def ingest_batch(
     fast_commit: bool = True,
     session_timeout_minutes: int = 30,
     salt_rotation_days: int = 1,
+    is_measurement: bool = True,
     now: datetime | None = None,
 ) -> int:
     """Persist a batch of client events. Returns the number of rows written.
@@ -109,6 +110,7 @@ def ingest_batch(
         visitor=visitor,
         previous_visitor=previous_visitor,
         user_id=user_id,
+        is_measurement=is_measurement,
         browser=browser,
         os=os_name,
         device=device,
@@ -158,6 +160,7 @@ def _build_rows(
             visitor_id=ctx.visitor,
             session=session,
             user_id=ctx.user_id,
+            is_measurement=ctx.is_measurement,
             event_name=(e.get("event_name") or "pageview")[:64],
             pathname=(e.get("pathname") or "")[:1024],
             route=(e.get("route") or "")[:1024],

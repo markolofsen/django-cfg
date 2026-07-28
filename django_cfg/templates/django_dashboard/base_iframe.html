@@ -43,14 +43,19 @@
         html, body {
             margin: 0;
             padding: 0;
-            background: transparent;
+            /* A dashboard tab is often opened directly with `?iframe=1` while
+               debugging or sharing a URL. In that case there is no parent
+               admin document from which to inherit `.dark`, and transparent
+               would expose the browser's white canvas. Dashboard tabs are a
+               dark surface in both embedded and direct modes. */
+            background: #000;
             height: 100%;
             overflow-x: hidden;
         }
         body {
             font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
             font-size: 14px;
-            background: transparent;
+            background: #000;
         }
         html.dark, html.dark body {
             background-color: #000;

@@ -50,6 +50,10 @@ class AnalyticsSession(models.Model):
         db_constraint=False,
     )
 
+    # False for a server-side lifecycle event that has no browser measurement.
+    # Reports exclude these rows from visit and bounce aggregates.
+    is_measurement = models.BooleanField(default=True)
+
     started_at = models.DateTimeField()
     last_seen_at = models.DateTimeField()
 

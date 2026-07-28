@@ -29,6 +29,7 @@ Type-safe configuration • Real-time WebSockets • gRPC Streaming • OpenAPI 
 - ✅ **Type-safe config** - Pydantic v2 validation catches errors before deployment
 - ✅ **90% less code** - Replace 200+ line settings.py with 30 lines
 - ✅ **Typed API clients** - Generate TypeScript / Python / Go clients from your DRF OpenAPI schema
+- ✅ **First-party analytics** - Typed product events, goals, and ordered funnels without a third-party tracker
 - ✅ **Real-time WebSockets** - Centrifugo integration included
 - ✅ **gRPC streaming** - Bidirectional streaming with WebSocket bridge
 - ✅ **AI-native docs** - First Django framework with MCP server for AI assistants

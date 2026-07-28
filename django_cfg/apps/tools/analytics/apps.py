@@ -25,6 +25,14 @@ class AnalyticsAppConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
 
     def ready(self) -> None:
+        # Server-confirmed login attribution is connected here rather than in
+        # accounts: analytics stays an optional feature and accounts must never
+        # acquire an import-time dependency on it.
+        from django.apps import apps
+
+        if apps.is_installed("django_cfg.apps.system.accounts"):
+            from . import signals  # noqa: F401
+
         self._warn_on_unshared_cache()
 
     def _warn_on_unshared_cache(self) -> None:

@@ -21,9 +21,9 @@ from __future__ import annotations
 import logging
 from urllib.parse import urlparse
 
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 
-from ..models import AnalyticsSite
+from ..models import AnalyticsProperty, AnalyticsSite
 
 logger = logging.getLogger("django_cfg.analytics")
 
@@ -99,7 +99,9 @@ def resolve_site(domain: str) -> AnalyticsSite | None:
     site = AnalyticsSite.objects.filter(domain=domain).first()
     if site is not None:
         # An explicitly deactivated site stays off. That is an operator decision.
-        return site if site.is_active else None
+        if not site.is_active:
+            return None
+        return ensure_property(site)
 
     if domain not in _trusted_domains():
         logger.warning(
@@ -122,7 +124,44 @@ def resolve_site(domain: str) -> AnalyticsSite | None:
         return AnalyticsSite.objects.filter(domain=domain).first()
 
     logger.info("Analytics: auto-registered site %r from security_domains", domain)
+    return ensure_property(site)
+
+
+def ensure_property(site: AnalyticsSite) -> AnalyticsSite:
+    """Attach a site to its zero-config logical property.
+
+    The shortest trusted suffix is the property's domain. For
+    ``cmdop.com`` + ``my.cmdop.com`` this yields one ``cmdop.com`` property;
+    domains that have no trusted parent remain a one-site property. No public
+    suffix heuristic is needed: ``security_domains`` is the explicit ownership
+    boundary and therefore the only grouping authority.
+    """
+    domain = _property_domain(site.domain)
+    try:
+        property_, _ = AnalyticsProperty.objects.get_or_create(
+            domain=domain,
+            defaults={"name": domain, "timezone": site.timezone or _default_timezone()},
+        )
+        if site.property_id != property_.pk:
+            AnalyticsSite.objects.filter(pk=site.pk).update(property=property_)
+            site.property = property_
+    except DatabaseError:
+        # During a rolling deploy the code can briefly precede migration 0003.
+        # Ingest must continue to work; the next request after migration lazily
+        # attaches the site to its property.
+        logger.debug("Analytics: properties schema is not ready yet")
+        return site
     return site
 
 
-__all__ = ["resolve_site", "claimed_domain"]
+def _property_domain(domain: str) -> str:
+    candidates = [
+        trusted for trusted in _trusted_domains()
+        if domain == trusted or domain.endswith(f".{trusted}")
+    ]
+    # The broadest owned suffix is the logical product boundary. Prefer length
+    # rather than label count so an unusual but valid host name behaves too.
+    return min(candidates, key=len) if candidates else domain
+
+
+__all__ = ["resolve_site", "claimed_domain", "ensure_property"]

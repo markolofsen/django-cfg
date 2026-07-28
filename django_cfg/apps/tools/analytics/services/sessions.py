@@ -29,6 +29,7 @@ class VisitorContext:
     visitor: uuid.UUID
     previous_visitor: uuid.UUID
     user_id: int | None
+    is_measurement: bool = True
     browser: str = ""
     os: str = ""
     device: str = "unknown"
@@ -91,6 +92,7 @@ def _open_session(
         site_id=ctx.site_id,
         visitor_id=ctx.visitor,
         user_id=ctx.user_id,
+        is_measurement=ctx.is_measurement,
         started_at=now,
         last_seen_at=now,
         entry_pathname=pathname[:1024],

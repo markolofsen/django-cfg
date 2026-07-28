@@ -25,7 +25,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from ..services import claimed_domain, ingest_batch, resolve_site
+from ..services import claimed_domain, get_analytics_config, ingest_batch, resolve_site
 from .serializers import (
     MAX_BATCH_SIZE,
     AnalyticsBatchSerializer,
@@ -110,7 +110,7 @@ class CollectView(APIView):
         if site is None:
             return Response({"accepted": 0}, status=status.HTTP_202_ACCEPTED)
 
-        config = _analytics_config()
+        config = get_analytics_config()
 
         try:
             written = ingest_batch(
@@ -135,25 +135,6 @@ class CollectView(APIView):
             return Response({"accepted": 0}, status=status.HTTP_202_ACCEPTED)
 
         return Response({"accepted": written}, status=status.HTTP_202_ACCEPTED)
-
-
-def _analytics_config():
-    """The live AnalyticsConfig.
-
-    DjangoConfig.analytics is always populated (it defaults to an instance, not
-    None — analytics is always-on). The fallback covers only the case where this
-    app runs outside a DjangoConfig-driven project.
-
-    NOTE: get_current_config, NOT get_config. There is no get_config; calling it
-    inside a broad `except Exception` silently degrades to defaults forever.
-    """
-    from django_cfg.core import get_current_config
-    from django_cfg.models.django.analytics import AnalyticsConfig
-
-    config = get_current_config()
-    if config is None or config.analytics is None:
-        return AnalyticsConfig()
-    return config.analytics
 
 
 __all__ = ["CollectView"]

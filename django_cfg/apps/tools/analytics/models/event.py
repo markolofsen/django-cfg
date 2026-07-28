@@ -103,6 +103,12 @@ class AnalyticsEvent(models.Model):
         default=EventName.PAGEVIEW,
     )
 
+    # Browser measurement (pageviews and client events) is distinct from a
+    # server-confirmed lifecycle fact such as a successful login. The latter
+    # must contribute to authenticated-user attribution without inventing a
+    # visit, pageview, or bounce.
+    is_measurement = models.BooleanField(default=True)
+
     # Raw URL path, e.g. /en/blog/hello-world
     pathname = models.CharField(max_length=1024)
     # Templated route, e.g. /[locale]/blog/[slug]. Without this, /en/pricing and

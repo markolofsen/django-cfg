@@ -19,12 +19,14 @@ Django-CFG does. `AnalyticsEvent.user` is a real FK to `AUTH_USER_MODEL`.
 
 - **Zero configuration** — enabled by default; the site row is created automatically
 - **Zero extra processes** — no Celery, no RQ worker, no daemon, no cron, no sidecar
-- **User attribution** — events link to authenticated users
+- **Automatic user attribution** — every successful framework login is linked to its authenticated user, even when browser beacons cannot carry a JWT
+- **Host properties** — related trusted hosts are grouped automatically, with both property and single-host reports
+- **Typed product events** — custom events flow through one client API; configure Django goals and ordered funnels by event name
 - **Cookieless** — no cookies, no consent banner needed for the mechanism itself
 - **IP and User-Agent are never stored** — they are hashed away at ingest
 - **Bot filtering** — crawlers are dropped silently
 - **Channel classification** — search / social / AI assistants / paid / referral, resolved at write time
-- **Admin dashboard** — a tab with visitors, pageviews, sessions, bounce rate, top pages, referrers, and breakdowns
+- **Admin dashboard** — a dual-series daily chart: pageviews with a numeric scale and unique visitors as a line, exact values on focus, plus compact searchable ranked lists
 
 ## Quick start
 
@@ -72,7 +74,8 @@ That is not a shortcut — it is the production baseline. Measured on durable st
 
 | Model | Purpose |
 |---|---|
-| `AnalyticsSite` | One row per domain. The tenant boundary and the timezone anchor. |
+| `AnalyticsProperty` | A logical product, normally the trusted apex domain; it aggregates related hosts. |
+| `AnalyticsSite` | One row per domain. The host boundary and timezone anchor. |
 | `AnalyticsSession` | One row per visit. All mutable state (pageviews, duration, bounce). |
 | `AnalyticsEvent` | Append-only. One row per pageview or custom event. |
 
@@ -83,10 +86,11 @@ Key event columns: `site`, `ts` (UTC), `visitor_id`, `session`, **`user`**, `pat
 Aggregation happens **at read time** — plain `GROUP BY` over the event table, backed by a `(site, ts, <dimension>)` index prefix. No rollup tables, no materialized views, no cron job.
 
 ```python
-from django_cfg.apps.tools.analytics.models import AnalyticsSite
+from django_cfg.apps.tools.analytics.models import AnalyticsProperty, AnalyticsSite
 from django_cfg.apps.tools.analytics.services import Period, reports
 
 site = AnalyticsSite.objects.get(domain="example.com")
+property_ = AnalyticsProperty.objects.get(domain="example.com")
 period = Period.last_days(7)
 
 reports.summary(site, period)         # visitors, pageviews, sessions, bounce_rate, known_users
@@ -96,9 +100,25 @@ reports.top_referrers(site, period)
 reports.breakdown(site, period, "channel")   # or browser / os / device / country / language
 reports.online_now(site)              # distinct visitors in the last 5 minutes
 reports.user_journey(site, user_id)   # every hit by one authenticated user
+reports.summary(property_, period)    # all trusted hosts; users are de-duplicated
 ```
 
+At property scope, pageviews, visitors, and sessions remain host-scoped totals;
+only authenticated users are safely de-duplicated with `DISTINCT user_id`.
+
 `reports.user_journey()` is the one no hosted analytics product can offer you.
+
+## Goals and funnels
+
+Create an **Analytics goal** in Django Admin by giving it a name, an event name,
+and either one host or one property. Create an **Analytics funnel** in the same
+place, then add ordered steps with the event names emitted by your application.
+
+The dashboard counts goals by distinct visitor and funnels only when a visitor
+reaches steps in order during the selected period. Visitor identities remain
+host-scoped at property level; Django does not pretend an anonymous visitor on
+two subdomains is the same person. For frontend events and the typed catalog,
+see the `@djangocfg/analytics` package README.
 
 ## Read next
 

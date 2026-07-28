@@ -2,185 +2,180 @@
 {% block tab_content %}
 
 <style>
-  /* This template extends `dashboard_base`, a VARIABLE rather than a fixed
-     template name: the view swaps in base_iframe.html inside the admin iframe
-     (which has no tab bar) and base.html when opened standalone. Hardcoding
-     base.html renders a second tab bar nested inside the first.
+  /* Analytics is a quiet instrument panel: one blue signal, exact values on
+     demand, and no visual competition with the data.  Styles stay local so a
+     tab cannot alter the host admin. */
+  .an { color: #ededed; font-variant-numeric: tabular-nums; }
+  .an [x-cloak] { display:none !important; }
+  .an-head { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
+  .an-head__left { display:flex; align-items:center; gap:12px; min-width:0; }
+  .an-site { font-size:14px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .an-source-select { appearance:none; background:#161616; border:1px solid #303030; border-radius:7px; color:#ededed; font:inherit; font-size:12px; padding:7px 28px 7px 9px; cursor:pointer; }
+  .an-live { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#a1a1a1; white-space:nowrap; }
+  .an-live__dot { width:6px; height:6px; border-radius:50%; background:#0070f3; box-shadow:0 0 0 3px rgba(0,112,243,.18); animation:an-pulse 2.4s ease-in-out infinite; }
+  @keyframes an-pulse { 50% { opacity:.35; } }
 
-     Do not write Django template tags inside these CSS comments — the template
-     engine parses tags everywhere, including inside a style block. */
-  /* Vercel/Geist-flavored: near-black surfaces, hairline borders, one accent,
-     generous whitespace, tabular numerals. No chart library — the sparkline is
-     flex divs and the rank bars are sized backgrounds.
+  .an-seg { display:inline-flex; padding:2px; gap:2px; background:#171717; border:1px solid #303030; border-radius:8px; }
+  .an-seg a, .an-seg button { border:0; font:inherit; font-size:12px; font-weight:500; line-height:1; padding:7px 11px; border-radius:6px; color:#919191; background:transparent; text-decoration:none; cursor:pointer; transition:color .12s ease, background .12s ease; }
+  .an-seg a:hover, .an-seg button:hover { color:#ededed; }
+  .an-seg .is-active { background:#303030; color:#fff; }
 
-     Styles are inline because the iframe document has no Tailwind build, so
-     utility classes silently do nothing (which is how the cards first came out
-     white-on-black). The other dashboard tabs do the same. */
+  .an-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:#303030; border:1px solid #303030; border-radius:12px; overflow:hidden; margin-bottom:24px; }
+  .an-stat { background:#0a0a0a; padding:18px 20px; }
+  .an-stat__label { font-size:12px; color:#8f8f8f; margin-bottom:8px; }
+  .an-stat__value { font-size:28px; font-weight:600; letter-spacing:-.02em; line-height:1; color:#fff; }
 
-  /* No padding here: the gutter is owned by .dashboard-tab-content in
-     django_dashboard/base_iframe.html, so every tab gets it and none has to
-     remember. */
-  .an {
-    color: #ededed;
-    font-variant-numeric: tabular-nums;
-  }
+  .an-card { background:#0a0a0a; border:1px solid #303030; border-radius:12px; overflow:hidden; }
+  .an-card__head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid #303030; font-size:13px; font-weight:600; color:#ededed; }
+  .an-card__body { padding:16px; }
+  .an-muted { color:#8f8f8f; font-size:12px; font-weight:400; }
 
-  .an-head {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
-  }
-  .an-head__left { display: flex; align-items: center; gap: 12px; }
-  .an-site { font-size: 14px; font-weight: 500; color: #ededed; }
+  /* The chart is a set of real buttons, not a decorative bar image: it works
+     with mouse, keyboard, and touch, and always exposes the exact value. */
+  .an-chart { min-width:0; }
+  .an-chart__topline { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:30px; margin-bottom:12px; }
+  .an-chart__readout { color:#bdbdbd; font-size:12px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .an-chart__readout strong { color:#fff; font-weight:600; }
+  .an-chart__legend { display:flex; align-items:center; gap:12px; color:#a1a1a1; font-size:12px; white-space:nowrap; }
+  .an-chart__legend span { display:inline-flex; align-items:center; gap:5px; }
+  .an-chart__legend i { width:8px; height:8px; border-radius:2px; background:#287fd9; }
+  .an-chart__legend i.an-chart__key-visitors { width:12px; height:2px; border-radius:2px; background:#5eead4; }
+  .an-chart__frame { display:grid; grid-template-columns:42px minmax(0,1fr); gap:10px; }
+  .an-chart__scale { position:relative; height:164px; color:#6e6e6e; font-size:10px; }
+  .an-chart__scale span { position:absolute; right:0; transform:translateY(-50%); }
+  .an-chart__scale span:first-child { top:0; transform:none; }
+  .an-chart__scale span:nth-child(2) { top:50%; }
+  .an-chart__scale span:last-child { bottom:0; transform:none; }
+  .an-chart__plot { position:relative; display:flex; align-items:stretch; gap:3px; height:164px; padding:12px 0 0; border-bottom:1px solid #252525; background:repeating-linear-gradient(to bottom, transparent 0, transparent 40px, #151515 41px); }
+  .an-chart__day { position:relative; z-index:1; flex:1 1 0; min-width:3px; display:flex; align-items:flex-end; padding:0; border:0; background:transparent; cursor:crosshair; }
+  .an-chart__day:focus-visible { outline:2px solid #5aa2ff; outline-offset:2px; border-radius:3px; }
+  .an-chart__bar { width:100%; min-height:2px; max-width:42px; margin:auto; border-radius:3px 3px 0 0; background:#0070f3; opacity:.52; transition:height .18s ease, opacity .12s ease, background .12s ease; }
+  .an-chart__day:hover .an-chart__bar, .an-chart__day:focus .an-chart__bar, .an-chart__day.is-active .an-chart__bar { opacity:1; background:#53a0ff; }
+  .an-chart__bar.is-zero { background:#303030; opacity:1; }
+  .an-chart__visitor-line { position:absolute; z-index:2; inset:12px 0 0; width:100%; height:calc(100% - 12px); overflow:visible; pointer-events:none; }
+  .an-chart__visitor-line polyline { fill:none; stroke:#5eead4; stroke-width:1.8; vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 3px rgba(94,234,212,.26)); }
+  .an-chart__visitor-line circle { fill:#0a0a0a; stroke:#5eead4; stroke-width:2; vector-effect:non-scaling-stroke; }
+  .an-chart__axis { display:flex; justify-content:space-between; gap:12px; padding-top:9px; color:#777; font-size:11px; }
+  .an-chart__axis span:nth-child(2) { text-align:center; }
+  .an-chart__axis span:last-child { text-align:right; }
 
-  .an-live {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 12px; color: #a1a1a1;
+  .an-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:24px; }
+  .an-funnel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:16px; margin-top:24px; }
+  .an-funnel { padding:8px 16px 14px; }
+  .an-funnel__step { display:grid; grid-template-columns:22px minmax(0,1fr) auto; align-items:center; gap:9px; padding:10px 0; border-bottom:1px solid #202020; }
+  .an-funnel__step:last-child { border-bottom:0; }
+  .an-funnel__position { color:#777; font-size:11px; }
+  .an-funnel__name { min-width:0; color:#d7d7d7; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .an-funnel__event { display:block; margin-top:2px; color:#777; font-size:11px; }
+  .an-funnel__count { color:#fff; font-size:12px; text-align:right; }
+  .an-funnel__rate { display:block; margin-top:2px; color:#8f8f8f; font-size:11px; }
+  @media (max-width:640px) {
+    .an-head__left { width:100%; }
+    .an-source-select { max-width:180px; }
+    .an-chart__plot, .an-chart__scale { height:132px; }
+    .an-chart__legend { gap:8px; font-size:11px; }
+    .an-chart__axis { font-size:10px; }
   }
-  .an-live__dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #0070f3; box-shadow: 0 0 0 3px rgba(0,112,243,0.18);
-    animation: an-pulse 2.4s ease-in-out infinite;
-  }
-  @keyframes an-pulse { 50% { opacity: 0.35; } }
-
-  /* Segmented control */
-  .an-seg {
-    display: inline-flex; padding: 2px; gap: 2px;
-    background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 8px;
-  }
-  .an-seg a {
-    font-size: 12px; font-weight: 500; line-height: 1;
-    padding: 7px 11px; border-radius: 6px;
-    color: #8f8f8f; text-decoration: none;
-    transition: color .12s ease, background .12s ease;
-  }
-  .an-seg a:hover { color: #ededed; }
-  .an-seg a.is-active { background: #2e2e2e; color: #fff; }
-
-  /* Stat row */
-  .an-stats {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1px; background: #2e2e2e;
-    border: 1px solid #2e2e2e; border-radius: 12px;
-    overflow: hidden; margin-bottom: 24px;
-  }
-  .an-stat { background: #0a0a0a; padding: 18px 20px; }
-  .an-stat__label {
-    font-size: 12px; color: #8f8f8f; margin-bottom: 8px;
-  }
-  .an-stat__value {
-    font-size: 28px; font-weight: 600; letter-spacing: -0.02em;
-    line-height: 1; color: #fff;
-  }
-
-  /* Card */
-  .an-card {
-    background: #0a0a0a; border: 1px solid #2e2e2e;
-    border-radius: 12px; overflow: hidden;
-  }
-  .an-card__head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 16px; border-bottom: 1px solid #2e2e2e;
-    font-size: 13px; font-weight: 500; color: #ededed;
-  }
-  .an-card__body { padding: 16px; }
-
-  /* Sparkline. One column per day in the range — NOT one per day-with-data.
-     Days with no traffic must still occupy a slot, or a single busy day
-     stretches to fill the whole chart and it reads as one solid block. */
-  .an-bars {
-    display: flex; align-items: flex-end; gap: 3px; height: 96px;
-  }
-  .an-bars__col {
-    flex: 1 1 0; min-width: 0;
-    display: flex; align-items: flex-end; justify-content: center;
-    height: 100%;
-  }
-  .an-bars__bar {
-    width: 100%; max-width: 44px;
-    min-height: 2px; border-radius: 3px 3px 0 0;
-    background: #0070f3; opacity: .5;
-    transition: opacity .12s ease;
-  }
-  .an-bars__col:hover .an-bars__bar { opacity: 1; }
-  /* A day with zero traffic still renders a faint baseline, so gaps are legible
-     as gaps rather than as missing columns. */
-  .an-bars__bar.is-zero { background: #2e2e2e; opacity: 1; }
-
-  .an-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 16px; margin-top: 24px;
-  }
-
+  @media (prefers-reduced-motion:reduce) { .an *, .an *::before, .an *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
 </style>
 
-<div class="an">
+{{ timeseries|json_script:"analytics-timeseries" }}
+<script>
+  /* Server reports are the single source of truth. Alpine only maps the two
+     existing series onto the chart; it never recalculates analytics data. */
+  function analyticsChart() {
+    const series = JSON.parse(document.getElementById("analytics-timeseries").textContent);
+    return {
+      series,
+      activeIndex: series.length ? Math.max(0, series.map(p => Math.max(p.pageviews, p.visitors)).lastIndexOf(Math.max(...series.map(p => Math.max(p.pageviews, p.visitors))))) : 0,
+      init() { if (!this.series.some(point => point.pageviews || point.visitors)) this.activeIndex = this.series.length - 1; },
+      pageviewPeak() { return Math.max(1, ...this.series.map(point => point.pageviews)); },
+      visitorPeak() { return Math.max(1, ...this.series.map(point => point.visitors)); },
+      pageviewHeight(point) { return Math.max(point.pageviews ? 3 : 1, Math.round(point.pageviews / this.pageviewPeak() * 100)); },
+      visitorY(point) { return 98 - Math.round(point.visitors / this.visitorPeak() * 94); },
+      x(index) { return this.series.length > 1 ? index / (this.series.length - 1) * 100 : 50; },
+      visitorLine() { return this.series.map((point, index) => `${this.x(index)},${this.visitorY(point)}`).join(" "); },
+      scaleValue(fraction) { return Math.round(this.pageviewPeak() * fraction).toLocaleString(); },
+      active() { return this.series[this.activeIndex] || {date: "", pageviews: 0, visitors: 0}; },
+      label(date) { return new Intl.DateTimeFormat(undefined, {month:"short", day:"numeric"}).format(new Date(`${date}T12:00:00`)); },
+      aria(point) { return `${this.label(point.date)}: ${point.pageviews} pageviews, ${point.visitors} visitors`; },
+    };
+  }
+</script>
+
+<div class="an" x-data="analyticsChart()" x-init="init()">
   <div class="an-head">
     <div class="an-head__left">
-      <span class="an-site">{% if site %}{{ site.domain }}{% else %}All traffic{% endif %}</span>
-      {% if online_now %}
-        <span class="an-live"><span class="an-live__dot"></span>{{ online_now }} online</span>
+      <span class="an-site">{% if source %}{{ source.domain }}{% else %}All traffic{% endif %}</span>
+      {% if properties or sites %}
+        <select class="an-source-select" aria-label="Analytics source" onchange="window.location.search=this.value">
+          {% if properties %}<optgroup label="Properties">{% for item in properties %}<option value="?property={{ item.domain }}&days={{ days }}{% if is_iframe %}&iframe=1{% endif %}" {% if property and property.pk == item.pk %}selected{% endif %}>{{ item.domain }} (all hosts)</option>{% endfor %}</optgroup>{% endif %}
+          {% if sites %}<optgroup label="Hosts">{% for item in sites %}<option value="?site={{ item.domain }}&days={{ days }}{% if is_iframe %}&iframe=1{% endif %}" {% if site and site.pk == item.pk %}selected{% endif %}>{{ item.domain }}</option>{% endfor %}</optgroup>{% endif %}
+        </select>
       {% endif %}
+      {% if online_now %}<span class="an-live"><span class="an-live__dot"></span>{{ online_now }} online</span>{% endif %}
     </div>
-    <div class="an-seg">
-      <a href="?{% if site %}site={{ site.domain }}&{% endif %}days=1{% if is_iframe %}&iframe=1{% endif %}"  class="{% if days == 1 %}is-active{% endif %}">24h</a>
-      <a href="?{% if site %}site={{ site.domain }}&{% endif %}days=7{% if is_iframe %}&iframe=1{% endif %}"  class="{% if days == 7 %}is-active{% endif %}">7d</a>
-      <a href="?{% if site %}site={{ site.domain }}&{% endif %}days=30{% if is_iframe %}&iframe=1{% endif %}" class="{% if days == 30 %}is-active{% endif %}">30d</a>
-      <a href="?{% if site %}site={{ site.domain }}&{% endif %}days=90{% if is_iframe %}&iframe=1{% endif %}" class="{% if days == 90 %}is-active{% endif %}">90d</a>
+    <div class="an-seg" aria-label="Period">
+      <a href="?{{ selected_query }}days=1{% if is_iframe %}&iframe=1{% endif %}" class="{% if days == 1 %}is-active{% endif %}">24h</a>
+      <a href="?{{ selected_query }}days=7{% if is_iframe %}&iframe=1{% endif %}" class="{% if days == 7 %}is-active{% endif %}">7d</a>
+      <a href="?{{ selected_query }}days=30{% if is_iframe %}&iframe=1{% endif %}" class="{% if days == 30 %}is-active{% endif %}">30d</a>
+      <a href="?{{ selected_query }}days=90{% if is_iframe %}&iframe=1{% endif %}" class="{% if days == 90 %}is-active{% endif %}">90d</a>
     </div>
   </div>
 
   <div class="an-stats">
-    <div class="an-stat">
-      <div class="an-stat__label">Visitors</div>
-      <div class="an-stat__value">{{ summary.visitors }}</div>
-    </div>
-    <div class="an-stat">
-      <div class="an-stat__label">Pageviews</div>
-      <div class="an-stat__value">{{ summary.pageviews }}</div>
-    </div>
-    <div class="an-stat">
-      <div class="an-stat__label">Sessions</div>
-      <div class="an-stat__value">{{ summary.sessions }}</div>
-    </div>
-    <div class="an-stat" title="Unique authenticated users — the number hosted analytics cannot give you.">
-      <div class="an-stat__label">Signed in</div>
-      <div class="an-stat__value">{{ summary.known_users }}</div>
-    </div>
-    <div class="an-stat">
-      <div class="an-stat__label">Bounce rate</div>
-      <div class="an-stat__value">{{ bounce_pct }}%</div>
-    </div>
+    <div class="an-stat"><div class="an-stat__label">Visitors</div><div class="an-stat__value">{{ summary.visitors }}</div></div>
+    <div class="an-stat"><div class="an-stat__label">Pageviews</div><div class="an-stat__value">{{ summary.pageviews }}</div></div>
+    <div class="an-stat"><div class="an-stat__label">Sessions</div><div class="an-stat__value">{{ summary.sessions }}</div></div>
+    <div class="an-stat" title="Unique authenticated users"><div class="an-stat__label">Signed in</div><div class="an-stat__value">{{ summary.known_users }}</div></div>
+    <div class="an-stat"><div class="an-stat__label">Bounce rate</div><div class="an-stat__value">{{ bounce_pct }}%</div></div>
   </div>
 
-  {% if timeseries %}
-  <div class="an-card">
+  <div class="an-card an-chart">
     <div class="an-card__head">
-      <span>Pageviews</span>
-      <span style="font-size:12px;color:#8f8f8f;">last {{ days }}d</span>
+      <span>Traffic</span>
+      <div class="an-chart__legend" aria-label="Chart legend"><span><i></i>Pageviews</span><span><i class="an-chart__key-visitors"></i>Unique visitors</span></div>
     </div>
     <div class="an-card__body">
-      <div class="an-bars">
-        {% for point in timeseries %}
-          <div class="an-bars__col"
-               title="{{ point.date }} — {{ point.pageviews }} views, {{ point.visitors }} visitors">
-            <div class="an-bars__bar{% if not point.pageviews %} is-zero{% endif %}"
-                 style="height: {{ point.share }}%"></div>
-          </div>
-        {% endfor %}
+      <div class="an-chart__topline" aria-live="polite">
+        <div class="an-chart__readout"><strong x-text="label(active().date)"></strong><span> · </span><strong x-text="active().pageviews.toLocaleString()"></strong><span> pageviews · </span><strong x-text="active().visitors.toLocaleString()"></strong><span> unique visitors</span></div>
+        <span class="an-muted">Hover or focus a day</span>
       </div>
+      <div class="an-chart__frame">
+        <div class="an-chart__scale" aria-label="Pageviews scale"><span x-text="scaleValue(1)"></span><span x-text="scaleValue(.5)"></span><span>0</span></div>
+        <div class="an-chart__plot" role="list" aria-label="Daily pageviews and unique visitors chart">
+          <template x-for="(point, index) in series" :key="point.date">
+            <button class="an-chart__day" type="button" role="listitem" :class="{ 'is-active': activeIndex === index }" @mouseenter="activeIndex = index" @focus="activeIndex = index" @click="activeIndex = index" :aria-label="aria(point)">
+              <span class="an-chart__bar" :class="{ 'is-zero': !point.pageviews }" :style="`height: ${pageviewHeight(point)}%`"></span>
+            </button>
+          </template>
+          <svg class="an-chart__visitor-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline :points="visitorLine()"></polyline><circle :cx="x(activeIndex)" :cy="visitorY(active())" r="2.3"></circle></svg>
+        </div>
+      </div>
+      <div class="an-chart__axis" style="padding-left:52px;"><span x-text="series.length ? label(series[0].date) : ''"></span><span x-text="series.length ? label(series[Math.floor((series.length - 1) / 2)].date) : ''"></span><span x-text="series.length ? label(series[series.length - 1].date) : ''"></span></div>
     </div>
   </div>
-  {% endif %}
 
   <div class="an-grid">
     {% include "analytics/_table.html" with title="Top pages" rows=top_pages %}
     {% include "analytics/_table.html" with title="Referrers" rows=top_referrers %}
-    {% include "analytics/_table.html" with title="Channels"  rows=channels %}
+    {% include "analytics/_table.html" with title="Channels" rows=channels %}
     {% include "analytics/_table.html" with title="Countries" rows=countries %}
-    {% include "analytics/_table.html" with title="Browsers"  rows=browsers %}
-    {% include "analytics/_table.html" with title="Devices"   rows=devices %}
+    {% include "analytics/_table.html" with title="Browsers" rows=browsers %}
+    {% include "analytics/_table.html" with title="Devices" rows=devices %}
   </div>
+
+  {% if goals or funnels %}
+  <div class="an-funnel-grid">
+    {% if goals %}{% include "analytics/_table.html" with title="Goals" rows=goals %}{% endif %}
+    {% for funnel in funnels %}
+      <div class="an-card">
+        <div class="an-card__head"><span>{{ funnel.name }}</span><span class="an-muted">Funnel</span></div>
+        {% if funnel.steps %}<div class="an-funnel">{% for step in funnel.steps %}<div class="an-funnel__step"><span class="an-funnel__position">{{ forloop.counter }}</span><span class="an-funnel__name">{{ step.name }}<span class="an-funnel__event">{{ step.event_name }}</span></span><span class="an-funnel__count">{{ step.visitors }}<span class="an-funnel__rate">{{ step.conversion_percent }}%</span></span></div>{% endfor %}</div>{% else %}<div class="an-card__empty">Add funnel steps in Analytics admin</div>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
 
 {% endblock %}

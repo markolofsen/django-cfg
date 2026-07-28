@@ -15,6 +15,14 @@ class AnalyticsSite(models.Model):
     domain = models.CharField(max_length=255, unique=True)
     name = models.CharField(max_length=128, blank=True)
 
+    property = models.ForeignKey(
+        "cfg_analytics.AnalyticsProperty",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sites",
+    )
+
     # IANA name, e.g. "Europe/Berlin". Never a fixed UTC offset — that would
     # break DST. Reports fold UTC buckets into local days with this at read time.
     timezone = models.CharField(max_length=64, default="UTC")

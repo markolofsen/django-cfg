@@ -5,7 +5,18 @@
 
 {% block extrahead %}
     {{ block.super }}
+    {# Dashboard tabs can be opened outside their admin iframe.  Unfold's
+       page shell is otherwise transparent there, exposing the browser's white
+       canvas behind dark-tab surfaces.  This is intentionally local to the
+       dashboard base so ordinary Django admin screens keep their own theme. #}
+    <style>
+        html, body, #main, #content { background: #000 !important; }
+        [x-cloak] { display: none !important; }
+    </style>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    {# The iframe base already loads Alpine. Standalone tabs need the same
+       declarative interactions (charts, expandable ranked lists). #}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
     {% if dashboard_config.tailwind_css %}
     <link rel="stylesheet" href="{% static dashboard_config.tailwind_css %}">
     {% endif %}
