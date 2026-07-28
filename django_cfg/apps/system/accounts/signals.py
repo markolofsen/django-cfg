@@ -31,6 +31,15 @@ user_authenticated = Signal()
 user_email_verified = Signal()
 
 
+# Fired synchronously while an account-deletion transaction is open, after the
+# user has been soft-deleted. Product applications use this to apply their own
+# deletion policy for records whose database ``on_delete`` action would only run
+# on a hard delete. Receivers must raise on failure so the account deletion is
+# rolled back rather than leaving credentials or personal product data behind.
+# Provides: user
+user_soft_deleted = Signal()
+
+
 # @receiver(post_save, sender=User)
 # def send_user_registration_email(sender, instance, created, **kwargs):
 #     """Send welcome email when new user is created - DISABLED for manual control."""

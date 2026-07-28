@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import generics, permissions, status
@@ -10,6 +11,7 @@ from rest_framework.views import APIView
 from django_cfg.mixins import ClientAPIMixin
 from django_cfg.modules.django_telegram import DjangoTelegram
 from django_cfg.utils import get_logger
+from ..signals import user_soft_deleted
 from ..serializers.profile import (
     AccountDeleteResponseSerializer,
     AvatarUploadSerializer,
@@ -242,8 +244,12 @@ class AccountDeleteView(ClientAPIMixin, APIView):
         user_id = user.id
         full_name = user.full_name or "N/A"
 
-        # Perform soft delete
-        user.soft_delete()
+        # A soft delete does not invoke database-level ``on_delete`` handlers.
+        # Keep product cleanup and the identity change atomic through the
+        # lifecycle signal; a receiver failure must leave the account usable.
+        with transaction.atomic():
+            user.soft_delete()
+            user_soft_deleted.send(sender=type(user), user=user)
 
         # Send Telegram notification
         try:
