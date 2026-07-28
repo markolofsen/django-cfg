@@ -109,6 +109,12 @@ class AnalyticsEvent(models.Model):
     # visit, pageview, or bounce.
     is_measurement = models.BooleanField(default=True)
 
+    # HMAC-SHA256 of an opaque idempotency key supplied by a trusted server
+    # producer.  Browser ingest never writes this field.  Keeping only the
+    # digest makes retries safe without turning an agent/machine identifier
+    # into analytics data.
+    source_id_hash = models.CharField(max_length=64, blank=True)
+
     # Raw URL path, e.g. /en/blog/hello-world
     pathname = models.CharField(max_length=1024)
     # Templated route, e.g. /[locale]/blog/[slug]. Without this, /en/pricing and
@@ -155,6 +161,7 @@ class AnalyticsEvent(models.Model):
             models.Index(fields=["site", "ts", "pathname"], name="cfg_an_ev_path"),
             models.Index(fields=["site", "ts", "referrer_domain"], name="cfg_an_ev_ref"),
             models.Index(fields=["site", "ts", "channel"], name="cfg_an_ev_chan"),
+            models.Index(fields=["site", "source_id_hash"], name="cfg_an_ev_source"),
             # Sankey / path analysis: LEAD() partitioned by SESSION, never by
             # visitor — partitioning by visitor stitches yesterday's session onto
             # today's and destroys the exit rate.

@@ -100,4 +100,18 @@ def session_id(*, visitor: uuid.UUID, window_start: datetime) -> uuid.UUID:
     return uuid.uuid5(_NAMESPACE, f"{visitor}|{window_start.isoformat()}")
 
 
-__all__ = ["visitor_id", "previous_visitor_id", "session_id"]
+def server_visitor_id(*, site_id: int, user_id: int) -> uuid.UUID:
+    """Stable opaque identity for trusted non-browser facts.
+
+    A server fact belongs to an authenticated person, not to an IP/UA-derived
+    browser visitor.  This value is deliberately separate from ``visitor_id``:
+    it lets the session invariant remain true while ``is_measurement=False``
+    keeps the fact out of traffic metrics.
+    """
+    digest = hashlib.sha256(
+        f"{settings.SECRET_KEY}:analytics:server:{site_id}:{user_id}".encode()
+    ).hexdigest()
+    return uuid.uuid5(_NAMESPACE, digest)
+
+
+__all__ = ["visitor_id", "previous_visitor_id", "server_visitor_id", "session_id"]
