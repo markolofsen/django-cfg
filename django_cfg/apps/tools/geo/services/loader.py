@@ -104,12 +104,19 @@ class GeoDataLoader:
 
         return data
 
-    def populate_database(self, force: bool = False) -> dict:
+    def populate_database(
+        self,
+        force: bool = False,
+        countries: Optional[list[str]] = None,
+    ) -> dict:
         """
         Populate database from dr5hn data.
 
         Args:
             force: Force re-download of JSON files
+            countries: ISO2 allow-list, e.g. ``["BB", "BS"]``. When given, only
+                those countries are imported, and states/cities are restricted
+                to them. ``None`` or empty imports the full dataset.
 
         Returns:
             Statistics dict with counts
@@ -118,8 +125,30 @@ class GeoDataLoader:
 
         stats = {"countries": 0, "states": 0, "cities": 0}
 
+        wanted_iso2 = {code.strip().upper() for code in countries or [] if code}
+
         # Load countries
         countries_data = self.download_json("countries.json", force=force)
+
+        if wanted_iso2:
+            countries_data = [
+                c for c in countries_data
+                if (c.get("iso2") or "").upper() in wanted_iso2
+            ]
+            found = {(c.get("iso2") or "").upper() for c in countries_data}
+            missing = sorted(wanted_iso2 - found)
+            if missing:
+                # Loud, because a mistyped code silently drops a whole market
+                # and the failure only surfaces later as unresolved cities.
+                raise ValueError(
+                    f"Unknown ISO2 code(s) in the country filter: {', '.join(missing)}. "
+                    "Check them against the dr5hn dataset."
+                )
+            logger.info(f"Country filter active: {', '.join(sorted(found))}")
+
+        # Country ids drive the states/cities filters below.
+        wanted_country_ids = {c["id"] for c in countries_data} if wanted_iso2 else None
+
         logger.info(f"Loading {len(countries_data)} countries...")
 
         for c in countries_data:
@@ -154,6 +183,12 @@ class GeoDataLoader:
 
         # Load states
         states_data = self.download_json("states.json", force=force)
+
+        if wanted_country_ids is not None:
+            states_data = [
+                s for s in states_data if s.get("country_id") in wanted_country_ids
+            ]
+
         logger.info(f"Loading {len(states_data)} states...")
 
         for s in states_data:
@@ -173,8 +208,15 @@ class GeoDataLoader:
 
         logger.info(f"Loaded {stats['states']} states")
 
-        # Load cities
+        # Load cities. This is where the filter pays off: the unfiltered file
+        # is ~150,000 rows, and a five-market project needs a few hundred.
         cities_data = self.download_json("cities.json", force=force)
+
+        if wanted_country_ids is not None:
+            cities_data = [
+                c for c in cities_data if c.get("country_id") in wanted_country_ids
+            ]
+
         logger.info(f"Loading {len(cities_data)} cities...")
 
         # Batch insert for better performance

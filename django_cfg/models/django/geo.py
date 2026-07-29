@@ -4,7 +4,7 @@ Geo configuration model.
 
 from typing import TYPE_CHECKING, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 if TYPE_CHECKING:
     from django_cfg.models.django.django_rq import RQScheduleConfig
@@ -22,7 +22,12 @@ class GeoConfig(BaseModel):
         from django_cfg import DjangoConfig, GeoConfig
 
         class MyConfig(DjangoConfig):
+            # Whole dataset.
             geo = GeoConfig()
+
+            # Only the markets this project serves — a few hundred rows
+            # instead of ~150,000 cities.
+            geo = GeoConfig(countries=["BB", "BS", "KY", "LC", "TC"])
         ```
     """
 
@@ -41,10 +46,43 @@ class GeoConfig(BaseModel):
         )
     )
 
+    countries: List[str] = Field(
+        default_factory=list,
+        description=(
+            "ISO2 codes to populate, e.g. ['BB', 'BS', 'KY']. Empty means the "
+            "whole dataset (250 countries, 5k states, 150k cities). Most "
+            "projects serve a handful of markets and have no use for the rest: "
+            "restricting the load keeps the tables small, the import fast, and "
+            "reverse-geocoding confined to real coverage. States and cities "
+            "are filtered to the selected countries automatically."
+        ),
+    )
+
     auto_populate: bool = Field(
         default=True,
         description="Auto-populate geo data on startup if empty"
     )
+
+    @field_validator("countries")
+    @classmethod
+    def _validate_countries(cls, value: List[str]) -> List[str]:
+        """Normalize to upper-case ISO2 and reject anything malformed.
+
+        Failing here beats silently importing nothing: a typo like 'Barbados'
+        or 'bb ' would otherwise produce an empty database that looks like a
+        download problem.
+        """
+        normalized: List[str] = []
+        for raw in value:
+            code = str(raw).strip().upper()
+            if len(code) != 2 or not code.isalpha():
+                raise ValueError(
+                    f"GeoConfig.countries expects 2-letter ISO2 codes; got {raw!r}. "
+                    "Use 'BB' for Barbados, not a country name."
+                )
+            if code not in normalized:
+                normalized.append(code)
+        return normalized
 
     update_interval: int = Field(
         default=86400 * 30,  # 30 days

@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Geo: selective country population.** `GeoConfig` gains a `countries`
+  allow-list of ISO2 codes; `geo_populate` also accepts `--countries BB,BS,KY`
+  (the flag overrides the config). States and cities cascade automatically to
+  the selected countries.
+  - Previously the only option was the full dr5hn dataset — ~250 countries,
+    ~5,000 states, ~150,000 cities. A project serving a handful of markets had
+    to import all of it, which bloats the database and lets reverse-geocoding
+    resolve assets to places outside its coverage.
+  - Measured on a five-market Caribbean project: **5 countries / 62 states /
+    514 cities** instead of the full set.
+  - Unknown ISO2 codes raise rather than silently importing nothing, and
+    `GeoConfig` rejects country *names* (`"Barbados"`) at validation time — a
+    typo that quietly dropped a market would otherwise surface much later as
+    unresolved cities.
+  - Default behaviour is unchanged: an empty list imports everything.
+
 - **Payments engine — `django_cfg.apps.payments`** (production-lifted from a
   live SaaS): config-gated app driven by `PaymentsConfig` on `DjangoConfig`.
   - Provider abstraction (Stripe-first); the SDK is an optional extra:
