@@ -102,6 +102,30 @@ SQLALCHEMY_COLUMN_TYPES: dict[str, str] = {
 }
 
 
+class UnmappedFieldTypeError(Exception):
+    """
+    Raised when a Django field type cannot be mapped to a Python type.
+
+    Emitting ``Any`` for an unknown field produces code that is guaranteed to
+    fail: SQLModel raises "typing.Any has no matching SQLAlchemy type" while
+    building the model class, i.e. at import time, which surfaces in production
+    as a container crash-loop rather than as a generation failure. Failing here
+    keeps the breakage at ``make gen``, where it is actionable.
+    """
+
+    def __init__(self, field: ParsedField) -> None:
+        self.field = field
+        mro = " -> ".join(field.django_type_mro) or field.django_type
+        super().__init__(
+            f"Cannot map Django field {field.name!r} of type {field.django_type!r} "
+            f"to a Python type (MRO: {mro}).\n"
+            f"Add {field.django_type!r} to DJANGO_TO_PYTHON in type_mapper.py, or "
+            f"make the field inherit from a mapped Django field class.\n"
+            f"To generate anyway (emitting `Any`, which SQLModel cannot map to a "
+            f"column), construct TypeMapper with strict=False."
+        )
+
+
 class TypeMapper:
     """
     Maps Django field types to Python/SQLModel types.
@@ -118,10 +142,12 @@ class TypeMapper:
         use_jsonb: bool = True,
         use_array_fields: bool = True,
         use_uuid_type: bool = True,
+        strict: bool = True,
     ):
         self.use_jsonb = use_jsonb
         self.use_array_fields = use_array_fields
         self.use_uuid_type = use_uuid_type
+        self.strict = strict
         self._imports: set[tuple[str, str]] = set()
 
     @property
@@ -157,7 +183,7 @@ class TypeMapper:
             else:
                 base_type = "int"  # Default to int for AutoField, etc.
         else:
-            base_type = DJANGO_TO_PYTHON.get(django_type, "Any")
+            base_type = self._resolve_python_type(field)
 
         # Handle array fields
         if field.is_array and field.array_base_type:
@@ -174,6 +200,33 @@ class TypeMapper:
             return f"Optional[{base_type}]"
 
         return base_type
+
+    def _resolve_python_type(self, field: ParsedField) -> str:
+        """
+        Resolve a non-relation field to a Python type annotation.
+
+        Falls back to the field's base classes when the concrete class is not
+        mapped by name, so third-party subclasses resolve the way Django itself
+        treats them: ``CountryField`` is a ``CharField``, so it maps to ``str``.
+
+        Raises:
+            UnmappedFieldTypeError: in strict mode, when nothing in the MRO is
+                mapped. Non-strict mode returns "Any" instead.
+        """
+        # Exact class name wins, so explicit entries can override an ancestor
+        # (e.g. MoneyField -> Decimal rather than its DecimalField base).
+        if field.django_type in DJANGO_TO_PYTHON:
+            return DJANGO_TO_PYTHON[field.django_type]
+
+        # Walk the base classes, nearest ancestor first.
+        for base in field.django_type_mro[1:]:
+            if base in DJANGO_TO_PYTHON:
+                return DJANGO_TO_PYTHON[base]
+
+        if self.strict:
+            raise UnmappedFieldTypeError(field)
+
+        return "Any"
 
     def get_fk_id_field_type(self, field: ParsedField) -> str:
         """Get type for FK ID field (e.g., user_id: Optional[UUID])."""

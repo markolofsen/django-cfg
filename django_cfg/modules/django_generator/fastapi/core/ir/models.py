@@ -33,6 +33,11 @@ class ParsedField:
     django_type: str  # CharField, IntegerField, ForeignKey, etc.
     python_type: str  # str, int, Optional[int], etc.
 
+    # Base-class chain of the Django field, from the concrete class up.
+    # Third-party fields (CountryField, CICharField, custom subclasses) are not
+    # in DJANGO_TO_PYTHON by name, but resolve through their ancestors.
+    django_type_mro: list[str] = field(default_factory=list)
+
     # Constraints
     max_length: Optional[int] = None
     nullable: bool = False

@@ -84,14 +84,30 @@ class MCPView(APIView):
                 status=401,
             )
 
-        # Step 3: Check if session is initialized (except for initialize method)
+        # Step 3: Track the session, but do NOT gate on it.
+        #
+        # This server does not implement MCP session management: it never
+        # returns an `Mcp-Session-Id` header, so a client has no way to identify
+        # its session on later requests. Per the Streamable HTTP spec, session
+        # IDs are optional — but a server that does not assign one MUST behave
+        # statelessly, because there is nothing for the client to echo back.
+        #
+        # Gating on initialization without issuing that header made the endpoint
+        # unusable for every spec-compliant client: the state was keyed on a
+        # hash of IP + User-Agent, so `initialize` and the following
+        # `tools/call` were treated as different sessions whenever those
+        # differed — which is exactly what Claude Code does. Every tool call
+        # answered "Session not initialized. Call 'initialize' first." while
+        # curl, reusing one User-Agent, worked and hid the fault.
+        #
+        # Multi-worker deployments break it a second way: the registry is a
+        # per-process dict, so `initialize` and the next call land in different
+        # workers.
+        #
+        # Restoring the gate requires issuing `Mcp-Session-Id` on the initialize
+        # response, honouring it on later requests, and storing sessions in a
+        # shared backend (cache/Redis) rather than in process memory.
         session_key = self._get_session_key(request, user)
-        if rpc_request.method != "initialize" and not self._is_initialized(session_key):
-            return self._create_error_response(
-                error_code=INVALID_REQUEST,
-                error_message="Session not initialized. Call 'initialize' first.",
-                request_id=rpc_request.id,
-            )
 
         # Step 4: Build MCP context
         try:

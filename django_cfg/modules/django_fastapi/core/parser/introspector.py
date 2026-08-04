@@ -188,10 +188,18 @@ class DjangoModelParser:
         try:
             field_type = type(field).__name__
 
+            # Record the field's base-class chain so the type mapper can resolve
+            # third-party subclasses (CountryField -> CharField) that are absent
+            # from DJANGO_TO_PYTHON by name. Without this the mapper silently
+            # falls back to Any, and SQLModel then fails at class-construction
+            # time with "typing.Any has no matching SQLAlchemy type".
+            field_type_mro = [klass.__name__ for klass in type(field).__mro__]
+
             # Basic field info
             parsed = ParsedField(
                 name=getattr(field, 'name', str(field)),
                 django_type=field_type,
+                django_type_mro=field_type_mro,
                 python_type=self._get_python_type(field),
                 nullable=getattr(field, 'null', False),
                 blank=getattr(field, 'blank', False),
