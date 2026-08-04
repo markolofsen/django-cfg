@@ -84,6 +84,15 @@ class DjangoMCPConfig(AppConfig):
         and imports them. Each file is expected to register its tools
         via tool_registry.register(YourTool()).
 
+        A module that fails to import is a **hard error under ``debug``**. A
+        broken tool file otherwise vanishes from ``tools/list`` with only a log
+        warning, and an agent reads that absence as "this data does not exist"
+        rather than as a fault — indistinguishable from an empty database and
+        silent for as long as nobody calls the tool. Failing at startup puts the
+        traceback in front of the developer who caused it. In production the
+        failure is still logged and skipped, so one bad module cannot take the
+        whole site down.
+
         Returns the number of tool modules discovered.
         """
         from .auto_loader import mcp_config_exists
@@ -107,21 +116,49 @@ class DjangoMCPConfig(AppConfig):
         if not tools_dir.exists():
             return 0
 
+        # Loud in development, resilient in production. See the docstring.
+        strict = bool(getattr(config, "debug", False))
+
         count = 0
-        for py_file in tools_dir.glob("*.py"):
+        failures: list[str] = []
+        for py_file in sorted(tools_dir.glob("*.py")):
             if py_file.name.startswith("_"):
                 continue
 
             module_name = f"project_mcp_tools.{py_file.stem}"
             try:
                 spec = importlib.util.spec_from_file_location(module_name, py_file)
-                if spec and spec.loader:
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                    count += 1
-                    logger.info(f"✅ MCP tool module registered: {py_file.name}")
+                if spec is None or spec.loader is None:
+                    raise ImportError(f"Could not build an import spec for {py_file}")
+
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                count += 1
+                logger.info(f"✅ MCP tool module registered: {py_file.name}")
             except Exception as e:
-                logger.warning(f"⚠️ Failed to load MCP tool module {py_file.name}: {e}")
+                failures.append(f"{py_file.name}: {e.__class__.__name__}: {e}")
+                # Log with the traceback either way — under `strict` it is also
+                # raised below, but the log keeps the detail in production.
+                logger.exception(
+                    f"⚠️ Failed to load MCP tool module {py_file.name}: {e}"
+                )
+
+        if failures and strict:
+            detail = "\n  - ".join(failures)
+            raise ImproperlyConfigured(
+                f"{len(failures)} MCP tool module(s) in {tools_dir} failed to import:\n"
+                f"  - {detail}\n\n"
+                "These tools are absent from tools/list, which an agent cannot "
+                "distinguish from the data not existing. Fix the import error, or "
+                "rename the file to a leading underscore to skip it deliberately. "
+                "(Raised because debug=True; production logs and skips instead.)"
+            )
+
+        if failures:
+            logger.error(
+                f"⚠️ {len(failures)} MCP tool module(s) were skipped and their tools "
+                f"are NOT available: {', '.join(f.split(':')[0] for f in failures)}"
+            )
 
         return count
 
