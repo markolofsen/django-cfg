@@ -134,6 +134,42 @@ from django_cfg.modules.django_mcp.tools.my_module import my_custom_tool
 tool_registry.register(my_custom_tool)
 ```
 
+**From your project's `mcp/tools/` directory** — the simplest path, and the one most projects use. Every `*.py` file there whose name does not start with `_` is imported during `AppConfig.ready()`, so registering at module level is enough:
+
+```python
+# <project_root>/mcp/tools/my_tools.py
+from django_cfg.modules.django_mcp.tools.base import MCPTool, tool_registry
+
+class MyCustomTool(MCPTool):
+    name = "my_custom_tool"
+    description = "Does something specific. Use when the user asks about X."
+    input_schema = {"type": "object", "properties": {}}
+
+    def execute(self, context, arguments) -> str:
+        return "Result"
+
+tool_registry.register(MyCustomTool())
+```
+
+Discovery requires `mcp/__init__.py` to exist (see [Configuration](/features/modules/django-mcp/configuration)). Prefix a filename with `_` to keep it out of discovery — useful for shared helpers.
+
+### When a tool module fails to import
+
+A tool file with an import-time error registers nothing, so its tools are simply **absent** from `tools/list`. An agent cannot tell that absence apart from "this data does not exist" — it reads as an empty result and the investigation stops, silently, for as long as nobody calls the tool.
+
+Discovery therefore fails loudly in development:
+
+- **`debug=True`** — startup raises `ImproperlyConfigured` listing every broken module and its exception. All failures are reported together, so you do not fix one per restart.
+- **`debug=False`** — the failure is logged at `ERROR` with the traceback and the module is skipped, so one bad file cannot take production down.
+
+```text
+django.core.exceptions.ImproperlyConfigured: 1 MCP tool module(s) in
+/app/mcp/tools failed to import:
+  - my_tools.py: ModuleNotFoundError: No module named 'requests'
+```
+
+If a file in `mcp/tools/` is not meant to be a tool module, rename it with a leading underscore rather than leaving it broken.
+
 ## Context differences between subsystems
 
 Tools are called with slightly different context depending on which subsystem calls them:

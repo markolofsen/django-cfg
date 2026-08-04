@@ -3,6 +3,7 @@
 import hashlib
 import json
 import logging
+import secrets
 from typing import Any, Dict
 
 from django.http import JsonResponse
@@ -68,7 +69,20 @@ class MCPView(APIView):
             )
 
         # Step 2: Authenticate user
+        #
+        # The return value MUST be enforced. It previously was not: a request
+        # with a wrong key — or no key at all — produced user=None, which then
+        # travelled into MCPContext unchecked, so every tool ran anyway. The
+        # endpoint was effectively public, and because `tools/list` still
+        # answered 200 nothing looked wrong.
         user = self._authenticate(request)
+        if user is None and self._access_key_required():
+            return self._create_error_response(
+                error_code=INVALID_REQUEST,
+                error_message="Unauthorized: a valid X-MCP-Access-Key header is required.",
+                request_id=rpc_request.id,
+                status=401,
+            )
 
         # Step 3: Check if session is initialized (except for initialize method)
         session_key = self._get_session_key(request, user)
@@ -120,22 +134,50 @@ class MCPView(APIView):
                 request_id=rpc_request.id,
             )
 
+    def _access_key_required(self) -> bool:
+        """Whether a configured access key must be presented.
+
+        A project that never set one is deliberately open (local development),
+        so requiring a key it does not have would lock it out of its own server.
+        Once a key IS configured, presenting it is mandatory.
+        """
+        try:
+            return bool(self._get_mcp_config().access_key)
+        except Exception:
+            # Config unavailable: fail closed. An endpoint whose policy cannot be
+            # read must not answer as if no policy existed.
+            return True
+
     def _authenticate(self, request) -> Any:
-        """Authenticate user using MCP access key."""
-        # Check MCP Access Key (required)
+        """Authenticate the caller by MCP access key.
+
+        Returns the MCP agent user on success and ``None`` on failure. Callers
+        MUST treat ``None`` as a rejection when :meth:`_access_key_required` is
+        true — this method only decides identity, never access.
+        """
         try:
             mcp_config = self._get_mcp_config()
             access_key_header = request.headers.get("X-MCP-Access-Key")
             if (
                 mcp_config.access_key
                 and access_key_header
-                and access_key_header == mcp_config.access_key
+                # compare_digest, not ==, so a wrong key cannot be recovered
+                # byte-by-byte from response timing.
+                and secrets.compare_digest(str(access_key_header), str(mcp_config.access_key))
             ):
-                # Authenticated via access key -> return a generic MCP agent user
-                from django.contrib.auth import get_user_model
-                return get_user_model().get_anonymous()
+                # Authenticated by access key. The caller is a machine, not a
+                # Django user, so represent it as AnonymousUser.
+                #
+                # NOT `get_user_model().get_anonymous()`: that only exists on
+                # guardian-style user models. On a plain custom user it raises
+                # AttributeError, which the old blanket `except` swallowed —
+                # so a CORRECT key also produced None. That went unnoticed only
+                # because the result was never enforced.
+                from django.contrib.auth.models import AnonymousUser
+                return AnonymousUser()
         except Exception:
-            pass
+            logger.exception("MCP access-key authentication failed unexpectedly")
+            return None
 
         return None
 
@@ -205,9 +247,16 @@ class MCPView(APIView):
         response = JSONRPCParser.create_success_response(result, request_id)
         return JsonResponse(response.to_dict())
 
-    def _create_error_response(self, error_code: int, error_message: str, request_id) -> JsonResponse:
-        """Create JSON-RPC error response."""
+    def _create_error_response(
+        self, error_code: int, error_message: str, request_id, status: int = 400
+    ) -> JsonResponse:
+        """Create JSON-RPC error response.
+
+        ``status`` exists so authentication failures can answer 401 rather than
+        400 — an HTTP client (and any proxy or log) should be able to tell
+        "you are not allowed" from "your request was malformed".
+        """
         response = JSONRPCParser.create_error_response(
             error_code, error_message, request_id=request_id
         )
-        return JsonResponse(response.to_dict(), status=400)
+        return JsonResponse(response.to_dict(), status=status)

@@ -64,4 +64,10 @@ class InitializeHandler:
             serverInfo=server_info,
         )
 
-        return result.model_dump()
+        # exclude_none is required, not cosmetic. Every capability is Optional,
+        # so a plain model_dump() emits `"logging": null` for the ones this
+        # server does not implement. The MCP schema types a capability as an
+        # object, and a strict client rejects the whole handshake: Claude Code
+        # fails with `capabilities.logging: Invalid input` and never connects.
+        # An absent key means "not supported"; null is simply invalid.
+        return result.model_dump(exclude_none=True)
