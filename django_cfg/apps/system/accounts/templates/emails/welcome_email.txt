@@ -1,8 +1,8 @@
-Welcome to {{ site_name }}!
+Welcome to {{ project_name }}!
 
 Hello {{ user.get_full_name|default:user.username }},
 
-Welcome to {{ site_name }}! We're excited to have you on board. 
+Welcome to {{ project_name }}! We're excited to have you on board. 
 Your account ({{ user.email }}) has been created and you're ready to get started.
 
 What you can expect:
@@ -19,9 +19,9 @@ What you can expect:
 To get started, simply request a login code whenever you want to sign in. 
 We'll send you a secure code via email that you can use to access your account.
 
-Thanks for joining {{ site_name }}!
+Thanks for joining {{ project_name }}!
 
 If you have any questions, feel free to contact our support team.
 
 ---
-{{ site_name }} Team
+{{ project_name }} Team

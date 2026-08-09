@@ -50,6 +50,54 @@ flowchart LR
 
 ---
 
+## Extension signals
+
+The accounts app fires Django signals at key lifecycle points so your product
+can hook in without patching the app:
+
+| Signal | Fired | Provides |
+|---|---|---|
+| `user_authenticated` | On a successful login | `user`, `request` |
+| `user_email_verified` | Whenever an email is proven — every OTP verify, and every OAuth login (the provider email is already verified) | `user`, `consent` (a dict on the OTP path, `None` on OAuth) — see [OTP consent](./otp#verify--the-user_email_verified-signal) |
+| `user_soft_deleted` | Synchronously, inside the account-deletion transaction, after the user is soft-deleted | `user` |
+
+`user_soft_deleted` exists because a soft delete does not run the database's
+`on_delete` handlers. Use it to apply your own deletion policy for records that
+would otherwise only be cleaned up on a hard delete (e.g. revoking credentials or
+purging personal product data). Because it runs **inside** the deletion
+transaction, a receiver that **raises rolls the whole deletion back**, leaving the
+account usable rather than half-deleted:
+
+```python
+from django.dispatch import receiver
+from django_cfg.apps.system.accounts.signals import user_soft_deleted
+
+@receiver(user_soft_deleted)
+def purge_product_data(sender, user, **kwargs):
+    # Raise on failure — the account deletion is rolled back if this fails.
+    MyRecord.objects.filter(owner=user).delete()
+```
+
+`user_email_verified` is the hook to enroll a newsletter/marketing subscription
+on sign-up. It fires for **both** login paths — OTP verify and OAuth (GitHub's
+primary email arrives already verified) — so a receiver connected to it covers
+every way a user reaches your service. The framework stores no subscription and
+sends no consent of its own on the OAuth path (`consent=None`); your receiver
+decides what proof it requires and where the subscription lives:
+
+```python
+from django.dispatch import receiver
+from django_cfg.apps.system.accounts.signals import user_email_verified
+
+@receiver(user_email_verified)
+def enroll_newsletter(sender, user, consent=None, **kwargs):
+    # Treat any verified login as the opt-in, or gate on `consent["marketing_consent"]`
+    # from the OTP flow — your product's policy, not the framework's.
+    subscribe(user.email)
+```
+
+---
+
 ## Enable
 
 ```python

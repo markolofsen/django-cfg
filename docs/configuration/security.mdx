@@ -162,7 +162,9 @@ layer reduces a different risk, so no single failure is catastrophic:
 2. **Attack the XSS root, not just the symptom.** A baseline **Content-Security-
    Policy** + `X-Content-Type-Options`/`Referrer-Policy`/`X-Frame-Options` is
    emitted on every frontend route (via `@djangocfg/nextjs`), so injected scripts
-   are far less likely to run in the first place.
+   are far less likely to run in the first place. Apps declare the third parties
+   they use by name instead of hand-editing origins — see
+   [Frontend CSP vendors](#frontend-csp-vendors) below.
 3. **Bind the token to the client (DPoP).** When enabled, even an XSS-stolen
    token can't be used elsewhere — see below.
 4. **Clean console for users, full logs for admins.** Verbose logs are gated by
@@ -247,10 +249,40 @@ class MyConfig(DjangoConfig):
 class MyConfig(DjangoConfig):
     security_domains: list = ["myapp.com"]
     ssl_redirect: bool = True
-
-# Add to settings:
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 ```
+
+In production django-cfg **automatically** sets
+`SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` so Django trusts
+the reverse proxy's `X-Forwarded-Proto` when deciding whether a request is HTTPS
+— you no longer add it by hand. `USE_X_FORWARDED_HOST` is deliberately **not**
+set: with the widened Docker `ALLOWED_HOSTS`, trusting a proxy-supplied `Host`
+would open a host-header-poisoning path.
+
+## Frontend CSP vendors
+
+The `@djangocfg/nextjs` config emits the Content-Security-Policy. Rather than
+editing origins, an app names the third parties it loads:
+
+```typescript
+// next.config.ts — createNextConfig({ ... })
+csp: {
+  vendors: ['stripe', 'sentry'],   // opt into known presets
+  // baseline: false,              // drop the always-on baseline vendors
+  // scriptSrc: ['https://…'],     // additive per-directive escape hatch
+  // frameSrc / connectSrc / imgSrc / fontSrc: [...]
+}
+// csp: false   // disable the CSP entirely
+```
+
+- **Baseline vendors** are on for every app unless you set `baseline: false`:
+  `cloudflare`, `google-analytics`, `youtube`, `vimeo`. (The old `cloudflare`
+  boolean option was renamed to `baseline`.)
+- **Opt-in presets** (`csp.vendors`): `stripe`, `cloudflare`, `google-analytics`,
+  `google-tag-manager`, `google-fonts`, `sentry`, `youtube`, `vimeo`. Each preset
+  contributes only the `script-src` / `frame-src` / `connect-src` / `img-src` /
+  `font-src` origins that vendor actually needs.
+- **Per-directive arrays** (`scriptSrc`, `connectSrc`, …) are additive escape
+  hatches for origins no preset covers.
 
 ## Django-Axes: Brute-Force Protection
 

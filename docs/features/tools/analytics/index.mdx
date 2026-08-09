@@ -22,6 +22,7 @@ Django-CFG does. `AnalyticsEvent.user` is a real FK to `AUTH_USER_MODEL`.
 - **Automatic user attribution** — every successful framework login is linked to its authenticated user, even when browser beacons cannot carry a JWT
 - **Host properties** — related trusted hosts are grouped automatically, with both property and single-host reports
 - **Typed product events** — custom events flow through one client API; configure Django goals and ordered funnels by event name
+- **Server-confirmed events** — record trusted backend facts (webhooks, jobs) exactly once from Python, excluded from traffic metrics
 - **Cookieless** — no cookies, no consent banner needed for the mechanism itself
 - **IP and User-Agent are never stored** — they are hashed away at ingest
 - **Bot filtering** — crawlers are dropped silently
@@ -79,7 +80,7 @@ That is not a shortcut — it is the production baseline. Measured on durable st
 | `AnalyticsSession` | One row per visit. All mutable state (pageviews, duration, bounce). |
 | `AnalyticsEvent` | Append-only. One row per pageview or custom event. |
 
-Key event columns: `site`, `ts` (UTC), `visitor_id`, `session`, **`user`**, `pathname`, `route`, `locale`, `referrer_domain`, `channel`, `utm_*`, `props` (JSONB).
+Key event columns: `site`, `ts` (UTC), `visitor_id`, `session`, **`user`**, `pathname`, `route`, `locale`, `referrer_domain`, `channel`, `utm_*`, `props` (JSONB), `is_measurement` (false for server-confirmed facts so they never inflate traffic), `source_id_hash` (HMAC digest backing server-event idempotency).
 
 ## Reports
 
@@ -124,4 +125,5 @@ see the `@djangocfg/analytics` package README.
 
 - [Configuration](/features/tools/analytics/configuration) — every setting and what it costs
 - [Frontend](/features/tools/analytics/frontend) — `@djangocfg/analytics` for Next.js and React
+- [Server events](/features/tools/analytics/server-events) — record trusted backend facts exactly once from Python
 - [Privacy](/features/tools/analytics/privacy) — what is collected, what is not, and GDPR

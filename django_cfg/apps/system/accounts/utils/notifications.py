@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from django_cfg.core.state import get_current_config
 from django_cfg.modules.django_email import DjangoEmailService
+from django_cfg.modules.django_email.service import text_direction
 from django_cfg.modules.django_telegram import DjangoTelegram
 
 # Get config once
@@ -30,6 +31,8 @@ class AccountNotifications:
         button_text: str,
         button_url: str = None,
         template_name: str = "emails/base_email",
+        locale: str = None,
+        extra_context: dict = None,
     ):
         """Private method for sending templated emails."""
         email_service = DjangoEmailService()
@@ -43,20 +46,37 @@ class AccountNotifications:
             "secondary_text": secondary_text,
             "button_text": button_text,
             "button_url": button_url,
+            # Derived here, not in each template: a translator who adds an RTL
+            # locale should not also have to remember to set the direction.
+            "text_dir": text_direction(locale),
         }
+        if extra_context:
+            context.update(extra_context)
 
         email_service.send_template(
             subject=subject,
             template_name=template_name,
             context=context,
             recipient_list=[user.email],
+            locale=locale,
         )
 
     # === EMAIL NOTIFICATIONS ===
 
     @staticmethod
-    def send_welcome_email(user, send_email=True, send_telegram=True):
-        """Send welcome email and telegram notification for new user"""
+    def send_welcome_email(user, locale=None, send_email=True, send_telegram=True):
+        """Send welcome email and telegram notification for new user.
+
+        Renders ``emails/welcome`` — a template a product is expected to
+        override per locale (``emails/welcome/<locale>.html``). The inline
+        ``main_*`` strings below are only the fallback the framework's own
+        default template uses; a product template ignores them and writes its
+        own copy.
+
+        Prefer ``services.welcome.send_welcome_email``, which resolves the
+        locale and guarantees one send per user. Calling this directly sends
+        unconditionally.
+        """
         if send_email:
             AccountNotifications._send_email(
                 user=user,
@@ -64,8 +84,10 @@ class AccountNotifications:
                 main_text=f"Welcome {user.username}! Your account has been successfully created.",
                 main_html_content=f'<p style="font-size: 1.5em; font-weight: bold; color: #28a745;">Welcome {user.username}!</p>',
                 secondary_text="You can now access all our services and start exploring our API.",
-                button_text="Go to Private",
-                button_url=f"{config.site_url}/private",
+                button_text=f"Go to {config.project_name}",
+                button_url=config.site_url,
+                template_name="emails/welcome",
+                locale=locale,
             )
             logger.info(f"Welcome email sent to {user.email}")
 

@@ -45,6 +45,7 @@ The raw User-Agent is also never stored — it is reduced to `(browser, os, devi
 | **Visitor id** | a UUID | A daily-rotating pseudonym |
 | **User id** | FK to your user table | On a server-confirmed successful login, and on authenticated ingest when available |
 | **Custom event props** | `{ "plan": "pro" }` | Bounded product dimensions attached by your frontend |
+| **Server-event idempotency key** | an HMAC digest | Only an HMAC-SHA256 of the key is stored (`source_id_hash`); the raw key never reaches the database |
 
 <Callout type="warning">
 Custom event `props` are application-controlled JSON. Never put an email,

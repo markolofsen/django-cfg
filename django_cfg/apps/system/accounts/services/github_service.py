@@ -362,6 +362,13 @@ class GitHubOAuthService:
             if github_username and (not user.username or user.username.startswith('user_')):
                 user.username = github_username
 
+            # GitHub hands us a primary *verified* email (see the caller's
+            # email selection), so the address is proven at account creation.
+            if github_email and not user.is_email_verified:
+                from django.utils import timezone
+                user.is_email_verified = True
+                user.email_verified_at = timezone.now()
+
             user.save()
 
             logger.info(f"Created new user from GitHub: {user.email}")

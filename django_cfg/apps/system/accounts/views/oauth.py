@@ -277,6 +277,22 @@ class GitHubCallbackView(APIView):
             from ..signals import user_authenticated
             user_authenticated.send(sender=self.__class__, user=user, request=request)
 
+            # Persist the browser's language before announcing verification:
+            # the welcome-email receiver reads ``user.language``, and this is the
+            # only point on the OAuth path where a language is observable at all
+            # (there is no OTP request to carry it).
+            from ..services.welcome import persist_user_language
+            persist_user_language(
+                user, request.META.get('HTTP_ACCEPT_LANGUAGE', '') or ''
+            )
+
+            # The OAuth provider (GitHub) hands us an already-verified primary
+            # email, so announce it the same way the OTP path does — this is the
+            # extension point products use to enroll a newsletter subscription.
+            # The framework passes no consent; the product's receiver decides.
+            from ..services.verification import mark_user_verified
+            mark_user_verified(user)
+
             return Response({
                 'requires_2fa': False,
                 'session_id': None,

@@ -32,18 +32,16 @@ The SSE streaming endpoint used by the admin chat UI.
 **Response:** `Content-Type: text/event-stream`
 
 ```
-event: tool_start
-data: {"name": "query_model", "args": {"app": "auth", "model": "User", "filters": {...}}}
-
-event: tool_result
-data: {"name": "query_model", "result": "[{\"id\": 1, ...}]"}
-
 event: text
 data: {"content": "There are 42 users who signed up this week."}
 
 event: done
 data: {}
 ```
+
+The agent runs its tool calls internally and streams back only the final
+answer. Intermediate tool activity is **not** surfaced as SSE events (see
+[SSE event types](#sse-event-types) below).
 
 ### `POST /cfg/mcp/agent/`
 
@@ -53,56 +51,47 @@ Synchronous variant. Uses `X-MCP-Access-Key` header auth (not session). Blocks u
 
 | Event | Payload fields | When emitted |
 |-------|---------------|--------------|
-| `tool_start` | `name`, `args` | LLM decided to call a tool, before execution. |
-| `tool_result` | `name`, `result` | Tool executed, result returned. |
-| `text` | `content` | LLM produced final text answer. |
-| `error` | `message` | Auth failure, JSON parse error, LLM failure, or max tool calls exceeded. |
+| `text` | `content` | The agent produced its final text answer. |
+| `error` | `message` | Auth failure, JSON parse error, or agent failure. |
 | `done` | _(empty)_ | Always the last event — signals stream end. |
 
-`tool_start` and `tool_result` always come in pairs. Multiple pairs appear when the LLM calls several tools in a single turn.
+The stream carries only the final answer. Tool calls run inside the agent and
+are **not** emitted as `tool_start` / `tool_result` events — the agent runs to
+completion server-side, then the resulting text is streamed. (An earlier
+version surfaced per-tool events; that was removed because OpenRouter streaming
+could complete without text deltas and trigger a duplicate provider request.)
 
 ## Agentic loop
 
-`MCPAgentRunner.stream()` in `agents/runner.py` drives the loop:
+`agents/api/views.py:MCPAgentStreamView` runs the agent synchronously via
+`agent_runner.run(...)` and turns the result into the SSE stream:
 
 ```
-user_message → context.messages
-tools_def = build OpenAI-compatible function definitions from registry
+user_message + Redis history → AgentContext (with user=request.user, request=request)
+tools_def = OpenAI-compatible function definitions from the registry
 
-while tool_call_count < max_tool_calls (default 10):
-    messages = context.to_llm_messages(system_prompt)
-    response = LLMClient.chat_completion(messages, tools=tools_def)
-
-    if response has tool_calls:
-        for each tool_call:
-            yield {"event": "tool_start", "name": ..., "args": ...}
-            result = tool.execute(context.config, args)
-            context.add_message("tool", result, tool_call_id=...)
-            yield {"event": "tool_result", "name": ..., "result": ...}
-        continue loop
-
-    else:  # final text response
-        yield {"event": "text", "content": ...}
-        yield {"event": "done"}
-        return
-
-yield {"event": "error", "message": "Max tool calls reached"}
+result = agent_runner.run(message, context, model=model)   # runs all tool calls internally
+yield {"event": "text", "content": result.text}
 yield {"event": "done"}
+# on failure: yield {"event": "error", "message": ...}; yield {"event": "done"}
 ```
 
-The loop is synchronous. Django's `StreamingHttpResponse` sends each yielded chunk immediately because Gunicorn/uvicorn flushes after each `yield`.
+`AgentContext` exposes `user` and `request` to tools, so a custom tool can act
+with the authenticated request in scope. Django's `StreamingHttpResponse` sends
+each yielded chunk immediately because Gunicorn/uvicorn flushes after each
+`yield`.
 
 ## Session history
 
-Session history is currently **in-memory only** — `AgentContext.messages` lives for the duration of a single HTTP request. Each request starts a fresh context. The `session_id` field is stored but not persisted.
+History is **persisted in Redis** (Django's default cache), keyed as
+`mcp_chat:{user_id}:{session_id}`. On each request `MCPAgentStreamView`:
 
-**Planned:** `chat/store.py` will add `RedisMCPChatStore` to persist history to Django's default cache (Redis) keyed as `mcp_chat:{user_id}:{session_id}`. Once wired in, `MCPAgentStreamView` will:
+1. Loads prior history via `RedisMCPChatStore` and seeds `AgentContext` with it.
+2. Appends the user message.
+3. After the stream ends, appends the assistant reply.
 
-1. Load history from Redis before building `AgentContext`.
-2. Append the user message to Redis.
-3. After stream ends, append the assistant reply to Redis.
-
-See [Redis & Caching](./redis) for the full store API and key format.
+So a conversation continues across requests as long as the same `session_id` is
+sent. See [Redis & Caching](./redis) for the store API and key format.
 
 ## Browser-side implementation
 
@@ -124,7 +113,7 @@ const reader = resp.body.getReader();
 
 The CSRF token is read from the `csrftoken` cookie set automatically by Django's CSRF middleware for authenticated sessions.
 
-## Wiring in Redis history (when ready)
+## How the view wires Redis history
 
 ```python
 from django_cfg.modules.django_mcp.chat.store import RedisMCPChatStore
@@ -132,20 +121,21 @@ from django_cfg.modules.django_mcp.chat.store import RedisMCPChatStore
 store = RedisMCPChatStore(user_id=request.user.pk, session_id=session_id)
 history = store.get_history()   # list of {"role": ..., "content": ...}
 
-context = AgentContext(tools=tools, session_key=session_id, config=mcp_config)
+context = AgentContext(
+    tools=tools, session_key=session_id, config=mcp_config,
+    user=request.user, request=request,
+)
 for msg in history:
     context.add_message(msg["role"], msg["content"])
 
-# Run stream, collect assistant text
-collected = []
-def event_stream():
-    for event in agent_runner.stream(message, context, model=model):
-        if event["event"] == "text":
-            collected.append(event.get("content", ""))
-        yield _sse_line(event)
+result = agent_runner.run(message, context, model=model)   # tools run internally
 
-# After stream: persist to Redis
+# Persist both turns
 store.append_message("user", message)
-if collected:
-    store.append_message("assistant", "".join(collected))
+if result.text:
+    store.append_message("assistant", result.text)
+
+def event_stream():
+    yield _sse_line({"event": "text", "content": result.text})
+    yield _sse_line({"event": "done"})
 ```

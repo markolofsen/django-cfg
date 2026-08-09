@@ -54,17 +54,31 @@ sequenceDiagram
     participant V as OTPViewSet
     participant TS as TOTPService
 
-    C->>V: POST /otp/verify/ {identifier, otp}
+    C->>V: POST /otp/verify/ {identifier, otp, remember_me?}
     V-->>C: 200 {requires_2fa: true, session_id: "uuid", access: null}
 
     Note over C: User opens authenticator app
 
     C->>TS: POST /cfg/totp/verify/ {session_id, token}
     TS->>TS: verify TOTP device token
-    TS-->>C: 200 {access, refresh, user}
+    TS-->>C: 200 {access, refresh, user, persistent_session}
 ```
 
 `session_id` is a short-lived UUID in cache — bridges OTP and TOTP steps without issuing tokens prematurely.
+
+## Persistent session
+
+The `remember_me` flag sent to `POST /cfg/accounts/otp/verify/` is **not** a
+field on the TOTP verify request. Instead it is persisted on the two-factor
+session (`TwoFactorSession.remember_me`) when the session is created, then read
+back when the second factor succeeds.
+
+So a "remember me" choice made at the OTP step carries through 2FA: after
+`POST /cfg/totp/verify/` (or `/cfg/totp/verify/backup/`), the minted refresh
+token gets the 30-day `REMEMBER_ME_LIFETIME` window, and both verify responses
+include a `persistent_session` boolean reporting whether the long-lived session
+was granted. See [Persistent Session (`remember_me`)](./otp#persistent-session-remember_me)
+for the token-lifetime details.
 
 ---
 

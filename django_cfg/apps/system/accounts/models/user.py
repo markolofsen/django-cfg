@@ -58,6 +58,16 @@ class CustomUser(AbstractUser):
         help_text="When the email was first OTP-verified.",
     )
 
+    # One-time welcome letter. Claimed with a conditional UPDATE (see
+    # services/welcome.py) because ``user_email_verified`` fires on EVERY
+    # verification, not only the first — the sticky ``is_email_verified`` flag
+    # cannot serve as the guard.
+    welcome_email_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the one-time welcome email was sent. Null means not yet sent.",
+    )
+
     # Account deletion (soft delete)
     # When set, account is deactivated and personal data anonymized
     deleted_at = models.DateTimeField(

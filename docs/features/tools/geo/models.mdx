@@ -202,12 +202,44 @@ for result in nearby:
 # First-time population (downloads from GitHub)
 python manage.py geo_populate
 
+# Only selected markets (ISO2 codes) — states & cities cascade to them
+python manage.py geo_populate --countries BB,BS,KY
+
 # Force re-download
 python manage.py geo_populate --force
 
 # Clear cached files
 python manage.py geo_populate --clear-cache
 ```
+
+`--countries` takes a comma-separated list of ISO2 codes and restricts the
+import to those countries (states and cities are filtered to match). It
+overrides `GeoConfig.countries` for that run; omit it to fall back to the
+configured allow-list, or to the full dataset when none is set. An unknown or
+malformed code fails loudly rather than silently importing nothing — see
+[`GeoConfig`](#geoconfig).
+
+### GeoConfig
+
+```python
+from django_cfg.models.django.geo import GeoConfig
+
+geo = GeoConfig(countries=["BB", "BS", "KY", "LC", "TC"])   # keep tables small
+```
+
+| Field | Default | Purpose |
+|-------|---------|---------|
+| `enabled` | `True` | Enable the geo app. |
+| `database` | `"default"` | Database alias the geo tables live in. |
+| `countries` | `[]` | ISO2 allow-list. Empty = the whole dataset (250 countries, ~5k states, ~150k cities). |
+| `auto_populate` | — | Populate automatically on startup/migrate. |
+| `use_postgis` | — | Use PostGIS spatial types where available. |
+| `auto_update_enabled` / `update_interval` | — | Periodic refresh of the dataset. |
+
+`countries` is validated: codes are upper-cased and de-duplicated, and anything
+that isn't exactly two alpha characters (e.g. `"Barbados"`, `"bb "`) raises a
+`ValueError` at config time — so a typo can't produce an empty database that
+looks populated.
 
 ### Data Source
 

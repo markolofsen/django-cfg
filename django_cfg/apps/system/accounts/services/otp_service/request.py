@@ -122,10 +122,10 @@ def request_otp(
             send_telegram=False,  # sent separately below
         )
 
-        if created and should_send_email:
-            AccountNotifications.send_welcome_email(
-                user=user, send_email=True, send_telegram=False,
-            )
+        # No welcome email here: this is OTP *request*, so the address is not
+        # proven yet and OAuth signups never reach this code at all. The welcome
+        # letter is sent from the ``user_email_verified`` receiver instead —
+        # see ``services/welcome.py``.
 
         # Telegram operator notification for the request
         try:

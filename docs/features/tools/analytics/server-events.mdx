@@ -1,0 +1,97 @@
+---
+title: Server events
+description: Record trusted, exactly-once analytics events from the Django backend — server-confirmed facts that never touch a browser, with no HTTP endpoint and no fabricated traffic metrics.
+---
+
+import { Callout } from 'nextra/components'
+
+# Server events
+
+Browser events answer "what did a visitor do on a page." Some facts never
+happen in a browser — a webhook fired, a background job connected a machine, a
+subscription renewed. Those are **server-confirmed facts**, and you record them
+in-process with `record_server_event()`.
+
+<Callout type="info">
+There is **no HTTP endpoint** for server events. The browser ingest at
+`POST /cfg/analytics/collect/` is untrusted by design; server events are a
+Python service call you make from code you already trust. The caller owns
+authentication and actor derivation.
+</Callout>
+
+## The API
+
+```python
+from django_cfg.apps.tools.analytics.models import AnalyticsSite
+from django_cfg.apps.tools.analytics.services import record_server_event
+
+site = AnalyticsSite.objects.get(domain="my.example.com")
+
+result = record_server_event(
+    site=site,
+    user_id=user.pk,
+    event_name="machine_connected",
+    idempotency_key="machine-42:conn-2026-08-03T10:00Z",
+    props={"region": "eu-west"},   # optional
+)
+
+result.created   # True on first call, False on a retry with the same key
+result.event     # the AnalyticsEvent row
+```
+
+Signature (all arguments are keyword-only):
+
+```python
+def record_server_event(
+    *,
+    site,                       # an AnalyticsSite instance
+    user_id: int,
+    event_name: str,            # truncated to 64 chars
+    idempotency_key: str,       # required, non-empty
+    props: dict | None = None,
+    now: datetime | None = None,
+    fast_commit: bool = True,
+) -> ServerEventResult
+```
+
+`ServerEventResult` is a frozen dataclass with `.event` (the `AnalyticsEvent`)
+and `.created` (bool).
+
+## Exactly-once
+
+`idempotency_key` makes the write idempotent: call `record_server_event()` again
+with the same `(site, key)` and you get `created=False` and the original row
+back — safe for at-least-once delivery (webhook retries, job re-runs).
+
+The raw key is **never persisted**. Only an HMAC-SHA256 digest of it (keyed on
+`SECRET_KEY`, stored in `AnalyticsEvent.source_id_hash`) reaches the database, so
+a private retry token or agent id cannot be reconstructed from the event table.
+
+An empty `idempotency_key` raises `ValueError` — there is no un-keyed path.
+
+## No fabricated traffic
+
+Server events are written with `is_measurement=False`. They are **excluded from
+traffic metrics** — they never inflate pageviews, unique visitors, sessions, or
+bounce rate. They still carry full user attribution (`user_id`) and show up in
+goal/funnel reporting and `reports.user_journey()`, so a server-confirmed
+conversion counts without pretending a page was viewed.
+
+Server-side identity uses `server_visitor_id(site_id=..., user_id=...)` — a
+stable opaque UUID for trusted facts, kept separate from the IP/UA-derived
+browser `visitor_id`.
+
+## When to use it
+
+- Webhook-delivered facts (payment succeeded, subscription renewed).
+- Background-job outcomes (import finished, machine connected).
+- Anything you must count **exactly once** and can attribute to a known user.
+
+For browser pageviews and typed product events sent from the frontend, use
+[`@djangocfg/analytics`](/features/tools/analytics/frontend) instead — those go
+through the untrusted ingest and *are* measurement traffic.
+
+## Read next
+
+- [Configuration](/features/tools/analytics/configuration) — every setting and what it costs
+- [Privacy](/features/tools/analytics/privacy) — what is collected, what is not

@@ -95,10 +95,24 @@ sequenceDiagram
     V->>GH: GET /user (profile data)
     V->>S: find or create CustomUser by email
     V->>DB: create/update OAuthConnection
+    V->>V: fire user_email_verified(user, consent=None)
     V-->>C: 200 {access, refresh, user, requires_2fa}
 ```
 
 The callback response is **identical in structure to OTP verify** — `useAuth` handles both transparently.
+
+### Email is verified, and it announces itself
+
+GitHub returns a **primary, verified** email, so an OAuth account is created with
+`is_email_verified=True` — the user never has to run a separate OTP to prove it.
+
+On a successful login (the no-2FA path) the OAuth view also fires the
+[`user_email_verified`](/features/built-in-apps/user-management/accounts#extension-signals) signal, exactly like the OTP
+path — with `consent=None`, since no consent UI is involved. This is the hook a
+product uses to enroll a newsletter subscription on GitHub sign-up: connect one
+receiver to `user_email_verified` and it covers **both** OTP and OAuth logins.
+The framework stores no subscription and asserts no marketing consent of its own;
+your receiver decides.
 
 ---
 

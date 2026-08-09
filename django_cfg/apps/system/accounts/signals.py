@@ -187,6 +187,25 @@ def handle_login_alert(sender, user, request, **kwargs):
         logger.error(f"Failed to send login alert for {getattr(user, 'email', '?')}: {e}")
 
 
+@receiver(user_email_verified, dispatch_uid="django_cfg.accounts.welcome_email")
+def handle_welcome_email(sender, user, **kwargs):
+    """Send the one-time welcome letter once an email is actually proven.
+
+    Deliberately on verification rather than user creation: the address is
+    proven, and this is the one hook both the OTP and OAuth paths share. The
+    signal fires on every verification, so the service dedupes — see
+    ``services/welcome.py``.
+    """
+    try:
+        from .services.welcome import send_welcome_email
+        send_welcome_email(user)
+    except Exception as e:
+        # Never let a welcome letter break a login.
+        logger.error(
+            f"Failed to send welcome email for {getattr(user, 'email', '?')}: {e}"
+        )
+
+
 # Helper function to notify about failed OTP attempts
 def notify_failed_otp_attempt(email: str, ip_address: str = None, reason: str = "Invalid OTP"):
     """Send notification about failed OTP attempt."""

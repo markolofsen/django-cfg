@@ -1,0 +1,58 @@
+---
+title: "Release v2.2.119"
+description: "Server-side analytics events, persistent sessions, LLM media transport, healthz liveness/readiness split, and a name-based frontend CSP — the user-facing changes since 2.2.109."
+---
+
+import { Callout } from 'nextra/components'
+
+# Release v2.2.119
+
+**Released:** August 3, 2026
+
+A rollup of the user-facing changes shipped across `2.2.110` → `2.2.119`.
+
+## Highlights
+
+- **Server-side analytics events** — `record_server_event(*, site, user_id, event_name, idempotency_key, props=None)` records trusted backend facts (webhooks, jobs) from Python. It is **exactly-once** (only an HMAC digest of the idempotency key is stored) and written with `is_measurement=False` so it never inflates pageviews or visitors, while keeping full user attribution. There is no HTTP endpoint — it's an in-process service. See [Server events](/features/tools/analytics/server-events).
+- **Persistent sessions (`remember_me`)** — `POST /cfg/accounts/otp/verify/` accepts an optional `remember_me`; when set, the refresh token gets a 30-day window with a hard `cfg_session_expires_at` ceiling that refresh rotation can't extend. The choice carries through 2FA via the two-factor session, and both verify responses now report `persistent_session`. See [Persistent Session](/features/built-in-apps/user-management/accounts/otp#persistent-session-remember_me).
+- **Client storage modes** — the generated TypeScript auth store selects where the token lives via `auth.setStorageMode('localStorage' | 'sessionStorage' | 'cookie')` (bootstrap-only). Storage mode is decoupled from session length, which is now purely the server-side `remember_me` decision. See [Storage modes](/features/api-generation/generated-clients#storage-modes).
+- **`user_soft_deleted` signal** — fires synchronously inside the account-deletion transaction after a soft delete; a raising receiver rolls the deletion back, so product-data cleanup that a soft delete would otherwise skip stays atomic. See [Extension signals](/features/built-in-apps/user-management/accounts#extension-signals).
+- **OAuth login now announces the verified email** — a GitHub account is created with `is_email_verified=True` (the provider email is already verified), and a successful OAuth login fires the `user_email_verified` signal just like the OTP path (with `consent=None`). A single receiver connected to `user_email_verified` now covers both OTP and OAuth logins — the hook for enrolling a newsletter subscription on sign-up. See [OAuth](/features/built-in-apps/user-management/accounts/oauth#email-is-verified-and-it-announces-itself).
+- **LLM config seam + media transport** — `LLMConfig` / `set_config` / `set_notification_handler` inject a process-wide LLM configuration; the new `MediaTransportRouter` / `MediaTarget` pick the right wire format (data URL, multipart, public URL) per provider with a fail-closed publish/`revoke` lifecycle. See [Media Transport](/features/modules/django-llm/media-transport).
+- **`/healthz` liveness/readiness split** *(breaking)* — health endpoints moved from `/cfg/health/*` to root `/healthz` (dependency-free **liveness**) and `/healthz/ready` (DB + cache + resources **readiness**), with browsable `/healthz/drf/` and `/healthz/ready/drf/`. Update orchestrator probes. See [Health Checks](/features/modules/django-health).
+- **Name-based frontend CSP** — `@djangocfg/nextjs` apps declare third parties by name (`csp: { vendors: ['stripe', 'sentry'] }`) instead of editing origins. Baseline vendors (`cloudflare`, `google-analytics`, `youtube`, `vimeo`) are on unless `baseline: false`. In production django-cfg now auto-sets `SECURE_PROXY_SSL_HEADER`. See [Frontend CSP vendors](/configuration/security#frontend-csp-vendors).
+- **Selective geo population** — `geo_populate --countries BB,BS,KY` and `GeoConfig(countries=[...])` restrict the import to chosen markets (states/cities cascade), with loud ISO2 validation so a typo can't silently produce an empty database. See [Data Population](/features/tools/geo/models#data-population).
+
+## Updated Packages
+
+| Package | Version | Changes |
+|---------|---------|---------|
+| `django-cfg` (PyPI) | 2.2.119 | Server analytics events, `remember_me`, `user_soft_deleted`, LLM config + media transport, `/healthz` split, geo `--countries`, auto `SECURE_PROXY_SSL_HEADER` |
+| `@djangocfg/api` | 2.1.496 | `auth.setStorageMode()`, `remember_me` / `persistent_session` |
+| `@djangocfg/analytics` | 2.1.496 | Aligned with server-event model changes |
+| `@djangocfg/nextjs` | 2.1.496 | Name-based CSP vendors + `baseline` flag (renamed from `cloudflare`) |
+
+## Upgrade
+
+```bash
+pip install -U django-cfg
+python manage.py migrate   # analytics + accounts/totp migrations
+```
+
+```bash
+pnpm update @djangocfg/api @djangocfg/analytics @djangocfg/nextjs
+```
+
+## Breaking Changes
+
+- **Health endpoints renamed.** `/cfg/health/` → `/healthz/ready`, `/cfg/health/quick/` → `/healthz`, and the DRF variants → `/healthz/ready/drf/` and `/healthz/drf/`. Update Kubernetes/Docker liveness and readiness probes and any external monitors.
+- **CSP `cloudflare` option renamed to `baseline`** in `@djangocfg/nextjs`. Apps that set `csp: { cloudflare: false }` should now use `csp: { baseline: false }`.
+
+<Callout type="info">
+Everything else is additive and opt-in: without `remember_me`, without calling
+`record_server_event`, and without `csp.vendors`, behavior is unchanged.
+</Callout>
+
+## Full Changelog
+
+See the [GitHub release](https://github.com/markolofsen/django-cfg/releases) for the complete list of changes.

@@ -55,6 +55,26 @@ data = translate_json({"title": "Привет"}, target_language="en")
 models = get_available_models()
 ```
 
+### Configuration (optional)
+
+By default clients auto-detect provider keys from Django config. To inject a
+process-wide configuration explicitly — useful outside a request, in scripts, or
+when sourcing keys from somewhere other than `django_config.api_keys` — use the
+config seam:
+
+```python
+from django_cfg.modules.django_llm import (
+    LLMConfig, set_config, reset_config, set_notification_handler,
+)
+
+set_config(LLMConfig(openrouter_api_key="sk-or-v1-..."))   # explicit config wins
+set_notification_handler(my_handler)                        # host email/Telegram callback
+# reset_config()  # clear back to env/Django auto-detection
+```
+
+Explicit client arguments (e.g. `LLMClient(api_key=...)`) always take precedence
+over `set_config`; `LLMConfig` is only the fallback.
+
 ### Vision & Image Generation (submodule imports)
 
 ```python
@@ -79,6 +99,7 @@ print(image.first_url)
 
 ```
 django_llm/
+├── config.py           # LLMConfig + set_config/reset_config/set_notification_handler
 ├── client/             # LLMClient for text completions
 ├── providers/          # Provider management (OpenAI, OpenRouter)
 ├── registry/           # Model catalogue, pricing, cost calculation
@@ -86,6 +107,9 @@ django_llm/
 ├── structured/         # Structured output + JSON extraction
 ├── tokenizer.py        # Token counting
 ├── monitoring/         # Provider balance monitoring
+├── media/              # Provider-neutral media transport + temporary publication
+│   ├── transport/      # MediaTransportRouter, MediaTarget, PreparedMedia
+│   └── publication/    # TemporaryMediaPublisher (fail-closed CDN handoff)
 ├── features/
 │   ├── vision/         # VisionClient, OCR, image resizing
 │   ├── image_gen/      # ImageGenClient
@@ -190,6 +214,7 @@ client = VisionClient(api_key="sk-or-v1-...")
 - [Vision & OCR](./vision)
 - [Image Generation](./image-generation)
 - [Text Client](./text-client)
+- [Media Transport](./media-transport)
 - [Caching](./caching)
 - [Cost Tracking](./cost-tracking)
 - [Balance Monitoring](./balance-monitoring)

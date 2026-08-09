@@ -1,0 +1,120 @@
+---
+title: Media Transport
+description: Provider-neutral media transport for django-cfg LLM clients — pick the right wire format (data URL, multipart, public URL) per destination, with fail-closed temporary CDN publication and a revoke lifecycle.
+---
+
+import { Callout } from 'nextra/components'
+
+# Media Transport
+
+Different model endpoints accept media differently: one wants an inline
+`data:` URL, another a multipart upload, another only a public URL it can fetch.
+The **media transport** layer picks the right wire format for a destination from
+a single source, so client code doesn't special-case providers.
+
+<Callout type="info">
+Most callers never touch this directly. `VisionClient` and `ImageEditClient`
+route media through the high-level `normalize_image_input(...)` helper. Reach for
+`MediaTransportRouter` only when you prepare bytes for a provider yourself.
+</Callout>
+
+## Router
+
+```python
+from django_cfg.modules.django_llm import MediaTransportRouter, MediaTarget
+
+router = MediaTransportRouter()   # uses the built-in default policies
+
+lease = router.prepare_for(
+    MediaTarget.OPENROUTER_IMAGE,   # the destination
+    "/path/to/photo.jpg",           # a MediaSource
+)
+
+prepared = lease.prepared
+image_ref = prepared.as_reference()   # e.g. a data: URL to hand the provider
+# ... send image_ref to the model ...
+lease.revoke()                        # release any temporary publication
+```
+
+`prepare_for(target, source, *, filename=None, content_type=None)` returns a
+`MediaLease`. It raises `MediaPolicyError` if no policy is registered for the
+target, and `MediaSourceError` / `MediaPolicyError` if the source can't satisfy
+the target's accepted transports.
+
+### Sources
+
+A `MediaSource` is anything the router can read: `bytes`, `bytearray`,
+`memoryview`, a filesystem `Path`, a Django `FieldFile`, a `data:` URL, or a
+remote `http(s)` URL.
+
+### Targets and transports
+
+`MediaTarget` names a destination; the router resolves it to a
+`MediaTransportKind`:
+
+| `MediaTarget` | Typical transport |
+|---|---|
+| `OPENROUTER_IMAGE` | inline `data-url` |
+| `MULTIPART_UPLOAD` | `multipart` |
+| `PUBLIC_URL` | `public-url` |
+
+`MediaTransportKind` is `DATA_URL` (`"data-url"`), `MULTIPART` (`"multipart"`),
+or `PUBLIC_URL` (`"public-url"`).
+
+## PreparedMedia
+
+`lease.prepared` is a `PreparedMedia` describing how to send the media:
+
+- `transport` — the chosen `MediaTransportKind`.
+- `content_type`, `filename`.
+- `as_reference()` — the reference to hand the provider (a `data:` URL or a
+  public URL). Raises for a multipart transport, which has no single reference.
+- `as_bytes()` — the raw bytes for a multipart upload.
+
+Branch on `transport` to decide which accessor to use:
+
+```python
+if prepared.transport.value == "multipart":
+    payload = prepared.as_bytes()
+else:
+    payload = prepared.as_reference()
+```
+
+## Lease lifecycle — revoke
+
+When a target requires a public URL, the router publishes the media to a
+temporary CDN location and the lease holds that publication. **Always release
+the lease** so temporary objects don't leak:
+
+```python
+lease = router.prepare_for(MediaTarget.PUBLIC_URL, source)
+try:
+    send_to_model(lease.prepared.as_reference())
+finally:
+    lease.revoke()        # or: await lease.arevoke()
+```
+
+`revoke()` is a no-op when no publication was created (e.g. an inline
+`data-url`), so it's always safe to call.
+
+## Temporary publication
+
+The `media/publication` layer backs the public-URL transport. It is
+**fail-closed**: if the media cannot be published, preparation raises
+`TemporaryPublicationError` rather than silently handing the provider an
+unreachable URL. `TemporaryMediaPublisher` is the protocol; `SdkRouterPublisher`
+is the built-in implementation.
+
+## Errors
+
+| Error | Raised when |
+|---|---|
+| `MediaTransportError` | Base class for transport failures. |
+| `MediaPolicyError` | The source can't satisfy the target's accepted transports. |
+| `MediaSourceError` | The source itself is invalid (e.g. untyped remote URL). |
+| `TemporaryPublicationError` | A required public-URL publication failed. |
+
+## Read next
+
+- [Vision & OCR](./vision) — the high-level image-input path most callers use
+- [Image Generation](./image-generation)

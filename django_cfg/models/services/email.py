@@ -76,6 +76,25 @@ class EmailConfig(BaseConfig):
         description="Default 'from' email address"
     )
 
+    default_from_name: Optional[str] = Field(
+        default=None,
+        description=(
+            "Display name shown in the recipient's inbox. Defaults to the "
+            "project name. Set it to a person ('Mark from Acme') for letters "
+            "written in the first person — the name is what a reader sees "
+            "before deciding to open, and 'noreply' argues against replying."
+        ),
+    )
+
+    reply_to: Optional[str] = Field(
+        default=None,
+        description=(
+            "Address that receives replies, when it differs from 'from'. "
+            "Needed when mail is sent from an unattended sender but the content "
+            "invites a response: without it, a reply is silently discarded."
+        ),
+    )
+
     # File backend settings
     file_path: str = Field(
         default="emails/",
@@ -123,10 +142,15 @@ class EmailConfig(BaseConfig):
             )
         return self
 
-    @field_validator('default_from')
+    @field_validator('default_from', 'reply_to')
     @classmethod
-    def validate_email(cls, v: str) -> str:
-        """Validate email address format."""
+    def validate_email(cls, v: Optional[str]) -> Optional[str]:
+        """Validate email address format.
+
+        ``reply_to`` is checked too: a typo there does not fail a send, it just
+        routes every reply into nowhere, which is invisible until someone
+        complains that nobody answered them.
+        """
         if v and '@' not in v:
             raise ValueError("Invalid email address format")
         return v

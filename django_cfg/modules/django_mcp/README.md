@@ -4,7 +4,7 @@ Transform any Django-CFG project into an MCP server for AI agents.
 
 ## What it does
 
-- 🤖 **12 built-in tools** — introspection, ORM queries, aggregations, time-series, user lookup
+- 🤖 **11 built-in tools** — introspection, ORM queries, aggregations, time-series, user lookup
 - 🔒 **Secure by default** — deny-by-default, field redaction, row limits, command sandboxing
 - 🔌 **Auto-discovery** — drop `mcp/__init__.py` and `mcp/tools/*.py` in your project root
 - 🧠 **LLM agent** — `/cfg/mcp/agent/` endpoint, uses `django_llm` (OpenRouter)
@@ -66,7 +66,7 @@ curl -X POST http://localhost:8000/cfg/mcp/agent/ \
 | `POST /cfg/mcp/` | JSON-RPC 2.0 | MCP protocol (tools/list, tools/call) |
 | `POST /cfg/mcp/agent/` | REST | Chat-style agent interface |
 
-## Built-in Tools (12)
+## Built-in Tools (11)
 
 | Category | Tools |
 |----------|-------|
@@ -75,17 +75,32 @@ curl -X POST http://localhost:8000/cfg/mcp/agent/ \
 | **Data Access** | `query_model`, `get_object` — ORM with filters |
 | **Commands** | `execute_command` — whitelisted management commands |
 | **Analytics** | `aggregate_model`, `time_series`, `top_values`, `distribution` |
-| **Project** | Auto-discovered from `mcp/tools/*.py` |
+| **Project** | Auto-discovered from `mcp/tools/*.py`, on top of the 11 |
 
 ## Security
 
 | Layer | Mechanism |
 |-------|-----------|
-| **Auth** | `X-MCP-Access-Key` header required |
+| **Auth** | `X-MCP-Access-Key`, enforced with `401` — **only when `access_key` is set**; unset means open |
 | **Models** | Deny-by-default — only exposed models accessible |
 | **Fields** | Automatic PII redaction (emails, phones, keys) |
 | **Queries** | Max rows, cost estimation, read-only by default |
 | **Commands** | Whitelist only, 30s timeout, stdout captured |
+
+`GET /cfg/mcp/info/` is public by design and lists every tool with its schema.
+Not a data leak, but it is reconnaissance — block it at the proxy on a public
+host.
+
+> **Check a deployed server before trusting its auth.** Until 2026-08-04 the
+> access key was compared and then ignored, so tools ran for unauthenticated
+> callers while `tools/list` kept answering `200`. A request with no key must
+> return `401`:
+>
+> ```bash
+> curl -s -o /dev/null -w '%{http_code}\n' -X POST <url> \
+>   -H 'Content-Type: application/json' \
+>   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}'
+> ```
 
 ## LLM
 
@@ -123,4 +138,15 @@ project_root/
 
 ## Docs
 
-Full documentation: [AI MCP Guide](https://djangocfg.com/guides/ai-mcp)
+Public guide: [AI MCP Guide](https://djangocfg.com/guides/ai-mcp)
+
+Module-level detail lives in [`@docs/`](./@docs/README.md):
+
+| Page | Read it when |
+|------|--------------|
+| [architecture.md](./@docs/architecture.md) | You are changing the request path — it states the auth and statelessness invariants and why both once broke. |
+| [tools.md](./@docs/tools.md) | You are writing a tool. |
+| [configuration.md](./@docs/configuration.md) | You need a config field's exact effect. |
+| [agent-chat.md](./@docs/agent-chat.md) | You are touching the admin SSE chat. |
+| [redis.md](./@docs/redis.md) | Cache, budget, or chat history. |
+| [remote-consumption.md](./@docs/remote-consumption.md) | You are *calling* a remote MCP server rather than serving one. |

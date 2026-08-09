@@ -5,8 +5,10 @@ This email service automatically configures itself based on the DjangoConfig ins
 without requiring manual parameter passing.
 """
 
+import re
 import socket
 import threading
+from html import unescape
 from smtplib import SMTPAuthenticationError, SMTPDataError, SMTPException, SMTPRecipientsRefused, SMTPSenderRefused
 from typing import Any, Dict, List, Optional
 
@@ -19,6 +21,41 @@ from ..base import BaseCfgModule
 from ..django_logging import get_logger
 
 logger = get_logger("django_cfg.email")
+
+# The locale whose file doubles as the fallback for every untranslated locale.
+# Kept next to the resolver rather than imported from the accounts app: this
+# module is the generic email transport and must not depend on it.
+DEFAULT_TEMPLATE_LOCALE = "en"
+
+# Languages written right-to-left. Base languages only: a region subtag never
+# changes direction, so `ar-EG` is as RTL as `ar`.
+RTL_LANGUAGES: frozenset = frozenset({"ar", "he", "fa", "ur"})
+
+
+def subject_from_html(html: str) -> Optional[str]:
+    """The rendered ``<title>`` of an email template, or None.
+
+    A localized letter has to carry its own Subject: a caller that builds the
+    subject itself can only write it in one language, and the inbox then shows an
+    English subject over translated prose. The ``<title>`` is where the template
+    already states it, so it doubles as the envelope subject.
+    """
+    match = re.search(r"<title[^>]*>(.*?)</title>", html, re.S | re.I)
+    if not match:
+        return None
+    subject = unescape(re.sub(r"\s+", " ", match.group(1))).strip()
+    return subject or None
+
+
+def text_direction(locale: Optional[str]) -> str:
+    """``rtl`` or ``ltr`` for a locale tag.
+
+    Derived centrally so no template or translator has to remember it: a letter
+    that forgets `dir` renders Arabic left-aligned with its punctuation stranded
+    on the wrong side.
+    """
+    base = (locale or "").strip().replace("_", "-").split("-")[0].lower()
+    return "rtl" if base in RTL_LANGUAGES else "ltr"
 
 
 def _notify_telegram_on_email_error(error_msg: str, context: dict = None):
@@ -211,24 +248,73 @@ class DjangoEmailService(BaseCfgModule):
             True if email queued successfully
         """
         from_email = self._get_formatted_from_email(from_email)
+        reply_to = self._get_reply_to()
 
         if text_message is None:
             text_message = strip_tags(html_message)
 
-        def _do_send():
-            self._handle_email_sending(
-                send_mail,
+        # EmailMultiAlternatives rather than send_mail: send_mail has no
+        # reply_to parameter, so a configured Reply-To would be dropped and every
+        # reply to a first-person letter would reach the unattended sender
+        # instead of a mailbox someone reads.
+        def _send():
+            message = EmailMultiAlternatives(
                 subject=subject,
-                message=text_message,
+                body=text_message,
                 from_email=from_email,
-                recipient_list=recipient_list,
-                html_message=html_message,
-                fail_silently=fail_silently,
+                to=recipient_list,
+                reply_to=reply_to,
             )
+            message.attach_alternative(html_message, "text/html")
+            return message.send(fail_silently=fail_silently)
+
+        def _do_send():
+            self._handle_email_sending(_send)
 
         # Always send in background thread to avoid blocking
         self._send_in_background(_do_send)
         return True
+
+    @staticmethod
+    def _template_candidates(
+        template_name: str, extension: str, locale: Optional[str] = None
+    ) -> List[str]:
+        """Template names to try, most specific first.
+
+        ``render_to_string`` accepts a list and uses the first that exists, so
+        this gives per-file fallback: a locale may ship only some of the
+        templates a product has, and each missing one degrades to the base
+        rather than failing the send.
+
+        Two layouts are accepted, and a **directory** is preferred:
+
+        ==========================  ==============================
+        directory (preferred)       ``emails/welcome/fr.html``
+        sibling suffix (legacy)     ``emails/welcome.fr.html``
+        ==========================  ==============================
+
+        The directory form is what a translated letter should use: at 17 locales
+        the suffix form buries a single letter under 34 sibling files, and the
+        shared shell has no obvious home among them. The suffix form stays
+        supported because it is the shape existing products already ship, and
+        one-locale templates read fine that way.
+
+        For a region-carrying locale the base language is tried too, so
+        ``pt-BR`` also reaches a ``pt`` template if a product ships one.
+        """
+        candidates: List[str] = []
+        if locale:
+            tags = [locale]
+            base = locale.split("-")[0]
+            if base != locale:
+                tags.append(base)
+            for tag in tags:
+                candidates.append(f"{template_name}/{tag}.{extension}")
+                candidates.append(f"{template_name}.{tag}.{extension}")
+        # Unsuffixed last: it is the fallback every untranslated locale lands on.
+        candidates.append(f"{template_name}/{DEFAULT_TEMPLATE_LOCALE}.{extension}")
+        candidates.append(f"{template_name}.{extension}")
+        return candidates
 
     def send_template(
         self,
@@ -238,6 +324,7 @@ class DjangoEmailService(BaseCfgModule):
         recipient_list: List[str],
         from_email: Optional[str] = None,
         fail_silently: bool = False,
+        locale: Optional[str] = None,
     ) -> bool:
         """
         Send an email using a Django template in background thread (non-blocking).
@@ -249,6 +336,10 @@ class DjangoEmailService(BaseCfgModule):
             recipient_list: List of recipient email addresses
             from_email: Sender email (auto-detected if not provided)
             fail_silently: Whether to fail silently on errors
+            locale: Render the locale-specific variant when one exists —
+                ``<template_name>.<locale>.html``, falling back to
+                ``<template_name>.html``. Also exposed to the template as
+                ``locale`` so the base shell can set ``<html lang>``.
 
         Returns:
             True if email queued successfully
@@ -257,15 +348,30 @@ class DjangoEmailService(BaseCfgModule):
 
         # Prepare context with auto-added values
         context = self._prepare_template_context(context)
+        if locale:
+            context.setdefault("locale", locale)
 
         # Render HTML template
-        html_message = render_to_string(f"{template_name}.html", context)
+        html_message = render_to_string(
+            self._template_candidates(template_name, "html", locale), context
+        )
 
-        # Try to render plain text template
+        # Try to render plain text template. The locale-specific .txt is
+        # optional even when a locale-specific .html exists — a translator who
+        # only supplied HTML must not silently break the send.
         try:
-            text_message = render_to_string(f"{template_name}.txt", context)
-        except:
+            text_message = render_to_string(
+                self._template_candidates(template_name, "txt", locale), context
+            )
+        except Exception:
             text_message = strip_tags(html_message)
+
+        # A localized template states its own subject in <title>, and that wins:
+        # the caller can only hard-code one language, which is how an English
+        # "Welcome to X" ends up over a Russian letter.
+        template_subject = subject_from_html(html_message)
+        if template_subject:
+            subject = template_subject
 
         return self.send_html(
             subject=subject,
@@ -480,9 +586,25 @@ class DjangoEmailService(BaseCfgModule):
         if '<' in from_email and '>' in from_email:
             return from_email
 
-        # Format with project name
-        project_name = self.config.project_name
-        return f'"{project_name}" <{from_email}>'
+        # An explicit display name wins over the project name: a letter written
+        # in the first person should arrive from a person, and the name is what
+        # the reader sees before deciding whether to open it at all.
+        name = None
+        if self.email_config:
+            name = getattr(self.email_config, 'default_from_name', None)
+        name = name or self.config.project_name
+        return f'"{name}" <{from_email}>'
+
+    def _get_reply_to(self) -> Optional[List[str]]:
+        """Configured Reply-To, as the list Django's message classes expect.
+
+        Separate from the sender because the two answer different questions: the
+        `From` is an identity the gateway pins, while replies have to reach a
+        mailbox someone reads. A letter that invites a reply from an unattended
+        address discards it silently.
+        """
+        reply_to = getattr(self.email_config, 'reply_to', None) if self.email_config else None
+        return [reply_to] if reply_to else None
 
     def is_configured(self) -> bool:
         """Check if email is properly configured."""

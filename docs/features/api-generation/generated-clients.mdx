@@ -106,6 +106,32 @@ auth.clearSession();
 auth.isAuthenticated();
 ```
 
+#### Storage modes
+
+Tokens are stored in one place, selected at bootstrap:
+
+```typescript
+// StorageMode = 'localStorage' | 'sessionStorage' | 'cookie'
+auth.setStorageMode('cookie');   // call ONCE at startup, before any setSession
+```
+
+| Mode | Behavior |
+|---|---|
+| `localStorage` | **Default.** Survives reload and browser restart. |
+| `sessionStorage` | Cleared when the browser session ends. |
+| `cookie` | JS-readable (not `HttpOnly`) — for SSR `cookies()` access or subdomain sharing. |
+
+`setStorageMode()` is a **one-time bootstrap relocation**, not a per-login
+switch — the mode is module state that resets on reload, so set it before the
+first `setSession`. Public clients support only `'localStorage' | 'cookie'`.
+
+<Callout type="info">
+Storage mode is *where* the token lives, not *how long the session lasts*.
+Session length is a server decision — see
+[Persistent Session (`remember_me`)](/features/built-in-apps/user-management/accounts/otp#persistent-session-remember_me).
+There is no `persist`/`remember` parameter on the client store.
+</Callout>
+
 #### React — subscribe to the session
 
 ```tsx

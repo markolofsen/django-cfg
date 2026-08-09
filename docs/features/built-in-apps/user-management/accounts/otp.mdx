@@ -31,7 +31,7 @@ sequenceDiagram
     S->>T: record_sent(email)
     V-->>C: 200 {message}
 
-    C->>V: POST /otp/verify/ {identifier, otp}
+    C->>V: POST /otp/verify/ {identifier, otp, remember_me?}
     V->>V: is_ratelimited(IP, 20/min)?
     V->>S: verify_otp(email, code)
     S->>S: OTPVerifyThrottle.is_locked(email)?
@@ -43,7 +43,7 @@ sequenceDiagram
         S->>DB: mark OTP as used
         S->>S: fire user_email_verified(user, consent)
         S->>S: record_success → clear lockout
-        V-->>C: 200 {access, refresh, user, requires_2fa}
+        V-->>C: 200 {access, refresh, user, requires_2fa, persistent_session}
     end
 ```
 
@@ -53,6 +53,43 @@ sequenceDiagram
 - **OTP reuse** — if a valid unexpired OTP exists, a re-request returns the same code. Reduces SMTP load, avoids confusing users with multiple codes in inbox.
 - **Active-only lookup** — `OTPService` always filters `deleted_at__isnull=True`. Soft-deleted accounts cannot authenticate.
 - **Test account bypass** — users with `is_test_account=True` accept any OTP code. Intended for App Store review / CI environments where real email delivery isn't available.
+
+---
+
+## Persistent Session (`remember_me`)
+
+`POST /cfg/accounts/otp/verify/` accepts an optional `remember_me` boolean
+(default `false`). When `true`, the issued refresh token gets a **30-day**
+lifetime (`REMEMBER_ME_LIFETIME`) plus an absolute `cfg_session_expires_at`
+deadline; without it the refresh token uses the server's default SimpleJWT
+lifetime.
+
+The deadline is a hard ceiling: `CustomTokenRefreshView` re-reads
+`cfg_session_expires_at` on every rotation and re-clamps the new tokens to it, so
+continued refresh activity cannot extend the 30-day window.
+
+Both branches of the verify response now report the outcome:
+
+```jsonc
+// POST /cfg/accounts/otp/verify/  { "identifier": "...", "otp": "...", "remember_me": true }
+{
+  "access": "...",
+  "refresh": "...",
+  "user": { /* ... */ },
+  "requires_2fa": false,
+  "persistent_session": true   // mirrors the effective remember_me
+}
+```
+
+When `requires_2fa` is `true`, no tokens are minted yet; the `remember_me` choice
+is carried on the 2FA session and applied after the second factor — see
+[Two-Factor Authentication](./two-factor#persistent-session).
+
+<Callout type="info">
+Session **length** is a server decision (`remember_me` → refresh-token lifetime).
+It is not the same as *where* the generated client stores the token — see
+[Storage modes](/features/api-generation/generated-clients#storage-modes).
+</Callout>
 
 ---
 
@@ -87,6 +124,11 @@ from django_cfg.apps.system.accounts.signals import user_email_verified
 # }  — or None when the request carried no consent data
 ```
 
+The **same signal also fires on OAuth login** (GitHub's email is already
+verified), but there `consent` is `None` — no consent UI is involved. So a
+single receiver covers every login path; just default `consent=None` and handle
+the missing-evidence case.
+
 Consumers subscribe to bridge consent into their own systems — the framework itself stores **no subscription state on the user model**, deliberately:
 
 ```python
@@ -94,9 +136,11 @@ from django.dispatch import receiver
 from django_cfg.apps.system.accounts.signals import user_email_verified
 
 @receiver(user_email_verified)
-def bridge_marketing_consent(sender, user, consent, **kwargs):
+def bridge_marketing_consent(sender, user, consent=None, **kwargs):
+    # OTP path: consent is a dict. OAuth path: consent is None.
     if consent and consent["marketing_consent"]:
         enqueue_newsletter_subscribe(user.email, evidence=consent)
+    # …or treat any verified login as the opt-in — your product's policy.
 ```
 
 Receivers must accept `**kwargs` — the payload may gain keys. The dev-mode and test-account verify bypasses also forward the latest stored consent for the email, so dev behavior does not diverge from the real-OTP path.

@@ -60,8 +60,14 @@ flowchart TB
 Data is downloaded on demand from GitHub (not bundled with package).
 
 ```bash
-python manage.py geo_populate
+python manage.py geo_populate                      # full dataset (250 countries)
+python manage.py geo_populate --countries BB,BS,KY # only selected markets
 ```
+
+Most projects care about a handful of countries. Set an allow-list to keep the
+tables small — `GeoConfig(countries=["BB", "BS", "KY"])`, or the `--countries`
+flag for a one-off run. States and cities cascade to the selected countries. See
+[Data Population](./models#data-population) for the full `GeoConfig` reference.
 
 ### 2. Use LocationField in Models
 
