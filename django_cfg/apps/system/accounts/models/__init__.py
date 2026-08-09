@@ -21,6 +21,7 @@ from .base import user_avatar_path
 # Import choices
 from .choices import ActivityType
 
+
 # Import OAuth models
 from .oauth import OAuthConnection, OAuthProvider, OAuthState
 

@@ -16,6 +16,30 @@ config = get_current_config()
 logger = logging.getLogger(__name__)
 
 
+def _resolve_copy(template_name: str, locale: str = None) -> dict:
+    """Database copy for a letter, as template context, or ``{}``.
+
+    The key is the template's own directory (``emails/welcome`` -> ``welcome``),
+    so a project stores copy under the name it already uses for the template
+    instead of maintaining a second mapping that can disagree.
+
+    Failure is never fatal: before the table's migration has run, or on any
+    database error, a letter must still go out with its built-in wording rather
+    than not at all.
+    """
+    key = (template_name or "").rstrip("/").split("/")[-1]
+    if not key:
+        return {}
+    try:
+        from django_cfg.apps.system.mailer.models import EmailContent
+
+        row = EmailContent.resolve(key, locale or "")
+        return row.as_context() if row else {}
+    except Exception as e:  # table missing, db down — not worth losing the mail
+        logger.debug("Email copy lookup skipped for %r: %s", key, e)
+        return {}
+
+
 class AccountNotifications:
     """Centralized account notification system"""
 
@@ -33,6 +57,7 @@ class AccountNotifications:
         template_name: str = "emails/base_email",
         locale: str = None,
         extra_context: dict = None,
+        text_only: bool = False,
     ):
         """Private method for sending templated emails."""
         email_service = DjangoEmailService()
@@ -49,6 +74,10 @@ class AccountNotifications:
             # Derived here, not in each template: a translator who adds an RTL
             # locale should not also have to remember to set the direction.
             "text_dir": text_direction(locale),
+            # Editable per-locale copy, when this project loaded any. Absent is
+            # normal and not an error: the template's own wording is the
+            # fallback, so a fresh install still sends a correct letter.
+            "copy": _resolve_copy(template_name, locale),
         }
         if extra_context:
             context.update(extra_context)
@@ -59,12 +88,15 @@ class AccountNotifications:
             context=context,
             recipient_list=[user.email],
             locale=locale,
+            text_only=text_only,
         )
 
     # === EMAIL NOTIFICATIONS ===
 
     @staticmethod
-    def send_welcome_email(user, locale=None, send_email=True, send_telegram=True):
+    def send_welcome_email(
+        user, locale=None, send_email=True, send_telegram=True, text_only=True
+    ):
         """Send welcome email and telegram notification for new user.
 
         Renders ``emails/welcome`` — a template a product is expected to
@@ -88,6 +120,10 @@ class AccountNotifications:
                 button_url=config.site_url,
                 template_name="emails/welcome",
                 locale=locale,
+                # Plain text by default: this letter is written in the first
+                # person and asks for a reply, and an HTML page imitating a typed
+                # message reads as marketing however carefully it is styled.
+                text_only=text_only,
             )
             logger.info(f"Welcome email sent to {user.email}")
 

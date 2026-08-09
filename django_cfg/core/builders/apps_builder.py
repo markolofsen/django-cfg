@@ -97,6 +97,10 @@ class InstalledAppsBuilder:
                 apps.append("django_cfg.apps.system.accounts")
                 # TOTP 2FA app - always available for security
                 apps.append("django_cfg.apps.system.totp")
+                # Mailer: per-locale letter copy + the send log. Always on, like
+                # accounts — every project sends mail, and the copy has to be
+                # editable before anyone thinks to enable a feature flag.
+                apps.append("django_cfg.apps.system.mailer")
             apps.append(app)
 
         return apps

@@ -18,6 +18,7 @@ from django_cfg.modules.django_unfold.navigation.sections import (
     build_currency_section,
     build_dashboard_section,
     build_geo_section,
+    build_mailer_section,
     build_payments_section,
     build_totp_section,
 )
@@ -74,6 +75,10 @@ class NavigationManager(BaseCfgModule):
 
         if self.is_totp_enabled():
             sections.append(build_totp_section())
+
+        # Unconditional: the mailer app ships with every django-cfg project, and
+        # the letter copy has to be reachable before anyone looks for a switch.
+        sections.append(build_mailer_section())
 
         sections.extend(self._get_extension_navigation())
 

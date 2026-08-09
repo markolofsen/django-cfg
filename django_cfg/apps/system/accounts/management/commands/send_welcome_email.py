@@ -68,8 +68,28 @@ class Command(BaseCommand):
                 raise CommandError(str(exc)) from exc
             self.stdout.write(self.style.SUCCESS(f"  queued {used} -> {email}"))
 
+        # The transport sends on a *daemon* thread, and a management command's
+        # process exits the moment handle() returns — which kills that thread
+        # mid-flight. Without this wait the command prints "queued" for a letter
+        # that never left, and writes no log row either.
+        self._await_sending_threads()
+
         count = len(locales)
-        self.stdout.write(
-            f"{count} letter{'s' if count != 1 else ''} queued. "
-            "Sending is threaded, so delivery happens a moment after this returns."
-        )
+        self.stdout.write(f"{count} letter{'s' if count != 1 else ''} sent.")
+
+    @staticmethod
+    def _await_sending_threads(timeout: float = 30.0) -> None:
+        """Block until the email service's background threads finish."""
+        import threading
+        import time
+
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            alive = [
+                t
+                for t in threading.enumerate()
+                if t is not threading.current_thread() and t.daemon and t.is_alive()
+            ]
+            if not alive:
+                return
+            time.sleep(0.1)

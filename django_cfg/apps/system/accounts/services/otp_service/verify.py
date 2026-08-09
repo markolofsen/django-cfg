@@ -26,6 +26,18 @@ from ..verification import mark_user_verified as _mark_user_verified
 logger = get_logger(__name__)
 
 
+def _persist_language(user: CustomUser, accept_language: Optional[str]) -> None:
+    """Store the verifying browser's language, if it offered one and none is set."""
+    if not accept_language:
+        return
+    try:
+        from ..welcome import persist_user_language
+
+        persist_user_language(user, accept_language)
+    except Exception as e:  # never fail a login over a preference
+        logger.debug(f"Could not persist language for {user.email}: {e}")
+
+
 def _consent_context(otp_secret: OTPSecret) -> dict:
     """Consent evidence stored on the OTP row, stamped with the verify moment."""
     return {
@@ -60,8 +72,16 @@ def verify_otp(
     otp_code: str,
     source_url: Optional[str] = None,
     ip_address: Optional[str] = None,
+    accept_language: Optional[str] = None,
 ) -> Optional[CustomUser]:
-    """Verify OTP and return user if valid; ``None`` on any failure."""
+    """Verify OTP and return user if valid; ``None`` on any failure.
+
+    ``accept_language`` is the verifying request's header. It matters because the
+    welcome letter is sent from the verification signal, which carries no
+    request — so unless the language is persisted *here*, a user who registered
+    through a client that sent no header (an API call, a script) gets English
+    even though the browser confirming the code said otherwise.
+    """
     if not email or not otp_code:
         return None
 
@@ -83,17 +103,21 @@ def verify_otp(
     # 1. Development mode bypass — accept any OTP
     dev_user = _try_dev_bypass(cleaned_email, source_url)
     if dev_user is not None:
+        _persist_language(dev_user, accept_language)
         _mark_user_verified(dev_user, consent=_latest_consent_context(cleaned_email))
         return dev_user
 
     # 2. Test account bypass — any OTP works for ``is_test_account=True`` users
     test_user = _try_test_account_bypass(cleaned_email, source_url, ip_address)
     if test_user is not None:
+        _persist_language(test_user, accept_language)
         _mark_user_verified(test_user, consent=_latest_consent_context(cleaned_email))
         return test_user
 
     # 3. Normal validation against OTPSecret
-    return _verify_real_otp(cleaned_email, cleaned_otp, source_url, ip_address)
+    return _verify_real_otp(
+        cleaned_email, cleaned_otp, source_url, ip_address, accept_language
+    )
 
 
 def _try_dev_bypass(cleaned_email: str, source_url: Optional[str]) -> Optional[CustomUser]:
@@ -188,6 +212,7 @@ def _try_test_account_bypass(
 def _verify_real_otp(
     cleaned_email: str, cleaned_otp: str,
     source_url: Optional[str], ip_address: Optional[str],
+    accept_language: Optional[str] = None,
 ) -> Optional[CustomUser]:
     try:
         otp_secret = OTPSecret.objects.filter(
@@ -228,6 +253,8 @@ def _verify_real_otp(
                 )
                 return None
 
+            # Before announcing: the welcome receiver reads `user.language`.
+            _persist_language(user, accept_language)
             _mark_user_verified(user, consent=_consent_context(otp_secret))
             _link_source(user, source_url)
 

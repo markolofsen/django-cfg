@@ -232,7 +232,16 @@ class OTPViewSet(viewsets.GenericViewSet):
         remember_me: bool = serializer.validated_data["remember_me"]  # type: ignore[index]
 
         ip_address = request.META.get('REMOTE_ADDR', 'Unknown')
-        user = OTPService.verify_otp(identifier, otp, source_url, ip_address=ip_address)
+        user = OTPService.verify_otp(
+            identifier,
+            otp,
+            source_url,
+            ip_address=ip_address,
+            # The welcome letter is sent from the verification signal, which
+            # carries no request — so this is the last point where the reader's
+            # own browser can still state its language.
+            accept_language=request.META.get('HTTP_ACCEPT_LANGUAGE', '') or '',
+        )
 
         if user:
             # Check if 2FA is enabled system-wide AND user has TOTP device

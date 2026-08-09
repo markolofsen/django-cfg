@@ -60,14 +60,20 @@ def request_otp(
         if created:
             logger.info(f"Created new user: {cleaned_email}")
 
-        # Save user language from Accept-Language (only if not already set)
-        if accept_language and not user.language:
-            lang_code = CustomUser.objects.clean_language(
-                accept_language.split(",")[0].split(";")[0]
-            )
-            if lang_code:
-                user.language = lang_code
-                user.save(update_fields=["language"])
+        # Save the user's language from Accept-Language, once.
+        #
+        # This used to take the header's FIRST tag and reduce it to two letters,
+        # which is wrong in three ways that all reach a real inbox:
+        #   `de;q=0.7,ru,en;q=0.9` stored `de` although `ru` is the preferred one
+        #   (an unweighted tag is q=1.0); `pt-BR,...` stored `pt`, for which no
+        #   template or copy exists; and `xx-YY,de` stored the nonexistent `xx`.
+        # `persist_user_language` honours q-weights and only stores a tag the
+        # platform actually ships, so there is one parser instead of two that
+        # disagree.
+        if accept_language:
+            from ..welcome import persist_user_language
+
+            persist_user_language(user, accept_language)
 
     except Exception as e:
         logger.error(

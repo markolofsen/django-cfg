@@ -27,11 +27,6 @@ logger = get_logger("django_cfg.email")
 # module is the generic email transport and must not depend on it.
 DEFAULT_TEMPLATE_LOCALE = "en"
 
-# Languages written right-to-left. Base languages only: a region subtag never
-# changes direction, so `ar-EG` is as RTL as `ar`.
-RTL_LANGUAGES: frozenset = frozenset({"ar", "he", "fa", "ur"})
-
-
 def subject_from_html(html: str) -> Optional[str]:
     """The rendered ``<title>`` of an email template, or None.
 
@@ -50,12 +45,51 @@ def subject_from_html(html: str) -> Optional[str]:
 def text_direction(locale: Optional[str]) -> str:
     """``rtl`` or ``ltr`` for a locale tag.
 
-    Derived centrally so no template or translator has to remember it: a letter
-    that forgets `dir` renders Arabic left-aligned with its punctuation stranded
-    on the wrong side.
+    Thin re-export of ``mailer.locales.text_direction``: the locale policy lives
+    in the mailer app, but this module is imported by callers that predate it.
+    Imported lazily because this module is the generic transport and must not
+    require the mailer app to be installed.
     """
-    base = (locale or "").strip().replace("_", "-").split("-")[0].lower()
-    return "rtl" if base in RTL_LANGUAGES else "ltr"
+    from django_cfg.apps.system.mailer.locales import text_direction as _impl
+
+    return _impl(locale)
+
+
+def _record_send(
+    key: str,
+    recipients: List[str],
+    subject: str,
+    locale: str,
+    status: str,
+    error: str,
+) -> None:
+    """Write one ``EmailLog`` row per recipient.
+
+    Best-effort by design: the log is diagnostic, and losing a row must never
+    lose the mail. It also runs in the sending thread, so a database error here
+    would otherwise surface as an unrelated "background email task failed".
+
+    Nothing is written when the mailer app is absent — a project can install
+    django-cfg without it, and a send should not depend on the log's existence.
+    """
+    try:
+        from django_cfg.apps.system.mailer.models import EmailLog
+
+        EmailLog.objects.bulk_create(
+            [
+                EmailLog(
+                    key=key or "",
+                    recipient=address,
+                    subject=(subject or "")[:255],
+                    locale=locale or "",
+                    status=status,
+                    error=error or "",
+                )
+                for address in recipients or []
+            ]
+        )
+    except Exception as e:
+        logger.debug(f"Email log skipped: {e}")
 
 
 def _notify_telegram_on_email_error(error_msg: str, context: dict = None):
@@ -68,6 +102,38 @@ def _notify_telegram_on_email_error(error_msg: str, context: dict = None):
         )
     except Exception as e:
         logger.debug(f"Could not send telegram notification: {e}")
+
+
+# Live sending threads, so a caller that is about to exit can wait for them.
+_SEND_THREADS: List[threading.Thread] = []
+_SEND_THREADS_LOCK = threading.Lock()
+
+
+def wait_for_sends(timeout: float = 30.0) -> bool:
+    """Block until queued sends finish. True if all completed.
+
+    Sending happens on daemon threads, which Python kills at interpreter exit —
+    fine for a web process that keeps running, fatal for a management command
+    that returns immediately. Anything short-lived must call this, or it reports
+    success for a letter that never left.
+    """
+    with _SEND_THREADS_LOCK:
+        threads = [t for t in _SEND_THREADS if t.is_alive()]
+    deadline = None
+    for thread in threads:
+        if deadline is None:
+            import time as _time
+
+            deadline = _time.monotonic() + timeout
+        import time as _time
+
+        remaining = deadline - _time.monotonic()
+        if remaining <= 0:
+            break
+        thread.join(remaining)
+    with _SEND_THREADS_LOCK:
+        _SEND_THREADS[:] = [t for t in _SEND_THREADS if t.is_alive()]
+        return not _SEND_THREADS
 
 
 class DjangoEmailService(BaseCfgModule):
@@ -86,15 +152,37 @@ class DjangoEmailService(BaseCfgModule):
         self.config = self.get_config()
         self.email_config = getattr(self.config, 'email', None)
 
+    @staticmethod
+    def _is_running_under_tests() -> bool:
+        """True when Django's test runner has swapped in the locmem backend.
+
+        Keyed off the backend rather than ``sys.argv`` or a settings flag: the
+        runner sets it for every test process however it was started (manage.py,
+        pytest, parallel workers), and it is exactly the condition under which
+        sending must not outlive the test.
+        """
+        return "locmem" in getattr(settings, "EMAIL_BACKEND", "")
+
     def _send_in_background(self, func, *args, **kwargs):
         """
         Execute a function in a background thread to avoid blocking.
+
+        Runs **inline** under a test runner. A thread that outlives the test
+        writing to the database races the runner's transaction rollback, which
+        surfaces as an unrelated `database table is locked` in whichever test
+        happens to run next — a failure that reproduces about one run in three
+        and points at the wrong code. Tests that want to observe threading patch
+        this method directly.
 
         Args:
             func: Function to execute
             *args: Positional arguments for the function
             **kwargs: Keyword arguments for the function
         """
+        if self._is_running_under_tests():
+            func(*args, **kwargs)
+            return
+
         def _wrapper():
             try:
                 func(*args, **kwargs)
@@ -108,8 +196,13 @@ class DjangoEmailService(BaseCfgModule):
                     'function': func.__name__ if hasattr(func, '__name__') else 'unknown',
                 })
 
-        thread = threading.Thread(target=_wrapper, daemon=True)
+        thread = threading.Thread(target=_wrapper, daemon=True, name="django-cfg-email")
         thread.start()
+        # Tracked so a caller can wait for delivery. These are daemon threads, so
+        # a short-lived process (a management command, a script) exits out from
+        # under them and the mail is never sent — see `wait_for_sends`.
+        with _SEND_THREADS_LOCK:
+            _SEND_THREADS.append(thread)
 
     def _handle_email_sending(self, email_func, *args, **kwargs):
         """
@@ -232,6 +325,9 @@ class DjangoEmailService(BaseCfgModule):
         text_message: Optional[str] = None,
         from_email: Optional[str] = None,
         fail_silently: bool = False,
+        log_key: str = "",
+        log_locale: str = "",
+        text_only: bool = False,
     ) -> bool:
         """
         Send an HTML email with optional plain text alternative in background thread (non-blocking).
@@ -243,6 +339,10 @@ class DjangoEmailService(BaseCfgModule):
             text_message: Plain text alternative (auto-generated if not provided)
             from_email: Sender email (auto-detected if not provided)
             fail_silently: Whether to fail silently on errors
+            text_only: Send as text/plain with NO HTML part. A letter written in
+                the first person reads better this way — the client renders it in
+                its own font, so it looks like a message a person typed instead of
+                a page imitating one, and no client can break the layout.
 
         Returns:
             True if email queued successfully
@@ -265,11 +365,36 @@ class DjangoEmailService(BaseCfgModule):
                 to=recipient_list,
                 reply_to=reply_to,
             )
-            message.attach_alternative(html_message, "text/html")
+            if not text_only:
+                message.attach_alternative(html_message, "text/html")
             return message.send(fail_silently=fail_silently)
 
         def _do_send():
-            self._handle_email_sending(_send)
+            # Logged around the actual attempt, inside the thread: sending is
+            # threaded and the transport is HTTP, so a failure otherwise surfaces
+            # nowhere a human looks.
+            #
+            # The RESULT is what decides the status, not just an exception:
+            # `_handle_email_sending` swallows every SMTP error and returns 0, so
+            # keying off exceptions alone would file a failed send as "sent".
+            try:
+                sent = self._handle_email_sending(_send)
+            except Exception as exc:
+                _record_send(
+                    log_key, recipient_list, subject, log_locale, "failed", str(exc)
+                )
+                raise
+            if sent:
+                _record_send(log_key, recipient_list, subject, log_locale, "sent", "")
+            else:
+                _record_send(
+                    log_key,
+                    recipient_list,
+                    subject,
+                    log_locale,
+                    "failed",
+                    "transport reported 0 messages sent; see the log for the provider error",
+                )
 
         # Always send in background thread to avoid blocking
         self._send_in_background(_do_send)
@@ -325,6 +450,7 @@ class DjangoEmailService(BaseCfgModule):
         from_email: Optional[str] = None,
         fail_silently: bool = False,
         locale: Optional[str] = None,
+        text_only: bool = False,
     ) -> bool:
         """
         Send an email using a Django template in background thread (non-blocking).
@@ -380,6 +506,11 @@ class DjangoEmailService(BaseCfgModule):
             text_message=text_message,
             from_email=from_email,
             fail_silently=fail_silently,
+            # The template's own directory names the letter in the log, so a row
+            # says "welcome" rather than just an address and a subject.
+            log_key=(template_name or "").rstrip("/").split("/")[-1],
+            log_locale=locale or "",
+            text_only=text_only,
         )
 
     def send_multipart(

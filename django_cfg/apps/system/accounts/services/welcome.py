@@ -2,10 +2,10 @@
 
 Three things live here, and the split from the *content* of the letter is
 deliberate: this module owns **when** a welcome is sent, **that it is sent only
-once**, and **which locale** it renders in. What the letter actually says is the
-product's business — it supplies
-``templates/emails/welcome_email.<locale>.html`` and shadows the framework
-default via app-directory template resolution.
+once**, and **which locale** it renders in. What the letter actually says lives
+in the mailer app: ``EmailContent`` rows per locale, rendered by the product's
+own ``templates/emails/welcome/_shell.html``. The locale *policy* — which
+languages exist, how a header is parsed — is ``mailer.locales``.
 
 Why the trigger is ``user_email_verified`` and not user creation:
 
@@ -27,86 +27,24 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from django.conf import settings
 from django.utils import timezone
 
 from ..models import CustomUser
 
 logger = logging.getLogger(__name__)
 
-# The locales the platform ships UI for. Mirrors the frontend SSoT,
-# ``packages/i18n/src/locales/index.ts`` (re-exported as ``DEFAULT_LOCALES``
-# from ``packages/nextjs/src/i18n/routing.ts``). Kept as an explicit list
-# because the TS ``LocaleCode`` type is ``'en' | 'ru' | 'ko' | string`` and so
-# constrains nothing — the file list is the real contract.
-#
-# ``pt-BR`` carries a region on purpose. There is no bare ``pt``, which is why
-# ``resolve_locale`` must not blindly reduce a tag to two letters the way
-# ``UserManager.clean_language`` does — that would map a Brazilian user to
-# ``pt`` and match no template at all.
-SUPPORTED_LOCALES: tuple[str, ...] = (
-    "en", "ru", "ko", "ja", "de", "fr", "zh", "it", "es",
-    "nl", "ar", "tr", "pt-BR", "pl", "sv", "no", "da",
+# Locale policy lives in the mailer app: which languages the platform can write
+# a letter in is a mail concern, not a property of the accounts feature. Kept as
+# re-exports so existing imports of these names keep working.
+from django_cfg.apps.system.mailer.locales import (  # noqa: E402
+    DEFAULT_LOCALE,
+    SUPPORTED_LOCALES,
+    best_supported,
+    match_supported as _match_supported,
+    parse_accept_language,
 )
 
-DEFAULT_LOCALE = "en"
-
 WELCOME_TEMPLATE = "emails/welcome"
-
-
-def _match_supported(tag: str) -> Optional[str]:
-    """Best supported locale for one BCP-47 tag, or None.
-
-    Exact match wins (so ``pt-BR`` resolves to ``pt-BR``); otherwise the tag's
-    base language is matched against both bare and region-carrying entries, so
-    ``pt`` and ``pt-PT`` both reach ``pt-BR`` rather than falling back to
-    English.
-    """
-    tag = (tag or "").strip().replace("_", "-")
-    if not tag:
-        return None
-
-    lowered = tag.lower()
-    by_lower = {loc.lower(): loc for loc in SUPPORTED_LOCALES}
-    if lowered in by_lower:
-        return by_lower[lowered]
-
-    base = lowered.split("-")[0]
-    if base in by_lower:
-        return by_lower[base]
-    for loc in SUPPORTED_LOCALES:
-        if loc.lower().split("-")[0] == base:
-            return loc
-    return None
-
-
-def parse_accept_language(header: str) -> list[str]:
-    """Tags from an ``Accept-Language`` header, most-preferred first.
-
-    Honors ``q`` weights; ``*`` is dropped. Django's own
-    ``get_language_from_request`` is not used because it filters against
-    ``settings.LANGUAGES``, which this package never populates.
-    """
-    tags: list[tuple[float, int, str]] = []
-    for index, part in enumerate(header.split(",")):
-        piece = part.strip()
-        if not piece:
-            continue
-        tag, _, params = piece.partition(";")
-        tag = tag.strip()
-        if not tag or tag == "*":
-            continue
-        quality = 1.0
-        for param in params.split(";"):
-            key, _, value = param.partition("=")
-            if key.strip() == "q":
-                try:
-                    quality = float(value)
-                except ValueError:
-                    quality = 0.0
-        # index keeps the header's own order stable among equal weights
-        tags.append((-quality, index, tag))
-    return [tag for _, _, tag in sorted(tags)]
 
 
 def persist_user_language(user: CustomUser, accept_language: str) -> None:
@@ -123,22 +61,22 @@ def persist_user_language(user: CustomUser, accept_language: str) -> None:
     if not accept_language or getattr(user, "language", ""):
         return
 
-    for tag in parse_accept_language(accept_language):
-        matched = _match_supported(tag)
-        if matched:
-            user.language = matched
-            user.save(update_fields=["language"])
-            return
+    matched = best_supported(accept_language)
+    if matched:
+        user.language = matched
+        user.save(update_fields=["language"])
 
 
 def resolve_locale(user: CustomUser, accept_language: str = "") -> str:
     """The locale to render this user's email in.
 
-    Order: the user's stored ``language`` → ``Accept-Language`` → the project's
-    ``LANGUAGE_CODE`` → ``en``.
+    Order: the user's stored ``language`` → ``Accept-Language`` → ``en``.
 
-    ``Accept-Language`` matters more than it looks: the OAuth path persists no
-    language at all, so for those users it is the only signal there is.
+    ``settings.LANGUAGE_CODE`` is deliberately NOT in that chain. It is the
+    project's own default, not a statement about this reader: on a project
+    configured as ``ru`` it would send a Russian letter to a French speaker whose
+    language we do not ship, which is worse than English — the one language a
+    recipient of an English-language product is most likely to read.
     """
     stored = getattr(user, "language", "") or ""
     if stored:
@@ -146,13 +84,7 @@ def resolve_locale(user: CustomUser, accept_language: str = "") -> str:
         if matched:
             return matched
 
-    for tag in parse_accept_language(accept_language):
-        matched = _match_supported(tag)
-        if matched:
-            return matched
-
-    matched = _match_supported(getattr(settings, "LANGUAGE_CODE", "") or "")
-    return matched or DEFAULT_LOCALE
+    return best_supported(accept_language) or DEFAULT_LOCALE
 
 
 def send_welcome_email(user: CustomUser, accept_language: str = "") -> bool:

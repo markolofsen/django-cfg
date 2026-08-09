@@ -46,6 +46,13 @@ class OTPService:
         otp_code: str,
         source_url: Optional[str] = None,
         ip_address: Optional[str] = None,
+        accept_language: Optional[str] = None,
     ) -> Optional[CustomUser]:
         """Verify OTP and return user if valid; ``None`` on any failure."""
-        return _verify_otp(email, otp_code, source_url=source_url, ip_address=ip_address)
+        return _verify_otp(
+            email,
+            otp_code,
+            source_url=source_url,
+            ip_address=ip_address,
+            accept_language=accept_language,
+        )
