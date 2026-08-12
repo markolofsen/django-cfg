@@ -50,19 +50,37 @@ class Command(BaseCommand):
         )
 
         if status.mismatch:
-            self.stdout.write(
-                self.style.ERROR(
-                    "❌ django-cfg loaded from PyPI copy (site-packages), not your editable source."
+            # Name what was ACTUALLY found. A mismatch is not always the PyPI
+            # copy — anything shadowing the package (stray PYTHONPATH entry,
+            # leftover copy, second venv) lands here too, and telling that
+            # developer to re-run `make install-local` would send them to fix
+            # a link that is already correct.
+            if status.is_site_packages:
+                self.stdout.write(
+                    self.style.ERROR(
+                        "❌ django-cfg loaded from PyPI copy (site-packages), not your editable source."
+                    )
                 )
-            )
-            self.stdout.write(
-                self.style.WARNING(
-                    "   A `uv sync` / `uv run` likely reinstalled the PyPI copy over your editable link."
+                self.stdout.write(
+                    self.style.WARNING(
+                        "   A `uv sync` / `uv run` likely reinstalled the PyPI copy over your editable link."
+                    )
                 )
-            )
-            self.stdout.write(
-                self.style.WARNING("   Fix: make install-local\n")
-            )
+                self.stdout.write(
+                    self.style.WARNING("   Fix: make install-local\n")
+                )
+            else:
+                self.stdout.write(
+                    self.style.ERROR(
+                        "❌ django-cfg loaded from outside your editable source."
+                    )
+                )
+                self.stdout.write(
+                    self.style.WARNING(
+                        "   Something is shadowing the package — check PYTHONPATH,"
+                        " a stray django_cfg/ copy, or a second virtualenv.\n"
+                    )
+                )
             if options.get("strict"):
                 raise SystemExit(1)
             return

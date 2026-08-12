@@ -50,6 +50,38 @@ flowchart LR
 
 ---
 
+## User profiles &amp; avatars
+
+Profile fields (name, phone, company, position, avatar) live on the built-in
+user model and are read/updated through `/cfg/accounts/profile/*`. Avatar upload
+is a dedicated multipart endpoint:
+
+```
+POST   /cfg/accounts/profile/avatar/   # multipart/form-data, field: avatar
+```
+
+**Uploads are resized on the fly — the original is never stored.** Every
+uploaded avatar is normalized server-side before it reaches storage:
+
+| Step | Behaviour |
+|---|---|
+| **Orientation** | EXIF rotation is applied (phone photos land upright) |
+| **Crop** | Center-cropped to a square (crop-to-fill, no letterboxing) |
+| **Resize** | Downscaled to **400×400** |
+| **Transparency** | Alpha/palette flattened onto white → clean RGB |
+| **Format** | Re-encoded to **WebP** (~3–5× smaller than the source JPEG/PNG) |
+
+Only the processed thumbnail is written to disk, so a multi-megabyte upload
+becomes a few-KB `.webp` regardless of the source format. Accepted inputs: JPEG,
+PNG, GIF, WebP, up to 5 MB (a non-image or oversize payload is rejected with a
+validation error).
+
+The normalization is a serializer-level concern (`AvatarUploadSerializer` calls
+the `process_avatar` service), so it applies to **every** save path — the upload
+endpoint, the Django admin, and any direct serializer use — identically.
+
+---
+
 ## Extension signals
 
 The accounts app fires Django signals at key lifecycle points so your product
@@ -128,5 +160,5 @@ class MyConfig(DjangoConfig):
   </Card>
 </Cards>
 
-TAGS: accounts, otp, jwt, 2fa, oauth, authentication
+TAGS: accounts, otp, jwt, 2fa, oauth, authentication, profile, avatar
 DEPENDS_ON: [frontend, otp, jwt, two-factor, oauth]

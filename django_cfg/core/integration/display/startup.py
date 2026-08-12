@@ -235,7 +235,9 @@ class StartupDisplayManager(BaseDisplayManager):
             warn_text = Text()
             warn_text.append("⚠️  ", style="bold yellow")
             warn_text.append(
-                "django-cfg loaded from PyPI copy (site-packages), not your editable source.",
+                "django-cfg loaded from PyPI copy (site-packages), not your editable source."
+                if status.is_site_packages
+                else "django-cfg loaded from outside your editable source.",
                 style="bold yellow",
             )
             warn_text.append("\n   Loaded from: ", style="dim")

@@ -189,25 +189,37 @@ class AvatarUploadSerializer(serializers.ModelSerializer):
         fields = ["avatar"]
 
     def validate_avatar(self, value):
-        """Validate avatar image."""
-        if value:
-            # Check file size (max 5MB)
-            if value.size > 5 * 1024 * 1024:
-                raise serializers.ValidationError(
-                    "Avatar file size must be less than 5MB."
-                )
+        """Validate the upload, then resize/re-encode it before it is stored.
 
-            # Check file type
-            allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
-            if (
-                hasattr(value, "content_type")
-                and value.content_type not in allowed_types
-            ):
-                raise serializers.ValidationError(
-                    "Avatar must be a valid image file (JPEG, PNG, GIF, or WebP)."
-                )
+        Returns a processed square WebP thumbnail (max 400x400) — the original
+        upload is never persisted. Resizing happens here so every save path
+        (endpoint, admin, direct serializer use) is normalized identically.
+        """
+        if not value:
+            return value
 
-        return value
+        # Check file size (max 5MB) — bounds the in-memory decode below.
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError(
+                "Avatar file size must be less than 5MB."
+            )
+
+        # Check declared file type (defense-in-depth; real decode happens next).
+        allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp"]
+        if (
+            hasattr(value, "content_type")
+            and value.content_type not in allowed_types
+        ):
+            raise serializers.ValidationError(
+                "Avatar must be a valid image file (JPEG, PNG, GIF, or WebP)."
+            )
+
+        from ..services import process_avatar
+
+        try:
+            return process_avatar(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
 
 
 class RegistrationSourceSerializer(serializers.ModelSerializer):

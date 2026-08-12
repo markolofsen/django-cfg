@@ -44,8 +44,28 @@ class EditableStatus:
 
     @property
     def mismatch(self) -> bool:
-        """True when editable was expected but the PyPI copy is loaded instead."""
-        return self.editable_expected and self.is_site_packages
+        """
+        True when editable was expected but something else is loaded instead.
+
+        Asks "did it load from the editable source?", NOT "does the path look
+        like site-packages?". Those differ: the old test was
+        ``editable_expected and is_site_packages``, so anything shadowing the
+        package from a path without a ``/site-packages/`` segment — a stray
+        ``PYTHONPATH`` entry, a copy left in the project root, a second venv —
+        reported "✅ loaded from your editable source" while naming a totally
+        different directory one line above.
+
+        When the expected source is known, containment is the test: a healthy
+        editable install resolves to ``<source>/src/django_cfg``, i.e. UNDER the
+        source tree, never equal to it. Falling back to ``is_site_packages``
+        when the source is unknown keeps the env-marker-only case working
+        (marker set, no ~/djangocfg to compare against).
+        """
+        if not self.editable_expected:
+            return False
+        if self.expected_source and self.loaded_path:
+            return not _is_within(self.loaded_path, self.expected_source)
+        return self.is_site_packages
 
 
 def _loaded_django_cfg_dir() -> Optional[str]:
@@ -67,6 +87,29 @@ def _is_site_packages(path: Optional[str]) -> bool:
         return False
     normalized = path.replace("\\", "/")
     return "/site-packages/" in normalized or "/dist-packages/" in normalized
+
+
+def _is_within(path: str, parent: str) -> bool:
+    """
+    True if ``path`` lies inside the ``parent`` tree (or is that tree).
+
+    Both sides are resolved first: ``~/djangocfg`` is routinely a SYMLINK to a
+    checkout elsewhere, and comparing an unresolved link against a resolved
+    import path would call every healthy install a mismatch. Never raises — a
+    diagnostic that throws is worse than one that stays quiet, so an
+    unresolvable path answers "inside" and keeps the warning silent.
+    """
+    # Guard empty input explicitly: `Path("").resolve()` yields the CWD instead
+    # of raising, so it would sail past the except branch and be judged against
+    # whatever directory the process happens to sit in.
+    if not path or not parent:
+        return True
+    try:
+        resolved = Path(path).resolve()
+        base = Path(parent).resolve()
+        return resolved == base or base in resolved.parents
+    except Exception:
+        return True
 
 
 def _detect_editable_source() -> Optional[str]:
