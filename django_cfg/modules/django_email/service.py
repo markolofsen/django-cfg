@@ -42,6 +42,23 @@ def subject_from_html(html: str) -> Optional[str]:
     return subject or None
 
 
+def html_to_text(html: str) -> str:
+    """The plain-text body of an HTML letter.
+
+    ``strip_tags`` alone is not enough. The template engine escapes as it
+    renders, so an apostrophe reaches the HTML as ``&#x27;`` — correct there,
+    and correct still after ``strip_tags``, which removes tags and leaves
+    entities untouched. Nothing decodes them in a ``text/plain`` part, so the
+    reader is shown the raw entity:
+
+        I&#x27;d genuinely like to know what you make of it
+
+    Reported from a real welcome letter on 2026-08-14. ``subject_from_html``
+    already unescapes for the same reason; this is the body's half of it.
+    """
+    return unescape(strip_tags(html))
+
+
 def text_direction(locale: Optional[str]) -> str:
     """``rtl`` or ``ltr`` for a locale tag.
 
@@ -351,7 +368,7 @@ class DjangoEmailService(BaseCfgModule):
         reply_to = self._get_reply_to()
 
         if text_message is None:
-            text_message = strip_tags(html_message)
+            text_message = html_to_text(html_message)
 
         # EmailMultiAlternatives rather than send_mail: send_mail has no
         # reply_to parameter, so a configured Reply-To would be dropped and every
@@ -490,7 +507,7 @@ class DjangoEmailService(BaseCfgModule):
                 self._template_candidates(template_name, "txt", locale), context
             )
         except Exception:
-            text_message = strip_tags(html_message)
+            text_message = html_to_text(html_message)
 
         # A localized template states its own subject in <title>, and that wins:
         # the caller can only hard-code one language, which is how an English
@@ -547,7 +564,7 @@ class DjangoEmailService(BaseCfgModule):
             try:
                 email = EmailMultiAlternatives(
                     subject=subject,
-                    body=text_content or strip_tags(html_content or ''),
+                    body=text_content or html_to_text(html_content or ''),
                     from_email=from_email,
                     to=recipient_list,
                 )
@@ -627,12 +644,12 @@ class DjangoEmailService(BaseCfgModule):
             try:
                 text_content = render_to_string(f"{template_name}.txt", context)
             except:
-                text_content = strip_tags(html_content)
+                text_content = html_to_text(html_content)
 
         elif html_message:
             # HTML email
             html_content = html_message
-            text_content = message or strip_tags(html_message)
+            text_content = message or html_to_text(html_message)
 
         elif message:
             # Simple text email
@@ -818,7 +835,7 @@ class DjangoEmailService(BaseCfgModule):
         try:
             text_message = render_to_string(f"{template_name}.txt", context)
         except:
-            text_message = strip_tags(html_message)
+            text_message = html_to_text(html_message)
 
         return self.send_html(
             subject=subject,
