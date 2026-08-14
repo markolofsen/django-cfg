@@ -503,8 +503,16 @@ class DjangoEmailService(BaseCfgModule):
         # optional even when a locale-specific .html exists — a translator who
         # only supplied HTML must not silently break the send.
         try:
-            text_message = render_to_string(
-                self._template_candidates(template_name, "txt", locale), context
+            # unescape: Django autoescapes in EVERY template, including .txt,
+            # so an apostrophe in the copy renders as &#x27; — invisible in a
+            # browser but shown raw in a text/plain part, which is the only
+            # part a text_only letter has. Reported from a real welcome letter
+            # on 2026-08-14, where the HTML fallback below was already correct
+            # and only this branch was not.
+            text_message = unescape(
+                render_to_string(
+                    self._template_candidates(template_name, "txt", locale), context
+                )
             )
         except Exception:
             text_message = html_to_text(html_message)
@@ -642,7 +650,10 @@ class DjangoEmailService(BaseCfgModule):
             # Render templates
             html_content = render_to_string(f"{template_name}.html", context)
             try:
-                text_content = render_to_string(f"{template_name}.txt", context)
+                # unescape for the same reason as in send_template: autoescaping
+                # applies to .txt too, and nothing decodes entities in a
+                # text/plain part.
+                text_content = unescape(render_to_string(f"{template_name}.txt", context))
             except:
                 text_content = html_to_text(html_content)
 
