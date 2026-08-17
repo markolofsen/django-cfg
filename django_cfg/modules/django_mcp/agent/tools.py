@@ -24,6 +24,7 @@ from django.db import models
 from django.db.models import Count, Sum, Avg, Min, Max, F
 
 from django_cfg.modules.django_mcp.tools.base import MCPTool
+from django_cfg.modules.django_mcp.tools.serialization import serialize_queryset
 from django_cfg.modules.django_mcp.agent.context import AgentQueryContext
 from django_cfg.modules.django_mcp.services.redactor import apply_redaction, RedactionMode
 
@@ -200,23 +201,7 @@ class QueryModelTool(MCPTool):
 
     def _serialize_queryset(self, qs, model, hidden_fields):
         """Serialize QuerySet to list of dicts."""
-        results = []
-        for obj in qs:
-            obj_data = {}
-            for field in model._meta.fields:
-                if field.name in hidden_fields:
-                    continue
-                value = getattr(obj, field.name)
-                if isinstance(value, models.Model):
-                    obj_data[field.name] = value.pk if value else None
-                elif hasattr(value, "isoformat"):
-                    obj_data[field.name] = value.isoformat()
-                elif hasattr(value, "__iter__") and not isinstance(value, str):
-                    obj_data[field.name] = list(value)
-                else:
-                    obj_data[field.name] = value
-            results.append(obj_data)
-        return results
+        return serialize_queryset(qs, hidden_fields)
 
 
 class CountRecordsTool(MCPTool):

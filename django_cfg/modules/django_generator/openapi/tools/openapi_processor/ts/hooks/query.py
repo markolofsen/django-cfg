@@ -50,7 +50,7 @@ def render_query(op: IROperation, hook: str, *, sdk_import_prefix: str = "../.."
 // DO NOT EDIT — re-run `make gen`.
 
 import useSWR from "swr";
-import type {{ SWRConfiguration }} from "swr";
+import type {{ SWRConfiguration, SWRResponse }} from "swr";
 import {{ {cls_name} }} from "{sdk_import_prefix}/sdk.gen";
 import type {{ {data_t}, {resp_t} }} from "{sdk_import_prefix}/types.gen";
 {validation.imports}
@@ -65,10 +65,16 @@ type Result = {resp_t}[keyof {resp_t}];
  */
 type HookConfig = SWRConfiguration<Result> & {{ enabled?: boolean }};
 
+// The return type is ANNOTATED, not inferred. Left to inference, tsc reaches
+// into swr's internal `dist/types-*` module to name the result and fails with
+// TS2742 ("cannot be named without a reference to ... not portable") in every
+// consumer that has swr hoisted to a different node_modules depth. Naming
+// SWRResponse here keeps the public surface expressible from the package's own
+// imports.
 export function {hook}(
   {args_sig}
   config?: HookConfig,
-) {{
+): SWRResponse<Result> {{
   const {{ enabled = true, ...swrConfig }} = config ?? {{}};
   const key = enabled ? {key_expr} : null;
   return useSWR<Result>(

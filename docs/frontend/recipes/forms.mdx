@@ -134,6 +134,6 @@ export function EditForm({ onSuccess }) {
 
 1. Define the Zod schema first, then derive the TypeScript type with `z.infer`
 2. Always use `zodResolver` — never validate manually in `onSubmit`
-3. Use `Controller` for components that do not support `ref` forwarding (Select, Combobox, DatePicker)
+3. Use `Controller` for components that do not support `ref` forwarding (Select, Combobox, DatePicker). The native-engine `DateField` / `TimeField` / `DateTimeField` forward a ref to the underlying input and register directly.
 4. Set API errors on `root` with `form.setError('root', ...)` — display at the form level
 5. Separate dialog state from form logic — form component receives `onSuccess`, not `open`/`onOpenChange`

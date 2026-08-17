@@ -80,8 +80,14 @@ def funnel(source: AnalyticsSource, period: Period, definition: AnalyticsFunnel)
             expected = 0
         if expected >= len(steps) or by_event[event_name] != expected:
             continue
-        expected += 1
+        # Credit the step that just matched, THEN advance. Incrementing
+        # `expected` first credited the NEXT step: step 1 always reported zero
+        # (so every conversion_rate divided by zero and came back 0.0), and a
+        # visitor who completed the final step indexed one past the end and
+        # raised IndexError. `expected` is the index of the step we are waiting
+        # for, so it is also the index of the step this row completes.
         completed[expected] += 1
+        expected += 1
 
     first = completed[0]
     return [

@@ -19,11 +19,16 @@ from ...pipeline.errors import ToolExecutionError, ToolNotInstalledError
 
 INSTALL_HINT = "ensure node + npx are on PATH (Node 18+)"
 
-# Pinned, NOT @latest: an unpinned generator makes builds nondeterministic
-# (a new hey-api release can silently change SDK/type naming, enum output, or
-# file layout between two runs of the same spec). Bump deliberately + re-verify
-# the generated clients when raising this. (W2.1)
-HEY_API_VERSION = "0.99.0"
+# `latest`, by owner decision (2026-08-16): the generator tracks upstream rather
+# than being bumped by hand.
+#
+# The cost is stated plainly because it was once the reason for a pin (W2.1): a
+# new hey-api release can change SDK/type naming, enum output, or file layout,
+# so two runs of the SAME spec on different days can produce different files.
+# The generated tree is committed, so that shows up as a diff nobody wrote —
+# review it as a real change, not as noise, and re-verify the clients when it
+# appears.
+HEY_API_VERSION = "latest"
 
 
 @dataclass(slots=True)
@@ -83,7 +88,9 @@ def generate(
 def _normalize_whitespace_only_lines(output: Path) -> None:
     """Remove indentation from otherwise-empty generated text lines.
 
-    Hey API 0.99.0 emits spaces on some separator lines in ``sdk.gen.ts``.
+    Hey API emits spaces on some separator lines in ``sdk.gen.ts`` (seen in
+    0.99.0; the version now floats, so this stays defensive rather than
+    tracking one release).
     Normalizing those lines keeps generated output friendly to ``git diff
     --check`` without touching non-empty lines, where trailing whitespace can
     be meaningful inside a TypeScript template literal.

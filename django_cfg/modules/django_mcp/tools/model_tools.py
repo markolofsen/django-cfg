@@ -3,9 +3,9 @@
 import json
 from typing import Any, Dict, List
 from django.core.exceptions import ValidationError
-from django.db import models
 
 from django_cfg.modules.django_mcp.tools.base import MCPTool
+from django_cfg.modules.django_mcp.tools.serialization import serialize_instance, serialize_queryset
 from django_cfg.modules.django_mcp.services.context import MCPContext
 from django_cfg.modules.django_mcp.services.redactor import apply_redaction, RedactionMode
 
@@ -84,23 +84,7 @@ class QueryModelTool(MCPTool):
 
         # Serialize results
         hidden_fields = model_config.hidden_fields
-        results = []
-        for obj in qs:
-            obj_data = {}
-            for field in model._meta.fields:
-                if field.name in hidden_fields:
-                    continue
-                value = getattr(obj, field.name)
-                # Convert to JSON-safe type
-                if isinstance(value, models.Model):
-                    obj_data[field.name] = value.pk if value else None
-                elif hasattr(value, "isoformat"):  # datetime
-                    obj_data[field.name] = value.isoformat()
-                elif hasattr(value, "__iter__") and not isinstance(value, str):
-                    obj_data[field.name] = list(value)
-                else:
-                    obj_data[field.name] = value
-            results.append(obj_data)
+        results = serialize_queryset(qs, hidden_fields)
 
         # Apply redaction
         mode = RedactionMode(context.config.redaction.mode.lower())
@@ -158,19 +142,7 @@ class GetObjectTool(MCPTool):
 
         # Serialize
         hidden_fields = model_config.hidden_fields
-        obj_data = {}
-        for field in model._meta.fields:
-            if field.name in hidden_fields:
-                continue
-            value = getattr(obj, field.name)
-            if isinstance(value, models.Model):
-                obj_data[field.name] = value.pk if value else None
-            elif hasattr(value, "isoformat"):
-                obj_data[field.name] = value.isoformat()
-            elif hasattr(value, "__iter__") and not isinstance(value, str):
-                obj_data[field.name] = list(value)
-            else:
-                obj_data[field.name] = value
+        obj_data = serialize_instance(obj, hidden_fields)
 
         # Apply redaction
         mode = RedactionMode(context.config.redaction.mode.lower())
