@@ -1,7 +1,7 @@
 """Base MCP Tool Class."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from django_cfg.modules.django_mcp.services.context import MCPContext
 from django_cfg.modules.django_mcp.services.redactor import redactor, RedactionMode
@@ -22,7 +22,7 @@ class MCPTool(ABC):
             "inputSchema": self.input_schema,
         }
 
-    def is_available(self, context: MCPContext) -> bool:
+    def is_available(self, context: Optional[MCPContext]) -> bool:
         """Whether this tool should appear in ``tools/list`` at all.
 
         Default: always. Override when a tool can be configured *off*, so it
@@ -68,7 +68,7 @@ class MCPToolRegistry:
         """Get tool by name."""
         return self._tools.get(name)
 
-    def get_all_tools(self, context: MCPContext) -> list:
+    def get_all_tools(self, context: Optional[MCPContext]) -> list:
         """Tools this context may see.
 
         Registration happens at import time, when there is no config to consult,
@@ -78,6 +78,13 @@ class MCPToolRegistry:
         Note this filters on *configuration*, not on the caller: the registry
         still has no per-key tenancy, so every authenticated caller sees the
         same set.
+
+        ``context`` may be ``None``: the public ``/info/`` view lists tools
+        before there is a caller. Every ``is_available`` implementation must
+        therefore tolerate it — one that dereferenced ``context.config``
+        directly turned ``/info/`` into a 500 on every upgraded deployment,
+        and because that view answers *before* authentication it broke for
+        everyone while the authenticated surface stayed green.
         """
         return [tool for tool in self._tools.values() if tool.is_available(context)]
 

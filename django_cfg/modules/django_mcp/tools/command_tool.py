@@ -3,7 +3,7 @@
 import io
 import sys
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from django.core.management import call_command
 
 from django_cfg.modules.django_mcp.tools.base import MCPTool
@@ -34,7 +34,7 @@ class ExecuteCommandTool(MCPTool):
         "required": ["command"],
     }
 
-    def is_available(self, context: MCPContext) -> bool:
+    def is_available(self, context: Optional[MCPContext]) -> bool:
         """Hidden entirely unless this project whitelisted a command.
 
         Registration is unconditional because it happens at import, before there
@@ -43,8 +43,19 @@ class ExecuteCommandTool(MCPTool):
         nothing — where every call answers "not whitelisted". An agent reads
         that as a broken server rather than as a disabled feature, and a listed
         tool that never works is worse than an absent one.
+
+        ``context`` is Optional because the public ``/info/`` view lists tools
+        with no caller at all — it passes ``None``. Reading ``context.config``
+        unconditionally turned that view into a 500 on every deployment that
+        upgraded to the filter, which is worse than the bug it fixed: the
+        endpoint answers before authentication, so it broke for everyone while
+        the authenticated surface kept working and looked healthy.
+
+        Absent a context there is no config, so nothing can prove a command was
+        whitelisted — the honest answer is "not available", and it is also the
+        safe one.
         """
-        commands = getattr(context.config, "commands", None)
+        commands = getattr(getattr(context, "config", None), "commands", None)
         return bool(
             commands
             and getattr(commands, "enabled", False)
