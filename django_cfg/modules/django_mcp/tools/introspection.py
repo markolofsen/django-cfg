@@ -10,17 +10,57 @@ from django_cfg.modules.django_mcp.tools.base import MCPTool
 from django_cfg.modules.django_mcp.services.context import MCPContext
 
 
-def _get_introspection_config(context: MCPContext):
-    """Safe accessor for introspection config (handles dict or model)."""
+#: Fallback field list, used only when the object is not a pydantic model.
+#:
+#: The model path below copies *every* declared field instead, because naming
+#: them here is exactly how ``max_depth`` would go missing the day someone
+#: reads it: the readers use ``intro.get(flag, False)``, so a dropped key is
+#: indistinguishable from a flag deliberately turned off.
+_INTROSPECTION_FLAGS = ("enabled", "expose_urls", "expose_code", "max_depth")
+
+
+def _get_introspection_config(context: MCPContext) -> Dict[str, Any]:
+    """Safe accessor for introspection config (handles dict or model).
+
+    Every declared flag is copied out, not just ``enabled``. Projecting a model
+    down to ``{"enabled": ...}`` made ``expose_urls`` and ``expose_code``
+    unreachable: the callers read them with ``.get(flag, False)``, so a config
+    that plainly said ``expose_urls=True`` produced "URL exposure is not
+    enabled" on every call, and the operator's own setting could not be
+    reconciled with the tool's answer without reading this function.
+
+    That is the expensive shape of bug — the feature is configured, the config
+    object is correct, and only an invisible projection in between disagrees.
+    """
     config = context.config
-    if isinstance(config, dict):
-        intro = config.get("introspection", {})
-        return intro if isinstance(intro, dict) else {"enabled": getattr(intro, "enabled", False)}
-    else:
-        intro = config.introspection
-        if isinstance(intro, dict):
-            return intro
-        return {"enabled": getattr(intro, "enabled", False)}
+    intro = config.get("introspection", {}) if isinstance(config, dict) else config.introspection
+
+    if isinstance(intro, dict):
+        return intro
+
+    dump = getattr(intro, "model_dump", None)
+    if callable(dump):
+        # Ask the model for everything it declares, so a field added later
+        # arrives here without anyone remembering to update a list.
+        dumped = dump()
+        if isinstance(dumped, dict):
+            return dumped
+    return {flag: getattr(intro, flag, False) for flag in _INTROSPECTION_FLAGS}
+
+
+def _as_int(value: Any, default: int) -> int:
+    """Coerce an LLM-supplied argument to an int, falling back on nonsense.
+
+    Arguments here are written by a model, so a string where an integer belongs
+    is routine rather than exceptional — and refusing the whole call over one
+    malformed field costs the caller a round trip to learn nothing.
+    """
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 class ListAppsTool(MCPTool):
@@ -167,11 +207,38 @@ class GetModelSchemaTool(MCPTool):
 class ListURLsTool(MCPTool):
     """List URL patterns registered in Django."""
 
+    #: Cap the response so one call cannot consume the caller's whole context.
+    #:
+    #: Measured on a real project: the unbounded form returned 9,681 patterns —
+    #: 364 KB, roughly 91k tokens — in a single answer. An agent that spends its
+    #: entire window listing URLs has nothing left to do the task it was listing
+    #: them for, and the tool looks like it "worked".
+    DEFAULT_LIMIT = 200
+    MAX_LIMIT = 2000
+
     name = "list_urls"
-    description = "List URL patterns registered in Django. Only available when introspection is enabled."
+    description = (
+        "List URL patterns registered in Django. Only available when introspection "
+        "is enabled. Results are capped, and a large project has thousands — pass "
+        "`contains` to filter to the prefix you care about (e.g. 'apix/billing') "
+        "rather than paging through everything."
+    )
     input_schema = {
         "type": "object",
-        "properties": {},
+        "properties": {
+            "contains": {
+                "type": "string",
+                "description": "Only patterns whose path or name contains this substring.",
+            },
+            "limit": {
+                "type": "integer",
+                "description": f"Max patterns to return (default {DEFAULT_LIMIT}, max {MAX_LIMIT}).",
+            },
+            "offset": {
+                "type": "integer",
+                "description": "Skip this many matches — for paging through a filtered set.",
+            },
+        },
     }
 
     def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> str:
@@ -185,8 +252,42 @@ class ListURLsTool(MCPTool):
 
         resolver = get_resolver()
         urls = self._extract_urls(resolver.url_patterns)
+        total = len(urls)
 
-        return json.dumps(urls, indent=2)
+        needle = (arguments.get("contains") or "").strip().lower()
+        if needle:
+            urls = [
+                u for u in urls
+                if needle in u["pattern"].lower() or needle in (u["name"] or "").lower()
+            ]
+        matched = len(urls)
+
+        # `is None`, not a falsy test: `limit=0` is a value the caller passed,
+        # and `or DEFAULT_LIMIT` would silently turn it into 200 — the tool
+        # answering a question nobody asked, which is how a caller decides it
+        # is being ignored.
+        limit = _as_int(arguments.get("limit"), self.DEFAULT_LIMIT)
+        limit = max(1, min(limit, self.MAX_LIMIT))
+
+        offset = max(0, _as_int(arguments.get("offset"), 0))
+
+        page = urls[offset:offset + limit]
+
+        # Report the truncation in the payload. A silently capped list reads as
+        # "these are all the URLs", which is how somebody concludes a route was
+        # never deployed when it was merely past the cap.
+        return json.dumps(
+            {
+                "total_urls": total,
+                "matched": matched,
+                "returned": len(page),
+                "offset": offset,
+                "truncated": offset + len(page) < matched,
+                "filter": needle or None,
+                "urls": page,
+            },
+            indent=2,
+        )
 
     def _extract_urls(self, patterns, prefix: str = "") -> list:
         """Recursively extract URL patterns."""

@@ -203,17 +203,37 @@ class MCPView(APIView):
                     # bug in the tool.
                     from django.contrib.auth import get_user_model
 
-                    try:
-                        return get_user_model().objects.get(
-                            **{get_user_model().USERNAME_FIELD: service_username}
-                        )
-                    except get_user_model().DoesNotExist:
+                    model = get_user_model()
+                    account = model.objects.filter(
+                        **{model.USERNAME_FIELD: service_username}
+                    ).first()
+
+                    if account is None:
                         logger.error(
                             "MCP service_username=%r is configured but no such "
                             "user exists; rejecting the request.",
                             service_username,
                         )
                         return None
+
+                    # Deactivating an account is how every operator revokes
+                    # access, and it silently did nothing here: `objects.get`
+                    # returns an inactive user perfectly happily, so the key
+                    # kept working while the admin listed the service account as
+                    # disabled. That gap is invisible from both ends — the
+                    # operator sees "inactive", the endpoint keeps serving — and
+                    # it is the one place where the reasonable belief "I turned
+                    # that account off" is simply false.
+                    if not account.is_active:
+                        logger.error(
+                            "MCP service_username=%r is inactive; rejecting the "
+                            "request. Re-activate the account or clear "
+                            "service_username to fall back to anonymous.",
+                            service_username,
+                        )
+                        return None
+
+                    return account
 
                 from django.contrib.auth.models import AnonymousUser
                 return AnonymousUser()
