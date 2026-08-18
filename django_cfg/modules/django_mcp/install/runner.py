@@ -33,6 +33,18 @@ class InstallOptions(NamedTuple):
     local_key: Optional[str] = None
 
 
+#: Identify the probe instead of accepting urllib's default.
+#:
+#: ``Python-urllib/3.x`` is a blocked signature on Cloudflare's managed rules,
+#: which is not a hypothetical: api.cmdop.com answered this probe ``403`` while
+#: the very same URL answered ``200`` to curl. The check then reports a
+#: perfectly healthy deployment as unreachable, and an operator either chases a
+#: server bug that does not exist or learns to ignore the warning — which is
+#: worse, because the warning is the only thing standing between them and
+#: registering a genuinely dead endpoint.
+_USER_AGENT = "django-cfg-mcp-install (+https://pypi.org/project/django-cfg/)"
+
+
 def probe(url: str, timeout: int = 10) -> Optional[int]:
     """Ask the endpoint's ``/info/`` whether it is alive.
 
@@ -41,10 +53,17 @@ def probe(url: str, timeout: int = 10) -> Optional[int]:
 
     A ``401`` counts as alive — it means the server is up and *authenticating*,
     which is the correct answer to an unauthenticated probe.
+
+    A ``403`` is deliberately *not* translated here. It can mean the endpoint
+    refused us, but in front of a WAF it usually means the edge did — and this
+    function cannot tell the two apart from one status code. Naming the caller
+    in the User-Agent removes the common cause rather than guessing after
+    the fact.
     """
     info = url.rstrip("/") + "/info/"
+    request = urllib.request.Request(info, headers={"User-Agent": _USER_AGENT})
     try:
-        with urllib.request.urlopen(info, timeout=timeout) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             return response.status
     except urllib.error.HTTPError as exc:
         return exc.code

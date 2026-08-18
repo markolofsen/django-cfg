@@ -236,6 +236,21 @@ def _check_reachable(targets: dict[str, Target]) -> list[Finding]:
             findings.append(
                 Finding("warn", f"reachable {kind}", f"{target.url} → no response")
             )
+        elif code == 403:
+            # Django answers an unauthenticated probe 401, not 403. A 403 here
+            # is therefore usually the edge, not the app — Cloudflare blocked
+            # this exact probe on a fully healthy deployment while curl got 200.
+            findings.append(
+                Finding(
+                    "warn",
+                    f"reachable {kind}",
+                    f"{target.url} → 403, which this app does not return to an "
+                    "unauthenticated probe — most likely a WAF in front of it",
+                    "compare with `curl -s -o /dev/null -w '%{http_code}' "
+                    f"{target.url.rstrip('/')}/info/` — a 200 there means the "
+                    "deployment is fine and only the probe was refused",
+                )
+            )
         else:
             findings.append(
                 Finding("warn", f"reachable {kind}", f"{target.url} → {code}")
