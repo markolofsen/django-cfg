@@ -72,6 +72,7 @@ class MCPConfigBuilder:
         self._custom_tools: List[MCPTool] = []
         self._enabled: bool = True
         self._access_key: Optional[str] = None
+        self._service_username: Optional[str] = None
         self._rate_limit: str = "100/minute"
         self._llm_model: str = "openai/gpt-4.1-nano"
 
@@ -187,9 +188,25 @@ class MCPConfigBuilder:
 
         return decorator
 
-    def set_access_key(self, key: str) -> "MCPConfigBuilder":
-        """Set static access key for agents. REQUIRED for all requests."""
+    def set_access_key(
+        self, key: str, *, service_username: Optional[str] = None
+    ) -> "MCPConfigBuilder":
+        """Set static access key for agents. REQUIRED for all requests.
+
+        Args:
+            key: The value callers send in ``X-MCP-Access-Key``.
+            service_username: Bind the key to a real Django account. Omitted
+                (the default), a valid key authenticates as ``AnonymousUser``,
+                so any tool gated on ``user.is_staff`` refuses it — which is
+                the safe default and usually the right one.
+
+                Set it only when tools genuinely need a staff identity. It
+                grants that account's permissions to every holder of the key,
+                so the key must then be treated as that user's password: not
+                committed, and rotated with the account.
+        """
         self._access_key = key
+        self._service_username = service_username
         return self
 
     def set_llm_model(self, model: str) -> "MCPConfigBuilder":
@@ -245,6 +262,7 @@ class MCPConfigBuilder:
         return DjangoMCPModuleConfig(
             enabled=self._enabled,
             access_key=self._access_key,
+            service_username=self._service_username,
             rate_limit=self._rate_limit,
             llm_model=self._llm_model,
             introspection=self._introspection,

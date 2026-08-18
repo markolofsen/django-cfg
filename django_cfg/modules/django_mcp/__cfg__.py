@@ -142,6 +142,15 @@ class DjangoMCPModuleConfig(BaseModel):
         description="Static access key for agents (passed via X-MCP-Access-Key header). Required.",
         repr=False,
     )
+    service_username: Optional[str] = Field(
+        default=None,
+        description=(
+            "Username the access key acts as. When None (the default) a valid "
+            "key authenticates to AnonymousUser, so tools gated on "
+            "`user.is_staff` refuse. Set this to bind the key to a real, "
+            "auditable service account instead of widening those gates."
+        ),
+    )
     rate_limit: str = Field(
         default="100/minute",
         description="Rate limit for MCP requests",

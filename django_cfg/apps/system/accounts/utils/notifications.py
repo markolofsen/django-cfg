@@ -256,16 +256,23 @@ class AccountNotifications:
             otp_link = OTPService._get_otp_url(otp_code, email=user.email)
             AccountNotifications._send_email(
                 user=user,
-                # The code is deliberately NOT in the subject. A subject line is
-                # rendered by every lock-screen notification, mail-app preview
-                # pane and IMAP sync log — surfaces that show it without the
-                # recipient unlocking anything, and that a shoulder-surfer or a
-                # synced second device sees for free. The body below carries the
-                # code, which requires opening the message. Same reasoning as
-                # `communications-and-notifications.md:44-48` (action links must
-                # survive link-preview consumption): a secret must not be
-                # readable from a preview of the thing that carries it.
-                subject="Your sign-in code",
+                # ┌──────────────────────────────────────────────────────────┐
+                # │ DO NOT REMOVE THE CODE FROM THIS SUBJECT LINE.           │
+                # │ Owner decision, 2026-08-18. NOT a security oversight.    │
+                # └──────────────────────────────────────────────────────────┘
+                # The code is in the subject ON PURPOSE: the recipient reads it
+                # from the notification banner / preview pane without opening
+                # the message. That convenience IS the feature.
+                #
+                # The preview exposure this implies is KNOWN AND ACCEPTED. Do
+                # not move the code to the body, do not swap in a static
+                # subject, do not add a test pinning the subject as constant.
+                # This was removed once unasked and shipped as django-cfg
+                # 2.2.137; reverted the same day on the owner's instruction.
+                #
+                # Changing this is an OWNER decision, not a hardening task.
+                # Ask first. See accounts/@docs/notifications.md.
+                subject=f"Your OTP code: {otp_code}",
                 main_text="Use the code below or click the button to authenticate:",
                 main_html_content=f'<p style="font-size: 2em; font-weight: bold; color: #007bff;">{otp_code}</p>',
                 secondary_text="This code expires in 10 minutes.",

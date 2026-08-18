@@ -181,14 +181,40 @@ class MCPView(APIView):
                 # byte-by-byte from response timing.
                 and secrets.compare_digest(str(access_key_header), str(mcp_config.access_key))
             ):
-                # Authenticated by access key. The caller is a machine, not a
-                # Django user, so represent it as AnonymousUser.
+                # Authenticated by access key. By default the caller is a
+                # machine, not a Django user, so represent it as AnonymousUser.
                 #
                 # NOT `get_user_model().get_anonymous()`: that only exists on
                 # guardian-style user models. On a plain custom user it raises
                 # AttributeError, which the old blanket `except` swallowed —
                 # so a CORRECT key also produced None. That went unnoticed only
                 # because the result was never enforced.
+                service_username = getattr(mcp_config, "service_username", None)
+                if service_username:
+                    # The key is bound to a real account, so tools that gate on
+                    # `user.is_staff` can be reached — and every action they
+                    # take is attributable to a username rather than to
+                    # "somebody with the key".
+                    #
+                    # A missing account is a rejection, never a silent fallback
+                    # to AnonymousUser: an operator who configured a service
+                    # user and got anonymous access instead would see tools
+                    # refusing with a permission error and go looking for the
+                    # bug in the tool.
+                    from django.contrib.auth import get_user_model
+
+                    try:
+                        return get_user_model().objects.get(
+                            **{get_user_model().USERNAME_FIELD: service_username}
+                        )
+                    except get_user_model().DoesNotExist:
+                        logger.error(
+                            "MCP service_username=%r is configured but no such "
+                            "user exists; rejecting the request.",
+                            service_username,
+                        )
+                        return None
+
                 from django.contrib.auth.models import AnonymousUser
                 return AnonymousUser()
         except Exception:
