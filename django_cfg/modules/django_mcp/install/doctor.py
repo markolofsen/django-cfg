@@ -30,7 +30,7 @@ from typing import Any, Literal, NamedTuple, Optional
 
 from .console import Console, mask
 from .discovery import URL_VAR
-from .runner import probe
+from .runner import probe, probe_endpoint
 from .targets import Target
 
 Status = Literal["ok", "warn", "fail"]
@@ -216,21 +216,59 @@ def _check_targets(config: Any, targets: dict[str, Target]) -> list[Finding]:
 
 
 def _check_reachable(targets: dict[str, Target]) -> list[Finding]:
+    """Two different questions, and they need two different requests.
+
+    ``probe`` asks ``/info/``, which is **public by design** — it is how a
+    client discovers the tool list before it has a key. Reading its ``200`` as
+    "the endpoint serves unauthenticated" is simply the wrong route: this check
+    once reported a correctly-locked production deployment as wide open, with
+    the alarming wording and all, while ``POST /cfg/mcp/`` was answering 401 to
+    everyone. A false "your secrets are exposed" is not a harmless
+    over-warning — it either sends someone into an emergency that does not
+    exist, or teaches them that this line is noise, which is worse, because the
+    real thing looks identical.
+
+    So: ``/info/`` answers *is it up*, and the guarded endpoint answers *is it
+    locked*. Only the second may claim the endpoint is open.
+    """
     findings: list[Finding] = []
     for kind, target in sorted(targets.items()):
         code = probe(target.url)
-        if code == 401:
-            # The healthiest possible answer: up, and refusing anonymous callers.
-            findings.append(Finding("ok", f"reachable {kind}", f"{target.url} → 401 (up, authenticating)"))
-        elif code == 200:
-            findings.append(
-                Finding(
-                    "warn",
-                    f"reachable {kind}",
-                    f"{target.url} → 200 without a key. If this is not a "
-                    "developer machine, the endpoint is serving unauthenticated.",
-                    "check MCP__ACCESS_KEY is set in that deployment",
+        if code == 200:
+            # Alive. Now ask the route that is supposed to refuse us.
+            guarded = probe_endpoint(target.url)
+            if guarded == 401:
+                findings.append(
+                    Finding(
+                        "ok",
+                        f"reachable {kind}",
+                        f"{target.url} → up, and the endpoint answers 401 without a key",
+                    )
                 )
+            elif guarded == 200:
+                findings.append(
+                    Finding(
+                        "fail",
+                        f"reachable {kind}",
+                        f"{target.url} answers 200 WITHOUT a key — it is serving "
+                        "every caller. An empty access key does not disable this "
+                        "endpoint, it opens it.",
+                        "set MCP__ACCESS_KEY in that deployment and redeploy",
+                    )
+                )
+            else:
+                findings.append(
+                    Finding(
+                        "warn",
+                        f"reachable {kind}",
+                        f"{target.url} → up ({target.url}info/ answered 200), but "
+                        f"the endpoint itself answered {guarded}",
+                    )
+                )
+        elif code == 401:
+            # Also healthy: some deployments gate /info/ too.
+            findings.append(
+                Finding("ok", f"reachable {kind}", f"{target.url} → 401 (up, authenticating)")
             )
         elif code is None:
             findings.append(

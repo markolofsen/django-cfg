@@ -71,6 +71,34 @@ def probe(url: str, timeout: int = 10) -> Optional[int]:
         return None
 
 
+def probe_endpoint(url: str, timeout: int = 10) -> Optional[int]:
+    """Ask the guarded endpoint itself whether it demands a key.
+
+    Deliberately separate from :func:`probe`. That one asks ``/info/``, which is
+    public by design, so its ``200`` says "the server is up" and nothing at all
+    about authentication — reading it as "serving unauthenticated" once
+    reported a correctly-locked production deployment as wide open.
+
+    Here a ``401`` is the answer we want: the endpoint is refusing an
+    anonymous caller. A ``200`` means it is answering everyone, which is the
+    one finding in this whole module that is a genuine emergency.
+    """
+    body = b'{"jsonrpc":"2.0","method":"tools/list","id":1}'
+    request = urllib.request.Request(
+        url,
+        data=body,
+        headers={"User-Agent": _USER_AGENT, "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status
+    except urllib.error.HTTPError as exc:
+        return exc.code
+    except Exception:
+        return None
+
+
 def run(target: Target, options: InstallOptions, console: Console) -> int:
     """Perform the install/uninstall. Returns a process exit code."""
     resolved = keys.ResolvedKey(None, "")
