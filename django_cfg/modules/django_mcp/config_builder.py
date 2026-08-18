@@ -14,6 +14,7 @@ from django_cfg.modules.django_mcp import (
     AppMCPConfig,
     ModelMCPConfig,
     CommandMCPConfig,
+    MCPTargetConfig,
 )
 from django_cfg.modules.django_mcp.tools.base import MCPTool, tool_registry
 from django_cfg.modules.django_mcp.services.context import MCPContext
@@ -73,6 +74,7 @@ class MCPConfigBuilder:
         self._enabled: bool = True
         self._access_key: Optional[str] = None
         self._service_username: Optional[str] = None
+        self._targets: Dict[str, MCPTargetConfig] = {}
         self._rate_limit: str = "100/minute"
         self._llm_model: str = "openai/gpt-4.1-nano"
 
@@ -209,6 +211,59 @@ class MCPConfigBuilder:
         self._service_username = service_username
         return self
 
+    def add_target(
+        self,
+        kind: str,
+        *env_files: str,
+        url: Optional[str] = None,
+        access_key: Optional[str] = None,
+        server_name: Optional[str] = None,
+    ) -> "MCPConfigBuilder":
+        """Declare a deployment ``manage.py mcp_install --<kind>`` can register.
+
+        A target names a **deployment**, described by the dotenv files that
+        configure it. Everything else is derived from those files:
+
+        ==============  ====================================================
+        endpoint        ``APP__API_URL`` + this module's ``endpoint_path``
+        access key      ``MCP__ACCESS_KEY``
+        registration    ``<project>_<kind>``
+        ==============  ====================================================
+
+        So the usual declaration is one line per deployment::
+
+            mcp.add_target("local")                        # this process
+            mcp.add_target("prod", "../../deploy/.env")    # somewhere else
+
+        ``local`` takes no files because for it the *running process is the
+        target*: its own config already answers both questions.
+
+        Remote targets cannot work that way, and the reason is the whole point
+        of this method: ``mcp_install --prod`` runs on a laptop configured by
+        ``.env.local``, where ``get_current_config()`` holds the **development**
+        URL and the **development** key. Registering those against production
+        yields a client that connects, lists every tool, and 401s on the first
+        real call — inside an assistant, where nobody sees the status code. The
+        files are the only place the target deployment's own values exist.
+
+        Args:
+            kind: The flag that selects this target ("local", "prod", "staging").
+            *env_files: Dotenv files configuring that deployment, highest
+                priority first; relative paths resolve against ``BASE_DIR``.
+            url: Endpoint override. Only needed when the deployment's URL is not
+                in its dotenv as ``APP__API_URL``.
+            server_name: Registration-name override. Set it to **keep an
+                existing registration**: changing the derived name orphans the
+                old entry in the assistant rather than updating it.
+        """
+        self._targets[kind] = MCPTargetConfig(
+            env_files=list(env_files),
+            url=url,
+            access_key=access_key,
+            server_name=server_name,
+        )
+        return self
+
     def set_llm_model(self, model: str) -> "MCPConfigBuilder":
         """
         Set default LLM model for agents (OpenRouter format).
@@ -266,6 +321,7 @@ class MCPConfigBuilder:
             rate_limit=self._rate_limit,
             llm_model=self._llm_model,
             introspection=self._introspection,
+            install_targets=self._targets,
             exposed_apps=exposed_apps,
             commands=CommandMCPConfig(
                 enabled=len(all_commands) > 0,

@@ -73,7 +73,7 @@ curl -X POST http://localhost:8000/cfg/mcp/agent/ \
 | **Introspection** | `list_apps`, `get_model_schema`, `list_urls` |
 | **User Info** | `get_user_info` — lookup by ID, email, or username |
 | **Data Access** | `query_model`, `get_object` — ORM with filters |
-| **Commands** | `execute_command` — whitelisted management commands |
+| **Commands** | `execute_command` — whitelisted commands; **not listed at all** unless you `allow_command(...)`, since a tool that answers "not whitelisted" to every call reads to an agent as a broken server rather than a disabled feature |
 | **Analytics** | `aggregate_model`, `time_series`, `top_values`, `distribution` |
 | **Project** | Auto-discovered from `mcp/tools/*.py`, on top of the 11 |
 

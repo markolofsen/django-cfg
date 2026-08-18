@@ -34,6 +34,23 @@ class ExecuteCommandTool(MCPTool):
         "required": ["command"],
     }
 
+    def is_available(self, context: MCPContext) -> bool:
+        """Hidden entirely unless this project whitelisted a command.
+
+        Registration is unconditional because it happens at import, before there
+        is a config to ask. Without this filter the tool is *listed* on every
+        deployment — including the overwhelmingly common one that whitelisted
+        nothing — where every call answers "not whitelisted". An agent reads
+        that as a broken server rather than as a disabled feature, and a listed
+        tool that never works is worse than an absent one.
+        """
+        commands = getattr(context.config, "commands", None)
+        return bool(
+            commands
+            and getattr(commands, "enabled", False)
+            and getattr(commands, "allowed_commands", [])
+        )
+
     def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> str:
         """Execute the execute_command tool."""
         command_name = arguments.get("command")

@@ -9,6 +9,7 @@ from .__cfg__ import (
     ModelMCPConfig,
     IntrospectionConfig,
     CommandMCPConfig,
+    MCPTargetConfig,
     RedactionConfig,
 )
 from .auto_loader import load_project_mcp_config, mcp_config_exists
@@ -50,6 +51,7 @@ __all__ = [
     "ModelMCPConfig",
     "IntrospectionConfig",
     "CommandMCPConfig",
+    "MCPTargetConfig",
     "RedactionConfig",
     "MCPConfigBuilder",
     "is_enabled",

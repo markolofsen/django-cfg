@@ -22,6 +22,21 @@ class MCPTool(ABC):
             "inputSchema": self.input_schema,
         }
 
+    def is_available(self, context: MCPContext) -> bool:
+        """Whether this tool should appear in ``tools/list`` at all.
+
+        Default: always. Override when a tool can be configured *off*, so it
+        disappears from the listing instead of being advertised and failing on
+        every call.
+
+        That distinction matters more than it looks. An agent reads a listed
+        tool as a capability; when calling it always errors, the agent does not
+        conclude "this feature is disabled here" — it concludes the server is
+        broken, and may stop trusting neighbouring tools that do work. A tool
+        that is not listed is simply a capability this deployment lacks.
+        """
+        return True
+
     @abstractmethod
     def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> str:
         """Execute the tool and return result as string."""
@@ -54,9 +69,17 @@ class MCPToolRegistry:
         return self._tools.get(name)
 
     def get_all_tools(self, context: MCPContext) -> list:
-        """Get all tools available for the current context."""
-        # In future: filter based on user permissions
-        return list(self._tools.values())
+        """Tools this context may see.
+
+        Registration happens at import time, when there is no config to consult,
+        so a tool that can be switched off is registered anyway and filtered
+        here — the first point where the context exists.
+
+        Note this filters on *configuration*, not on the caller: the registry
+        still has no per-key tenancy, so every authenticated caller sees the
+        same set.
+        """
+        return [tool for tool in self._tools.values() if tool.is_available(context)]
 
 
 # Global tool registry instance

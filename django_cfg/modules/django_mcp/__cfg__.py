@@ -113,6 +113,84 @@ class RedactionConfig(BaseModel):
     )
 
 
+class MCPTargetConfig(BaseModel):
+    """One endpoint an assistant can be registered against.
+
+    Declared by the *project*, because only the project knows that production is
+    ``api.example.com`` and that its key lives in ``deploy/.env``. django_cfg
+    owns the machinery in ``install/``; hardcoding hostnames there would make
+    the framework know about one product.
+
+    Targets are separate **registrations**, not one setting with a flag. They
+    carry distinct ``server_name``s so both can be installed at once: sharing a
+    name, they silently replace each other, and an assistant then reports
+    ConnectionRefused for a server nobody touched.
+    """
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    url: Optional[str] = Field(
+        default=None,
+        description=(
+            "This deployment's base URL or full MCP endpoint. Pass the value "
+            "from your own environment config, exactly as you pass `api_url` "
+            "to DjangoConfig. Omit it for the local target — the running "
+            "process is that deployment, so its own api_url answers."
+        ),
+    )
+    access_key: Optional[str] = Field(
+        default=None,
+        repr=False,
+        description=(
+            "This deployment's MCP access key. Pass it from your environment "
+            "config alongside `url`.\n\n"
+            "It must be given explicitly for a REMOTE target, and the reason is "
+            "the bug this whole field exists to prevent: `manage.py "
+            "mcp_install --prod` runs on a laptop, where the loaded environment "
+            "is the *development* one. Falling back to the running process's "
+            "key there registers the dev key against production — the client "
+            "connects, lists every tool, and 401s on the first real call, "
+            "inside an assistant where nobody sees the status code.\n\n"
+            "Omit it for the local target, where the process IS the deployment."
+        ),
+    )
+    env_files: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Fallback: dotenv files to read `url`/`access_key` from when they "
+            "are not passed directly, highest priority first; relative paths "
+            "resolve against BASE_DIR. Useful when a deployment's secrets live "
+            "outside the Django project (a compose `.env`, say) and so are "
+            "never loaded into this process at all."
+        ),
+    )
+    server_name: Optional[str] = Field(
+        default=None,
+        description=(
+            "Registration name override. Normally omitted — it is derived as "
+            "<project>_<target>. Set it to keep an existing registration: "
+            "changing this name orphans the old entry rather than updating it."
+        ),
+    )
+
+    @field_validator("url")
+    @classmethod
+    def _must_be_http(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        if not value.startswith(("http://", "https://")):
+            raise ValueError(f"target url must be http(s), got {value!r}")
+        # 'localhost' resolves to IPv6 ::1 first on macOS while runserver binds
+        # IPv4 only, so the assistant reports ConnectionRefused against a server
+        # curl reaches without trouble. Caught here rather than in support.
+        if "//localhost" in value:
+            raise ValueError(
+                "use 127.0.0.1 rather than 'localhost': on macOS the name "
+                "resolves to IPv6 ::1 first, but runserver binds IPv4 only, so "
+                "assistants report ConnectionRefused against a working server"
+            )
+        return value
+
+
 class DjangoMCPModuleConfig(BaseModel):
     """
     Global configuration for the Model Context Protocol module.
@@ -156,6 +234,40 @@ class DjangoMCPModuleConfig(BaseModel):
         description="Rate limit for MCP requests",
     )
     # REMOVED: allow_unauthenticated - use access_key instead
+
+    install_targets: Dict[str, MCPTargetConfig] = Field(
+        default_factory=dict,
+        description=(
+            "Endpoints `manage.py mcp_install --<name>` can register, keyed by "
+            "the flag that selects them (e.g. 'local', 'prod'). Empty means the "
+            "command only accepts an explicit --url."
+        ),
+    )
+
+    @field_validator("install_targets")
+    @classmethod
+    def _server_names_must_be_unique(
+        cls, targets: Dict[str, "MCPTargetConfig"]
+    ) -> Dict[str, "MCPTargetConfig"]:
+        """Two targets sharing a server_name is a silent uninstall.
+
+        Both write the same key in the assistant's config, so installing the
+        second removes the first without a word — and the failure surfaces later
+        as a connection error against an endpoint nobody changed.
+        """
+        seen: Dict[str, str] = {}
+        for kind, target in targets.items():
+            if target.server_name is None:
+                # Derived names are <project>_<kind> and unique by construction.
+                continue
+            if (previous := seen.get(target.server_name)) is not None:
+                raise ValueError(
+                    f"targets {previous!r} and {kind!r} share server_name "
+                    f"{target.server_name!r}; installing one would silently "
+                    "deregister the other"
+                )
+            seen[target.server_name] = kind
+        return targets
 
     # Introspection
     introspection: IntrospectionConfig = Field(
