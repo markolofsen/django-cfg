@@ -32,7 +32,46 @@ class UserAPIKeyManager(models.Manager):
 
 
 class UserAPIKey(models.Model):
-    """Per-user API key for automated/service access."""
+    """Per-user API key for automated/service access.
+
+    ## The key is stored in plain text ON PURPOSE — do not "fix" this
+
+    Reviewed and decided 2026-08-18. A hashed credential cannot be re-read, and
+    re-reading is the product requirement here: ``POST .../reveal`` returns the
+    full key to the signed-in user whenever they ask, because the same durable
+    value is pasted into every one of that user's agents during onboarding. A
+    user who sets up a fourth machine needs the key they already gave the other
+    three. Hashing and reveal-on-demand are incompatible by construction, so
+    choosing reveal is choosing plaintext.
+
+    That trade is stated here rather than left implicit because the schema
+    otherwise reads like an oversight: the sibling credential in the platform
+    (``apps.apikeys.ApiKey``, the ``cmdop_live_*`` cabinet key) stores
+    ``sha256`` and carries ``expires_at`` / ``revoked_at`` / ``is_active``. The
+    two are different products, not two attempts at one: that one is
+    show-once-and-rotate, this one is copy-it-again-whenever.
+
+    ## Revocation exists, and it is ``regenerate()``
+
+    ``key`` is a ``OneToOneField``, so there is no key *collection* and nothing
+    to revoke selectively. ``regenerate()`` assigns a fresh uuid4 and stamps
+    ``reissued_at``: every previously-issued copy stops authenticating at that
+    moment. **Do not add a ``revoked_at`` column beside it** — it would be a
+    second way to express "this key is dead", and a duplicated condition in this
+    exact subsystem has already drifted once (an expired cabinet key kept opening
+    the build plane while inference answered 401 for the same row).
+
+    ## What this design does NOT give you, so nobody assumes it does
+
+    - **No disable-without-rotate**, and no expiry. Cutting off API access for
+      one user means rotating their key or deactivating the account
+      (``CustomUser`` activeness is the only per-request gate the router applies).
+    - **No last-used record.** ``reissued_at`` says when it was rotated; nothing
+      says when or from where it was used. Incident forensics start from the
+      consuming service's logs, not from this row.
+    - **A database dump is a set of live credentials.** That is the accepted cost
+      of the reveal affordance; treat this table as secret material at rest.
+    """
 
     objects = UserAPIKeyManager()
 
@@ -45,7 +84,13 @@ class UserAPIKey(models.Model):
         default=uuid.uuid4,
         editable=False,
         unique=True,
-        help_text="API key in plain text (UUIDv4).",
+        # Plain text is the deliberate consequence of the reveal affordance, not
+        # a missing hash — see the class docstring before changing this.
+        help_text=(
+            "API key in plain text (UUIDv4). Stored unhashed on purpose so "
+            "`/reveal` can return it to its owner for agent onboarding; rotate "
+            "with regenerate() to revoke."
+        ),
     )
     reissued_at = models.DateTimeField(
         null=True,
