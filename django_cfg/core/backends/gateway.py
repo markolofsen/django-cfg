@@ -213,7 +213,9 @@ class GatewayEmailBackend(BaseEmailBackend):
         **Why this returns a value instead of just logging.** The gateway reports
         provider-side suppression by answering ``success: true`` with the refused
         addresses in ``result.permanent_bounces`` — deliberately, so the caller
-        logs instead of retrying an address that will never accept mail. This
+        **records** it instead of retrying an address that will never accept mail
+        (the gateway's own wording; "logs" was the misreading that produced the
+        defect below, and is answered by ``_report_bounces``). This
         method used to write a ``logger.warning`` and return ``None``, which
         ``send_messages`` read as a successful send. The consequence reached all
         the way to the audit trail: ``DjangoEmailService`` keys ``EmailLog.status``
@@ -264,7 +266,54 @@ class GatewayEmailBackend(BaseEmailBackend):
             len(remaining),
             len(message.recipients()),
         )
+        self._report_bounces(bounces, message.subject, remaining)
         return bool(remaining)
+
+    @staticmethod
+    def _report_bounces(bounces, subject, remaining):
+        """Announce a permanent bounce so a project can record it.
+
+        **Why this exists: the log line above is not a record.** The gateway's own
+        source says it reports suppression in the envelope "so the caller records
+        it instead of retrying" — and the caller wrote a warning and moved on, so
+        the only trace of "this address will never accept mail" was a log line
+        nobody queries. The next send to the same address tried again.
+        ``EmailLog`` says the message was not sent, which is true and silent about
+        why.
+
+        django-cfg deliberately does **not** grow a suppression table to fix that.
+        A project that keeps one already has the schema and the vocabulary (in
+        cmdop: ``crm_email_suppressions``, with a ``hard_bounce`` reason meaning
+        exactly this), and a framework copy would make two owners of one fact. So
+        this reports; the project records. Nothing listening means nothing
+        happens, which is correct for a library.
+
+        Failures are swallowed on purpose. This runs on the send path inside the
+        sending thread, so a receiver's database error must not turn a delivered
+        letter into a raised exception — and the log line above has already told
+        the operator what the gateway said.
+        """
+        try:
+            from django_cfg.apps.system.mailer.signals import (
+                email_permanently_bounced,
+            )
+        except ImportError:
+            # The mailer app is optional; a project can install django-cfg
+            # without it. No listener is reachable, so there is nothing to tell.
+            return
+
+        try:
+            email_permanently_bounced.send(
+                sender=GatewayEmailBackend,
+                addresses=list(bounces),
+                subject=subject,
+                remaining=list(remaining),
+            )
+        except Exception:
+            logger.exception(
+                "A receiver of email_permanently_bounced raised; the bounce is "
+                "recorded in the log above but may not have been persisted"
+            )
 
     def _post_with_retry(self, payload):
         client = self._client

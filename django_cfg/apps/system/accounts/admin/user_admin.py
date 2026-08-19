@@ -27,16 +27,17 @@ from django_cfg.modules.django_admin import (
 )
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
-from django_cfg.modules.base import BaseCfgModule
+# `BaseCfgModule` import removed 2026-08-19: its only two uses here called
+# `is_newsletter_enabled()` / `is_support_enabled()`, methods that do not exist.
+# Left in place it would read as "this admin consults feature flags", which is
+# precisely the impression that kept four dead code paths looking intentional.
 
 from ..models import CustomUser
 from .filters import UserStatusFilter
 from .inlines import (
     UserActivityInline,
     UserAPIKeyInline,
-    UserEmailLogInline,
     UserRegistrationSourceInline,
-    UserSupportTicketsInline,
 )
 from .resources import CustomUserResource
 
@@ -97,7 +98,8 @@ customuser_config = AdminConfig(
         "sources_count",
         "activity_count",
         "emails_count",
-        "tickets_count",
+        # "tickets_count" removed 2026-08-19 with the method: no Ticket model
+        # exists in django_cfg, so the column could only ever render blank.
         "last_login",
         "date_joined",
     ],
@@ -297,17 +299,27 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
     )
 
     def get_inlines(self, request, obj):
-        """Get inlines based on enabled apps."""
-        inlines = [UserRegistrationSourceInline, UserActivityInline, UserAPIKeyInline]
-        try:
-            base_module = BaseCfgModule()
-            if base_module.is_newsletter_enabled():
-                inlines.append(UserEmailLogInline)
-            if base_module.is_support_enabled():
-                inlines.append(UserSupportTicketsInline)
-        except Exception:
-            pass
-        return inlines
+        """The inlines this admin shows. All three are unconditional.
+
+        **This method used to be conditional, and the condition never ran.** It
+        called ``BaseCfgModule().is_newsletter_enabled()``, which does not exist,
+        inside a ``try: … except Exception: pass``. So the ``AttributeError``
+        aborted the block on its FIRST line — meaning the second check
+        (``is_support_enabled``) was unreachable too, and both optional inlines
+        were silently dropped for every project. Measured before the fix on
+        cmdop's live configuration: three inlines returned, not five.
+
+        Neither of the two could be repaired: their models
+        (``business.newsletter.EmailLog``, ``business.support.Ticket``) do not
+        exist anywhere in django_cfg, so they were removed along with this
+        condition — see the note in ``inlines.py``. Mail history now lives in the
+        ``emails_count`` column and ``EmailLogAdmin``.
+
+        Returning a plain list is the point: there is no longer a feature flag to
+        get wrong, and adding a genuinely optional inline later should gate on
+        ``apps.is_installed(...)``, which fails loudly when its argument is wrong.
+        """
+        return [UserRegistrationSourceInline, UserActivityInline, UserAPIKeyInline]
 
     # === Computed display methods ===
 
@@ -351,40 +363,63 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
 
     @computed_field("Emails")
     def emails_count(self, obj):
-        """Count of emails (newsletter app)."""
+        """How much mail this person has been sent, from the mailer's own log.
+
+        **This column returned `None` for every user of every project, since it
+        was written.** It called ``base_module.is_newsletter_enabled()`` — a method
+        that has never existed, ``BaseCfgModule`` defines eight ``is_*_enabled``
+        and not that one — and then imported ``django_cfg.apps.business.newsletter``,
+        an app that has never existed either. Either alone raises; both were
+        caught by ``except (…, Exception)``, which cannot fail. So the panel was
+        not "disabled because newsletter is off"; it was broken, and looked
+        identical to off.
+
+        Now reads ``django_cfg_mailer.EmailLog``, which is real and populated
+        (100 rows on cmdop prod at the time of writing).
+
+        Joined on ``user_id``, not on a relation: ``EmailLog.user_id`` is an
+        ``IntegerField`` by design — mail also goes to addresses with no account,
+        and a letter's record should outlive the account being deleted — so there
+        is no ``user=`` lookup to make. That same absence is why this is a column
+        and not a ``TabularInline``: an inline requires a ForeignKey to the parent.
+
+        The narrow ``except`` is deliberate. A missing table (``ProgrammingError``)
+        is a project that has not migrated the mailer, and a column must not break
+        the user page over it. An ``AttributeError`` from a renamed field is a bug
+        and should surface — swallowing everything is what hid this for as long as
+        it existed.
+        """
         from django.db.utils import OperationalError, ProgrammingError
+
         try:
-            base_module = BaseCfgModule()
-            if not base_module.is_newsletter_enabled():
-                return None
-            from django_cfg.apps.business.newsletter.models import EmailLog
-            count = EmailLog.objects.filter(user=obj).count()
-            if count == 0:
-                return None
-            return self.html.badge(
-                f"{count} email{'s' if count != 1 else ''}",
-                variant="success",
-                icon=Icons.EMAIL,
-            )
-        except (ProgrammingError, OperationalError, ImportError, Exception):
+            from django_cfg.apps.system.mailer.models import EmailLog
+        except ImportError:
+            # The mailer app is optional; without it there is no mail to count.
             return None
 
-    @computed_field("Tickets")
-    def tickets_count(self, obj):
-        """Count of support tickets."""
-        from django.db.utils import OperationalError, ProgrammingError
         try:
-            base_module = BaseCfgModule()
-            if not base_module.is_support_enabled():
-                return None
-            from django_cfg.apps.business.support.models import Ticket
-            count = Ticket.objects.filter(user=obj).count()
-            if count == 0:
-                return None
-            return self.html.badge(
-                f"{count} ticket{'s' if count != 1 else ''}",
-                variant="warning",
-                icon=Icons.SUPPORT_AGENT,
-            )
-        except (ProgrammingError, OperationalError, ImportError, Exception):
+            count = EmailLog.objects.filter(user_id=obj.pk).count()
+        except (ProgrammingError, OperationalError):
             return None
+
+        if count == 0:
+            return None
+        return self.html.badge(
+            f"{count} email{'s' if count != 1 else ''}",
+            variant="success",
+            icon=Icons.EMAIL,
+        )
+
+    # `tickets_count` was REMOVED here rather than repaired, 2026-08-19.
+    #
+    # It had the same two defects as `emails_count` above — `is_support_enabled()`
+    # is not a method of `BaseCfgModule`, and `django_cfg.apps.business.support`
+    # is not an app — but unlike email there is nothing to point it at: **no
+    # `Ticket` model exists anywhere in django_cfg** (`rg "class Ticket\b"`
+    # returns nothing, and `apps/` holds only api/payments/system/tools; there is
+    # no `business` package at all). A column whose data source does not exist
+    # cannot be fixed, and leaving it returning `None` behind a blanket `except`
+    # is what made four separate dead code paths look like configuration.
+    #
+    # If a support app is ever added, add the column back then — against the model
+    # it actually ships, not against a guessed import path.

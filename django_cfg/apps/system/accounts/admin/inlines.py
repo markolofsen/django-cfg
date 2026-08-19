@@ -6,7 +6,6 @@ Enhanced inline classes with better organization and conditional loading.
 
 from unfold.admin import TabularInline
 
-from django_cfg.modules.base import BaseCfgModule
 
 from ..models import UserActivity, UserAPIKey, UserRegistrationSource
 
@@ -69,58 +68,29 @@ class UserActivityInline(TabularInline):
         return True
 
 
-class UserEmailLogInline(TabularInline):
-    """Enhanced inline for viewing user's email logs."""
-
-    def __init__(self, *args, **kwargs):
-        # Check if newsletter app is available and enabled
-        self.model = None
-        try:
-            base_module = BaseCfgModule()
-
-            # Only import if newsletter is enabled
-            if base_module.is_newsletter_enabled():
-                from django_cfg.apps.business.newsletter.models import EmailLog
-                self.model = EmailLog
-        except (ImportError, Exception):
-            # Newsletter app not available or not enabled
-            pass
-
-        # Only call super if we have a valid model
-        if self.model:
-            super().__init__(*args, **kwargs)
-
-    extra = 0
-    max_num = 15  # Limit to 15 most recent emails
-    readonly_fields = ["newsletter", "campaign", "recipient", "subject", "status", "created_at", "sent_at"]
-    fields = ["newsletter", "campaign", "subject", "status", "created_at", "sent_at"]
-    ordering = ["-created_at"]
-    verbose_name = "Email Log"
-    verbose_name_plural = "Email History"
-
-    # Show only recent emails to avoid performance issues
-    def get_queryset(self, request):
-        if not self.model:
-            return self.model.objects.none()
-        qs = super().get_queryset(request)
-        # Don't slice here - let Django handle formset filtering first
-        return qs.order_by('-created_at')
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-    def has_view_permission(self, request, obj=None):
-        # Only show if newsletter app is enabled and model exists
-        if not self.model:
-            return False
-        try:
-            base_module = BaseCfgModule()
-            return base_module.is_newsletter_enabled()
-        except Exception:
-            return False
+# `UserEmailLogInline` and `UserSupportTicketsInline` were REMOVED here, 2026-08-19.
+#
+# Both were dead from the day they were written, and in the same three ways:
+#
+#   1. they gated on `BaseCfgModule().is_newsletter_enabled()` /
+#      `is_support_enabled()` — neither method exists (`BaseCfgModule` defines
+#      eight `is_*_enabled`, neither of them these);
+#   2. they imported `django_cfg.apps.business.{newsletter,support}` — there is no
+#      `business` package at all (`apps/` holds api, payments, system, tools), and
+#      **no `Ticket` or `Newsletter` model exists anywhere in django_cfg**;
+#   3. `except (ImportError, Exception)` cannot fail, so `self.model` stayed
+#      `None`, `super().__init__` was never called, and the inline resolved to
+#      nothing — indistinguishable from "the feature is switched off".
+#
+# Their `get_queryset` also read `self.model.objects.none()` guarded by
+# `if not self.model:` — i.e. `None.objects` on the exact path meant to be safe.
+#
+# Email history is not lost: it is a column on the user list (`emails_count`,
+# repaired the same day against the real `django_cfg_mailer.EmailLog`) and a full
+# page of its own at `EmailLogAdmin`. **An inline is not possible for it** —
+# `EmailLog.user_id` is an `IntegerField` on purpose, because mail also goes to
+# addresses with no account and a letter's record should outlive the account, and
+# a `TabularInline` requires a ForeignKey to the parent.
 
 
 class UserAPIKeyInline(TabularInline):
@@ -139,57 +109,3 @@ class UserAPIKeyInline(TabularInline):
 
     def has_delete_permission(self, request, obj=None):
         return False
-
-
-class UserSupportTicketsInline(TabularInline):
-    """Enhanced inline for viewing user's support tickets."""
-
-    def __init__(self, *args, **kwargs):
-        # Check if support app is available and enabled
-        self.model = None
-        try:
-            base_module = BaseCfgModule()
-
-            # Only import if support is enabled
-            if base_module.is_support_enabled():
-                from django_cfg.apps.business.support.models import Ticket
-                self.model = Ticket
-        except (ImportError, Exception):
-            # Support app not available or not enabled
-            pass
-
-        # Only call super if we have a valid model
-        if self.model:
-            super().__init__(*args, **kwargs)
-
-    extra = 0
-    max_num = 10  # Limit to 10 most recent tickets
-    readonly_fields = ["uuid", "subject", "status", "created_at"]
-    fields = ["uuid", "subject", "status", "created_at"]
-    ordering = ["-created_at"]
-    verbose_name = "Support Ticket"
-    verbose_name_plural = "Support Tickets"
-
-    # Show only recent tickets to avoid performance issues
-    def get_queryset(self, request):
-        if not self.model:
-            return self.model.objects.none()
-        qs = super().get_queryset(request)
-        # Don't slice here - let Django handle formset filtering first
-        return qs.order_by('-created_at')
-
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-    def has_view_permission(self, request, obj=None):
-        # Only show if support app is enabled and model exists
-        if not self.model:
-            return False
-        try:
-            base_module = BaseCfgModule()
-            return base_module.is_support_enabled()
-        except Exception:
-            return False

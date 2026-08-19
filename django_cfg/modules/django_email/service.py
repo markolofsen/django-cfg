@@ -92,6 +92,7 @@ def _record_send(
     try:
         from django_cfg.apps.system.mailer.models import EmailLog
 
+        user_ids = _user_ids_for(recipients or [])
         EmailLog.objects.bulk_create(
             [
                 EmailLog(
@@ -101,12 +102,58 @@ def _record_send(
                     locale=locale or "",
                     status=status,
                     error=error or "",
+                    user_id=user_ids.get(address.strip().lower()),
                 )
                 for address in recipients or []
             ]
         )
     except Exception as e:
         logger.debug(f"Email log skipped: {e}")
+
+
+def _user_ids_for(recipients) -> dict:
+    """Map each recipient address to a user id, where one exists.
+
+    **Why this function had to be written at all.** ``EmailLog.user_id`` has been
+    declared, indexed and documented since the initial migration, and **nothing
+    ever wrote it** — measured on cmdop production: 112 rows, *all* of them
+    ``user_id = NULL``. So every consumer that answers "what mail did this person
+    get" returned nothing, and looked exactly like a person who had received no
+    mail. Declaring a column, indexing it, and documenting it is not the same as
+    having a writer.
+
+    One query for the whole batch, not one per address: this runs on the send
+    path. Matching is case-insensitive because a user types their address however
+    they like at signup while a caller may pass it from a template or a form —
+    built as OR-ed ``email__iexact`` terms, since **there is no ``__iin`` lookup
+    in Django**. That mistake is worth naming: written as ``email__iin`` it raises
+    ``FieldError``, which the ``except`` below would have swallowed into an empty
+    mapping — leaving ``user_id`` NULL forever and looking exactly like the bug
+    this function exists to fix.
+
+    Returns an empty mapping rather than raising if the user model cannot be
+    reached — the log is diagnostic and losing a row must never lose the mail.
+    """
+    addresses = [a.strip().lower() for a in recipients if a]
+    if not addresses:
+        return {}
+    try:
+        from django.contrib.auth import get_user_model
+        from django.db.models import Q
+
+        criteria = Q()
+        for address in set(addresses):
+            criteria |= Q(email__iexact=address)
+
+        rows = (
+            get_user_model()
+            ._default_manager.filter(criteria)
+            .values_list("email", "pk")
+        )
+        return {email.strip().lower(): pk for email, pk in rows}
+    except Exception as e:  # pragma: no cover - defensive on the send path
+        logger.debug(f"Email log user lookup skipped: {e}")
+        return {}
 
 
 def _notify_telegram_on_email_error(error_msg: str, context: dict = None):
