@@ -194,8 +194,11 @@ class GatewayEmailBackend(BaseEmailBackend):
                 if not message.recipients():
                     continue
                 try:
-                    self._send(message)
-                    num_sent += 1
+                    # A message every recipient of which the gateway refused is
+                    # NOT a send. Counting it as one is what let a suppressed
+                    # address be recorded as `sent` — see `_send`.
+                    if self._send(message):
+                        num_sent += 1
                 except Exception:
                     if not self.fail_silently:
                         raise
@@ -205,6 +208,25 @@ class GatewayEmailBackend(BaseEmailBackend):
         return num_sent
 
     def _send(self, message):
+        """POST one message; return whether any recipient was actually accepted.
+
+        **Why this returns a value instead of just logging.** The gateway reports
+        provider-side suppression by answering ``success: true`` with the refused
+        addresses in ``result.permanent_bounces`` — deliberately, so the caller
+        logs instead of retrying an address that will never accept mail. This
+        method used to write a ``logger.warning`` and return ``None``, which
+        ``send_messages`` read as a successful send. The consequence reached all
+        the way to the audit trail: ``DjangoEmailService`` keys ``EmailLog.status``
+        off the number this backend returns, so a recipient the provider had
+        refused was filed as ``sent`` — "handed to the transport", which is the
+        one thing that had not happened. Wrong in the direction that matters,
+        because ``sent`` is what an operator reads as "we mailed them".
+
+        A partial refusal is still a send: if two of three recipients are
+        suppressed, the letter did reach the third, and reporting that message as
+        unsent would understate delivery just as badly as the old behaviour
+        overstated it. Hence "any", not "all".
+        """
         payload = build_payload(message)
         response = self._post_with_retry(payload)
 
@@ -217,14 +239,32 @@ class GatewayEmailBackend(BaseEmailBackend):
 
         result = body.get("result") or {}
         bounces = result.get("permanent_bounces") or []
-        if bounces:
-            # Accepted by the gateway but undeliverable recipients exist —
-            # they are suppressed on the provider side.
-            logger.warning(
-                "Email gateway reported permanent bounces for %s (subject=%r)",
-                bounces,
-                message.subject,
-            )
+        if not bounces:
+            return True
+
+        # Accepted by the gateway but undeliverable recipients exist — they are
+        # suppressed on the provider side.
+        #
+        # Compared case-insensitively against the message's own recipient list:
+        # addresses are echoed back by the provider and may differ in case, and a
+        # mismatch here would silently degrade to "nothing was suppressed" —
+        # exactly the failure this block exists to report.
+        refused = {address.strip().lower() for address in bounces if address}
+        remaining = [
+            address
+            for address in message.recipients()
+            if address.strip().lower() not in refused
+        ]
+
+        logger.warning(
+            "Email gateway reported permanent bounces for %s (subject=%r); "
+            "%d of %d recipients remain",
+            bounces,
+            message.subject,
+            len(remaining),
+            len(message.recipients()),
+        )
+        return bool(remaining)
 
     def _post_with_retry(self, payload):
         client = self._client

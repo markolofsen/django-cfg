@@ -50,9 +50,25 @@ def load_project_mcp_config() -> Optional[Any]:
         spec.loader.exec_module(module)
 
         # Get mcp_config from the module
+        #
+        # DEBUG, not WARNING: a project whose `mcp/` package holds only tools and
+        # declares its configuration in settings is doing something supported —
+        # `ready()` reads None as "keep the config already declared" and carries
+        # on. Logging that at WARNING described the correct arrangement as a
+        # fault, ten times a day, naming a file that is right precisely because
+        # it is empty. During an incident that line is read as the cause.
+        #
+        # A genuinely missing declaration still surfaces: the endpoint has no
+        # config to serve and says so at the point of use, where the message can
+        # be acted on.
         mcp_config = getattr(module, "mcp_config", None)
         if mcp_config is None:
-            logger.warning(f"mcp_config not found in {mcp_file}")
+            logger.debug(
+                "No mcp_config in %s; keeping the configuration declared "
+                "elsewhere (this is the expected arrangement when mcp/ holds "
+                "only tools).",
+                mcp_file,
+            )
             return None
 
         logger.info(f"✅ MCP configuration loaded from {mcp_file}")

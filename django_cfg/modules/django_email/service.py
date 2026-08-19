@@ -410,7 +410,14 @@ class DjangoEmailService(BaseCfgModule):
                     subject,
                     log_locale,
                     "failed",
-                    "transport reported 0 messages sent; see the log for the provider error",
+                    # Two different events land here, and the message must not
+                    # name only one of them. Besides a provider error, the
+                    # gateway backend now also reports 0 when every recipient of
+                    # the message was refused as permanently suppressed — that is
+                    # not an error, it is mail we are not allowed to send, and it
+                    # carries no provider error to go looking for.
+                    "transport reported 0 messages sent; either a provider error "
+                    "or every recipient is suppressed — see the log",
                 )
 
         # Always send in background thread to avoid blocking
