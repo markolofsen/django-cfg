@@ -36,6 +36,12 @@ class _BatchEntry:
     api_url:    str
     count:      int = 1
     first_seen: float = field(default_factory=time)
+    # The buffer's dict key is a fingerprint OR a `message[:64]` fallback
+    # (see notify_server_event) and the two are indistinguishable once used
+    # as a key. This field carries ONLY a real, upstream-computed fingerprint
+    # — blank when the caller supplied none — because the alert prints it as
+    # a stable join key and a truncated message is not one.
+    fingerprint: str = ""
 
 
 class _AlertBatch:
@@ -63,8 +69,15 @@ class _AlertBatch:
         event_type:  str,
         message:     str,
         api_url:     str,
+        real_fingerprint: str = "",
     ) -> None:
-        """Add event to buffer; flush immediately if the fingerprint is new."""
+        """Add event to buffer; flush immediately if the fingerprint is new.
+
+        ``fingerprint`` is the dedup KEY (possibly a message-derived fallback);
+        ``real_fingerprint`` is the upstream-computed one, or blank. Keeping
+        them separate is what lets the alert print a join key without ever
+        printing a truncated message dressed up as one.
+        """
         now = time()
         with self._lock:
             if fingerprint in self._buffer:
@@ -74,6 +87,7 @@ class _AlertBatch:
                     event_type=event_type,
                     message=message,
                     api_url=api_url,
+                    fingerprint=real_fingerprint,
                 )
             is_new = now - self._recent.get(fingerprint, 0.0) > self.NEW_FINGERPRINT_TTL_SEC
             if is_new:
@@ -140,6 +154,7 @@ def notify_server_event(
                 event_type=event_type,
                 message=message,
                 api_url=api_url,
+                real_fingerprint=fingerprint,
             )
         elif event_type == "SLOW_QUERY":
             elapsed = extra.get("elapsed_ms", 0)
@@ -149,6 +164,7 @@ def notify_server_event(
                     event_type=event_type,
                     message=f"{message[:200]} ({elapsed:.0f}ms)",
                     api_url=api_url,
+                    real_fingerprint=fingerprint,
                 )
     except Exception as exc:
         logger.debug("django_monitor: notify_server_event suppressed — %s", exc)
@@ -199,8 +215,26 @@ def _send_batch(snapshot: Dict[str, _BatchEntry]) -> None:
         for entry in sorted(snapshot.values(), key=lambda e: -e.count):
             icon = _LEVEL_ICON.get(entry.event_type, "⚪")
             project = f"  <i>{entry.api_url}</i>" if entry.api_url else ""
+            # The fingerprint is computed at capture time and was, until now,
+            # used as a buffer key and then discarded — so an operator reading
+            # a repeat alert had no stable key to join two occurrences by, and
+            # no way to correlate an alert with anything else keyed on the same
+            # value. Printing it costs nothing — no store, no retention, and
+            # nothing readable: every producer hashes with sha256 and keeps 16
+            # hex chars, over an exception signature (request.py:57, rq.py:75,
+            # log_handler.py:58) or over SQL with the literals already stripped
+            # (slow_query.py:40,81). It is the whole reason this is worth a
+            # line: server events are log-only, so the alert is the only place
+            # the key can surface at all.
+            #
+            # Omitted rather than faked when blank. Only the frontend ingest
+            # path can produce a blank one (the four server capture sites all
+            # stamp unconditionally), and there the honest output is no key —
+            # printing the fallback would advertise `message[:64]` as a stable
+            # identifier when it changes with every distinct message.
+            fp = f"  <code>{entry.fingerprint}</code>" if entry.fingerprint else ""
             lines.append(
-                f"{icon} [{entry.event_type}] ×{entry.count} — {entry.message[:120]}{project}"
+                f"{icon} [{entry.event_type}] ×{entry.count} — {entry.message[:120]}{fp}{project}"
             )
 
         send_error("\n".join(lines))
