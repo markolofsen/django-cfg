@@ -72,6 +72,114 @@ def text_direction(locale: Optional[str]) -> str:
     return _impl(locale)
 
 
+def dedup_key_for(key: str, recipient: str, locale: str = "") -> str:
+    """The letter's identity: event + channel + recipient.
+
+    ``@rules/communications-and-notifications.md:88-95`` requires deduplication by
+    logical event + channel + recipient + template version. Channel is implicit
+    here (this module is email and nothing else), and ``locale`` stands in for
+    template version: the same event re-rendered in another language is a
+    different letter, not a duplicate of the first.
+
+    Address is normalised, because ``A@x.test`` and ``a@x.test`` are one inbox and
+    a key that distinguishes them would let the same letter through twice.
+    """
+    return f"{key or 'adhoc'}:{(recipient or '').strip().lower()}:{locale or ''}"[:200]
+
+
+def _open_send(
+    key: str,
+    recipients: List[str],
+    subject: str,
+    locale: str,
+) -> List[int]:
+    """Record the intent to send, **before** the attempt. Returns the row ids.
+
+    This is the half that did not exist. Every row was created after the transport
+    returned, so a worker that died mid-send lost the letter *and* the evidence
+    that it had ever been attempted — measured on production: 112 rows, `queued`
+    = 0, because nothing ever wrote that state.
+
+    Returns ids rather than objects so the resolving update is one query and does
+    not depend on the rows still matching a filter — by then the transport has run
+    and their status is exactly what is being changed.
+
+    Best-effort, like the rest of the log: an empty list means "no intent
+    recorded", and the caller must still send. Refusing to mail because a
+    diagnostic write failed would turn a logging outage into an outage.
+
+    **The ``try`` alone does not deliver that promise, and this was measured.**
+    Running without the migration applied, the failing INSERT left the caller's
+    transaction broken, so the `except` returned `[]` as designed and then every
+    later query raised `TransactionManagementError` — the send died anyway. A
+    caller sending mail inside `atomic` (any view, any RQ job) is the normal case,
+    not the exotic one. The savepoint below is what makes "best-effort" true:
+    the log write rolls back by itself and the caller's transaction survives.
+    """
+    try:
+        from django.db import transaction
+
+        from django_cfg.apps.system.mailer.models import EmailLog
+
+        addresses = [a for a in (recipients or []) if a]
+        if not addresses:
+            return []
+
+        with transaction.atomic():
+            user_ids = _user_ids_for(addresses)
+            rows = EmailLog.objects.bulk_create(
+                [
+                    EmailLog(
+                        key=key or "",
+                        recipient=address,
+                        subject=(subject or "")[:255],
+                        locale=locale or "",
+                        status=EmailLog.Status.QUEUED,
+                        error="",
+                        user_id=user_ids.get(address.strip().lower()),
+                        dedup_key=dedup_key_for(key, address, locale),
+                    )
+                    for address in addresses
+                ]
+            )
+        return [row.pk for row in rows if row.pk is not None]
+    except Exception as e:
+        logger.debug(f"Email intent not recorded: {e}")
+        return []
+
+
+def _close_send(row_ids: List[int], status: str, error: str) -> None:
+    """Resolve intent rows to their outcome.
+
+    Falls back to nothing when ``row_ids`` is empty: that means ``_open_send``
+    failed, and inventing rows here would report a send whose intent was never
+    recorded — the reverse of the bug being fixed.
+
+    ``sent_at`` is stamped only on success. A failed row keeps it NULL, so the
+    field answers "did the transport ever accept this" and not "when did we last
+    touch the row".
+    """
+    if not row_ids:
+        return
+    try:
+        from django.db import transaction
+        from django.utils import timezone
+
+        from django_cfg.apps.system.mailer.models import EmailLog
+
+        sent = status == EmailLog.Status.SENT
+        # Savepointed for the reason given in `_open_send`: a diagnostic write
+        # must not be able to break the transaction it happens to run inside.
+        with transaction.atomic():
+            EmailLog.objects.filter(pk__in=row_ids).update(
+                status=status,
+                error=(error or "")[:2000],
+                sent_at=timezone.now() if sent else None,
+            )
+    except Exception as e:
+        logger.debug(f"Email outcome not recorded: {e}")
+
+
 def _record_send(
     key: str,
     recipients: List[str],
@@ -82,6 +190,10 @@ def _record_send(
 ) -> None:
     """Write one ``EmailLog`` row per recipient.
 
+    Kept for callers that only learn the outcome — a send they did not open an
+    intent for. Prefer ``_open_send``/``_close_send``: this function cannot record
+    a send that died before returning, which is the case the pair exists for.
+
     Best-effort by design: the log is diagnostic, and losing a row must never
     lose the mail. It also runs in the sending thread, so a database error here
     would otherwise surface as an unrelated "background email task failed".
@@ -90,23 +202,36 @@ def _record_send(
     django-cfg without it, and a send should not depend on the log's existence.
     """
     try:
+        from django.db import transaction
+        from django.utils import timezone
+
         from django_cfg.apps.system.mailer.models import EmailLog
 
         user_ids = _user_ids_for(recipients or [])
-        EmailLog.objects.bulk_create(
-            [
-                EmailLog(
-                    key=key or "",
-                    recipient=address,
-                    subject=(subject or "")[:255],
-                    locale=locale or "",
-                    status=status,
-                    error=error or "",
-                    user_id=user_ids.get(address.strip().lower()),
-                )
-                for address in recipients or []
-            ]
-        )
+        stamp = timezone.now() if status == EmailLog.Status.SENT else None
+        # Savepointed: this had the same latent defect as `_open_send`, and it has
+        # been in place since the log was written — a `try` around a write inside
+        # someone else's `atomic` protects the logger, not the caller.
+        with transaction.atomic():
+            EmailLog.objects.bulk_create(
+                [
+                    EmailLog(
+                        key=key or "",
+                        recipient=address,
+                        subject=(subject or "")[:255],
+                        locale=locale or "",
+                        status=status,
+                        error=error or "",
+                        user_id=user_ids.get(address.strip().lower()),
+                        # Same key shape as the intent path. A row that carried
+                        # none would be invisible to any duplicate check, which is
+                        # worse than a duplicate: a letter nobody appears to send.
+                        dedup_key=dedup_key_for(key, address, locale),
+                        sent_at=stamp,
+                    )
+                    for address in recipients or []
+                ]
+            )
     except Exception as e:
         logger.debug(f"Email log skipped: {e}")
 
@@ -351,6 +476,8 @@ class DjangoEmailService(BaseCfgModule):
         recipient_list: List[str],
         from_email: Optional[str] = None,
         fail_silently: bool = False,
+        log_key: str = "",
+        log_locale: str = "",
     ) -> bool:
         """
         Send a simple text email in background thread (non-blocking).
@@ -361,21 +488,46 @@ class DjangoEmailService(BaseCfgModule):
             recipient_list: List of recipient email addresses
             from_email: Sender email (auto-detected if not provided)
             fail_silently: Whether to fail silently on errors
+            log_key: Which letter this is, for ``EmailLog``. Optional and blank by
+                default, because this method sends ad-hoc mail with no key — but
+                the row is written either way. Until now this path wrote **no row
+                at all**: measured on production, all 112 rows carry a key, i.e.
+                every one came through `send_html`, and nothing sent from here or
+                from the attachments family was recorded anywhere.
 
         Returns:
             True if email queued successfully
         """
         from_email = self._get_formatted_from_email(from_email)
 
+        # Before the hand-off, for the reason given in `send_html`.
+        row_ids = _open_send(log_key, recipient_list, subject, log_locale)
+
         def _do_send():
-            self._handle_email_sending(
-                send_mail,
-                subject=subject,
-                message=message,
-                from_email=from_email,
-                recipient_list=recipient_list,
-                fail_silently=fail_silently,
-            )
+            try:
+                sent = self._handle_email_sending(
+                    send_mail,
+                    subject=subject,
+                    message=message,
+                    from_email=from_email,
+                    recipient_list=recipient_list,
+                    fail_silently=fail_silently,
+                )
+            except Exception as exc:
+                _close_send(row_ids, "failed", str(exc))
+                raise
+            # `_handle_email_sending` returns 0 for every swallowed SMTP error, so
+            # the result decides the status — an exception check alone would file a
+            # refused send as sent.
+            if sent:
+                _close_send(row_ids, "sent", "")
+            else:
+                _close_send(
+                    row_ids,
+                    "failed",
+                    "transport reported 0 messages sent; either a provider error "
+                    "or every recipient is suppressed — see the log",
+                )
 
         # Always send in background thread to avoid blocking
         self._send_in_background(_do_send)
@@ -433,8 +585,16 @@ class DjangoEmailService(BaseCfgModule):
                 message.attach_alternative(html_message, "text/html")
             return message.send(fail_silently=fail_silently)
 
+        # The intent is recorded HERE, on the calling thread, before the sender is
+        # handed off. Opening it inside `_do_send` would look equivalent and is
+        # not: a thread that fails to start, or is killed at interpreter exit
+        # before its first line runs, would leave no row at all — precisely the
+        # case this row exists to make visible. `_SEND_THREADS`/`wait_for_sends`
+        # already document that these threads do get killed that way.
+        row_ids = _open_send(log_key, recipient_list, subject, log_locale)
+
         def _do_send():
-            # Logged around the actual attempt, inside the thread: sending is
+            # Resolved around the actual attempt, inside the thread: sending is
             # threaded and the transport is HTTP, so a failure otherwise surfaces
             # nowhere a human looks.
             #
@@ -444,18 +604,13 @@ class DjangoEmailService(BaseCfgModule):
             try:
                 sent = self._handle_email_sending(_send)
             except Exception as exc:
-                _record_send(
-                    log_key, recipient_list, subject, log_locale, "failed", str(exc)
-                )
+                _close_send(row_ids, "failed", str(exc))
                 raise
             if sent:
-                _record_send(log_key, recipient_list, subject, log_locale, "sent", "")
+                _close_send(row_ids, "sent", "")
             else:
-                _record_send(
-                    log_key,
-                    recipient_list,
-                    subject,
-                    log_locale,
+                _close_send(
+                    row_ids,
                     "failed",
                     # Two different events land here, and the message must not
                     # name only one of them. Besides a provider error, the
@@ -601,6 +756,8 @@ class DjangoEmailService(BaseCfgModule):
         from_email: Optional[str] = None,
         attachments: Optional[List[tuple]] = None,
         fail_silently: bool = False,
+        log_key: str = "",
+        log_locale: str = "",
     ) -> bool:
         """
         Send a multipart email with attachments.
@@ -613,6 +770,12 @@ class DjangoEmailService(BaseCfgModule):
             from_email: Sender email (auto-detected if not provided)
             attachments: List of (filename, content, mimetype) tuples
             fail_silently: Whether to fail silently on errors
+            log_key: Which letter this is, for ``EmailLog``. This method is the
+                head of the attachments family — ``send_with_attachments``,
+                ``send_html_with_attachments`` and
+                ``send_template_with_attachments`` all route through it — so
+                recording here covers four entry points that previously wrote
+                nothing at all.
 
         Returns:
             True if email was sent successfully, False otherwise
@@ -621,6 +784,10 @@ class DjangoEmailService(BaseCfgModule):
 
         if not html_content and not text_content:
             raise ValueError("Either html_content or text_content must be provided")
+
+        # After the ValueError, so a caller's bad arguments do not leave a queued
+        # row for a letter that was never going to be built.
+        row_ids = _open_send(log_key, recipient_list, subject, log_locale)
 
         def _send_multipart_email():
             try:
@@ -638,11 +805,27 @@ class DjangoEmailService(BaseCfgModule):
                     for filename, content, mimetype in attachments:
                         email.attach(filename, content, mimetype)
 
-                email.send(fail_silently=fail_silently)
-                logger.info(f"Multipart email sent successfully to {recipient_list}")
+                # The return value was previously discarded, which left this path
+                # unable to distinguish a delivered letter from one the transport
+                # refused outright — `send()` reports 0 without raising.
+                sent = email.send(fail_silently=fail_silently)
+                if sent:
+                    logger.info(f"Multipart email sent successfully to {recipient_list}")
+                    _close_send(row_ids, "sent", "")
+                else:
+                    logger.warning(
+                        f"Multipart email reported 0 sent to {recipient_list}"
+                    )
+                    _close_send(
+                        row_ids,
+                        "failed",
+                        "transport reported 0 messages sent; either a provider "
+                        "error or every recipient is suppressed — see the log",
+                    )
             except Exception as e:
                 error_msg = f"Failed to send multipart email: {e}"
                 logger.error(error_msg)
+                _close_send(row_ids, "failed", str(e))
 
                 # Notify telegram about error
                 context = {

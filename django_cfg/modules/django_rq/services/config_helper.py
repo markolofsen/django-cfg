@@ -188,7 +188,7 @@ def _generate_deterministic_job_id(schedule_config) -> str:
     return f"schedule_{func_name}_{hash_digest}"
 
 
-def _cleanup_old_schedules(scheduler, job_id: str, connection=None):
+def _cleanup_old_schedules(scheduler, job_id: str, connection=None, queue_name: str = "default"):
     """
     Remove existing schedule with the given job_id before registering new one.
 
@@ -199,6 +199,8 @@ def _cleanup_old_schedules(scheduler, job_id: str, connection=None):
         scheduler: RQ Scheduler instance
         job_id: Job ID to remove
         connection: Redis connection (optional, for deep cleanup)
+        queue_name: Queue the schedule targets, used to locate the job
+            registries this ID may be stranded in (default: "default")
 
     Example:
         >>> _cleanup_old_schedules(scheduler, "schedule_sync_accounts_abc123")
@@ -220,6 +222,34 @@ def _cleanup_old_schedules(scheduler, job_id: str, connection=None):
                 logger.debug(f"Removed stale job data: {job_key}")
         except Exception as e:
             logger.debug(f"Failed to cleanup job data {job_id}: {e}")
+
+        # Registries hold job IDs, not job hashes, so deleting `rq:job:<id>`
+        # above does not remove the ID from them. Without this, a schedule that
+        # once failed leaves its ID stranded in FailedJobRegistry with the
+        # registry's default one-year TTL, while the hash carrying the traceback
+        # is gone -- the job reads as "failed" forever with an empty exc_info,
+        # and `rqstats`/dashboards report a failure that never happened again.
+        #
+        # This matters more than a cosmetic count. Schedule IDs are
+        # deterministic (see _generate_deterministic_job_id), so the stranded ID
+        # is the SAME ID the live schedule uses. cleanup_old_jobs() walks the
+        # failed registry and calls remove(delete_job=True) on anything whose
+        # created_at is past the cutoff -- and created_at is set once at
+        # registration, not refreshed per run. Left in place, the stranded entry
+        # eventually points the cleaner at a live schedule's job hash.
+        #
+        # Registry keys are per-QUEUE, not per-job: rq:failed:<queue>. Removing
+        # the ID is a plain ZREM -- deliberately NOT registry.remove(job), which
+        # would need to fetch a hash we just deleted.
+        for registry_key in (
+            f"rq:failed:{queue_name}",
+            f"rq:finished:{queue_name}",
+        ):
+            try:
+                if connection.zrem(registry_key, job_id):
+                    logger.debug(f"Removed stale registry entry: {registry_key} -> {job_id}")
+            except Exception as e:
+                logger.debug(f"Failed to cleanup registry {registry_key} for {job_id}: {e}")
 
 
 def register_schedules_from_config():
@@ -315,7 +345,9 @@ def register_schedules_from_config():
                     target_queue = schedule_config.queue or 'default'
 
                     # Clean up old version of this schedule (including stale job data)
-                    _cleanup_old_schedules(scheduler, job_id, connection=connection)
+                    _cleanup_old_schedules(
+                        scheduler, job_id, connection=connection, queue_name=target_queue
+                    )
 
                     # Get schedule type and register
                     if schedule_config.cron:

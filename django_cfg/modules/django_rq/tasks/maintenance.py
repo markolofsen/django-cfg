@@ -26,6 +26,33 @@ def _make_aware(dt: datetime) -> datetime:
     return dt
 
 
+def _is_live_schedule_id(job_id: str, redis_conn) -> bool:
+    """
+    Report whether this job ID belongs to a schedule that is currently registered.
+
+    Schedule IDs are deterministic (`schedule_<func>_<hash>`), so a schedule
+    keeps the SAME ID for its entire life. That makes an ID stranded in a
+    registry indistinguishable, by ID alone, from the live schedule -- and the
+    stranded entry carries the created_at of the ORIGINAL registration, which is
+    never refreshed per run. Any cutoff long enough will therefore mark a live
+    schedule as "old" and, with delete_job=True, delete the job hash the
+    scheduler needs.
+
+    The cost is asymmetric: skipping a genuinely dead job leaves one key in
+    Redis until the next pass, while deleting a live one silently stops a
+    recurring task. django-cfg schedules backstops here (storage reclamation
+    aborts billed multipart uploads), so this returns True when unsure.
+    """
+    from django_cfg.modules.django_rq.health.scheduler import SCHEDULED_JOBS_KEY
+
+    try:
+        # rq-scheduler keeps every registered schedule's ID in this sorted set.
+        return redis_conn.zscore(SCHEDULED_JOBS_KEY, job_id) is not None
+    except Exception as e:
+        logger.warning(f"Could not check schedule membership for {job_id}: {e} -- keeping it")
+        return True
+
+
 def cleanup_old_jobs(
     max_age_days: int = 7,
     dry_run: bool = False,
@@ -48,8 +75,14 @@ def cleanup_old_jobs(
             "finished_deleted": 10,
             "failed_deleted": 5,
             "total_deleted": 15,
+            "schedules_skipped": 2,
             "dry_run": False
         }
+
+    Note:
+        IDs belonging to currently-registered schedules are never deleted,
+        regardless of age -- see _is_live_schedule_id for why age is not a
+        usable signal for them. They are counted in "schedules_skipped".
 
     Example:
         >>> from django_cfg.modules.django_rq.tasks.maintenance import cleanup_old_jobs
@@ -73,6 +106,10 @@ def cleanup_old_jobs(
             "dry_run": dry_run,
             "finished_total": 0,
             "failed_total": 0,
+            # Live schedules deliberately left alone. Reported rather than
+            # silently skipped: a registry that never shrinks should be
+            # explainable from this number, not a mystery.
+            "schedules_skipped": 0,
         }
 
         logger.info(
@@ -88,6 +125,10 @@ def cleanup_old_jobs(
 
         for job_id in finished_job_ids:
             try:
+                if _is_live_schedule_id(job_id, redis_conn):
+                    stats["schedules_skipped"] += 1
+                    logger.debug(f"Keeping live schedule (finished registry): {job_id}")
+                    continue
                 job = Job.fetch(job_id, connection=redis_conn)
                 if job.created_at and job.created_at < cutoff_date:
                     logger.debug(
@@ -108,6 +149,10 @@ def cleanup_old_jobs(
 
         for job_id in failed_job_ids:
             try:
+                if _is_live_schedule_id(job_id, redis_conn):
+                    stats["schedules_skipped"] += 1
+                    logger.debug(f"Keeping live schedule (failed registry): {job_id}")
+                    continue
                 job = Job.fetch(job_id, connection=redis_conn)
                 if job.created_at and job.created_at < cutoff_date:
                     logger.debug(
@@ -133,7 +178,8 @@ def cleanup_old_jobs(
         logger.info(
             f"=== Cleanup completed: {stats['total_deleted']} jobs deleted "
             f"(finished: {stats['finished_deleted']}/{stats['finished_total']}, "
-            f"failed: {stats['failed_deleted']}/{stats['failed_total']}) "
+            f"failed: {stats['failed_deleted']}/{stats['failed_total']}, "
+            f"live schedules kept: {stats['schedules_skipped']}) "
             f"[dry_run={dry_run}] ==="
         )
         logger.info(f"Stats: {stats}")
