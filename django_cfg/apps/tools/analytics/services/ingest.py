@@ -151,13 +151,30 @@ def _build_rows(
     ctx: VisitorContext,
     now: datetime,
 ) -> Iterable[AnalyticsEvent]:
+    # Inherit the SURVIVING session's visitor id, not today's.
+    #
+    # `resolve_session` already continues a visit across a salt rotation by
+    # looking the visitor up under `[visitor, previous_visitor]`
+    # (sessions.py:63) — but the rows were then written under `ctx.visitor`,
+    # so the continuity landed on the session while `funnel()` joins on the
+    # EVENT's `(site_id, visitor_id)` (goals.py:72,77). One visit could
+    # therefore hold two identities, and production showed exactly that: 1
+    # session carrying two distinct visitor_ids across its own events, with
+    # 0 of 1281 visitors spanning more than 1.0 days (longest 0.968 d).
+    #
+    # Nothing new is stored and no new pseudonym is minted: this reuses an id
+    # the session already carries, which is why it is not the privacy decision
+    # the design records against Umami/Shynet. When the session is fresh,
+    # `session.visitor_id` IS `ctx.visitor` and this changes nothing.
+    visitor = session.visitor_id
+
     for e in events:
         # The client's clock is not trusted for ordering — it can be skewed or
         # forged. `ts` is server-assigned; the client timestamp is not kept.
         yield AnalyticsEvent(
             site=site,
             ts=now,
-            visitor_id=ctx.visitor,
+            visitor_id=visitor,
             session=session,
             user_id=ctx.user_id,
             is_measurement=ctx.is_measurement,
