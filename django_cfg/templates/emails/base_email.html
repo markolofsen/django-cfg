@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>{{ email_title }} — {{ project_name }}</title>
+    <title>{% if email_title %}{{ email_title }} — {{ project_name }}{% else %}{{ subject }}{% endif %}</title>
     <!--[if mso]>
     <noscript>
       <xml>
@@ -232,7 +232,7 @@
         <!-- Body -->
         <div class="email-body">
 
-          <h1 class="email-title">{{ email_title }}</h1>
+          {% if email_title %}<h1 class="email-title">{{ email_title }}</h1>{% endif %}
           <p class="email-greeting">
             {% if greeting %}{{ greeting }}{% else %}Hello{% endif %}
           </p>

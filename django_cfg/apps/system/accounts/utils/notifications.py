@@ -58,8 +58,22 @@ class AccountNotifications:
         locale: str = None,
         extra_context: dict = None,
         text_only: bool = False,
+        copy_key: str = None,
     ):
-        """Private method for sending templated emails."""
+        """Private method for sending templated emails.
+
+        ``copy_key`` names the *letter*; ``template_name`` names the *layout*.
+        They were one thing, and only one caller (`welcome`) passed a template of
+        its own — so seven distinct letters shared the key ``base_email`` and
+        therefore shared one row of editable copy. Measured on production: copy
+        written for a security alert came back verbatim for the OTP and
+        profile-update letters, with `welcome` unaffected as the control.
+
+        Splitting them keeps the layout shared, which is the point of a base
+        template, while giving each letter its own translatable row. A letter that
+        passes no ``copy_key`` still resolves off the template name, so existing
+        callers keep working.
+        """
         email_service = DjangoEmailService()
 
         # Prepare context for template
@@ -77,7 +91,9 @@ class AccountNotifications:
             # Editable per-locale copy, when this project loaded any. Absent is
             # normal and not an error: the template's own wording is the
             # fallback, so a fresh install still sends a correct letter.
-            "copy": _resolve_copy(template_name, locale),
+            # Keyed off the letter, falling back to the template for callers that
+            # name no letter of their own.
+            "copy": _resolve_copy(copy_key or template_name, locale),
         }
         if extra_context:
             context.update(extra_context)
@@ -152,6 +168,7 @@ class AccountNotifications:
             AccountNotifications._send_email(
                 user=user,
                 subject="Security Alert: Profile Updated ⚠️",
+                copy_key="profile_updated",
                 main_text="A security alert has been triggered for your account.",
                 main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">Profile Updated</p>',
                 secondary_text=f"Details: Your {change_text} has been updated. If this wasn't you, please contact support immediately.",
@@ -179,6 +196,7 @@ class AccountNotifications:
                 AccountNotifications._send_email(
                     user=user,
                     subject=f"Account Activated - {config.project_name} ✅",
+                copy_key="account_activated",
                     main_text="Your account has been activated and is now ready to use!",
                     main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #28a745;">Account Activated!</p>',
                     secondary_text="You now have full access to all our services and features.",
@@ -191,6 +209,7 @@ class AccountNotifications:
                 AccountNotifications._send_email(
                     user=user,
                     subject=f"Account Status Update - {config.project_name} ⚠️",
+                copy_key="account_deactivated",
                     main_text="Your account status has been updated.",
                     main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">Account Deactivated</p>',
                     secondary_text=f"Reason: {reason or 'Account deactivated by administrator'}\nIf you believe this is an error, please contact our support team.",
@@ -228,6 +247,7 @@ class AccountNotifications:
             AccountNotifications._send_email(
                 user=user,
                 subject=f"Login Notification - {config.project_name} 🔐",
+                copy_key="login_notification",
                 main_text=f"We detected a login to your account at {login_time}{ip_text}.",
                 main_html_content=f'<p style="font-size: 1.2em; color: #007bff;">Login at {login_time}</p>',
                 secondary_text="If this wasn't you, please secure your account immediately and contact support.",
@@ -273,6 +293,11 @@ class AccountNotifications:
                 # Changing this is an OWNER decision, not a hardening task.
                 # Ask first. See accounts/@docs/notifications.md.
                 subject=f"Your OTP code: {otp_code}",
+                # Copy key only — this does NOT touch the subject above. The
+                # subject is passed to `send_template` directly and is never read
+                # from the copy row, so giving this letter its own translatable
+                # body cannot move the code out of the subject line.
+                copy_key="otp_code",
                 main_text="Use the code below or click the button to authenticate:",
                 main_html_content=f'<p style="font-size: 2em; font-weight: bold; color: #007bff;">{otp_code}</p>',
                 secondary_text="This code expires in 10 minutes.",
@@ -321,6 +346,7 @@ class AccountNotifications:
             AccountNotifications._send_email(
                 user=user,
                 subject=f"Security Alert: {alert_type} ⚠️",
+                copy_key="security_alert",
                 main_text="A security alert has been triggered for your account.",
                 main_html_content=f'<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">{alert_type}</p>',
                 secondary_text=f"Details: {details}\nIf this wasn't you, please contact support immediately.",
@@ -361,6 +387,7 @@ class AccountNotifications:
             AccountNotifications._send_email(
                 user=user,
                 subject=f"Security Alert: Suspicious Activity: {activity_type} ⚠️",
+                copy_key="suspicious_activity",
                 main_text="A security alert has been triggered for your account.",
                 main_html_content=f'<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">Suspicious Activity: {activity_type}</p>',
                 secondary_text=f"Details: We detected suspicious activity on your account: {details.get('description', 'Unknown activity')}\nIf this wasn't you, please contact support immediately.",
