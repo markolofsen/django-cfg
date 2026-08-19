@@ -321,4 +321,34 @@ class MCPView(APIView):
         response = JSONRPCParser.create_error_response(
             error_code, error_message, request_id=request_id
         )
-        return JsonResponse(response.to_dict(), status=status)
+        http_response = JsonResponse(response.to_dict(), status=status)
+
+        if status == 401:
+            # RFC 7235 §3.1: "The server generating a 401 (Unauthorized)
+            # response MUST send a WWW-Authenticate header field containing at
+            # least one challenge." We were sending a bare 401, which is a
+            # protocol violation regardless of scheme.
+            #
+            # The scheme token is deliberately NOT `Bearer`. Bearer means OAuth
+            # 2.0 to every client that reads it, and MCP clients act on that
+            # reading: on a 401 they go looking for OAuth discovery documents
+            # (`/.well-known/oauth-protected-resource`, then `/register`).
+            # This server does not implement OAuth — it authenticates with a
+            # static `X-MCP-Access-Key` header — so those paths 404 with
+            # Django's HTML error page, and a client parsing them as JSON dies
+            # on the first `<` with an unrelated-looking error.
+            #
+            # Advertising a scheme we do not implement would be worse than
+            # sending nothing: the client would complete a discovery flow that
+            # cannot succeed. A custom token is explicitly allowed (RFC 7235
+            # names the scheme "a case-insensitive token"), so we name the
+            # thing we actually want, and `realm` says where to put it.
+            #
+            # MCP itself does not require OAuth: "Authorization is OPTIONAL for
+            # MCP implementations" (spec, Protocol Requirements). The OAuth
+            # MUSTs apply to servers that chose OAuth. This one did not.
+            http_response["WWW-Authenticate"] = (
+                'MCPAccessKey realm="mcp", header="X-MCP-Access-Key"'
+            )
+
+        return http_response
