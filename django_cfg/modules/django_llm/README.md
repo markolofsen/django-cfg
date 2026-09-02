@@ -109,14 +109,6 @@ incident write-ups, and architecture diagrams are in:
 
 ## Contributing
 
-### Mirror synchronization
-
-`django_cfg.modules.django_llm` is the source of truth. This in-tree copy and
-the standalone `cmdop_llm` package are mirrors. Use
-[`scripts/sync_mirrors.sh`](./scripts/sync_mirrors.sh) to check drift, refresh
-both mirrors from django-cfg, or promote a reviewed change from one mirror via
-django-cfg. The script never copies host integration seams.
-
 Read [`CLAUDE.md`](./CLAUDE.md) first. The one hard rule: **any new
 public symbol must be added to `__init__.py` + `__all__`**. The host
 shim is dynamic and reads `__all__`; if you forget, the symbol is

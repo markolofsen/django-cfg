@@ -38,13 +38,13 @@ class LLMClient(BaseCfgModule):
         self,
         apikey_openrouter: Optional[str] = None,
         apikey_openai: Optional[str] = None,
-        apikey_gonka: Optional[str] = None,
         cache_dir: Optional[Path] = None,
         cache_ttl: int = 3600,
         max_cache_size: int = 1000,
         models_cache_ttl: int = 86400,
         config: Optional[Any] = None,
-        preferred_provider: Optional[LLMProviderType] = None
+        preferred_provider: Optional[LLMProviderType] = None,
+        apikey_sdkrouter: Optional[str] = None,
     ):
         """
         Initialize LLM client.
@@ -52,7 +52,9 @@ class LLMClient(BaseCfgModule):
         Args:
             apikey_openrouter: API key for OpenRouter (auto-detected if not provided)
             apikey_openai: API key for OpenAI (auto-detected if not provided)
-            apikey_gonka: API key for gonka/gonkagate (auto-detected if not provided)
+            apikey_sdkrouter: cmdop token for the edge proxy `llm.sdkrouter.com`
+                (auto-detected if not provided). When present it becomes the
+                PRIMARY transport — see `_determine_primary_provider`.
             cache_dir: Cache directory path
             cache_ttl: Cache TTL in seconds
             max_cache_size: Maximum cache size
@@ -66,24 +68,22 @@ class LLMClient(BaseCfgModule):
 
         # API keys come from the one integration seam — never read host
         # config here directly (see _integration.get_api_keys).
-        if apikey_openrouter is None or apikey_openai is None or apikey_gonka is None:
+        if apikey_openrouter is None or apikey_openai is None or apikey_sdkrouter is None:
             _keys = get_api_keys()
             if apikey_openrouter is None:
                 apikey_openrouter = _keys["openrouter"]
             if apikey_openai is None:
                 apikey_openai = _keys["openai"]
-            if apikey_gonka is None:
-                # Prefer the key POOL (round-robined across race legs); fall back
-                # to the single key.
-                apikey_gonka = _keys.get("gonkagate_pool") or _keys.get("gonkagate")
+            if apikey_sdkrouter is None:
+                apikey_sdkrouter = _keys["sdkrouter"]
 
         # Initialize provider management
         self.provider_manager = ProviderManager(
             apikey_openrouter=apikey_openrouter,
             apikey_openai=apikey_openai,
-            apikey_gonka=apikey_gonka,
             preferred_provider=preferred_provider,
-            config=config
+            config=config,
+            apikey_sdkrouter=apikey_sdkrouter,
         )
         self.provider_selector = ProviderSelector(self.provider_manager)
 

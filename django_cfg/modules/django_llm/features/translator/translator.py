@@ -69,7 +69,14 @@ class DjangoTranslator(BaseCfgModule):
                 # Otherwise: configured if the integration seam yields a key.
                 else:
                     keys = get_api_keys()
-                    self._is_configured = bool(keys["openrouter"] or keys["openai"])
+                    # `sdkrouter` counts: a box holding only the edge token is
+                    # fully able to translate, and omitting it here reported
+                    # "not configured" while the transport was live.
+                    self._is_configured = bool(
+                        keys.get("sdkrouter")
+                        or keys.get("openrouter")
+                        or keys.get("openai")
+                    )
             except Exception:
                 self._is_configured = False
 
@@ -77,9 +84,16 @@ class DjangoTranslator(BaseCfgModule):
 
     @property
     def client(self) -> LLMClient:
-        """Get LLM client instance."""
+        """The LLM client — injected, or built from the configured credentials.
+
+        Previously this REQUIRED injection and raised otherwise, which made
+        `is_configured` a promise the object could not keep: it answered True
+        from the presence of a key and then refused to build a client from it.
+        Every module-level convenience (`translate_text`, `translate_json`)
+        constructs `DjangoTranslator()` with no client, so that path was dead.
+        """
         if self._client is None:
-            raise ValueError("LLM client not configured. Pass client to constructor.")
+            self._client = LLMClient()
         return self._client
 
     @property

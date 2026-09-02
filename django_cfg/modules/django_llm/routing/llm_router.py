@@ -48,11 +48,11 @@ from typing import Callable, TypeVar
 from pydantic import BaseModel
 
 from ..client.client import LLMClient
-from ..providers import LLMProvider
+from ..providers import LLMProvider, min_max_tokens_for
 from ..pipeline import ModelRouter, alert_wasted_call
 from ..core import AllProvidersFailedError
 from ..core.errors import LLMTruncationError, LLMValidationError
-from ..catalog import PROVIDER_GONKA, ModelRole, check, provider_for, races, recommend
+from ..catalog import ModelRole, check, provider_for, recommend
 from ..structured import parse_into_schema
 
 logger = logging.getLogger("modules.django_llm.routing.router")
@@ -131,7 +131,7 @@ class LLMRouter:
             working; pass it only for a deliberate, documented override (e.g. a
             model too new to be catalogued). New code should not pass it at all.
         race_size: DEPRECATED as a blanket setting — derived per model from
-            ``catalog.races(model)`` when left ``None``. An explicit value
+            one leg when left ``None`` — racing went with gonka. An explicit value
             overrides that for every model in the chain.
     """
 
@@ -149,6 +149,8 @@ class LLMRouter:
         if not model_chain:
             raise ValueError("LLMRouter requires a non-empty model_chain")
         self._chain = list(model_chain)
+        # Set once the proxy refuses our credential; see provider_for_model.
+        self._sdkrouter_rejected = False
         self._max_total_attempts = max_total_attempts
         self._retry_delay = retry_delay_seconds
 
@@ -178,8 +180,64 @@ class LLMRouter:
     # ── Per-model resolution — the catalog is the source of truth ───────────────
 
     def provider_for_model(self, model: str) -> str:
-        """The provider that serves ``model`` — the explicit override, else the catalog."""
-        return self._provider_override or provider_for(model)
+        """Which TRANSPORT serves ``model``: explicit override, else edge, else catalog.
+
+        THE EDGE PROXY SHORT-CIRCUITS THE CATALOG, and it has to. Everywhere
+        else a provider is an intrinsic property of the model — the docstring at
+        the top of this module says so and it is still true of VENDORS. The edge
+        proxy is not a vendor: it fronts the same upstreams under the same
+        slugs, so asking "which vendor serves gpt-4o-mini" is the wrong
+        question when the answer is "we no longer talk to vendors directly".
+
+        Without this the migration would silently not happen. `_determine_
+        primary_provider` only picks the client used when a model's own provider
+        has no key, but the router names a provider PER CALL — so every call
+        would resolve to "openrouter" and go direct, while the edge client sat
+        initialised and unused.
+
+        A chain may still mix providers when the edge is not configured; that
+        path is unchanged.
+
+        **The proxy drops out if it rejects our credential.** "Configured"
+        used to mean "a token exists", which is not the same as "the token
+        works": on 2026-09-02 production held a token belonging to a different
+        service, so every model resolved to the proxy, every call came back
+        `401 invalid cmdop token`, and ingestion failed wholesale — with valid
+        OpenRouter and OpenAI keys sitting right there, unused. A transport
+        that cannot authenticate is not a transport.
+        """
+        if self._provider_override:
+            return self._provider_override
+        if not self._sdkrouter_rejected and self._client.provider_manager.has_provider(
+            LLMProvider.SDKROUTER.value
+        ):
+            return LLMProvider.SDKROUTER.value
+        return provider_for(model)
+
+    def note_provider_failure(self, provider: str, exc: BaseException) -> None:
+        """Retire the proxy for this router once it refuses our credential.
+
+        Scoped to auth failures (401/403) on purpose. A 5xx or a timeout is the
+        proxy having a bad minute and the normal cascade handles it; a rejected
+        credential will be rejected identically on every subsequent call, so
+        continuing to route through it turns one bad secret into a total
+        outage rather than a degraded one.
+        """
+        if provider != LLMProvider.SDKROUTER.value or self._sdkrouter_rejected:
+            return
+        status = getattr(exc, "status_code", None)
+        if status is None:
+            # openai.APIStatusError carries it on .response; fall back to the
+            # message, which is what a wrapped error leaves us.
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+        text = str(exc)
+        if status in (401, 403) or "401" in text or "403" in text:
+            self._sdkrouter_rejected = True
+            logger.warning(
+                "sdkrouter rejected our credential (%s) — falling back to the "
+                "vendors the catalogue names for each model",
+                status or "auth error",
+            )
 
     def race_size_for_model(self, model: str) -> int:
         """How many parallel legs to run for ``model``.
@@ -192,9 +250,11 @@ class LLMRouter:
         """
         if self._race_size_override is not None:
             return self._race_size_override
-        if self._provider_override:
-            return 2 if self._provider_override == PROVIDER_GONKA else 1
-        return 2 if races(model) else 1
+        # ONE LEG unless a caller asks otherwise. Racing existed for gonka's
+        # 8-55s random-host tail; that network went on 2026-08-15 and every
+        # remaining provider serves from a single endpoint, where a second leg
+        # buys nothing and pays for two prompts.
+        return 1
 
     # ── Construction by role ────────────────────────────────────────────────────
 
@@ -256,11 +316,24 @@ class LLMRouter:
         return self._router().run(lambda model: self._attempt(call, model))
 
     def _attempt(self, call: "Callable[[str], R]", model: str) -> "R":
-        """One model's turn: race it if its provider warrants it, else call once."""
-        race_size = self.race_size_for_model(model)
-        if race_size >= 2:
-            return self._race(call, model, race_size)
-        return call(model)
+        """One model's turn: race it if its provider warrants it, else call once.
+
+        A failure is reported to `note_provider_failure` before it propagates,
+        so a proxy that rejects our credential is retired for the rest of this
+        router rather than being re-tried for every remaining model in the
+        chain. The provider is resolved BEFORE the call: afterwards the flag
+        may already have flipped and we would attribute the failure to whoever
+        comes next.
+        """
+        provider = self.provider_for_model(model)
+        try:
+            race_size = self.race_size_for_model(model)
+            if race_size >= 2:
+                return self._race(call, model, race_size)
+            return call(model)
+        except Exception as exc:
+            self.note_provider_failure(provider, exc)
+            raise
 
     def _race(self, call: "Callable[[str], R]", model: str, race_size: int) -> "R":
         """Parallel race of ``race_size`` legs on ONE model.
@@ -334,7 +407,14 @@ class LLMRouter:
             # Any remaining failure propagates so ModelRouter cascades to the
             # next model. Each attempt is billed → wasted spend is surfaced.
             attempt_messages = list(full_messages)
-            attempt_max_tokens = max_tokens
+            # A `@cf*` model spends part of its budget on a reasoning pass that
+            # never reaches `content`; under the floor it returns an empty
+            # `content` with finish_reason=length, which reads as a model that
+            # answered with nothing rather than one that was cut off. Applied
+            # here so no caller has to know — non-CF models pass through
+            # untouched, since inflating their ceiling only loosens a limit
+            # that is doing its job.
+            attempt_max_tokens = min_max_tokens_for(model, max_tokens)
             did_bump = False
             did_reask = False
 
@@ -416,10 +496,16 @@ class LLMRouter:
                         raise
                     did_reask = True
                     if resp is not None:
+                        # The validation error belongs in this line. Without it
+                        # a recurring shape problem is invisible: you see the
+                        # re-ask rate and the wasted spend, but never which
+                        # field the model keeps getting wrong, so there is
+                        # nothing to act on short of reproducing by hand.
                         logger.warning(
                             "LLMRouter.parse: model=%s invalid (billed $%.6f, tokens=%d); "
-                            "re-asking with error injected",
+                            "re-asking with error injected: %s",
                             model, resp.cost_usd or 0.0, resp.tokens_used,
+                            str(exc).replace("\n", " ")[:300],
                         )
                     attempt_messages = [
                         *attempt_messages,
@@ -470,7 +556,10 @@ class LLMRouter:
             resp = self._client.chat_completion(
                 messages=full_messages,
                 model=model,
-                max_tokens=max_tokens,
+                # Same CF floor `parse` applies: a `@cf*` model under it returns
+                # empty content with finish_reason=length. `complete` has no
+                # repair ladder to notice that, so the floor matters MORE here.
+                max_tokens=min_max_tokens_for(model, max_tokens),
                 provider=self.provider_for_model(model),
             )
             logger.debug("LLMRouter.complete: success model=%s", model)

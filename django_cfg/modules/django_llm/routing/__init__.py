@@ -26,7 +26,7 @@ from .presets import (
     escalate,
     extract,
     extract_chat,
-    extract_chat_gonka,
+    extract_chat_bulk,
     extract_many,
 )
 from .providers import (
@@ -49,7 +49,7 @@ __all__ = [
     # sync presets
     "extract",
     "extract_chat",
-    "extract_chat_gonka",
+    "extract_chat_bulk",
     "classify",
     "chat_with_tools",
     "escalate",

@@ -5,6 +5,7 @@ Translation Cache Manager - stores translations by language pairs like in unreal
 import hashlib
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -60,8 +61,19 @@ class TranslationCacheManager:
         try:
             with open(cache_file, encoding='utf-8') as f:
                 return json.load(f)
-        except (OSError, json.JSONDecodeError) as e:
-            logger.warning(f"Failed to load cache file {cache_file}: {e}")
+        # `UnicodeDecodeError` IS IN THIS TUPLE FOR A REASON, and it is not
+        # theoretical: a killed run left `en→ru.json` truncated mid-character,
+        # and because the decode error escaped this handler it propagated out of
+        # `get()` and failed EVERY subsequent translation into that language —
+        # 406 of 691 roles, deterministically, surviving re-runs. A cache that
+        # cannot be read must degrade to a cache miss; it must never become a
+        # permanent outage for the thing it was meant to speed up.
+        #
+        # `UnicodeDecodeError` subclasses `ValueError`, not `OSError`, and
+        # `json.JSONDecodeError` never fires because the failure happens in the
+        # codec before the parser sees anything.
+        except (OSError, ValueError) as e:
+            logger.warning(f"Failed to load cache file {cache_file}, ignoring it: {e}")
             return {}
 
     def _save_file_cache(self, source_lang: str, target_lang: str, cache_data: Dict[str, Any]):
@@ -72,8 +84,18 @@ class TranslationCacheManager:
             # Ensure directory exists
             cache_file.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(cache_file, 'w', encoding='utf-8') as f:
+            # WRITE-THEN-RENAME, because the direct write is what corrupted the
+            # file above: `open(...,'w')` truncates immediately, so a process
+            # killed mid-dump leaves a half-written file on disk. `os.replace`
+            # is atomic within a filesystem, so a reader sees either the old
+            # complete file or the new one — never a partial.
+            #
+            # The temp file sits beside the target rather than in /tmp, so the
+            # rename never crosses a filesystem boundary.
+            tmp_file = cache_file.with_suffix('.json.tmp')
+            with open(tmp_file, 'w', encoding='utf-8') as f:
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_file, cache_file)
 
         except OSError as e:
             logger.error(f"Failed to save cache file {cache_file}: {e}")

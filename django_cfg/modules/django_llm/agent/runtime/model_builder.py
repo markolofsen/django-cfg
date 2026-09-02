@@ -84,7 +84,7 @@ def resolve_provider() -> tuple[str, str, str | None]:
     keys = get_api_keys()
     urls = PROVIDER_BASE_URLS
 
-    for name in ("openrouter", "openai", "gonkagate"):
+    for name in ("openrouter", "openai"):
         key = keys.get(name)
         if key:
             base_url = None if name == "openai" else urls[name]

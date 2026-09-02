@@ -11,7 +11,6 @@ Env (all optional; explicit args override):
     CMDOP_PROJECT_NAME, CMDOP_ENVIRONMENT
     CMDOP_LLM_KEYS__OPENROUTER | OPENROUTER_API_KEY
     CMDOP_LLM_KEYS__OPENAI     | OPENAI_API_KEY
-    CMDOP_LLM_KEYS__GONKAGATE  | GONKAGATE_API_KEY
     CMDOP_TELEGRAM_BOT_TOKEN, CMDOP_TELEGRAM_CHAT_ID, CMDOP_TELEGRAM_PARSE_MODE
 
 `BaseCfgModule` is the framework-neutral base the ported clients subclass; its
@@ -48,8 +47,12 @@ class _TelegramSettings(BaseModel):
 class APIKeys(BaseModel):
     openrouter: str | None = None
     openai: str | None = None
-    gonkagate: str | None = None
-    gonkagate_pool: list[str] = Field(default_factory=list)
+    # The cmdop token for the edge proxy (`llm.sdkrouter.com`). Distinct from the
+    # two above in kind, not just in value: those are VENDOR credentials that
+    # work against a vendor directly, this one works nowhere else. That is the
+    # point of the proxy — a leaked cmdop token buys an attacker our proxy, not
+    # our OpenRouter balance.
+    sdkrouter: str | None = None
 
     def get_openrouter_key(self) -> str | None:
         return self.openrouter
@@ -57,8 +60,8 @@ class APIKeys(BaseModel):
     def get_openai_key(self) -> str | None:
         return self.openai
 
-    def get_gonkagate_key(self) -> str | None:
-        return self.gonkagate
+    def get_sdkrouter_key(self) -> str | None:
+        return self.sdkrouter
 
 
 class LLMConfig(BaseSettings):
@@ -105,15 +108,12 @@ def _load_from_env() -> LLMConfig:
             or env("CMDOP_DEV_LLM_KEYS__OPENAI")
             or env("OPENAI_API_KEY")
         )
-    if not cfg.api_keys.gonkagate:
-        cfg.api_keys.gonkagate = (
-            env("CMDOP_LLM_KEYS__GONKAGATE")
-            or env("CMDOP_DEV_LLM_KEYS__GONKAGATE")
-            or env("GONKAGATE_API_KEY")
+    if not cfg.api_keys.sdkrouter:
+        cfg.api_keys.sdkrouter = (
+            env("CMDOP_LLM_KEYS__SDKROUTER")
+            or env("CMDOP_DEV_LLM_KEYS__SDKROUTER")
+            or env("CMDOP_LLM_PROXY_TOKEN")
         )
-    pool = env("CMDOP_LLM_KEYS__GONKAGATE_POOL") or env("GONKAGATE_API_KEYS")
-    if pool and not cfg.api_keys.gonkagate_pool:
-        cfg.api_keys.gonkagate_pool = [key.strip() for key in pool.split(",") if key.strip()]
     if not cfg.telegram.bot_token:
         cfg.telegram.bot_token = env("CMDOP_TELEGRAM_BOT_TOKEN")
     if not cfg.telegram.chat_id:

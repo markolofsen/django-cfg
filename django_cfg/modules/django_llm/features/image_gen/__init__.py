@@ -13,6 +13,7 @@ from .models import (
     ImageSize,
     ImageQuality,
     ImageStyle,
+    ModelQuality,
     IMAGE_GEN_PRESETS,
     get_image_gen_price,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "ImageSize",
     "ImageQuality",
     "ImageStyle",
+    "ModelQuality",
     "IMAGE_GEN_PRESETS",
     "get_image_gen_price",
 ]

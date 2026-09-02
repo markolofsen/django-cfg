@@ -5,11 +5,13 @@ preset resolves to a current OpenRouter model ID. When Google bumps
 the Nano Banana lineup, ONE constant changes here; every caller
 follows automatically.
 
-Cost ballpark (June 2026 OpenRouter pricing, per typical real-estate
-photo edit at HD output):
-    fast      ≈ $0.07     Nano Banana GA — cheapest, stable
-    balanced  ≈ $0.07-0.10 Nano Banana 2 — preview, better preserve
-    premium   ≈ $0.30-0.50 Nano Banana Pro — best fidelity + 2K/4K
+Rates per 1M completion tokens, measured against the router catalogue
+2026-08-30. Per-edit dollar figures are deliberately absent: the old
+ones were measured on a SKU `fast` no longer points at, and carrying
+them over would attribute one model's cost to another.
+    fast      0.00150  3.1-flash-lite-image — cheapest of the nine
+    balanced  0.00300  Nano Banana 2 — preview, better preserve
+    premium   0.01200  Nano Banana Pro — best fidelity + 2K/4K
 """
 
 from __future__ import annotations

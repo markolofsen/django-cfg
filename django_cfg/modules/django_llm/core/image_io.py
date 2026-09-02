@@ -230,9 +230,15 @@ def validate_raster_image(
 # above that ceiling wastes tokens; sending input below it starves
 # the model of detail for the edit decision. Match input to output:
 #
-#   * ``fast`` (Nano Banana 1, output 1024×1024)        → input 1024
+#   * ``fast`` (3.1-flash-lite-image)                   → input 1024
 #   * ``balanced`` (Nano Banana 2, output up to ~1792)  → input 1536
 #   * ``premium`` (Nano Banana Pro, output 2K-4K)       → input 2048
+#
+# The ``fast`` cap is INHERITED, not re-derived: it was matched to Nano
+# Banana 1's 1024 output, and `fast` moved to 3.1-flash-lite-image on
+# 2026-08-30 without that model's output ceiling being measured. Kept
+# because 1024 is the conservative direction — too-small input starves
+# detail, too-large only wastes tokens. Re-measure before raising it.
 #
 # Premium intentionally sits below 4K — 2048 gives Pro 1:1 detail
 # at its 2K mode and 2× headroom for 4K decisions, while still

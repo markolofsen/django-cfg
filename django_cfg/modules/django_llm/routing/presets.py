@@ -155,7 +155,7 @@ def extract_chat(
     )
 
 
-def extract_chat_gonka(
+def extract_chat_bulk(
     schema: type[T],
     messages: list[dict],
     *,
@@ -167,6 +167,15 @@ def extract_chat_gonka(
     Use this instead of ``extract_chat`` when cost matters more than latency —
     bulk ingestion, offline normalization, batch processing. Do NOT use it on
     interactive paths where a user is waiting for a response.
+
+    RENAMED from ``extract_chat_gonka`` on 2026-08-15. The gonka network was
+    retired 2026-08-01 and this function had already been repointed at
+    ``openai/gpt-4o-mini`` — so the name promised a provider it had not used for
+    two weeks. One caller had noticed and written it into a comment
+    ("resolves to gpt-4o-mini") rather than renaming the function.
+
+    ``extract_chat_gonka`` remains as a deprecated alias so existing callers
+    keep working; it will go once they are migrated.
     """
     router = LLMRouter(["openai/gpt-4o-mini"])
     return router.parse(
@@ -175,6 +184,11 @@ def extract_chat_gonka(
         system=system,
         max_tokens=max_tokens,
     )
+
+
+#: Deprecated alias — see `extract_chat_bulk`. Kept so callers that still import
+#: the old name do not break; migrate and then delete.
+extract_chat_gonka = extract_chat_bulk
 
 
 # ── Async twins ──────────────────────────────────────────────────────────────

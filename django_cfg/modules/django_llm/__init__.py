@@ -49,7 +49,19 @@ from .catalog import ModelRole
 from .storage import LLMCache
 
 # Provider abstraction.
-from .providers import PROVIDER_BASE_URLS, LLMProvider
+from .providers import (
+    CF,
+    CF_ALIASES,
+    CF_MIN_MAX_TOKENS,
+    CF_STRUCTURED_OUTPUT,
+    PROVIDER_BASE_URLS,
+    REASONING_MIN_MAX_TOKENS,
+    SDKROUTER_BASE_URL,
+    LLMProvider,
+    is_cf_model,
+    is_reasoning_model,
+    min_max_tokens_for,
+)
 
 # Routing — cascade engine + presets (sync + async twins + fan-out).
 from .routing import (
@@ -66,7 +78,7 @@ from .routing import (
     escalate,
     extract,
     extract_chat,
-    extract_chat_gonka,
+    extract_chat_bulk,
     extract_many,
 )
 
@@ -237,7 +249,16 @@ __all__ = [
     "LLMCache",
     # Providers
     "LLMProvider",
+    "CF",
+    "CF_ALIASES",
+    "CF_MIN_MAX_TOKENS",
+    "CF_STRUCTURED_OUTPUT",
     "PROVIDER_BASE_URLS",
+    "REASONING_MIN_MAX_TOKENS",
+    "SDKROUTER_BASE_URL",
+    "is_cf_model",
+    "is_reasoning_model",
+    "min_max_tokens_for",
     # Routing
     "LLMRouter",
     "LLMRouterError",
@@ -247,7 +268,7 @@ __all__ = [
     "escalate",
     "extract",
     "extract_chat",
-    "extract_chat_gonka",
+    "extract_chat_bulk",
     "extract_many",
     "aclassify",
     "achat_with_tools",

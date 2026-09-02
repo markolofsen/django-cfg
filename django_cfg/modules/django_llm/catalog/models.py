@@ -36,17 +36,21 @@ from .roles import ModelRole, Verdict
 
 PROVIDER_OPENROUTER = "openrouter"
 PROVIDER_OPENAI = "openai"
-PROVIDER_GONKA = "gonkagate"
+PROVIDER_SDKROUTER = "sdkrouter"
+
+# Imported late-ish on purpose: `providers/` drags in the OpenAI SDK, but this
+# helper is a pure string test with no such dependency, so the catalogue stays
+# cheap to import.
+from ..providers.sdkrouter_aliases import CF_STRUCTURED_OUTPUT, is_cf_model  # noqa: E402
 
 #: Provider for a slug the catalog does not know.
 #:
 #: OpenRouter, deliberately: it is the AGGREGATOR — it fronts OpenAI,
 #: Anthropic, Google, Meta, DeepSeek, Qwen and friends behind one
 #: `vendor/model` slug namespace, which is exactly the namespace every
-#: slug in this file is written in. gonka, by contrast, serves only a
-#: small fixed set of models (see ``providers/provider_manager.py``
-#: ``_init_gonka_client``), so defaulting an unknown slug to gonka would
-#: send it to a provider that has never heard of it.
+#: slug in this file is written in. The sdkrouter proxy, by contrast,
+#: resolves a curated set of ALIASES, so defaulting an unknown
+#: `vendor/model` slug onto it would send a name it does not publish.
 DEFAULT_PROVIDER = PROVIDER_OPENROUTER
 
 
@@ -192,27 +196,46 @@ _CATALOG: dict[str, ModelTraits] = {
         },
         issues=("recency bias — drops tools described early in a long prompt",),
     ),
-    "moonshotai/kimi-k2.6": ModelTraits(
-        slug="moonshotai/kimi-k2.6",
-        reasoning=False, reasoning_disablable=True,
-        # THE gonka model. Verified from two places in the code, not guessed:
-        #   - providers/provider_manager.py::_init_gonka_client — "serves the
-        #     gonka network's chat models (e.g. minimaxai/minimax-m2.7,
-        #     moonshotai/kimi-k2.6)";
-        #   - providers/config_builder.py::get_default_model — gonkagate's
-        #     default model IS "moonshotai/kimi-k2.6".
-        # It was already the only slug any caller ever paired with
-        # preferred_provider=GONKA (marketplace ingestion reviewer).
-        provider=PROVIDER_GONKA,
+    CF_STRUCTURED_OUTPUT: ModelTraits(
+        slug=CF_STRUCTURED_OUTPUT,
+        reasoning=False, reasoning_disablable=False,
+        # An ALIAS the sdkrouter proxy resolves, not a vendor slug — it landed
+        # on `cf/openai/gpt-oss-20b` when verified on 2026-09-02, and the point
+        # of naming the promise rather than the model is that the upstream can
+        # move without this entry changing.
+        #
+        # Catalogued so the recommendation integrity tests can see it. Note
+        # `provider_for()` short-circuits `@cf*` before consulting this table;
+        # the entry exists for the ROLE verdicts, not for routing.
+        provider=PROVIDER_SDKROUTER,
         roles={
             ModelRole.EXTRACTION: Verdict.OK,
             ModelRole.CLASSIFY: Verdict.OK,
         },
         issues=(
-            "gonka random-host latency 11–57s — RACE it (see races()); a single "
-            "leg's tail latency is the whole call's latency",
-            "gonka availability is not underwritten — 502s observed for a whole "
-            "run; always keep an openrouter model ahead of or behind it in the chain",
+            "reserves part of max_tokens for a reasoning pass that never reaches "
+            "content; under ~2000 it returns empty with finish_reason=length. "
+            "LLMRouter raises the floor (min_max_tokens_for) — a caller that "
+            "bypasses the router must do it itself",
+            "behind the sdkrouter proxy — availability is only as good as that "
+            "Worker; the chain keeps openrouter models behind it",
+        ),
+    ),
+    "moonshotai/kimi-k2.6": ModelTraits(
+        slug="moonshotai/kimi-k2.6",
+        reasoning=False, reasoning_disablable=True,
+        # Routed through the sdkrouter edge proxy since 2026-09-02, when
+        # `gonkagate` was retired. Confirm the proxy publishes an alias for
+        # this slug before relying on it — the proxy resolves names it knows,
+        # and an unpublished one 404s rather than falling through.
+        provider=PROVIDER_SDKROUTER,
+        roles={
+            ModelRole.EXTRACTION: Verdict.OK,
+            ModelRole.CLASSIFY: Verdict.OK,
+        },
+        issues=(
+            "behind the sdkrouter proxy — availability is only as good as that "
+            "Worker; keep an openrouter model ahead of or behind it in the chain",
         ),
     ),
 }
@@ -225,8 +248,31 @@ _CATALOG: dict[str, ModelTraits] = {
 
 _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
     ModelRole.EXTRACTION: (
-        "openai/gpt-4o-mini",         # openrouter — primary; strict json_schema reliable
-        "google/gemini-2.5-flash",    # openrouter fallback
+        # OpenRouter leads, and Cloudflare is deliberately NOT here — on
+        # LATENCY, not correctness.
+        #
+        # Strict JSON through the proxy is fixed as of 2026-09-02 (it rewrites
+        # `response_format` into the Workers AI shape), and `@cf` re-measured
+        # 5/5 on the `anyOf` form `to_strict_json_schema` emits for
+        # `int | None`. What rules it out is speed: five DISTINCT listings took
+        # 17.6/20.0/49.3/78.4s through `@cf` against 1.0-1.3s for gpt-4o-mini,
+        # and ingestion runs thousands of them.
+        #
+        # Put CF_STRUCTURED_OUTPUT back at the head of this tuple if CF latency
+        # reaches single digits — the models are capable and much cheaper.
+        # Measure with DISTINCT prompts: the proxy caches, and a repeated prompt
+        # returns in ~0.0s.
+        # gemini-2.5-flash leads on operator judgement: it is the model that
+        # has been watched doing this job on real listings. The catalogue grades
+        # it EXTRACTION=OK rather than GOOD and `advisories` warns that a
+        # reasoning model in the hot path costs determinism — both are general
+        # cautions, and neither outranks having seen it work here. Its thinking
+        # is disablable, which is what makes the caution survivable.
+        #
+        # gpt-4o-mini stays directly behind it: 28/28 on the strict-JSON bench,
+        # so a fallback that is stronger on schema adherence than the primary.
+        "google/gemini-2.5-flash",    # openrouter — primary
+        "openai/gpt-4o-mini",         # openrouter fallback; strict json_schema reliable
     ),
     ModelRole.TOOL_CHAT: (
         # THIS TUPLE IS THE LIVE `auto`+tools PICK. The dispatcher
@@ -245,6 +291,8 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
         "google/gemini-2.5-flash",        # cheaper Flash fallback
     ),
     ModelRole.CLASSIFY: (
+        # Same reasoning as EXTRACTION above — this role wants strict JSON too,
+        # so it waits on the same proxy fix.
         "openai/gpt-4o-mini",         # openrouter — primary
         "google/gemini-2.5-flash",    # openrouter fallback
     ),
@@ -271,14 +319,22 @@ def provider_for(slug: str) -> str:
     """Which provider serves ``slug`` — the single source of provider truth.
 
     Returns an ``LLMProvider`` *value* (``"openrouter"`` / ``"openai"`` /
-    ``"gonkagate"``), never an enum, so importing the catalog stays free of the
+    ``"sdkrouter"``), never an enum, so importing the catalog stays free of the
     OpenAI SDK that ``providers/`` drags in. Callers that need the enum do
     ``LLMProvider(provider_for(slug))``.
 
     An uncatalogued slug gets ``DEFAULT_PROVIDER`` (openrouter, the
-    aggregator) — we never guess a slug onto gonka, which serves only a
-    small fixed model set.
+    aggregator) — we never guess a slug onto sdkrouter, which publishes a
+    curated alias set rather than the whole `vendor/model` namespace.
     """
+    # A Cloudflare alias resolves before the catalogue is consulted. `@cf-fast`
+    # and friends are names the sdkrouter PROXY publishes, not `vendor/model`
+    # slugs, so they will never be catalogued — and falling through to
+    # DEFAULT_PROVIDER sent them to OpenRouter, which answers
+    # "@cf-fast is not a valid model ID". Measured 2026-09-02.
+    if is_cf_model(slug):
+        return PROVIDER_SDKROUTER
+
     entry = _CATALOG.get(slug)
     return entry.provider if entry else DEFAULT_PROVIDER
 
@@ -286,13 +342,19 @@ def provider_for(slug: str) -> str:
 def races(slug: str) -> bool:
     """Whether ``slug`` should be RACED (parallel legs, first clean wins).
 
-    A property of the MODEL's provider, not of the call. gonka assigns each
-    request to a random network host, so per-call latency is 11–57s with a long
-    tail; two staggered legs plus first-clean-wins cuts that tail and survives an
-    empty/errored leg. Every other provider serves from one endpoint at
-    predictable latency — racing there would just double the bill for nothing.
+    A property of the MODEL's provider, not of the call.
+
+    **Nothing races today, and that is the correct answer, not an oversight.**
+    Racing existed for `gonkagate`, which assigned each request to a random
+    network host and so had an 11–57s latency spread with a long tail; two
+    staggered legs cut it. Every remaining provider — including the sdkrouter
+    proxy that replaced it — serves from one endpoint at predictable latency,
+    where a second leg doubles the bill and buys nothing.
+
+    Kept as a function rather than deleted: it is the one place that decides,
+    and a provider with a latency tail may appear again.
     """
-    return provider_for(slug) == PROVIDER_GONKA
+    return False
 
 
 def recommend(role: ModelRole) -> list[str]:

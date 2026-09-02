@@ -73,9 +73,14 @@ class ImageGenClient(BaseCfgModule):
     def default_model(self) -> str:
         return self._default_model or DEFAULT_IMAGE_GEN_MODEL
 
-    def _select_model(
+    def select_model(
         self, model: Optional[str] = None, model_quality: Optional[ModelQuality] = None,
     ) -> str:
+        """The model an equivalent `generate()` would dial.
+
+        Public so a caller can attribute spend on a failed attempt without
+        re-deriving the ladder.
+        """
         if model:
             return model
         return IMAGE_GEN_PRESETS.get(model_quality) or self.default_model
@@ -161,7 +166,7 @@ class ImageGenClient(BaseCfgModule):
         style: ImageStyle = "vivid",
         response_format: ResponseFormat = "b64_json",
     ) -> ImageGenResponse:
-        selected_model = self._select_model(model, model_quality)
+        selected_model = self.select_model(model, model_quality)
         if n < 1 or n > 10:
             raise ValueError("n must be between 1 and 10")
         if self._uses_chat_multimodal(selected_model):
