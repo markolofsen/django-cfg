@@ -1,0 +1,189 @@
+---
+title: Welcome Email
+description: The one-time welcome letter — trigger, one-send guarantee, locale resolution, template overrides, and editable per-locale copy.
+---
+
+import { Callout } from 'nextra/components'
+
+# Welcome Email
+
+A one-time welcome letter sent the moment a user's email is first proven —
+whether that happens through OTP verify or an OAuth login.
+
+---
+
+## Trigger
+
+The accounts app fires [`user_email_verified`](/features/built-in-apps/user-management/accounts#extension-signals) on
+every successful email verification, on both auth paths. A dedicated receiver,
+`handle_welcome_email` in `accounts/signals.py`, calls
+`services/welcome.py::send_welcome_email(user)` on that signal:
+
+```python
+@receiver(user_email_verified, dispatch_uid="django_cfg.accounts.welcome_email")
+def handle_welcome_email(sender, user, **kwargs):
+    from .services.welcome import send_welcome_email
+    send_welcome_email(user)
+```
+
+The trigger is deliberately **verification**, not user creation:
+
+- Sending at OTP *request* time (the previous implementation) welcomed an
+  address before it ever entered its code — an unproven signup got "your
+  account has been created" mail.
+- Sending only on OTP also missed OAuth entirely, since that path never called
+  it. GitHub signups received no welcome mail at all.
+
+`user_email_verified` already fires on both paths, so one receiver covers both.
+
+---
+
+## One-send guarantee
+
+The signal fires on **every** verification (not just the first), so the signal
+itself can't be the guard. `send_welcome_email()` claims the send atomically
+with a conditional `UPDATE` on `CustomUser.welcome_email_sent_at` (added by
+migration `0025_customuser_welcome_email_sent_at`):
+
+```python
+claimed = CustomUser.objects.filter(
+    pk=user.pk, welcome_email_sent_at__isnull=True
+).update(welcome_email_sent_at=timezone.now())
+if not claimed:
+    return False
+```
+
+A read-then-write would let two concurrent verifications both pass the check
+and mail the user twice; the `UPDATE ... WHERE ... IS NULL` closes that race.
+
+The call is a no-op (`False`, no mail sent) when:
+
+- the user has no email,
+- `user.is_test_account` is `True`, or
+- the letter was already sent.
+
+If the underlying send raises synchronously (a queueing failure, not a
+delivery failure — sending itself happens on a background thread), the claim
+is released by resetting `welcome_email_sent_at` back to `None` before
+re-raising, so a retry can still deliver the letter.
+
+---
+
+## Locale resolution
+
+`resolve_locale(user, accept_language)` picks the language to render in, in
+this order:
+
+1. **`user.language`** — the stored preference, if set.
+2. **`Accept-Language`** header — parsed and matched against
+   `SUPPORTED_LOCALES`.
+3. **`en`** (`DEFAULT_LOCALE`) — fallback.
+
+`settings.LANGUAGE_CODE` is deliberately **not** in that chain — it's the
+project's own default, not a statement about the recipient. A project
+configured as `ru` sending Russian to a French speaker it doesn't support
+would be worse than English, the language most readers of an English-authored
+product can fall back to.
+
+`persist_user_language()` writes `user.language` from `Accept-Language`
+**once**, on any path that proves an email — write-once so a later visit from
+a differently configured browser can't silently override a preference the
+user set explicitly in their profile.
+
+### Supported locales
+
+```
+en, ru, ko, ja, de, fr, zh, it, es, nl, ar, tr, pt-BR, pl, sv, no, da
+```
+
+Defined in `apps/system/mailer/locales.py` as the single source of truth for
+every localized letter (welcome included) — mirrored from the frontend i18n
+locale list. `ar` (and `he`, `fa`, `ur`, though none of those are in the
+supported set today) are treated as right-to-left, driving the `text_dir`
+template context var.
+
+---
+
+## Template
+
+The letter renders `emails/welcome` (`WELCOME_TEMPLATE`). Override it
+per-locale in your own project at `templates/emails/welcome/<locale>.html`
+(e.g. `emails/welcome/ru.html`); the framework's own template is only the
+fallback.
+
+<Callout type="info">
+Default `text_only=True` on the real signal path — this letter is written in
+the first person and asks nothing of the recipient beyond a click, and an
+HTML page dressed up as a typed message reads as marketing however carefully
+it's styled.
+</Callout>
+
+---
+
+## Editable per-locale copy
+
+Body copy for the welcome letter (and every other account notification) can
+be overridden per-locale from the database via the `mailer` app's
+`EmailContent` model, without a redeploy.
+
+Each letter resolves its own row by a `copy_key`, so letters don't collide on
+shared copy:
+
+| Letter | `copy_key` |
+|---|---|
+| Welcome | *(none passed — resolves off its template name, `emails/welcome` → `welcome`)* |
+| OTP | `otp_code` |
+| Profile updated | `profile_updated` |
+| Account activated | `account_activated` |
+| Account deactivated | `account_deactivated` |
+| Login notification | `login_notification` |
+| Security alert | `security_alert` |
+| Suspicious activity | `suspicious_activity` |
+
+<Callout type="warning">
+`copy_key` only supplies template-context copy — it can never override the
+[OTP subject line](./otp#otp-code-in-the-email-subject), which is passed to
+the mailer directly and is never read from the `EmailContent` row.
+</Callout>
+
+The lookup fails soft: before the `EmailContent` migration has run, or on any
+database error, `_resolve_copy` catches the exception and returns `{}` — the
+letter still sends with its built-in wording rather than not sending at all.
+
+---
+
+## Sending a preview
+
+Prefer `services.welcome.send_welcome_email` for the real signal path — it's
+the one with the one-send guarantee and locale resolution. The lower-level
+sender it calls, `AccountNotifications.send_welcome_email`, sends
+**unconditionally** on every call and is not meant to be called directly from
+product code.
+
+To preview the letter without touching `welcome_email_sent_at` or creating a
+user, use the [`send_welcome_email` management
+command](/cli/commands/testing-monitoring#send_welcome_email):
+
+```bash
+python manage.py send_welcome_email you@example.com
+python manage.py send_welcome_email you@example.com --locale ru
+python manage.py send_welcome_email you@example.com --all-locales
+```
+
+---
+
+## Source Files
+
+| File | Role |
+|---|---|
+| `accounts/signals.py` | `handle_welcome_email` receiver on `user_email_verified` |
+| `accounts/services/welcome.py` | Trigger guard, one-send claim, locale resolution |
+| `accounts/services/welcome_preview.py` | Preview sends for the management command |
+| `accounts/utils/notifications.py` | `AccountNotifications.send_welcome_email`, `_resolve_copy` |
+| `apps/system/mailer/locales.py` | `SUPPORTED_LOCALES`, `DEFAULT_LOCALE`, `RTL_LANGUAGES` |
+| `apps/system/mailer/models/content.py` | `EmailContent` (editable per-locale copy) |
+| `accounts/migrations/0025_customuser_welcome_email_sent_at.py` | `welcome_email_sent_at` field |
+| `accounts/management/commands/send_welcome_email.py` | Preview CLI command |
+
+TAGS: welcome-email, locale, i18n, EmailContent, copy_key, notifications
+DEPENDS_ON: [index, otp]

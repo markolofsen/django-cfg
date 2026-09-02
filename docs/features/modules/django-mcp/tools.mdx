@@ -23,6 +23,16 @@ Controlled by `DjangoMCPModuleConfig.introspection`. When `introspection.enabled
 | `get_model_schema` | Returns field definitions for a specific model. |
 | `list_urls` | Returns URL patterns (requires `introspection.expose_urls = True`). |
 
+`list_urls` is paginated — a real project can have thousands of URL patterns, and an unbounded response has been measured at ~9,700 patterns / ~360 KB / ~90k tokens in a single tool result, enough to consume an agent's entire context window on one call. It accepts:
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `contains` | — | Substring filter, matched against the pattern or the URL name. |
+| `limit` | `200` | Max patterns returned, capped at `2000`. |
+| `offset` | `0` | Skip this many matches — for paging through a filtered set. |
+
+The response includes `total_urls`, `matched`, `returned`, `offset`, and `truncated: bool` so an agent can tell "these are all the matches" from "there are more — increase `offset` or narrow `contains`".
+
 ### Model queries (`tools/model_tools.py`)
 
 Both tools check `config.is_model_exposed(app_label, model_name)` before executing. Fields listed in `ModelMCPConfig.hidden_fields` are stripped from results. `max_results` caps the queryset size.
@@ -75,6 +85,7 @@ class MCPTool(ABC):
 - `description` is the most important field — it determines when the LLM decides to use the tool. Write it precisely.
 - `input_schema` is sent verbatim to the LLM as the function parameter schema in OpenAI tool format.
 - `execute()` must always return a `str`. For structured data, return a JSON-encoded string. For errors, return a plain error message string — do not raise exceptions (the runner catches them and returns the message).
+- `is_available(context)` may be called with `context=None` — the public `/info/` listing checks availability without a request context. If you override `is_available`, it must tolerate a missing context rather than assume one is always present.
 
 ## Adding a custom tool
 

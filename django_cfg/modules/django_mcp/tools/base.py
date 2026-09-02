@@ -14,6 +14,18 @@ class MCPTool(ABC):
     description: str = ""
     input_schema: Dict[str, Any] = {}
 
+    #: Whether an anonymous profile may serve this tool.
+    #:
+    #: **Defaults to False, and the default is the design.** A tool declared
+    #: beside its own code is the only place that knows whether it is safe to
+    #: expose; a list kept in the project's config is a second place, and the
+    #: two drift the moment someone adds a tool without editing it. Silently,
+    #: and in the direction that publishes an operator capability.
+    #:
+    #: Set True only for a tool that reads data already public, returns no
+    #: personal data, and cannot mutate anything.
+    public: bool = False
+
     def to_definition(self) -> Dict[str, Any]:
         """Return tool definition for MCP tools/list response."""
         return {
@@ -68,7 +80,7 @@ class MCPToolRegistry:
         """Get tool by name."""
         return self._tools.get(name)
 
-    def get_all_tools(self, context: Optional[MCPContext]) -> list:
+    def get_all_tools(self, context: Optional[MCPContext], *, profile=None) -> list:
         """Tools this context may see.
 
         Registration happens at import time, when there is no config to consult,
@@ -85,8 +97,18 @@ class MCPToolRegistry:
         directly turned ``/info/`` into a 500 on every upgraded deployment,
         and because that view answers *before* authentication it broke for
         everyone while the authenticated surface stayed green.
+
+        ``profile`` narrows the result to what that surface serves. It is a
+        keyword because ``/info/`` has a profile but no context, so the two
+        cannot be folded into one argument.
         """
-        return [tool for tool in self._tools.values() if tool.is_available(context)]
+        profile = profile if profile is not None else getattr(context, "profile", None)
+        tools = [tool for tool in self._tools.values() if tool.is_available(context)]
+        if profile is not None and not profile.serves_all_tools:
+            # The tool object, not its name: `PUBLIC_TOOLS` resolves by reading
+            # the tool's own `public` flag.
+            tools = [tool for tool in tools if profile.serves(tool)]
+        return tools
 
 
 # Global tool registry instance

@@ -157,6 +157,36 @@ The default is derived from the edge-provided `CF-IPCountry` header against the 
 
 ---
 
+## OTP Code In The Email Subject
+
+The OTP email's subject line **includes the plaintext code**:
+`subject=f"Your OTP code: {otp_code}"` (`utils/notifications.py`). This is
+deliberate, not an oversight — the recipient can read the code straight off a
+lock-screen or preview-pane notification without opening the email.
+
+<Callout type="warning">
+The preview exposure this implies is **known and accepted**. It was briefly
+removed (code moved out of the subject) and shipped as django-cfg 2.2.137,
+then reverted the same day on the owner's explicit instruction — the
+convenience of a lock-screen-readable code *is* the feature.
+
+Don't rely on the subject being static or predictable-format-free: if you're
+building anything that reads the OTP email's subject (a filter, a third-party
+integration), assume the code is there in plaintext by design.
+</Callout>
+
+The letter's `copy_key` (`otp_code`) only supplies admin-editable **body**
+copy — see [editable per-locale copy](./welcome-email#editable-per-locale-copy).
+It cannot move the code out of the subject: the subject string is passed
+directly to the mailer and is never read from the copy row.
+
+The body also shows the code large, and states a 10-minute expiry in the
+notification copy — that's the email's own wording, not necessarily the
+enforced `OTPSecret` TTL; check the model directly if you need the actual
+enforced lifetime.
+
+---
+
 ## Brute-Force Protection Layers
 
 Four independent layers working in sequence:

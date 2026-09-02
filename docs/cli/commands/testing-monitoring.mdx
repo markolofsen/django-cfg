@@ -493,6 +493,45 @@ python manage.py otp_test [OPTIONS]
 python manage.py otp_test --email user@example.com
 ```
 
+## Welcome Email Preview
+
+### `send_welcome_email`
+
+Send the [welcome letter](/features/built-in-apps/user-management/accounts/welcome-email)
+to an address for review, without marking it sent — the same address can be
+re-sent indefinitely.
+
+```bash
+python manage.py send_welcome_email <email> [OPTIONS]
+```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `email` | `TEXT` | Recipient address (positional, required) |
+| `--locale` | `TEXT` | Locale to render (default: project default, or `--as-user`'s stored language) |
+| `--all-locales` | flag | Send one copy per supported locale — for reviewing translations. Mutually exclusive with `--locale` |
+| `--as-user` | `TEXT` | Render using an existing user's context and stored `language` |
+
+**Examples:**
+
+```bash
+python manage.py send_welcome_email you@example.com
+python manage.py send_welcome_email you@example.com --locale ru
+python manage.py send_welcome_email you@example.com --all-locales
+python manage.py send_welcome_email you@example.com --as-user someone@example.com
+```
+
+<Callout type="info">
+The command blocks until the email service's background daemon threads
+finish sending (30s timeout). This is deliberate: the transport sends on a
+daemon thread, and a management command's process exits the instant `handle()`
+returns — without the wait, the process would kill the send mid-flight and
+still print a false "queued" with no log row to show for it.
+</Callout>
+
+It never writes `welcome_email_sent_at`, so it never touches the one-send
+guarantee that the real signup path relies on — this is preview-only.
+
 ## Cron Setup
 
 ```bash

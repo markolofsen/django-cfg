@@ -180,6 +180,60 @@ python manage.py check_settings --verbose
 
 ---
 
+### `check_editable`
+
+Diagnoses the dev gotcha where an editable (`pip install -e`) django-cfg
+checkout gets silently shadowed by a PyPI copy — e.g. a plain `uv sync`
+reinstalling the published wheel over your editable link — or by anything
+else shadowing the package (a stray `PYTHONPATH` entry, a leftover copy, a
+second virtualenv). Read-only; it never mutates anything.
+
+<Callout type="info">
+This is a framework-contributor / local-checkout tool. It only fires for
+machines developing django-cfg itself (keyed off a `~/djangocfg` checkout or
+the `DJANGO_CFG_EDITABLE_EXPECTED` env var). A typical consumer app running
+the published PyPI wheel will just see "no editable install expected on this
+machine" and exit clean.
+</Callout>
+
+```bash
+python manage.py check_editable [OPTIONS]
+```
+
+| Option | Type | Description |
+|--------|------|--------------|
+| `--strict` | `flag` | Exit with code 1 on mismatch (default: always exits 0) |
+
+**Output fields:**
+
+- **Loaded from** — the directory `django_cfg` actually imported from (`django_cfg.__file__`'s parent)
+- **In site-packages** — whether that path lives in an installed-packages tree
+- **Editable source** — the resolved `~/djangocfg` checkout path, or "not found"
+- **Editable env** — whether `DJANGO_CFG_EDITABLE_EXPECTED` is set
+- **Editable expected** — whether either signal above means an editable install was intended
+
+**Examples:**
+
+```bash
+# Check where django-cfg is actually loaded from
+python manage.py check_editable
+
+# Fail the command (exit 1) if a mismatch is found — useful in a pre-flight script
+python manage.py check_editable --strict
+```
+
+On a mismatch, the message names what was actually found instead of always
+blaming PyPI:
+
+- Loaded from site-packages → `❌ django-cfg loaded from PyPI copy (site-packages)... Fix: make install-local`
+- Loaded from somewhere else entirely → `❌ django-cfg loaded from outside your editable source... check PYTHONPATH, a stray django_cfg/ copy, or a second virtualenv.`
+
+The same message branching also drives the yellow startup-banner warning you
+get in dev when django-cfg boots from the wrong copy — `check_editable` just
+lets you check it on demand.
+
+---
+
 ## API Endpoints Testing
 
 ### `check_endpoints`

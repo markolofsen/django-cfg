@@ -9,15 +9,135 @@ from dataclasses import dataclass, field
 from functools import wraps
 
 from django_cfg.modules.django_mcp import (
+    ALL_TOOLS,
+    PUBLIC_TOOLS,
     DjangoMCPModuleConfig,
     IntrospectionConfig,
     AppMCPConfig,
     ModelMCPConfig,
     CommandMCPConfig,
+    MCPProfile,
     MCPTargetConfig,
 )
 from django_cfg.modules.django_mcp.tools.base import MCPTool, tool_registry
 from django_cfg.modules.django_mcp.services.context import MCPContext
+
+
+#: Where the operator surface lives. Read from the model so the builder and the
+#: config cannot disagree about the default.
+DEFAULT_ENDPOINT_PATH = DjangoMCPModuleConfig.model_fields["endpoint_path"].default
+
+
+class ProfileBuilder:
+    """Collects one profile's settings inside a ``with`` block.
+
+    Used through :meth:`MCPConfigBuilder.profile`. The context-manager shape is
+    deliberate: an indented block makes it visible which surface each call
+    belongs to, and a settings call that drifts outside the block is a syntax
+    the reader notices rather than a silent reassignment to the wrong profile.
+    """
+
+    def __init__(self, name: str, path: str, access: str):
+        self._name = name
+        self._path = path
+        self._access = access
+        self._access_key: Optional[str] = None
+        self._service_username: Optional[str] = None
+        self._tools: List[str] = []
+        self._exposures: Dict[str, ModelExposure] = {}
+        self._introspection: Optional[IntrospectionConfig] = None
+        self._rate_limit: str = "100/minute"
+        self._public_info: Optional[bool] = None
+
+    def set_access_key(
+        self, key: str, service_username: Optional[str] = None
+    ) -> "ProfileBuilder":
+        self._access_key = key
+        self._service_username = service_username
+        return self
+
+    def tools(self, *names: str) -> "ProfileBuilder":
+        """Name the tools this profile serves, or ``"*"`` for all.
+
+        ``"*"`` is deliberately ugly to write out: serving every registered tool
+        is a real choice with real consequences and should read like one.
+        """
+        self._tools.extend(names)
+        return self
+
+    def expose(
+        self,
+        model: str,
+        read_only: bool = True,
+        hidden_fields: Optional[List[str]] = None,
+        max_results: int = 100,
+        operations: Optional[List[str]] = None,
+    ) -> "ProfileBuilder":
+        app_label, model_name = model.split(".")
+        self._exposures[model] = ModelExposure(
+            app_label=app_label,
+            model_name=model_name.lower(),
+            read_only=read_only,
+            hidden_fields=hidden_fields or [],
+            max_results=max_results,
+            operations=operations
+            or (
+                ["list", "retrieve"]
+                if read_only
+                else ["list", "retrieve", "create", "update", "delete"]
+            ),
+        )
+        return self
+
+    def enable_introspection(
+        self, expose_urls: bool = False, expose_code: bool = False, max_depth: int = 3
+    ) -> "ProfileBuilder":
+        self._introspection = IntrospectionConfig(
+            enabled=True,
+            expose_urls=expose_urls,
+            expose_code=expose_code,
+            max_depth=max_depth,
+        )
+        return self
+
+    def set_rate_limit(self, limit: str = "100/minute") -> "ProfileBuilder":
+        self._rate_limit = limit
+        return self
+
+    def set_public_info(self, public: bool) -> "ProfileBuilder":
+        """Override whether ``<path>info/`` lists tools without a credential."""
+        self._public_info = public
+        return self
+
+    def build(self) -> MCPProfile:
+        """Validated here, so a bad profile fails where it was written."""
+        return MCPProfile(
+            name=self._name,
+            path=self._path,
+            access=self._access,
+            access_key=self._access_key,
+            service_username=self._service_username,
+            tools=self._tools,
+            exposures={
+                key: ModelMCPConfig(
+                    enabled=True,
+                    read_only=exposure.read_only,
+                    hidden_fields=exposure.hidden_fields,
+                    max_results=exposure.max_results,
+                    allowed_operations=exposure.operations,
+                )
+                for key, exposure in self._exposures.items()
+            },
+            introspection=self._introspection,
+            rate_limit=self._rate_limit,
+            public_info=self._public_info,
+        )
+
+    def __enter__(self) -> "ProfileBuilder":
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        return False
 
 
 @dataclass
@@ -77,6 +197,56 @@ class MCPConfigBuilder:
         self._targets: Dict[str, MCPTargetConfig] = {}
         self._rate_limit: str = "100/minute"
         self._llm_model: str = "openai/gpt-4.1-nano"
+        self._profiles: Dict[str, ProfileBuilder] = {}
+        self._public_profile: Optional[Dict[str, Any]] = None
+
+    def enable_public_profile(
+        self,
+        path: str = "/mcp/",
+        rate_limit: str = "20/minute",
+        expose: Optional[Dict[str, Dict[str, Any]]] = None,
+    ) -> "MCPConfigBuilder":
+        """Serve an anonymous, read-only surface beside the operator one.
+
+            mcp.set_access_key(key, service_username=user)
+            mcp.enable_public_profile()
+
+        It serves whatever declares ``public = True`` on its tool class — the
+        project never restates the list, so adding a tool cannot silently
+        change what is public in either direction.
+
+        The flat settings above become the ``operator`` profile automatically;
+        that is why this does not trip the "profiles must not be mixed with
+        flat settings" rule, which exists for a *hand-written* profile leaving
+        flat calls stranded.
+
+        ``rate_limit`` defaults tighter than the operator's: an anonymous
+        caller has no key to revoke, so the rate is the only lever.
+        """
+        self._public_profile = {
+            "path": path,
+            "rate_limit": rate_limit,
+            "expose": expose or {},
+        }
+        return self
+
+    def profile(self, name: str, path: str, access: str) -> ProfileBuilder:
+        """Declare one MCP surface.
+
+            with mcp.profile("public", path="/mcp/", access="anonymous") as p:
+                p.tools("catalog_search", "catalog_get")
+                p.set_rate_limit("20/minute")
+
+        Declaring any profile means the flat ``set_access_key`` /
+        ``enable_introspection`` / ``set_rate_limit`` calls no longer describe a
+        surface — profiles do, entirely. Mixing the two would leave a reader
+        guessing which one governs a given endpoint, so :meth:`build` rejects it.
+        """
+        if name in self._profiles:
+            raise ValueError(f"MCP profile {name!r} is declared twice.")
+        builder = ProfileBuilder(name=name, path=path, access=access)
+        self._profiles[name] = builder
+        return builder
 
     def expose(
         self,
@@ -218,6 +388,7 @@ class MCPConfigBuilder:
         url: Optional[str] = None,
         access_key: Optional[str] = None,
         server_name: Optional[str] = None,
+        profile: Optional[str] = None,
     ) -> "MCPConfigBuilder":
         """Declare a deployment ``manage.py mcp_install --<kind>`` can register.
 
@@ -255,12 +426,17 @@ class MCPConfigBuilder:
             server_name: Registration-name override. Set it to **keep an
                 existing registration**: changing the derived name orphans the
                 old entry in the assistant rather than updating it.
+            profile: Which profile this target registers. Needed only when the
+                deployment serves more than one — the URL is built from that
+                profile's path, so a public subdomain registered without it
+                points at the operator path and lists the operator tools.
         """
         self._targets[kind] = MCPTargetConfig(
             env_files=list(env_files),
             url=url,
             access_key=access_key,
             server_name=server_name,
+            profile=profile,
         )
         return self
 
@@ -290,6 +466,72 @@ class MCPConfigBuilder:
         """
         if not self._enabled:
             return None
+
+        if self._public_profile is not None and not self._profiles:
+            # `enable_public_profile()` — turn the flat settings into the
+            # operator profile and add the anonymous one beside it, so the
+            # project states its intent once instead of writing both out.
+            spec = self._public_profile
+            if not self._access_key:
+                # The operator profile requires a key; without one there is
+                # nothing to protect and a public-only server is not what
+                # `enable_public_profile` means.
+                raise ValueError(
+                    "enable_public_profile() needs an operator access key. Call "
+                    "set_access_key() first: without it the operator surface "
+                    "would be anonymous too, which is not what this asks for."
+                )
+            with self.profile(
+                "operator", path=DEFAULT_ENDPOINT_PATH, access="key"
+            ) as op:
+                op.set_access_key(self._access_key, self._service_username)
+                op.tools(ALL_TOOLS)
+                op._introspection = self._introspection
+                op.set_rate_limit(self._rate_limit)
+                for model_key, exposure in self._models.items():
+                    op.expose(
+                        model_key,
+                        read_only=exposure.read_only,
+                        hidden_fields=exposure.hidden_fields,
+                        max_results=exposure.max_results,
+                        operations=exposure.operations,
+                    )
+            with self.profile("public", path=spec["path"], access="anonymous") as pub:
+                pub.tools(PUBLIC_TOOLS)
+                pub.set_rate_limit(spec["rate_limit"])
+                for model_key, kwargs in spec["expose"].items():
+                    pub.expose(model_key, **{"read_only": True, **kwargs})
+
+            # Moved, not copied. Left in place they would trip the mixing check
+            # below — and, worse, remain as a second declaration of settings the
+            # profiles now own.
+            self._access_key = None
+            self._service_username = None
+            self._introspection = IntrospectionConfig()
+
+        if self._profiles:
+            # Declaring profiles means profiles describe every surface. A flat
+            # `set_access_key` alongside them would apply to no endpoint while
+            # looking like it protects one — the exact "configured but not
+            # enforced" shape this feature exists to remove.
+            #
+            # Not reached via `enable_public_profile()`: that path moves the
+            # flat settings onto the operator profile rather than stranding
+            # them, and clears them below.
+            conflicting = [
+                name
+                for name, value in (
+                    ("set_access_key", self._access_key),
+                    ("enable_introspection", self._introspection.enabled),
+                )
+                if value
+            ]
+            if conflicting:
+                raise ValueError(
+                    "MCP config mixes profiles with the flat "
+                    f"{', '.join(conflicting)} call(s). Move them onto a profile: "
+                    "with profiles declared, the flat settings govern no endpoint."
+                )
 
         # Group models by app
         exposed_apps: Dict[str, AppMCPConfig] = {}
@@ -322,6 +564,7 @@ class MCPConfigBuilder:
             llm_model=self._llm_model,
             introspection=self._introspection,
             install_targets=self._targets,
+            profiles={name: b.build() for name, b in self._profiles.items()},
             exposed_apps=exposed_apps,
             commands=CommandMCPConfig(
                 enabled=len(all_commands) > 0,

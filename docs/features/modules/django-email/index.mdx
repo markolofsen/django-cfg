@@ -12,7 +12,8 @@ Django-CFG's **Email Module** provides an auto-configuring email service that re
 - **Auto-configuration** — reads `EmailConfig` from `DjangoConfig` without manual parameter passing
 - **Background sending** — all methods dispatch to a daemon thread and return immediately
 - **Template support** — renders `.html` and `.txt` Django templates with auto-injected context variables
-- **HTML emails** — automatic plain-text fallback generated via `strip_tags`
+- **HTML emails** — automatic plain-text fallback derived from the HTML, with entities correctly decoded
+- **Database-backed content** — per-locale letter copy (`EmailContent`) with admin editing and a full send log (`EmailLog`)
 - **Attachment support** — send files with any email type via `EmailMultiAlternatives`
 - **Admin notifications** — send to all addresses from `config.admin_emails` or Django `ADMINS` setting
 - **Multi-channel alerts** — single call sends to both email and Telegram simultaneously
@@ -44,6 +45,8 @@ email.send_html(
     recipient_list=["user@example.com"],
 )
 ```
+
+When no plain-text alternative is supplied, one is derived from the HTML via `strip_tags` followed by unescaping — so an apostrophe rendered as `&#x27;` by template autoescaping shows up as `'` in the `text/plain` part, not as a literal entity. The same unescaping is applied when a project supplies its own `.txt` template, so hand-written `.txt` templates render correctly too.
 
 ### Template-Based Email
 
@@ -219,7 +222,12 @@ Built-in templates tested:
 | `welcome` | `emails/welcome_email` | New account welcome |
 | `login_alert` | `emails/login_alert_email` | Security login alert |
 
+### `load_email_content`
+
+Loads per-locale letter copy into the database (`EmailContent`) so it can be edited in the admin without a deploy. See [Content Management](./content-management) for the full flag reference.
+
 ## See Also
 
+- [Content Management](./content-management) — `EmailContent`, `EmailLog`, and the `load_email_content` command
 - [Configuration Reference](./configuration) — all `EmailConfig` fields, provider setups
 - [Telegram Module](/features/modules/django-telegram) — Telegram notifications and combined alerts

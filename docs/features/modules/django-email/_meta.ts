@@ -1,5 +1,6 @@
 export default {
   index: { display: 'hidden' },
+  'quick-start': 'Quick Start',
   'configuration': 'Configuration',
-  'quick-start': 'Quick Start'
+  'content-management': 'Content Management'
 }

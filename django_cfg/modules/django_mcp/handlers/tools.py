@@ -72,6 +72,19 @@ class ToolsHandler:
         if not tool:
             raise MCPPermissionDenied(f"Tool '{tool_name}' not found or not permitted")
 
+        # Filtering the LISTING is cosmetic on its own: a caller who learned an
+        # operator tool's name from documentation, another deployment or a leaked
+        # `/info/` could still invoke it here. The profile decides what exists,
+        # not merely what is advertised.
+        #
+        # Reported as "not found" rather than "forbidden" because from this
+        # profile's perspective it genuinely does not exist — and a permission
+        # error would confirm the tool is real, which is what the filtered
+        # listing set out to withhold.
+        profile = getattr(context, "profile", None)
+        if profile is not None and not profile.serves(tool):
+            raise MCPPermissionDenied(f"Tool '{tool_name}' not found or not permitted")
+
         # Execute tool with context
         result = tool.execute(context, arguments)
 

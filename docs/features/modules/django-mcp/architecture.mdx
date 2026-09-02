@@ -25,7 +25,7 @@ MCPView (views.py)
     └── method: resources/list  → handlers/resources.py
 ```
 
-Every tool call receives an `MCPContext` (from `services/context.py`) carrying the resolved `DjangoMCPModuleConfig`, the validated `access_key`, and optional tenant/user information.
+Every tool call receives an `MCPContext` (from `services/context.py`) carrying `user` (`AnonymousUser` by default, or the resolved [service account](/features/modules/django-mcp/configuration#service-accounts) when `service_username` is set), `session_key` (used for logging only — never an authorization input), the Django `request`, and the resolved `DjangoMCPModuleConfig`. There is no raw `access_key` field on the context; the key is only ever compared during authentication.
 
 ### 2. Admin Chat Agent
 
@@ -65,6 +65,21 @@ StreamingHttpResponse (text/event-stream)
     ▼
 Browser JS reads ReadableStream, renders tool calls + final answer
 ```
+
+## Request lifecycle
+
+`MCPView.post()` (the JSON-RPC endpoint) runs four steps for every request:
+
+1. **Parse** the JSON-RPC 2.0 envelope. A malformed body returns a JSON-RPC parse error, not an HTTP-level 400.
+2. **Authenticate and enforce.** `_authenticate()` resolves the caller (`AnonymousUser` or the configured service account) from `X-MCP-Access-Key`. Its return value is enforced immediately: if authentication fails and a key is required, the request is rejected with `401` before any handler runs.
+3. **Derive a session key for logging only.** `_get_session_key()` computes a key from the request, but nothing is gated on it — see below.
+4. **Route** to the JSON-RPC method handler (`initialize`, `tools/list`, `tools/call`, `resources/list`, ...) with a freshly built `MCPContext`.
+
+<Callout type="info">
+The transport is intentionally **stateless**, per the MCP Streamable HTTP spec. The server never issues an `Mcp-Session-Id` header, and nothing is gated on `_is_initialized` or any other session state — every `tools/call` is authenticated and authorized independently of whether `initialize` was ever called on that connection. Gating on session state without issuing a session ID previously broke every spec-compliant client: state was keyed on a hash of IP + User-Agent, so `initialize` and the following `tools/call` looked like different sessions whenever a client's requests didn't share one identical User-Agent — which is exactly what happens with real MCP clients spread across worker processes.
+</Callout>
+
+A `401` response carries `WWW-Authenticate: MCPAccessKey realm="mcp", header="X-MCP-Access-Key"` — a custom scheme, not `Bearer`. `Bearer` reads as OAuth 2.0 to MCP clients, which then go looking for `/.well-known/oauth-protected-resource` and fail in a way that's harder to diagnose than a plain 401.
 
 ## Shared tool registry
 
@@ -127,6 +142,10 @@ The admin chat agent uses `django_llm.LLMClient` with OpenRouter as the provider
 | `POST /cfg/mcp/` | `X-MCP-Access-Key` header | External MCP clients with static key |
 | `POST /cfg/mcp/agent/` | `X-MCP-Access-Key` header | Programmatic agents with static key |
 | `POST /cfg/mcp/agent/stream/` | Django session + CSRF token | Authenticated users (superuser UI gate) |
-| `GET /cfg/mcp/info/` | None | Anyone — returns tool list metadata |
+| `GET /cfg/mcp/info/` | `X-MCP-Access-Key` header, unless `public_info=True` | Anyone, if `public_info=True` or no `access_key` is configured — otherwise the same holders as `POST /cfg/mcp/` |
 
 The streaming endpoint (`agent/stream/`) checks `request.user.is_authenticated` and requires a valid CSRF token. The admin template wraps the chat UI in `{% if user.is_superuser %}`, so only superusers see it in the admin panel.
+
+<Callout type="warning">
+`/info/` returning tool names, descriptions, and full input schemas used to be unconditional — a capability map for the whole app, handed to anyone. As of `public_info` (default `False`), it now follows the JSON-RPC endpoint's gating: if `access_key` is set, `/info/` requires it too. Set `public_info=True` only if you want that listing to stay public regardless.
+</Callout>

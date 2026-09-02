@@ -17,6 +17,11 @@ class MCPContext:
     session_key: str
     config: Any  # MCPConfig object
 
+    #: The MCPProfile answering this request, or None on a deployment that
+    #: predates profiles. Defaulted so every existing construction site keeps
+    #: working unchanged.
+    profile: Any = None
+
     # Future: add database session, cache, etc.
 
     def is_authenticated(self) -> bool:

@@ -8,7 +8,10 @@ from typing import Any, Dict
 
 from django.http import JsonResponse
 from drf_spectacular.utils import extend_schema
+from rest_framework.exceptions import Throttled
 from rest_framework.views import APIView
+
+from django_cfg.modules.django_mcp.throttling import MCPRateThrottle
 
 from django_cfg.modules.django_mcp.exceptions import (
     MCPError,
@@ -40,9 +43,36 @@ class MCPView(APIView):
     """
     authentication_classes = []  # Custom auth handled in dispatch
     permission_classes = []  # Permissions checked per-method
+    throttle_classes = [MCPRateThrottle]
 
     # Track initialization state per-session (or per-user if authenticated)
     _initialized_sessions: Dict[str, bool] = {}
+
+    def handle_exception(self, exc):
+        """Answer a throttled request in the JSON-RPC envelope.
+
+        DRF raises ``Throttled`` from ``check_throttles`` *inside*
+        ``APIView.dispatch`` and handles it here — before the ``except`` in our
+        own ``dispatch`` below, which therefore never sees it. Left to DRF the
+        response is a correct 429 with ``Retry-After``, but its body is
+        ``{"detail": ...}``: an MCP client parsing for a JSON-RPC envelope finds
+        no ``error`` object and reports a protocol failure rather than a rate
+        limit.
+        """
+        if isinstance(exc, Throttled):
+            logger.info("MCP request throttled: %s", exc.detail)
+            response = self._create_error_response(
+                error_code=INVALID_REQUEST,
+                error_message=str(exc.detail),
+                request_id=None,
+                status=429,
+            )
+            if exc.wait is not None:
+                # RFC 9110 §10.2.3. DRF sets this too; keep it, because the
+                # header is the only part a generic HTTP client acts on.
+                response["Retry-After"] = str(int(exc.wait))
+            return response
+        return super().handle_exception(exc)
 
     def dispatch(self, request, *args, **kwargs):
         """Override dispatch to handle JSON-RPC error formatting."""
@@ -124,6 +154,10 @@ class MCPView(APIView):
             request=request,
             session_key=session_key,
             config=mcp_config,
+            # Carried so both the listing and the execution check read the same
+            # profile. Resolved from the URL the request arrived on, never from
+            # a header — a header would let the caller pick their own surface.
+            profile=self._get_profile(),
         )
 
         # Step 5: Route to appropriate handler
@@ -150,14 +184,42 @@ class MCPView(APIView):
                 request_id=rpc_request.id,
             )
 
+    #: Profile this view instance serves. ``None`` means "resolve it", which is
+    #: what every URL registered before profiles existed does. Set by
+    #: ``MCPView.as_view(profile="public")`` once a project mounts more than one.
+    profile: str | None = None
+
+    def _get_profile(self):
+        """The profile answering this request, or ``None`` if unresolvable.
+
+        Falls back to ``default`` — the profile synthesised from the flat config
+        fields — so a deployment that never declared one still gets a profile
+        rather than a special case threaded through every call site.
+        """
+        try:
+            profiles = getattr(self._get_mcp_config(), "profiles", None) or {}
+            if self.profile is not None:
+                return profiles.get(self.profile)
+            return profiles.get("default")
+        except Exception:
+            return None
+
     def _access_key_required(self) -> bool:
         """Whether a configured access key must be presented.
 
         A project that never set one is deliberately open (local development),
         so requiring a key it does not have would lock it out of its own server.
         Once a key IS configured, presenting it is mandatory.
+
+        Reads the profile, falling back to the flat field when no profile is
+        resolvable — the fallback matters because an unresolvable profile is
+        exactly the case where the config is broken, and it must fail closed
+        rather than answer as if no policy existed.
         """
         try:
+            profile = self._get_profile()
+            if profile is not None:
+                return profile.access == "key"
             return bool(self._get_mcp_config().access_key)
         except Exception:
             # Config unavailable: fail closed. An endpoint whose policy cannot be
@@ -173,13 +235,17 @@ class MCPView(APIView):
         """
         try:
             mcp_config = self._get_mcp_config()
+            # One source for both, or they drift: a key taken from the profile
+            # and a service_username taken from the flat config would
+            # authenticate one profile's caller as another profile's account.
+            credentials = self._get_profile() or mcp_config
             access_key_header = request.headers.get("X-MCP-Access-Key")
             if (
-                mcp_config.access_key
+                credentials.access_key
                 and access_key_header
                 # compare_digest, not ==, so a wrong key cannot be recovered
                 # byte-by-byte from response timing.
-                and secrets.compare_digest(str(access_key_header), str(mcp_config.access_key))
+                and secrets.compare_digest(str(access_key_header), str(credentials.access_key))
             ):
                 # Authenticated by access key. By default the caller is a
                 # machine, not a Django user, so represent it as AnonymousUser.
@@ -189,7 +255,7 @@ class MCPView(APIView):
                 # AttributeError, which the old blanket `except` swallowed —
                 # so a CORRECT key also produced None. That went unnoticed only
                 # because the result was never enforced.
-                service_username = getattr(mcp_config, "service_username", None)
+                service_username = getattr(credentials, "service_username", None)
                 if service_username:
                     # The key is bound to a real account, so tools that gate on
                     # `user.is_staff` can be reached — and every action they

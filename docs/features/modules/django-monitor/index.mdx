@@ -69,6 +69,16 @@ Alerts are **batched**: the first occurrence of a new fingerprint is sent
 immediately, and repeats within the window are folded into a single 60-second
 digest so a crash loop can't flood your chat.
 
+Each alert line also ends with a `<code>fingerprint</code>` token when one is
+available — a stable 16-hex-char SHA-256 join key you can use to correlate
+repeat occurrences of the same error across alerts, and against `monitor.log`
+entries (`ev.fingerprint` is stored there too). It's computed per source: from
+the exception signature for `UNHANDLED_EXCEPTION`, `RQ_FAILURE` and
+`LOG_ERROR`, or from the query SQL with literal values stripped for
+`SLOW_QUERY` — so the same query with different parameters shares one
+fingerprint. The fingerprint is omitted (not faked) when none is available,
+which only happens for browser-originated events.
+
 ---
 
 ## Quick Start
@@ -122,6 +132,10 @@ package. It captures JS errors, console errors and failed requests in the
 browser and posts them in batches to `POST /cfg/monitor/ingest/`, where they are
 enriched and written to `monitor.log` like any server event (error-level ones
 also alert). It ships an in-app debug panel for inspecting the same feed live.
+
+Browser events are the one path where an alert may show no fingerprint token —
+server-side capture always stamps one, but frontend ingest doesn't compute one
+upstream.
 
 ---
 

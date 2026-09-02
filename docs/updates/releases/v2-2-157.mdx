@@ -1,0 +1,58 @@
+---
+title: "Release v2.2.157"
+description: "MCP service accounts and declarative config builder, a new welcome-email flow, OTP email subject hardening, and an email plain-text rendering fix — the user-facing changes since 2.2.119."
+---
+
+import { Callout } from 'nextra/components'
+
+# Release v2.2.157
+
+**Released:** September 3, 2026
+
+A rollup of the user-facing changes shipped across `2.2.120` → `2.2.157`.
+
+## Highlights
+
+- **MCP service accounts + `public_info` gating** — `MCPConfig` gains `service_username` (the Django user MCP tool calls run as) and `public_info` (controls whether `GET /cfg/mcp/info/` is reachable without authentication). See [MCP Configuration](/features/modules/django-mcp/configuration#service-accounts).
+- **Declarative MCP config via `MCPConfigBuilder`** — a fluent builder (`.expose()`, `.allow_command()`, `.enable_introspection()`, `.tool()`, `.set_access_key()`, `.add_target()`, `.set_llm_model()`, `.set_rate_limit()`, `.disable()`, `.build()`) for assembling `MCPConfig` in code instead of hand-writing the Pydantic model. See [MCP Configuration](/features/modules/django-mcp/configuration#declarative-config-via-mcpconfigbuilder).
+- **`mcp_install` and `mcp_doctor` commands documented** — `mcp_install` wires an MCP client config (key resolution precedence, reachability probing) with no default target (you must choose one explicitly); `mcp_doctor` checks for the four failure modes that otherwise fail invisibly. See [MCP Commands](/cli/commands/mcp-commands).
+- **`list_urls` MCP tool gets pagination** — `contains`, `limit`, and `offset` params plus a `truncated` response flag, so large route tables no longer silently overflow the response. See [MCP Tools](/features/modules/django-mcp/tools#built-in-tools).
+- **Welcome email** — a new one-send-guaranteed (atomic UPDATE claim) welcome email fires on account creation, with locale resolution and a per-locale `copy_key` override system for the template body. New `send_welcome_email` management command for manual sends/previews. See [Welcome Email](/features/built-in-apps/user-management/accounts/welcome-email) and [Testing & Monitoring Commands](/cli/commands/testing-monitoring#send_welcome_email).
+- **OTP subject-line hardening** — the OTP code is no longer put in the email subject line (reverted in 2.2.137 after a prior change); the `copy_key` override system is body-only and cannot touch the subject. See [OTP](/features/built-in-apps/user-management/accounts/otp#otp-code-in-the-email-subject).
+- **Email content management** — `EmailContent` (admin-editable copy with a `resolve()` fallback chain and `render_copy` placeholder substitution), `EmailLog` (attempt-vs-delivery semantics, `is_abandoned`), and the `email_permanently_bounced` signal are now documented, along with `load_email_content --from-fixture` (natural-key `update_or_create`, distinct from `loaddata`). See [Content Management](/features/modules/django-email/content-management).
+- **Plain-text email rendering fix** — the plain-text fallback now runs `unescape` after `strip_tags`, fixing leaked HTML entities (`&amp;`, `&#39;`, …) in plain-text emails, including hand-written `.txt` templates. See [django-email](/features/modules/django-email#features).
+- **Alert-batching fingerprint** — django-monitor computes a 16-hex SHA-256 fingerprint per alert source to join related events; it's omitted when blank, and browser/frontend-ingested events may lack one. See [django-monitor](/features/modules/django-monitor#what-gets-captured).
+- **`check_editable` command** — new command (sibling to `check_settings`) that reports whether the installed `django-cfg` is the editable local checkout or the PyPI package, with a `--strict` flag and mismatch diagnostics. See [Core Commands](/cli/commands/core-commands#check_editable).
+
+## Updated Packages
+
+| Package | Version | Changes |
+|---------|---------|---------|
+| `django-cfg` (PyPI) | 2.2.157 | MCP service accounts, `MCPConfigBuilder`, `list_urls` pagination, welcome email, OTP subject hardening, email content management + plain-text fix, monitor fingerprinting, `check_editable` |
+| `@djangocfg/api` | 2.1.536 | Aligned with backend auth/accounts changes |
+| `@djangocfg/analytics` | 2.1.536 | Aligned with backend changes |
+| `@djangocfg/nextjs` | 2.1.536 | Aligned with backend changes |
+
+## Upgrade
+
+```bash
+pip install -U django-cfg
+python manage.py migrate   # accounts/mailer migrations
+```
+
+```bash
+pnpm update @djangocfg/api @djangocfg/analytics @djangocfg/nextjs
+```
+
+## Breaking Changes
+
+None. MCP service accounts, `public_info`, the welcome email, and `check_editable` are additive; the OTP subject and plain-text rendering changes restore previously-documented behavior rather than introducing new API surface.
+
+<Callout type="info">
+If you rely on the OTP code appearing in the email subject line, that behavior
+was removed — the code is body-only from 2.2.137 onward.
+</Callout>
+
+## Full Changelog
+
+See the [GitHub release](https://github.com/markolofsen/django-cfg/releases) for the complete list of changes.

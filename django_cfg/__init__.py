@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.2.157"
+__version__ = "2.2.158"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -242,6 +242,9 @@ try:
     from .modules.django_mcp import (
         DjangoMCPModuleConfig,
         MCPConfigBuilder,
+        MCPProfile,
+        PUBLIC_TOOLS as MCP_PUBLIC_TOOLS,
+        ALL_TOOLS as MCP_ALL_TOOLS,
         IntrospectionConfig as MCPIntrospectionConfig,
         AppMCPConfig as MCPAppMCPConfig,
         ModelMCPConfig as MCPModelMCPConfig,
@@ -251,6 +254,9 @@ try:
 except ImportError:
     DjangoMCPModuleConfig = None  # type: ignore[assignment]
     MCPConfigBuilder = None  # type: ignore[assignment]
+    MCPProfile = None  # type: ignore[assignment]
+    MCP_ALL_TOOLS = None  # type: ignore[assignment]
+    MCP_PUBLIC_TOOLS = None  # type: ignore[assignment]
     MCPIntrospectionConfig = None  # type: ignore[assignment]
     MCPAppMCPConfig = None  # type: ignore[assignment]
     MCPModelMCPConfig = None  # type: ignore[assignment]
@@ -350,7 +356,8 @@ __all__ = [
     "ImportForm", "ExportForm", "SelectableFieldsExportForm",
     "ImportExportMixin", "ImportExportModelAdmin",
     "ExportMixin", "ImportMixin", "BaseResource",
-    "DjangoMCPModuleConfig", "MCPConfigBuilder",
+    "DjangoMCPModuleConfig", "MCPConfigBuilder", "MCPProfile",
+    "MCP_ALL_TOOLS", "MCP_PUBLIC_TOOLS",
     "MCPIntrospectionConfig", "MCPAppMCPConfig", "MCPModelMCPConfig",
     "MCPCommandMCPConfig", "MCPRedactionConfig",
 ]

@@ -140,10 +140,20 @@ def registry() -> dict[str, Target]:
             django = django_config()
             api_url = (getattr(django, "api_url", None) if django else None) or LOCAL_FALLBACK_URL
 
+        # A target that names a profile registers THAT profile's path. Without
+        # this the public subdomain would be registered against the operator
+        # path — an endpoint that answers, with the wrong tool set.
+        target_path = endpoint_path
+        named_profile = getattr(declared, "profile", None)
+        if named_profile:
+            profile = (getattr(config, "profiles", {}) or {}).get(named_profile)
+            if profile is not None:
+                target_path = profile.path
+
         # Left unresolved rather than guessed when a remote target supplied
         # neither: inventing a URL would register a client against an endpoint
         # nobody chose. The caller reports what it looked at.
-        url = _endpoint(_delocalhost(api_url), endpoint_path) if api_url else ""
+        url = _endpoint(_delocalhost(api_url), target_path) if api_url else ""
 
         built[kind] = Target(kind, url, name, files, declared.access_key)
     return built

@@ -1,0 +1,117 @@
+---
+title: MCP Commands
+description: Django-CFG MCP CLI commands — register the project's MCP server with AI coding assistants and diagnose the setup.
+sidebar_label: MCP Commands
+keywords:
+  - django-cfg mcp_install
+  - django-cfg mcp_doctor
+  - mcp management commands
+---
+
+# MCP Commands
+
+Management commands for registering [`django_mcp`](/features/modules/django-mcp)'s server with local AI coding assistants (Claude Code, Codex) and diagnosing whether the setup will actually work. Both live in `django_cfg.modules.django_mcp.install` and are exposed as Django management commands.
+
+## `mcp_install`
+
+Registers this project's MCP server with Claude Code and/or Codex, so the assistant knows the endpoint URL and the access key without either being typed by hand.
+
+```bash
+python manage.py mcp_install --local
+python manage.py mcp_install --prod
+python manage.py mcp_install --local --uninstall
+python manage.py mcp_install --url https://staging.example.com/cfg/mcp/ --name staging
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--target NAME` | `str` | — | Explicit target name, as an alternative to `--<kind>` |
+| `--<kind>` | `flag` | — | Shorthand for `--target <kind>`, one flag per name declared in `install_targets` (e.g. `--local`, `--prod`) |
+| `--url URL` | `str` | — | Register an ad hoc endpoint not declared as a target. Requires `--name` |
+| `--name NAME` | `str` | — | Server name for `--url`, or an override for a declared target's name |
+| `--key KEY` | `str` | — | Access key, overriding whatever the normal resolution would find |
+| `--key-env-var VAR` | `str` | — | Codex only: read the key from this environment variable at runtime instead of writing it into the config file |
+| `--agent {all,claude,codex}` | `str` | `all` | Which assistant(s) to register with |
+| `--scope {local,user,project}` | `str` | `user` | Claude Code config scope |
+| `--uninstall` | `flag` | `False` | Remove the registration instead of adding it |
+| `--dry-run` | `flag` | `False` | Report what would happen without writing anything |
+| `--skip-probe` | `flag` | `False` | Skip the reachability check before writing |
+
+### There is no default target
+
+Local and production serve the same tools over the same protocol, so a client aimed at the wrong one doesn't fail loudly — it connects, lists every tool, and answers from the other environment's database. `mcp_install` refuses to guess: pass `--local`, `--prod`, or whatever kind your project declared. Running with no target and no declared targets prints the available ones (if any) and exits.
+
+Targets are declared per-project, either directly on `install_targets` or (the usual path) via `MCPConfigBuilder.add_target()`:
+
+```python
+# mcp/__init__.py
+from django_cfg.modules.django_mcp import MCPConfigBuilder
+
+mcp = MCPConfigBuilder()
+mcp.set_access_key("dev-local-key")
+mcp.add_target("local")
+mcp.add_target("prod", "../../deploy/.env")
+```
+
+`local` needs no files — the running process *is* that deployment, so its own `access_key` and URL answer directly. A remote target should point at the dotenv file(s) that configure that deployment. See [`add_target`](/features/modules/django-mcp/configuration#declarative-config-via-mcpconfigbuilder) for the full signature.
+
+### Key resolution
+
+For a given target, the access key is resolved in this order, first match wins:
+
+1. an explicit `--key` on the command line;
+2. the target's own `access_key`, if declared directly on `MCPTargetConfig`;
+3. `$MCP__ACCESS_KEY` as the shell had it — captured at process start, before the project's own config loads. This exists specifically to dodge a real bug: importing a project's `mcp/__init__.py` loads settings through pydantic-settings, which writes dotenv values into `os.environ` — so without the early snapshot, a `--prod` install could silently resolve the *local development* key while reporting its source as `$MCP__ACCESS_KEY`;
+4. the target's declared dotenv files, in order, reading `MCP__ACCESS_KEY`;
+5. for the **local** target only, when it declares no files: this process's own `access_key`.
+
+A remote target never falls back to the running process's key — that fallback exists only for `local`, where the process genuinely is the deployment.
+
+### Reachability probe
+
+Before writing anything, `mcp_install` GETs `<url>/info/` to confirm the endpoint is alive. The probe sends a custom `User-Agent: django-cfg-mcp-install (+https://pypi.org/project/django-cfg/)` instead of urllib's default `Python-urllib/3.x` — the default signature is blocked by Cloudflare's managed WAF rules on some deployments, which would otherwise report a perfectly healthy server as unreachable. Both `200` and `401` count as "alive" (`401` means the server is up and correctly requiring auth). Pass `--skip-probe` to disable this check entirely.
+
+### Exit codes
+
+A failed install exits non-zero via `SystemExit`, so a scripted caller (CI, a setup script) can detect it — Django management commands otherwise exit `0` even on a refused install.
+
+---
+
+## `mcp_doctor`
+
+Checks whether this project's MCP setup will actually work for an assistant, before you find out the hard way.
+
+```bash
+python manage.py mcp_doctor
+python manage.py mcp_doctor --skip-probe
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--skip-probe` | `flag` | `False` | Skip network requests to declared endpoints |
+
+### What it checks
+
+Four things, each of which fails **invisibly** on its own:
+
+- **The access key is set.** An empty `access_key` doesn't disable the endpoint — django_cfg reads "no key configured" as "no key required", so an unset key means the endpoint answers everyone.
+- **The key is bound to an account** (via `service_username`), or every tool gated on `user.is_staff` refuses in a way an agent can't distinguish from an empty result.
+- **That account exists, is active, and is not a superuser.** A `service_username` that matches no row (e.g. a bare username when `USERNAME_FIELD` is `email`) rejects every request outright, not just staff-gated ones. A superuser binding is flagged too — it grants full admin rights to every holder of the key.
+- **Declared endpoints answer, and answer with `401` — not `200` — when unauthenticated.**
+
+The last check uses two distinct probes:
+
+- `probe()` hits `/info/`, which is public by design. A `200` there says only "the server is up" — it says nothing about whether the JSON-RPC endpoint is locked.
+- `probe_endpoint()` POSTs a real `tools/list` JSON-RPC call to the guarded endpoint and expects `401`. A `200` here is the one finding in the whole report that's a genuine emergency: it means the endpoint is serving every caller.
+
+Reading `/info/`'s `200` as "serving unauthenticated" previously produced false-positive "server is wide open" reports against correctly-locked deployments — which is why the two are checked separately.
+
+<Callout type="warning">
+A clean `mcp_doctor` report proves the setup is reachable and locked down — it does not prove any tool works. A connected server with a valid key can still ship tools that raise on every real call while listing cleanly. Call one for real after a clean report.
+</Callout>
+
+## See Also
+
+- [django_mcp — Configuration](/features/modules/django-mcp/configuration) — `service_username`, `public_info`, `install_targets`, `MCPConfigBuilder`
+- [django_mcp — Architecture](/features/modules/django-mcp/architecture) — request lifecycle, security boundaries
+- [Core Commands](/cli/commands/core-commands)

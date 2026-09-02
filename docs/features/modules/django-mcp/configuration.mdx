@@ -30,12 +30,42 @@ When `enabled=False` (the default), the MCP endpoint exists but returns errors o
 | `endpoint_path` | `str` | `"/cfg/mcp/"` | URL path for the JSON-RPC endpoint. |
 | `llm_model` | `str` | `"openai/gpt-4.1-nano"` | Default model for the admin chat agent (OpenRouter format). |
 | `access_key` | `str \| None` | `None` | Static key for `X-MCP-Access-Key` header auth. Required for `POST /cfg/mcp/` and `POST /cfg/mcp/agent/`. |
+| `service_username` | `str \| None` | `None` | Bind `access_key` to a real Django account. See [Service accounts](#service-accounts) below. |
+| `public_info` | `bool` | `False` | Let `GET <endpoint>/info/` list tools without a key. See [Info endpoint gating](#info-endpoint-gating) below. |
 | `rate_limit` | `str` | `"100/minute"` | Format: `"N/period"`. Period is `second`, `minute`, `hour`, or `day`. |
 | `protocol_version` | `str` | `"2025-03-26"` | MCP protocol version reported in the `initialize` handshake. |
 | `server_name` | `str` | `"django-cfg-mcp"` | Server name reported in `initialize`. |
 | `server_version` | `str` | `"1.0.0"` | Server version reported in `initialize`. |
 | `enable_streaming` | `bool` | `False` | Reserved for future protocol-level streaming. Does not affect SSE admin chat. |
 | `enable_audit_log` | `bool` | `True` | Write every MCP operation to `MCPAuditLog`. |
+| `install_targets` | `Dict[str, MCPTargetConfig]` | `{}` | Deployments `manage.py mcp_install --<name>` can register. See [`mcp_install`](/cli/commands/mcp-commands#mcp_install). |
+
+### Service accounts
+
+By default, a valid `access_key` authenticates the caller as `AnonymousUser`. That's deliberate — tools gated on `user.is_staff` refuse an anonymous caller, so a leaked key doesn't automatically unlock staff-only tools. Set `service_username` to bind the key to a real, auditable Django account instead:
+
+```python
+mcp = DjangoMCPModuleConfig(
+    enabled=True,
+    access_key="your-secret-key",
+    service_username="mcp-service",
+)
+```
+
+Two things change once `service_username` is set:
+
+- **A missing account is a rejection, not a fallback.** If no user matches `service_username`, the request gets a 401 — it never silently falls back to `AnonymousUser`. The same is true for an inactive account (`is_active=False`).
+- **The key becomes that account's password.** Every holder of the key gets that account's permissions, and every action it takes is attributable to that username rather than to "somebody with the key". Treat the key with the same care as a real credential — never commit it.
+
+The ergonomic entry point is `MCPConfigBuilder.set_access_key(key, service_username=...)` — see [Declarative config via `MCPConfigBuilder`](#declarative-config-via-mcpconfigbuilder) below.
+
+### Info endpoint gating
+
+`GET <endpoint>/info/` returns the same tool listing as `tools/list` — names, descriptions, and full input schemas — in one request, without JSON-RPC. That listing is a capability map: the tool names alone can disclose what the app does (billing, user data, arbitrary model queries) even though every tool still requires the key to actually run.
+
+By default (`public_info=False`), `/info/` requires the same `X-MCP-Access-Key` header as the JSON-RPC endpoint whenever `access_key` is configured. Set `public_info=True` to let anyone list tools without a key — useful for a public demo server, or a client that wants to inspect tools before the user provides a key.
+
+An unauthorized request gets `401` with `WWW-Authenticate: MCPAccessKey realm="mcp", header="X-MCP-Access-Key"` — not `Bearer`, deliberately, so MCP clients don't mistake it for OAuth and go looking for `/.well-known/oauth-protected-resource`.
 
 ## `introspection` — `IntrospectionConfig`
 
@@ -169,6 +199,54 @@ mcp = DjangoMCPModuleConfig(
     ),
 )
 ```
+
+## Declarative config via `MCPConfigBuilder`
+
+`MCPConfigBuilder` is a fluent, method-chaining alternative to constructing `DjangoMCPModuleConfig` (and its nested models) by hand. It's the pattern most projects use — put it in `<project_root>/mcp/__init__.py`:
+
+```python
+from django_cfg.modules.django_mcp import MCPConfigBuilder
+
+mcp = MCPConfigBuilder()
+
+# Expose models
+mcp.expose("profiles.UserProfile")
+mcp.expose("accounts.User", hidden_fields=["password", "secret_key"])
+mcp.expose("orders.Order", operations=["list", "retrieve", "create"])
+
+# Allow management commands
+mcp.allow_command("clearsessions")
+
+# Custom tools
+@mcp.tool(name="get_user_stats", description="Get user statistics")
+def get_user_stats(ctx, user_id: str) -> str:
+    return f"Stats for user {user_id}"
+
+# Enable introspection
+mcp.enable_introspection(expose_urls=True)
+
+# Auth + install targets
+mcp.set_access_key("your-secret-key", service_username="mcp-service")
+mcp.add_target("local")
+mcp.add_target("prod", "../../deploy/.env")
+
+mcp_config = mcp.build()
+```
+
+| Method | Equivalent to |
+|--------|---------------|
+| `.expose(model_path, ...)` | An entry in `exposed_apps` |
+| `.allow_command(name, staff_only=False)` | An entry in `commands.allowed_commands` |
+| `.enable_introspection(expose_urls=..., expose_code=...)` | `introspection` config |
+| `.tool(name, description, input_schema=None)` | Decorator that registers a custom `MCPTool` |
+| `.set_access_key(key, service_username=None)` | `access_key` + `service_username` |
+| `.add_target(kind, *env_files, url=None, access_key=None, server_name=None)` | An entry in `install_targets`, keyed by `kind` |
+| `.set_llm_model(model)` | `llm_model` |
+| `.set_rate_limit(limit)` | `rate_limit` |
+| `.disable()` | `enabled=False` |
+| `.build()` | Returns the assembled `DjangoMCPModuleConfig` |
+
+`.add_target()` declares a deployment `manage.py mcp_install --<kind>` can register — see [`mcp_install`](/cli/commands/mcp-commands#mcp_install) for the full resolution and probing behavior. `kind="local"` needs no `env_files`: the running process *is* that deployment, so its own `access_key`/URL answer directly. A remote target (`"prod"`, `"staging"`, ...) should point at the dotenv file(s) that configure that deployment — resolving a remote target's key from the current process would register the local development key against production.
 
 ## Helper methods
 

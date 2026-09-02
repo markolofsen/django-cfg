@@ -1,0 +1,132 @@
+---
+title: Email Content Management
+description: Store per-locale letter copy in the database with EmailContent, track send attempts with EmailLog, and load copy with the load_email_content command.
+---
+
+# Email Content Management
+
+Beyond `DjangoEmailService`, django-cfg ships a small app — `django_cfg.apps.system.mailer` — that separates a system letter's **words** from its **layout**. The layout (tables, inline styles, the signature block) stays a Django template in your project. The words (subject, greeting, paragraphs) live in the database, per locale, editable in the admin without a deploy.
+
+This page covers `EmailContent`, `EmailLog`, and the `load_email_content` management command. For the sending API itself, see the [Overview](/features/modules/django-email).
+
+## EmailContent
+
+`EmailContent` stores one letter's copy in one language, keyed by `(key, locale)`:
+
+| Field | Description |
+| --- | --- |
+| `key` | Which letter, e.g. `welcome`. Matches the template directory name. |
+| `locale` | BCP-47 tag, e.g. `ru` or `pt-BR`. |
+| `subject` | Envelope `Subject:` header. |
+| `greeting`, `run_intro`, `role` | Single-line fields. |
+| `lede`, `run_after`, `points`, `outro`, `signoff` | Multi-line fields — one paragraph per stored line. |
+| `is_active` | Default `True`. Unchecking falls this locale back to the next one in the chain without deleting the text. |
+| `updated_at` | `auto_now`. |
+
+All prose fields allow blank — a locale can translate part of a letter and leave the rest empty; that block just renders nothing. There's a unique constraint on `(key, locale)`.
+
+### Resolution
+
+```python
+from django_cfg.apps.system.mailer.models import EmailContent
+
+content = EmailContent.resolve("welcome", locale="pt-BR")
+```
+
+`resolve(key, locale, default_locale="en")` tries, in order:
+
+1. The exact tag (`pt-BR`)
+2. Its base language (`pt`)
+3. `default_locale`
+
+Inactive rows are skipped at every step. If nothing matches, it returns `None` — the caller then falls back to the template's own built-in wording, so a project that has never loaded any content still sends a correct letter. Note the fallback is **row-level**, not field-level: a partial `pt-BR` row doesn't borrow individual missing fields from the `pt` row.
+
+`content.as_context()` returns a dict with the multi-line fields split into paragraph lists (one paragraph per stored line), ready to hand to a template.
+
+### Substitution in stored copy
+
+Stored copy can reference exactly two placeholders — `{{ project_name }}` and `{{ site_url }}` — interpolated by the `render_copy` template tag. Nothing else is substituted: stored text can never reach the rest of the template context (no `{{ user.email }}`, no tags), which is a deliberate injection guard since this text is editable from the admin.
+
+### Admin
+
+`EmailContent` is registered with `list_display=["key", "locale", "subject", "is_active", "updated_at"]`, `list_editable=["is_active"]`, and filters on `key`, `locale`, and `is_active`. The change form groups fields into three fieldsets — "Which letter, which language", "Subject", and "The letter, in reading order" — instead of an alphabetical field list.
+
+## EmailLog
+
+`EmailLog` is a read-only record of send **attempts**, not delivery. A provider accepting a message is not proof it reached an inbox — bounces and spam placement happen later and are the provider's story to tell, so the status vocabulary intentionally stops at `sent`:
+
+| Field | Description |
+| --- | --- |
+| `key` | Which letter, blank for ad-hoc mail. |
+| `recipient`, `subject`, `locale` | What was sent, and in which language. |
+| `status` | `queued`, `sent` (handed to the transport), or `failed`. |
+| `error` | Transport error, kept verbatim. |
+| `user_id` | Plain integer, not a FK — the record outlives the account being deleted. |
+| `dedup_key` | `event:recipient:locale` — identifies the letter, not the row, so a retry path can tell "never attempted" from "attempted twice". |
+| `created_at`, `sent_at` | `sent_at` is `NULL` on a `queued` row that never resolved. |
+
+The row is written **before** the send attempt, not after — so a `queued` row with no `sent_at` is the signature of a process that died mid-send, not a normal transient state. The `is_abandoned` property (`status == "queued" and sent_at is None`) is the structural check for that; age/staleness policy is left to the caller.
+
+`EmailLogAdmin` is fully read-only (`has_add_permission`/`has_change_permission` return `False`), with `status` shown as a badge (`queued` → info, `sent` → success, `failed` → danger), filterable by `status`, `key`, and a date range on `created_at`.
+
+### Permanent bounces
+
+django-cfg doesn't keep a suppression list — that's a project concern with its own schema and admin. When the HTTP gateway backend reports addresses as permanently bounced, it fires a signal instead:
+
+```python
+from django_cfg.apps.system.mailer.signals import email_permanently_bounced
+
+def handle_bounce(sender, addresses, subject, remaining, **kwargs):
+    # addresses: permanently-refused recipients, exactly as the gateway echoed them
+    # remaining: recipients of the same message that were NOT refused
+    ...
+
+email_permanently_bounced.connect(handle_bounce)
+```
+
+If nothing is listening, nothing happens. `EmailLog` still records the message as not-sent for those recipients — this signal only carries the *reason*.
+
+## `load_email_content` command
+
+Loads per-locale letter copy into `EmailContent`. This is both the migration path off file-only templates and the loader for django-cfg's own shipped fixtures.
+
+```bash
+python manage.py load_email_content welcome
+python manage.py load_email_content welcome --locales ru de
+python manage.py load_email_content welcome --dry-run
+python manage.py load_email_content welcome --overwrite
+python manage.py load_email_content welcome --defaults
+python manage.py load_email_content welcome --from-fixture path/to/fixture.json
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `key` (positional) | — | Letter key, e.g. `welcome`. |
+| `--locales` | every locale in `SUPPORTED_LOCALES` | Locales to load, space-separated. |
+| `--overwrite` | off | Replace rows that already exist. Without it, existing rows are always left alone — an admin edit must survive a re-import. |
+| `--dry-run` | off | Print what would happen and change nothing. |
+| `--defaults` | off | Load django-cfg's built-in English copy instead of reading project templates. |
+| `--from-fixture PATH` | — | Load from a Django fixture JSON instead of templates. |
+
+`--defaults`, `--from-fixture`, and the plain template-based load are three alternate modes — checked in that order, not combinable in one invocation. If both `--defaults` and `--from-fixture` are given, `--defaults` wins.
+
+### Template-based load (default mode)
+
+Reads `emails/<key>/<locale>.html` and renders the named template blocks — `subject`, `greeting`, `lede`, `run_intro`, `run_after`, `points`, `outro`, `signoff`, `role` — rather than regexing the source. A sentinel value stands in for `{{ project_name }}` during rendering and is swapped back to the literal placeholder afterward, so the stored copy stays portable across projects instead of baking in one project's name. An empty rendered `subject` raises `CommandError` — it usually means the template has no `{% block subject %}`.
+
+### `--defaults`
+
+Loads `DEFAULT_EMAIL_COPY` from the module's fixtures, for the English (`DEFAULT_LOCALE`) row only. An unknown key raises `CommandError` listing the available keys.
+
+### `--from-fixture`
+
+Loads a Django fixture JSON and matches existing rows on `(key, locale)` via `update_or_create` — **not** primary key. This is deliberately safer than `loaddata`: on a database whose id sequences differ from the fixture's, `loaddata` would overwrite the wrong rows, or fail outright against the unique constraint. Matching the natural key makes the fixture re-runnable against any database.
+
+Only records whose `model` ends with `emailcontent` and whose `fields.key` matches the given `key` are loaded; `updated_at` is dropped from each record (it's `auto_now` and a stale value from the fixture is noise). `CommandError` is raised if the file doesn't exist, isn't valid JSON, or contains no matching rows for `key`.
+
+`--overwrite` and `--dry-run` apply the same way as the template-import mode.
+
+## See Also
+
+- [Overview](/features/modules/django-email) — `DjangoEmailService`, sending API, plain-text fallback
+- [Configuration Reference](/features/modules/django-email/configuration) — `EmailConfig` fields, provider setups

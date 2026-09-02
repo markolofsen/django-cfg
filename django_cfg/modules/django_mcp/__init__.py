@@ -4,11 +4,14 @@ default_app_config = "django_cfg.modules.django_mcp.apps.DjangoMCPConfig"
 
 from .exceptions import MCPError, MCPPermissionDenied, MCPValidationError
 from .__cfg__ import (
+    ALL_TOOLS,
+    PUBLIC_TOOLS,
     DjangoMCPModuleConfig,
     AppMCPConfig,
     ModelMCPConfig,
     IntrospectionConfig,
     CommandMCPConfig,
+    MCPProfile,
     MCPTargetConfig,
     RedactionConfig,
 )
@@ -46,11 +49,14 @@ __all__ = [
     "MCPError",
     "MCPPermissionDenied",
     "MCPValidationError",
+    "ALL_TOOLS",
+    "PUBLIC_TOOLS",
     "DjangoMCPModuleConfig",
     "AppMCPConfig",
     "ModelMCPConfig",
     "IntrospectionConfig",
     "CommandMCPConfig",
+    "MCPProfile",
     "MCPTargetConfig",
     "RedactionConfig",
     "MCPConfigBuilder",
