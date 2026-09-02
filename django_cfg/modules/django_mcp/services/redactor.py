@@ -152,14 +152,24 @@ def apply_redaction(data: Any, mode: RedactionMode = RedactionMode.REDACT,
     if mode == RedactionMode.NONE:
         return data
 
-    # Add custom patterns if provided
-    if custom_patterns:
-        for name, pattern in custom_patterns.items():
-            redactor.add_pattern(RedactionPattern(
-                name=name,
-                pattern=pattern,
-                replacement=f"[{name.upper()}_REDACTED]",
-                severity="medium",
-            ))
+    if not custom_patterns:
+        return redactor.redact(data, mode)
 
-    return redactor.redact(data, mode)
+    # Custom patterns run FIRST, in a throwaway redactor.
+    #
+    # Two bugs here, both silent. They were appended after the defaults, so a
+    # value matching a builtin was replaced by the builtin's label — a custom
+    # `custom_token` pattern produced [API_KEY_REDACTED], and the project's own
+    # naming never appeared. And they were pushed onto the *global* `redactor`,
+    # so every call permanently grew the pattern list: one request's patterns
+    # applied to every later request in the process, including other tenants'.
+    custom = [
+        RedactionPattern(
+            name=name,
+            pattern=pattern,
+            replacement=f"[{name.upper()}_REDACTED]",
+            severity="medium",
+        )
+        for name, pattern in custom_patterns.items()
+    ]
+    return PiiRedactor(custom + DEFAULT_PATTERNS[:]).redact(data, mode)
