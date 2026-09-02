@@ -50,7 +50,7 @@ class ImageCache:
         if cache_dir:
             self.cache_dir = Path(cache_dir)
         else:
-            self.cache_dir = Path.home() / ".cache" / "modules.django_llm" / "images"
+            self.cache_dir = Path.home() / ".cache" / "django_cfg.modules.django_llm" / "images"
 
         if self.enabled:
             self.cache_dir.mkdir(parents=True, exist_ok=True)

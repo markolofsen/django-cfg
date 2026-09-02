@@ -6,7 +6,7 @@ image. Backed by Nano Banana family models on OpenRouter, which
 accept multimodal inputs AND multimodal outputs via
 ``modalities=["image","text"]``.
 
-Cost is calculated through the same registry every other modules.django_llm
+Cost is calculated through the same registry every other django_cfg.modules.django_llm
 client uses, so AIPhoto / future apps don't need their own pricing
 math.
 

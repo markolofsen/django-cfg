@@ -4,7 +4,7 @@ selection. Thin facade over the LLMClient's already-loaded model catalogue (336
 OpenRouter models with live `pricing`); the rest of the app shouldn't have to know
 where the cache lives or what the price field is called.
 
-    from modules.django_llm import import_llm
+    from django_cfg.modules.django_llm import import_llm
     budget = import_llm("registry.budget")
 
     budget.model_price("anthropic/claude-3.5-haiku")   # -> {"prompt": 0.8, "completion": 4.0} USD/1M

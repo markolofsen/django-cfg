@@ -1,9 +1,9 @@
 """Turn a use-case into a ready pydantic-ai ``Model`` with a fallback chain.
 
 The agent plane needs a ``pydantic_ai.models.Model`` — the transport library
-(`modules.django_llm` root) returns ``(text, model_id)`` and runs no tool loop, so
+(`django_cfg.modules.django_llm` root) returns ``(text, model_id)`` and runs no tool loop, so
 the two layers stay separate and this is the seam between them. This module owns the
-*machinery*: reading the provider/key/endpoint from `modules.django_llm`, building an
+*machinery*: reading the provider/key/endpoint from `django_cfg.modules.django_llm`, building an
 ``OpenAIChatModel`` per slug, and wrapping them in a ``FallbackModel`` with the
 right fall-over predicate.
 
@@ -63,7 +63,7 @@ def is_malformed_response(exc: Exception) -> bool:
 
 
 def resolve_provider() -> tuple[str, str, str | None]:
-    """Return ``(provider_name, api_key, base_url)`` from ``modules.django_llm``.
+    """Return ``(provider_name, api_key, base_url)`` from ``django_cfg.modules.django_llm``.
 
     Preference order matches ``ProviderManager._determine_primary_provider``:
     OpenRouter first (it fronts every model most tier configs name), then OpenAI,
@@ -75,11 +75,11 @@ def resolve_provider() -> tuple[str, str, str | None]:
     at ``api.openai.com``.
     """
     # Import the transport from THIS package's own root, not through a host shim.
-    # `modules.django_llm` was cmdop's sandbox/djangocfg switch — a host module that
+    # `django_cfg.modules.django_llm` was cmdop's sandbox/djangocfg switch — a host module that
     # does not exist in django-cfg, so reaching for it broke the harness there. The
-    # transport root (`modules.django_llm` → `django_cfg.modules.django_llm` under the
+    # transport root (`django_cfg.modules.django_llm` → `django_cfg.modules.django_llm` under the
     # sync's rewrite) is the portable path, and both symbols are on its public surface.
-    from modules.django_llm import get_api_keys, PROVIDER_BASE_URLS
+    from django_cfg.modules.django_llm import get_api_keys, PROVIDER_BASE_URLS
 
     keys = get_api_keys()
     urls = PROVIDER_BASE_URLS
@@ -92,14 +92,14 @@ def resolve_provider() -> tuple[str, str, str | None]:
 
     logger.error(
         "[model_builder] no LLM provider key found — checked %s via "
-        "modules.django_llm.get_api_keys(). The agent will fail on first call.",
+        "django_cfg.modules.django_llm.get_api_keys(). The agent will fail on first call.",
         ", ".join(urls),
     )
     return "openrouter", "api-key-not-set", urls["openrouter"]
 
 
 def build_chat_model(model_name: str) -> OpenAIChatModel:
-    """Build one chat model on whichever provider ``modules.django_llm`` resolves."""
+    """Build one chat model on whichever provider ``django_cfg.modules.django_llm`` resolves."""
     _, api_key, base_url = resolve_provider()
     provider = OpenAIProvider(base_url=base_url, api_key=api_key)
     return OpenAIChatModel(model_name, provider=provider)

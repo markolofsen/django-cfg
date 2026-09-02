@@ -41,15 +41,15 @@ from pydantic_ai.messages import (
 )
 from pydantic_ai.run import AgentRunResultEvent
 
-from modules.django_llm.agent.tools.core._base_tool import strip_raw
-from modules.django_llm.agent.capabilities.code_mode import (
+from django_cfg.modules.django_llm.agent.tools.core._base_tool import strip_raw
+from django_cfg.modules.django_llm.agent.capabilities.code_mode import (
     iter_sandboxed_calls,
 )
-from modules.django_llm.agent.runtime.action_guard import (
+from django_cfg.modules.django_llm.agent.runtime.action_guard import (
     claims_action_without_evidence,
     tool_return_succeeded,
 )
-from modules.django_llm.agent.bus.events import (
+from django_cfg.modules.django_llm.agent.bus.events import (
     ApprovalRequiredEvent,
     DirectiveEvent,
     DoneEvent,
@@ -60,7 +60,7 @@ from modules.django_llm.agent.bus.events import (
     ToolResultEvent,
     UIPayloadEvent,
 )
-from modules.django_llm.agent.runtime.ui_payloads import (
+from django_cfg.modules.django_llm.agent.runtime.ui_payloads import (
     UI_PAYLOAD_TYPES,
     DirectivePayload,
 )
@@ -428,7 +428,7 @@ async def stream_agent_run(
                     # necessarily the primary). Pricing never raises — cost is
                     # telemetry, not the answer; see runtime/cost.py.
                     try:
-                        from modules.django_llm.agent.runtime.cost import price_run
+                        from django_cfg.modules.django_llm.agent.runtime.cost import price_run
 
                         usage_obj = run_result.usage
                         model_slug = str(
