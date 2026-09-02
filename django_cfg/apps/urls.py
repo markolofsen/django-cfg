@@ -9,6 +9,7 @@ from typing import List
 from django.urls import include, path
 
 from django_cfg.modules.base import BaseCfgModule
+from django_cfg.modules.django_mcp.urls import profile_urlpatterns
 
 
 def get_enabled_cfg_apps() -> List[str]:
@@ -165,6 +166,10 @@ except Exception:
 # MCP endpoint (Model Context Protocol for AI agents)
 # Registered unconditionally — module checks enabled state internally
 urlpatterns.append(path('cfg/mcp/', include('django_cfg.modules.django_mcp.urls')))
+
+# Declared MCP profiles, each at its own path (e.g. an anonymous '/mcp/').
+# Resolved lazily — see django_mcp.urls.profile_urlpatterns.
+urlpatterns.extend(profile_urlpatterns())
 
 # Custom admin dashboard tabs — always registered; view returns 404 if dashboard not configured
 urlpatterns.append(path('cfg/admin/dashboard/', include('django_cfg.modules.django_dashboard.urls')))
