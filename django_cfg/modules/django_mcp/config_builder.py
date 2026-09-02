@@ -199,12 +199,14 @@ class MCPConfigBuilder:
         self._llm_model: str = "openai/gpt-4.1-nano"
         self._profiles: Dict[str, ProfileBuilder] = {}
         self._public_profile: Optional[Dict[str, Any]] = None
+        self._synthesised_profiles: bool = False
 
     def enable_public_profile(
         self,
         path: str = "/mcp/",
         rate_limit: str = "20/minute",
         expose: Optional[Dict[str, Dict[str, Any]]] = None,
+        operator_public_info: bool = False,
     ) -> "MCPConfigBuilder":
         """Serve an anonymous, read-only surface beside the operator one.
 
@@ -222,11 +224,19 @@ class MCPConfigBuilder:
 
         ``rate_limit`` defaults tighter than the operator's: an anonymous
         caller has no key to revoke, so the rate is the only lever.
+
+        ``operator_public_info`` keeps the OPERATOR endpoint's ``/info/``
+        listing readable without a key. Default False: that listing names every
+        tool with its full input schema, which describes the internals to
+        anyone who asks. Set True only to preserve pre-2.3 behaviour a project
+        already depends on — the public profile has its own listing, and that
+        one is anonymous by design.
         """
         self._public_profile = {
             "path": path,
             "rate_limit": rate_limit,
             "expose": expose or {},
+            "operator_public_info": operator_public_info,
         }
         return self
 
@@ -488,6 +498,7 @@ class MCPConfigBuilder:
                 op.tools(ALL_TOOLS)
                 op._introspection = self._introspection
                 op.set_rate_limit(self._rate_limit)
+                op.set_public_info(spec["operator_public_info"])
                 for model_key, exposure in self._models.items():
                     op.expose(
                         model_key,
@@ -502,22 +513,26 @@ class MCPConfigBuilder:
                 for model_key, kwargs in spec["expose"].items():
                     pub.expose(model_key, **{"read_only": True, **kwargs})
 
-            # Moved, not copied. Left in place they would trip the mixing check
-            # below — and, worse, remain as a second declaration of settings the
-            # profiles now own.
-            self._access_key = None
-            self._service_username = None
-            self._introspection = IntrospectionConfig()
+            # COPIED, not moved. Clearing the flat fields here broke
+            # introspection outright: `tools/introspection.py` reads
+            # `config.introspection`, not the profile, so an emptied field left
+            # every introspection tool answering "not enabled". Measured on
+            # cmdop, 7 tests.
+            #
+            # The flat fields therefore stay as the operator surface's
+            # description, and the mixing check below skips this path — it
+            # guards a HAND-WRITTEN profile that would strand them, which is a
+            # different situation from this one, where they were the source.
+            self._synthesised_profiles = True
 
-        if self._profiles:
+        if self._profiles and not self._synthesised_profiles:
             # Declaring profiles means profiles describe every surface. A flat
             # `set_access_key` alongside them would apply to no endpoint while
             # looking like it protects one — the exact "configured but not
             # enforced" shape this feature exists to remove.
             #
-            # Not reached via `enable_public_profile()`: that path moves the
-            # flat settings onto the operator profile rather than stranding
-            # them, and clears them below.
+            # `enable_public_profile()` is exempt: there the flat settings ARE
+            # the operator profile's source, not a stranded leftover.
             conflicting = [
                 name
                 for name, value in (
