@@ -307,13 +307,23 @@ class RawSQLTool(MCPTool):
             return "Error: Only SELECT queries are allowed"
 
         # ── Step 1: AST Validation ──────────────────────────────────────
-        if HAS_PGLAST:
-            try:
-                validator = SQLValidator()
-                validator.validate_or_raise(sql)
-            except Exception as e:
-                query_context.record_query(self.name, error=f"AST validation failed: {e}")
-                return f"Error: SQL validation failed — {e}"
+        # Refused rather than skipped when pglast is absent. Without it the
+        # only remaining check is `startswith("SELECT")`, which a data-modifying
+        # CTE passes — so skipping here would silently downgrade the tool's
+        # advertised safety pipeline to a string prefix.
+        if not HAS_PGLAST:
+            query_context.record_query(self.name, error="pglast not installed")
+            return (
+                "Error: raw_sql is unavailable — SQL validation requires pglast. "
+                "Install it: pip install 'django-cfg[mcp-sql]'"
+            )
+
+        try:
+            validator = SQLValidator()
+            validator.validate_or_raise(sql)
+        except Exception as e:
+            query_context.record_query(self.name, error=f"AST validation failed: {e}")
+            return f"Error: SQL validation failed — {e}"
 
         # ── Step 2: Cost Estimation ─────────────────────────────────────
         estimator = QueryCostEstimator(max_cost=50_000, max_rows=10_000)

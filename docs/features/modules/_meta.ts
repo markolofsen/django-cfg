@@ -25,7 +25,6 @@ export default {
   // ── Code Generation ──────────────────────────────────────────
   'django-codegen': 'Code Generation',
   'django-fastapi': 'FastAPI ORM',
-  'django-ogimage': 'OG Images',
 
   // ── AI & LLM ────────────────────────────────────────────────
   'django-llm': 'LLM Integration',

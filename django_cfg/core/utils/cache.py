@@ -22,8 +22,8 @@ Quick start::
     cache.set(key, b"<png bytes>", suffix=".png")
     data = cache.get(key, suffix=".png")   # None on miss or expiry
 
-    # absolute path + relative URL for sharded media layout (OG images etc.)
-    path, url = cache.sharded_paths(key, "ogimage", suffix=".png")
+    # absolute path + relative URL for sharded media layout
+    path, url = cache.sharded_paths(key, "thumbnails", suffix=".png")
 
     # --- lazy remote resource ---
     font = LazyFileResource(

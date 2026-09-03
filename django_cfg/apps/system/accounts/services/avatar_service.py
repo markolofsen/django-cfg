@@ -56,8 +56,8 @@ def process_avatar(uploaded: UploadedFile) -> ContentFile:
     Raises ``ValueError`` if the payload is not a decodable image (callers
     should surface this as a validation error).
     """
-    # Pillow is a core dependency (django_ogimage), so import at module-call
-    # time is fine; keep it local to avoid importing PIL on app load.
+    # Pillow is a core dependency; imported here rather than at module level to
+    # keep PIL off the app-load path.
     from PIL import Image, ImageOps, UnidentifiedImageError
 
     # Read the whole upload into memory. Avatars are capped at a few MB upstream

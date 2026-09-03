@@ -112,7 +112,6 @@ def get_default_cfg_group():
 
 # Core API endpoints (always enabled)
 urlpatterns = [
-    path('cfg/og/', include('django_cfg.modules.django_ogimage.http.urls')),
     path('cfg/sitemap/', include('django_cfg.modules.django_sitemap.http.urls')),
     path('', include('django_cfg.apps.api.health.urls')),
     path('cfg/endpoints/', include('django_cfg.apps.api.endpoints.urls')),

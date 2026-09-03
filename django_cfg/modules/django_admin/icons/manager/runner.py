@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from .categorizer import categorize_icons
-from .downloader import download_codepoints, download_metadata, download_top_svgs
+from .downloader import download_codepoints, download_metadata
 from .generator import generate_constants_file, generate_readme
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,6 @@ def run(output_dir: Path = DEFAULT_OUTPUT_DIR) -> bool:
     2. Download metadata  (popularity, categories, version)
     3. Categorize icons
     4. Generate constants.py + README.md
-    5. Download top-50 SVGs into django_ogimage assets
 
     Returns True on success, False if codepoints download failed.
     """
@@ -38,7 +37,6 @@ def run(output_dir: Path = DEFAULT_OUTPUT_DIR) -> bool:
 
     generate_constants_file(output_dir, icons_data, categories)
     generate_readme(output_dir, icons_data, categories)
-    download_top_svgs(metadata)
 
     logger.info("🎉 Icon generation completed successfully!")
     return True
@@ -50,7 +48,6 @@ def main() -> None:
     if success:
         print("\n✅ Material Icons updated successfully!")
         print(f"   constants.py + README.md → {DEFAULT_OUTPUT_DIR}")
-        print("   SVG icons → django_ogimage/core/assets/icons/")
         print("\n💡 Don't forget to commit the changes!")
     else:
         print("\n❌ Icon generation failed!")

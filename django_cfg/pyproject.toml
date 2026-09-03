@@ -10,7 +10,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.2.162"
+version = "2.2.163"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nreal-time WebSockets, and 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -70,9 +70,9 @@ dependencies = [
     "cachetools>=5.3.0,<7.0",
     "toml>=0.10.2,<0.11.0",
 
-    # Image rendering (django_ogimage)
+    # Image handling for django_llm vision (resize/encode before upload)
     "pillow>=12.2.0,<13.0",
-    "pictex>=2.1.0,<3.0",
+    # Readable fallback usernames (accounts/managers/user_manager.py)
     "coolname>=2.2.0,<3.0",
     "tzlocal>=5.3.1,<6.0",
     "psutil>=7.0.0",
@@ -250,6 +250,14 @@ payments = [
     "stripe>=15.3.0,<16.0",
 ]
 
+# MCP raw-SQL tool (django_mcp/sql/) — the AST validator behind `raw_sql`.
+# Extra-gated the same way as payments: validator.py lazy-imports pglast and
+# SQLValidator raises ImportError ("pip install pglast") without it, so the
+# tool refuses rather than falling back to a weaker check.
+mcp-sql = [
+    "pglast>=7.0,<9.0",
+]
+
 rq = [
     "django-rq>=4.0.0",
     "rq>=2.7.0",
@@ -281,6 +289,7 @@ docs = [
 
 test = [
     "django>=5.2.14,<6.0",  # 5.2.14 floor covers 2026 SQLi/DoS/session-fixation CVEs
+    "pglast>=7.0,<9.0",  # django_mcp/sql/tests skip themselves without it
     "pytest>=7.0",
     "pytest-django>=4.5",
     "pytest-cov>=4.0",
@@ -534,6 +543,9 @@ dev = [
     "django-rq>=4.0.0",
     "rq>=2.7.0",
     "rq-scheduler>=0.14.0",
+    # django_mcp/sql/tests skip themselves without it, so the SQL validator
+    # would ship unverified. The runtime dependency is the `mcp-sql` extra.
+    "pglast>=7.0,<9.0",
 ]
 
 [tool.uv]
@@ -637,7 +649,6 @@ exclude = [
     "**/static/frontend/*.version",
     "**/apps/tools/geo/data/*.json",
     # All fonts excluded — system font used as default, others downloaded on demand
-    "**/django_ogimage/core/assets/fonts/*.ttf",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -663,7 +674,6 @@ exclude = [
     "**/static/frontend/*.zip",
     "**/static/frontend/*.version",
     "**/apps/tools/geo/data/*.json",
-    "**/django_ogimage/core/assets/fonts/*.ttf",
 ]
 
 [tool.hatch.build.targets.wheel.force-include]

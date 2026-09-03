@@ -22,8 +22,8 @@ Usage::
         get_logs_path, get_templates_path,
     )
 
-    get_media_path("ogimage", "ab", "cd", "abcdef.png")
-    # → /project/media/ogimage/ab/cd/abcdef.png
+    get_media_path("thumbnails", "ab", "cd", "abcdef.png")
+    # → /project/media/thumbnails/ab/cd/abcdef.png
 
     get_static_root("css", "main.css")
     # → /project/staticfiles/css/main.css
