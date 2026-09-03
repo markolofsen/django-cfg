@@ -74,10 +74,12 @@ def probe(url: str, timeout: int = 10) -> Optional[int]:
 def probe_endpoint(url: str, timeout: int = 10) -> Optional[int]:
     """Ask the guarded endpoint itself whether it demands a key.
 
-    Deliberately separate from :func:`probe`. That one asks ``/info/``, which is
-    public by design, so its ``200`` says "the server is up" and nothing at all
-    about authentication — reading it as "serving unauthenticated" once
-    reported a correctly-locked production deployment as wide open.
+    Deliberately separate from :func:`probe`. That one asks ``/info/``, whose
+    status says "the server is up" and nothing about *this* endpoint's policy:
+    since 2.2.158 it is gated by the same key unless the project opts out, and
+    a profile may serve its listing anonymously by design. Reading its ``200``
+    as "serving unauthenticated" once reported a correctly-locked production
+    deployment as wide open.
 
     Here a ``401`` is the answer we want: the endpoint is refusing an
     anonymous caller. A ``200`` means it is answering everyone, which is the

@@ -87,9 +87,13 @@ curl -X POST http://localhost:8000/cfg/mcp/agent/ \
 | **Queries** | Max rows, cost estimation, read-only by default |
 | **Commands** | Whitelist only, 30s timeout, stdout captured |
 
-`GET /cfg/mcp/info/` is public by design and lists every tool with its schema.
-Not a data leak, but it is reconnaissance — block it at the proxy on a public
-host.
+`GET /cfg/mcp/info/` lists every tool with its schema. It used to answer `200`
+to anyone; since 2.2.158 it is gated by the same access key as the JSON-RPC
+endpoint, so no proxy rule is needed. Never a data leak — execution always
+required the key — but the capability map is worth gating too. An anonymous
+*profile* serves its own `/info/` anonymously by design, listing only that
+profile's tools; `public_info=True` restores the old always-public behaviour
+deliberately.
 
 > **Check a deployed server before trusting its auth.** Until 2026-08-04 the
 > access key was compared and then ignored, so tools ran for unauthenticated

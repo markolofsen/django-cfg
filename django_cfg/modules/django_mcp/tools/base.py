@@ -26,12 +26,30 @@ class MCPTool(ABC):
     #: personal data, and cannot mutate anything.
     public: bool = False
 
-    def to_definition(self) -> Dict[str, Any]:
-        """Return tool definition for MCP tools/list response."""
+    def schema_for(self, profile) -> Dict[str, Any]:
+        """The input schema this profile should be shown.
+
+        Default: the class attribute, unchanged. Override when a limit differs
+        by profile — an anonymous surface that caps rows lower than the operator
+        one must *say so*, or the listing advertises a ceiling the call will not
+        honour and the agent reads the clamp as a bug.
+
+        Tools are registered as singleton instances, so this must return a new
+        dict rather than mutate ``self.input_schema``: two profiles share the
+        object, and a per-request mutation is a cross-request race.
+        """
+        return self.input_schema
+
+    def to_definition(self, profile=None) -> Dict[str, Any]:
+        """Return tool definition for MCP tools/list response.
+
+        ``profile`` is optional so every existing caller keeps working; when
+        given, the schema is the one that profile should see.
+        """
         return {
             "name": self.name,
             "description": self.description,
-            "inputSchema": self.input_schema,
+            "inputSchema": self.schema_for(profile) if profile is not None else self.input_schema,
         }
 
     def is_available(self, context: Optional[MCPContext]) -> bool:

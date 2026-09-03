@@ -218,15 +218,22 @@ def _check_targets(config: Any, targets: dict[str, Target]) -> list[Finding]:
 def _check_reachable(targets: dict[str, Target]) -> list[Finding]:
     """Two different questions, and they need two different requests.
 
-    ``probe`` asks ``/info/``, which is **public by design** — it is how a
-    client discovers the tool list before it has a key. Reading its ``200`` as
-    "the endpoint serves unauthenticated" is simply the wrong route: this check
-    once reported a correctly-locked production deployment as wide open, with
-    the alarming wording and all, while ``POST /cfg/mcp/`` was answering 401 to
-    everyone. A false "your secrets are exposed" is not a harmless
-    over-warning — it either sends someone into an emergency that does not
-    exist, or teaches them that this line is noise, which is worse, because the
-    real thing looks identical.
+    ``probe`` asks ``/info/``. **Since 2.2.158 that route is gated by the same
+    key as JSON-RPC** unless the project opts out with ``public_info``, so its
+    status code no longer answers the same question it used to:
+
+    ==========  ====================================================
+    ``200``     up, and this profile serves its listing anonymously
+    ``401``     up, and gated — the normal shape for a keyed endpoint
+    ==========  ====================================================
+
+    Both are healthy. Reading either as "the endpoint serves unauthenticated"
+    is the wrong route: this check once reported a correctly-locked production
+    deployment as wide open, with the alarming wording and all, while ``POST
+    /cfg/mcp/`` was answering 401 to everyone. A false "your secrets are
+    exposed" is not a harmless over-warning — it either sends someone into an
+    emergency that does not exist, or teaches them that this line is noise,
+    which is worse, because the real thing looks identical.
 
     So: ``/info/`` answers *is it up*, and the guarded endpoint answers *is it
     locked*. Only the second may claim the endpoint is open.
@@ -285,8 +292,10 @@ def _check_reachable(targets: dict[str, Target]) -> list[Finding]:
                     f"{target.url} → 403, which this app does not return to an "
                     "unauthenticated probe — most likely a WAF in front of it",
                     "compare with `curl -s -o /dev/null -w '%{http_code}' "
-                    f"{target.url.rstrip('/')}/info/` — a 200 there means the "
-                    "deployment is fine and only the probe was refused",
+                    f"{target.url.rstrip('/')}/info/` — **200 or 401** there "
+                    "means the deployment is fine and only the probe was "
+                    "refused. 401 is the normal answer for a keyed endpoint "
+                    "since 2.2.158; only a 403 points at the edge",
                 )
             )
         else:

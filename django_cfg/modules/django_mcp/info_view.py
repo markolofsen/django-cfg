@@ -165,7 +165,10 @@ class MCPInfoView(APIView):
             tools.append({
                 "name": tool.name,
                 "description": tool.description,
-                "input_schema": tool.input_schema,
+                # The profile's schema, not the class attribute: a tool whose
+                # ceiling differs per profile must advertise the one that
+                # applies here, or this listing contradicts the endpoint.
+                "input_schema": tool.schema_for(profile) if profile else tool.input_schema,
             })
 
         return JsonResponse({

@@ -1,5 +1,7 @@
 """MCP Tools Handler."""
 
+import logging
+import time
 from typing import Any, Dict, List
 
 from django_cfg.modules.django_mcp.services.context import MCPContext
@@ -23,6 +25,25 @@ from django_cfg.modules.django_mcp.agent.orm_tools import (
 )
 # Use the GLOBAL registry — do NOT create a new one
 from django_cfg.modules.django_mcp.tools.base import tool_registry
+
+logger = logging.getLogger(__name__)
+
+
+def _caller_ip(context) -> str:
+    """Best-effort caller address for the access log.
+
+    An anonymous profile has no key and no account, so the address is the only
+    thing distinguishing one caller from another when reading the log after the
+    fact. ``X-Forwarded-For`` is trusted here only because this endpoint sits
+    behind the deployment's own proxy; it is a log field, never an auth input.
+    """
+    request = getattr(context, "request", None)
+    if request is None:
+        return "-"
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR") or "-"
 
 # Register introspection tools
 tool_registry.register(list_apps_tool)
@@ -54,7 +75,7 @@ class ToolsHandler:
         """Return list of available tools."""
         tools = []
         for tool in tool_registry.get_all_tools(context):
-            tools.append(tool.to_definition())
+            tools.append(tool.to_definition(getattr(context, "profile", None)))
 
         return {"tools": tools}
 
@@ -83,10 +104,43 @@ class ToolsHandler:
         # listing set out to withhold.
         profile = getattr(context, "profile", None)
         if profile is not None and not profile.serves(tool):
+            logger.info(
+                "mcp.call profile=%s tool=%s ip=%s outcome=refused",
+                getattr(profile, "name", "-"),
+                tool_name,
+                _caller_ip(context),
+            )
             raise MCPPermissionDenied(f"Tool '{tool_name}' not found or not permitted")
 
         # Execute tool with context
-        result = tool.execute(context, arguments)
+        started = time.monotonic()
+        try:
+            result = tool.execute(context, arguments)
+        except Exception as exc:
+            logger.warning(
+                "mcp.call profile=%s tool=%s ip=%s args=%s ms=%d outcome=error error=%s",
+                getattr(profile, "name", "-"),
+                tool_name,
+                _caller_ip(context),
+                ",".join(sorted(arguments)) or "-",
+                (time.monotonic() - started) * 1000,
+                type(exc).__name__,
+            )
+            raise
+
+        logger.info(
+            "mcp.call profile=%s tool=%s ip=%s args=%s ms=%d bytes=%d outcome=ok",
+            getattr(profile, "name", "-"),
+            tool_name,
+            _caller_ip(context),
+            # Argument NAMES only. On an anonymous endpoint the values are
+            # attacker-supplied and may carry a search phrase or an id a caller
+            # would not expect us to retain; the names are enough to tell which
+            # shape of call was made.
+            ",".join(sorted(arguments)) or "-",
+            (time.monotonic() - started) * 1000,
+            len(result or ""),
+        )
 
         return {
             "content": [
