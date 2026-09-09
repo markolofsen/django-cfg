@@ -38,10 +38,6 @@ def get_enabled_cfg_apps() -> List[str]:
     # Sitemap module — its AppConfig.ready() autoloads per-app sitemap_sources.py
     enabled_apps.append("django_cfg.modules.django_sitemap")
 
-    # Integration apps
-    if base_module.is_centrifugo_enabled():
-        enabled_apps.append("django_cfg.modules.django_centrifugo")
-
     if base_module.should_enable_rq():
         enabled_apps.append("django_cfg.modules.django_rq")
 
@@ -105,7 +101,7 @@ def get_default_cfg_group():
         name="cfg",
         apps=get_enabled_cfg_apps(),
         title="Django-CFG API",
-        description="Authentication (OTP), Support, Newsletter, Leads, Knowledge Base, AI Agents, Tasks, Centrifugo, gRPC, Dashboard",
+        description="Authentication (OTP), Support, Newsletter, Leads, Knowledge Base, AI Agents, Tasks, Dashboard",
         version="1.0.0",
     )
 
@@ -124,15 +120,6 @@ urlpatterns = [
 
 # Business apps (conditional based on config)
 base_module = BaseCfgModule()
-
-# Integration apps (conditional based on config)
-# django_centrifugo: token endpoint for client websocket auth.
-# Mounted only when centrifugo is enabled in config.
-if base_module.is_centrifugo_enabled():
-    urlpatterns.append(
-        path('cfg/centrifugo/', include('django_cfg.modules.django_centrifugo.urls'))
-    )
-
 
 
 # Geo app (countries, states, cities)

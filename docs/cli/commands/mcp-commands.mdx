@@ -55,6 +55,17 @@ mcp.add_target("prod", "../../deploy/.env")
 
 `local` needs no files — the running process *is* that deployment, so its own `access_key` and URL answer directly. A remote target should point at the dotenv file(s) that configure that deployment. See [`add_target`](/features/modules/django-mcp/configuration#declarative-config-via-mcpconfigbuilder) for the full signature.
 
+### Targets on a multi-profile deployment
+
+A target's URL is built from its profile's `path`. On a deployment serving more than one [profile](/features/modules/django-mcp/configuration#profiles), name the one this target registers:
+
+```python
+mcp.add_target("prod", "../../deploy/.env", profile="operator")
+mcp.add_target("prod_public", "../../deploy/.env", profile="public")
+```
+
+Omitted, a target registers `endpoint_path`. That failure is quiet: the client connects to a real endpoint and lists real tools, just the wrong set. A target naming a profile that does not exist is rejected at config-build time rather than falling back.
+
 ### Key resolution
 
 For a given target, the access key is resolved in this order, first match wins:
@@ -69,7 +80,7 @@ A remote target never falls back to the running process's key — that fallback 
 
 ### Reachability probe
 
-Before writing anything, `mcp_install` GETs `<url>/info/` to confirm the endpoint is alive. The probe sends a custom `User-Agent: django-cfg-mcp-install (+https://pypi.org/project/django-cfg/)` instead of urllib's default `Python-urllib/3.x` — the default signature is blocked by Cloudflare's managed WAF rules on some deployments, which would otherwise report a perfectly healthy server as unreachable. Both `200` and `401` count as "alive" (`401` means the server is up and correctly requiring auth). Pass `--skip-probe` to disable this check entirely.
+Before writing anything, `mcp_install` GETs `<url>/info/` to confirm the endpoint is alive. The probe sends a custom `User-Agent: django-cfg-mcp-install (+https://pypi.org/project/django-cfg/)` instead of urllib's default `Python-urllib/3.x` — the default signature is blocked by Cloudflare's managed WAF rules on some deployments, which would otherwise report a perfectly healthy server as unreachable. Both `200` and `401` count as "alive": `401` means the server is up and correctly requiring auth, and since 2.2.158 `/info/` is itself gated unless the profile serves its listing anonymously. Pass `--skip-probe` to disable this check entirely.
 
 ### Exit codes
 
@@ -99,12 +110,14 @@ Four things, each of which fails **invisibly** on its own:
 - **That account exists, is active, and is not a superuser.** A `service_username` that matches no row (e.g. a bare username when `USERNAME_FIELD` is `email`) rejects every request outright, not just staff-gated ones. A superuser binding is flagged too — it grants full admin rights to every holder of the key.
 - **Declared endpoints answer, and answer with `401` — not `200` — when unauthenticated.**
 
-The last check uses two distinct probes:
+The last check uses two distinct probes, because "is it up?" and "is it locked?" are different questions:
 
-- `probe()` hits `/info/`, which is public by design. A `200` there says only "the server is up" — it says nothing about whether the JSON-RPC endpoint is locked.
-- `probe_endpoint()` POSTs a real `tools/list` JSON-RPC call to the guarded endpoint and expects `401`. A `200` here is the one finding in the whole report that's a genuine emergency: it means the endpoint is serving every caller.
+- `probe()` GETs `/info/` and answers only **is it up**. Since 2.2.158 that route is gated by the same key as JSON-RPC unless the profile serves its listing anonymously, so both `200` (up, listing is anonymous here) and `401` (up, gated — the normal shape for a keyed endpoint) are healthy. Its status code cannot say whether the endpoint is locked.
+- `probe_endpoint()` POSTs a real `tools/list` JSON-RPC call to the guarded endpoint and answers **is it locked**. `401` is the pass. A `200` here is the one finding in the whole report that's a genuine emergency: it means the endpoint is serving every caller.
 
-Reading `/info/`'s `200` as "serving unauthenticated" previously produced false-positive "server is wide open" reports against correctly-locked deployments — which is why the two are checked separately.
+Only the second may claim an endpoint is open. Reading `/info/`'s status as "serving unauthenticated" once reported a correctly-locked production deployment as wide open, alarming wording and all, while `POST /cfg/mcp/` was answering `401` to everyone — and a false "your secrets are exposed" either sends someone into an emergency that does not exist, or teaches them the line is noise, which is worse.
+
+A `403` from the probe is reported as a **warning about the edge, not the app**: Django answers an unauthenticated probe with `401`, never `403`, so a `403` is most likely a WAF in front of the deployment.
 
 <Callout type="warning">
 A clean `mcp_doctor` report proves the setup is reachable and locked down — it does not prove any tool works. A connected server with a valid key can still ship tools that raise on every real call while listing cleanly. Call one for real after a clean report.

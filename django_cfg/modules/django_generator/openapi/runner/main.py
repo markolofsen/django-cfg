@@ -13,7 +13,6 @@ from ...public.config import (
     GeneratorOptions,
     Platform,
 )
-from .centrifugo import run_centrifugo
 from .logger import (
     GenerationLogger,
     get_generation_logger,
@@ -97,15 +96,11 @@ def run(
 
     # Run generators (filtered by only_target if specified)
     run_openapi_gen = only_target is None or only_target not in ("orm",)
-    run_centrifugo_gen = only_target is None or only_target not in ("orm",)
     run_sdk_gen = only_target is None or only_target not in ("orm",)
     run_orm_gen = only_target is None or only_target == "orm"
 
     if config.openapi and run_openapi_gen:
         run_openapi(config.openapi, only_platforms, only_target, only_groups, dry_run, logger)
-
-    if config.centrifugo and run_centrifugo_gen:
-        run_centrifugo(config.centrifugo, only_platforms, only_groups, dry_run, logger)
 
     if config.sdk and run_sdk_gen:
         run_sdk(config.sdk, only_groups, dry_run, logger)

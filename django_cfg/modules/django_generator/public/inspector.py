@@ -50,7 +50,6 @@ class ConfigSummary(BaseModel):
 
     openapi: list[TargetSummary] = []
     extensions: ExtensionsSummary | None = None
-    centrifugo: list[TargetSummary] = []
     sdk: list[SDKPackageSummary] = []
     orm: list[ORMTargetSummary] = []
 
@@ -91,17 +90,6 @@ def inspect_config(config: Config) -> ConfigSummary:
                 ],
             )
 
-    centrifugo_targets: list[TargetSummary] = []
-    if config.centrifugo:
-        for t in config.centrifugo.targets:
-            centrifugo_targets.append(TargetSummary(
-                lang=t.lang.value,
-                type=_target_type_str(t.type),
-                path=str(t.path),
-                groups=t.groups,
-                post_build=t.post_build,
-            ))
-
     sdk_packages: list[SDKPackageSummary] = []
     if config.sdk:
         for pkg in config.sdk.packages:
@@ -125,7 +113,6 @@ def inspect_config(config: Config) -> ConfigSummary:
     return ConfigSummary(
         openapi=openapi_targets,
         extensions=extensions_summary,
-        centrifugo=centrifugo_targets,
         sdk=sdk_packages,
         orm=orm_targets,
     )

@@ -5,12 +5,9 @@ from rest_framework import serializers
 from django_cfg.apps.system.accounts.serializers import UserSerializer
 
 
-# Simplified user serializer without centrifugo to avoid Swift type conflicts
+# Distinct schema name so the 2FA response does not alias the profile schema.
 class TotpVerifyUserSerializer(UserSerializer):
     """User data returned after 2FA verification."""
-
-    class Meta(UserSerializer.Meta):
-        fields = [f for f in UserSerializer.Meta.fields if f != "centrifugo"]
 
 
 class VerifySerializer(serializers.Serializer):

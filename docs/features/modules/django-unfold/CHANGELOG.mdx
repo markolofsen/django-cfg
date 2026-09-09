@@ -15,7 +15,6 @@ Modern React-based admin dashboard with real-time capabilities and type-safe API
 - **REST API Backend** - Complete API at `/cfg/dashboard/api/` for all dashboard data
 - **Service Layer** - Clean service classes for statistics, health, charts, and commands
 - **Type-Safe** - Full TypeScript + Pydantic type safety
-- **Real-Time** - WebSocket support via Centrifugo integration
 
 ### API Endpoints
 
@@ -43,41 +42,6 @@ class MyConfig(DjangoConfig):
 
 ---
 
-## 🔧 Centrifugo WebSocket Integration
-
-Real-time communication via WebSocket with automatic RPC logging.
-
-### Features
-
-- **RPC Logging** - Automatic logging of all RPC calls to database
-- **Admin Interface** - RPC Logs admin panel with filtering
-- **Real-Time Metrics** - WebSocket connection monitoring
-- **Type-Safe** - Full Pydantic validation for all messages
-
-### Configuration
-
-```python
-from django_cfg import DjangoConfig, DjangoCfgCentrifugoConfig
-
-class MyConfig(DjangoConfig):
-    centrifugo: DjangoCfgCentrifugoConfig = DjangoCfgCentrifugoConfig(
-        enabled=True,
-        centrifugo_url="ws://localhost:8000/connection/websocket",
-        log_all_calls=True,
-        log_level="INFO",
-    )
-```
-
-### Usage
-
-Access Centrifugo dashboard at `/cfg/centrifugo/admin/` to view:
-- Real-time connection status
-- RPC call logs
-- Channel statistics
-- Error tracking
-
----
-
 ## 🎯 Navigation Manager
 
 Automatic navigation generation based on enabled Django-CFG modules.
@@ -87,7 +51,6 @@ Automatic navigation generation based on enabled Django-CFG modules.
 The NavigationManager automatically creates sidebar sections for:
 
 - **Dashboard** - Overview, Frontend Admin, Settings, Health Check
-- **Centrifugo** (if enabled) - Dashboard, Logs
 - **Operations** (if enabled) - Background Tasks, Maintenance
 - **Users & Access** (if accounts enabled) - Users, Groups, OTP Secrets
 - **Support** (if enabled) - Tickets, Messages
@@ -154,7 +117,6 @@ unfold: UnfoldConfig = UnfoldConfig(
 ## 📚 Related Documentation
 
 - [Unfold Overview](/features/modules/django-unfold) - Complete module documentation
-- [Centrifugo Integration](../django-centrifugo/) - Real-time WebSocket setup
 - [Configuration Guide](/configuration) - Unfold configuration
 
 ---
@@ -162,19 +124,13 @@ unfold: UnfoldConfig = UnfoldConfig(
 ## 🚀 Quick Start
 
 ```python
-from django_cfg import DjangoConfig, UnfoldConfig, DjangoCfgCentrifugoConfig
+from django_cfg import DjangoConfig, UnfoldConfig
 
 class MyConfig(DjangoConfig):
     # Unfold admin interface
     unfold: UnfoldConfig = UnfoldConfig(
         site_title="My Admin",
         theme='dark',
-    )
-
-    # Optional: Centrifugo WebSocket
-    centrifugo: DjangoCfgCentrifugoConfig = DjangoCfgCentrifugoConfig(
-        enabled=True,
-        centrifugo_url="ws://localhost:8000/connection/websocket",
     )
 ```
 
@@ -187,5 +143,4 @@ Access admin at: `http://localhost:8000/admin/`
 - Dashboard automatically adapts to enabled Django-CFG modules
 - Use `NavigationManager` for consistent sidebar across projects
 - OKLCH colors provide better color interpolation than RGB
-- Centrifugo logging helps debug real-time issues
 - All APIs are documented via OpenAPI/Swagger at `/api/schema/swagger/`

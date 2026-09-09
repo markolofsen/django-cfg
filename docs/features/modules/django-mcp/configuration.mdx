@@ -39,6 +39,7 @@ When `enabled=False` (the default), the MCP endpoint exists but returns errors o
 | `enable_streaming` | `bool` | `False` | Reserved for future protocol-level streaming. Does not affect SSE admin chat. |
 | `enable_audit_log` | `bool` | `True` | Write every MCP operation to `MCPAuditLog`. |
 | `install_targets` | `Dict[str, MCPTargetConfig]` | `{}` | Deployments `manage.py mcp_install --<name>` can register. See [`mcp_install`](/cli/commands/mcp-commands#mcp_install). |
+| `profiles` | `Dict[str, MCPProfile]` | `{}` | MCP surfaces this process serves, keyed by profile name. Empty means the flat fields above describe one implicit surface. See [Profiles](#profiles) below. |
 
 ### Service accounts
 
@@ -66,6 +67,113 @@ The ergonomic entry point is `MCPConfigBuilder.set_access_key(key, service_usern
 By default (`public_info=False`), `/info/` requires the same `X-MCP-Access-Key` header as the JSON-RPC endpoint whenever `access_key` is configured. Set `public_info=True` to let anyone list tools without a key — useful for a public demo server, or a client that wants to inspect tools before the user provides a key.
 
 An unauthorized request gets `401` with `WWW-Authenticate: MCPAccessKey realm="mcp", header="X-MCP-Access-Key"` — not `Bearer`, deliberately, so MCP clients don't mistake it for OAuth and go looking for `/.well-known/oauth-protected-resource`.
+
+## Profiles
+
+A **profile** is one MCP surface, and it binds three things that must never be set independently: an access rule, a tool set, and a mount path. One Django process can serve several — typically an operator endpoint behind a key plus an anonymous public one.
+
+Binding them is the point. When access is inferred from "is a key configured?", these four situations are indistinguishable and three of them are accidents:
+
+```
+"I want a public server"      access_key is None
+forgot the env var in prod    access_key is None
+typo in the variable name     access_key is None
+secret never reached the pod  access_key is None
+```
+
+A profile makes the deliberate case a named choice (`access="anonymous"`), so the accidents keep failing.
+
+### The implicit `default` profile
+
+A deployment that declares no profiles still has exactly one surface. `DjangoMCPModuleConfig` synthesises a profile named `default` from the flat fields — `endpoint_path`, `access_key`, `service_username`, `rate_limit`, `public_info` — serving all tools. Nothing changes for existing projects; the request path just always has a profile to read.
+
+`access` on that synthesised profile mirrors the old rule: `key` when `access_key` is set, `anonymous` when it is not. That inference is exactly what declaring a profile replaces, and it stays inferred here on purpose — changing it would break every local deployment on upgrade.
+
+### `MCPProfile` fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | `str` | — | Profile identifier, matching `^[a-z][a-z0-9_-]*$`. |
+| `path` | `str` | — | URL path this profile is mounted at. Must start with `/`. |
+| `access` | `str` | — | `"key"` (requires `X-MCP-Access-Key`) or `"anonymous"` (requires nothing). |
+| `access_key` | `str \| None` | `None` | Required when `access="key"`, forbidden when `"anonymous"`. |
+| `service_username` | `str \| None` | `None` | Account the key acts as. Forbidden on an anonymous profile. |
+| `tools` | `List[str]` | `[]` | Tool names this profile serves, `["*"]` for all, or `["public"]` for every tool declaring `public = True`. **Defaults to empty, never to all.** |
+| `exposures` | `Dict[str, ModelMCPConfig]` | `{}` | Model exposures scoped to this profile, keyed by `"app.Model"`. |
+| `introspection` | `IntrospectionConfig \| None` | `None` | Introspection for this profile. Forbidden when anonymous. |
+| `rate_limit` | `str` | `"100/minute"` | Rate limit for this profile's endpoints. |
+| `public_info` | `bool \| None` | `None` | Whether `<path>info/` lists tools without a credential. `None` follows `access`. |
+
+`ALL_TOOLS` (`"*"`) and `PUBLIC_TOOLS` (`"public"`) are importable from `django_cfg.modules.django_mcp`. `PUBLIC_TOOLS` resolves by reading each tool class's own `public` flag rather than restating a list in your config, so adding a tool cannot silently change what is public in either direction.
+
+### The one-call form
+
+The common case — an operator surface plus an anonymous public one — is a single builder call:
+
+```python
+from django_cfg.modules.django_mcp import MCPConfigBuilder
+
+mcp = MCPConfigBuilder()
+mcp.set_access_key("your-secret-key", service_username="mcp-service")
+mcp.enable_public_profile(path="/mcp/", rate_limit="20/minute")
+
+mcp_config = mcp.build()
+```
+
+Everything configured before that call becomes the `operator` profile, mounted at the default `endpoint_path` and serving all tools. `public` is added beside it at `path`, anonymous, serving only tools that declare `public = True`.
+
+`rate_limit` defaults tighter than the operator's (`"20/minute"`): an anonymous caller has no key to revoke, so the rate is the only lever. `enable_public_profile()` requires that `set_access_key()` was called first — without an operator key both surfaces would be anonymous, which is not what it asks for.
+
+### Writing profiles by hand
+
+`mcp.profile(name, path, access)` returns a `ProfileBuilder` used as a context manager, so it is visible which surface each setting belongs to:
+
+```python
+mcp = MCPConfigBuilder()
+
+with mcp.profile("operator", path="/cfg/mcp/", access="key") as op:
+    op.set_access_key("your-secret-key", "mcp-service")
+    op.tools("*")
+    op.enable_introspection(expose_urls=True)
+
+with mcp.profile("public", path="/mcp/", access="anonymous") as pub:
+    pub.tools("catalog_search", "catalog_get")
+    pub.set_rate_limit("20/minute")
+    pub.expose("catalog.Product", max_results=20)
+
+mcp_config = mcp.build()
+```
+
+<Callout type="warning">
+Declaring a profile by hand means profiles describe **every** surface. `build()` rejects a config that mixes hand-written profiles with the flat `set_access_key()` / `enable_introspection()` calls — a flat setting alongside profiles governs no endpoint while looking like it protects one. `enable_public_profile()` is exempt, because there the flat settings *are* the operator profile's source.
+</Callout>
+
+### What an anonymous profile may not do
+
+These raise at startup rather than serving, so an unsafe public endpoint is hard to express rather than merely discouraged:
+
+- `introspection` enabled — it describes internal URLs, models and schemas to whoever asks.
+- `tools=["*"]` — an anonymous endpoint that inherits every registered tool publishes the operator surface the moment one is added.
+- an exposure with `read_only=False`.
+- a `service_username` — it binds a *key* to an account, and with no key to bind it grants that account's privileges to everyone.
+- an `access_key` — it would never be checked.
+
+Two further checks run at the config level: two profiles mounted at the same path is rejected (one would silently shadow the other), and an `install_targets` entry naming a profile that does not exist is rejected where the typo is.
+
+### Routing
+
+Profiles are mounted **by URL, never selected by a header** — a header would let the caller choose their own surface, making the public tool set advisory rather than enforced. Each declared profile gets two routes, registered by django_cfg's own URL configuration:
+
+| Route | View |
+|-------|------|
+| `POST <profile.path>` | JSON-RPC endpoint for that profile |
+| `GET <profile.path>info/` | Tool listing for that profile |
+
+The profile whose `path` equals `endpoint_path` is skipped, because `urls.py` already serves it wherever the project mounted the module. The agent endpoints (`agent/`, `agent/stream/`, `agent/history/`) are deliberately **not** mounted per profile: they spend an LLM budget on the deployment's account, so mounting them on an anonymous profile would make it a public spending endpoint.
+
+### Enforcement
+
+`tools/call` re-checks the profile, not just `tools/list`. Filtering the listing alone is cosmetic — a caller who learned an operator tool's name from documentation, another deployment, or a leaked listing could still invoke it. A refused call is reported as **not found** rather than forbidden: from that profile's perspective the tool genuinely does not exist, and a permission error would confirm it is real, which is what the filtered listing set out to withhold.
 
 ## `introspection` — `IntrospectionConfig`
 
@@ -240,7 +348,9 @@ mcp_config = mcp.build()
 | `.enable_introspection(expose_urls=..., expose_code=...)` | `introspection` config |
 | `.tool(name, description, input_schema=None)` | Decorator that registers a custom `MCPTool` |
 | `.set_access_key(key, service_username=None)` | `access_key` + `service_username` |
-| `.add_target(kind, *env_files, url=None, access_key=None, server_name=None)` | An entry in `install_targets`, keyed by `kind` |
+| `.add_target(kind, *env_files, url=None, access_key=None, server_name=None, profile=None)` | An entry in `install_targets`, keyed by `kind` |
+| `.profile(name, path, access)` | A hand-written entry in `profiles` — used as a context manager |
+| `.enable_public_profile(path="/mcp/", rate_limit="20/minute", expose=None, operator_public_info=False)` | An `operator` + `public` profile pair |
 | `.set_llm_model(model)` | `llm_model` |
 | `.set_rate_limit(limit)` | `rate_limit` |
 | `.disable()` | `enabled=False` |

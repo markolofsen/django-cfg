@@ -37,11 +37,11 @@ from .base.module import BaseCfgAutoModule
 # Django-specific
 from .django.axes import AxesConfig
 from .django.constance import ConstanceConfig, ConstanceField
-from .django.crypto_fields import CryptoFieldsConfig
 from .django.currency import CurrencyConfig
 from .django.payments import PaymentsConfig
 from .django.django_rq import DjangoRQConfig, RQQueueConfig
-from .django.storage import StorageConfig
+from .django.storage import FileCleanupConfig, StorageConfig
+from .django.storage_backend import S3StorageConfig
 from .django.environment import EnvironmentConfig
 from .django.geo import GeoConfig
 from .django.analytics import AnalyticsConfig
@@ -95,10 +95,11 @@ __all__ = [
     "AnalyticsConfig",
     "SimpleHistoryConfig",
     "StorageConfig",
+    "FileCleanupConfig",
+    "S3StorageConfig",
     "OpenAPIClientConfig",
     "UnfoldConfig",
     "AxesConfig",
-    "CryptoFieldsConfig",
     # Services
     "EmailConfig",
     "TelegramConfig",

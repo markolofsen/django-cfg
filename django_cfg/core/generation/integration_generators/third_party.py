@@ -60,7 +60,6 @@ class ThirdPartyIntegrationsGenerator:
         settings.update(self._generate_telegram_settings())
         settings.update(self._generate_unfold_settings())
         settings.update(self._generate_constance_settings())
-        settings.update(self._generate_centrifugo_settings())
         settings.update(self._generate_simple_history_settings())
 
         # Track enabled integrations
@@ -116,21 +115,6 @@ class ThirdPartyIntegrationsGenerator:
         self.integrations.append("constance")
 
         return constance_settings
-
-    def _generate_centrifugo_settings(self) -> Dict[str, Any]:
-        """
-        Generate Centrifugo settings.
-
-        Returns:
-            Dictionary with Centrifugo configuration
-        """
-        if not hasattr(self.config, "centrifugo") or not self.config.centrifugo:
-            return {}
-
-        centrifugo_settings = self.config.centrifugo.to_django_settings()
-        self.integrations.append("centrifugo")
-
-        return centrifugo_settings
 
     def _generate_simple_history_settings(self) -> Dict[str, Any]:
         """

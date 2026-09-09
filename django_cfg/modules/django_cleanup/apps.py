@@ -22,8 +22,14 @@ class DjangoCleanupConfig(AppConfig):
 
     def ready(self) -> None:
         """Register cleanup signals for all models with file fields."""
-        from .config import get_config
+        from .config import get_config, is_enabled
         from .signals import connect_signals_for_model
+
+        # Belt and braces: apps_builder already omits this app when disabled,
+        # but a project may list it in INSTALLED_APPS by hand.
+        if not is_enabled():
+            logger.debug("Storage cleanup is disabled, skipping signal registration")
+            return
 
         config = get_config()
 

@@ -50,13 +50,18 @@ __all__ = [
 #: rather than guess. A slot with no credential is `None`, never absent.
 _PROVIDER_SLOTS: tuple[str, ...] = ("openrouter", "openai", "sdkrouter")
 
-#: Env override per slot, checked BEFORE config. `sdkrouter` is a transport
-#: token rather than a vendor credential, so a deployment can point at a proxy
-#: without waiting on a config release.
-_ENV_VARS: dict[str, str] = {
-    "openrouter": "DJANGO_LLM_KEYS__OPENROUTER",
-    "openai": "DJANGO_LLM_KEYS__OPENAI",
-    "sdkrouter": "DJANGO_LLM_KEYS__SDKROUTER",
+#: Env overrides per slot, checked BEFORE config and in order — the first
+#: variable that holds a value wins. `sdkrouter` is a transport token rather
+#: than a vendor credential, so a deployment can point at a proxy without
+#: waiting on a config release.
+#:
+#: The legacy `CMDOP_LLM_KEYS__*` names are still honoured: they are set on
+#: deployed hosts, and dropping them would take the proxy token out from under
+#: a running fleet.
+_ENV_VARS: dict[str, tuple[str, ...]] = {
+    "openrouter": ("DJANGO_LLM_KEYS__OPENROUTER", "CMDOP_LLM_KEYS__OPENROUTER"),
+    "openai": ("DJANGO_LLM_KEYS__OPENAI", "CMDOP_LLM_KEYS__OPENAI"),
+    "sdkrouter": ("DJANGO_LLM_KEYS__SDKROUTER", "CMDOP_LLM_KEYS__SDKROUTER"),
 }
 
 
@@ -78,9 +83,11 @@ def get_api_keys() -> dict[str, str | None]:
     keys: dict[str, str | None] = {name: None for name in _PROVIDER_SLOTS}
 
     for name in _PROVIDER_SLOTS:
-        value = os.environ.get(_ENV_VARS[name])
-        if value:
-            keys[name] = value
+        for var in _ENV_VARS[name]:
+            value = os.environ.get(var)
+            if value:
+                keys[name] = value
+                break
 
     try:
         api_keys = getattr(get_current_config(), "api_keys", None)

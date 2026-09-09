@@ -149,7 +149,6 @@ class OpenAPIClientConfig(OpenAPIConfig):
             # Also create individual cfg module groups for granular access
             for app_name in cfg_apps:
                 # Extract module name:
-                #   django_cfg.apps.integrations.centrifugo -> centrifugo -> cfg_centrifugo
                 #   django_cfg.modules.django_monitor      -> monitor   -> cfg_monitor
                 parts = app_name.split(".")
                 module_name = parts[-1].removeprefix("django_")  # strip django_ prefix for modules

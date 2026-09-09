@@ -27,7 +27,10 @@ Django-CFG automatically registers the MCP endpoints:
 | Endpoint | Description |
 |----------|-------------|
 | `POST /cfg/mcp/` | MCP JSON-RPC 2.0 endpoint |
+| `GET /cfg/mcp/info/` | Server metadata and tool listing in one request |
 | `POST /cfg/mcp/agent/` | AI Agent chat endpoint |
+
+To serve more than one surface — say an operator endpoint behind a key plus an anonymous public one — declare [profiles](/features/modules/django-mcp/configuration#profiles). Each gets its own path, access rule and tool set, and django_cfg registers its routes for you.
 
 <Callout type="info">
 The module is disabled by default (`enabled=False`). Set `enabled=True` and provide an `access_key` before using any MCP functionality.

@@ -14,12 +14,11 @@ Complete reference for `django_generator` configuration models.
 Main configuration container:
 
 ```python
-from django_cfg.modules.django_generator import Config, OpenAPI, Centrifugo, ORM
+from django_cfg.modules.django_generator import Config, OpenAPI, ORM
 
 config = Config(
-    openapi=OpenAPI(...),       # OpenAPI client generation
-    centrifugo=Centrifugo(...), # Centrifugo RPC clients
-    orm=ORM(...),               # FastAPI/SQLModel generation
+    openapi=OpenAPI(...),  # OpenAPI client generation
+    orm=ORM(...),          # FastAPI/SQLModel generation
 )
 ```
 
@@ -266,7 +265,6 @@ from pathlib import Path
 from django_cfg.modules.django_generator import (
     Config,
     OpenAPI,
-    Centrifugo,
     ORM,
     Target,
     ExtensionTarget,
@@ -314,18 +312,6 @@ config = Config(
             group_prefix="ext_",
         ),
         go_module="github.com/myorg/myproject",
-    ),
-
-    # Centrifugo RPC
-    centrifugo=Centrifugo(
-        targets=[
-            Target(
-                lang=Language.TYPESCRIPT,
-                type=TargetType.WEB,
-                path=FRONTEND / "packages/ws/generated",
-                groups=["notifications"],
-            ),
-        ],
     ),
 
     # FastAPI ORM

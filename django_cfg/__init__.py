@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.2.163"
+__version__ = "2.2.164"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -89,7 +89,6 @@ from .models.api.twofactor import TwoFactorConfig
 # ---------------------------------------------------------------------------
 from .models.django.environment import EnvironmentConfig
 from .models.django.axes import AxesConfig
-from .models.django.crypto_fields import CryptoFieldsConfig
 from .models.django.django_rq import DjangoRQConfig, RQQueueConfig, RQScheduleConfig
 from .models.django.rq_health import QueueHealthThresholds, RQHealthConfig
 from .modules.django_logging.__cfg__ import DjangoLoggingConfig
@@ -99,7 +98,8 @@ from .models.django.geo import GeoConfig
 from .models.django.analytics import AnalyticsConfig
 from .models.django.simple_history import SimpleHistoryConfig
 from .models.django.constance import ConstanceConfig, ConstanceField
-from .models.django.storage import StorageConfig
+from .models.django.storage import FileCleanupConfig, StorageConfig
+from .models.django.storage_backend import S3StorageConfig
 from .models.django.openapi import OpenAPIClientConfig
 from .models.services import EmailConfig, TelegramConfig
 
@@ -182,14 +182,6 @@ except ImportError:
 # Dashboard tabs (always available — no optional deps)
 # ---------------------------------------------------------------------------
 from .modules.django_dashboard.models import DashboardConfig, DashboardTab
-
-# ---------------------------------------------------------------------------
-# [OPTIONAL] Centrifugo  (requires: cent)
-# ---------------------------------------------------------------------------
-try:
-    from .modules.django_centrifugo.services.client.config import DjangoCfgCentrifugoConfig
-except ImportError:
-    DjangoCfgCentrifugoConfig = None  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------------
 # [OPTIONAL] Ngrok  (requires: pyngrok)
@@ -275,7 +267,7 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "SmallPagination": ("django_cfg.middleware.pagination", "SmallPagination"),
     "NoPagination": ("django_cfg.middleware.pagination", "NoPagination"),
     # Utils
-    "version_check": ("django_cfg.utils.version_check", "version_check"),
+    "check_python_version": ("django_cfg.utils.version_check", "check_python_version"),
     # Import-export (imports django.contrib.admin.models → AppRegistryNotReady)
     "ImportForm": ("django_cfg.modules.django_import_export", "ImportForm"),
     "ExportForm": ("django_cfg.modules.django_import_export", "ExportForm"),
@@ -316,17 +308,17 @@ __all__ = [
     "JWTConfig", "GitHubOAuthConfig", "OAuthConfig", "LimitsConfig",
     "ApiKeys", "TwoFactorConfig",
     # Django models
-    "EnvironmentConfig", "AxesConfig", "CryptoFieldsConfig",
+    "EnvironmentConfig", "AxesConfig",
     "DjangoRQConfig", "RQQueueConfig", "RQScheduleConfig",
     "RQHealthConfig", "QueueHealthThresholds",
     "DjangoLoggingConfig",
     "CurrencyConfig", "PaymentsConfig", "GeoConfig", "AnalyticsConfig", "SimpleHistoryConfig",
-    "ConstanceConfig", "ConstanceField", "StorageConfig", "OpenAPIClientConfig",
+    "ConstanceConfig", "ConstanceField", "StorageConfig", "FileCleanupConfig", "S3StorageConfig", "OpenAPIClientConfig",
     "EmailConfig", "TelegramConfig",
     # middleware (lazy — DRF reads settings at import time)
     "DefaultPagination", "LargePagination", "SmallPagination", "NoPagination",
     # utils & testing
-    "version_check", "SmartTestRunner", "FastTestRunner",
+    "check_python_version", "SmartTestRunner", "FastTestRunner",
     # services
     "DjangoLogger", "get_logger",
     "DjangoEmailService", "send_email", "get_admin_emails",
@@ -343,8 +335,6 @@ __all__ = [
     "NavigationItem", "NavigationSection", "NavigationItemType", "SiteDropdownItem",
     # dashboard
     "DashboardConfig", "DashboardTab",
-    # optional: centrifugo
-    "DjangoCfgCentrifugoConfig",
     # optional: ngrok
     "NgrokConfig",
     "DjangoNgrok", "NgrokManager", "NgrokError",

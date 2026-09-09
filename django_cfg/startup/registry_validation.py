@@ -18,7 +18,6 @@ logger = logging.getLogger("django_cfg.registry")
 # Module path prefixes for explicitly optional dependencies.
 # ImportError from these is expected when the feature is not installed.
 _OPTIONAL_PREFIXES = (
-    "django_cfg.modules.django_centrifugo",
     "django_cfg.modules.django_ngrok",
     "django_cfg.modules.django_import_export",
     "django_cfg.modules.django_unfold",

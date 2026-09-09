@@ -12,6 +12,5 @@ export default {
   'cors': 'CORS',
   'rate-limiting': 'Rate Limiting',
   'startup': 'Startup',
-  'utilities': 'Utilities',
-  'encryption': 'Encryption'
+  'utilities': 'Utilities'
 }

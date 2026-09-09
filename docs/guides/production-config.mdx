@@ -663,8 +663,10 @@ When `security_domains` is set, Django-CFG automatically enables:
 
 <Callout type="info">
 **Production Media Strategy**
-In production, serve media files from a CDN or cloud storage (S3, CloudFlare R2) for better performance and scalability.
-
+Two separate decisions: where files are **stored** (`storage.backend`) and the
+URL they are **served** from (`media_url`). Local disk does not survive a
+container restart, so production should store uploads in object storage — see
+[Object storage](#object-storage) below.
 </Callout>
 
 ### Media URL Options
@@ -691,39 +693,41 @@ MEDIA_URL="https://cdn.example.com/media/"
 MEDIA_URL="__auto__"
 ```
 
-### CDN Integration
+### Object storage
 
-### Cloudflare R2
+`media_url` only controls the URL files are *served* from. To also **store**
+uploads in object storage — so they survive a container restart — configure
+`storage.backend`. django-cfg generates `STORAGES` for you; there is no need to
+set `DEFAULT_FILE_STORAGE` or `AWS_*` settings by hand.
 
 ```python
-# config.py
-media_url: str = "https://media.example.com/uploads/"
+from django_cfg import DjangoConfig, StorageConfig, S3StorageConfig
 
-# Use django-storages for R2
-# DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+class ProductionConfig(DjangoConfig):
+    storage = StorageConfig(
+        backend=S3StorageConfig.r2(
+            account_id="abc123",
+            bucket_name="media",
+            custom_domain="media.example.com",
+        ),
+    )
 ```
 
 ```bash
-# Environment
-MEDIA_URL="https://media.example.com/uploads/"
-AWS_S3_ENDPOINT_URL="https://xxx.r2.cloudflarestorage.com"
-AWS_ACCESS_KEY_ID="your-access-key"
-AWS_SECRET_ACCESS_KEY="your-secret-key"
+# Credentials — no keys in code
+R2__ACCESS_KEY_ID="your-access-key"
+R2__SECRET_ACCESS_KEY="your-secret-key"
 ```
 
-### AWS S3
+Setting `custom_domain` rewrites `MEDIA_URL` automatically, so you do not set it
+separately. Presets exist for AWS S3 and MinIO too. Requires
+`pip install django-cfg[s3]`.
 
-```python
-# config.py
-media_url: str = "https://mybucket.s3.amazonaws.com/media/"
-```
-
-```bash
-# Environment
-MEDIA_URL="https://mybucket.s3.amazonaws.com/media/"
-AWS_STORAGE_BUCKET_NAME="mybucket"
-AWS_S3_REGION_NAME="us-east-1"
-```
+<Callout type="info">
+Full setup, credentials, and the R2-specific gotchas (the `501 Not Implemented`
+checksum error in particular) are on the
+[Media Storage](/configuration/storage) page.
+</Callout>
 
 ### Nginx (self-hosted)
 

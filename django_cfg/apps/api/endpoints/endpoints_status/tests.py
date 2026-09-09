@@ -168,7 +168,9 @@ class CheckEndpointTests(TestCase):
         }
 
         client = Client()
-        result = check_endpoint(endpoint, client=client, timeout=5)
+        # Returns (endpoint, auth_token) — the token is minted on the first
+        # 401/403 so a later call can reuse it instead of re-authenticating.
+        result, _auth_token = check_endpoint(endpoint, client=client, timeout=5)
 
         # Check result structure
         self.assertIn('status_code', result)
@@ -185,11 +187,13 @@ class CheckEndpointTests(TestCase):
             'reason': 'requires_parameters',
         }
 
-        result = check_endpoint(endpoint)
+        result, auth_token = check_endpoint(endpoint)
 
-        # Should remain skipped
+        # Should remain skipped — and short-circuit before any request, so
+        # no token can have been minted.
         self.assertEqual(result['status'], 'skipped')
         self.assertNotIn('status_code', result)
+        self.assertIsNone(auth_token)
 
 
 class CheckAllEndpointsTests(TestCase):

@@ -21,7 +21,8 @@ Both subsystems use the same global tool registry, so any tool you register is a
 - Connect Claude Desktop, Cursor, or any MCP-compatible client to your Django app and let it query models, run management commands, and inspect the app structure.
 - Let admin users ask "How many users signed up this week?" or "Show me the 10 largest orders" directly from the admin panel — no SQL, no custom views.
 - Build custom tools that wrap any Django logic and expose them to both external MCP clients and the admin chat in one registration step.
-- Track every tool call in `MCPAuditLog` for compliance and debugging.
+- Serve more than one surface from one process — an operator endpoint behind a key plus an anonymous, read-only public one — with [profiles](/features/modules/django-mcp/configuration#profiles).
+- Track every tool call in `MCPAuditLog`, and in a one-line-per-call [access log](/features/modules/django-mcp/tools#access-logging) that records argument names but never argument values.
 
 ## Quick start
 

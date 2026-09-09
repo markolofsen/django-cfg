@@ -162,7 +162,7 @@ def _get_client_ip(request_or_conn: Any) -> str:
             return x_forwarded_for.split(',')[0].strip()
         return request_or_conn.META.get('REMOTE_ADDR', 'unknown')
 
-    # WebSocket connection (Centrifugo)
+    # WebSocket connection
     if hasattr(request_or_conn, 'client_ip'):
         return request_or_conn.client_ip or 'unknown'
 
@@ -175,7 +175,7 @@ def _get_client_ip(request_or_conn: Any) -> str:
 
 def _get_user_id(request_or_conn: Any) -> Optional[str]:
     """Extract user ID from request or connection."""
-    # WebSocket connection (Centrifugo) - has user_id directly
+    # WebSocket connection - has user_id directly
     if hasattr(request_or_conn, 'user_id'):
         return str(request_or_conn.user_id) if request_or_conn.user_id else None
 

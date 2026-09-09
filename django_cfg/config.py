@@ -15,7 +15,7 @@ def is_feature_available(feature: str) -> bool:
     Check if a feature is available (dependencies installed).
 
     Args:
-        feature: Feature name (e.g., 'grpc', 'centrifugo', 'dramatiq')
+        feature: Feature name (e.g., 'grpc', 'dramatiq')
 
     Returns:
         True if feature dependencies are available
@@ -24,12 +24,6 @@ def is_feature_available(feature: str) -> bool:
         try:
             import grpc  # noqa
             import grpc_reflection  # noqa
-            return True
-        except ImportError:
-            return False
-    elif feature == "centrifugo":
-        try:
-            import cent  # noqa
             return True
         except ImportError:
             return False

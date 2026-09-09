@@ -8,7 +8,6 @@ export default {
   'django-health': 'Health Checks',
 
   // ── Communication ────────────────────────────────────────────
-  'django-centrifugo': 'Centrifugo WebSocket',
   'django-rq': 'Background Tasks (RQ)',
   'django-email': 'Email',
   'django-telegram': 'Telegram Bot',

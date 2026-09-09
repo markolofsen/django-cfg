@@ -320,29 +320,17 @@ class SecurityBuilder:
         Auto-detect Docker internal service names from configuration.
 
         Extracts service hostnames from internal URLs:
-        - Centrifugo API URL (centrifugo_api_url)
         - gRPC internal URL (grpc.internal_url if available)
         - Any other internal service URLs
 
         Example:
-            centrifugo_api_url = "http://djangocfg-centrifugo:8000/api"
-            → Extracts: "djangocfg-centrifugo"
+            internal_url = "djangocfg-grpc:50051"
+            → Extracts: "djangocfg-grpc"
 
         Returns:
             List of internal service hostnames (without port)
         """
         service_names = []
-
-        # Extract from Centrifugo config
-        if hasattr(self.config, 'centrifugo') and self.config.centrifugo:
-            centrifugo_cfg = self.config.centrifugo
-
-            # Extract from centrifugo_api_url (for Django → Centrifugo publishing)
-            if hasattr(centrifugo_cfg, 'centrifugo_api_url'):
-                api_url = centrifugo_cfg.centrifugo_api_url
-                hostname = self._extract_hostname_from_url(api_url)
-                if hostname and self._is_internal_service_name(hostname):
-                    service_names.append(hostname)
 
         # Extract from gRPC config
         if hasattr(self.config, 'grpc') and self.config.grpc:

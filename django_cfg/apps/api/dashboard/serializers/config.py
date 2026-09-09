@@ -43,27 +43,6 @@ class EmailConfigSerializer(serializers.Serializer):
 
 
 
-class CentrifugoConfigSerializer(serializers.Serializer):
-    """Centrifugo configuration."""
-    module_name = serializers.CharField(required=False, allow_null=True)
-    enabled = serializers.BooleanField(required=False, allow_null=True)
-    wrapper_url = serializers.CharField(required=False, allow_null=True)
-    wrapper_api_key = serializers.CharField(required=False, allow_null=True)
-    centrifugo_url = serializers.CharField(required=False, allow_null=True)
-    centrifugo_api_url = serializers.CharField(required=False, allow_null=True)
-    centrifugo_api_key = serializers.CharField(required=False, allow_null=True)
-    centrifugo_token_hmac_secret = serializers.CharField(required=False, allow_null=True)
-    default_timeout = serializers.IntegerField(required=False, allow_null=True)
-    ack_timeout = serializers.IntegerField(required=False, allow_null=True)
-    http_timeout = serializers.IntegerField(required=False, allow_null=True)
-    max_retries = serializers.IntegerField(required=False, allow_null=True)
-    retry_delay = serializers.FloatField(required=False, allow_null=True)
-    verify_ssl = serializers.BooleanField(required=False, allow_null=True)
-    log_all_calls = serializers.BooleanField(required=False, allow_null=True)
-    log_only_with_ack = serializers.BooleanField(required=False, allow_null=True)
-    log_level = serializers.CharField(required=False, allow_null=True)
-
-
 class RedisQueueConfigSerializer(serializers.Serializer):
     """Redis Queue configuration."""
     url = serializers.CharField(required=False, allow_null=True)
@@ -235,7 +214,6 @@ class DjangoConfigSerializer(serializers.Serializer):
 
     # Integrations
     email = EmailConfigSerializer(required=False, allow_null=True)
-    centrifugo = CentrifugoConfigSerializer(required=False, allow_null=True)
     django_rq = DjangoRQConfigSerializer(required=False, allow_null=True)
     drf = DRFConfigSerializer(required=False, allow_null=True)
     spectacular = SpectacularConfigSerializer(required=False, allow_null=True)
@@ -245,7 +223,6 @@ class DjangoConfigSerializer(serializers.Serializer):
     ngrok = NgrokConfigSerializer(required=False, allow_null=True)
     axes = AxesConfigSerializer(required=False, allow_null=True)
     github_oauth = GitHubOAuthConfigSerializer(required=False, allow_null=True)
-    crypto_fields = serializers.JSONField(required=False, allow_null=True)
     unfold = serializers.JSONField(required=False, allow_null=True)  # Complex Unfold config object
     admin_timezone = serializers.CharField(required=False, allow_null=True)
     tailwind_app_name = serializers.CharField(required=False, allow_null=True)

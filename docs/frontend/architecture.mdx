@@ -90,11 +90,6 @@ app/
 │   └── providers/
 │       └── SWRProvider.tsx      # Global SWR config + presets
 │
-├── _ws/                         # WebSocket (Centrifugo) — DO NOT EDIT
-│   ├── generated/
-│   ├── context/
-│   └── hooks/
-│
 └── _views/                      # Optional: page-level view components
 ```
 
@@ -185,7 +180,7 @@ Auto-handles: standalone output (production), transpile packages, dev webpack op
 
 1. Every non-route directory uses an underscore prefix (`_lib/`, `_components/`, `_core/`)
 2. Never use relative imports deeper than one level — use TypeScript aliases (`@lib/`, `@api/`, `@contexts`)
-3. Never edit `generated/` directories manually — regenerate with `make api` or `make centrifuge`
+3. Never edit `generated/` directories manually — regenerate with `make api`
 4. Route definitions live in `_routes/` with `defineRoute()` — co-locate URL builder functions with the route they serve
 5. Server Components handle data fetching and metadata — Client Components handle interactivity and hooks
 6. Every directory exports a barrel `index.ts` for clean import paths

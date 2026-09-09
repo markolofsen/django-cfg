@@ -36,7 +36,7 @@ openapi_processor/
     tool.py
     hooks/          ← query.py + mutation.py + infinite_query.py + generator.py + barrels.py
     schemas/        ← OpenAPI → Zod generator
-    events/         ← Centrifugo channel bridge
+    events/         ← client error-event bridge
     wrapper/        ← class API + helpers + top-level barrel
   tests/
     ts/             ← pytest suite (112 tests)
@@ -60,7 +60,7 @@ spec and emits:
 | `_<group>/schemas/` | Zod schemas for every component schema |
 | `_<group>/hooks/` | SWR hooks per operation (flat, one file per hook). Paginated GET endpoints get **both** a page-based `useSWR` hook and a `<hook>Infinite` `useSWRInfinite` variant side-by-side; non-paginated GET → single query hook; non-GET → mutation. |
 | `_<group>/sdk.gen.ts` / `_<group>/types.gen.ts` | Re-export shims pointing at the top-level Hey API SDK so app code can import classes/types via the group-scoped path |
-| `_<group>/events.ts` | Centrifugo channel → TS type bridge |
+| `_<group>/events.ts` | Client interceptor → typed `window` CustomEvent bridge for network/validation/runtime errors |
 | `_<group>/api.ts` | `class API` with JWT interceptor + Zod validation routes |
 | `_<group>/index.ts` | Barrel re-export |
 | `helpers/` | `StorageAdapter`, `APIError`, `APILogger`, Zod event dispatcher |

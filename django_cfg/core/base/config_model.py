@@ -21,12 +21,10 @@ if TYPE_CHECKING:
 # MCP module is always available within django_cfg
 from django_cfg.modules.django_mcp.__cfg__ import DjangoMCPModuleConfig  # noqa: F401
 
-from django_cfg.modules.django_centrifugo.services.client.config import DjangoCfgCentrifugoConfig
 from ...models import (
     ApiKeys,
     AxesConfig,
     CacheConfig,
-    CryptoFieldsConfig,
     AnalyticsConfig,
     CurrencyConfig,
     DatabaseConfig,
@@ -44,7 +42,6 @@ from ...models import (
     TwoFactorConfig,
     UnfoldConfig,
 )
-from ..encryption.config import EncryptionConfig
 from ...models.ngrok import NgrokConfig
 from ...modules.django_dashboard.models import DashboardConfig
 from ..exceptions import ConfigurationError
@@ -199,16 +196,6 @@ class DjangoConfig(BaseModel):
     axes: Optional[AxesConfig] = Field(
         default=None,
         description="Django-Axes brute-force protection (None = smart defaults)",
-    )
-
-    crypto_fields: Optional[CryptoFieldsConfig] = Field(
-        default=None,
-        description="Django Crypto Fields encryption for sensitive data",
-    )
-
-    encryption: Optional[EncryptionConfig] = Field(
-        default=None,
-        description="API response encryption to prevent data scraping (field-level or response-level)",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
@@ -428,17 +415,12 @@ class DjangoConfig(BaseModel):
 
     storage: Optional[StorageConfig] = Field(
         default_factory=StorageConfig,
-        description="Storage cleanup configuration for automatic file deletion",
+        description="Media storage backend and automatic file cleanup",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                           INTEGRATIONS                                    ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
-
-    centrifugo: Optional[DjangoCfgCentrifugoConfig] = Field(
-        default=None,
-        description="Centrifugo WebSocket pub/sub",
-    )
 
     ngrok: Optional[NgrokConfig] = Field(
         default=None,

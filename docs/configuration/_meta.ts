@@ -4,6 +4,7 @@ export default {
   'database': 'Database',
   'cache': 'Cache',
   'email': 'Email',
+  'storage': 'Media Storage',
   'security': 'Security',
   'django-settings': 'Django Settings'
 }

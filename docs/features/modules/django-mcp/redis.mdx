@@ -97,11 +97,7 @@ if not ok:
 
 ## 3. Chat history (`chat/store.py` — `RedisMCPChatStore`)
 
-<Callout type="warning">
-Status: planned / in progress. The store class exists but is not yet wired into the streaming view. Currently all chat history is in-memory and resets on each request.
-</Callout>
-
-Persists the conversation history for the admin chat agent between page reloads.
+Persists the conversation history for the admin chat agent between page reloads. `agents/api/views.py` reads the history into the agent context before each run and appends the user message and the assistant reply after it, keyed on `request.user.pk` plus the request's `session_id`. `GET /cfg/mcp/agent/history/` returns the stored messages for a session.
 
 ### Key format
 

@@ -2,7 +2,7 @@
 
 **Post-processor for Hey API output.** Takes a sliced OpenAPI spec and emits
 everything that `@hey-api/openapi-ts` deliberately does not: Zod schemas, SWR
-hooks, a Centrifugo events bridge, and typed `class API` wrappers with JWT
+hooks, a client error-event bridge, and typed `class API` wrappers with JWT
 interceptors and runtime validation.
 
 ---
@@ -15,9 +15,10 @@ class-per-tag methods. It stops there by design. Real app code needs more:
 - **Runtime validation** — a 200 response is not trustworthy until Zod parses it.
 - **SWR hooks** — `useFleetsList()` / `useFleetsCreate()` instead of
   calling the SDK directly in every component.
-- **Realtime events bridge** — a typed `events.ts` that maps Centrifugo
-  publication channels onto TS types so the frontend never hardcodes a
-  channel string.
+- **Error events bridge** — a typed `events.ts` that hooks the Hey API client
+  interceptors and re-emits network/validation/runtime failures as typed
+  `CustomEvent`s on `window`, so error handling lives in one place instead of
+  every call site.
 - **`class API` per group** — a single entry-point per tag-group that owns
   JWT storage, wires the Authorization header interceptor, and exposes only
   the SDK classes that belong to that group.
@@ -64,7 +65,7 @@ ts_extras/
   tool.py           — entry point: build_ir → schemas → hooks → events
   schemas/          — OpenAPI → Zod source generator
   hooks/            — IR → SWR query + mutation hook generator
-  events/           — emits events.ts (Centrifugo channel bridge)
+  events/           — emits events.ts (client error-event bridge)
   wrapper/          — reads sdk.gen.ts → emits class API + helpers
 ```
 
@@ -124,9 +125,14 @@ property declarations, so no drift between SDK and hook signatures.
 
 ### events/
 
-Emits `events.ts` — a typed map of Centrifugo channel patterns to their
-publication payload types. Downstream code subscribes with `onEvent('fleets.*',
-handler)` and gets typed payloads automatically.
+Emits `events.ts` — interceptor wiring that re-emits Hey API client failures as
+typed `CustomEvent`s on `window` (`cmdop:network-error`,
+`cmdop:validation-error`, `cmdop:runtime-error`). Importing the module for its
+side effect registers the interceptors; downstream code listens with
+`window.addEventListener` and gets a typed `detail`.
+
+The emitted file is IR-free — its shape is fixed and depends only on
+`./client.gen` being present, so it takes no per-target input.
 
 ### wrapper/
 

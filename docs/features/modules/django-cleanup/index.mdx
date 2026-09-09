@@ -40,23 +40,31 @@ report.save()
 
 ## Configuration
 
-Configure cleanup behavior via `StorageConfig` on your `DjangoConfig`:
+Cleanup behavior lives in `FileCleanupConfig`, passed as `StorageConfig.cleanup`:
 
 ```python
-from django_cfg import DjangoConfig, StorageConfig
+from django_cfg import DjangoConfig, StorageConfig, FileCleanupConfig
 
 class MyConfig(DjangoConfig):
     storage = StorageConfig(
-        auto_cleanup=True,
-        delete_on_replace=True,
-        log_deletions=True,
-        exclude_models={"backups.DatabaseBackup"},
-        exclude_fields={"docs.Contract.original_scan"},
-        check_shared_files=False,
-        respect_soft_delete=True,
-        soft_delete_fields={"deleted_at", "is_deleted", "deleted"},
+        cleanup=FileCleanupConfig(
+            auto_cleanup=True,
+            delete_on_replace=True,
+            log_deletions=True,
+            exclude_models={"backups.DatabaseBackup"},
+            exclude_fields={"docs.Contract.original_scan"},
+            check_shared_files=False,
+            respect_soft_delete=True,
+            soft_delete_fields={"deleted_at", "is_deleted", "deleted"},
+        )
     )
 ```
+
+<Callout type="info">
+Passing these fields directly to `StorageConfig` still works but is deprecated
+and emits a `DeprecationWarning`. `StorageConfig` is now a container for
+`cleanup` and [`backend`](/configuration/storage), which are independent.
+</Callout>
 
 ### Disabling the Module
 
@@ -67,9 +75,11 @@ class MyConfig(DjangoConfig):
 
 ### Configuration Fields
 
+`enabled` is on `StorageConfig`; the rest are on `FileCleanupConfig`.
+
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `enabled` | `bool` | `True` | Enable the cleanup module entirely |
+| `enabled` | `bool` | `True` | Enable the cleanup module entirely. When `False` the app is left out of `INSTALLED_APPS` and no signals are registered |
 | `auto_cleanup` | `bool` | `True` | Register signals for all models with file fields at startup |
 | `delete_on_replace` | `bool` | `True` | Delete old file when a field is updated with a new value |
 | `exclude_models` | `set[str]` | `set()` | Models to skip. Format: `"app_label.ModelName"` |
@@ -86,7 +96,7 @@ class MyConfig(DjangoConfig):
 ### Exclusion Formats
 
 ```python
-StorageConfig(
+FileCleanupConfig(
     exclude_models={
         "backups.DatabaseBackup",   # entire model excluded
         "audit.AuditLog",
@@ -133,7 +143,7 @@ article.delete()
 Custom soft-delete field names:
 
 ```python
-StorageConfig(
+FileCleanupConfig(
     respect_soft_delete=True,
     soft_delete_fields={"deleted_at", "is_deleted", "removed_at"},
 )
@@ -148,6 +158,10 @@ Works with any Django storage backend that implements the standard `Storage` int
 - `GoogleCloudStorage` from `django-storages`
 - Azure Blob storage from `django-storages`
 - Any custom storage backend
+
+To move media onto S3-compatible object storage, see
+[Media Storage](/configuration/storage) — `StorageConfig.backend` and cleanup are
+independent settings on the same model.
 
 ## Per-Model Control with `FileCleanupMixin`
 
@@ -218,25 +232,16 @@ from django_cfg.modules.django_cleanup import (
 )
 ```
 
-## Fallback: `settings.DJANGO_STORAGE`
+## Where Configuration Comes From
 
-If `DjangoConfig` is not used, configure via Django settings:
+`DjangoConfig.storage.cleanup`, falling back to built-in defaults when no
+config is loaded.
 
-```python
-# settings.py
-DJANGO_STORAGE = {
-    "auto_cleanup": True,
-    "delete_on_replace": True,
-    "log_deletions": True,
-    "exclude_models": ["backups.DatabaseBackup"],
-    "exclude_fields": ["documents.Contract.original_scan"],
-    "check_shared_files": False,
-    "respect_soft_delete": True,
-    "soft_delete_fields": ["deleted_at", "is_deleted"],
-}
-```
-
-Configuration priority: `DjangoConfig.storage` > `settings.DJANGO_STORAGE` > built-in defaults.
+<Callout type="warning">
+A `settings.DJANGO_STORAGE` fallback was documented in earlier versions. It was
+removed in 2.3.0 — django-cfg never wrote that setting, so the path was
+unreachable. `DjangoConfig` is the single source of truth.
+</Callout>
 
 ## Troubleshooting
 
@@ -244,7 +249,7 @@ Configuration priority: `DjangoConfig.storage` > `settings.DJANGO_STORAGE` > bui
 
 1. Check if model is excluded: `is_model_excluded(MyModel, get_config())`
 2. Check if soft-delete is active: `is_soft_deleted(instance, get_config())`
-3. Enable logging: `StorageConfig(log_deletions=True)`
+3. Enable logging: `FileCleanupConfig(log_deletions=True)`
 
 ### Files Deleted Unexpectedly
 

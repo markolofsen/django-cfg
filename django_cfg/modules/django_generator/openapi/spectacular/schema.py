@@ -35,7 +35,7 @@ class PathBasedAutoSchema(AutoSchema):
         - `"cfg"` is the namespace marker — the TS resolver picks up every
           op that carries it for `cfg_*` groups (so app-side groups can
           safely match by short tag without dragging django-cfg ops in).
-        - `"<app>"` (e.g. "accounts", "totp", "centrifugo") is the
+        - `"<app>"` (e.g. "accounts", "totp", "payments") is the
           sub-group tag — `cfg_<app>` resolves by intersecting
           `{"cfg", "<app>"}`.
 

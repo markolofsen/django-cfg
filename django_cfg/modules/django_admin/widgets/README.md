@@ -41,15 +41,6 @@ config = AdminConfig(
 
 See: [@docs/JSON_WIDGET.md](../@docs/JSON_WIDGET.md)
 
-### EncryptedFieldWidget
-
-Widget for django-crypto-fields with copy button.
-
-**Features:**
-- 🔒 Secure input (password type)
-- 📋 Copy button for encrypted values
-- 🎯 Placeholder hints
-
 ---
 
 ## Widget Architecture

@@ -48,7 +48,7 @@ class ViewMixin(FlashMixin):
     - changelist_view with documentation context
     - changeform_view with documentation context
     - get_fieldsets for filtering non-editable fields on add form
-    - formfield_for_dbfield for JSON and encrypted field widgets
+    - formfield_for_dbfield for JSON field widgets
     """
 
     # Attributes provided by Django's ModelAdmin at runtime
@@ -256,7 +256,6 @@ class ViewMixin(FlashMixin):
 
         Automatically detects and customizes:
         - JSON fields (applies django-json-widget for editable fields only)
-        - Encrypted fields from django-crypto-fields
 
         Note: MoneyField is handled by MoneyFieldAdminMixin from django_currency module.
         """
@@ -298,44 +297,6 @@ class ViewMixin(FlashMixin):
                     logger.debug(f"Auto-applied JSONEditorWidget to editable field '{db_field.name}'")
                 except ImportError:
                     logger.warning("django-json-widget not available, using default textarea")
-
-        # Check if this is an EncryptedTextField or EncryptedCharField
-        if 'Encrypted' in field_class_name and ('TextField' in field_class_name or 'CharField' in field_class_name):
-            from django import forms
-            from ...widgets import EncryptedFieldWidget, EncryptedPasswordWidget
-
-            # Determine placeholder based on field name
-            placeholder = "Enter value"
-            if 'key' in db_field.name.lower():
-                placeholder = "Enter API Key"
-            elif 'secret' in db_field.name.lower():
-                placeholder = "Enter API Secret"
-            elif 'passphrase' in db_field.name.lower():
-                placeholder = "Enter Passphrase (if required)"
-
-            # Widget attributes
-            widget_attrs = {
-                'placeholder': placeholder,
-            }
-
-            # Decide widget based on config
-            show_plain_text = getattr(self.config, 'show_encrypted_fields_as_plain_text', False)
-
-            if show_plain_text:
-                # Show as plain text with copy button
-                widget = EncryptedFieldWidget(attrs=widget_attrs, show_copy_button=True)
-            else:
-                # Show as password (masked) with copy button
-                # render_value=True shows masked value (••••••) after save
-                widget = EncryptedPasswordWidget(attrs=widget_attrs, render_value=True, show_copy_button=True)
-
-            # Return CharField with appropriate widget
-            return forms.CharField(
-                widget=widget,
-                required=not db_field.blank and not db_field.null,
-                help_text=db_field.help_text or "This field is encrypted at rest",
-                label=db_field.verbose_name if hasattr(db_field, 'verbose_name') else db_field.name.replace('_', ' ').title()
-            )
 
         # Handle LocationField with custom widget
         if field_class_name == 'LocationField':

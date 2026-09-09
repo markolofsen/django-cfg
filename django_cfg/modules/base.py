@@ -169,22 +169,6 @@ class BaseCfgModule(ABC):
         """
         return self.get_config().should_enable_rq()
 
-    def is_centrifugo_enabled(self) -> bool:
-        """
-        Check if django-cfg Centrifugo is enabled.
-
-        Returns:
-            True if Centrifugo is enabled, False otherwise
-        """
-        centrifugo_config = self._get_config_key('centrifugo', None)
-
-        # Check if centrifugo config exists and is enabled
-        if centrifugo_config and hasattr(centrifugo_config, 'enabled'):
-            return centrifugo_config.enabled
-
-        return False
-
-
     def is_currency_enabled(self) -> bool:
         """
         Check if django-cfg Currency is enabled.

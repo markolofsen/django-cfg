@@ -215,19 +215,6 @@ class OpenAPI(BaseModel):
 
 
 # =============================================================================
-# Centrifugo Config
-# =============================================================================
-
-
-class Centrifugo(BaseModel):
-    """Centrifugo RPC client generation config."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    targets: list[Target] = []
-
-
-# =============================================================================
 # SDK Config
 # =============================================================================
 
@@ -430,6 +417,5 @@ class Config(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     openapi: OpenAPI | None = None
-    centrifugo: Centrifugo | None = None
     sdk: SDK | None = None
     orm: ORM | None = None  # FastAPI/Pydantic model generation

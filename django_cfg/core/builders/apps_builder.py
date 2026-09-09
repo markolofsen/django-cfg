@@ -116,21 +116,16 @@ class InstalledAppsBuilder:
             # Core apps (always enabled)
             "django_cfg.modules.django_tailwind",  # Universal Tailwind layouts
             "django_cfg.modules.django_llm",  # LLM service + balance monitoring
-            "django_cfg.modules.django_cleanup",  # Automatic file cleanup
             "django_cfg.modules.django_generator",  # Unified client generation (replaces django_codegen + django_client + django_fastapi)
             "django_cfg.modules.django_sitemap",  # Universal sitemap source registry + JSON feed
-"django_cfg.apps.api.health",
+            "django_cfg.apps.api.health",
             "django_cfg.apps.api.commands",
             "django_cfg.apps.api.dashboard",  # Dashboard API
         ]
 
-        # Integrations (enabled via config)
-        if self.config.centrifugo and self.config.centrifugo.enabled:
-            apps.append("django_cfg.modules.django_centrifugo")
-
-
-        if self.config.crypto_fields and self.config.crypto_fields.enabled:
-            apps.append("django_crypto_fields.apps.AppConfig")
+        # File cleanup (storage=StorageConfig(enabled=False) opts out entirely)
+        if self.config.storage is None or self.config.storage.enabled:
+            apps.append("django_cfg.modules.django_cleanup")
 
         # Currency app (exchange rates management)
         if self.config.currency and self.config.currency.enabled:

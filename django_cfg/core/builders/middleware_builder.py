@@ -94,11 +94,6 @@ class MiddlewareBuilder:
         # accounts is always enabled - core django-cfg functionality
         middleware.append("django_cfg.middleware.UserActivityMiddleware")
 
-        # Encryption middleware (API response encryption)
-        # Detects ?encrypt=true or X-Encrypt-Response header
-        if self.config.encryption and self.config.encryption.enabled:
-            middleware.append("django_cfg.core.encryption.middleware.EncryptionMiddleware")
-
         # django-simple-history: resolves request.user for audit rows
         if self.config.simple_history and self.config.simple_history.enabled:
             middleware.append("simple_history.middleware.HistoryRequestMiddleware")

@@ -124,14 +124,6 @@ class DjangoConfig(BaseModel):
         default=None,
         description="Django-Axes brute-force protection (None = smart defaults)",
     )
-    crypto_fields: Optional[CryptoFieldsConfig] = Field(
-        default=None,
-        description="Django Crypto Fields encryption for sensitive data",
-    )
-    encryption: Optional[EncryptionConfig] = Field(
-        default=None,
-        description="API response encryption to prevent data scraping",
-    )
 
     # ══════════════════════════════════════════════════════════════
     #                            URLS
@@ -312,10 +304,6 @@ class DjangoConfig(BaseModel):
     #                       INTEGRATIONS
     # ══════════════════════════════════════════════════════════════
 
-    centrifugo: Optional[DjangoCfgCentrifugoConfig] = Field(
-        default=None,
-        description="Centrifugo WebSocket pub/sub",
-    )
     ngrok: Optional[NgrokConfig] = Field(
         default=None,
         description="Ngrok tunneling for development/webhooks",
@@ -331,7 +319,7 @@ class DjangoConfig(BaseModel):
 
     storage: Optional[StorageConfig] = Field(
         default_factory=StorageConfig,
-        description="Automatic file cleanup for FileField/ImageField",
+        description="Media storage backend and automatic file cleanup",
     )
 
     # ══════════════════════════════════════════════════════════════
@@ -898,6 +886,5 @@ config = MyConfig(
 
 ### Integrations
 - [**Django-RQ**](/features/modules/django-rq) - Background task queue
-- [**Centrifugo**](../features/modules/django-centrifugo) - WebSocket pub/sub
 - [**Ngrok**](/features/modules/django-ngrok) - Development tunneling
 - [**OAuth**](../features/integrations/oauth) - Social authentication

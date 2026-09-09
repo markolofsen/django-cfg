@@ -427,51 +427,6 @@ cli test-telegram --message "Hello from Django-CFG!"
 cli test-telegram --message "Deploy successful" --chat-id "-1001234567890"
 ```
 
-## Centrifugo / WebSocket Testing
-
-### `centrifugo_publish`
-
-Test Centrifugo real-time messaging by publishing messages to channels.
-
-```bash
-python manage.py centrifugo_publish -c CHANNEL [-m MESSAGE | -d JSON_DATA]
-```
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `--channel, -c` | `TEXT` | Centrifugo channel name (required) |
-| `--message, -m` | `TEXT` | Simple text message |
-| `--data, -d` | `JSON` | JSON data to publish |
-
-**Examples:**
-
-```bash
-# Test AI chat channel
-python manage.py centrifugo_publish \
-  -c "ai_chat:workspace:UUID" \
-  -m "Test message"
-
-# Test with custom JSON
-python manage.py centrifugo_publish \
-  -c "notifications:user:123" \
-  -d '{"type":"alert","text":"Test notification"}'
-
-# Test dashboard updates
-python manage.py centrifugo_publish \
-  -c "dashboard:workspace:UUID" \
-  -d '{"type":"metric_update","value":142}'
-```
-
-<Callout type="info">
-**Channel Naming**
-
-Use `:` for namespace separation (not `#`):
-- ✅ `ai_chat:workspace:UUID`
-- ❌ `ai_chat#workspace#UUID`
-
-See [Centrifugo CLI Commands](/features/modules/django-centrifugo/cli-commands) for details.
-</Callout>
-
 ## OTP Authentication Testing
 
 ### `otp_test`

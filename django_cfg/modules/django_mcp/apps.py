@@ -45,7 +45,7 @@ class DjangoMCPConfig(AppConfig):
         if not is_enabled():
             return
 
-        # Step 0: Register default tools (introspection, query, raw_sql, etc.)
+        # Step 0: Register default tools (introspection, query, aggregation, etc.)
         self._register_default_tools()
 
         # Step 1: Auto-discover and load project-level mcp/ folder config
@@ -68,7 +68,12 @@ class DjangoMCPConfig(AppConfig):
         self._register_connection_signal()
 
     def _register_default_tools(self):
-        """Register default MCP tools (introspection, query, raw_sql, etc.)."""
+        """Register the default MCP tools (introspection, query, aggregation).
+
+        Note ``raw_sql`` is deliberately NOT among them: it is defined in
+        ``agent/tools.py`` but never registered here, so a deployment opts into
+        it explicitly rather than exposing arbitrary SQL by default.
+        """
         try:
             from .handlers.tools import tool_registry  # This imports and registers all default tools
             from django_cfg.modules.django_mcp.tools.base import tool_registry as global_registry

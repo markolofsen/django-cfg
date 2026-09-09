@@ -17,9 +17,8 @@ class StorageCleanupConfig:
     """
     Runtime configuration for file cleanup behavior.
 
-    This dataclass is used internally by the module. Configuration can come from:
-    1. DjangoConfig.storage (preferred) - via get_current_config()
-    2. Django settings.DJANGO_STORAGE (fallback)
+    Used internally by the module. Values come from `DjangoConfig.storage`
+    via `get_current_config()`; defaults apply when no config is loaded.
     """
 
     # Enable automatic cleanup for all models
@@ -70,30 +69,17 @@ class StorageCleanupConfig:
         Returns:
             StorageCleanupConfig instance
         """
+        cleanup = config.cleanup
         return cls(
-            auto_cleanup=config.auto_cleanup,
-            delete_on_replace=config.delete_on_replace,
-            exclude_models=set(config.exclude_models),
-            exclude_fields=set(config.exclude_fields),
-            log_deletions=config.log_deletions,
-            check_shared_files=config.check_shared_files,
-            respect_soft_delete=config.respect_soft_delete,
-            soft_delete_fields=set(config.soft_delete_fields),
+            auto_cleanup=cleanup.auto_cleanup,
+            delete_on_replace=cleanup.delete_on_replace,
+            exclude_models=set(cleanup.exclude_models),
+            exclude_fields=set(cleanup.exclude_fields),
+            log_deletions=cleanup.log_deletions,
+            check_shared_files=cleanup.check_shared_files,
+            respect_soft_delete=cleanup.respect_soft_delete,
+            soft_delete_fields=set(cleanup.soft_delete_fields),
         )
-
-    @classmethod
-    def from_django_settings(cls) -> "StorageCleanupConfig":
-        """
-        Load configuration from Django settings (fallback).
-
-        Reads from settings.DJANGO_STORAGE dict.
-        """
-        from django.conf import settings
-
-        config_dict = getattr(settings, "DJANGO_STORAGE", {})
-        valid_fields = {f for f in cls.__dataclass_fields__}
-        filtered_config = {k: v for k, v in config_dict.items() if k in valid_fields}
-        return cls(**filtered_config)
 
 
 def _get_config_from_django_cfg() -> Optional[StorageCleanupConfig]:
@@ -120,18 +106,27 @@ def get_config() -> StorageCleanupConfig:
     """
     Get cached configuration instance.
 
-    Priority:
-    1. DjangoConfig.storage (via get_current_config)
-    2. Django settings.DJANGO_STORAGE
-    3. Default values
+    Reads `DjangoConfig.storage`; falls back to dataclass defaults when no
+    config is loaded (e.g. plain-Django test setups).
     """
-    # Try DjangoConfig first
-    config = _get_config_from_django_cfg()
-    if config:
-        return config
+    return _get_config_from_django_cfg() or StorageCleanupConfig()
 
-    # Fall back to Django settings
-    return StorageCleanupConfig.from_django_settings()
+
+def is_enabled() -> bool:
+    """
+    Whether the cleanup module is enabled (`DjangoConfig.storage.enabled`).
+
+    Defaults to True when no config is loaded, matching StorageConfig's default.
+    """
+    try:
+        from django_cfg.core.state import get_current_config
+
+        django_config = get_current_config()
+        if django_config and django_config.storage is not None:
+            return django_config.storage.enabled
+    except Exception:
+        pass
+    return True
 
 
 def clear_config_cache() -> None:

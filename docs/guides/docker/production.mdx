@@ -180,7 +180,7 @@ carapis-django:
   volumes:
     - ./volumes/django/logs:/app/logs
     - ./volumes/django/static:/app/static
-    - ./volumes/django/media:/app/media  # User uploads (skip if using CDN/S3)
+    - ./volumes/django/media:/app/media  # User uploads (drop this when storage.backend is set)
   depends_on:
     carapis_postgres:
       condition: service_healthy
@@ -453,6 +453,12 @@ DJANGO_LOG_LEVEL=INFO
 MEDIA_URL=/media/  # Relative URL (served by nginx)
 # MEDIA_URL=https://cdn.example.com/media/  # CDN for production (recommended)
 # MEDIA_URL=__auto__  # Auto-generate from api_url
+
+# Storing uploads in object storage instead of the media volume:
+# configure storage.backend in config.py, then supply credentials here.
+# See /configuration/storage
+# R2__ACCESS_KEY_ID=...
+# R2__SECRET_ACCESS_KEY=...
 
 # Security Configuration
 SECURE_SSL_REDIRECT=true  # ⚠️ Enable only if SSL/TLS is configured

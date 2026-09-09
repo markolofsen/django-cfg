@@ -80,7 +80,6 @@ CORE_REGISTRY = {
 
     # Security
     "AxesConfig": ("django_cfg.models.django.axes", "AxesConfig"),
-    "CryptoFieldsConfig": ("django_cfg.models.django.crypto_fields", "CryptoFieldsConfig"),
 
     # API
     "LimitsConfig": ("django_cfg.models.api.limits", "LimitsConfig"),
@@ -190,9 +189,6 @@ MODULES_REGISTRY = {
     "add_django_cfg_urls": ("django_cfg.core.integration", "add_django_cfg_urls"),
     "get_django_cfg_urls_info": ("django_cfg.core.integration", "get_django_cfg_urls_info"),
     "set_current_config": ("django_cfg.core.config", "set_current_config"),
-
-    # Centrifugo WebSocket
-    "DjangoCfgCentrifugoConfig": ("django_cfg.apps.integrations.centrifugo.services.client.config", "DjangoCfgCentrifugoConfig"),
 
     # Streamlit Admin
     "StreamlitAdminConfig": ("django_cfg.modules.streamlit_admin", "StreamlitAdminConfig"),

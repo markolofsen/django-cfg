@@ -67,6 +67,27 @@ These tools bypass the per-model exposure check — they are always available wh
 | `top_values` | Top N values for a field with occurrence counts. |
 | `distribution` | Value distribution / histogram for a numeric field. |
 
+### Raw SQL (`agent/tools.py` — `RawSQLTool`)
+
+Not registered by default. `raw_sql_tool` is importable from `django_cfg.modules.django_mcp.agent.tools` and can be registered like any custom tool; nothing exposes it unless you do.
+
+It runs a read-only SELECT through a four-stage pipeline: pglast AST validation, `EXPLAIN` cost estimation (rejecting above 50,000 cost units or 10,000 estimated rows), execution inside a read-only transaction with a 5s statement timeout, and a row cap (default 50, max 100).
+
+<Callout type="warning">
+AST validation requires **pglast**, shipped as the `mcp-sql` extra (`pip install 'django-cfg[mcp-sql]'`). Without it the tool **refuses** rather than degrading: the only remaining check would be `startswith("SELECT")`, which a data-modifying CTE (`WITH x AS (DELETE ... RETURNING *) SELECT ...`) passes. A tool that advertises AST validation must not silently downgrade to a string prefix.
+</Callout>
+
+`SQLValidator` uses PostgreSQL's own parser, so a keyword hidden in a comment, a dollar-quoted string or a Unicode homoglyph is classified the way the server would classify it rather than the way a regex would. `SelectStmt` is the only permitted statement type — anything absent from that allowlist is refused, so a future PostgreSQL statement type is refused by default rather than admitted by omission.
+
+Four things beyond the statement check:
+
+- **The whole parse tree is walked**, not just the root. A data-modifying CTE (`WITH x AS (DELETE ... RETURNING *) SELECT ...`) has a `SelectStmt` root and would otherwise pass the statement check alone.
+- **Blocked schemas and tables.** `pg_catalog`, `information_schema` and the toast/temp schemas are refused, as are credential-bearing tables (`auth_user`, `django_session`, `authtoken_token`, `otp_totp_totpdevice`, `pg_authid`, …). Pass `allowed_tables` / `blocked_tables` to `SQLValidator` to change the sets.
+- **Dangerous functions** — `pg_sleep`, `lo_import`/`lo_export`, `dblink`, `pg_read_file`, `set_config`, `pg_terminate_backend` and similar — are checked on both the bare and the schema-qualified spelling, since `pg_catalog.pg_sleep(10)` parses to a two-part name a blocklist keyed on the joined name would miss.
+- **CTE names are bound by the query, not by tables.** They are collected in a first pass (the walk is breadth-first and reaches `FROM active_users` before the `WITH` that declares it) and skipped by the table allowlist — but only when unqualified, so `WITH auth_user AS (...)` cannot shadow the real table.
+
+Parameters are passed separately as `params`. psycopg's `%s` and `%(name)s` markers are rewritten to PostgreSQL's `$n` outside string literals before parsing, so the parameterised form — the safe one — is not refused as a syntax error, which would push callers toward interpolating values into the string instead.
+
 ## How tools work
 
 Every tool is a class inheriting `MCPTool`:
@@ -85,7 +106,77 @@ class MCPTool(ABC):
 - `description` is the most important field — it determines when the LLM decides to use the tool. Write it precisely.
 - `input_schema` is sent verbatim to the LLM as the function parameter schema in OpenAI tool format.
 - `execute()` must always return a `str`. For structured data, return a JSON-encoded string. For errors, return a plain error message string — do not raise exceptions (the runner catches them and returns the message).
-- `is_available(context)` may be called with `context=None` — the public `/info/` listing checks availability without a request context. If you override `is_available`, it must tolerate a missing context rather than assume one is always present.
+- `is_available(context)` may be called with `context=None` — the `/info/` listing checks availability without a request context. If you override `is_available`, it must tolerate a missing context rather than assume one is always present.
+- `public` (`bool`, default `False`) declares whether an anonymous [profile](/features/modules/django-mcp/configuration#profiles) may serve this tool. The default is the design: the tool, declared beside its own code, is the only place that knows whether it is safe to expose. Set it `True` only for a tool that reads data that is already public, returns no personal data, and cannot mutate anything.
+- `schema_for(profile)` returns the input schema a given profile should be shown. See [Profile-aware schemas](#profile-aware-schemas) below.
+
+## Profile-aware schemas
+
+A tool whose limit differs per profile must advertise the ceiling that actually applies. `input_schema` is a class attribute evaluated once at import, so without an override an anonymous listing would keep advertising the operator ceiling while `execute` quietly returned fewer rows — and an agent reads the schema as the contract, so it reports the clamp as a broken server.
+
+Override `schema_for` to say so:
+
+```python
+import copy
+
+class CatalogSearchTool(MCPTool):
+    name = "catalog_search"
+    public = True
+    input_schema = {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string"},
+            "limit": {"type": "integer", "maximum": 200},
+        },
+        "required": ["query"],
+    }
+
+    def schema_for(self, profile):
+        if profile is not None and profile.access == "anonymous":
+            # A NEW dict — see the warning below.
+            schema = copy.deepcopy(self.input_schema)
+            schema["properties"]["limit"]["maximum"] = 20
+            return schema
+        return self.input_schema
+```
+
+<Callout type="warning">
+`schema_for` must return a **new** dict. Tools are registered as singleton instances shared by every profile and every request, so mutating `self.input_schema` per request is a cross-request race, not merely an inaccuracy.
+</Callout>
+
+`to_definition(profile=None)` calls `schema_for` when a profile is given, and returns the class attribute unchanged when it is not. Both parameters are optional, so a tool that does not override either is unaffected. `tools/list` passes the request's profile; `GET <path>info/` passes the profile the listing belongs to.
+
+## Access logging
+
+Every `tools/call` writes one line to the `django_cfg.modules.django_mcp.handlers.tools` logger. On an anonymous profile there is no key to revoke and no account to disable, so this log is the only record of what a caller did.
+
+```text
+mcp.call profile=public tool=catalog_search ip=198.51.100.7 args=limit,query ms=42 bytes=1731 outcome=ok
+```
+
+| Field | Meaning |
+|-------|---------|
+| `profile` | Name of the profile that answered, or `-` |
+| `tool` | Requested tool name |
+| `ip` | First `X-Forwarded-For` entry, else `REMOTE_ADDR`, else `-` |
+| `args` | Argument **names**, sorted and comma-joined, or `-` |
+| `ms` | Wall-clock execution time |
+| `bytes` | Length of the returned string (`outcome=ok` only) |
+| `outcome` | `ok`, `error`, or `refused` |
+
+<Callout type="info">
+**Argument names are logged; argument values never are.** On an anonymous endpoint the values are attacker-supplied, and a search phrase is the caller's own words — logging them would make the access log the thing worth stealing. The names still say which shape of call was made.
+</Callout>
+
+Three outcomes:
+
+- `outcome=ok` at `INFO`, with `bytes`.
+- `outcome=error` at `WARNING`, carrying `error=<ExceptionClassName>` — the class name only, not the message, which may quote the arguments.
+- `outcome=refused` at `INFO`, when the profile does not serve the requested tool. These are the lines worth reading: an `operator_*` name posted at the public endpoint is the signal. A refusal is logged before execution, so it carries no `args`, `ms`, or `bytes`.
+
+`X-Forwarded-For` is preferred over `REMOTE_ADDR` because behind a proxy the latter would make every anonymous caller look like one address. It is a **log field, never an auth input**.
+
+This is independent of `enable_audit_log` / `MCPAuditLog`, which records MCP operations to the database.
 
 ## Adding a custom tool
 

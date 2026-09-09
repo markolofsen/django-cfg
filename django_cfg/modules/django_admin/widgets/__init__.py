@@ -1,17 +1,14 @@
 """
 Widget system for Django Admin.
 
-NOTE: EncryptedFieldWidget, EncryptedPasswordWidget, and JSONEditorWidget are lazily imported
-to avoid circular import issues with unfold.widgets and django-json-widget which access settings
-at module level.
+NOTE: JSONEditorWidget is lazily imported to avoid circular import issues with
+django-json-widget, which accesses settings at module level.
 """
 
 from .registry import WidgetRegistry
 
 __all__ = [
     "WidgetRegistry",
-    "EncryptedFieldWidget",
-    "EncryptedPasswordWidget",
     "JSONEditorWidget",
     "MoneyFieldWidget",
     "MoneyFieldFormField",
@@ -33,13 +30,7 @@ def __getattr__(name):
     Using PEP 562 lazy imports allows these widgets to be imported only
     when actually needed (i.e., when Django is properly configured).
     """
-    if name == "EncryptedFieldWidget":
-        from .encrypted_field_widget import EncryptedFieldWidget
-        return EncryptedFieldWidget
-    elif name == "EncryptedPasswordWidget":
-        from .encrypted_field_widget import EncryptedPasswordWidget
-        return EncryptedPasswordWidget
-    elif name == "JSONEditorWidget":
+    if name == "JSONEditorWidget":
         from .json_editor_widget import JSONEditorWidget
         return JSONEditorWidget
     elif name == "MoneyFieldWidget":

@@ -69,8 +69,6 @@ class SettingsOrchestrator:
             settings.update(self._generate_database_settings())
             settings.update(self._generate_cache_settings())
             settings.update(self._generate_security_settings())
-            settings.update(self._generate_crypto_fields_settings())
-            settings.update(self._generate_encryption_settings())
             settings.update(self._generate_email_settings())
             settings.update(self._generate_logging_settings())
             settings.update(self._generate_i18n_settings())
@@ -159,24 +157,6 @@ class SettingsOrchestrator:
             return generator.generate()
         except Exception as e:
             raise ConfigurationError(f"Failed to generate security settings: {e}") from e
-
-    def _generate_crypto_fields_settings(self) -> Dict[str, Any]:
-        """Generate django-crypto-fields encryption settings."""
-        try:
-            from .security_generators.crypto_fields import CryptoFieldsSettingsGenerator
-            generator = CryptoFieldsSettingsGenerator(self.config)
-            return generator.generate()
-        except Exception as e:
-            raise ConfigurationError(f"Failed to generate crypto-fields settings: {e}") from e
-
-    def _generate_encryption_settings(self) -> Dict[str, Any]:
-        """Generate API encryption settings for anti-scraping protection."""
-        try:
-            from .security_generators.encryption import EncryptionSettingsGenerator
-            generator = EncryptionSettingsGenerator(self.config)
-            return generator.generate()
-        except Exception as e:
-            raise ConfigurationError(f"Failed to generate encryption settings: {e}") from e
 
     def _generate_email_settings(self) -> Dict[str, Any]:
         """Generate email settings."""

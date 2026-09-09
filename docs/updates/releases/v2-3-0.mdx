@@ -1,0 +1,127 @@
+---
+title: "Release v2.3.0"
+description: "S3-compatible media storage (Cloudflare R2, MinIO, S3) arrives; three subsystems removed — Centrifugo, API response encryption, and django-crypto-fields. A minor bump because it removes public API."
+---
+
+import { Callout } from 'nextra/components'
+
+# Release v2.3.0
+
+**Released:** September 7, 2026
+
+A rollup of the user-facing changes shipped across `2.2.158` → `2.3.0`. This is a
+**minor** bump rather than a patch because it removes public API — read
+[Removals](#removals) before upgrading.
+
+## Removals
+
+Three optional subsystems are gone. All three were opt-in and defaulted to off,
+so a config that never enabled them needs no change.
+
+- **Centrifugo (WebSocket pub/sub)** — the `django_cfg.modules.django_centrifugo`
+  module, the `centrifugo` field on `DjangoConfig`, `DjangoCfgCentrifugoConfig`,
+  the `cfg/centrifugo/` URL prefix, the `centrifugo_publish` and
+  `generate_centrifugo_clients` commands, and the `cfg_centrifugo` OpenAPI group.
+  The `cent` dependency is dropped and the `centrifugo` extra no longer exists.
+- **API response encryption** — `django_cfg.core.encryption` in full:
+  `EncryptionConfig`, `EncryptionMiddleware`, `EncryptedJSONRenderer`,
+  `EncryptableSerializerMixin`, and the `Encrypted*` serializer fields.
+- **django-crypto-fields integration** — `CryptoFieldsConfig` and the
+  `crypto_fields` field on `DjangoConfig`, along with the admin's
+  `EncryptedFieldWidget` / `EncryptedPasswordWidget` and
+  `AdminConfig.show_encrypted_fields_as_plain_text`.
+
+<Callout type="info">
+  **DPoP is unaffected.** Sender-constrained tokens (RFC 9449) are a separate
+  subsystem that never depended on response encryption, and the `cryptography`
+  dependency stays for it. See [JWT & DPoP](/features/built-in-apps/user-management/accounts/jwt).
+</Callout>
+
+**`settings.DJANGO_STORAGE`** is also gone. It was documented as a fallback for
+cleanup configuration, but django-cfg never wrote that setting, so the code path
+was unreachable — `DjangoConfig.storage` was always the real source.
+
+## Deprecations
+
+`StorageConfig` is now a container for `enabled`, `cleanup`, and the new
+`backend`. Cleanup fields moved to `FileCleanupConfig`:
+
+```python
+# before (still works, warns)
+storage = StorageConfig(log_deletions=True)
+
+# now
+storage = StorageConfig(cleanup=FileCleanupConfig(log_deletions=True))
+```
+
+The flat form is folded into `cleanup` with a `DeprecationWarning`, and reading
+flat attributes still works, so no config breaks on upgrade.
+
+Separately, `StorageConfig(enabled=False)` now actually disables the cleanup
+module — the app is left out of `INSTALLED_APPS` and no signals are registered.
+It previously had no effect at all, so a project that set it expecting cleanup
+to be off **was still running cleanup**. If you rely on that accidental
+behavior, drop the flag.
+
+`version_check` also leaves `django_cfg.__all__`, replaced by
+`check_python_version`. The old name mapped to a symbol that never existed, so
+`from django_cfg import version_check` always raised `ImportError` — no working
+import can break on this. Importing `check_python_version` from
+`django_cfg.utils.version_check` continues to work as documented.
+
+## Highlights
+
+- **S3-compatible media storage** — `StorageConfig` gained a `backend` field, so
+  uploads can live in object storage instead of the container filesystem:
+
+  ```python
+  storage = StorageConfig(
+      backend=S3StorageConfig.r2(account_id="…", bucket_name="media"),
+  )
+  ```
+
+  Presets for Cloudflare R2, MinIO and AWS S3 apply each store's requirements
+  for you — for R2 that means `region_name="auto"`, no ACLs, and checksums only
+  when required (botocore's default CRC32 makes R2 answer `501 Not
+  Implemented`). Needs `pip install django-cfg[s3]`; without it startup raises
+  rather than silently writing to local disk. Media only by default — static
+  stays on WhiteNoise. See [Media Storage](/configuration/storage).
+- **Profile-aware MCP tool schemas** — a tool's advertised schema now depends on
+  the profile serving it, and `GET /cfg/mcp/info/` reports accordingly. See
+  [MCP Architecture](/features/modules/django-mcp/architecture).
+- **MCP tool-call logging** — every tool call is logged with its argument
+  **names**; argument values are never written. See
+  [MCP Architecture](/features/modules/django-mcp/architecture).
+- **SQL validator enforced** — the MCP SQL validator now imports, runs, and
+  cannot be skipped; previously a failed import could silently bypass it.
+- **Lazy MCP profile URLs** — profile URLs load lazily and mount through the
+  app's own URL conf.
+- **`django_ogimage` archived** — Open Graph images are rendered by the Next.js
+  side (`@djangocfg/widget-ogimage`), so the Python renderer and its Pillow-based
+  dependency chain are gone.
+
+## Updated Packages
+
+| Package | Version | Changes |
+|---------|---------|---------|
+| `django-cfg` (PyPI) | 2.3.0 | S3/R2/MinIO media storage (`s3` extra), Centrifugo / response-encryption / crypto-fields removal, `StorageConfig` split, MCP profile schemas + call logging, SQL validator fix, `django_ogimage` archived |
+| `@djangocfg/api` | 2.1.541 | `_cfg_centrifugo` client group and the `User.centrifugo` field removed |
+| `@djangocfg/layouts` | 2.1.541 | `CentrifugoProvider` and the `centrifugo` prop removed from `BaseApp`; the `ErrorsTracker` `centrifugo` error type is gone |
+| `@djangocfg/nextjs` | 2.1.541 | `@djangocfg/centrifugo` dropped from the transpile list |
+
+## Upgrade
+
+```bash
+pip install -U django-cfg
+```
+
+Remove any `centrifugo=`, `encryption=`, or `crypto_fields=` field from your
+`DjangoConfig` subclass, and drop `CENTRIFUGO__*` environment variables. If you
+ran the Centrifugo container, it can be removed from your compose file.
+
+```bash
+pnpm update @djangocfg/api @djangocfg/layouts @djangocfg/nextjs
+```
+
+Frontend apps passing `centrifugo={{ … }}` to `BaseApp` should drop the prop, and
+any `errorTracking.centrifugo` config should be removed.

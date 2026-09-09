@@ -14,7 +14,7 @@ pip install django-cfg
 Or with optional dependency groups:
 
 ```bash
-pip install "django-cfg[centrifugo]"  # Real-time messaging
+pip install "django-cfg[rq]"          # Background tasks
 pip install "django-cfg[full]"        # All enterprise features
 ```
 
@@ -22,10 +22,10 @@ pip install "django-cfg[full]"        # All enterprise features
 
 | Group | What it adds |
 |-------|-------------|
-| `centrifugo` | Real-time messaging (cent) |
 | `rq` | Redis Queue tasks (rq, django-rq) |
 | `ai` | Pydantic AI agents |
 | `geo` | Geographic/PostGIS support |
+| `s3` | S3-compatible [media storage](/configuration/storage) (django-storages, boto3) |
 | `full` | All enterprise features |
 
 <Callout type="tip">
@@ -41,7 +41,7 @@ Start with the base install. You can add optional groups later as your project g
 | Python | 3.12+ | Required |
 | Django | 5.0+ | Installed automatically with django-cfg |
 | Node.js | 20+ | For frontend (pnpm will be needed) |
-| Docker | Latest | Optional — for local services (Redis, PostgreSQL, Centrifugo) |
+| Docker | Latest | Optional — for local services (Redis, PostgreSQL) |
 
 ---
 

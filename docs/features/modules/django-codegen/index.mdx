@@ -224,29 +224,6 @@ This copies generated Python clients to the Streamlit app's `api/generated/` dir
 
 ---
 
-## Centrifugo Support
-
-Generate Centrifugo RPC clients:
-
-```python
-from django_cfg.modules.django_generator import Config, Centrifugo, Target
-
-config = Config(
-    centrifugo=Centrifugo(
-        targets=[
-            Target(
-                lang=Language.TYPESCRIPT,
-                type=TargetType.WEB,
-                path=FRONTEND / "packages/centrifugo/generated",
-                groups=["notifications", "chat"],
-            ),
-        ],
-    ),
-)
-```
-
----
-
 ## ORM Generation
 
 Generate FastAPI/SQLModel models from Django models:

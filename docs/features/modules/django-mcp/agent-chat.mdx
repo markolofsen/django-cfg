@@ -47,6 +47,14 @@ answer. Intermediate tool activity is **not** surfaced as SSE events (see
 
 Synchronous variant. Uses `X-MCP-Access-Key` header auth (not session). Blocks until the agent finishes all tool calls, then returns one JSON response. Useful for programmatic clients; not used by the admin UI.
 
+### `GET /cfg/mcp/agent/history/?session_id=...`
+
+Returns `{"messages": [...]}` — the stored conversation for the calling user and that session, oldest first. `session_id` defaults to `"agent-session"`. Requires an authenticated Django session; an anonymous request gets `401`.
+
+<Callout type="info">
+The agent endpoints are mounted only on the module's own `endpoint_path`, never on a declared [profile](/features/modules/django-mcp/configuration#profiles) path. They spend an LLM budget on the deployment's account, so mounting them on an anonymous profile would make it a public spending endpoint.
+</Callout>
+
 ## SSE event types
 
 | Event | Payload fields | When emitted |
@@ -68,7 +76,7 @@ could complete without text deltas and trigger a duplicate provider request.)
 
 ```
 user_message + Redis history → AgentContext (with user=request.user, request=request)
-tools_def = OpenAI-compatible function definitions from the registry
+every registered MCPTool → a pydantic_ai.Tool, via Tool.from_schema(input_schema)
 
 result = agent_runner.run(message, context, model=model)   # runs all tool calls internally
 yield {"event": "text", "content": result.text}

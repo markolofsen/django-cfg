@@ -360,7 +360,7 @@ export {{ auth, type Auth }} from './helpers/auth';
 {api_class_reexports}
 
 // Hey API SDK classes — one per OpenAPI tag. Lets consumers call
-// `Centrifugo.cfgCentrifugoAuthTokenRetrieve({{...}})` directly.
+// `Accounts.cfgAccountsProfileRetrieve({{...}})` directly.
 //
 // NOTE: classes whose name would collide with a barrel-level type
 // alias (e.g. `Auth`, which is also `type Auth = typeof auth`) are

@@ -1,0 +1,285 @@
+---
+title: Media Storage
+description: Store uploaded media on S3-compatible object storage (Cloudflare R2, MinIO, AWS S3) via StorageConfig and S3StorageConfig.
+---
+
+# Media Storage
+
+By default django-cfg stores uploaded media on the local filesystem
+(`MEDIA_ROOT`), which does not survive a container restart. `StorageConfig.backend`
+moves media to any S3-compatible object store — Cloudflare R2, MinIO, AWS S3, or
+anything else that speaks the S3 API.
+
+One model, `S3StorageConfig`, covers every store. Vendor differences live in the
+`r2()` / `minio()` / `s3()` presets, not in your config.
+
+<Callout type="info">
+Only **media** moves to object storage. Static files stay on WhiteNoise unless
+you opt in — see [Static files](#static-files).
+</Callout>
+
+---
+
+## Install
+
+```bash
+pip install django-cfg[s3]
+```
+
+The extra pulls in `django-storages` and `boto3`. If a backend is configured and
+the extra is missing, startup raises `ImproperlyConfigured` naming the extra.
+That is deliberate: a silent fallback to local disk is how uploads get lost on
+the next redeploy.
+
+---
+
+## Configure
+
+```python
+from django_cfg import DjangoConfig, StorageConfig, S3StorageConfig
+
+class MyConfig(DjangoConfig):
+    storage = StorageConfig(
+        backend=S3StorageConfig.r2(account_id="…", bucket_name="media"),
+    )
+```
+
+`backend` defaults to `None`, which keeps Django's local filesystem storage —
+existing projects are unaffected.
+
+`StorageConfig` also carries `cleanup`, the automatic file-deletion settings
+documented in [File Cleanup](/features/modules/django-cleanup). The two are
+independent; you can set either, both, or neither.
+
+### Presets
+
+```python
+# Cloudflare R2
+S3StorageConfig.r2(account_id="abc123", bucket_name="media")
+
+# MinIO (self-hosted)
+S3StorageConfig.minio(endpoint_url="https://minio.internal:9000", bucket_name="media")
+
+# Amazon S3
+S3StorageConfig.s3(bucket_name="media", region_name="eu-west-1")
+```
+
+Any other S3-compatible store (Backblaze B2, DigitalOcean Spaces, Scaleway…)
+uses the plain constructor:
+
+```python
+S3StorageConfig(
+    bucket_name="media",
+    endpoint_url="https://s3.us-west-000.backblazeb2.com",
+    region_name="us-west-000",
+)
+```
+
+Presets accept every field as a keyword override — `S3StorageConfig.r2(…, location="uploads")`.
+
+### Credentials
+
+Credentials fall back to the environment, so they need not appear in code:
+
+| Variable | Used by |
+|---|---|
+| `S3__ACCESS_KEY_ID` | all backends |
+| `S3__SECRET_ACCESS_KEY` | all backends |
+| `R2__ACCESS_KEY_ID` | the `r2()` preset (takes precedence over `S3__*`) |
+| `R2__SECRET_ACCESS_KEY` | the `r2()` preset (takes precedence over `S3__*`) |
+
+Provide **both** the key and the secret, or neither. Half-configured credentials
+are rejected at startup rather than failing on the first upload. Passing neither
+leaves the ambient AWS credential chain (instance role, `~/.aws/credentials`) in
+charge.
+
+---
+
+## Cloudflare R2 how-to
+
+### 1. Create a bucket
+
+In the Cloudflare dashboard: **R2 → Create bucket**. The name is your
+`bucket_name`. Your account ID is shown on the R2 overview page and in the
+dashboard URL.
+
+### 2. Create an R2 API token
+
+**R2 → Manage R2 API Tokens → Create API Token**, with *Object Read & Write* on
+that bucket. Cloudflare shows the access key ID and secret access key once —
+store them as `R2__ACCESS_KEY_ID` and `R2__SECRET_ACCESS_KEY`.
+
+```python
+class MyConfig(DjangoConfig):
+    storage = StorageConfig(
+        backend=S3StorageConfig.r2(
+            account_id="abc123",
+            bucket_name="media",
+            location="media",
+        ),
+    )
+```
+
+### 3. Custom domain (optional, for public serving)
+
+The `*.r2.cloudflarestorage.com` endpoint is the S3 API, not a public file host.
+To serve media publicly, attach a custom domain to the bucket
+(**bucket → Settings → Public access → Custom domain**) and pass it:
+
+```python
+S3StorageConfig.r2(
+    account_id="abc123",
+    bucket_name="media",
+    custom_domain="media.example.com",
+)
+```
+
+`custom_domain` must have **no scheme and no trailing slash** — both are rejected
+by a validator, because either produces subtly broken URLs. Setting it rewrites
+`MEDIA_URL` to `https://<custom_domain>/<location>/`.
+
+---
+
+## Troubleshooting R2
+
+R2 is S3-compatible with sharp edges. The `r2()` preset handles these for you;
+they are named here so the errors are diagnosable if you build a config by hand.
+
+### `501 Not Implemented` on upload
+
+```
+Header 'x-amz-checksum-algorithm' with value 'CRC32' not implemented
+```
+
+Recent versions of botocore send a CRC32 checksum by default, which R2 does not
+implement. **This looks like a credentials problem but is not** — the request is
+authenticated fine and rejected on the header.
+
+The `r2()` preset sets `request_checksum_calculation="when_required"` and
+`response_checksum_validation="when_required"`, which avoids it. If you built the
+config with the plain constructor, set both yourself.
+
+### Region must be `auto`
+
+`auto` is R2's only region. The preset sets it; a real AWS region name will not
+work.
+
+### ACLs are not supported
+
+R2 implements no ACLs at all. Passing `default_acl` to `.r2()` raises
+immediately, and setting it against R2 by other means makes uploads fail.
+Control public/private access in the Cloudflare dashboard instead.
+
+### Other unsupported R2 features
+
+Do not design against these — R2 does not implement them:
+
+- object tagging
+- object locking
+- bucket policies and replication
+- versioning
+- KMS server-side encryption
+
+---
+
+## Environments
+
+Give each environment its own bucket where you can — it is the cleanest
+boundary, and bucket count is not what you pay for.
+
+When environments must share one bucket, set `environment` so their keys cannot
+collide:
+
+```python
+S3StorageConfig.r2(
+    account_id="abc123",
+    bucket_name="shared-media",
+    location="media",
+    environment="prod" if env.is_prod else "dev",
+)
+```
+
+Objects then live under `prod/media/…` and `dev/media/…`, and `MEDIA_URL`
+follows the same prefix, so stored files and the URLs serving them cannot
+disagree. Collected static files are separated the same way (`prod/static/…`)
+when `serve_static=True`.
+
+<Callout type="warning">
+This is a **data-loss** guard, not tidiness. [File
+Cleanup](/features/modules/django-cleanup) deletes files through the storage
+API when a row is deleted. Two environments sharing a prefix means a local run
+that clears rows — after restoring a production dump, say — deletes the
+production objects behind those keys. There is no undo.
+</Callout>
+
+Omit `environment` and nothing changes: keys keep using `location` alone.
+
+---
+
+## Static files
+
+By default only `STORAGES["default"]` (media) points at object storage;
+`STORAGES["staticfiles"]` stays on WhiteNoise. User uploads are what must
+survive a restart, and static files are already served efficiently.
+
+To move collected static files as well:
+
+```python
+S3StorageConfig.r2(
+    account_id="abc123",
+    bucket_name="media",
+    custom_domain="cdn.example.com",
+    serve_static=True,
+)
+```
+
+<Callout type="warning">
+`serve_static=True` needs a custom domain, and it replaces WhiteNoise's
+`ManifestStaticFilesStorage` — hashed filenames and the manifest then live in the
+bucket, so `collectstatic` must run successfully against the bucket on every
+deploy or the app serves stale or missing assets. Verify it in staging first.
+</Callout>
+
+Static files are written under the `static/` prefix in the bucket (or
+`<environment>/static/`) with `querystring_auth` disabled, regardless of the
+media `location`. `file_overwrite` is forced on for static regardless of the
+media setting — leaving it off makes `collectstatic` write random-suffixed
+duplicates and a manifest that points at the wrong files.
+
+---
+
+## Field reference
+
+`S3StorageConfig`:
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `bucket_name` | `str` | *required* | Bucket that holds uploaded media |
+| `endpoint_url` | `str \| None` | `None` | S3 API endpoint; `None` targets AWS S3 |
+| `access_key_id` | `SecretStr \| None` | env `S3__ACCESS_KEY_ID` | Access key |
+| `secret_access_key` | `SecretStr \| None` | env `S3__SECRET_ACCESS_KEY` | Secret key |
+| `region_name` | `str` | `"us-east-1"` | Region; `"auto"` for R2 |
+| `signature_version` | `str` | `"s3v4"` | SigV4 everywhere; SigV2 is unsupported by most stores |
+| `addressing_style` | `str` | `"virtual"` | `"virtual"` (`bucket.host`) or `"path"` (`host/bucket`, needed by MinIO) |
+| `custom_domain` | `str \| None` | `None` | Public host serving the bucket (CDN or R2 custom domain), no scheme |
+| `default_acl` | `str \| None` | `None` | Object ACL; must stay `None` on stores without ACL support (R2) |
+| `querystring_auth` | `bool` | `False` | Sign media URLs. `False` suits a public bucket behind a CDN |
+| `file_overwrite` | `bool` | `False` | Overwrite on name collision instead of suffixing |
+| `location` | `str` | `""` | Key prefix inside the bucket (e.g. `"media"`) |
+| `environment` | `str \| None` | `None` | Segment prepended to `location`, to keep environments apart in one bucket (e.g. `"prod"`, `"dev"`) |
+| `object_parameters` | `dict[str, str]` | `{}` | Extra S3 object headers, e.g. `{"CacheControl": "max-age=86400"}` |
+| `serve_static` | `bool` | `False` | Also serve collected static files |
+| `request_checksum_calculation` | `str \| None` | `None` | botocore checksum mode: `"when_supported"` or `"when_required"` |
+| `response_checksum_validation` | `str \| None` | `None` | botocore response checksum validation mode |
+
+Validation rejects what silently half-works: `custom_domain` with a scheme or
+trailing slash, an `addressing_style` outside `{"virtual", "path"}`, and a
+credential key without its secret. `location` is stripped of surrounding slashes.
+
+---
+
+## See Also
+
+- [File Cleanup](/features/modules/django-cleanup) — the other half of `StorageConfig`
+- [Environment](/configuration/environment) — where credentials come from
+- [Installation](/getting-started/installation) — optional dependency groups

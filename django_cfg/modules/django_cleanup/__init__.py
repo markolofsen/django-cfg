@@ -10,11 +10,13 @@ Usage:
     # Configure in your config.py:
     class MyConfig(DjangoConfig):
         storage = StorageConfig(
-            log_deletions=True,
-            exclude_models=["backups.DatabaseBackup"],
+            cleanup=FileCleanupConfig(
+                log_deletions=True,
+                exclude_models=["backups.DatabaseBackup"],
+            )
         )
 
-    # Or disable:
+    # Or disable (app is left out of INSTALLED_APPS):
     class MyConfig(DjangoConfig):
         storage = StorageConfig(enabled=False)
 
@@ -26,10 +28,15 @@ Usage:
 
 Example with exclusions:
     storage = StorageConfig(
-        auto_cleanup=True,
-        exclude_models=["backups.DatabaseBackup"],
-        exclude_fields=["documents.Contract.original_scan"],
+        cleanup=FileCleanupConfig(
+            auto_cleanup=True,
+            exclude_models=["backups.DatabaseBackup"],
+            exclude_fields=["documents.Contract.original_scan"],
+        )
     )
+
+Passing cleanup fields directly to StorageConfig still works but is
+deprecated; see `models/django/storage.py`.
 """
 
 from .cleanup import (
@@ -42,7 +49,7 @@ from .cleanup import (
     is_model_excluded,
     is_soft_deleted,
 )
-from .config import StorageCleanupConfig, clear_config_cache, get_config
+from .config import StorageCleanupConfig, clear_config_cache, get_config, is_enabled
 from .signals import connect_signals_for_model, disconnect_signals_for_model
 
 
@@ -62,6 +69,7 @@ __all__ = [
     "StorageCleanupConfig",
     "get_config",
     "clear_config_cache",
+    "is_enabled",
     # Cleanup functions
     "cleanup_instance_files",
     "delete_file",

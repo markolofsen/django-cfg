@@ -37,29 +37,23 @@ Browser (Django admin /admin/)
     │ body: {message, session_id, model}
     │ auth: Django session cookie + CSRF token
     ▼
-MCPAgentStreamView (agents/views.py)
+MCPAgentStreamView (agents/api/views.py)
     │ validates auth, parses body
     │ builds AgentContext with all registered tools
     │ calls agent_runner.stream(message, context)
     ▼
-MCPAgentRunner.stream() (agents/runner.py)
+MCPAgentRunner (agents/runner/runner.py)
     │
-    │  ┌─────────────────────────────────┐
-    │  │  agentic loop (max 10 iters)     │
-    │  │                                  │
-    │  │  LLMClient.chat_completion()     │
-    │  │       ↓                          │
-    │  │  LLM response                    │
-    │  │       ↓                          │
-    │  │  has tool_calls?                 │
-    │  │  yes → execute each tool         │
-    │  │        yield tool_start event    │
-    │  │        yield tool_result event   │
-    │  │        → back to top             │
-    │  │  no  → yield text event          │
-    │  │        yield done event          │
-    │  │        → exit loop               │
-    │  └─────────────────────────────────┘
+    │  ┌─────────────────────────────────────┐
+    │  │  pydantic_ai.Agent over the MCP tools │
+    │  │  (django_llm harness owns the loop)   │
+    │  │                                       │
+    │  │  each MCPTool → pydantic_ai.Tool via  │
+    │  │  Tool.from_schema(input_schema)       │
+    │  │  execute() runs in a thread           │
+    │  └─────────────────────────────────────┘
+    │       ↓
+    │  final text answer
     ▼
 StreamingHttpResponse (text/event-stream)
     ▼
@@ -81,6 +75,14 @@ The transport is intentionally **stateless**, per the MCP Streamable HTTP spec. 
 
 A `401` response carries `WWW-Authenticate: MCPAccessKey realm="mcp", header="X-MCP-Access-Key"` — a custom scheme, not `Bearer`. `Bearer` reads as OAuth 2.0 to MCP clients, which then go looking for `/.well-known/oauth-protected-resource` and fail in a way that's harder to diagnose than a plain 401.
 
+## Profile routing
+
+A [profile](/features/modules/django-mcp/configuration#profiles) is resolved from **the URL the request arrived on**, never from a header, and it is what step 2 and step 4 above read. `MCPView.as_view(profile="public")` binds a view to one; the plain `MCPView` falls back to the synthesised `default` profile, which is what every URL registered before profiles existed resolves to.
+
+Profile routes are registered by `django_cfg.apps.urls`, not by the project — a profile that exists in the config but on no URL is invisible in the worst way: the config reads correct, the tool filter works, and the endpoint 404s. `urls.profile_urlpatterns()` builds them **lazily**, behind a `URLResolver` whose URLconf is resolved on first use. The module is imported while settings are still being built, when the MCP config does not yet exist; reading it at import time yields `None` and silently registers nothing, and an empty list is a perfectly valid URLconf, so the routes simply would not be there.
+
+Both `MCPView` and `MCPInfoView` read the profile the same way, and take the access key from the same object — the profile when one resolves, the flat config otherwise. Taking the gate from one and the key from the other would let a profile be gated by one key and unlocked by another.
+
 ## Shared tool registry
 
 Both subsystems use the same global `MCPToolRegistry` instance from `tools/base.py`. Tools are registered once in `handlers/tools.py` at import time, which is triggered by `auto_loader.py` inside `AppConfig.ready()`. After Django startup, both `MCPView` and `MCPAgentRunner` pull from the same registry — adding a tool makes it available in both contexts simultaneously.
@@ -96,9 +98,13 @@ django_mcp/
 ├── auto_loader.py      Loads tools and handlers at AppConfig.ready()
 │
 ├── agents/             Admin chat layer
-│   ├── runner.py       MCPAgentRunner — agentic loop and SSE stream
-│   ├── views.py        MCPAgentChatView (sync) + MCPAgentStreamView (SSE)
-│   ├── serializers.py  DRF serializers for agent request/response
+│   ├── api/
+│   │   ├── views.py    MCPAgentChatView (sync), MCPAgentStreamView (SSE),
+│   │   │               MCPAgentHistoryView
+│   │   └── serializers.py  DRF serializers for agent request/response
+│   ├── runner/
+│   │   ├── runner.py   MCPAgentRunner — the pydantic-ai harness run
+│   │   └── _harness_tools.py  Wraps each MCPTool as a pydantic_ai.Tool
 │   └── services/
 │       └── agent_service.py  High-level wrapper for the sync view
 │
@@ -119,21 +125,24 @@ django_mcp/
 │
 ├── protocols/          JSON-RPC 2.0 types and parser
 ├── services/           MCPContext dataclass + PII redactor
-├── sql/                SQL validator + EXPLAIN cost estimator
+├── sql/                pglast AST validator + EXPLAIN cost estimator (`mcp-sql` extra)
 ├── models/             MCPAuditLog Django model
 ├── cache.py            QueryCache — Redis query result cache
 ├── budget.py           QueryBudget — per-session resource limits
-└── chat/               RedisMCPChatStore for conversation history (planned)
+└── chat/               RedisMCPChatStore — admin chat conversation history
 ```
 
 ## LLM integration
 
-The admin chat agent uses `django_llm.LLMClient` with OpenRouter as the provider. The model is resolved in this priority order:
+The admin chat agent builds a `pydantic_ai.Agent` and delegates the agentic loop to `django_llm`'s harness, which resolves the provider (OpenRouter first). `MCPAgentRunner` keeps its public surface — `run(...) -> str` and `stream(...) -> Generator[dict]` — so callers are unaffected by that.
+
+Each registered `MCPTool` is wrapped as a `pydantic_ai.Tool`: `input_schema` becomes the parameter schema via `Tool.from_schema`, and `execute()` runs in a thread (`sync_to_async`), because it is synchronous and may touch the ORM — a tool coroutine that blocked on the database would stall the event loop the streaming path drives. A tool that raises returns its error as the tool result rather than raising into the loop, so the model can read the failure and recover.
+
+The model is resolved in this priority order:
 
 1. `model` field in the request body (explicit per-request override)
 2. `mcp_config.llm_model` from `DjangoMCPModuleConfig` (default: `"openai/gpt-4.1-nano"`)
-3. Primary provider's default model from `django_llm`
-4. Hard fallback: `"openai/gpt-4o-mini"`
+3. Hard fallback: `"openai/gpt-4o-mini"`
 
 ## Security boundaries
 
@@ -143,6 +152,8 @@ The admin chat agent uses `django_llm.LLMClient` with OpenRouter as the provider
 | `POST /cfg/mcp/agent/` | `X-MCP-Access-Key` header | Programmatic agents with static key |
 | `POST /cfg/mcp/agent/stream/` | Django session + CSRF token | Authenticated users (superuser UI gate) |
 | `GET /cfg/mcp/info/` | `X-MCP-Access-Key` header, unless `public_info=True` | Anyone, if `public_info=True` or no `access_key` is configured — otherwise the same holders as `POST /cfg/mcp/` |
+| `POST <profile.path>` | Whatever that profile's `access` says | Callers of that profile — see [Profiles](/features/modules/django-mcp/configuration#profiles) |
+| `GET <profile.path>info/` | Follows that profile's `public_info` | Anyone on an anonymous profile; keyholders otherwise |
 
 The streaming endpoint (`agent/stream/`) checks `request.user.is_authenticated` and requires a valid CSRF token. The admin template wraps the chat UI in `{% if user.is_superuser %}`, so only superusers see it in the admin panel.
 
