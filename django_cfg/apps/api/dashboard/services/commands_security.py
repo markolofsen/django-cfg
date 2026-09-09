@@ -33,7 +33,7 @@ ABSOLUTE_BLACKLIST: Set[str] = {
     'shell', 'shell_plus',
 
     # Development server (not for web execution)
-    'runserver', 'testserver', 'runserver_ngrok',
+    'runserver', 'testserver',
 
     # Project generation (not applicable in running app)
     'startapp', 'startproject',

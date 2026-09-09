@@ -55,7 +55,6 @@ class MyConfig(DjangoConfig):
     enable_accounts: bool = True      # User management + OTP auth
 
     # ✅ Background tasks (ReArq)
-    # ✅ Webhook testing (ngrok)
     # ✅ Email and Telegram notifications
     # ✅ Currency conversion (14K+ currencies)
     # ✅ LLM integration (OpenAI/OpenRouter)
@@ -316,39 +315,7 @@ job = await process_document.delay(document_id="123")
 
 ---
 
-### 9. 🌐 **Webhook Testing with Ngrok**
-
-**Problem**: Testing webhooks requires **manual ngrok setup**.
-
-**Solution**: **Built-in ngrok integration**.
-
-```python
-# config.py
-ngrok: NgrokConfig = NgrokConfig(enabled=True)
-
-# CLI: python manage.py runserver_ngrok
-# ✅ Ngrok tunnel ready: https://abc123.ngrok.io
-# ✅ ALLOWED_HOSTS updated automatically
-# ✅ Webhook URLs available everywhere
-```
-
-```python
-from django_cfg.modules.django_ngrok import get_webhook_url
-
-# Get webhook URL automatically
-webhook_url = get_webhook_url("/api/webhooks/stripe/")
-# "https://abc123.ngrok.io/api/webhooks/stripe/"
-```
-
-**Perfect for**:
-- 🎯 Stripe webhooks
-- 📱 Telegram bots
-- 💰 Payment integrations
-- 🔗 External API testing
-
----
-
-### 10. 💱 **Currency Conversion**
+### 9. 💱 **Currency Conversion**
 
 **Problem**: Currency APIs require **manual integration**.
 
@@ -369,7 +336,7 @@ amount_eur = convert_currency(100, "USD", "EUR")
 
 ---
 
-### 11. 🤝 **Communication Modules**
+### 10. 🤝 **Communication Modules**
 
 **Problem**: Integrating email, Telegram takes **weeks**.
 
@@ -423,7 +390,6 @@ response = client.chat_completion([
 | **📧 Communication** | 🟡 Basic email | ✅ **Email + Telegram** |
 | **💱 Currency** | ❌ Manual API | ✅ **14K+ currencies built-in** |
 | **🔄 Background Tasks** | 🟡 Manual Celery | ✅ **Built-in ReArq** |
-| **🌐 Webhook Testing** | 🟡 Manual ngrok | ✅ **Integrated ngrok** |
 | **🚀 Production Deploy** | 🟡 Manual config | ✅ **Zero-config Docker** |
 | **💡 IDE Support** | 🟡 Basic | ✅ **Full IntelliSense** |
 | **⏱️ Time to Production** | **3-6 months** | ✅ **30 seconds** |

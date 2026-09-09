@@ -30,7 +30,6 @@ from .integration import (
     get_django_cfg_urls_info,
     get_latest_version,
     get_version_info,
-    print_ngrok_tunnel_info,
     print_startup_info,
 )
 from .state import clear_current_config, get_current_config, set_current_config
@@ -57,7 +56,6 @@ __all__ = [
     "clear_current_config",
     # Integration utilities
     "print_startup_info",
-    "print_ngrok_tunnel_info",
     "get_version_info",
     "get_latest_version",
     "get_current_version",

@@ -20,8 +20,7 @@ integration/
 ├── display/                       # Modular display system
 │   ├── __init__.py               # Display system exports
 │   ├── base.py                   # BaseDisplayManager with common utilities
-│   ├── startup.py                # StartupDisplayManager for main info
-│   └── ngrok.py                  # NgrokDisplayManager for tunnel info
+│   └── startup.py                # StartupDisplayManager for main info
 ├── commands_collector.py         # Management commands collection
 ├── version_checker.py            # Version checking with cachetools
 ├── url_integration.py            # URL registration system
@@ -50,14 +49,6 @@ integration/
   - Management commands breakdown
   - Background tasks status
   - Update notifications
-
-#### `NgrokDisplayManager`
-- **Purpose**: Ngrok tunnel information display
-- **Features**:
-  - Tunnel status and configuration
-  - Active tunnel information
-  - Configuration validation
-  - Usage instructions
 
 ## Configuration
 
@@ -133,7 +124,6 @@ DJANGO_STARTUP_INFO_MODE=full    # Complete (default)
 
 #### Special Layouts:
 - **Project Commands**: Two-column layout within single panel
-- **Ngrok Integration**: Configuration and tunnel status
 
 ## Key Features
 
@@ -193,13 +183,12 @@ print_two_column_table()    # 50/50 column layout with panels
 
 ```python
 # Main entry points
-from django_cfg.core.integration import print_startup_info, print_ngrok_tunnel_info
+from django_cfg.core.integration import print_startup_info
 
 # Display managers
 from django_cfg.core.integration.display import (
     BaseDisplayManager,
-    StartupDisplayManager, 
-    NgrokDisplayManager
+    StartupDisplayManager,
 )
 
 # Utilities
@@ -245,16 +234,6 @@ class CustomDisplayManager(BaseDisplayManager):
         )
         
         self.console.print(panel)
-```
-
-### Ngrok Integration
-
-```python
-from django_cfg.core.integration import print_ngrok_tunnel_info
-
-# After ngrok tunnel is established
-tunnel_url = "https://abc123.ngrok-free.app"
-print_ngrok_tunnel_info(tunnel_url)
 ```
 
 ## Migration Guide

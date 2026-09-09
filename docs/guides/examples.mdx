@@ -82,7 +82,7 @@ Real-world payment integration examples with webhook handling.
 - Webhook handling
 - Payment status tracking
 
-**Includes**: Webhook dashboard, ngrok integration for local testing
+**Includes**: Webhook dashboard, payment status tracking
 
 ---
 
@@ -244,39 +244,6 @@ enable_accounts: bool = True  # Advanced user management!
 
 ---
 
-## 🌐 Webhook Testing Examples
-
-Local webhook testing with automatic ngrok integration.
-
-### Setup
-```python
-# config.py
-ngrok: NgrokConfig = NgrokConfig(enabled=True)
-```
-
-### Usage
-```bash
-# Start with ngrok tunnel
-python manage.py runserver_ngrok
-
-# Output:
-# ✅ Ngrok tunnel ready: https://abc123.ngrok.io
-```
-
-```python
-from django_cfg.modules.django_ngrok import get_webhook_url
-
-# Get webhook URL automatically
-stripe_webhook = get_webhook_url("/api/webhooks/stripe/")
-# "https://abc123.ngrok.io/api/webhooks/stripe/"
-```
-
-**See**:
-- [Ngrok Integration Overview](/features/modules/django-ngrok)
-- [Webhook Examples](../../features/modules/django-ngrok/webhook-examples)
-
----
-
 ## 🔐 Authentication Examples
 
 Multi-channel OTP authentication examples.
@@ -320,9 +287,6 @@ user = OTPService.verify_email_otp("user@example.com", "123456")
 
 **Setting up Background Tasks?**
 → Explore [ReArq Examples](/features/modules/django-rq)
-
-**Testing Webhooks?**
-→ Learn [Ngrok Integration](/features/modules/django-ngrok)
 
 ---
 

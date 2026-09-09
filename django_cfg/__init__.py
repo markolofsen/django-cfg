@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.2.165"
+__version__ = "2.3.0"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -184,44 +184,6 @@ except ImportError:
 from .modules.django_dashboard.models import DashboardConfig, DashboardTab
 
 # ---------------------------------------------------------------------------
-# [OPTIONAL] Ngrok  (requires: pyngrok)
-# ---------------------------------------------------------------------------
-try:
-    from .models.ngrok import NgrokConfig
-    from .modules.django_ngrok import (
-        DjangoNgrok,
-        NgrokManager,
-        NgrokError,
-        get_ngrok_service,
-        start_tunnel,
-        stop_tunnel,
-        get_tunnel_url,
-        get_webhook_url,
-        get_api_url,
-        get_tunnel_url_from_env,
-        get_ngrok_host_from_env,
-        is_ngrok_available_from_env,
-        is_tunnel_active,
-        get_effective_tunnel_url,
-    )
-except ImportError:
-    NgrokConfig = None  # type: ignore[assignment]
-    DjangoNgrok = None  # type: ignore[assignment]
-    NgrokManager = None  # type: ignore[assignment]
-    NgrokError = None  # type: ignore[assignment]
-    get_ngrok_service = None  # type: ignore[assignment]
-    start_tunnel = None  # type: ignore[assignment]
-    stop_tunnel = None  # type: ignore[assignment]
-    get_tunnel_url = None  # type: ignore[assignment]
-    get_webhook_url = None  # type: ignore[assignment]
-    get_api_url = None  # type: ignore[assignment]
-    get_tunnel_url_from_env = None  # type: ignore[assignment]
-    get_ngrok_host_from_env = None  # type: ignore[assignment]
-    is_ngrok_available_from_env = None  # type: ignore[assignment]
-    is_tunnel_active = None  # type: ignore[assignment]
-    get_effective_tunnel_url = None  # type: ignore[assignment]
-
-# ---------------------------------------------------------------------------
 # [OPTIONAL] Django import-export  (requires: django-import-export)
 # NOTE: imports Django models (AppRegistryNotReady if done before django.setup()),
 # so these remain lazy — accessed via __getattr__ below.
@@ -335,13 +297,6 @@ __all__ = [
     "NavigationItem", "NavigationSection", "NavigationItemType", "SiteDropdownItem",
     # dashboard
     "DashboardConfig", "DashboardTab",
-    # optional: ngrok
-    "NgrokConfig",
-    "DjangoNgrok", "NgrokManager", "NgrokError",
-    "get_ngrok_service", "start_tunnel", "stop_tunnel",
-    "get_tunnel_url", "get_webhook_url", "get_api_url",
-    "get_tunnel_url_from_env", "get_ngrok_host_from_env",
-    "is_ngrok_available_from_env", "is_tunnel_active", "get_effective_tunnel_url",
     # optional: import-export (lazy — imports Django admin models)
     "ImportForm", "ExportForm", "SelectableFieldsExportForm",
     "ImportExportMixin", "ImportExportModelAdmin",

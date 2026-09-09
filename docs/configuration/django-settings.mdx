@@ -304,10 +304,6 @@ class DjangoConfig(BaseModel):
     #                       INTEGRATIONS
     # ══════════════════════════════════════════════════════════════
 
-    ngrok: Optional[NgrokConfig] = Field(
-        default=None,
-        description="Ngrok tunneling for development/webhooks",
-    )
     streamlit_admin: Optional[StreamlitAdminConfig] = Field(
         default=None,
         description="Streamlit admin panel (auto-starts with Django)",
@@ -886,5 +882,4 @@ config = MyConfig(
 
 ### Integrations
 - [**Django-RQ**](/features/modules/django-rq) - Background task queue
-- [**Ngrok**](/features/modules/django-ngrok) - Development tunneling
 - [**OAuth**](../features/integrations/oauth) - Social authentication

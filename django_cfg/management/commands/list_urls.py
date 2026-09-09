@@ -49,18 +49,12 @@ class Command(SafeCommand):
             action="store_true",
             help="Show only API URLs"
         )
-        parser.add_argument(
-            "--with-ngrok",
-            action="store_true",
-            help="Show ngrok URLs alongside local URLs"
-        )
 
     def handle(self, *args, **options):
         self.logger.info("Starting list_urls command")
         filter_str = options["filter"]
         webhook_only = options["webhook"]
         api_only = options["api"]
-        with_ngrok = options["with_ngrok"]
 
         # Show header
         self.show_header()
@@ -82,10 +76,10 @@ class Command(SafeCommand):
             urls = [url for url in urls if '/api/' in url['pattern'] or url['pattern'].startswith('api/')]
 
         # Display URLs
-        self.display_urls(urls, with_ngrok)
+        self.display_urls(urls)
 
         # Show webhook info if requested
-        if webhook_only or with_ngrok:
+        if webhook_only:
             self.show_webhook_info()
 
     def show_header(self):
@@ -165,7 +159,7 @@ class Command(SafeCommand):
         extract_urls(resolver.url_patterns)
         return urls
 
-    def display_urls(self, urls, with_ngrok=False):
+    def display_urls(self, urls):
         """Display URLs in a Rich table."""
         if not urls:
             self.console.print("[yellow]No URLs found matching the criteria.[/yellow]")
@@ -177,12 +171,8 @@ class Command(SafeCommand):
         table.add_column("Name", style="white", width=20)
         table.add_column("View", style="green", width=25)
 
-        if with_ngrok:
-            table.add_column("Ngrok URL", style="magenta", width=40)
-
         # Get base URLs
         base_url = self.get_base_url()
-        ngrok_url = self.get_ngrok_url() if with_ngrok else None
 
         # Add rows
         for url in urls[:50]:  # Limit to first 50 URLs
@@ -194,16 +184,7 @@ class Command(SafeCommand):
             if len(view) > 23:
                 view = view[:20] + "..."
 
-            row = [pattern, name, view]
-
-            if with_ngrok:
-                if ngrok_url:
-                    full_ngrok_url = f"{ngrok_url.rstrip('/')}/{pattern.lstrip('/')}"
-                    row.append(full_ngrok_url)
-                else:
-                    row.append("—")
-
-            table.add_row(*row)
+            table.add_row(pattern, name, view)
 
         if len(urls) > 50:
             table.caption = f"Showing first 50 of {len(urls)} URLs"
@@ -216,8 +197,6 @@ class Command(SafeCommand):
         info_table.add_column("Value", style="white")
 
         info_table.add_row("🌐 Base URL:", base_url)
-        if with_ngrok and ngrok_url:
-            info_table.add_row("🔗 Ngrok URL:", ngrok_url)
 
         self.console.print()
         self.console.print(info_table)
@@ -239,8 +218,3 @@ class Command(SafeCommand):
             else:
                 return "https://yourdomain.com"
 
-    def get_ngrok_url(self):
-        """Get ngrok URL if available."""
-        if self.config:
-            return self.config.get_ngrok_url()
-        return None

@@ -35,7 +35,4 @@ export default {
   'django-cleanup': 'File Cleanup',
   'django-tailwind': 'Tailwind CSS',
   'django-migrator': 'Migrator',
-
-  // ── Networking ────────────────────────────────────────────────
-  'django-ngrok': 'Ngrok Tunnels',
 }

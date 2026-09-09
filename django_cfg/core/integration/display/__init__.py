@@ -5,7 +5,6 @@ Modular, class-based display system for startup information.
 """
 
 from .base import BaseDisplayManager
-from .ngrok import NgrokDisplayManager
 from .startup import StartupDisplayManager
 from .banner import get_banner, print_banner, get_available_styles
 from .ai_hints import AIHintsDisplayManager, get_ai_hints_manager, AI_HINTS
@@ -13,7 +12,6 @@ from .ai_hints import AIHintsDisplayManager, get_ai_hints_manager, AI_HINTS
 __all__ = [
     "BaseDisplayManager",
     "StartupDisplayManager",
-    "NgrokDisplayManager",
     "AIHintsDisplayManager",
     "get_ai_hints_manager",
     "AI_HINTS",

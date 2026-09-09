@@ -13,53 +13,6 @@ keywords:
 
 Commands for development, testing, and debugging Django-CFG projects.
 
-## Development Server
-
-### `runserver_ngrok`
-
-Run development server with ngrok tunnel for webhook testing.
-
-```bash
-python manage.py runserver_ngrok [OPTIONS]
-```
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `--domain` | `TEXT` | Custom ngrok domain |
-| `--no-ngrok` | `flag` | Disable ngrok for this session |
-| `[address:port]` | `str` | Custom address and port |
-
-**Examples:**
-
-```bash
-# Start server with ngrok tunnel
-python manage.py runserver_ngrok
-
-# Use custom ngrok domain
-python manage.py runserver_ngrok --domain myapp
-
-# Custom port
-python manage.py runserver_ngrok 0.0.0.0:8080
-
-# Disable ngrok for this session
-python manage.py runserver_ngrok --no-ngrok
-```
-
-**Features:**
-- ✅ Automatic ngrok tunnel creation
-- ✅ Public URL for webhooks
-- ✅ ALLOWED_HOSTS auto-configuration
-- ✅ Tunnel status monitoring
-
-**Output:**
-```
-✅ Ngrok tunnel ready: https://abc123.ngrok.io
-Django development server is running at http://127.0.0.1:8000/
-Public URL: https://abc123.ngrok.io
-```
-
----
-
 ## Testing Commands
 
 ### `test_email`
@@ -291,28 +244,30 @@ poetry run python manage.py migrate
 # 4. Create superuser
 poetry run python manage.py createsuperuser
 
-# 5. Start development server with ngrok
-python manage.py runserver_ngrok
+# 5. Start development server
+python manage.py runserver
 ```
 
 ---
 
 ### Webhook Development Workflow
 
+Exposing your local server to the internet is outside Django-CFG's scope — run a
+tunnel yourself (for example `ngrok http 8000` or `cloudflared tunnel`) and point
+your webhook provider at the resulting public URL.
+
 ```bash
-# 1. Start server with ngrok
-python manage.py runserver_ngrok
+# 1. Start the development server
+python manage.py runserver
 
-# Output: Public URL: https://abc123.ngrok.io
-
-# 2. Configure webhook in external service
-# Use: https://abc123.ngrok.io/api/webhooks/stripe/
+# 2. Configure the webhook in the external service
+# Use: https://<your-public-url>/api/webhooks/stripe/
 
 # 3. Monitor webhook events
 # Check Django admin: /admin/payments/webhook/
 
 # 4. Test webhook
-curl -X POST https://abc123.ngrok.io/api/webhooks/stripe/ \
+curl -X POST https://<your-public-url>/api/webhooks/stripe/ \
   -H "Content-Type: application/json" \
   -d '{"event": "test"}'
 ```
@@ -370,7 +325,6 @@ python manage.py shell -c "from myapp.models import User; print(User.objects.cou
 
 ## Tips
 
-- Use `runserver_ngrok` for webhook development
 - Use `script` command for reusable data operations (not one-off shell commands)
 - Use `generate` command for consistent code patterns
 
@@ -378,12 +332,10 @@ python manage.py shell -c "from myapp.models import User; print(User.objects.cou
 
 | Problem | Solution |
 |---------|----------|
-| Ngrok not starting | Check: `which ngrok`, `show_config --section ngrok` |
 | Email test failing | Check: `check_settings --email-test`, `show_config --section email` |
 | Script errors | Run: `script my_script.py --verbosity 2` |
 
 ## See Also
 
 - [Quick Reference](./quick-reference)
-- [Ngrok Integration](/features/modules/django-ngrok)
 - [Core Commands](./core-commands)

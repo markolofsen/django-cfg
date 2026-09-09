@@ -9,7 +9,6 @@ from rich.text import Text
 import traceback
 
 from .base import BaseDisplayManager
-from .ngrok import NgrokDisplayManager
 from .ai_hints import AIHintsDisplayManager
 
 
@@ -19,16 +18,12 @@ class StartupDisplayManager(BaseDisplayManager):
     def __init__(self, config=None):
         """Initialize startup display manager."""
         super().__init__(config)
-        self.ngrok_manager = NgrokDisplayManager(config)
         self.ai_hints_manager = AIHintsDisplayManager(config)
 
     def display_startup_info(self):
         """Display startup information based on config.startup_info_mode."""
         if not self.config:
             return
-
-        # Always check and display ngrok info first if active
-        self.ngrok_manager.display_if_active()
 
         # Dev-only safety net: warn if the editable install was silently
         # overwritten by the PyPI copy (e.g. after `uv sync`).

@@ -33,26 +33,6 @@ Production-ready Redis-based task queue with built-in monitoring:
 
 [**Full Django-RQ Guide →**](/features/modules/django-rq)
 
-### 🔧 Development Tools
-
-### [Ngrok Integration](/features/modules/django-ngrok)
-
-Secure tunnels for webhook testing in development:
-
-**Core Features:**
-- ✅ **Automatic tunnel** creation with custom subdomains
-- ✅ **HTTPS support** for secure webhook delivery
-- ✅ **Custom domains** with ngrok auth token
-- ✅ **Auto-configuration** of ALLOWED_HOSTS and CSRF settings
-- ✅ **CLI integration** with `runserver_ngrok` command
-
-**Use Cases:**
-- OAuth callback testing ([Authentication](./auth))
-- Third-party API webhooks
-- Mobile app development
-
-[**Full Ngrok Guide →**](/features/modules/django-ngrok)
-
 ### 🔐 Authentication
 
 ### [Authentication Patterns](./auth)
@@ -135,23 +115,6 @@ queue.enqueue('apps.myapp.tasks.send_welcome_email', user_id=123)
 
 [**Full Django-RQ Guide →**](/features/modules/django-rq)
 
-### Enable Ngrok for Webhook Testing
-
-```yaml
-# config.dev.yaml
-ngrok:
-  enabled: true
-  subdomain: "myapp"  # myapp.ngrok.io
-  auth_token: "${NGROK_AUTH_TOKEN}"
-```
-
-```bash
-# Start server with ngrok tunnel
-python manage.py runserver_ngrok
-```
-
-[**Full Ngrok Guide →**](/features/modules/django-ngrok)
-
 ---
 
 ## Integration Architecture
@@ -162,7 +125,7 @@ All integrations use [Pydantic v2](/core/type-safety) for validation:
 
 ```python
 from django_cfg import DjangoConfig
-from django_cfg.models import DjangoRQConfig, RQQueueConfig, NgrokConfig
+from django_cfg.models import DjangoRQConfig, RQQueueConfig
 
 class MyConfig(DjangoConfig):
     redis_url: str = "redis://localhost:6379/0"
@@ -176,12 +139,6 @@ class MyConfig(DjangoConfig):
             RQQueueConfig(queue="high"),
         ],
     )
-
-    # Ngrok configuration
-    ngrok: NgrokConfig | None = NgrokConfig(
-        enabled=True,
-        subdomain="myapp"
-    )
 ```
 
 ### Environment-Based Enablement
@@ -191,11 +148,11 @@ Enable integrations per environment using [environment detection](/configuration
 ```python
 class MyConfig(DjangoConfig):
     @property
-    def ngrok(self) -> NgrokConfig | None:
-        # Only enable ngrok in development
+    def django_rq(self) -> DjangoRQConfig | None:
+        # Only run background workers outside of development
         if self.is_development:
-            return NgrokConfig(enabled=True)
-        return None
+            return None
+        return DjangoRQConfig(enabled=True, redis_db=0)
 ```
 
 ### Automatic Django Integration
@@ -203,7 +160,6 @@ class MyConfig(DjangoConfig):
 Integrations automatically configure Django settings:
 
 - **Django-RQ**: Configures RQ_QUEUES, Redis connections, worker management
-- **Ngrok**: Updates ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS, generates public URL
 - **Auth**: Configures authentication backends, middleware, JWT settings
 
 ---
@@ -213,7 +169,6 @@ Integrations automatically configure Django settings:
 | Integration | Type | Production Ready | Auto-Config | CLI Tools |
 |-------------|------|------------------|-------------|-----------|
 | **Django-RQ** | Task Queue | ✅ Yes | ✅ Yes | ✅ `rqworker`, `rqscheduler`, `rqstats` |
-| **Ngrok** | Development Tool | ⚠️ Dev Only | ✅ Yes | ✅ `runserver_ngrok` |
 | **JWT Auth** | Security | ✅ Yes | ✅ Yes | - |
 | **2FA/TOTP** | Security | ✅ Yes | ✅ Yes | - |
 | **OTP Login** | Security | ✅ Yes | ✅ Yes | - |
@@ -226,18 +181,15 @@ Integrations automatically configure Django settings:
 
 ```yaml
 # config.prod.yaml
-ngrok:
-  auth_token: "${NGROK_AUTH_TOKEN}"  # From environment
+telegram:
+  bot_token: "${TELEGRAM_BOT_TOKEN}"  # From environment
 
 ```
 
-### 2. Disable in Production When Not Needed
+### 2. Enable Only What Each Environment Needs
 
 ```python
 class ProductionConfig(DjangoConfig):
-    # Ngrok only for development
-    ngrok: None = None
-
     # Django-RQ for production background tasks
     django_rq: DjangoRQConfig = DjangoRQConfig(
         enabled=True,
@@ -258,9 +210,6 @@ python manage.py rqworker default
 
 # Check queue stats
 python manage.py rqstats
-
-# Test ngrok tunnel (dev only)
-python manage.py runserver_ngrok --test
 ```
 
 ---
@@ -275,10 +224,6 @@ python manage.py runserver_ngrok --test
 - **[Django-RQ Configuration](../modules/django-rq/configuration)** - Setup and configuration
 - **[Django-RQ Examples](../modules/django-rq/examples)** - Real-world task patterns
 - **[Django-RQ Monitoring](../modules/django-rq/monitoring)** - Task monitoring and observability
-
-**Development Tools:**
-- **[Ngrok Overview](/features/modules/django-ngrok)** - Webhook testing guide
-- **[Ngrok Configuration](../modules/django-ngrok/configuration)** - Tunnel configuration
 
 **Authentication:**
 - **[Auth Patterns](./auth)** - Enterprise authentication
@@ -322,8 +267,7 @@ python manage.py runserver_ngrok --test
 
 **New to Integrations?**
 1. Start with [Django-RQ Overview](/features/modules/django-rq) for background tasks
-2. Try [Ngrok Overview](/features/modules/django-ngrok) for webhook testing
-3. Review [Integration Patterns](./patterns) for best practices
+2. Review [Integration Patterns](./patterns) for best practices
 
 **Ready for Production?**
 1. Review [Production Config](/guides/production-config)

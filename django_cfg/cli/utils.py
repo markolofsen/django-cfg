@@ -168,7 +168,6 @@ def get_standard_dependencies() -> Dict[str, str]:
         "redis": "redis",
 
         # Development
-        "ngrok": "ngrok",
         "click": "click",
     }
 

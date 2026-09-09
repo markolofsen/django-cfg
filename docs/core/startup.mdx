@@ -15,7 +15,7 @@ These hooks run automatically from `DjangoCfgConfig.ready()`. They are each isol
 
 `validate_registry()` walks every entry in `DJANGO_CFG_REGISTRY` and confirms that the module can be imported and the expected attribute exists on it.
 
-- Optional-dependency entries (ngrok, import-export, Unfold) that fail with `ImportError` are logged at `DEBUG` level only — these failures are expected when the optional package is not installed.
+- Optional-dependency entries (import-export, Unfold) that fail with `ImportError` are logged at `DEBUG` level only — these failures are expected when the optional package is not installed.
 - Required entries that fail (missing attribute or unexpected error) are logged as `ERROR` and collected into a summary warning.
 - The check is read-only and idempotent — calling it multiple times is safe.
 
@@ -343,12 +343,6 @@ DJANGO_SHOW_AI_HINTS=false  # Disable AI hints
 - **Async QuerySet Iteration**: Use `async for` instead of list comprehensions
 - **Sync to Async**: Use `sync_to_async()` wrapper for sync functions
 - **Pydantic for RPC**: Use Pydantic models for type-safe API params
-
-### Ngrok Integration
-When using ngrok for local development, the system automatically detects and displays:
-- Tunnel status and configuration
-- Public URL for webhook testing
-- Usage instructions
 
 ### Update Monitoring
 - Automatic checking for new Django-CFG versions

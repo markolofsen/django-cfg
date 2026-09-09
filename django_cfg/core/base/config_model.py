@@ -42,7 +42,6 @@ from ...models import (
     TwoFactorConfig,
     UnfoldConfig,
 )
-from ...models.ngrok import NgrokConfig
 from ...modules.django_dashboard.models import DashboardConfig
 from ..exceptions import ConfigurationError
 from ..types.enums import EnvironmentMode, StartupInfoMode
@@ -421,11 +420,6 @@ class DjangoConfig(BaseModel):
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                           INTEGRATIONS                                    ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
-
-    ngrok: Optional[NgrokConfig] = Field(
-        default=None,
-        description="Ngrok tunneling for development/webhooks",
-    )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                     AI AGENTS & MCP                                       ║

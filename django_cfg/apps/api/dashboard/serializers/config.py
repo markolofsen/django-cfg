@@ -114,14 +114,6 @@ class TelegramConfigSerializer(serializers.Serializer):
     retry_delay = serializers.FloatField(required=False, allow_null=True)
 
 
-class NgrokConfigSerializer(serializers.Serializer):
-    """Ngrok tunneling configuration."""
-    enabled = serializers.BooleanField(required=False, allow_null=True)
-    authtoken = serializers.CharField(required=False, allow_null=True)
-    basic_auth = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
-    compression = serializers.BooleanField(required=False, allow_null=True)
-
-
 class AxesConfigSerializer(serializers.Serializer):
     """Django-Axes brute-force protection configuration."""
     enabled = serializers.BooleanField(required=False, allow_null=True)
@@ -220,7 +212,6 @@ class DjangoConfigSerializer(serializers.Serializer):
 
     # Services & Security (now typed!)
     telegram = TelegramConfigSerializer(required=False, allow_null=True)
-    ngrok = NgrokConfigSerializer(required=False, allow_null=True)
     axes = AxesConfigSerializer(required=False, allow_null=True)
     github_oauth = GitHubOAuthConfigSerializer(required=False, allow_null=True)
     unfold = serializers.JSONField(required=False, allow_null=True)  # Complex Unfold config object

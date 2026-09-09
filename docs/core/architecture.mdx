@@ -152,7 +152,7 @@ This pattern keeps Django-CFG startup time under **50ms** despite having 100+ co
 - **`core.py`** - DjangoConfig, DatabaseConfig, CacheConfig, SecuritySettings
 - **`services.py`** - DjangoEmailService, DjangoTelegram, DjangoLogger
 - **`modules.py`** - Utility functions and django-import-export components
-- **`third_party.py`** - Unfold, DRF, Constance, Ngrok, Django-CFG API Client Generation
+- **`third_party.py`** - Unfold, DRF, Constance, Django-CFG API Client Generation
 - **`exceptions.py`** - All error classes
 
 ### 3. **Pydantic Models** (`django_cfg/models/`)
@@ -263,7 +263,6 @@ logger.info("Application started")
 - **`django_telegram`** - Telegram bot integration (`DjangoTelegram`, `send_telegram_message`, `send_telegram_photo`)
 - **`django_logger`** - Enhanced logging (`DjangoLogger`, `get_logger`)
 - **`django_unfold`** - Modern admin interface with customizable themes
-- **`django_ngrok`** - Webhook testing with automatic tunnel management
 - **`django_health`** - Health check endpoints for monitoring
 - **`django_import_export`** - Data import/export functionality
 
@@ -290,7 +289,7 @@ class Command(BaseCommand):
 - **Configuration**: `validate_config`, `show_config`, `check_settings`
 - **Tasks**: `rearq_worker`, `task_status`, `task_clear`
 - **Communication**: `test_email`, `test_telegram`
-- **Development**: `runserver_ngrok`, `generate`, `tree`
+- **Development**: `generate`, `tree`
 
 ### 7. **CLI Tools** (`django_cfg/cli/`)
 

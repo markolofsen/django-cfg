@@ -9,7 +9,7 @@ Organized by category:
 - infrastructure/ - Core infrastructure (database, cache, logging, security)
 - api/ - API, authentication, and documentation
 - django/ - Django-specific configurations
-- services/ - External services (email, telegram, ngrok)
+- services/ - External services (email, telegram)
 - tasks/ - Task/worker configurations
 
 Note: Extension configs are handled in extensions/apps/<name>/__cfg__.py
@@ -53,9 +53,6 @@ from .infrastructure.cache import CacheConfig
 from .infrastructure.database import DatabaseConfig
 from .infrastructure.logging import LoggingConfig
 from .infrastructure.security import SecurityConfig
-from .ngrok.auth import NgrokAuthConfig
-from .ngrok.config import NgrokConfig
-from .ngrok.tunnel import NgrokTunnelConfig
 
 from .services.base import ServiceConfig
 
@@ -104,9 +101,6 @@ __all__ = [
     "EmailConfig",
     "TelegramConfig",
     "ServiceConfig",
-    "NgrokConfig",
-    "NgrokAuthConfig",
-    "NgrokTunnelConfig",
     # OAuth
     "GitHubOAuthConfig",
     "OAuthConfig",

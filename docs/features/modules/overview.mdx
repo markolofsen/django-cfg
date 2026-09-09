@@ -265,30 +265,6 @@ django_rq = DjangoRQConfig(
 
 **Learn more:** [Django-RQ Integration Documentation](/features/modules/django-rq)
 
-### 🔧 Development Tools
-
-### Ngrok Module (`DjangoNgrok`)
-
-Development tunneling for webhooks:
-
-```python
-from django_cfg.modules.django_ngrok import DjangoNgrok
-
-ngrok = DjangoNgrok()
-
-# Start tunnel for development
-tunnel_url = ngrok.start_tunnel(port=8000)
-print(f"Public URL: {tunnel_url}")
-
-# Configure webhooks automatically
-ngrok.setup_webhook_urls({
-    "stripe": "/webhooks/stripe/",
-    "github": "/webhooks/github/"
-})
-```
-
-**Features:** Automatic tunnel creation, webhook URL management, SSL certificate handling, custom domain support, tunnel monitoring, and development/production switching.
-
 ### 🚀 Advanced Modules
 
 ### Currency Module (`CurrencyConverter`)
@@ -551,9 +527,3 @@ class MyProjectConfig(DjangoConfig):
 | [Import/Export](/features/modules/django-import-export) | Excel import/export integration | Yes (django-import-export) |
 | [File Cleanup](/features/modules/django-cleanup) | Auto file cleanup on model delete | No |
 | [Tailwind CSS](/features/modules/django-tailwind) | Tailwind layout templates and utilities | No |
-
-### Networking
-
-| Module | Description | Optional |
-|--------|-------------|----------|
-| [Ngrok Tunnels](/features/modules/django-ngrok) | Development tunneling for webhooks | Yes (pyngrok) |

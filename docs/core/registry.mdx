@@ -46,7 +46,7 @@ Django-CFG uses multiple specialized registries combined into one:
 ```python
 DJANGO_CFG_REGISTRY = {
     **CORE_REGISTRY,        # Core components (config, exceptions, etc.)
-    **SERVICES_REGISTRY,    # Service integrations (email, telegram, ngrok)
+    **SERVICES_REGISTRY,    # Service integrations (email, telegram, logging)
     **THIRD_PARTY_REGISTRY, # Third-party integrations (unfold, DRF, etc.)
     **MODULES_REGISTRY,     # Utility modules and functions
     **EXCEPTIONS_REGISTRY,  # Exception classes
@@ -128,13 +128,6 @@ SERVICES_REGISTRY = {
     "DjangoTelegram": ("django_cfg.modules.django_telegram", "DjangoTelegram"),
     "send_telegram_message": ("django_cfg.modules.django_telegram", "send_telegram_message"),
     "send_telegram_photo": ("django_cfg.modules.django_telegram", "send_telegram_photo"),
-
-    # Ngrok services
-    "NgrokConfig": ("django_cfg.models.ngrok", "NgrokConfig"),
-    "NgrokManager": ("django_cfg.modules.django_ngrok", "NgrokManager"),
-    "start_tunnel": ("django_cfg.modules.django_ngrok", "start_tunnel"),
-    "stop_tunnel": ("django_cfg.modules.django_ngrok", "stop_tunnel"),
-    "get_tunnel_url": ("django_cfg.modules.django_ngrok", "get_tunnel_url"),
 
     # Logging services
     "DjangoLogger": ("django_cfg.modules.django_logging", "DjangoLogger"),
@@ -297,9 +290,9 @@ Components may have optional dependencies:
 
 ```python
 try:
-    from django_cfg import NgrokConfig
+    from django_cfg import UnfoldConfig
 except ImportError:
-    NgrokConfig = None  # ngrok not installed
+    UnfoldConfig = None  # django-unfold not installed
 ```
 
 ## Extending the Registry

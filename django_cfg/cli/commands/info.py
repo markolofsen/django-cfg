@@ -75,7 +75,6 @@ def info(verbose: bool):
         "🎨 Admin & UI": ["django-unfold", "django-constance"],
         "📊 API & Documentation": ["djangorestframework", "drf-spectacular"],
         "⚡ Background Processing": ["rearq", "redis"],
-        "🛠️  Development Tools": ["ngrok"],
     }
 
     for category, dep_list in categories.items():

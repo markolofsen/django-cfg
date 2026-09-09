@@ -68,9 +68,6 @@ python manage.py migrator --database analytics_db
 # Enhanced development server
 cli runserver
 
-# With ngrok tunnel (for webhooks)
-python manage.py runserver_ngrok
-
 # Custom port and host
 cli runserver --port 3000 --host 0.0.0.0
 ```
@@ -272,7 +269,7 @@ python manage.py collectstatic --noinput
 
 # Development startup
 python manage.py migrate_all && \
-python manage.py runserver_ngrok
+python manage.py runserver
 ```
 
 ## 📋 Command Categories
@@ -283,7 +280,7 @@ python manage.py runserver_ngrok
 | **Database** | 3 | Migrations, database management |
 | **Testing** | 4 | Endpoint health, email, telegram, OTP |
 | **Background Tasks** | 9 | Django-RQ workers, scheduler, stats |
-| **Development** | 8 | Server, ngrok, scripts, testing |
+| **Development** | 7 | Server, scripts, testing |
 | **Streamlit** | 3 | Admin panel scaffolding, server |
 | **Code Generation** | 2 | FastAPI, API client generation |
 | **LLM & Monitoring** | 2 | API balance, event cleanup |
