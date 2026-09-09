@@ -18,6 +18,12 @@ from .schemas import (
     AutocompleteResult,
 )
 from .geocoding import GeocodingService, get_geocoding_service
+from .validation import (
+    GeocodeValidation,
+    GeocodeValidator,
+    ValidationStatus,
+    get_geocode_validator,
+)
 from .search import (
     GeoSearchService,
     distance,
@@ -59,6 +65,11 @@ __all__ = [
     # Geocoding Service
     "GeocodingService",
     "get_geocoding_service",
+    # Geocode validation
+    "ValidationStatus",
+    "GeocodeValidation",
+    "GeocodeValidator",
+    "get_geocode_validator",
     # Search
     "GeoSearchService",
     "get_search_service",

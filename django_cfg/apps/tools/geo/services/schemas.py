@@ -187,11 +187,24 @@ class GeocodingResult(BaseModel):
     confidence: float = 1.0  # 0-1 score
     source: str = "nominatim"  # 'nominatim', 'photon', 'local', 'cache'
 
+    # Sanity check against reference geography. Defaults keep old callers working.
+    # 'valid' | 'suspect' | 'invalid' | 'unverified' — see services/validation.py
+    validation_status: str = "unverified"
+    validation_reason: Optional[str] = None
+    # km to nearest known reference place; None when the check abstained
+    validation_distance_km: Optional[float] = None
+
     @computed_field
     @property
     def coordinates(self) -> tuple[float, float]:
         """Return (latitude, longitude) tuple."""
         return (self.latitude, self.longitude)
+
+    @computed_field
+    @property
+    def is_suspect(self) -> bool:
+        """True when validation says the point should not be trusted."""
+        return self.validation_status in ("suspect", "invalid")
 
 
 class ReverseGeocodingResult(BaseModel):

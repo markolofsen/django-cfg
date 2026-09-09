@@ -131,7 +131,10 @@ class GeocodingService:
         # Query Nominatim
         result = self._geocode_nominatim(address, country_code)
         if result:
-            self._cache_result(cache_key, result, CACHE_TTL_GEOCODE)
+            result = self._validate_result(result, country_code)
+            # Never cache a bad point — the TTL is 30 days.
+            if not result.is_suspect:
+                self._cache_result(cache_key, result, CACHE_TTL_GEOCODE)
 
         return result
 
@@ -345,6 +348,10 @@ class GeocodingService:
                 ),
                 confidence=0.8,
                 source="local",
+                # Coordinates come straight from the reference table.
+                validation_status="valid",
+                validation_reason="local reference row",
+                validation_distance_km=0.0,
             )
 
         return None
@@ -470,6 +477,38 @@ class GeocodingService:
         except httpx.HTTPError as e:
             logger.warning(f"Nominatim reverse error: {e}")
             return None
+
+    def _validate_result(
+        self,
+        result: GeocodingResult,
+        country_code: Optional[str] = None,
+    ) -> GeocodingResult:
+        """Attach a validation verdict. Never raises; on error the result passes through."""
+        from .validation import get_geocode_validator
+
+        # Prefer the country the provider actually resolved over the requested filter.
+        cc = result.address.country_code or country_code
+        state = result.address.state
+
+        try:
+            verdict = get_geocode_validator().validate(
+                result.latitude, result.longitude, country_code=cc, state_name=state
+            )
+        except Exception as e:  # validation must never break geocoding
+            logger.warning(f"Geocode validation error: {e}")
+            return result
+
+        if verdict.is_flagged:
+            logger.warning(
+                f"Geocode result flagged ({verdict.status.value}): "
+                f"{result.display_name} -> {result.latitude},{result.longitude} — {verdict.reason}"
+            )
+
+        return result.model_copy(update={
+            "validation_status": verdict.status.value,
+            "validation_reason": verdict.reason or None,
+            "validation_distance_km": verdict.distance_km,
+        })
 
     def _cache_key(self, operation: str, *args) -> str:
         """Generate cache key."""

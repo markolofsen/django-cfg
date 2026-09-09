@@ -375,6 +375,11 @@ class CityViewSet(ReadOnlyModelViewSet):
             'address': result.address.model_dump(),
             'confidence': result.confidence,
             'source': result.source,
+            # Sanity check vs reference geography — callers decide what to do.
+            'validation_status': result.validation_status,
+            'validation_reason': result.validation_reason,
+            'validation_distance_km': result.validation_distance_km,
+            'is_suspect': result.is_suspect,
         })
 
     @extend_schema(
