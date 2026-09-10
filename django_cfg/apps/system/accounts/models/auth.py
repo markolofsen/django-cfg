@@ -25,9 +25,14 @@ class OTPSecret(models.Model):
     consent_disclosure_version = models.CharField(max_length=64, blank=True, default="")
     consent_jurisdiction_hint = models.CharField(max_length=8, blank=True, default="")
 
+    #: How long a code stays valid. Named because the email states this number
+    #: to the recipient — a literal in both places drifts the moment one moves,
+    #: and the letter is the copy nobody re-checks against the model.
+    EXPIRY_MINUTES = 10
+
     def save(self, *args, **kwargs):
         if not self.expires_at:
-            self.expires_at = timezone.now() + timedelta(minutes=10)
+            self.expires_at = timezone.now() + timedelta(minutes=self.EXPIRY_MINUTES)
         super().save(*args, **kwargs)
 
     @staticmethod

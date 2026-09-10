@@ -29,6 +29,24 @@ from typing import Any, Callable
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+#: The engine's own version, mirrored verbatim into every tree.
+#:
+#: Not the django-cfg release number and not a PyPI version — this counts
+#: changes to the ENGINE, so `.scripts/sync.py` can tell which of two trees is
+#: newer. Without it, a stale checkout syncing outward silently overwrites a
+#: fresh one and the only symptom is work disappearing. With it, that is a
+#: refusal naming both versions.
+#:
+#: Bump on any change that goes UP to the canon, before promoting:
+#:   patch — a fix or a doc correction inside the engine
+#:   minor — a new symbol, feature plane, or alias
+#:   major — a change callers must adapt to
+#:
+#: `sync` compares this across trees; `promote` refuses to overwrite a HIGHER
+#: version than the one it carries. Left alone, everything still works — the
+#: gate only ever refuses a downgrade, never a match.
+ENGINE_VERSION: str = "1.1.0"
+
 
 def get_logger(name: str) -> logging.Logger:
     """stdlib logger (the ports import `get_logger` from the host)."""

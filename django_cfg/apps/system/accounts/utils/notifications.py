@@ -52,7 +52,10 @@ class AccountNotifications:
         main_text: str,
         main_html_content: str,
         secondary_text: str,
-        button_text: str,
+        # Optional: a letter whose whole content is a code has nothing to link
+        # to, and both templates already guard on `{% if button_text and
+        # button_url %}`.
+        button_text: str = None,
         button_url: str = None,
         template_name: str = "emails/base_email",
         locale: str = None,
@@ -272,8 +275,8 @@ class AccountNotifications:
     def send_otp_notification(user, otp_code, is_new_user=False, source_url=None, send_email=True, send_telegram=True):
         """Send OTP notification via email"""
         if send_email:
-            from ..services.otp_service import OTPService
-            otp_link = OTPService._get_otp_url(otp_code, email=user.email)
+            from ..models.auth import OTPSecret
+
             AccountNotifications._send_email(
                 user=user,
                 # ┌──────────────────────────────────────────────────────────┐
@@ -298,11 +301,39 @@ class AccountNotifications:
                 # from the copy row, so giving this letter its own translatable
                 # body cannot move the code out of the subject line.
                 copy_key="otp_code",
-                main_text="Use the code below or click the button to authenticate:",
-                main_html_content=f'<p style="font-size: 2em; font-weight: bold; color: #007bff;">{otp_code}</p>',
-                secondary_text="This code expires in 10 minutes.",
-                button_text="Login with OTP",
-                button_url=otp_link,
+                main_text="Use the code below to sign in:",
+                main_html_content="",
+                secondary_text=f"This code expires in {OTPSecret.EXPIRY_MINUTES} minutes.",
+                # NO BUTTON, and no magic link — deliberately.
+                #
+                # The link carried the code in a URL
+                # (`/auth/?otp=1234&email=...`), which leaks it into referrers,
+                # browser history, proxy logs and messenger link previews —
+                # Telegram fetches links to build them, so a preview bot could
+                # spend the code before the recipient read it.
+                #
+                # Its host also could not be right. It came from the single
+                # global `config.site_url`, so with one Django serving two
+                # brands every Bali recipient was sent to the Caribbean portal.
+                # Taking the host from the request's `source_url` instead would
+                # be worse: that value is client-supplied and unvalidated, which
+                # would let anyone have our own SMTP deliver a working login
+                # link pointing at their site.
+                #
+                # The recipient already knows which site they came from, and the
+                # code is in the subject line and in the body. If the link is
+                # ever wanted back, it needs a host allowlist first.
+                button_text=None,
+                button_url=None,
+                # The letter's own layout: a large monospace code, the expiry,
+                # and a "didn't request this?" note. `base_email` is a generic
+                # card built around a call-to-action button this letter no
+                # longer has.
+                template_name="emails/otp_email",
+                extra_context={
+                    "otp_code": otp_code,
+                    "expires_minutes": OTPSecret.EXPIRY_MINUTES,
+                },
             )
             logger.info(f"OTP email sent to {user.email}")
 

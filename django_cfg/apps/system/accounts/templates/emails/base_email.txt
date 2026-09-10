@@ -11,5 +11,5 @@ Hello {{ user.get_full_name|default:user.username }},
 {% if secondary_text %}{{ secondary_text }}{% endif %}
 
 ---
-This is an automated message from UnrealON.
+This is an automated message from {{ site_name }}.
 Please do not reply to this email.

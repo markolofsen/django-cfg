@@ -235,6 +235,56 @@ def _prune_empty_dirs(root: Path) -> None:
             path.rmdir()
 
 
+#: Where `ENGINE_VERSION` lives, relative to a tree root.
+VERSION_FILE = "config.py"
+_VERSION_RE = re.compile(r'^ENGINE_VERSION\s*:\s*str\s*=\s*["\']([^"\']+)["\']', re.M)
+
+
+def read_version(tree: Path) -> tuple[int, ...] | None:
+    """``ENGINE_VERSION`` from ``tree``, as a comparable tuple.
+
+    Parsed rather than imported: this script must work against a tree whose
+    engine is broken, which is exactly when importing it would fail.
+
+    ``None`` means the file or the constant is absent — a tree predating
+    versioning. Treated as "unknown", never as "older", so an unversioned tree
+    is reported rather than silently overwritten.
+    """
+    path = tree / VERSION_FILE
+    if not path.is_file():
+        return None
+    match = _VERSION_RE.search(path.read_text(encoding="utf-8", errors="replace"))
+    if not match:
+        return None
+    try:
+        return tuple(int(part) for part in match.group(1).split("."))
+    except ValueError:
+        return None
+
+
+def format_version(version: tuple[int, ...] | None) -> str:
+    return ".".join(str(p) for p in version) if version else "unversioned"
+
+
+def check_downgrade(source: Path, target: Path, label: str) -> str | None:
+    """Refuse when ``source`` would overwrite a NEWER ``target``.
+
+    The failure this exists for: a checkout that has fallen behind runs `sync`,
+    and `--delete` quietly reverts everyone else to its stale state. Returns a
+    message to refuse with, or None to proceed.
+    """
+    ours, theirs = read_version(source), read_version(target)
+    if ours is None or theirs is None:
+        return None                     # unknown, not older — see read_version
+    if theirs > ours:
+        return (
+            f"REFUSED — {label} is at {format_version(theirs)}, ahead of the "
+            f"source's {format_version(ours)}. Syncing would revert it. "
+            f"Promote {label} first, or bump the source."
+        )
+    return None
+
+
 def find_workspace_root(start: Path) -> Path:
     """Walk up until the canon is visible, and return the directory holding it.
 
@@ -303,6 +353,12 @@ def main(argv: list[str]) -> int:
             origin, flavour, skip = package_root / "cmdop_llm", "canonical", True
             if not origin.is_dir():
                 raise SystemExit(f"ERROR: package tree not present at {origin}")
+        # A promote overwrites the canon, so this is the direction where a
+        # stale tree does the most damage.
+        refusal = check_downgrade(origin, canon, "the canon")
+        if refusal:
+            print(refusal, file=sys.stderr)
+            return 1
         if args.dry_run:
             report("canon", plan_tree(origin, canon, flavour, skip_tests=skip))
         else:
@@ -311,12 +367,20 @@ def main(argv: list[str]) -> int:
                 apply_tree(package_root / "tests", canon / "tests", "canonical")
 
     drift = False
+    refused = False
+    inspecting = args.command == "check" or args.dry_run
     for label, path, flavour, skip in targets:
-        act = plan_tree if args.command == "check" or args.dry_run else apply_tree
-        plan = act(canon, path, flavour, skip_tests=skip)
+        # A tree ahead of the canon is a promote waiting to happen, not drift
+        # to flatten. Report it and leave the tree alone.
+        refusal = check_downgrade(canon, path, label)
+        if refusal:
+            print(refusal, file=sys.stderr)
+            refused = True
+            continue
+        plan = (plan_tree if inspecting else apply_tree)(canon, path, flavour, skip_tests=skip)
         if not plan.empty:
             drift = True
-            if args.command == "check" or args.dry_run:
+            if inspecting:
                 report(label, plan)
 
     # Name what was NOT checked. A silently skipped tree reads as "in sync",
@@ -326,18 +390,34 @@ def main(argv: list[str]) -> int:
     for mirror in disabled:
         print(f"SKIPPED — {mirror.label}: {mirror.disabled_because}", file=sys.stderr)
 
+    # A refusal must not be reported as success: the tree was SKIPPED, and
+    # "Synchronized N trees" would read as though it had been handled.
+    if refused:
+        print(
+            "A tree is ahead of the canon and was left alone — promote it "
+            "before syncing.",
+            file=sys.stderr,
+        )
+        return 1
+
     if args.command == "check":
         if drift:
             print("DRIFT — run sync, or promote project|package.", file=sys.stderr)
             return 1
-        print(f"OK — the canon and {len(targets)} tree(s) are synchronized.")
+        print(
+            f"OK — the canon ({format_version(read_version(canon))}) and "
+            f"{len(targets)} tree(s) are synchronized."
+        )
         return 0
 
     if args.dry_run:
         print("DRY RUN — nothing was written.")
         return 0
 
-    print(f"Synchronized {len(targets)} tree(s) from the canon.")
+    print(
+        f"Synchronized {len(targets)} tree(s) from the canon "
+        f"({format_version(read_version(canon))})."
+    )
     return 0
 
 

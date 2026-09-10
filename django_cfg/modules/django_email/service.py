@@ -934,6 +934,16 @@ class DjangoEmailService(BaseCfgModule):
         if 'project_name' not in updated_context:
             updated_context['project_name'] = self.config.project_name
 
+        # `site_name` is the same fact under the name the TEMPLATES ask for.
+        #
+        # The context supplied `project_name` while every letter reads
+        # `{{ site_name }}`, so the header and signature rendered the literal
+        # default — "App" — in production mail. Two names for one value is the
+        # bug; this makes the second name resolve rather than adding a second
+        # source, and a caller passing its own still wins.
+        if 'site_name' not in updated_context:
+            updated_context['site_name'] = updated_context['project_name']
+
         # Auto-add logo_url from config if not provided
         if 'logo_url' not in updated_context and self.config.project_logo:
             updated_context['logo_url'] = self.config.project_logo

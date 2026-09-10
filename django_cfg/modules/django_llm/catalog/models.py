@@ -41,7 +41,7 @@ PROVIDER_SDKROUTER = "sdkrouter"
 # Imported late-ish on purpose: `providers/` drags in the OpenAI SDK, but this
 # helper is a pure string test with no such dependency, so the catalogue stays
 # cheap to import.
-from ..providers.sdkrouter_aliases import CF_STRUCTURED_OUTPUT, is_cf_model  # noqa: E402
+from ..providers.sdkrouter_aliases import CF, CF_STRUCTURED_OUTPUT, is_cf_model  # noqa: E402
 
 #: Provider for a slug the catalog does not know.
 #:
@@ -199,10 +199,20 @@ _CATALOG: dict[str, ModelTraits] = {
     CF_STRUCTURED_OUTPUT: ModelTraits(
         slug=CF_STRUCTURED_OUTPUT,
         reasoning=False, reasoning_disablable=False,
-        # An ALIAS the sdkrouter proxy resolves, not a vendor slug — it landed
-        # on `cf/openai/gpt-oss-20b` when verified on 2026-09-02, and the point
-        # of naming the promise rather than the model is that the upstream can
-        # move without this entry changing.
+        # An ALIAS the sdkrouter proxy resolves, not a vendor slug. Naming the
+        # promise rather than the model is the point: the upstream can move
+        # without this entry changing.
+        #
+        # `CF_STRUCTURED_OUTPUT` was repointed from `CF.FAST` to `CF.JSON` on
+        # 2026-09-10, so this entry was RE-DESCRIBED — it previously carried
+        # `@cf-fast`'s chain and issues under the new name. As of that date the
+        # proxy resolves `@cf-json` to `granite-4.0-h-micro` ->
+        # `gpt-oss-20b` -> `mistral-small-3.1-24b`, and EVERY entry in it was
+        # probed 5/5 against a deliberately awkward schema (nested object, an
+        # enum, and `anyOf: [integer, null]` — the shape
+        # `to_strict_json_schema` emits for `int | None`, which degrades worst).
+        # `glm-4.7-flash`, which led the old `CF.FAST` chain, managed 1/5 with
+        # an HTTP 502 and is deliberately absent.
         #
         # Catalogued so the recommendation integrity tests can see it. Note
         # `provider_for()` short-circuits `@cf*` before consulting this table;
@@ -213,10 +223,15 @@ _CATALOG: dict[str, ModelTraits] = {
             ModelRole.CLASSIFY: Verdict.OK,
         },
         issues=(
-            "reserves part of max_tokens for a reasoning pass that never reaches "
-            "content; under ~2000 it returns empty with finish_reason=length. "
-            "LLMRouter raises the floor (min_max_tokens_for) — a caller that "
-            "bypasses the router must do it itself",
+            "the schema is honoured by the PROXY, not the model: it rewrites the "
+            "OpenAI `json_schema` envelope into the native Workers AI shape "
+            "(measured 5/5 against the wrapped form's 4/5). A caller that reaches "
+            "Workers AI directly gets a hint, not a constraint",
+            "`gpt-oss-20b` sits second in this chain and reserves part of "
+            "max_tokens for a reasoning pass that never reaches content; under "
+            "~2000 it returns empty with finish_reason=length. LLMRouter raises "
+            "the floor (min_max_tokens_for) — a caller that bypasses the router "
+            "must do it itself",
             "behind the sdkrouter proxy — availability is only as good as that "
             "Worker; the chain keeps openrouter models behind it",
         ),
@@ -262,6 +277,12 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
         # reaches single digits — the models are capable and much cheaper.
         # Measure with DISTINCT prompts: the proxy caches, and a repeated prompt
         # returns in ~0.0s.
+        #
+        # Those timings are `@cf`'s, and CF_STRUCTURED_OUTPUT now points at
+        # `@cf-json` (repointed 2026-09-10). Its head, `granite-4.0-h-micro` at
+        # 0.14 neurons, is NOT the model that produced them — so re-measure the
+        # JSON chain before concluding anything. The figure that blocks this may
+        # no longer hold.
         # gemini-2.5-flash leads on operator judgement: it is the model that
         # has been watched doing this job on real listings. The catalogue grades
         # it EXTRACTION=OK rather than GOOD and `advisories` warns that a
@@ -300,6 +321,69 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
         "anthropic/claude-sonnet-4.6",
     ),
 }
+
+
+# ── The two alias layers, mapped ─────────────────────────────────────
+#
+# There are two vocabularies for "which model", and until now they did not
+# meet:
+#
+#   * ModelRole  — vendor-neutral, ours: what the call is FOR.
+#   * @cf-*      — the lanes the sdkrouter proxy publishes, whose contents the
+#                  proxy retunes without telling us.
+#
+# `_RECOMMENDED` above names OpenRouter slugs and no `@cf` alias at all, so a
+# caller who wanted the Cloudflare-billed copy had to name a lane by hand —
+# which is exactly the coupling aliases exist to remove.
+#
+# This maps one onto the other, so a caller asks for a ROLE and never types a
+# slug or a lane. It is deliberately data, not a function: what belongs in a
+# lane is a judgement, and judgements need somewhere to be read and argued
+# with.
+
+CF_LANE_FOR_ROLE: dict[ModelRole, str] = {
+    # Both entries of `@cf-vision` were sent a real picture rather than trusted
+    # to a capability flag — `gemma-4-26b` advertises vision and answers
+    # `400 AiError 8006 "Invalid data for image"`.
+    ModelRole.VISION: CF.VISION,
+    # The proxy routes tool calls here by its own decision, so agreeing with it
+    # keeps one policy rather than two that can disagree.
+    ModelRole.TOOL_CHAT: CF.CODER,
+    ModelRole.CLASSIFY: CF.CHEAP,
+    ModelRole.ESCALATION: CF.BEST,
+    # ModelRole.EXTRACTION is ABSENT ON PURPOSE — see below. Adding it here
+    # would make ingestion 15-70x slower, silently.
+}
+
+#: Why EXTRACTION has no lane, kept beside the map so the refusal travels with
+#: it. Correctness is NOT the objection: the proxy rewrites `response_format`
+#: into the native Workers AI shape and `@cf-json` measures 5/5 against the
+#: `anyOf: [integer, null]` form that degrades worst.
+#:
+#: Latency is. Five DISTINCT listings took 17.6/20.0/49.3/78.4s through `@cf`
+#: against gpt-4o-mini's 1.0-1.3s, and ingestion runs thousands.
+#:
+#: Those timings are `@cf`'s. `@cf-json` now leads with `granite-4.0-h-micro`
+#: at 0.14 neurons — a different model — so the figure may no longer hold.
+#: RE-MEASURE with distinct prompts (the proxy caches; a repeat returns in
+#: ~0.0s) before adding EXTRACTION to the map.
+CF_LANE_REFUSED_FOR: dict[ModelRole, str] = {
+    ModelRole.EXTRACTION: (
+        "latency, not correctness: measured 17.6-78.4s on @cf against "
+        "gpt-4o-mini's 1.0-1.3s, over thousands of listings per ingest. "
+        "Re-measure @cf-json before revisiting — its head changed."
+    ),
+}
+
+
+def cf_lane_for(role: ModelRole) -> str | None:
+    """The Cloudflare lane for ``role``, or ``None`` if there deliberately is none.
+
+    ``None`` is an answer, not a gap: ask :data:`CF_LANE_REFUSED_FOR` why, and
+    do not paper over it by picking a nearby lane. Callers that must run on
+    Cloudflare should surface the reason rather than silently choosing.
+    """
+    return CF_LANE_FOR_ROLE.get(role)
 
 
 # ── Public API ───────────────────────────────────────────────────────
