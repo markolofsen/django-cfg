@@ -30,8 +30,22 @@ def pytest_configure(config):  # noqa: ARG001
             self, verbosity=1, autoclobber=False, serialize=True, keepdb=False
         ):
             # Step 1: create the empty DB (no migrations yet).
+            #
+            # Close EVERY connection first, not just this alias'. Dropping a
+            # database Postgres still has sessions on fails with `is being
+            # accessed by other users`, and a project with two aliases holds a
+            # connection on the other one while this alias is being set up — so
+            # `--create-db` conflicted with the very process running it.
+            # `self.connection.close()` below cannot help: it runs after the
+            # drop, and only for this alias.
+            from django.db import connections as _all_connections
+
+            for _alias in _all_connections:
+                _all_connections[_alias].close()
+
             # autoclobber=True: always drop any leftover test DB from a previous
-            # interrupted run — no interactive prompt in CI.
+            # interrupted run rather than prompting. A prompt here would hang
+            # any non-interactive run.
             test_db_name = self._create_test_db(verbosity, True, keepdb)
             self.connection.settings_dict["NAME"] = test_db_name
             self.connection.close()
@@ -66,6 +80,8 @@ def pytest_configure(config):  # noqa: ARG001
 
         BaseDatabaseCreation.create_test_db = patched_create_test_db
 
-    except Exception:
-        # Never break test collection if the patch fails
-        pass
+    except Exception as e:
+        # Never break test collection if the patch fails — but say so. Silently
+        # skipping leaves the extensions uninstalled, and the run then fails
+        # later somewhere that looks unrelated to this patch.
+        sys.stderr.write(f"⚠️  django-cfg pytest patch not applied: {e!r}\n")
