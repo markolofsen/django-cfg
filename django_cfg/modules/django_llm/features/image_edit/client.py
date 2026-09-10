@@ -1,18 +1,21 @@
-"""Image-edit client — multimodal in/out via OpenRouter.
+"""Image-edit client — explicit OpenRouter image transports.
 
-Why this can't reuse the OpenAI SDK
------------------------------------
-The OpenAI SDK strips ``message.images`` — it's not in the OpenAI
-``ChatCompletion`` schema. OpenRouter, for Gemini-family Nano Banana
-models, puts the OUTPUT image bytes (as ``data:image/...;base64,``
-strings) inside ``choices[0].message.images[*].image_url.url`` after
-the request opts in via ``modalities=["image", "text"]``. So this
-client talks to the REST endpoint with ``httpx`` directly.
+Transport contracts
+-------------------
+``image-api`` uses OpenRouter's dedicated ``POST /api/v1/images`` contract:
+ordered ``input_references`` in, ``data[0].b64_json`` out. The compatibility
+``chat-completions`` mode retains the older multimodal message contract where
+output images live in ``choices[0].message.images``. Selection is explicit per
+request or inherited from ``ImageEditClient.default_transport_mode``; neither
+path retries or silently falls back to the other.
+
+Both paths use ``httpx`` directly so provider-specific image response fields
+are retained rather than filtered by an OpenAI SDK response model.
 
 Why this lives here (not in the host app)
 -----------------------------------------
-Every caller of an LLM in the project funnels through django_cfg.modules.django_llm.
-Putting the multimodal-edit transport inside django_cfg.modules.django_llm means apps
+Every caller of an LLM in the project funnels through modules.django_llm.
+Putting the multimodal-edit transport inside modules.django_llm means apps
 (real-estate AIPhoto today, vehicle ai_photo, others later) don't
 reimplement HTTP, auth, cost, or pricing — they pass an
 ``ImageEditRequest`` and get an ``ImageEditResponse`` back.
@@ -41,13 +44,24 @@ import httpx
 from ..._integration import BaseCfgModule, get_api_keys
 from ...providers import PROVIDER_BASE_URLS
 from .errors import ImageEditError, NoImageReturnedError
+from .composite_models import CompositeImageEditRequest
 from .models import (
     DEFAULT_EDIT_MODEL,
     ImageEditRequest,
     ImageEditResponse,
+    ImageEditTransportMode,
 )
-from .payload import build_payload
-from .response_parser import extract_image_bytes, extract_text
+from .payload import (
+    build_composite_image_api_payload,
+    build_composite_payload,
+    build_image_api_payload,
+    build_payload,
+)
+from .response_parser import (
+    extract_image_api_bytes,
+    extract_image_bytes,
+    extract_text,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +74,7 @@ class ImageEditClient(BaseCfgModule):
 
     Auto-detects the OpenRouter key via the integration seam
     (``get_api_keys()["openrouter"]``, which reads config through
-    ``django_cfg.modules.django_llm.config``); the host doesn't pass keys around.
+    ``modules.django_llm.config``); the host doesn't pass keys around.
     """
 
     def __init__(
@@ -69,9 +83,10 @@ class ImageEditClient(BaseCfgModule):
         default_model: str | None = None,
         base_url: str = OPENROUTER_BASE_URL,
         timeout: float = 120.0,
-        app_title: str = "django_cfg.modules.django_llm-image_edit",
+        app_title: str = "modules.django_llm-image_edit",
         app_url: str = "https://djangocfg.com/",
         transport: httpx.BaseTransport | None = None,
+        default_transport_mode: ImageEditTransportMode = "chat-completions",
     ):
         super().__init__()
         if api_key is None:
@@ -86,6 +101,14 @@ class ImageEditClient(BaseCfgModule):
         self.timeout = timeout
         self.app_title = app_title
         self.app_url = app_url
+        if default_transport_mode not in {"chat-completions", "image-api"}:
+            raise ValueError(
+                "default_transport_mode must be 'chat-completions' or 'image-api'"
+            )
+        # Application profiles can pin the dedicated API client-wide, while a
+        # request may override this value explicitly. The compatibility default
+        # remains chat-completions until callers opt in.
+        self.default_transport_mode = default_transport_mode
         # Test seam: pass an httpx.MockTransport from a test to intercept
         # the OpenRouter call without hitting the network. Production
         # callers leave this None and httpx uses its default transport.
@@ -105,6 +128,9 @@ class ImageEditClient(BaseCfgModule):
         balanced / premium) resolved via ``presets.IMAGE_EDIT_MODELS``
         unless ``request.model`` is set explicitly.
 
+        Transport selection: ``request.transport_mode`` wins; otherwise the
+        client profile's ``default_transport_mode`` is used.
+
         ``auto_compress=True`` (default) caps the input image at
         ~1536px on the longest side and re-encodes as JPEG. Disable
         when the caller has prepared bytes precisely (lossless masks,
@@ -114,15 +140,68 @@ class ImageEditClient(BaseCfgModule):
         but emitted no image — caller persists ``model_text`` as
         the refusal reason without retrying.
         """
+        transport_mode = self._resolve_transport_mode(request)
+        builder = (
+            build_image_api_payload
+            if transport_mode == "image-api"
+            else build_payload
+        )
+        return self._execute(
+            request,
+            builder(
+                request,
+                request.resolved_model(),
+                auto_compress=auto_compress,
+            ),
+            transport_mode=transport_mode,
+        )
+
+    def composite_edit(
+        self,
+        request: CompositeImageEditRequest,
+        *,
+        auto_compress: bool = True,
+    ) -> ImageEditResponse:
+        """Issue one multi-reference composition call.
+
+        Reference order, roles and labels are preserved in the provider
+        payload. This method performs exactly one HTTP request and never
+        retries or falls back to another model implicitly.
+        """
+        transport_mode = self._resolve_transport_mode(request)
+        builder = (
+            build_composite_image_api_payload
+            if transport_mode == "image-api"
+            else build_composite_payload
+        )
+        return self._execute(
+            request,
+            builder(
+                request,
+                request.resolved_model(),
+                auto_compress=auto_compress,
+            ),
+            transport_mode=transport_mode,
+        )
+
+    def _execute(
+        self,
+        request: ImageEditRequest | CompositeImageEditRequest,
+        payload: dict[str, Any],
+        *,
+        transport_mode: ImageEditTransportMode,
+    ) -> ImageEditResponse:
+        """Execute one prepared payload and parse the shared response shape."""
         started = time.time()
         resolved_model = request.resolved_model()
-        payload = build_payload(
-            request, resolved_model, auto_compress=auto_compress,
-        )
-        body = self._post(payload)
+        body = self._post(payload, transport_mode=transport_mode)
 
-        image_bytes, image_mime = extract_image_bytes(body)
-        text = extract_text(body)
+        if transport_mode == "image-api":
+            image_bytes, image_mime = extract_image_api_bytes(body)
+            text = ""
+        else:
+            image_bytes, image_mime = extract_image_bytes(body)
+            text = extract_text(body)
 
         if image_bytes is None:
             raise NoImageReturnedError(
@@ -172,6 +251,19 @@ class ImageEditClient(BaseCfgModule):
             self.edit, request, auto_compress=auto_compress,
         )
 
+    async def acomposite_edit(
+        self,
+        request: CompositeImageEditRequest,
+        *,
+        auto_compress: bool = True,
+    ) -> ImageEditResponse:
+        """Async ``composite_edit`` — one sync call on a worker thread."""
+        return await asyncio.to_thread(
+            self.composite_edit,
+            request,
+            auto_compress=auto_compress,
+        )
+
     # ── convenience shortcuts (parity with image_gen) ──────────────
 
     def edit_fast(
@@ -210,8 +302,20 @@ class ImageEditClient(BaseCfgModule):
 
     # ── internals ──────────────────────────────────────────────────
 
-    def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
-        url = f"{self.base_url}/chat/completions"
+    def _resolve_transport_mode(
+        self,
+        request: ImageEditRequest | CompositeImageEditRequest,
+    ) -> ImageEditTransportMode:
+        return request.transport_mode or self.default_transport_mode
+
+    def _post(
+        self,
+        payload: dict[str, Any],
+        *,
+        transport_mode: ImageEditTransportMode,
+    ) -> dict[str, Any]:
+        endpoint = "images" if transport_mode == "image-api" else "chat/completions"
+        url = f"{self.base_url}/{endpoint}"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",

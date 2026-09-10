@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from django_cfg.modules.django_llm.agent.runtime.cost import RunCost
+    from modules.django_llm.agent.runtime.cost import RunCost
 
 
 @dataclass(frozen=True, slots=True)

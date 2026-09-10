@@ -1,6 +1,6 @@
 """
 OpenRouter Models Cache - Fetch and cache available models with pricing
-Originally adapted from unreal_llm; now part of django_cfg.modules.django_llm.
+Originally adapted from unreal_llm; now part of modules.django_llm.
 """
 
 import asyncio

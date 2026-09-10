@@ -1,4 +1,4 @@
-"""django_cfg.modules.django_llm — single LLM transport surface (framework-neutral).
+"""modules.django_llm — single LLM transport surface (framework-neutral).
 
 Every model call funnels through this package: chat, structured
 extraction, vision, image generation, image edit, embeddings,
@@ -7,17 +7,17 @@ translation. Callers stay thin — they import an ``LLMClient`` /
 cost, retry, structured-output repair, provider-policy adaptation, and
 registry math.
 
-    from django_cfg.modules.django_llm import LLMClient, LLMRouter, ...
+    from modules.django_llm import LLMClient, LLMRouter, ...
 
 Extracted as a standalone package with a single configuration seam:
-``django_cfg.modules.django_llm.config`` (explicit arguments, environment fallback, no Django).
+``modules.django_llm.config`` (explicit arguments, environment fallback, no Django).
 
 # Adding a new public symbol
 
 1. Implement it in the right submodule (``features/``, ``core/``, …).
 2. Add it to the appropriate ``from .X import Y`` block below.
 3. Add the name to ``__all__``.
-4. Done — ``from django_cfg.modules.django_llm import YourThing`` works.
+4. Done — ``from modules.django_llm import YourThing`` works.
 
 See ``CLAUDE.md`` next to this file for the full contract.
 """
@@ -89,15 +89,24 @@ from .features.image_edit import (
     DEFAULT_MODEL_QUALITY,
     IMAGE_EDIT_MODELS,
     AspectRatio,
+    CompositeImageEditRequest,
     ImageEditClient,
     ImageEditError,
+    ImageEditReference,
+    ImageEditReferenceRole,
     ImageEditRequest,
     ImageEditResponse,
+    ImageEditTransportMode,
+    ImageResolution,
     ModelQuality,
     NoImageReturnedError,
     OutputQuality,
+    build_composite_image_api_payload,
+    build_composite_payload,
+    build_image_api_payload,
     build_payload,
     edit_many,
+    extract_image_api_bytes,
     extract_image_bytes,
     extract_text,
     resolve_model,
@@ -119,6 +128,41 @@ from .features.image_input import (
     normalize_image_input,
 )
 from .features.translator import DjangoTranslator, TranslationError
+from .features.video_gen import (
+    BYTEPLUS_MODELARK_BASE_URL,
+    BytePlusSeedanceClient,
+    MediaReference,
+    MediaReferenceKind,
+    MediaReferenceRole,
+    OpenRouterVideoGenClient,
+    SeedanceGenerationRequest,
+    SeedanceJob,
+    SeedanceJobStatus,
+    SeedanceModel,
+    SeedanceModelFamily,
+    SeedanceRatio,
+    SeedanceResolution,
+    SeedanceResult,
+    SeedanceUsage,
+    VideoFrameImage,
+    VideoFrameType,
+    VideoGenerationError,
+    VideoGenerationFailedError,
+    VideoGenerationHTTPError,
+    VideoGenerationTimeoutError,
+    VideoGenEstimate,
+    VideoGenJob,
+    VideoGenRequest,
+    VideoGenResult,
+    VideoImageURL,
+    VideoJobStatus,
+    VideoModelCapability,
+    VideoOutputSpec,
+    VideoPricingUnavailableError,
+    VideoTransportSecurityError,
+    VideoUsage,
+    compile_byteplus_seedance_request,
+)
 from .features.vision import VisionClient
 
 # Embeddings — the single embedding entry point for apps. Two ready
@@ -279,18 +323,27 @@ __all__ = [
     "LLMClient",
     # Image-edit feature
     "AspectRatio",
+    "CompositeImageEditRequest",
     "DEFAULT_EDIT_MODEL",
     "DEFAULT_MODEL_QUALITY",
     "IMAGE_EDIT_MODELS",
     "ImageEditClient",
     "ImageEditError",
+    "ImageEditReference",
+    "ImageEditReferenceRole",
     "ImageEditRequest",
     "ImageEditResponse",
+    "ImageEditTransportMode",
+    "ImageResolution",
     "ModelQuality",
     "NoImageReturnedError",
     "OutputQuality",
+    "build_composite_image_api_payload",
+    "build_composite_payload",
+    "build_image_api_payload",
     "build_payload",
     "edit_many",
+    "extract_image_api_bytes",
     "extract_image_bytes",
     "extract_text",
     "resolve_model",
@@ -325,6 +378,40 @@ __all__ = [
     "PreparedMedia",
     # Vision feature
     "VisionClient",
+    # Video generation feature — the seedance / i2v chain
+    "BYTEPLUS_MODELARK_BASE_URL",
+    "BytePlusSeedanceClient",
+    "MediaReference",
+    "MediaReferenceKind",
+    "MediaReferenceRole",
+    "OpenRouterVideoGenClient",
+    "SeedanceGenerationRequest",
+    "SeedanceJob",
+    "SeedanceJobStatus",
+    "SeedanceModel",
+    "SeedanceModelFamily",
+    "SeedanceRatio",
+    "SeedanceResolution",
+    "SeedanceResult",
+    "SeedanceUsage",
+    "VideoFrameImage",
+    "VideoFrameType",
+    "VideoGenerationError",
+    "VideoGenerationFailedError",
+    "VideoGenerationHTTPError",
+    "VideoGenerationTimeoutError",
+    "VideoGenEstimate",
+    "VideoGenJob",
+    "VideoGenRequest",
+    "VideoGenResult",
+    "VideoImageURL",
+    "VideoJobStatus",
+    "VideoModelCapability",
+    "VideoOutputSpec",
+    "VideoPricingUnavailableError",
+    "VideoTransportSecurityError",
+    "VideoUsage",
+    "compile_byteplus_seedance_request",
     # Translator feature
     "DjangoTranslator",
     "TranslationError",

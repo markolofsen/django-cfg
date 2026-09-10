@@ -65,7 +65,7 @@ def price_run(usage: Any, model: str) -> RunCost:
 
     cost_usd: Optional[float] = None
     try:
-        from django_cfg.modules.django_llm.registry.models import ModelsCache
+        from modules.django_llm.registry.models import ModelsCache
 
         cost_usd = ModelsCache().calculate_cost_from_usage(
             model,

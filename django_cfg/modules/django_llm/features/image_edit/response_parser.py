@@ -1,14 +1,15 @@
-"""Response unpacking for OpenRouter image-edit calls.
+"""Response unpacking for OpenRouter image-edit transports.
 
-OpenRouter wraps the model's image bytes inside the standard chat
-completion ``choices[0].message.images[*].image_url.url`` slot as a
-``data:image/...;base64,...`` URL. Tear that apart cleanly so the
-client class stays free of plumbing.
+The compatibility chat endpoint wraps bytes in a data URL under
+``choices[0].message.images``. The dedicated Image API returns raw base64 under
+``data[0].b64_json``. Keeping both parsers here makes endpoint selection in the
+client explicit and prevents shape-probing fallback.
 """
 
 from __future__ import annotations
 
 import base64
+import binascii
 import logging
 from typing import Any
 
@@ -66,3 +67,32 @@ def extract_text(body: dict[str, Any]) -> str:
         ]
         return "\n".join(parts).strip()
     return ""
+
+
+def extract_image_api_bytes(
+    body: dict[str, Any],
+) -> tuple[bytes | None, str | None]:
+    """Pull the first dedicated Image API ``data[].b64_json`` result.
+
+    OpenRouter omits ``media_type`` for normal raster PNG output. Invalid or
+    absent base64 is treated as no image, allowing the client to raise its
+    stable ``NoImageReturnedError`` contract rather than leaking decoder
+    details.
+    """
+    data = body.get("data") or []
+    if not isinstance(data, list) or not data:
+        return None, None
+    first = data[0]
+    if not isinstance(first, dict):
+        return None, None
+    encoded = first.get("b64_json")
+    if not isinstance(encoded, str) or not encoded:
+        return None, None
+    try:
+        image_bytes = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error):
+        return None, None
+    media_type = first.get("media_type")
+    if not isinstance(media_type, str) or not media_type:
+        media_type = "image/png"
+    return image_bytes, media_type

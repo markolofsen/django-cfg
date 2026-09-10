@@ -5,7 +5,9 @@ Handles DATABASES configuration and routing.
 Size: ~100 lines (focused on database settings)
 """
 
+import hashlib
 import logging
+import os
 from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
@@ -150,6 +152,33 @@ class DatabaseSettingsGenerator:
 
         return rules
 
+    @staticmethod
+    def _test_db_suffix() -> str:
+        """Per-checkout suffix for test database names, or '' when disabled.
+
+        Test database names derive from settings, not from the directory, so
+        two checkouts of the same project share one `test_<name>`. Running
+        their suites at once means each TRUNCATEs the other's rows mid-test:
+        the failures look like ordering bugs, and any measurement taken during
+        the overlap is worthless. Two agents on one machine hit this routinely.
+
+        Set ``DJANGO_CFG_TEST_DB_PER_CHECKOUT=1`` to give each checkout its own
+        databases. The cost is disk — a full migrated set per checkout — which
+        is why it is opt-in rather than the default.
+
+        The suffix is derived from the checkout path, NOT from the pid: it must
+        be identical across runs or ``--reuse-db`` rebuilds from scratch every
+        time, which is the very cost it exists to avoid.
+        """
+        if os.environ.get("DJANGO_CFG_TEST_DB_PER_CHECKOUT", "").lower() not in (
+            "1", "true", "yes", "on",
+        ):
+            return ""
+
+        root = os.environ.get("DJANGO_CFG_TEST_DB_KEY") or os.getcwd()
+        digest = hashlib.sha256(os.path.abspath(root).encode()).hexdigest()[:8]
+        return f"_{digest}"
+
     def _generate_test_settings(self, alias: str, db_config: "DatabaseConfig") -> Dict[str, Any]:
         """
         Automatic test database configuration.
@@ -190,7 +219,7 @@ class DatabaseSettingsGenerator:
 
             test_settings.update({
                 # Custom name for test database
-                'NAME': f'test_{db_name}',
+                'NAME': f'test_{db_name}{self._test_db_suffix()}',
 
                 # Use clean template without old data
                 'TEMPLATE': 'template0',

@@ -1,6 +1,6 @@
 """The agent plane — pydantic-ai harness: tool loop, HITL, streaming.
 
-`django_cfg.modules.django_llm` has two planes, and the distinction is load-bearing:
+`modules.django_llm` has two planes, and the distinction is load-bearing:
 
 | plane | what it does | depends on |
 |---|---|---|
@@ -14,8 +14,8 @@ and accounts for the cost of a whole turn rather than a single call.
 ## Import this plane EXPLICITLY
 
 ```python
-from django_cfg.modules.django_llm.agent import ...        # correct
-from django_cfg.modules.django_llm import SomeAgentThing   # NEVER — see below
+from modules.django_llm.agent import ...        # correct
+from modules.django_llm import SomeAgentThing   # NEVER — see below
 ```
 
 The package root must never re-export anything from here. Every Django app that

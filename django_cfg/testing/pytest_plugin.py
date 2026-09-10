@@ -1,10 +1,9 @@
 """
 pytest plugin for django-cfg.
 
-Patches Django's BaseDatabaseCreation.create_test_db to install PostgreSQL
-extensions (pgvector, pg_trgm, unaccent) AFTER the empty DB is created but
-BEFORE migrations run — identical to what SmartTestRunner does for
-`python manage.py test`.
+Installs the PostgreSQL extensions (pgvector, pg_trgm, unaccent) that models
+may depend on, on the empty test database, BEFORE migrations run — the same
+thing SmartTestRunner does for `python manage.py test`.
 
 Activated by adding to conftest.py:
     pytest_plugins = ["django_cfg.testing.pytest_plugin"]
@@ -15,73 +14,50 @@ import sys
 
 def pytest_configure(config):  # noqa: ARG001
     """
-    Patch BaseDatabaseCreation as early as possible.
+    Hook the extension install onto `pre_migrate`.
 
-    pytest_configure runs before any test collection or DB setup,
-    so the patch is in place when pytest-django calls create_test_db.
+    This used to wrap `BaseDatabaseCreation.create_test_db` and re-implement
+    its body around the extension step. That method is load-bearing for two
+    things the wrapper broke, both found 2026-09-10:
+
+    - It DROPs the test database. The wrapper closed only the alias being set
+      up, so a second alias still held a session and `--create-db` failed
+      against its own process with `is being accessed by other users`.
+    - `setup_databases` calls it with `serialize=False` and then serializes the
+      result itself, afterwards (`django/test/utils.py`). The wrapper's
+      `close()` calls invalidated the connection that pass depends on, so
+      `_test_serialized_contents` came out absent — and every
+      `serialized_rollback=True` test silently restored nothing. A
+      `transaction=True` test TRUNCATEs the data-migration rows, and nothing
+      put them back.
+
+    `pre_migrate` fires with a usable connection before any migration is
+    applied, which is all the extension step ever needed. Django keeps
+    ownership of creating, dropping and serializing the database.
     """
     try:
-        from django.db.backends.base.creation import BaseDatabaseCreation
-        from .runners.utils import install_extensions_on
+        from django.db.models.signals import pre_migrate
 
-        original_create_test_db = BaseDatabaseCreation.create_test_db
-
-        def patched_create_test_db(
-            self, verbosity=1, autoclobber=False, serialize=True, keepdb=False
-        ):
-            # Step 1: create the empty DB (no migrations yet).
-            #
-            # Close EVERY connection first, not just this alias'. Dropping a
-            # database Postgres still has sessions on fails with `is being
-            # accessed by other users`, and a project with two aliases holds a
-            # connection on the other one while this alias is being set up — so
-            # `--create-db` conflicted with the very process running it.
-            # `self.connection.close()` below cannot help: it runs after the
-            # drop, and only for this alias.
-            from django.db import connections as _all_connections
-
-            for _alias in _all_connections:
-                _all_connections[_alias].close()
-
-            # autoclobber=True: always drop any leftover test DB from a previous
-            # interrupted run rather than prompting. A prompt here would hang
-            # any non-interactive run.
-            test_db_name = self._create_test_db(verbosity, True, keepdb)
-            self.connection.settings_dict["NAME"] = test_db_name
-            self.connection.close()
-
-            # Step 2: install extensions while DB is empty
-            try:
-                install_extensions_on(self.connection, verbosity=verbosity)
-            except Exception as e:
-                if verbosity >= 2:
-                    sys.stderr.write(
-                        f"⚠️  Could not install extensions on {test_db_name}: {e}\n"
-                    )
-
-            self.connection.settings_dict["NAME"] = test_db_name
-            self.connection.close()
-
-            # Step 3: run the original create_test_db (migrations etc.)
-            # _create_test_db already ran above — replace it with a no-op so
-            # original_create_test_db skips DB creation but still runs migrations.
-            original_inner = self._create_test_db
-            self._create_test_db = lambda *_, **__: test_db_name
-            try:
-                return original_create_test_db(
-                    self,
-                    verbosity=verbosity,
-                    autoclobber=autoclobber,
-                    serialize=serialize,
-                    keepdb=keepdb,
-                )
-            finally:
-                self._create_test_db = original_inner
-
-        BaseDatabaseCreation.create_test_db = patched_create_test_db
-
+        pre_migrate.connect(_install_extensions, dispatch_uid="django_cfg.test_extensions")
     except Exception as e:
-        # Never break test collection if the patch fails — but say so. Silently
-        # skipping leaves the extensions uninstalled, and the run then fails
-        # later somewhere that looks unrelated to this patch.
-        sys.stderr.write(f"⚠️  django-cfg pytest patch not applied: {e!r}\n")
+        # Never break collection — but say so. Silently skipping leaves the
+        # extensions uninstalled, and the run then fails later somewhere that
+        # looks unrelated to this plugin.
+        sys.stderr.write(f"⚠️  django-cfg pytest plugin not applied: {e!r}\n")
+
+
+def _install_extensions(sender, **kwargs):
+    """Install extensions on the database about to be migrated.
+
+    `pre_migrate` fires once per app; the SQL is `IF NOT EXISTS` and the
+    underlying check is cached, so repeats are cheap and idempotent.
+    """
+    using = kwargs.get("using")
+    if not using:
+        return
+
+    from django.db import connections
+
+    from .runners.utils import install_extensions_on
+
+    install_extensions_on(connections[using], verbosity=kwargs.get("verbosity", 0))

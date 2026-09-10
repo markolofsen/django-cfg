@@ -29,13 +29,13 @@ from typing import Any
 from pydantic_ai import Agent
 from pydantic_ai.messages import ToolReturnPart
 
-from django_cfg.modules.django_llm.agent.bus.result import AgentSyncResult
-from django_cfg.modules.django_llm.agent.runtime.action_guard import (
+from modules.django_llm.agent.bus.result import AgentSyncResult
+from modules.django_llm.agent.runtime.action_guard import (
     claims_action_without_evidence,
     tool_return_succeeded,
 )
-from django_cfg.modules.django_llm.agent.runtime.cost import price_run
-from django_cfg.modules.django_llm.agent.tools.core._base_tool import strip_raw
+from modules.django_llm.agent.runtime.cost import price_run
+from modules.django_llm.agent.tools.core._base_tool import strip_raw
 
 logger = logging.getLogger(__name__)
 

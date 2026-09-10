@@ -17,11 +17,20 @@ Verified live on 2026-09-02 by calling each alias and reading back the
     @cf            -> cf/zai-org/glm-4.7-flash
     @cf-fast       -> cf/openai/gpt-oss-20b
     @cf-cheap      -> cf/openai/gpt-oss-20b
-    @cf-balanced   -> cf/zai-org/glm-4.7-flash
     @cf-best       -> cf/moonshotai/kimi-k2.6
-    @cf-smart      -> cf/moonshotai/kimi-k2.6
     @cf-coder      -> cf/zai-org/glm-4.7-flash
     @cf-reasoning  -> cf/zai-org/glm-5.2
+
+`@cf-balanced` and `@cf-smart` were WITHDRAWN by the proxy on 2026-09-10: they
+resolved to the same chains as `@cf` and `@cf-best` respectively, and two names
+for one chain let a retune move one and not the other. The proxy now enforces
+`every alias names a distinct chain` in its own tests, so they cannot come back
+as duplicates.
+
+Not yet mirrored here: the proxy also publishes `@auto`, `@cf-long`,
+`@cf-vision` and `@cf-json`. `@auto` is a per-request decision rather than a
+lane — image part -> `@cf-vision`, tools -> `@cf-coder`, very long -> `@cf-long`,
+6+ messages -> `@cf-coder`, else `@cf-cheap`.
 
 Two things the proxy will not forgive, both found by probing it:
 
@@ -72,21 +81,47 @@ class CF:
       default for parsing work.** Listing normalization is a strict-JSON task
       over short text; it wants throughput and a low bill, and a bigger model
       buys nothing it can use.
-    * :attr:`BALANCED` — the default when a call is not obviously bulk.
-    * :attr:`BEST` / :attr:`SMART` — reach for it when a cheaper model has been
-      *observed* to fail the task, not in anticipation.
+    * :attr:`DEFAULT` — the general lane, when a call is not obviously bulk.
+    * :attr:`BEST` — reach for it when a cheaper model has been *observed* to
+      fail the task, not in anticipation.
     * :attr:`REASONING` — multi-step problems. Not extraction: a reasoning model
       spends its budget deliberating over a field it could have copied.
+
+    `BALANCED` and `SMART` were removed on 2026-09-10 — see the module
+    docstring. They were aliases of `DEFAULT` and `BEST`, so anything that used
+    them wants those.
     """
 
     DEFAULT: Final = "@cf"
     FAST: Final = "@cf-fast"
     CHEAP: Final = "@cf-cheap"
-    BALANCED: Final = "@cf-balanced"
     BEST: Final = "@cf-best"
-    SMART: Final = "@cf-smart"
     CODER: Final = "@cf-coder"
     REASONING: Final = "@cf-reasoning"
+
+    #: Structured output. Every model in this chain was PROBED, 5/5, against a
+    #: deliberately awkward schema — nested object, an enum, and an optional
+    #: integer as `anyOf: [integer, null]`, the shape `to_strict_json_schema`
+    #: emits for `int | None` and the one that degrades worst.
+    #:
+    #: Seated on a probe, never on a `json_mode` property. `glm-4.7-flash`
+    #: managed 1/5 with an HTTP 502 and is deliberately NOT in the chain.
+    #:
+    #: The proxy does the load-bearing half: it unwraps the OpenAI `json_schema`
+    #: envelope into the native Workers AI shape, measured 5/5 against the
+    #: wrapped form's 4/5. Without that rewrite a schema is a hint the model
+    #: usually honours — and usually is not a constraint.
+    JSON: Final = "@cf-json"
+
+    #: The 1.31M-context pair. Reach for it when the conversation cannot fit
+    #: anywhere else, not because more context is free — it is not.
+    LONG: Final = "@cf-long"
+
+    #: Image understanding. BOTH entries were sent a real picture rather than
+    #: trusted to a capability flag: `gemma-4-26b` advertises `vision` and
+    #: answers `400 AiError 8006 "Invalid data for image"`, and
+    #: `llama-3.2-11b-vision` needs an agreement nobody has accepted.
+    VISION: Final = "@cf-vision"
 
 
 #: Every alias the proxy publishes, for validation and for listing in a UI.
@@ -95,28 +130,37 @@ CF_ALIASES: Final[frozenset[str]] = frozenset(
         CF.DEFAULT,
         CF.FAST,
         CF.CHEAP,
-        CF.BALANCED,
         CF.BEST,
-        CF.SMART,
         CF.CODER,
         CF.REASONING,
+        CF.JSON,
+        CF.LONG,
+        CF.VISION,
     }
 )
 
 #: The alias structured extraction WOULD use — not wired up today.
 #:
-#: Named separately from `CF.FAST` because this is a DECISION, not a synonym:
-#: parsing listings is strict-JSON over short text, so the cheapest capable
-#: model is the right one and a larger one is money spent on nothing. Change
-#: this one constant to move every parsing path at once.
+#: A DECISION, not a synonym: parsing listings is strict-JSON over short text,
+#: so the cheapest model that actually holds a schema is the right one and a
+#: larger one is money spent on nothing. Change this one constant to move every
+#: parsing path at once.
 #:
-#: `_RECOMMENDED[EXTRACTION]` does NOT reference it as of 2026-09-02, and the
-#: reason is LATENCY rather than correctness. Strict JSON works: the proxy
-#: rewrites `response_format` into the Workers AI shape, and `@cf` re-measured
-#: 5/5 afterwards. But five distinct listings took 17.6-78.4s against
-#: gpt-4o-mini's 1.0-1.3s, and ingestion runs thousands. See
-#: `django_llm/CLAUDE.md`.
-CF_STRUCTURED_OUTPUT: Final = CF.FAST
+#: Repointed to `CF.JSON` on 2026-09-10, from `CF.FAST`. The proxy now publishes
+#: a chain whose every entry was PROBED against a schema, 5/5 — and the model
+#: that led `CF.FAST`, `glm-4.7-flash`, managed 1/5 with an HTTP 502. Pointing
+#: structured work at the fast lane was seating it on latency rather than on
+#: whether the schema survives.
+#:
+#: **Still not referenced by `_RECOMMENDED[EXTRACTION]`, and the reason is
+#: LATENCY, not correctness.** Correctness is settled: the proxy rewrites
+#: `response_format` into the native Workers AI shape and it measures 5/5. But
+#: five distinct listings took 17.6-78.4s against gpt-4o-mini's 1.0-1.3s, and
+#: ingestion runs thousands. Re-measure the JSON chain before wiring it up —
+#: `granite-4.0-h-micro` at 0.14 neurons is a different model from the one that
+#: produced those timings, so the figure that blocks this may no longer hold.
+#: See `django_llm/CLAUDE.md`.
+CF_STRUCTURED_OUTPUT: Final = CF.JSON
 
 
 def is_cf_model(model: str | None) -> bool:

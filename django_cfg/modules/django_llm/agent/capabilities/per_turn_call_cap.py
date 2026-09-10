@@ -105,7 +105,7 @@ def _categories_for(deps: Any) -> dict[str, str]:
     if cached is not None:
         return cached
 
-    from django_cfg.modules.django_llm.agent.tools.core import get_tool_meta
+    from modules.django_llm.agent.tools.core import get_tool_meta
 
     # The tools come from the host, through the `ToolProvider` seam on deps — the
     # harness must not know a registry exists, let alone whose. See

@@ -23,6 +23,18 @@ DEFAULT_EDIT_MODEL = resolve_model(quality=DEFAULT_MODEL_QUALITY)
 OutputQuality = Literal["auto", "hd"]
 
 
+# Explicit wire contract. ``chat-completions`` remains available for callers
+# pinned to the legacy OpenRouter multimodal response shape. ``image-api`` uses
+# the dedicated POST /api/v1/images endpoint and never falls back implicitly.
+ImageEditTransportMode = Literal["chat-completions", "image-api"]
+
+
+# OpenRouter's dedicated Image API uses resolution tiers rather than the
+# legacy prompt-only HD hint. The current Gemini 3.1 Flash Image endpoints
+# advertise all four values through /api/v1/images/models/.../endpoints.
+ImageResolution = Literal["512", "1K", "2K", "4K"]
+
+
 # Output aspect-ratio hint. ``auto`` preserves the source image's
 # aspect ratio (Nano Banana family respects this when ``image_config``
 # is omitted). Explicit values are honoured by Nano Banana Pro.
@@ -56,6 +68,12 @@ class ImageEditRequest(BaseModel):
     # OutputQuality alias).
     output_quality: OutputQuality = "hd"
     aspect_ratio: AspectRatio = "auto"
+    resolution: ImageResolution = "2K"
+
+    # None inherits ImageEditClient.default_transport_mode. This makes a
+    # transport selectable per request while still allowing an application
+    # profile to configure one client-wide default.
+    transport_mode: ImageEditTransportMode | None = None
 
     # Pass-through knobs (e.g. ``seed`` for repro) merged into payload root.
     extra: Optional[Dict[str, Any]] = None

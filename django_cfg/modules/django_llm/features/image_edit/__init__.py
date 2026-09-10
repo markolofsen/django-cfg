@@ -2,11 +2,11 @@
 
 Pure image generation lives in ``features/image_gen`` (text → image).
 This module is the missing third corner: image + prompt → edited
-image. Backed by Nano Banana family models on OpenRouter, which
-accept multimodal inputs AND multimodal outputs via
-``modalities=["image","text"]``.
+image. The preferred dedicated OpenRouter Image API accepts ordered
+``input_references`` and returns ``data[].b64_json``; the legacy multimodal chat
+contract remains available through an explicit transport mode.
 
-Cost is calculated through the same registry every other django_cfg.modules.django_llm
+Cost is calculated through the same registry every other modules.django_llm
 client uses, so AIPhoto / future apps don't need their own pricing
 math.
 
@@ -23,6 +23,11 @@ Model selection mirrors ``features/image_gen``:
 """
 
 from .client import ImageEditClient
+from .composite_models import (
+    CompositeImageEditRequest,
+    ImageEditReference,
+    ImageEditReferenceRole,
+)
 from .errors import ImageEditError, NoImageReturnedError
 from .fanout import edit_many
 from .models import (
@@ -30,9 +35,16 @@ from .models import (
     AspectRatio,
     ImageEditRequest,
     ImageEditResponse,
+    ImageEditTransportMode,
+    ImageResolution,
     OutputQuality,
 )
-from .payload import build_payload
+from .payload import (
+    build_composite_image_api_payload,
+    build_composite_payload,
+    build_image_api_payload,
+    build_payload,
+)
 from .presets import (
     DEFAULT_MODEL_QUALITY,
     IMAGE_EDIT_MODELS,
@@ -40,7 +52,11 @@ from .presets import (
     resolve_model,
 )
 from .prompt_safety import sanitize_edit_prompt
-from .response_parser import extract_image_bytes, extract_text
+from .response_parser import (
+    extract_image_api_bytes,
+    extract_image_bytes,
+    extract_text,
+)
 
 __all__ = [
     "ImageEditClient",
@@ -48,6 +64,11 @@ __all__ = [
     "NoImageReturnedError",
     "ImageEditRequest",
     "ImageEditResponse",
+    "ImageEditTransportMode",
+    "ImageResolution",
+    "CompositeImageEditRequest",
+    "ImageEditReference",
+    "ImageEditReferenceRole",
     "OutputQuality",
     "AspectRatio",
     "ModelQuality",
@@ -57,4 +78,11 @@ __all__ = [
     "resolve_model",
     "sanitize_edit_prompt",
     "edit_many",
+    "build_composite_payload",
+    "build_composite_image_api_payload",
+    "build_image_api_payload",
+    "build_payload",
+    "extract_image_api_bytes",
+    "extract_image_bytes",
+    "extract_text",
 ]

@@ -11,7 +11,7 @@ from ..config import cache
 
 from .schemas import BalanceResponse
 
-logger = logging.getLogger("django_cfg.modules.django_llm.monitoring")
+logger = logging.getLogger("modules.django_llm.monitoring")
 
 
 class LLMBalanceNotifier:
