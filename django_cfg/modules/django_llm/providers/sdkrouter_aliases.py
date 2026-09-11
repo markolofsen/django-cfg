@@ -26,7 +26,7 @@ so drift is visible, not so anyone depends on it:
     @cf-best       -> cf/zai-org/glm-5.3-flash
     @cf-coder      -> cf/zai-org/glm-4.7-flash
     @cf-reasoning  -> cf/zai-org/glm-5.3-flash
-    @cf-json       -> cf/ibm-granite/granite-4.0-h-micro
+    @cf-json       -> cf/mistralai/mistral-small-3.1-24b-instruct
     @cf-long       -> cf/zai-org/glm-5.3-flash
     @cf-vision     -> cf/zai-org/glm-5.3-flash
 
@@ -110,13 +110,22 @@ class CF:
     CODER: Final = "@cf-coder"
     REASONING: Final = "@cf-reasoning"
 
-    #: Structured output. Every model in this chain was PROBED, 5/5, against a
+    #: Structured output. Every model in this chain was PROBED against a
     #: deliberately awkward schema — nested object, an enum, and an optional
     #: integer as `anyOf: [integer, null]`, the shape `to_strict_json_schema`
     #: emits for `int | None` and the one that degrades worst.
     #:
     #: Seated on a probe, never on a `json_mode` property. `glm-4.7-flash`
     #: managed 1/5 with an HTTP 502 and is deliberately NOT in the chain.
+    #:
+    #: **Ordered by ACCURACY, the one chain that is not cheapest-first** (head
+    #: moved to `mistral-small` on 2026-09-11): a structured extraction that
+    #: returns the wrong number costs more than the model that produced it.
+    #: Measured on 10 real property listings x 3 rounds, scored on price AND
+    #: currency AND deal type together, in Russian and Indonesian as well as
+    #: English — `mistral-small` 24/30 at P50 1.54s, `granite` 21/30 at 1.90s,
+    #: `gemma-4-26b` 25/30 but P50 9.17s / P90 22.36s, which is why it is not
+    #: seated. `granite` stays behind it as the cheap fallback.
     #:
     #: The proxy does the load-bearing half: it unwraps the OpenAI `json_schema`
     #: envelope into the native Workers AI shape, measured 5/5 against the
