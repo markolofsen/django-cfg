@@ -1,0 +1,6 @@
+{
+  "caribbean-mls": {
+    "type": "http",
+    "url": "https://mcp.caribbeanrealestatemls.com/mcp/"
+  }
+}

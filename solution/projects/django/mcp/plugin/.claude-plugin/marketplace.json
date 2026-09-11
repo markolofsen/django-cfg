@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "caribbean-mls",
+  "description": "The Caribbean MLS property catalogue, as an MCP server for Claude Code",
+  "owner": {
+    "name": "Caribbean MLS",
+    "url": "https://caribbeanrealestatemls.com"
+  },
+  "plugins": [
+    {
+      "name": "caribbean-mls",
+      "description": "Search published Caribbean property listings: markets, property types, prices, bedrooms, developers and projects",
+      "author": {
+        "name": "Caribbean MLS"
+      },
+      "source": "./plugins/caribbean-mls",
+      "category": "data"
+    }
+  ]
+}

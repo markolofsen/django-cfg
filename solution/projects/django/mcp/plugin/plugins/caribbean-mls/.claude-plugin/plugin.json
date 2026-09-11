@@ -1,0 +1,9 @@
+{
+  "name": "caribbean-mls",
+  "description": "The Caribbean MLS property catalogue over MCP \u2014 read-only, no credentials",
+  "version": "1.0.0",
+  "author": {
+    "name": "Caribbean MLS",
+    "url": "https://caribbeanrealestatemls.com"
+  }
+}
