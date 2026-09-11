@@ -10,16 +10,25 @@ latency; `cf/openai/gpt-oss-20b` is today's way of keeping it. Naming the
 promise means the upstream can be swapped centrally without every caller
 learning a new id — which is the reason to route through a proxy at all.
 
-Verified live on 2026-09-02 by calling each alias and reading back the
-`model` the proxy reported. The right-hand column is what it resolved to
-**that day**, recorded so drift is visible, not so anyone depends on it:
+**An alias names an ORDERED CHAIN, not one model** (the proxy changed this on
+2026-09-09). Every entry in a `@cf*` chain stays inside Workers AI, so the
+credit is still what pays; the chain exists because the failure mode measured
+in production is a STALL, not an error — 161,931 requests over 7 days with zero
+errors but a P99 of 27.7s. A per-attempt deadline moves off a stalled model,
+and it needs somewhere to move to.
+
+Chain heads as of 2026-09-11, read from `llm-proxy/src/resolve.mjs` — recorded
+so drift is visible, not so anyone depends on it:
 
     @cf            -> cf/zai-org/glm-4.7-flash
     @cf-fast       -> cf/openai/gpt-oss-20b
-    @cf-cheap      -> cf/openai/gpt-oss-20b
-    @cf-best       -> cf/moonshotai/kimi-k2.6
+    @cf-cheap      -> cf/mistralai/mistral-small-3.1-24b-instruct
+    @cf-best       -> cf/zai-org/glm-5.3-flash
     @cf-coder      -> cf/zai-org/glm-4.7-flash
-    @cf-reasoning  -> cf/zai-org/glm-5.2
+    @cf-reasoning  -> cf/zai-org/glm-5.3-flash
+    @cf-json       -> cf/ibm-granite/granite-4.0-h-micro
+    @cf-long       -> cf/zai-org/glm-5.3-flash
+    @cf-vision     -> cf/zai-org/glm-5.3-flash
 
 `@cf-balanced` and `@cf-smart` were WITHDRAWN by the proxy on 2026-09-10: they
 resolved to the same chains as `@cf` and `@cf-best` respectively, and two names
@@ -27,10 +36,12 @@ for one chain let a retune move one and not the other. The proxy now enforces
 `every alias names a distinct chain` in its own tests, so they cannot come back
 as duplicates.
 
-Not yet mirrored here: the proxy also publishes `@auto`, `@cf-long`,
-`@cf-vision` and `@cf-json`. `@auto` is a per-request decision rather than a
-lane — image part -> `@cf-vision`, tools -> `@cf-coder`, very long -> `@cf-long`,
-6+ messages -> `@cf-coder`, else `@cf-cheap`.
+All NINE aliases the proxy publishes are mirrored here (verified against
+`llm-proxy/src/resolve.mjs` on 2026-09-11). The proxy additionally accepts
+`@auto`, which is deliberately NOT an alias on either side: it is a per-request
+decision rather than a lane — image part -> `@cf-vision`, tools -> `@cf-coder`,
+very long -> `@cf-long`, 6+ messages -> `@cf-coder`, else `@cf-cheap`. Mirroring
+it as a name would imply a fixed chain it does not have.
 
 Two things the proxy will not forgive, both found by probing it:
 
@@ -138,6 +149,37 @@ CF_ALIASES: Final[frozenset[str]] = frozenset(
         CF.VISION,
     }
 )
+
+#: Withdrawn names the proxy still RESOLVES, mapped to what they became.
+#:
+#: Deliberately NOT in :data:`CF_ALIASES`: the proxy accepts them but does not
+#: publish them, and `every alias names a distinct chain` has to keep holding
+#: over the published set — that test is what stops a retune moving one spelling
+#: and not the other, which is why these two were withdrawn on 2026-09-10.
+#:
+#: Read this as "old input still accepted", not as an alias. Mirrors
+#: `RETIRED_ALIASES` in `llm-proxy/src/resolve.mjs`.
+CF_RETIRED_ALIASES: Final[dict[str, str]] = {
+    "@cf-balanced": CF.DEFAULT,
+    "@cf-smart": CF.BEST,
+}
+
+
+def canonical_cf_alias(model: str | None) -> str | None:
+    """The published alias ``model`` names, following a withdrawal, or None.
+
+    ``@cf-smart`` -> ``@cf-best``; a published alias returns itself; a resolved
+    ``cf/...`` id or a non-CF model returns None, because neither is an alias.
+    Use it before validating against :data:`CF_ALIASES` so a caller pinned to a
+    withdrawn spelling is not rejected by a check the proxy itself would pass.
+    """
+    if not model:
+        return None
+    name = "@" + model.lstrip("@")
+    if name in CF_RETIRED_ALIASES:
+        return CF_RETIRED_ALIASES[name]
+    return name if name in CF_ALIASES else None
+
 
 #: The alias structured extraction WOULD use — not wired up today.
 #:
