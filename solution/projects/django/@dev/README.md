@@ -20,7 +20,7 @@ contract in [`CLAUDE.md`](CLAUDE.md) says what belongs in it.
 | Tree | Owns |
 |---|---|
 | **this tree** | The Django half of this project |
-| [`../frontend/@dev`](../frontend/@dev/README.md) | The frontend beside it |
+| [`../frontend/@dev`](../../frontend/@dev/README.md) | The frontend beside it |
 
 A track that spans both lives in whichever it mostly changes, and the other
 tree's README links to it. **Two plans for one piece of work is how they come to
