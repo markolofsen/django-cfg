@@ -6,6 +6,11 @@ from .otp import (
     OTPVerifyResponseSerializer,
     OTPVerifySerializer,
 )
+from .password import (
+    PasswordLoginErrorSerializer,
+    PasswordLoginResponseSerializer,
+    PasswordLoginSerializer,
+)
 from .profile import (
     AccountDeleteResponseSerializer,
     CfgUserUpdateSerializer,
@@ -22,4 +27,7 @@ __all__ = [
     'OTPRequestResponseSerializer',
     'OTPVerifyResponseSerializer',
     'OTPErrorResponseSerializer',
+    'PasswordLoginSerializer',
+    'PasswordLoginResponseSerializer',
+    'PasswordLoginErrorSerializer',
 ]

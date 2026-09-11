@@ -1,10 +1,15 @@
 """
-Brute-force protection service for OTP authentication.
+Brute-force protection for the credential flows.
 
 Handles:
 - Per-email OTP resend cooldown (prevents rapid resend spam)
 - Per-email daily OTP budget (limits total emails per day)
 - Per-IP OTP request budget (prevents IP-level flooding)
+- Per-email failure lockout, namespaced per flow (OTP verify, password login)
+
+Each flow that counts failures gets its OWN cache keys. Sharing them lets a
+failure in one flow deny the other, which turns a lockout meant to stop an
+attacker into a way to lock out the account's owner.
 """
 
 import hashlib
@@ -21,6 +26,8 @@ _PREFIX_HOURLY = "otp:hourly"
 _PREFIX_DAILY = "otp:daily"
 _PREFIX_VERIFY_FAIL = "otp:verify_fail"
 _PREFIX_VERIFY_LOCKOUT = "otp:verify_lockout"
+_PREFIX_PASSWORD_FAIL = "password:login_fail"
+_PREFIX_PASSWORD_LOCKOUT = "password:login_lockout"
 
 
 def _hash_identifier(value: str) -> str:
@@ -143,11 +150,29 @@ class OTPRequestThrottle:
 
 
 class OTPVerifyThrottle:
-    """Tracks failed OTP verification attempts for brute-force detection."""
+    """Tracks failed OTP verification attempts for brute-force detection.
+
+    **Cache keys are namespaced by ``prefix_fail`` / ``prefix_lockout`` so a
+    second credential flow can subclass this without sharing a lockout.**
+    They were module constants until 2026-09-11, when the password grant
+    arrived and reused this class directly: five wrong password guesses then
+    locked the victim out of OTP login too. One account under attack is one
+    account, but the flows are not equally exposed — anyone may attempt a
+    password, while an OTP code only exists after its owner asked for one — so
+    an attacker who cannot guess the password could still deny the legitimate
+    route. Namespacing costs nothing and removes that.
+    """
 
     DEFAULT_MAX_ATTEMPTS = 5            # Failed attempts before lockout
     DEFAULT_LOCKOUT_SECONDS = 900       # 15 minutes lockout
     DEFAULT_WINDOW_SECONDS = 600        # 10-minute window (matches OTP TTL)
+
+    #: Cache key namespaces. A subclass overrides both to get its own lockout.
+    prefix_fail = _PREFIX_VERIFY_FAIL
+    prefix_lockout = _PREFIX_VERIFY_LOCKOUT
+
+    #: Named in log lines so a lockout says which flow triggered it.
+    flow_label = "OTP verify"
 
     @classmethod
     def _get_max_attempts(cls) -> int:
@@ -174,7 +199,7 @@ class OTPVerifyThrottle:
             (locked, retry_after_seconds)
         """
         email_hash = _hash_identifier(email)
-        lockout_key = f"{_PREFIX_VERIFY_LOCKOUT}:{email_hash}"
+        lockout_key = f"{cls.prefix_lockout}:{email_hash}"
 
         if cache.get(lockout_key):
             remaining = OTPRequestThrottle._get_cache_ttl(lockout_key, cls._get_lockout_seconds())
@@ -193,8 +218,8 @@ class OTPVerifyThrottle:
             - attempts_remaining is how many more attempts before lockout
         """
         email_hash = _hash_identifier(email)
-        fail_key = f"{_PREFIX_VERIFY_FAIL}:{email_hash}"
-        lockout_key = f"{_PREFIX_VERIFY_LOCKOUT}:{email_hash}"
+        fail_key = f"{cls.prefix_fail}:{email_hash}"
+        lockout_key = f"{cls.prefix_lockout}:{email_hash}"
 
         window = cls.DEFAULT_WINDOW_SECONDS
         max_attempts = cls._get_max_attempts()
@@ -214,8 +239,8 @@ class OTPVerifyThrottle:
             cache.set(lockout_key, 1, lockout_secs)
             cache.delete(fail_key)  # Reset counter after lockout
             logger.warning(
-                f"OTP brute-force lockout triggered for email hash {email_hash}, "
-                f"locked for {lockout_secs}s"
+                f"{cls.flow_label} brute-force lockout triggered for email hash "
+                f"{email_hash}, locked for {lockout_secs}s"
             )
             return True, 0
 
@@ -225,9 +250,27 @@ class OTPVerifyThrottle:
     def record_success(cls, email: str) -> None:
         """Clear failure counters on successful verification."""
         email_hash = _hash_identifier(email)
-        cache.delete(f"{_PREFIX_VERIFY_FAIL}:{email_hash}")
-        cache.delete(f"{_PREFIX_VERIFY_LOCKOUT}:{email_hash}")
-        logger.debug(f"OTP verify counters reset on success for email hash {email_hash}")
+        cache.delete(f"{cls.prefix_fail}:{email_hash}")
+        cache.delete(f"{cls.prefix_lockout}:{email_hash}")
+        logger.debug(
+            f"{cls.flow_label} counters reset on success for email hash {email_hash}"
+        )
 
 
-__all__ = ["OTPRequestThrottle", "OTPVerifyThrottle"]
+class PasswordLoginThrottle(OTPVerifyThrottle):
+    """Failed password attempts, counted separately from OTP verification.
+
+    Same thresholds, its own cache keys. Sharing them would let a password
+    guesser lock the account owner out of OTP login — a denial of the one
+    route still available to them.
+
+    A shared per-IP limit still applies on top of this; that one is deliberate,
+    since it counts an attacker rather than a victim.
+    """
+
+    prefix_fail = _PREFIX_PASSWORD_FAIL
+    prefix_lockout = _PREFIX_PASSWORD_LOCKOUT
+    flow_label = "Password login"
+
+
+__all__ = ["OTPRequestThrottle", "OTPVerifyThrottle", "PasswordLoginThrottle"]

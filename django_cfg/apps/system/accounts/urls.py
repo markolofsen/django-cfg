@@ -3,7 +3,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView, TokenBlacklistView
 
-from .views import OTPViewSet
+from .views import OTPViewSet, PasswordLoginView
 from .views.oauth import (
     GitHubAuthorizeView,
     GitHubCallbackView,
@@ -97,6 +97,9 @@ class CustomTokenBlacklistView(TokenBlacklistView):
 
 
 token_patterns = [
+    # Password grant. Mints through the same helper as OTP/OAuth/TOTP, so the
+    # pair carries the same DPoP `cnf` binding and remembered-session deadline.
+    path('', PasswordLoginView.as_view(), name='token_obtain_pair'),
     path('refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('blacklist/', CustomTokenBlacklistView.as_view(), name='token_blacklist'),
 ]
