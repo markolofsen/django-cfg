@@ -203,14 +203,32 @@ def canonical_cf_alias(model: str | None) -> str | None:
 #: structured work at the fast lane was seating it on latency rather than on
 #: whether the schema survives.
 #:
-#: **Still not referenced by `_RECOMMENDED[EXTRACTION]`, and the reason is
-#: LATENCY, not correctness.** Correctness is settled: the proxy rewrites
-#: `response_format` into the native Workers AI shape and it measures 5/5. But
-#: five distinct listings took 17.6-78.4s against gpt-4o-mini's 1.0-1.3s, and
-#: ingestion runs thousands. Re-measure the JSON chain before wiring it up —
-#: `granite-4.0-h-micro` at 0.14 neurons is a different model from the one that
-#: produced those timings, so the figure that blocks this may no longer hold.
-#: See `django_llm/CLAUDE.md`.
+#: **Carries CLASSIFICATION and EXTRACTION both**, since 2026-09-11. Latency is
+#: not the blocker: the figures that once blocked this were `@cf`/glm-4.7-flash,
+#: and this chain runs P50 1.54s / P90 2.77s on a classification schema.
+#:
+#: A note claiming SCHEMA SIZE was the blocker stood here for a few hours and
+#: was WRONG. It read a run of 502s on a 35-property / 12.8 KB extraction schema
+#: as Workers AI shedding load, and sent extraction to OpenAI for it. The 502s
+#: were the PROXY's own per-attempt deadline — 12s, sized for chat traffic —
+#: cutting each model off mid-answer; two cut-offs in a row surfaced as one 502
+#: at 24.7s, twice the deadline. Raising the deadline to 60s let the identical
+#: call through: 6/8 real listings answered, P50 30.5s.
+#:
+#: Two facts that should have prevented the wrong reading, both worth carrying:
+#:
+#:   - 12.8 KB is ~3.2k tokens of a 131k context window. 2.4%. Nothing was
+#:     near a size limit.
+#:   - Stripping the field descriptions let the SAME 34-property schema through.
+#:     A size limit does not care what the strings say; a time limit does.
+#:
+#: The general rule: an error arriving at a consistent multiple of a configured
+#: timeout is a timeout, not a capacity limit. Check the deadline before
+#: concluding anything about an upstream.
+#:
+#: A caller still wants a non-CF fallback behind this alias — at 6/8 the
+#: Cloudflare lane does not stand alone — but it belongs in the caller's chain,
+#: not here: a `@cf*` alias may only name Workers AI models.
 CF_STRUCTURED_OUTPUT: Final = CF.JSON
 
 
