@@ -16,7 +16,7 @@ Django-CFG automatically configures security based on environment mode (`IS_PROD
 
 **Development Mode (`IS_DEV=true`):**
 - CORS: Whitelist mode with common dev ports
-- CSRF: Wide port range for local development (3000-10000)
+- CSRF: common local dev ports; CORS allows any localhost port via regex
 - SSL: Disabled (local development)
 - Credentials: Allowed for frontend testing
 - DEBUG: Can be enabled for detailed error pages
@@ -144,7 +144,7 @@ fetch('https://api.example.com/user/', {
 })
 ```
 
-> **Note:** `CORS_ALLOW_ALL_ORIGINS = True` doesn't support credentials. Django-CFG uses whitelist for maximum flexibility.
+> **Note:** `CORS_ALLOW_ALL_ORIGINS = True` doesn't support credentials, so Django-CFG never sets it. Production uses a whitelist; development adds regexes covering any `localhost` port.
 
 ### Custom CORS Headers
 

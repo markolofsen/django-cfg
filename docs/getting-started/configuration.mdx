@@ -148,7 +148,6 @@ class ApplicationConfig(BaseSettings):
     """Application configuration."""
 
     name: str = Field(default="My Project")
-    logo_url: str = Field(default="")
     domain: str = Field(default="localhost")
     api_url: str = Field(default="http://localhost:8000")
     site_url: str = Field(default="http://localhost:3000")
@@ -453,7 +452,6 @@ class MyProjectConfig(DjangoConfig):
 
     # Project info
     project_name: str = env.app.name
-    project_logo: str = env.app.logo_url
 
     # URLs from ENV
     site_url: str = env.app.site_url

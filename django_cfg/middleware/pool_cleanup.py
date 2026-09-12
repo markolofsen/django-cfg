@@ -72,7 +72,7 @@ class ConnectionPoolCleanupMiddleware(MiddlewareMixin):
             # Cleanup happens in finally block to ensure it runs
             self._cleanup_connections(request, rollback_on_error=False)
 
-            if self._enable_logging and start_time:
+            if self._enable_logging and start_time is not None:
                 duration_ms = (time.time() - start_time) * 1000
                 logger.debug(f"Pool cleanup overhead: {duration_ms:.2f}ms")
 
@@ -224,7 +224,7 @@ class AsyncConnectionPoolCleanupMiddleware:
             # Always cleanup connections
             self._cleanup_connections(request, rollback_on_error=False)
 
-            if self._enable_logging and start_time:
+            if self._enable_logging and start_time is not None:
                 duration_ms = (time.time() - start_time) * 1000
                 logger.debug(f"Async pool cleanup overhead: {duration_ms:.2f}ms")
 

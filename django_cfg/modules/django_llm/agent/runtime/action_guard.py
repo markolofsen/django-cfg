@@ -47,7 +47,7 @@ def tool_return_succeeded(content: object) -> bool:
     produces a spurious warning, while a mis-read failure lets a fabricated "sent"
     through — the exact thing the guard exists to stop.
     """
-    from modules.django_llm.agent.tools.core._base_tool import strip_raw
+    from django_cfg.modules.django_llm.agent.tools.core._base_tool import strip_raw
 
     payload: dict = {}
     if isinstance(content, str):

@@ -1,15 +1,14 @@
-{{ site_name }} - Your Login Code
+{{ site_name }} — Your login code
 
-Hello {{ user.get_full_name|default:user.username }},
+Hi {{ user.get_full_name|default:user.username }},
 
-You requested a login code for your account. Use the code below to sign in:
+Use this code to sign in:
 
-LOGIN CODE: {{ otp_code }}
+    {{ otp_code }}
 
-⚠️ Important: This code will expire in {{ expires_minutes }} minutes.
-If you didn't request this code, please ignore this email.
+It expires in {{ expires_minutes }} minutes.
 
-If you're having trouble, you can request a new code or contact our support team.
+If you didn't try to sign in, you can safely ignore this email.
 
 ---
 This is an automated message from {{ site_name }}.

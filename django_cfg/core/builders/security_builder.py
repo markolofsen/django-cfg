@@ -107,28 +107,33 @@ class SecurityBuilder:
         all_domains = self._get_all_security_domains()
         normalized = self._normalize_domains(all_domains)
 
-        # Get all dev CORS origins (popular ports + security_domains)
-        dev_cors_origins = self._get_dev_csrf_origins() + normalized['cors_origins']
+        # CSRF is the only setting that still needs an explicit port list:
+        # Django matches CSRF_TRUSTED_ORIGINS literally and accepts no regex.
+        dev_csrf_origins = self._get_dev_csrf_origins() + normalized['csrf_origins']
 
         return {
-            # === CORS: Whitelist mode with credentials support ===
-            # Use whitelist instead of wildcard to support credentials: 'include'
+            # === CORS: localhost on any port, via regex ===
+            # A wildcard is not an option: browsers reject "*" when the request
+            # carries credentials. Regexes give back a concrete origin, so
+            # cookies work, and one pattern replaces a port-by-port list.
             'CORS_ALLOW_ALL_ORIGINS': False,
             'CORS_ALLOW_CREDENTIALS': True,
-            'CORS_ALLOWED_ORIGINS': dev_cors_origins,
+            'CORS_ALLOWED_ORIGINS': normalized['cors_origins'],
             # Desktop apps use custom URL schemes (wails://, app://, tauri://)
             # that http-only whitelists reject. Regex list covers them.
-            'CORS_ALLOWED_ORIGIN_REGEXES': self._get_desktop_app_cors_regexes(),
+            'CORS_ALLOWED_ORIGIN_REGEXES': (
+                self._get_desktop_app_cors_regexes()
+                + self._get_localhost_cors_regexes()
+            ),
             'CORS_ALLOW_HEADERS': self.config.cors_allow_headers,
 
             # === ALLOWED_HOSTS: Accept everything ===
             # Docker health checks, internal IPs, localhost, all!
             'ALLOWED_HOSTS': ['*'],
 
-            # === CSRF: Popular origins + security_domains ===
-            # CSRF only checks browser requests
-            # Docker-to-Docker requests don't have Referer
-            'CSRF_TRUSTED_ORIGINS': dev_cors_origins,
+            # === CSRF: dev ports + security_domains ===
+            # Browser requests only — Docker-to-Docker carries no Referer.
+            'CSRF_TRUSTED_ORIGINS': dev_csrf_origins,
 
             # === Security: All disabled ===
             'SECURE_SSL_REDIRECT': False,
@@ -537,21 +542,28 @@ class SecurityBuilder:
         return False
 
     def _get_dev_csrf_origins(self) -> List[str]:
+        """Dev CSRF origins for localhost and 127.0.0.1.
+
+        CSRF is the one setting that cannot take a regex — Django compares
+        CSRF_TRUSTED_ORIGINS literally — so the ports dev servers actually use
+        are listed. Enumerating a whole range instead put ~14k strings into
+        settings, and every one is compared on each unsafe request.
+
+        Docker IPs are absent on purpose: CSRF checks a browser's Referer, and
+        service-to-service calls do not send one.
         """
-        Smart list of dev CSRF origins.
-
-        Covers:
-        - All dev ports from 3000 to 10000 (covers all common dev servers)
-        - localhost and 127.0.0.1
-
-        Docker IPs NOT needed - CSRF checks Referer from browser!
-
-        Returns:
-            List of dev CSRF origins
-        """
-        # Wide port range for development (3000-10000)
-        # Covers: Next.js, React, Vite, Angular, Vue, Django, Flask, etc.
-        dev_ports = range(3000, 10001)
+        dev_ports = [
+            3000, 3001, 3002, 3003,   # Next.js, React, Docusaurus
+            4000, 4200,               # Phoenix, Angular
+            5000, 5001,               # Flask, .NET
+            5173, 5174,               # Vite
+            6006, 6017,               # Storybook
+            7000, 7301,
+            8000, 8001, 8080, 8081,   # Django, generic HTTP
+            8501,                     # Streamlit
+            8888,                     # Jupyter
+            9000,                     # generic
+        ]
 
         origins = []
         for port in dev_ports:
@@ -579,8 +591,11 @@ class SecurityBuilder:
             List of regex patterns for CORS_ALLOWED_ORIGIN_REGEXES
         """
         return [
-            r'^http://localhost:\d+$',      # localhost with any port
-            r'^http://127\.0\.0\.1:\d+$',   # 127.0.0.1 with any port
+            # https too: a dev server fronted by mkcert/Caddy serves the same
+            # host over TLS, and an http-only pattern silently rejects it.
+            r'^https?://localhost(:\d+)?$',
+            r'^https?://127\.0\.0\.1(:\d+)?$',
+            r'^https?://\[::1\](:\d+)?$',
         ]
 
     def _get_desktop_app_cors_regexes(self) -> List[str]:

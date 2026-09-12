@@ -55,7 +55,7 @@ from ..core.errors import LLMTruncationError, LLMValidationError
 from ..catalog import ModelRole, check, provider_for, recommend
 from ..structured import parse_into_schema
 
-logger = logging.getLogger("modules.django_llm.routing.router")
+logger = logging.getLogger("django_cfg.modules.django_llm.routing.router")
 
 T = TypeVar("T", bound=BaseModel)
 R = TypeVar("R")

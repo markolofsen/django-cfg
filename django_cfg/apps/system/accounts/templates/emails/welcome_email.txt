@@ -1,27 +1,21 @@
-Welcome to {{ project_name }}!
+Welcome to {{ project_name }}
 
-Hello {{ user.get_full_name|default:user.username }},
+Hi {{ user.get_full_name|default:user.username }},
 
-Welcome to {{ project_name }}! We're excited to have you on board. 
-Your account ({{ user.email }}) has been created and you're ready to get started.
+Your account ({{ user.email }}) is ready to use.
 
-What you can expect:
+Passwordless login
+    Sign in with a one-time code — no password needed.
 
-🔐 Secure Login
-   Use OTP codes for secure, passwordless authentication
+Instant access
+    Codes arrive in your inbox within seconds.
 
-⚡ Fast Access  
-   Quick login with email verification codes
+Nothing to remember
+    No passwords to reset, reuse, or compromise.
 
-🛡️ Enhanced Security
-   No passwords to remember or compromise
+Request a login code whenever you want to sign in.
 
-To get started, simply request a login code whenever you want to sign in. 
-We'll send you a secure code via email that you can use to access your account.
-
-Thanks for joining {{ project_name }}!
-
-If you have any questions, feel free to contact our support team.
+Questions? We're happy to help.
 
 ---
-{{ project_name }} Team
+The {{ project_name }} Team

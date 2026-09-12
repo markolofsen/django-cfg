@@ -111,11 +111,6 @@ class DjangoConfig(BaseModel):
         max_length=500,
     )
 
-    project_logo: str = Field(
-        default="",
-        description="Project logo URL",
-    )
-
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                         ENVIRONMENT & DEBUG                               ║
     # ╚══════════════════════════════════════════════════════════════════════════╝

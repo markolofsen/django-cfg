@@ -1,4 +1,10 @@
-"""No-key client for the CMDOP-owned cdn.sdkrouter.com gateway."""
+"""No-key client for the CMDOP-owned upload.sdkrouter.com file-handoff gateway.
+
+Its job is one exchange: hand bytes we hold locally to a third party that
+fetches over the public internet, and forget them. The window is capped at 24
+hours by the gateway, so nothing here is storage — the durable copy stays
+wherever it already lives.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -26,11 +32,21 @@ from ..errors import (
 )
 from ..models import PublishedMedia
 
-DEFAULT_BASE_URL = "https://cdn.sdkrouter.com"
+#: `upload.`, not `cdn.`: the CDN host serves a read-only customer-storage
+#: edge, and `media.` public marketing media. This is a third plane, with its
+#: own bucket and its own lifecycle.
+DEFAULT_BASE_URL = "https://upload.sdkrouter.com"
 SDKROUTER_MAX_BYTES = 8 * 1024 * 1024
-ALLOWED_CONTENT_TYPES = frozenset(
-    {"image/png", "image/jpeg", "image/webp", "image/gif", "image/avif", "video/mp4", "video/webm"}
-)
+#: What the gateway will accept. It sniffs the bytes itself and refuses a body
+#: whose real format disagrees with the declared type, so this list exists to
+#: fail early and locally rather than after an upload — it must stay in step
+#: with `detectMedia` in the Worker.
+ALLOWED_CONTENT_TYPES = frozenset({
+    "image/png", "image/jpeg", "image/webp", "image/gif", "image/avif",
+    "video/mp4", "video/webm",
+    "application/pdf", "application/zip",
+    "audio/wav", "audio/mpeg", "audio/ogg",
+})
 
 
 class _UploadResponse(BaseModel):

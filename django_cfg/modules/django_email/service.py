@@ -53,8 +53,8 @@ def html_to_text(html: str) -> str:
 
         I&#x27;d genuinely like to know what you make of it
 
-    Reported from a real welcome letter on 2026-08-14. ``subject_from_html``
-    already unescapes for the same reason; this is the body's half of it.
+    ``subject_from_html`` already unescapes for the same reason; this is the
+    body's half of it.
     """
     return unescape(strip_tags(html))
 
@@ -715,9 +715,8 @@ class DjangoEmailService(BaseCfgModule):
             # unescape: Django autoescapes in EVERY template, including .txt,
             # so an apostrophe in the copy renders as &#x27; — invisible in a
             # browser but shown raw in a text/plain part, which is the only
-            # part a text_only letter has. Reported from a real welcome letter
-            # on 2026-08-14, where the HTML fallback below was already correct
-            # and only this branch was not.
+            # part a text_only letter has; the HTML fallback below already
+            # unescapes, so only this branch was wrong.
             text_message = unescape(
                 render_to_string(
                     self._template_candidates(template_name, "txt", locale), context
@@ -934,19 +933,11 @@ class DjangoEmailService(BaseCfgModule):
         if 'project_name' not in updated_context:
             updated_context['project_name'] = self.config.project_name
 
-        # `site_name` is the same fact under the name the TEMPLATES ask for.
-        #
-        # The context supplied `project_name` while every letter reads
-        # `{{ site_name }}`, so the header and signature rendered the literal
-        # default — "App" — in production mail. Two names for one value is the
-        # bug; this makes the second name resolve rather than adding a second
-        # source, and a caller passing its own still wins.
+        # `site_name` is the same fact under the name the templates ask for;
+        # without it every letter falls back to its literal default. One
+        # source, two names — a caller passing its own still wins.
         if 'site_name' not in updated_context:
             updated_context['site_name'] = updated_context['project_name']
-
-        # Auto-add logo_url from config if not provided
-        if 'logo_url' not in updated_context and self.config.project_logo:
-            updated_context['logo_url'] = self.config.project_logo
 
         # Auto-add site_url from config if not provided
         if 'site_url' not in updated_context:

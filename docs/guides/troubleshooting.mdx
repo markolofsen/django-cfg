@@ -389,13 +389,14 @@ security_domains = [
 **Environment-Aware CORS Configuration**
 Django-CFG automatically configures CORS based on environment:
 
-**Development Mode** (`debug=True` or no `security_domains`):
-- ✅ `CORS_ALLOW_ALL_ORIGINS = True` - Fully open
+**Development Mode** (`env_mode="development"`):
+- ✅ `localhost`, `127.0.0.1`, `[::1]` on **any port**, http or https, via `CORS_ALLOWED_ORIGIN_REGEXES`
+- ✅ `CORS_ALLOW_CREDENTIALS = True` - cookie auth works (a `*` wildcard would break it)
 - ✅ `ALLOWED_HOSTS = ['*']` - All hosts accepted
-- ✅ Docker IPs work automatically
+- ✅ Docker IPs work automatically — CORS does not apply to server-to-server calls
 - ✅ No configuration needed!
 
-**Production Mode** (when `security_domains` set):
+**Production Mode** (`env_mode="production"`):
 - ✅ `CORS_ALLOWED_ORIGINS` - Generated from security_domains
 - ✅ `CORS_ALLOW_CREDENTIALS = True` - Credentials enabled
 - ✅ `ALLOWED_HOSTS` - Strict whitelist
@@ -406,13 +407,13 @@ Django-CFG automatically configures CORS based on environment:
 </details>
 
 <details>
-<summary>**CORS allows all origins in production**</summary>
+<summary>**A browser request is blocked by CORS in production**</summary>
 
 **Problem:**
-`CORS_ALLOW_ALL_ORIGINS = True` in production.
+The calling origin is not in `CORS_ALLOWED_ORIGINS`.
 
 **Cause:**
-Not setting `security_domains` in production configuration.
+Production builds the whitelist from `security_domains`, and the origin is missing.
 
 **Solution:**
 ```python
@@ -429,8 +430,8 @@ security_domains = [
 <Callout type="error">
 **Security Critical: CORS Misconfiguration**
 **Django-CFG behavior:**
-- ✅ **Development** (`debug=True` or no `security_domains`) → CORS fully open
-- 🔒 **Production** (when `security_domains` set) → Strict whitelist only
+- ✅ **Development** (`env_mode="development"`) → localhost on any port, via regex
+- 🔒 **Production** (`env_mode="production"`) → Strict whitelist only
 
 **Allowing all origins in production is a critical security vulnerability:**
 - 🔒 **CSRF attacks** - Any site can make requests to your API

@@ -6,7 +6,7 @@ image. The preferred dedicated OpenRouter Image API accepts ordered
 ``input_references`` and returns ``data[].b64_json``; the legacy multimodal chat
 contract remains available through an explicit transport mode.
 
-Cost is calculated through the same registry every other modules.django_llm
+Cost is calculated through the same registry every other django_cfg.modules.django_llm
 client uses, so AIPhoto / future apps don't need their own pricing
 math.
 

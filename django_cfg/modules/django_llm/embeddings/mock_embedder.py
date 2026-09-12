@@ -15,7 +15,7 @@ looks valid is far more dangerous than one that is obviously missing:
    still be served after the key was restored).
 
 Callers that PERSIST a vector (a pgvector column) must refuse a mock rather than
-store it. `modules/modules.django_llm/features/embeddings.py` enforces this at the public
+store it. `modules/django_cfg.modules.django_llm/features/embeddings.py` enforces this at the public
 seam, so no app has to remember to.
 """
 

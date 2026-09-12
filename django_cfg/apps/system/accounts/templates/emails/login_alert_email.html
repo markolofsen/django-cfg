@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    {% comment %}
+      This title becomes the Subject: header — send_template overrides the
+      caller's subject with it, so a localized letter states its own here.
+    {% endcomment %}
     <title>New sign-in detected — {{ project_name }}</title>
     <style type="text/css">
       * { box-sizing: border-box; }
@@ -13,266 +17,136 @@
       body {
         margin: 0 !important;
         padding: 0 !important;
-        background-color: #f0f2f5;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      }
-
-      .email-bg { background-color: #f0f2f5; padding: 48px 16px; }
-
-      .email-card {
-        max-width: 520px;
-        margin: 0 auto;
         background-color: #ffffff;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #424245;
       }
 
-      /* Header */
-      .email-header {
-        background-color: #0f0f1a;
-        padding: 26px 36px;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
+      .email-card { max-width: 640px; margin: 0 auto; background-color: #ffffff; }
+
+      .email-header { padding: 40px 40px 0; }
 
       .brand-name {
-        font-size: 17px;
-        font-weight: 700;
-        color: #ffffff;
-        letter-spacing: -0.2px;
-      }
-
-      /* Alert strip */
-      .alert-strip {
-        background-color: #fef3c7;
-        border-bottom: 1px solid #fde68a;
-        padding: 10px 36px;
-        font-size: 13px;
-        color: #92400e;
-        font-weight: 500;
-      }
-
-      /* Body */
-      .email-body { padding: 32px 36px 28px; }
-
-      .email-eyebrow {
-        font-size: 11px;
+        font-size: 15px;
         font-weight: 600;
-        color: #9ca3af;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-        margin: 0 0 8px;
+        color: #1d1d1f;
+        letter-spacing: -0.01em;
+        text-decoration: none;
       }
+
+      .email-body { padding: 32px 40px 40px; }
 
       .email-title {
-        font-size: 22px;
-        font-weight: 700;
-        color: #0f0f1a;
-        margin: 0 0 6px;
-        letter-spacing: -0.4px;
-        line-height: 1.3;
+        font-size: 28px;
+        font-weight: 600;
+        color: #1d1d1f;
+        margin: 0 0 12px;
+        letter-spacing: -0.022em;
+        line-height: 1.2;
       }
 
-      .email-subtitle {
-        font-size: 14px;
-        color: #6b7280;
-        margin: 0 0 24px;
-        line-height: 1.5;
-      }
-
-      /* Details table */
-      .details-card {
-        background-color: #f9fafb;
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
-        overflow: hidden;
-        margin: 0 0 24px;
-      }
-
-      .details-row {
-        display: flex;
-        padding: 12px 16px;
-        border-bottom: 1px solid #f3f4f6;
-      }
-
-      .details-row:last-child { border-bottom: none; }
-
-      .details-label {
-        font-size: 13px;
-        color: #9ca3af;
-        font-weight: 500;
-        width: 90px;
-        flex-shrink: 0;
-      }
-
-      .details-value {
-        font-size: 13px;
-        color: #111827;
-        font-weight: 500;
-      }
-
-      /* Warning */
-      .warning-box {
-        background-color: #fff7ed;
-        border: 1px solid #fed7aa;
-        border-radius: 10px;
-        padding: 14px 18px;
-        margin: 0 0 24px;
-        font-size: 14px;
-        color: #78350f;
+      .email-text {
+        font-size: 16px;
+        color: #424245;
         line-height: 1.6;
+        margin: 0 0 32px;
       }
 
-      .warning-box strong { font-weight: 600; }
+      .detail-label { font-size: 14px; color: #6e6e73; }
+      .detail-value { font-size: 14px; color: #1d1d1f; font-weight: 500; }
 
-      /* Button */
-      .btn-wrapper { margin: 4px 0 24px; }
-
-      .divider { border: none; border-top: 1px solid #f3f4f6; margin: 24px 0; }
-
-      .email-signature {
+      .note {
         font-size: 14px;
-        color: #6b7280;
-        margin: 0;
+        color: #6e6e73;
         line-height: 1.6;
+        margin: 24px 0 0;
       }
 
-      .email-signature strong { color: #374151; font-weight: 600; }
+      .btn-wrapper { margin: 32px 0 0; }
 
-      .email-footer {
-        background-color: #f9fafb;
-        border-top: 1px solid #f3f4f6;
-        padding: 22px 36px;
-        text-align: center;
-      }
+      .divider { border: none; border-top: 1px solid #d2d2d7; margin: 40px 0 24px; }
 
-      .email-footer p {
-        font-size: 12px;
-        color: #9ca3af;
-        margin: 0 0 3px;
-        line-height: 1.6;
-      }
+      .email-signature { font-size: 14px; color: #6e6e73; margin: 0; line-height: 1.6; }
+      .email-signature strong { color: #1d1d1f; font-weight: 600; }
+
+      .email-footer { border-top: 1px solid #d2d2d7; padding: 24px 40px 40px; }
+      .email-footer p { font-size: 12px; color: #86868b; margin: 0 0 6px; line-height: 1.5; }
+      .email-footer a { color: #86868b; text-decoration: underline; }
 
       @media only screen and (max-width: 600px) {
-        .email-bg { padding: 20px 12px; }
-        .email-header { padding: 20px 24px; }
-        .alert-strip { padding: 10px 24px; }
-        .email-body { padding: 28px 24px 22px; }
-        .email-footer { padding: 18px 24px; }
+        .email-header { padding: 28px 22px 0; }
+        .email-body { padding: 24px 22px 32px; }
+        .email-footer { padding: 20px 22px 32px; }
+        .email-title { font-size: 24px; }
       }
     </style>
   </head>
 
   <body>
-    <div class="email-bg">
-      <div class="email-card">
+    <div class="email-card">
 
-        <!-- Header -->
-        <div class="email-header">
-          <a href="{{ site_url|default:'#' }}" style="text-decoration: none; display: inline-block;">
-            <table border="0" cellspacing="0" cellpadding="0">
-              <tr>
-                {% if logo_url %}
-                <td valign="middle" style="padding-right: 10px;">
-                  <img src="{{ logo_url }}" alt="{{ project_name }}" width="36" height="36" style="display: block; border-radius: 8px; object-fit: cover;" />
-                </td>
-                {% endif %}
-                <td valign="middle">
-                  <span style="font-size: 17px; font-weight: 700; color: #ffffff; letter-spacing: -0.2px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">{{ project_name }}</span>
-                </td>
-              </tr>
-            </table>
-          </a>
-        </div>
+      <div class="email-header">
+        <a href="{{ site_url|default:'#' }}" class="brand-name">{{ project_name }}</a>
+      </div>
 
-        <!-- Alert strip -->
-        <div class="alert-strip">
-          &#9888;&#65039;&nbsp; Security notification for your account
-        </div>
+      <div class="email-body">
 
-        <!-- Body -->
-        <div class="email-body">
+        <h1 class="email-title">New sign-in detected</h1>
+        <p class="email-text">
+          Hi {{ user.get_full_name|default:user.username }}, we noticed a new sign-in
+          to your {{ project_name }} account.
+        </p>
 
-          <p class="email-eyebrow">Security alert</p>
-          <h1 class="email-title">New sign-in detected</h1>
-          <p class="email-subtitle">
-            Hi {{ user.get_full_name|default:user.username }} — we noticed a new sign-in to your {{ project_name }} account.
-          </p>
+        <table border="0" cellspacing="0" cellpadding="0" width="100%"
+               style="border-top: 1px solid #d2d2d7;">
+          <tr>
+            <td class="detail-label" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;" width="120">Device</td>
+            <td class="detail-value" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;">{{ device }}</td>
+          </tr>
+          <tr>
+            <td class="detail-label" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;">IP address</td>
+            <td class="detail-value" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;">{{ ip_address }}</td>
+          </tr>
+          <tr>
+            <td class="detail-label" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;">Time</td>
+            <td class="detail-value" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;">{{ login_time }}</td>
+          </tr>
+        </table>
 
-          <!-- Details card using table for email clients -->
-          <table border="0" cellspacing="0" cellpadding="0" width="100%"
-                 style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 20px;">
+        <p class="note">
+          If you recognise this sign-in, no action is required. If you didn't sign in,
+          secure your account now.
+        </p>
+
+        {% if button_url %}
+        <div class="btn-wrapper">
+          <table border="0" cellspacing="0" cellpadding="0">
             <tr>
-              <td style="padding: 12px 16px; border-bottom: 1px solid #f3f4f6;">
-                <table border="0" cellspacing="0" cellpadding="0" width="100%">
-                  <tr>
-                    <td width="90" style="font-size: 13px; color: #9ca3af; font-weight: 500;">Device</td>
-                    <td style="font-size: 13px; color: #111827; font-weight: 500;">{{ device }}</td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 12px 16px; border-bottom: 1px solid #f3f4f6;">
-                <table border="0" cellspacing="0" cellpadding="0" width="100%">
-                  <tr>
-                    <td width="90" style="font-size: 13px; color: #9ca3af; font-weight: 500;">IP Address</td>
-                    <td style="font-size: 13px; color: #111827; font-weight: 500;">{{ ip_address }}</td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 12px 16px;">
-                <table border="0" cellspacing="0" cellpadding="0" width="100%">
-                  <tr>
-                    <td width="90" style="font-size: 13px; color: #9ca3af; font-weight: 500;">Time</td>
-                    <td style="font-size: 13px; color: #111827; font-weight: 500;">{{ login_time }}</td>
-                  </tr>
-                </table>
+              <td style="border-radius: 980px; background-color: #0071e3;">
+                <a href="{{ button_url }}"
+                   style="display: inline-block; padding: 13px 28px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 500; color: #ffffff !important; text-decoration: none !important; border-radius: 980px; letter-spacing: -0.01em;">
+                  Review account activity
+                </a>
               </td>
             </tr>
           </table>
-
-          <!-- Warning -->
-          <div class="warning-box">
-            <strong>Was this you?</strong> If you recognise this sign-in, no action is required. If you didn't sign in, please secure your account immediately.
-          </div>
-
-          {% if button_url %}
-          <div class="btn-wrapper">
-            <table border="0" cellspacing="0" cellpadding="0">
-              <tr>
-                <td style="border-radius: 10px; background-color: #111827;">
-                  <a href="{{ button_url }}"
-                     style="display: inline-block; padding: 13px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff !important; text-decoration: none !important; border-radius: 10px; letter-spacing: -0.1px;">
-                    Review account activity
-                  </a>
-                </td>
-              </tr>
-            </table>
-          </div>
-          {% endif %}
-
-          <hr class="divider" />
-
-          <p class="email-signature">
-            Stay safe out there.<br />
-            <strong>The {{ project_name }} Security Team</strong>
-          </p>
-
         </div>
+        {% endif %}
 
-        <!-- Footer -->
-        <div class="email-footer">
-          <p>This is an automated security notification from {{ project_name }}.</p>
-          <p>You received this because a sign-in occurred on your account.</p>
-          {% if site_url %}<p><a href="{{ site_url }}" style="color: #9ca3af; text-decoration: none;">{{ site_url }}</a></p>{% endif %}
-        </div>
+        <hr class="divider" />
+
+        <p class="email-signature">
+          <strong>The {{ project_name }} Security Team</strong>
+        </p>
 
       </div>
+
+      <div class="email-footer">
+        <p>This is an automated security notification from {{ project_name }}.</p>
+        <p>You received this because a sign-in occurred on your account.</p>
+        {% if site_url %}<p><a href="{{ site_url }}">{{ site_url }}</a></p>{% endif %}
+      </div>
+
     </div>
   </body>
 </html>

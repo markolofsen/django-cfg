@@ -169,7 +169,6 @@ class DjangoConfigSerializer(serializers.Serializer):
     # Project info
     env_mode = serializers.CharField(required=False, allow_null=True)
     project_name = serializers.CharField(required=False, allow_null=True)
-    project_logo = serializers.CharField(required=False, allow_null=True)
     project_version = serializers.CharField(required=False, allow_null=True)
     project_description = serializers.CharField(required=False, allow_null=True)
     startup_info_mode = serializers.CharField(required=False, allow_null=True)

@@ -40,7 +40,7 @@ async def example_llm_usage():
     print("=" * 50)
 
     # Import after config is set
-    from modules.django_llm import DjangoLLM, chat_completion
+    from django_cfg.modules.django_llm import DjangoLLM, chat_completion
 
     # Initialize LLM service
     llm = DjangoLLM()
@@ -202,7 +202,7 @@ async def example_cache_management():
     print("\n💾 Testing Cache Management...")
     print("=" * 50)
 
-    from modules.django_llm import DjangoLLM
+    from django_cfg.modules.django_llm import DjangoLLM
 
     llm = DjangoLLM()
 

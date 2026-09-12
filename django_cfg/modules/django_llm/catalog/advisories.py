@@ -35,7 +35,7 @@ def _emit(model: str, rule: str, message: str) -> None:
     if (model, rule) in _seen:
         return
     _seen.add((model, rule))
-    warnings.warn(f"[modules.django_llm] {model}: {message}", LLMAdvisory, stacklevel=3)
+    warnings.warn(f"[django_cfg.modules.django_llm] {model}: {message}", LLMAdvisory, stacklevel=3)
     logger.warning("llm advisory [%s] %s — %s", rule, model, message)
 
 

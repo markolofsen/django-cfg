@@ -13,7 +13,7 @@ description: Security, CORS, and SSL configuration in Django-CFG
 
 | Setting | Development | Production |
 |---------|-------------|------------|
-| `CORS` | All origins allowed | Strict whitelist from `security_domains` |
+| `CORS` | Any `localhost` port, via regex | Strict whitelist from `security_domains` |
 | `ALLOWED_HOSTS` | `['*']` | Generated from `security_domains` |
 | `CSRF` | Dev ports (3000, 5173, 8080, etc.) | Trusted origins from domains |
 | `DEBUG` | Enabled | **Forced disabled** |
@@ -37,7 +37,7 @@ class MyConfig(DjangoConfig):
         "admin.myapp.com:8443",   # ✅ With port
     ]
 
-# Development: security_domains optional (CORS fully open by default)
+# Development: security_domains optional (localhost allowed on any port)
 class DevConfig(DjangoConfig):
     debug: bool = True
     # security_domains not needed - auto-configured for development
@@ -69,13 +69,44 @@ Set `ssl_redirect: bool = True` only for bare metal Django without reverse proxy
 
 ## CORS Configuration
 
-CORS origins are auto-generated from `security_domains`. Add custom headers:
+In production, CORS origins are auto-generated from `security_domains`. Add custom headers:
 
 ```python
 class MyConfig(DjangoConfig):
     security_domains: list = ["myapp.com", "api.myapp.com"]
     cors_allow_headers: list = ['x-api-key', 'x-custom-header']  # Merged with defaults
 ```
+
+### localhost in development
+
+Development allows `localhost`, `127.0.0.1` and `[::1]` on **any port**, over
+http or https, through `CORS_ALLOWED_ORIGIN_REGEXES`:
+
+```python
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https?://localhost(:\d+)?$',
+    r'^https?://127\.0\.0\.1(:\d+)?$',
+    r'^https?://\[::1\](:\d+)?$',
+]
+```
+
+No port list to maintain: a dev server on any port works without configuration.
+
+<Callout type="info">
+  **Why not `CORS_ALLOW_ALL_ORIGINS = True`?** Browsers reject the `*` wildcard
+  for credentialed requests (`credentials: 'include'`), so cookie-based auth
+  breaks. A regex echoes back the concrete origin, which browsers accept.
+</Callout>
+
+`CSRF_TRUSTED_ORIGINS` is still an explicit list of common dev ports — Django
+compares it literally and supports no regex. Add yours to `security_domains` if
+you run a dev server on an unusual port and hit a CSRF failure.
+
+### Docker service-to-service calls
+
+CORS does not apply to them. It is a browser mechanism keyed on the `Origin`
+header, and server-to-server requests do not send one. Container traffic is
+governed by `ALLOWED_HOSTS`, which is `['*']` in development.
 
 ## Examples
 

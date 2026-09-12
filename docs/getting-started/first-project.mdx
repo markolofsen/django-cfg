@@ -254,7 +254,7 @@ DATABASE__URL="sqlite:///db.sqlite3"
 
 # Security domains - optional in development
 # Django-CFG auto-configures for dev convenience:
-# - CORS fully open (CORS_ALLOW_ALL_ORIGINS=True)
+# - CORS: localhost on any port (regex, credentials supported)
 # - Docker IPs work automatically
 # - localhost any port
 # SECURITY_DOMAINS="localhost,127.0.0.1"

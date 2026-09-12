@@ -1,6 +1,6 @@
 """Model Catalog — single source of truth for model selection by role.
 
-    from modules.django_llm.catalog import ModelRole, recommend, traits
+    from django_cfg.modules.django_llm.catalog import ModelRole, recommend, traits
 
     recommend(ModelRole.EXTRACTION)   # -> ordered model chain
     traits("qwen/qwen3.5-flash-02-23").verdict(ModelRole.EXTRACTION)  # -> Verdict.AVOID

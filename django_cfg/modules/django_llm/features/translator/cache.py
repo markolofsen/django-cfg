@@ -26,8 +26,8 @@ class TranslationCacheManager:
         """
         # Default cache directory inside the package module structure
         if cache_dir is None:
-            # Resolve to the modules.django_llm package root
-            module_dir = Path(__file__).parent.parent.parent.parent  # llm/features/translator/cache.py -> modules.django_llm pkg root
+            # Resolve to the django_cfg.modules.django_llm package root
+            module_dir = Path(__file__).parent.parent.parent.parent  # llm/features/translator/cache.py -> django_cfg.modules.django_llm pkg root
             default_cache_dir = module_dir / ".cache" / "llm_translate"
 
             # Create cache directory if it doesn't exist

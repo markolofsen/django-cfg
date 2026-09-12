@@ -54,7 +54,7 @@ class OpenRouterVideoGenClient(BaseCfgModule):
         base_url: str = PROVIDER_BASE_URLS["openrouter"],
         timeout: float = 60.0,
         transport: httpx.AsyncBaseTransport | None = None,
-        app_title: str = "modules.django_llm-video_gen",
+        app_title: str = "django_cfg.modules.django_llm-video_gen",
         app_url: str = "https://cmdop.com/",
         max_download_bytes: int = 512 * 1024 * 1024,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,

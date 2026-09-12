@@ -324,7 +324,7 @@ Use separate configuration classes for each environment to ensure proper isolati
 class DevelopmentConfig(DjangoConfig):
     debug: bool = True
     # security_domains: Optional - not needed in development
-    # Django-CFG auto-configures CORS fully open
+    # Django-CFG auto-allows localhost on any port
 
     # All features enabled for development
     enable_accounts: bool = True

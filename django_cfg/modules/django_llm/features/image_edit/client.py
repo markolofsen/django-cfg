@@ -14,8 +14,8 @@ are retained rather than filtered by an OpenAI SDK response model.
 
 Why this lives here (not in the host app)
 -----------------------------------------
-Every caller of an LLM in the project funnels through modules.django_llm.
-Putting the multimodal-edit transport inside modules.django_llm means apps
+Every caller of an LLM in the project funnels through django_cfg.modules.django_llm.
+Putting the multimodal-edit transport inside django_cfg.modules.django_llm means apps
 (real-estate AIPhoto today, vehicle ai_photo, others later) don't
 reimplement HTTP, auth, cost, or pricing — they pass an
 ``ImageEditRequest`` and get an ``ImageEditResponse`` back.
@@ -74,7 +74,7 @@ class ImageEditClient(BaseCfgModule):
 
     Auto-detects the OpenRouter key via the integration seam
     (``get_api_keys()["openrouter"]``, which reads config through
-    ``modules.django_llm.config``); the host doesn't pass keys around.
+    ``django_cfg.modules.django_llm.config``); the host doesn't pass keys around.
     """
 
     def __init__(
@@ -83,7 +83,7 @@ class ImageEditClient(BaseCfgModule):
         default_model: str | None = None,
         base_url: str = OPENROUTER_BASE_URL,
         timeout: float = 120.0,
-        app_title: str = "modules.django_llm-image_edit",
+        app_title: str = "django_cfg.modules.django_llm-image_edit",
         app_url: str = "https://djangocfg.com/",
         transport: httpx.BaseTransport | None = None,
         default_transport_mode: ImageEditTransportMode = "chat-completions",

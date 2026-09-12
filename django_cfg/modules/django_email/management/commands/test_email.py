@@ -76,7 +76,6 @@ class Command(SafeCommand):
         ctx_base = svc._prepare_template_context({})
         site_url = ctx_base.get("site_url", "")
         project_name = ctx_base.get("project_name", "App")
-        logo_url = ctx_base.get("logo_url", "")
 
         backend = svc.get_backend_info()
         self.stdout.write(f"\n📧 Backend : {backend['backend']}")
@@ -97,7 +96,7 @@ class Command(SafeCommand):
             tpl = TEMPLATES[key]
             self.stdout.write(f"\n→ Sending: {tpl['description']}")
             try:
-                self._send(key, tpl, user, email, svc, site_url, project_name, logo_url)
+                self._send(key, tpl, user, email, svc, site_url, project_name)
                 self.stdout.write(self.style.SUCCESS(f"  ✅ Sent: {tpl['subject']}"))
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"  ❌ Failed: {e}"))
@@ -105,8 +104,8 @@ class Command(SafeCommand):
 
         self.stdout.write(self.style.SUCCESS(f"\n✅ Done — {len(to_send)} email(s) sent to {email}\n"))
 
-    def _send(self, key, tpl, user, email, svc, site_url, project_name, logo_url=""):
-        context = self._build_context(key, user, site_url, project_name, logo_url)
+    def _send(self, key, tpl, user, email, svc, site_url, project_name):
+        context = self._build_context(key, user, site_url, project_name)
 
         if key == "base":
             # base_email lives in django_cfg/templates/ — use DjangoEmailService
@@ -127,7 +126,7 @@ class Command(SafeCommand):
                 html_message=html,
             )
 
-    def _build_context(self, key, user, site_url, project_name, logo_url=""):
+    def _build_context(self, key, user, site_url, project_name):
         if key == "base":
             return {
                 "email_title": "Action required on your account",
@@ -141,14 +140,12 @@ class Command(SafeCommand):
                 "secondary_text": "If you did not initiate this action, please contact support immediately.",
                 "site_url": site_url,
                 "project_name": project_name,
-                "logo_url": logo_url,
             }
 
         if key == "otp":
             return {
                 "site_name": project_name,
                 "site_url": site_url,
-                "logo_url": logo_url,
                 "user": user,
                 "otp_code": "483920",
                 "expires_minutes": 10,
@@ -158,7 +155,6 @@ class Command(SafeCommand):
             return {
                 "site_name": project_name,
                 "site_url": site_url,
-                "logo_url": logo_url,
                 "user": user,
             }
 
@@ -167,7 +163,6 @@ class Command(SafeCommand):
                 "user": user,
                 "project_name": project_name,
                 "site_url": site_url,
-                "logo_url": logo_url,
                 "device": "Chrome 124 on macOS Sequoia",
                 "ip_address": "91.185.22.47",
                 "login_time": "April 15, 2026 at 23:14 UTC",

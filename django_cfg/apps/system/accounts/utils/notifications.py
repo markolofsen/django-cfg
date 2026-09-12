@@ -53,8 +53,7 @@ class AccountNotifications:
         main_html_content: str,
         secondary_text: str,
         # Optional: a letter whose whole content is a code has nothing to link
-        # to, and both templates already guard on `{% if button_text and
-        # button_url %}`.
+        # to, and the templates guard on both being set.
         button_text: str = None,
         button_url: str = None,
         template_name: str = "emails/base_email",
@@ -66,16 +65,9 @@ class AccountNotifications:
         """Private method for sending templated emails.
 
         ``copy_key`` names the *letter*; ``template_name`` names the *layout*.
-        They were one thing, and only one caller (`welcome`) passed a template of
-        its own — so seven distinct letters shared the key ``base_email`` and
-        therefore shared one row of editable copy. Measured on production: copy
-        written for a security alert came back verbatim for the OTP and
-        profile-update letters, with `welcome` unaffected as the control.
-
-        Splitting them keeps the layout shared, which is the point of a base
-        template, while giving each letter its own translatable row. A letter that
-        passes no ``copy_key`` still resolves off the template name, so existing
-        callers keep working.
+        Keying copy off the template alone makes every letter sharing a layout
+        share one row, so copy written for one comes back verbatim in another.
+        A caller passing no ``copy_key`` still resolves off the template name.
         """
         email_service = DjangoEmailService()
 
@@ -279,56 +271,21 @@ class AccountNotifications:
 
             AccountNotifications._send_email(
                 user=user,
-                # ┌──────────────────────────────────────────────────────────┐
-                # │ DO NOT REMOVE THE CODE FROM THIS SUBJECT LINE.           │
-                # │ Owner decision, 2026-08-18. NOT a security oversight.    │
-                # └──────────────────────────────────────────────────────────┘
-                # The code is in the subject ON PURPOSE: the recipient reads it
-                # from the notification banner / preview pane without opening
-                # the message. That convenience IS the feature.
-                #
-                # The preview exposure this implies is KNOWN AND ACCEPTED. Do
-                # not move the code to the body, do not swap in a static
-                # subject, do not add a test pinning the subject as constant.
-                # This was removed once unasked and shipped as django-cfg
-                # 2.2.137; reverted the same day on the owner's instruction.
-                #
-                # Changing this is an OWNER decision, not a hardening task.
-                # Ask first. See accounts/@docs/notifications.md.
+                # The code MUST stay in the subject: the recipient reads it
+                # from the preview pane without opening the letter. The
+                # preview exposure is accepted; removing it is an owner call.
                 subject=f"Your OTP code: {otp_code}",
-                # Copy key only — this does NOT touch the subject above. The
-                # subject is passed to `send_template` directly and is never read
-                # from the copy row, so giving this letter its own translatable
-                # body cannot move the code out of the subject line.
                 copy_key="otp_code",
                 main_text="Use the code below to sign in:",
                 main_html_content="",
                 secondary_text=f"This code expires in {OTPSecret.EXPIRY_MINUTES} minutes.",
-                # NO BUTTON, and no magic link — deliberately.
-                #
-                # The link carried the code in a URL
-                # (`/auth/?otp=1234&email=...`), which leaks it into referrers,
-                # browser history, proxy logs and messenger link previews —
-                # Telegram fetches links to build them, so a preview bot could
-                # spend the code before the recipient read it.
-                #
-                # Its host also could not be right. It came from the single
-                # global `config.site_url`, so with one Django serving two
-                # brands every Bali recipient was sent to the Caribbean portal.
-                # Taking the host from the request's `source_url` instead would
-                # be worse: that value is client-supplied and unvalidated, which
-                # would let anyone have our own SMTP deliver a working login
-                # link pointing at their site.
-                #
-                # The recipient already knows which site they came from, and the
-                # code is in the subject line and in the body. If the link is
-                # ever wanted back, it needs a host allowlist first.
+                # No magic link: it carried the code in the URL, leaking it to
+                # referrers, history and link-preview bots that would spend it
+                # first. A link needs a host allowlist before it can come back.
                 button_text=None,
                 button_url=None,
-                # The letter's own layout: a large monospace code, the expiry,
-                # and a "didn't request this?" note. `base_email` is a generic
-                # card built around a call-to-action button this letter no
-                # longer has.
+                # Own layout: `base_email` is built around a CTA button this
+                # letter does not have.
                 template_name="emails/otp_email",
                 extra_context={
                     "otp_code": otp_code,

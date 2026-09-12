@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    {% comment %}
+      This title becomes the Subject: header — send_template overrides the
+      caller's subject with it, so a localized letter states its own here.
+    {% endcomment %}
     <title>Welcome to {{ project_name }}</title>
     <style type="text/css">
       * { box-sizing: border-box; }
@@ -13,237 +17,127 @@
       body {
         margin: 0 !important;
         padding: 0 !important;
-        background-color: #f0f2f5;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      }
-
-      .email-bg { background-color: #f0f2f5; padding: 48px 16px; }
-
-      .email-card {
-        max-width: 540px;
-        margin: 0 auto;
         background-color: #ffffff;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #424245;
       }
 
-      /* Header */
-      .email-header {
-        background-color: #0f0f1a;
-        padding: 26px 36px;
-      }
+      .email-card { max-width: 640px; margin: 0 auto; background-color: #ffffff; }
+
+      .email-header { padding: 40px 40px 0; }
 
       .brand-name {
-        font-size: 17px;
-        font-weight: 700;
-        color: #ffffff;
-        letter-spacing: -0.2px;
-      }
-
-      /* Hero */
-      .email-hero {
-        background: linear-gradient(135deg, #0f0f1a 0%, #1e1b4b 100%);
-        padding: 40px 36px 36px;
-        text-align: center;
-      }
-
-      .hero-badge {
-        display: inline-block;
-        font-size: 11px;
-        font-weight: 600;
-        color: #a5b4fc;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        background-color: rgba(165, 180, 252, 0.12);
-        border: 1px solid rgba(165, 180, 252, 0.2);
-        border-radius: 100px;
-        padding: 4px 12px;
-        margin-bottom: 16px;
-      }
-
-      .hero-title {
-        font-size: 26px;
-        font-weight: 800;
-        color: #ffffff;
-        margin: 0 0 10px;
-        letter-spacing: -0.6px;
-        line-height: 1.2;
-      }
-
-      .hero-subtitle {
         font-size: 15px;
-        color: rgba(255, 255, 255, 0.6);
-        margin: 0;
-        line-height: 1.5;
+        font-weight: 600;
+        color: #1d1d1f;
+        letter-spacing: -0.01em;
+        text-decoration: none;
       }
 
-      /* Body */
-      .email-body { padding: 36px 36px 28px; }
+      .email-body { padding: 32px 40px 40px; }
+
+      .email-title {
+        font-size: 32px;
+        font-weight: 600;
+        color: #1d1d1f;
+        margin: 0 0 12px;
+        letter-spacing: -0.024em;
+        line-height: 1.15;
+      }
 
       .email-text {
-        font-size: 15px;
-        color: #374151;
-        line-height: 1.65;
-        margin: 0 0 28px;
-      }
-
-      /* Features */
-      .feature-row {
-        display: flex;
-        align-items: flex-start;
-        gap: 14px;
-        margin-bottom: 20px;
-      }
-
-      .feature-icon {
-        width: 36px;
-        height: 36px;
-        background-color: #f3f4f6;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
         font-size: 16px;
-        flex-shrink: 0;
-        text-align: center;
-        line-height: 36px;
+        color: #424245;
+        line-height: 1.6;
+        margin: 0 0 16px;
       }
+
+      .email-text strong { color: #1d1d1f; font-weight: 500; }
 
       .feature-title {
-        font-size: 14px;
+        font-size: 15px;
         font-weight: 600;
-        color: #111827;
-        margin: 0 0 2px;
+        color: #1d1d1f;
+        margin: 0 0 4px;
+        letter-spacing: -0.01em;
       }
 
-      .feature-desc {
-        font-size: 13px;
-        color: #6b7280;
-        margin: 0;
-        line-height: 1.5;
-      }
-
-      .divider { border: none; border-top: 1px solid #f3f4f6; margin: 28px 0; }
-
-      .email-signature {
+      .feature-text {
         font-size: 14px;
-        color: #6b7280;
+        color: #6e6e73;
         margin: 0;
-        line-height: 1.6;
+        line-height: 1.55;
       }
 
-      .email-signature strong { color: #374151; font-weight: 600; }
+      .divider { border: none; border-top: 1px solid #d2d2d7; margin: 40px 0 24px; }
 
-      .email-footer {
-        background-color: #f9fafb;
-        border-top: 1px solid #f3f4f6;
-        padding: 22px 36px;
-        text-align: center;
-      }
+      .email-signature { font-size: 14px; color: #6e6e73; margin: 0; line-height: 1.6; }
+      .email-signature strong { color: #1d1d1f; font-weight: 600; }
 
-      .email-footer p {
-        font-size: 12px;
-        color: #9ca3af;
-        margin: 0 0 3px;
-        line-height: 1.6;
-      }
+      .email-footer { border-top: 1px solid #d2d2d7; padding: 24px 40px 40px; }
+      .email-footer p { font-size: 12px; color: #86868b; margin: 0 0 6px; line-height: 1.5; }
+      .email-footer a { color: #86868b; text-decoration: underline; }
 
       @media only screen and (max-width: 600px) {
-        .email-bg { padding: 20px 12px; }
-        .email-header { padding: 20px 24px; }
-        .email-hero { padding: 30px 24px 28px; }
-        .email-body { padding: 28px 24px 22px; }
-        .email-footer { padding: 18px 24px; }
-        .hero-title { font-size: 22px; }
+        .email-header { padding: 28px 22px 0; }
+        .email-body { padding: 24px 22px 32px; }
+        .email-footer { padding: 20px 22px 32px; }
+        .email-title { font-size: 27px; }
       }
     </style>
   </head>
 
   <body>
-    <div class="email-bg">
-      <div class="email-card">
+    <div class="email-card">
 
-        <!-- Header -->
-        <div class="email-header">
-          <a href="{{ site_url|default:'#' }}" style="text-decoration: none; display: inline-block;">
-            <table border="0" cellspacing="0" cellpadding="0">
-              <tr>
-                {% if logo_url %}
-                <td valign="middle" style="padding-right: 10px;">
-                  <img src="{{ logo_url }}" alt="{{ project_name }}" width="36" height="36" style="display: block; border-radius: 8px; object-fit: cover;" />
-                </td>
-                {% endif %}
-                <td valign="middle">
-                  <span style="font-size: 17px; font-weight: 700; color: #ffffff; letter-spacing: -0.2px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">{{ project_name }}</span>
-                </td>
-              </tr>
-            </table>
-          </a>
-        </div>
+      <div class="email-header">
+        <a href="{{ site_url|default:'#' }}" class="brand-name">{{ project_name }}</a>
+      </div>
 
-        <!-- Hero -->
-        <div class="email-hero">
-          <div class="hero-badge">New account</div>
-          <h1 class="hero-title">Welcome aboard!</h1>
-          <p class="hero-subtitle">Your account is ready to use</p>
-        </div>
+      <div class="email-body">
 
-        <!-- Body -->
-        <div class="email-body">
+        <h1 class="email-title">Welcome to {{ project_name }}</h1>
+        <p class="email-text">
+          Hi {{ user.get_full_name|default:user.username }}, your account
+          (<strong>{{ user.email }}</strong>) is ready to use.
+        </p>
 
-          <p class="email-text">
-            Hi {{ user.get_full_name|default:user.username }}, your account (<strong style="color: #111827;">{{ user.email }}</strong>) has been created. You're all set to get started.
-          </p>
+        <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin: 32px 0 0;">
+          <tr>
+            <td style="padding: 0 0 22px;">
+              <p class="feature-title">Passwordless login</p>
+              <p class="feature-text">Sign in with a one-time code — no password needed.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 0 22px;">
+              <p class="feature-title">Instant access</p>
+              <p class="feature-text">Codes arrive in your inbox within seconds.</p>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <p class="feature-title">Nothing to remember</p>
+              <p class="feature-text">No passwords to reset, reuse, or compromise.</p>
+            </td>
+          </tr>
+        </table>
 
-          <!-- Features as table for email compatibility -->
-          <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin-bottom: 8px;">
-            <tr>
-              <td width="44" valign="top" style="padding-bottom: 20px;">
-                <div style="width: 36px; height: 36px; background-color: #f3f4f6; border-radius: 8px; text-align: center; line-height: 36px; font-size: 16px;">&#128274;</div>
-              </td>
-              <td valign="top" style="padding-bottom: 20px; padding-left: 10px;">
-                <p style="font-size: 14px; font-weight: 600; color: #111827; margin: 2px 0 2px;">Passwordless login</p>
-                <p style="font-size: 13px; color: #6b7280; margin: 0; line-height: 1.5;">Sign in securely with a one-time code — no password needed</p>
-              </td>
-            </tr>
-            <tr>
-              <td width="44" valign="top" style="padding-bottom: 20px;">
-                <div style="width: 36px; height: 36px; background-color: #f3f4f6; border-radius: 8px; text-align: center; line-height: 36px; font-size: 16px;">&#9889;</div>
-              </td>
-              <td valign="top" style="padding-bottom: 20px; padding-left: 10px;">
-                <p style="font-size: 14px; font-weight: 600; color: #111827; margin: 2px 0 2px;">Instant access</p>
-                <p style="font-size: 13px; color: #6b7280; margin: 0; line-height: 1.5;">Codes are delivered to your inbox within seconds</p>
-              </td>
-            </tr>
-            <tr>
-              <td width="44" valign="top">
-                <div style="width: 36px; height: 36px; background-color: #f3f4f6; border-radius: 8px; text-align: center; line-height: 36px; font-size: 16px;">&#128737;</div>
-              </td>
-              <td valign="top" style="padding-left: 10px;">
-                <p style="font-size: 14px; font-weight: 600; color: #111827; margin: 2px 0 2px;">Enhanced security</p>
-                <p style="font-size: 13px; color: #6b7280; margin: 0; line-height: 1.5;">No passwords to remember, reset, or compromise</p>
-              </td>
-            </tr>
-          </table>
+        <hr class="divider" />
 
-          <hr class="divider" />
-
-          <p class="email-signature">
-            Questions? We're happy to help.<br />
-            <strong>The {{ project_name }} Team</strong>
-          </p>
-
-        </div>
-
-        <!-- Footer -->
-        <div class="email-footer">
-          <p>&copy; {% now "Y" %} {{ project_name }}. All rights reserved.</p>
-          <p>This is an automated message — please do not reply.</p>
-          {% if site_url %}<p><a href="{{ site_url }}" style="color: #9ca3af; text-decoration: none;">{{ site_url }}</a></p>{% endif %}
-        </div>
+        <p class="email-signature">
+          Questions? We're happy to help.<br />
+          <strong>The {{ project_name }} Team</strong>
+        </p>
 
       </div>
+
+      <div class="email-footer">
+        <p>&copy; {% now "Y" %} {{ project_name }}. All rights reserved.</p>
+        <p>This is an automated message — please do not reply.</p>
+        {% if site_url %}<p><a href="{{ site_url }}">{{ site_url }}</a></p>{% endif %}
+      </div>
+
     </div>
   </body>
 </html>

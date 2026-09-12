@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    {% comment %}
+      This title becomes the Subject: header — send_template overrides the
+      caller's subject with it so a localized letter states its own. A title
+      that drops a caller's value (a one-time code) drops it from the inbox.
+    {% endcomment %}
     <title>{% if email_title %}{{ email_title }} — {{ project_name }}{% else %}{{ subject }}{% endif %}</title>
     <!--[if mso]>
     <noscript>
@@ -15,194 +20,103 @@
     </noscript>
     <![endif]-->
     <style type="text/css">
-      /* Reset */
       * { box-sizing: border-box; }
       body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
       table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
-      img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
 
       body {
         margin: 0 !important;
         padding: 0 !important;
-        background-color: #f0f2f5;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        color: #1a1a2e;
+        background-color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: #424245;
       }
 
-      /* Outer wrapper */
-      .email-bg {
-        background-color: #f0f2f5;
-        padding: 48px 16px;
-      }
+      .email-bg { background-color: #ffffff; padding: 0; }
 
-      /* Card container */
       .email-card {
-        max-width: 560px;
+        max-width: 640px;
         margin: 0 auto;
         background-color: #ffffff;
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
       }
 
-      /* Header */
       .email-header {
-        background-color: #0f0f1a;
-        padding: 28px 40px;
-        text-align: left;
+        padding: 40px 40px 0;
       }
 
-      .email-header-inner {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
+      .brand-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1d1d1f;
+        letter-spacing: -0.01em;
         text-decoration: none;
       }
 
-      .email-logo {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        object-fit: cover;
-      }
-
-      .email-brand {
-        font-size: 18px;
-        font-weight: 700;
-        color: #ffffff;
-        letter-spacing: -0.3px;
-      }
-
-      /* Body */
-      .email-body {
-        padding: 40px 40px 32px;
-      }
+      .email-body { padding: 32px 40px 40px; }
 
       .email-title {
-        font-size: 22px;
-        font-weight: 700;
-        color: #0f0f1a;
-        margin: 0 0 8px 0;
-        letter-spacing: -0.4px;
-        line-height: 1.3;
-      }
-
-      .email-greeting {
-        font-size: 15px;
-        color: #6b7280;
-        margin: 0 0 28px 0;
-        line-height: 1.5;
-      }
-
-      .email-text {
-        font-size: 15px;
-        color: #374151;
-        line-height: 1.65;
-        margin: 0 0 16px 0;
-      }
-
-      /* CTA Button */
-      .btn-wrapper {
-        margin: 28px 0;
-      }
-
-      .btn-primary {
-        display: inline-block;
-        background-color: #111827;
-        color: #ffffff !important;
-        text-decoration: none !important;
-        font-size: 15px;
+        font-size: 28px;
         font-weight: 600;
-        padding: 13px 24px;
-        border-radius: 10px;
-        letter-spacing: -0.1px;
-        border: 1px solid #111827;
+        color: #1d1d1f;
+        margin: 0 0 20px;
+        letter-spacing: -0.022em;
+        line-height: 1.2;
       }
 
-      /* Info box */
-      .info-box {
-        background-color: #f9fafb;
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
-        padding: 16px 20px;
-        margin: 20px 0;
-        font-size: 14px;
-        color: #4b5563;
+      .email-greeting,
+      .email-text {
+        font-size: 16px;
+        color: #424245;
         line-height: 1.6;
+        margin: 0 0 18px;
       }
 
-      /* Warning box */
-      .warning-box {
-        background-color: #fffbeb;
-        border: 1px solid #fcd34d;
-        border-radius: 10px;
-        padding: 14px 18px;
-        margin: 20px 0;
+      .btn-wrapper { margin: 32px 0; }
+
+      .secondary-text {
         font-size: 14px;
-        color: #78350f;
+        color: #6e6e73;
         line-height: 1.6;
+        margin: 24px 0 0;
       }
 
-      /* Divider */
       .divider {
         border: none;
-        border-top: 1px solid #f3f4f6;
-        margin: 28px 0;
+        border-top: 1px solid #d2d2d7;
+        margin: 40px 0 24px;
       }
 
-      /* Secondary text */
-      .secondary-text {
-        font-size: 13px;
-        color: #9ca3af;
-        line-height: 1.6;
-        margin: 16px 0 0;
-      }
-
-      /* Signature */
       .email-signature {
         font-size: 14px;
-        color: #6b7280;
-        margin: 24px 0 0;
+        color: #6e6e73;
+        margin: 0;
         line-height: 1.6;
       }
 
       .email-signature strong {
-        color: #374151;
+        color: #1d1d1f;
         font-weight: 600;
       }
 
-      /* Footer */
       .email-footer {
-        background-color: #f9fafb;
-        border-top: 1px solid #f3f4f6;
-        padding: 24px 40px;
-        text-align: center;
+        border-top: 1px solid #d2d2d7;
+        padding: 24px 40px 40px;
       }
 
       .email-footer p {
         font-size: 12px;
-        color: #9ca3af;
-        margin: 0 0 4px;
-        line-height: 1.6;
+        color: #86868b;
+        margin: 0 0 6px;
+        line-height: 1.5;
       }
 
-      .email-footer a {
-        color: #6b7280;
-        text-decoration: none;
-      }
+      .email-footer a { color: #86868b; text-decoration: underline; }
 
-      .email-footer a:hover {
-        color: #374151;
-        text-decoration: underline;
-      }
-
-      /* Mobile */
       @media only screen and (max-width: 600px) {
-        .email-bg { padding: 24px 12px; }
-        .email-header { padding: 22px 24px; }
-        .email-body { padding: 28px 24px 24px; }
-        .email-footer { padding: 20px 24px; }
-        .email-title { font-size: 20px; }
+        .email-header { padding: 28px 22px 0; }
+        .email-body { padding: 24px 22px 32px; }
+        .email-footer { padding: 20px 22px 32px; }
+        .email-title { font-size: 24px; }
       }
     </style>
   </head>
@@ -211,25 +125,10 @@
     <div class="email-bg">
       <div class="email-card">
 
-        <!-- Header -->
         <div class="email-header">
-          <a href="{{ site_url }}" style="text-decoration: none; display: inline-block;">
-            <table border="0" cellspacing="0" cellpadding="0">
-              <tr>
-                {% if logo_url %}
-                <td valign="middle" style="padding-right: 10px;">
-                  <img src="{{ logo_url }}" alt="{{ project_name }}" width="36" height="36" style="display: block; border-radius: 8px; object-fit: cover;" />
-                </td>
-                {% endif %}
-                <td valign="middle">
-                  <span style="font-size: 17px; font-weight: 700; color: #ffffff; letter-spacing: -0.2px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">{{ project_name }}</span>
-                </td>
-              </tr>
-            </table>
-          </a>
+          <a href="{{ site_url }}" class="brand-name">{{ project_name }}</a>
         </div>
 
-        <!-- Body -->
         <div class="email-body">
 
           {% if email_title %}<h1 class="email-title">{{ email_title }}</h1>{% endif %}
@@ -249,18 +148,11 @@
           <div class="btn-wrapper">
             <table border="0" cellspacing="0" cellpadding="0">
               <tr>
-                <td style="border-radius: 10px; background-color: #111827;">
-                  {% if tracking_click_url %}
-                  <a href="{{ tracking_click_url }}?url={{ button_url|urlencode }}"
-                     style="display: inline-block; padding: 13px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff !important; text-decoration: none !important; border-radius: 10px; letter-spacing: -0.1px;">
+                <td style="border-radius: 980px; background-color: #0071e3;">
+                  <a href="{% if tracking_click_url %}{{ tracking_click_url }}?url={{ button_url|urlencode }}{% else %}{{ button_url }}{% endif %}"
+                     style="display: inline-block; padding: 13px 28px; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 500; color: #ffffff !important; text-decoration: none !important; border-radius: 980px; letter-spacing: -0.01em;">
                     {{ button_text }}
                   </a>
-                  {% else %}
-                  <a href="{{ button_url }}"
-                     style="display: inline-block; padding: 13px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; font-size: 15px; font-weight: 600; color: #ffffff !important; text-decoration: none !important; border-radius: 10px; letter-spacing: -0.1px;">
-                    {{ button_text }}
-                  </a>
-                  {% endif %}
                 </td>
               </tr>
             </table>
@@ -280,7 +172,6 @@
 
         </div>
 
-        <!-- Footer -->
         <div class="email-footer">
           {% if subscribe_url %}<p>P.S. Want {{ project_name }} product updates? <a href="{{ subscribe_url }}">One click — subscribe</a>.</p>{% endif %}
           <p>&copy; {% now "Y" %} {{ project_name }}. All rights reserved.</p>
