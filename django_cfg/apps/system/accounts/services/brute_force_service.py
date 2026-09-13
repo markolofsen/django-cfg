@@ -224,12 +224,20 @@ class OTPVerifyThrottle:
         window = cls.DEFAULT_WINDOW_SECONDS
         max_attempts = cls._get_max_attempts()
 
-        # Increment failure counter
-        try:
-            count = cache.incr(fail_key)
-        except ValueError:
-            cache.set(fail_key, 1, window)
+        # `add` is atomic and only writes when the key is absent, so two
+        # concurrent first failures cannot both reset the counter to 1 the way
+        # `set` in an except branch did — that let a burst of guesses register
+        # as one and delayed the lockout past max_attempts.
+        if cache.add(fail_key, 1, window):
             count = 1
+        else:
+            try:
+                count = cache.incr(fail_key)
+            except ValueError:
+                # The key expired between `add` and `incr`; the window has
+                # rolled over, so this failure starts the next one.
+                cache.set(fail_key, 1, window)
+                count = 1
 
         attempts_remaining = max(0, max_attempts - count)
 

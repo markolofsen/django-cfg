@@ -177,7 +177,9 @@ class MoneyFieldWidget(MultiWidget):
         if rate_obj:
             rate = rate_obj.rate
             rate_at = rate_obj.updated_at
-            target_amount = Decimal(str(amount)) * rate if amount else None
+            # `is not None`, not truthiness: a zero amount converts to a real
+            # zero, which is a value to show — not a missing conversion.
+            target_amount = Decimal(str(amount)) * rate if amount is not None else None
             return target_amount, rate, rate_at
 
         return self.target_amount, self.rate, self.rate_at
@@ -189,13 +191,13 @@ class MoneyFieldWidget(MultiWidget):
         rate_at: Any = None,
         currency: Optional[str] = None,
     ) -> str:
-        if not target_amount and not rate:
+        if target_amount is None and rate is None:
             return ""
 
         display_currency = currency or self.default_currency
         parts = []
 
-        if target_amount:
+        if target_amount is not None:
             target_str = format_money(target_amount, self.target_currency, smart_precision=True)
             parts.append(f'<span class="text-primary-600 dark:text-primary-400 font-medium">→ {target_str}</span>')
 
@@ -232,13 +234,13 @@ class MoneyFieldWidget(MultiWidget):
             target_amount, rate, rate_at = self._get_live_rate_data(amount, currency)
 
         amount_str = format_money(amount, currency)
-        target_str = format_money(target_amount, self.target_currency, smart_precision=True) if target_amount else None
+        target_str = format_money(target_amount, self.target_currency, smart_precision=True) if target_amount is not None else None
 
         parts = ['<div class="money-field-display flex flex-col gap-0.5">']
         parts.append('<div class="flex items-center gap-2 text-sm">')
         parts.append(f'<span class="font-semibold text-font-default-light dark:text-font-default-dark">{amount_str}</span>')
 
-        if target_amount and currency.upper() != self.target_currency.upper():
+        if target_amount is not None and currency.upper() != self.target_currency.upper():
             parts.append('<span class="text-base-400 dark:text-base-500">→</span>')
             parts.append(f'<span class="text-primary-600 dark:text-primary-400 font-medium">{target_str}</span>')
         parts.append("</div>")

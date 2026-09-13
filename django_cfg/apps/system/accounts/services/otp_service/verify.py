@@ -238,51 +238,51 @@ def _verify_real_otp(
 
         otp_secret.mark_used()
 
-        try:
-            user = CustomUser.objects.filter(
-                email__iexact=cleaned_email, deleted_at__isnull=True,
-            ).first()
+        user = CustomUser.objects.filter(
+            email__iexact=cleaned_email, deleted_at__isnull=True,
+        ).first()
 
-            if not user.is_active:
-                logger.warning(
-                    f"[DELETED ACCOUNT] OTP verified but account is deleted: {cleaned_email}"
-                )
-                notify_failed_otp_attempt(
-                    cleaned_email, ip_address=ip_address,
-                    reason="Account is deleted or deactivated",
-                )
-                return None
-
-            # Before announcing: the welcome receiver reads `user.language`.
-            _persist_language(user, accept_language)
-            _mark_user_verified(user, consent=_consent_context(otp_secret))
-            _link_source(user, source_url)
-
-            try:
-                DjangoTelegram.send_success("Successful OTP Login", {
-                    "Email": cleaned_email,
-                    "Username": user.username,
-                    "Source URL": source_url or "Direct",
-                    "Login Time": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
-                    "User ID": user.id,
-                })
-                logger.info(f"Telegram OTP verification notification sent for {cleaned_email}")
-            except ImportError:
-                logger.warning(
-                    "django_cfg DjangoTelegram not available for OTP verification notifications"
-                )
-            except Exception as telegram_error:
-                logger.error(
-                    f"Failed to send Telegram OTP verification notification: {telegram_error}"
-                )
-
-            OTPVerifyThrottle.record_success(cleaned_email)
-            logger.info(f"OTP verified for {cleaned_email}")
-            return user
-
-        except CustomUser.DoesNotExist:
-            logger.warning(f"User was deleted after OTP was sent: {cleaned_email}")
+        # `.first()` yields None rather than raising, so the account being
+        # gone has to be checked here. Without it `user.is_active` raises
+        # AttributeError, which the outer handler logs as an opaque
+        # "Error verifying OTP" instead of naming the deleted account.
+        if user is None or not user.is_active:
+            logger.warning(
+                f"[DELETED ACCOUNT] OTP verified but account is deleted: {cleaned_email}"
+            )
+            notify_failed_otp_attempt(
+                cleaned_email, ip_address=ip_address,
+                reason="Account is deleted or deactivated",
+            )
             return None
+
+        # Before announcing: the welcome receiver reads `user.language`.
+        _persist_language(user, accept_language)
+        _mark_user_verified(user, consent=_consent_context(otp_secret))
+        _link_source(user, source_url)
+
+        try:
+            DjangoTelegram.send_success("Successful OTP Login", {
+                "Email": cleaned_email,
+                "Username": user.username,
+                "Source URL": source_url or "Direct",
+                "Login Time": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "User ID": user.id,
+            })
+            logger.info(f"Telegram OTP verification notification sent for {cleaned_email}")
+        except ImportError:
+            logger.warning(
+                "django_cfg DjangoTelegram not available for OTP verification notifications"
+            )
+        except Exception as telegram_error:
+            logger.error(
+                f"Failed to send Telegram OTP verification notification: {telegram_error}"
+            )
+
+        OTPVerifyThrottle.record_success(cleaned_email)
+        logger.info(f"OTP verified for {cleaned_email}")
+        return user
+
 
     except Exception as e:
         logger.error(f"Error verifying OTP: {e}")

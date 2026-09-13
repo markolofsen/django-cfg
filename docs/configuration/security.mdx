@@ -15,7 +15,7 @@ description: Security, CORS, and SSL configuration in Django-CFG
 |---------|-------------|------------|
 | `CORS` | Any `localhost` port, via regex | Strict whitelist from `security_domains` |
 | `ALLOWED_HOSTS` | `['*']` | Generated from `security_domains` |
-| `CSRF` | Dev ports (3000, 5173, 8080, etc.) | Trusted origins from domains |
+| `CSRF` | Loopback ports from your config + common defaults | Trusted origins from domains |
 | `DEBUG` | Enabled | **Forced disabled** |
 | `SSL` | Disabled | Reverse proxy assumed |
 
@@ -98,9 +98,26 @@ No port list to maintain: a dev server on any port works without configuration.
   breaks. A regex echoes back the concrete origin, which browsers accept.
 </Callout>
 
-`CSRF_TRUSTED_ORIGINS` is still an explicit list of common dev ports — Django
-compares it literally and supports no regex. Add yours to `security_domains` if
-you run a dev server on an unusual port and hit a CSRF failure.
+### CSRF and dev ports
+
+`CSRF_TRUSTED_ORIGINS` stays an explicit list — Django compares it literally and
+supports no regex. Django-CFG builds it from the loopback ports your config
+already names (`site_url`, `api_url`, `security_domains`) plus the common
+defaults (3000, 5173, 8000, 8080), expanded across `localhost`, `127.0.0.1` and
+`[::1]`, http and https.
+
+So a dev server on an unusual port is covered by naming it:
+
+```python
+class DevConfig(DjangoConfig):
+    env_mode: str = "development"
+    site_url: str = "http://localhost:7301"   # :7301 lands in CSRF automatically
+```
+
+<Callout type="info">
+  Same-origin requests need no entry at all: Django trusts an `Origin` matching
+  the request's own host before it consults the list.
+</Callout>
 
 ### Docker service-to-service calls
 

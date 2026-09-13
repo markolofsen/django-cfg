@@ -17,6 +17,7 @@ Pure and time-injectable: pass a ``now`` callable for deterministic tests.
 
 from __future__ import annotations
 
+import threading
 import time
 from enum import Enum
 from typing import Callable
@@ -53,6 +54,11 @@ class CircuitBreaker:
         self._state: CircuitState = CircuitState.CLOSED
         self._consecutive_failures: int = 0
         self._opened_at: float | None = None
+        # Guards the single HALF_OPEN probe. A plain state check let every
+        # concurrent caller through at once, so a recovering backend was hit
+        # by the whole waiting crowd instead of one canary.
+        self._lock = threading.Lock()
+        self._probe_in_flight: bool = False
 
     @property
     def state(self) -> CircuitState:
@@ -64,16 +70,26 @@ class CircuitBreaker:
     def allow(self) -> bool:
         """Whether a call may proceed.
 
-        CLOSED -> always; HALF_OPEN -> allow one probe; OPEN -> False until
+        CLOSED -> always; HALF_OPEN -> one probe at a time; OPEN -> False until
         the cooldown elapses (which transitions it to HALF_OPEN).
         """
-        return self.state is not CircuitState.OPEN
+        with self._lock:
+            state = self.state
+            if state is CircuitState.OPEN:
+                return False
+            if state is CircuitState.HALF_OPEN:
+                if self._probe_in_flight:
+                    return False
+                self._probe_in_flight = True
+            return True
 
     def record_success(self) -> None:
         """A call succeeded — reset failures and close the breaker."""
-        self._consecutive_failures = 0
-        self._opened_at = None
-        self._state = CircuitState.CLOSED
+        with self._lock:
+            self._consecutive_failures = 0
+            self._opened_at = None
+            self._state = CircuitState.CLOSED
+            self._probe_in_flight = False
 
     def record_failure(self) -> None:
         """A call failed — count it and open (or re-open) if past threshold.
@@ -93,6 +109,8 @@ class CircuitBreaker:
         """Move to OPEN and start the cooldown."""
         self._state = CircuitState.OPEN
         self._opened_at = self._now()
+        # The probe that failed is over; the next HALF_OPEN gets a fresh one.
+        self._probe_in_flight = False
         if self._consecutive_failures < self.failure_threshold:
             self._consecutive_failures = self.failure_threshold
 

@@ -153,6 +153,8 @@ class LLMRouter:
         self._sdkrouter_rejected = False
         self._max_total_attempts = max_total_attempts
         self._retry_delay = retry_delay_seconds
+        # Holds the breakers; see `_router`.
+        self._router_instance: ModelRouter | None = None
 
         # The explicit override, normalized to a provider VALUE string
         # ("openrouter" / "openai" / "gonkagate"), or None = derive per model.
@@ -603,18 +605,26 @@ class LLMRouter:
     # ── Internals ──────────────────────────────────────────────────────────────
 
     def _router(self) -> ModelRouter:
-        """A fresh ModelRouter over the chain — one attempt per model, then cascade.
+        """The ModelRouter over the chain — one attempt per model, then cascade.
+
+        Built once and kept: ModelRouter creates a CircuitBreaker per model in
+        its constructor, so returning a fresh router per call discarded every
+        recorded failure and the breaker never opened — a dead model was
+        retried on every request, paying its full timeout each time.
 
         The chain is capped at ``max_total_attempts`` so total work stays
         bounded even if a longer chain is supplied. ``base_delay`` maps to
         the configured retry cadence (unused at max_attempts=1, but kept so
         any future within-model retry honours it).
         """
-        return ModelRouter(
+        if self._router_instance is not None:
+            return self._router_instance
+        self._router_instance = ModelRouter(
             self._chain[: self._max_total_attempts],
             max_attempts=1,
             base_delay=self._retry_delay,
         )
+        return self._router_instance
 
     @staticmethod
     def _build_messages(messages: list[dict], system: str | None) -> list[dict]:

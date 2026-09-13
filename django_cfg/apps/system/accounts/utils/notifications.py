@@ -11,9 +11,17 @@ from django_cfg.modules.django_email import DjangoEmailService
 from django_cfg.modules.django_email.service import text_direction
 from django_cfg.modules.django_telegram import DjangoTelegram
 
-# Get config once
-config = get_current_config()
 logger = logging.getLogger(__name__)
+
+
+def _config():
+    """The active config, read per call.
+
+    Binding it at import time freezes whatever was registered first, so a
+    process that later calls `set_current_config` keeps mailing the old
+    project name and site URL.
+    """
+    return get_current_config()
 
 
 def _resolve_copy(template_name: str, locale: str = None) -> dict:
@@ -123,12 +131,12 @@ class AccountNotifications:
         if send_email:
             AccountNotifications._send_email(
                 user=user,
-                subject=f"Welcome to {config.project_name}",
+                subject=f"Welcome to {_config().project_name}",
                 main_text=f"Welcome {user.username}! Your account has been successfully created.",
                 main_html_content=f'<p style="font-size: 1.5em; font-weight: bold; color: #28a745;">Welcome {user.username}!</p>',
                 secondary_text="You can now access all our services and start exploring our API.",
-                button_text=f"Go to {config.project_name}",
-                button_url=config.site_url,
+                button_text=f"Go to {_config().project_name}",
+                button_url=_config().site_url,
                 template_name="emails/welcome",
                 locale=locale,
                 # Plain text by default: this letter is written in the first
@@ -190,20 +198,20 @@ class AccountNotifications:
             if status_type == "activated":
                 AccountNotifications._send_email(
                     user=user,
-                    subject=f"Account Activated - {config.project_name} ✅",
+                    subject=f"Account Activated - {_config().project_name} ✅",
                 copy_key="account_activated",
                     main_text="Your account has been activated and is now ready to use!",
                     main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #28a745;">Account Activated!</p>',
                     secondary_text="You now have full access to all our services and features.",
                     button_text="Access Private",
-                    button_url=f"{config.site_url}/private",
+                    button_url=f"{_config().site_url}/private",
                 )
                 logger.info(f"Account activation email sent to {user.email}")
 
             elif status_type == "deactivated":
                 AccountNotifications._send_email(
                     user=user,
-                    subject=f"Account Status Update - {config.project_name} ⚠️",
+                    subject=f"Account Status Update - {_config().project_name} ⚠️",
                 copy_key="account_deactivated",
                     main_text="Your account status has been updated.",
                     main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">Account Deactivated</p>',
@@ -241,7 +249,7 @@ class AccountNotifications:
             ip_text = f" from IP address {ip_address}" if ip_address else ""
             AccountNotifications._send_email(
                 user=user,
-                subject=f"Login Notification - {config.project_name} 🔐",
+                subject=f"Login Notification - {_config().project_name} 🔐",
                 copy_key="login_notification",
                 main_text=f"We detected a login to your account at {login_time}{ip_text}.",
                 main_html_content=f'<p style="font-size: 1.2em; color: #007bff;">Login at {login_time}</p>',

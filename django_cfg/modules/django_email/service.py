@@ -384,14 +384,23 @@ class DjangoEmailService(BaseCfgModule):
                     'error_type': type(e).__name__,
                     'function': func.__name__ if hasattr(func, '__name__') else 'unknown',
                 })
+            finally:
+                # Drop itself from the registry. Only `wait_for_sends` pruned the
+                # list, and a long-running server never calls it, so the list grew
+                # by one Thread per email sent for the life of the process.
+                current = threading.current_thread()
+                with _SEND_THREADS_LOCK:
+                    try:
+                        _SEND_THREADS.remove(current)
+                    except ValueError:
+                        pass
 
         thread = threading.Thread(target=_wrapper, daemon=True, name="django-cfg-email")
-        thread.start()
-        # Tracked so a caller can wait for delivery. These are daemon threads, so
-        # a short-lived process (a management command, a script) exits out from
-        # under them and the mail is never sent — see `wait_for_sends`.
+        # Registered before start, so a thread that finishes immediately cannot
+        # try to remove itself before it is in the list.
         with _SEND_THREADS_LOCK:
             _SEND_THREADS.append(thread)
+        thread.start()
 
     def _handle_email_sending(self, email_func, *args, **kwargs):
         """

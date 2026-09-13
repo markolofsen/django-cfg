@@ -208,7 +208,7 @@ def _touch_session(
     Uses F() so two concurrent batches from the same visitor cannot lose an
     increment to a read-modify-write race.
     """
-    from django.db.models import F
+    from django.db.models import BooleanField, Case, F, When
 
     pageviews = sum(1 for r in rows if r.event_name == "pageview")
     last_path = rows[-1].pathname if rows else session.exit_pathname
@@ -220,7 +220,14 @@ def _touch_session(
         pageviews=F("pageviews") + pageviews,
         duration_sec=_duration(session, now),
         # A visit stops being a bounce the moment it has a second pageview.
-        is_bounce=(session.pageviews + pageviews) <= 1,
+        # Computed from the stored count, not the one read before this batch:
+        # two concurrent batches both saw 0, both added 1, and both wrote
+        # is_bounce=True for a visit that by then had two pageviews.
+        is_bounce=Case(
+            When(pageviews__lte=1 - pageviews, then=True),
+            default=False,
+            output_field=BooleanField(),
+        ),
     )
 
 

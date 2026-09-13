@@ -261,6 +261,20 @@ class PaymentService:
             signals.payment_failed.send(sender=Payment, payment=payment)
 
         elif result.event_type == EVENT_REFUND:
-            payment.amount_refunded = result.amount or payment.amount
-            payment.status = Payment.Status.REFUNDED
-            payment.save(update_fields=["amount_refunded", "status", "updated_at"])
+            # A refund webhook fires for a partial refund too — one raised from
+            # the provider dashboard never goes through RefundService. Flipping
+            # to REFUNDED unconditionally told every fulfillment check that a
+            # 20%-refunded order was fully refunded.
+            if result.amount is None:
+                # The payload carried no refunded amount. Inventing one would
+                # record a full refund out of missing data, so record nothing
+                # and leave the row for a human to reconcile.
+                logger.warning(
+                    "refund webhook for %s carried no amount — status unchanged",
+                    payment.short_id,
+                )
+            else:
+                payment.amount_refunded = result.amount
+                if payment.amount_refunded >= payment.amount:
+                    payment.status = Payment.Status.REFUNDED
+                payment.save(update_fields=["amount_refunded", "status", "updated_at"])

@@ -541,36 +541,64 @@ class SecurityBuilder:
         # This works for: Docker, nginx, Cloudflare, AWS ALB, etc.
         return False
 
-    def _get_dev_csrf_origins(self) -> List[str]:
-        """Dev CSRF origins for localhost and 127.0.0.1.
+    # Loopback hosts that a dev server and a browser may address
+    # interchangeably: a frontend on http://localhost:3000 and the same app
+    # opened as http://127.0.0.1:3000 are different origins to a browser.
+    _LOOPBACK_HOSTS = ("localhost", "127.0.0.1", "[::1]")
 
-        CSRF is the one setting that cannot take a regex — Django compares
-        CSRF_TRUSTED_ORIGINS literally — so the ports dev servers actually use
-        are listed. Enumerating a whole range instead put ~14k strings into
-        settings, and every one is compared on each unsafe request.
+    # Ports that need no configuration to be reached. Kept short on purpose:
+    # any other port is picked up from the config by _get_dev_csrf_ports.
+    _COMMON_DEV_PORTS = (3000, 5173, 8000, 8080)
 
-        Docker IPs are absent on purpose: CSRF checks a browser's Referer, and
-        service-to-service calls do not send one.
+    def _get_dev_csrf_ports(self) -> List[int]:
+        """Loopback ports this project actually uses, plus the common defaults.
+
+        Ports are read from site_url, api_url and security_domains, so a dev
+        server on an unusual port is covered by naming it in the config rather
+        than by guessing here.
         """
-        dev_ports = [
-            3000, 3001, 3002, 3003,   # Next.js, React, Docusaurus
-            4000, 4200,               # Phoenix, Angular
-            5000, 5001,               # Flask, .NET
-            5173, 5174,               # Vite
-            6006, 6017,               # Storybook
-            7000, 7301,
-            8000, 8001, 8080, 8081,   # Django, generic HTTP
-            8501,                     # Streamlit
-            8888,                     # Jupyter
-            9000,                     # generic
-        ]
+        from urllib.parse import urlsplit
 
+        ports = set(self._COMMON_DEV_PORTS)
+
+        candidates = [self.config.site_url, self.config.api_url]
+        candidates.extend(self.config.security_domains)
+
+        for candidate in candidates:
+            if not candidate:
+                continue
+            # urlsplit needs a scheme to populate .port; bare "host:port" would
+            # otherwise parse the host as the scheme.
+            value = candidate if "://" in candidate else f"http://{candidate}"
+            try:
+                parsed = urlsplit(value)
+                if parsed.hostname in ("localhost", "127.0.0.1", "::1") and parsed.port:
+                    ports.add(parsed.port)
+            except ValueError:
+                # An unparseable domain must not take the whole config down.
+                continue
+
+        return sorted(ports)
+
+    def _get_dev_csrf_origins(self) -> List[str]:
+        """Dev CSRF origins across every loopback host and known dev port.
+
+        CSRF is the one setting that takes no regex — Django compares
+        CSRF_TRUSTED_ORIGINS literally, matching only the scheme, host and port
+        it is given — so the combinations are expanded here. Enumerating a port
+        range instead produced ~14k strings, each compared on every unsafe
+        request.
+
+        Docker IPs are absent on purpose: CSRF checks a browser's Origin or
+        Referer, and service-to-service calls send neither.
+        """
         origins = []
-        for port in dev_ports:
-            origins.extend([
-                f"http://localhost:{port}",
-                f"http://127.0.0.1:{port}",
-            ])
+        for port in self._get_dev_csrf_ports():
+            for host in self._LOOPBACK_HOSTS:
+                # https too: a dev server behind mkcert/Caddy serves the same
+                # host over TLS, and that is a distinct origin.
+                origins.append(f"http://{host}:{port}")
+                origins.append(f"https://{host}:{port}")
 
         return origins
 
