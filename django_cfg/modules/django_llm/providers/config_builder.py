@@ -18,7 +18,7 @@ PROVIDER_BASE_URLS: Dict[str, str] = {
     # that is useless anywhere else — a leaked token buys an attacker the
     # proxy, not the upstream balance.
     #
-    # Replaced `gonkagate` (`api.gonkagate.com`, on Railway) on 2026-09-02.
+    # Replaced a prior proxy (hosted on Railway) on 2026-09-02.
     "sdkrouter": "https://llm.sdkrouter.com/v1",
 }
 """Provider -> OpenAI-compatible base URL. The single source of truth.

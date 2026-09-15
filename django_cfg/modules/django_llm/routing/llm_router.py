@@ -111,10 +111,9 @@ class LLMRouter:
     chain, so a genuinely cross-provider chain — which is what
     ``catalog.recommend()`` deliberately builds, precisely so one vendor outage
     cannot stall a whole role — reaches each leg on the provider that actually
-    serves it. Racing is derived the same way (``catalog.races``): gonka models
-    are raced because gonka's random-host assignment gives an 11–57s latency
-    tail; openrouter models are not, because racing them would just double the
-    bill.
+    serves it. Racing is derived the same way (``catalog.races``), and today
+    nothing races: every provider serves from one endpoint at predictable
+    latency, where a second leg doubles the bill and buys nothing.
 
     Args:
         model_chain: Ordered list of model ids to try, primary first.
@@ -123,16 +122,16 @@ class LLMRouter:
         retry_delay_seconds: Base delay for any within-model retry. Unused
             at the default ``max_attempts=1``, kept for future cadence.
         preferred_provider: DEPRECATED. Pin EVERY model in the chain to this one
-            provider, overriding the catalog. It used to default to GONKA, which
-            silently sent openrouter-only models (claude, gpt-4o-mini, gemini) to
-            gonka — a provider that has never heard of them. It now defaults to
-            ``None`` = "derive from the model", which is the only correct answer
-            for a cross-provider chain. Kept solely so existing callers keep
-            working; pass it only for a deliberate, documented override (e.g. a
-            model too new to be catalogued). New code should not pass it at all.
-        race_size: DEPRECATED as a blanket setting — derived per model from
-            one leg when left ``None`` — racing went with gonka. An explicit value
-            overrides that for every model in the chain.
+            provider, overriding the catalog. It used to default to a single
+            provider, which silently sent models to one that had never heard of
+            them. It now defaults to ``None`` = "derive from the model", which is
+            the only correct answer for a cross-provider chain. Kept solely so
+            existing callers keep working; pass it only for a deliberate,
+            documented override (e.g. a model too new to be catalogued). New code
+            should not pass it at all.
+        race_size: DEPRECATED as a blanket setting — derived per model, and
+            one leg when left ``None``, since nothing races today. An explicit
+            value overrides that for every model in the chain.
     """
 
     def __init__(
@@ -153,11 +152,9 @@ class LLMRouter:
         self._sdkrouter_rejected = False
         self._max_total_attempts = max_total_attempts
         self._retry_delay = retry_delay_seconds
-        # Holds the breakers; see `_router`.
-        self._router_instance: ModelRouter | None = None
 
         # The explicit override, normalized to a provider VALUE string
-        # ("openrouter" / "openai" / "gonkagate"), or None = derive per model.
+        # ("openrouter" / "openai" / "sdkrouter"), or None = derive per model.
         if isinstance(preferred_provider, LLMProvider):
             self._provider_override: str | None = preferred_provider.value
         elif preferred_provider:
@@ -173,7 +170,7 @@ class LLMRouter:
         # PRIMARY (i.e. the fallback when a model's provider has no key).
         self._client = LLMClient(preferred_provider=self._provider_override)
 
-        # None = derive per model (gonka races, others don't). An explicit value
+        # None = derive per model (nothing races today). An explicit value
         # pins every model in the chain — kept for callers that must force it.
         self._race_size_override = max(1, race_size) if race_size is not None else None
         self._race_rounds = max(1, race_rounds)
@@ -244,16 +241,16 @@ class LLMRouter:
     def race_size_for_model(self, model: str) -> int:
         """How many parallel legs to run for ``model``.
 
-        Derived from the MODEL (gonka's latency tail is a gonka fact, not a
+        Derived from the MODEL (a latency tail is a provider fact, not a
         call-site fact), unless a ``race_size`` override was passed. When a
         provider override IS in force the racing decision follows THAT provider,
-        not the model's catalogued one — otherwise pinning a chain to gonka
-        would leave it un-raced.
+        not the model's catalogued one — otherwise pinning a chain to a racing
+        provider would leave it un-raced.
         """
         if self._race_size_override is not None:
             return self._race_size_override
-        # ONE LEG unless a caller asks otherwise. Racing existed for gonka's
-        # 8-55s random-host tail; that network went on 2026-08-15 and every
+        # ONE LEG unless a caller asks otherwise. Racing existed for a former
+        # provider's 8-55s random-host tail; that network is gone and every
         # remaining provider serves from a single endpoint, where a second leg
         # buys nothing and pays for two prompts.
         return 1
@@ -306,10 +303,10 @@ class LLMRouter:
 
         The cascade itself (per-model circuit breaker, fall through on failure)
         belongs to ``pipeline.ModelRouter``. All this layer adds is that a model
-        whose provider warrants it (``race_size_for_model`` >= 2 — i.e. gonka) is
+        whose provider warrants it (``race_size_for_model`` >= 2) is
         RACED across parallel legs before it is declared failed. Racing is thus a
         per-MODEL decision made as the chain is walked, not a chain-wide flag: a
-        chain of [claude (openrouter), kimi (gonka)] runs claude once and, only if
+        chain of [claude, kimi] runs claude once and, only if
         it fails, races kimi.
 
         A model whose race is fully exhausted has simply failed — ModelRouter then
@@ -340,7 +337,7 @@ class LLMRouter:
     def _race(self, call: "Callable[[str], R]", model: str, race_size: int) -> "R":
         """Parallel race of ``race_size`` legs on ONE model.
 
-        Staggered starts dodge gonka's near-identical-burst guard. The first leg
+        Staggered starts dodge a provider's near-identical-burst guard. The first leg
         that returns (no exception) wins; remaining legs are abandoned via
         ``shutdown(wait=False)`` so wall-clock == the fastest leg. A round where
         every leg raises (error / empty / validation) is retried up to
@@ -605,26 +602,18 @@ class LLMRouter:
     # ── Internals ──────────────────────────────────────────────────────────────
 
     def _router(self) -> ModelRouter:
-        """The ModelRouter over the chain — one attempt per model, then cascade.
-
-        Built once and kept: ModelRouter creates a CircuitBreaker per model in
-        its constructor, so returning a fresh router per call discarded every
-        recorded failure and the breaker never opened — a dead model was
-        retried on every request, paying its full timeout each time.
+        """A fresh ModelRouter over the chain — one attempt per model, then cascade.
 
         The chain is capped at ``max_total_attempts`` so total work stays
         bounded even if a longer chain is supplied. ``base_delay`` maps to
         the configured retry cadence (unused at max_attempts=1, but kept so
         any future within-model retry honours it).
         """
-        if self._router_instance is not None:
-            return self._router_instance
-        self._router_instance = ModelRouter(
+        return ModelRouter(
             self._chain[: self._max_total_attempts],
             max_attempts=1,
             base_delay=self._retry_delay,
         )
-        return self._router_instance
 
     @staticmethod
     def _build_messages(messages: list[dict], system: str | None) -> list[dict]:

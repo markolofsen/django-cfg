@@ -90,8 +90,8 @@ class ChatRequestHandler:
 
         # Resolve the provider for THIS call. An explicit `provider` (from the
         # model's catalog entry) wins when its key is configured; otherwise the
-        # client's primary. get_client() (not primary_client) so the gonka key
-        # pool round-robins per call — concurrent race legs ride distinct keys.
+        # client's primary. get_client() (not primary_client) so a provider's
+        # key pool round-robins per call — concurrent legs ride distinct keys.
         if provider and self.provider_manager.has_provider(provider):
             client = self.provider_manager.get_client(provider)
         else:
@@ -111,17 +111,11 @@ class ChatRequestHandler:
         if model is None:
             model = ConfigBuilder.get_default_model(provider)
 
-        # If gonka is the primary provider and the model slug has an openai/
-        # prefix, bypass gonka and use the direct OpenAI client instead.
-        # OpenRouter handles openai/ slugs natively — only bypass for gonka.
-        if (
-            model
-            and model.startswith("openai/")
-            and provider == "gonkagate"
-            and self.provider_manager.has_provider("openai")
-        ):
-            provider = "openai"
-            client = self.provider_manager.get_client("openai")
+        # An `openai/`-prefixed bypass used to sit here for a provider that
+        # could not serve those slugs. It was replaced on 2026-09-02 and is not
+        # an `LLMProvider` member any more, so the branch could never be taken.
+        # Removed 2026-09-14. Every remaining provider — openai, openrouter,
+        # sdkrouter — handles `openai/` slugs itself.
 
         # Prepare API model (remove prefix for OpenAI)
         api_model = self._prepare_api_model(model, provider)

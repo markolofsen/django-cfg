@@ -40,8 +40,8 @@ def _router(role: ModelRole, models: list[str] | None, extra_models: list[str] |
 
     No ``preferred_provider``: the router derives each model's provider from the
     catalog as it walks the chain. Pinning the whole chain to OpenRouter (as this
-    used to) was wrong the moment a chain contained a gonka-only model — it sent
-    kimi to a provider that does not serve it.
+    used to) was wrong the moment a chain contained a model another provider
+    serves exclusively — it sent kimi to a provider that does not serve it.
     """
     if models:
         return LLMRouter(models)
@@ -168,14 +168,11 @@ def extract_chat_bulk(
     bulk ingestion, offline normalization, batch processing. Do NOT use it on
     interactive paths where a user is waiting for a response.
 
-    RENAMED from ``extract_chat_gonka`` on 2026-08-15. The gonka network was
-    retired 2026-08-01 and this function had already been repointed at
-    ``openai/gpt-4o-mini`` — so the name promised a provider it had not used for
-    two weeks. One caller had noticed and written it into a comment
-    ("resolves to gpt-4o-mini") rather than renaming the function.
-
-    ``extract_chat_gonka`` remains as a deprecated alias so existing callers
-    keep working; it will go once they are migrated.
+    RENAMED on 2026-08-15 off a retired provider's name, which it had already
+    stopped using: the function was repointed at ``openai/gpt-4o-mini`` while
+    still promising that provider in its name. The deprecated alias went on
+    2026-09-14 — the condition it waited on ("once callers are migrated") was
+    already met, with no caller of the old name anywhere in the project.
     """
     router = LLMRouter(["openai/gpt-4o-mini"])
     return router.parse(
@@ -184,11 +181,6 @@ def extract_chat_bulk(
         system=system,
         max_tokens=max_tokens,
     )
-
-
-#: Deprecated alias — see `extract_chat_bulk`. Kept so callers that still import
-#: the old name do not break; migrate and then delete.
-extract_chat_gonka = extract_chat_bulk
 
 
 # ── Async twins ──────────────────────────────────────────────────────────────
@@ -349,7 +341,6 @@ async def classify_many(
 __all__ = [
     "extract",
     "extract_chat",
-    "extract_chat_gonka",
     "classify",
     "chat_with_tools",
     "escalate",

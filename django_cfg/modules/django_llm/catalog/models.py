@@ -240,7 +240,7 @@ _CATALOG: dict[str, ModelTraits] = {
         slug="moonshotai/kimi-k2.6",
         reasoning=False, reasoning_disablable=True,
         # Routed through the sdkrouter edge proxy since 2026-09-02, when
-        # `gonkagate` was retired. Confirm the proxy publishes an alias for
+        # its previous provider was retired. Confirm the proxy publishes an alias for
         # this slug before relying on it — the proxy resolves names it knows,
         # and an unpublished one 404s rather than falling through.
         provider=PROVIDER_SDKROUTER,
@@ -292,7 +292,31 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
         #
         # gpt-4o-mini stays directly behind it: 28/28 on the strict-JSON bench,
         # so a fallback that is stronger on schema adherence than the primary.
-        "google/gemini-2.5-flash",    # openrouter — primary
+        # ── RE-MEASURED 2026-09-14, and the block above no longer holds. ──
+        #
+        # The note above asks for exactly this: "Put CF_STRUCTURED_OUTPUT back
+        # at the head of this tuple if CF latency reaches single digits" and
+        # "Measure with DISTINCT prompts: the proxy caches". Done, five
+        # distinct listings in five languages (KR/DE/JP/PL/CN), no repeats:
+        #
+        #     @cf-json                      2.5 1.7 3.4 3.6 3.1   (s)
+        #     google/gemini-2.5-flash-lite  1.7 1.2 1.2 1.2 1.2
+        #     openai/gpt-4o-mini            2.4 3.5 1.0 2.7 1.2
+        #
+        # 1.7-3.6s, not the 17.6-78.4s that ruled it out — and the prediction
+        # in that note was right about why: those timings belonged to `@cf`,
+        # and CF_STRUCTURED_OUTPUT was repointed to `@cf-json` on 2026-09-10.
+        # `@cf-json` is also STEADIER than gpt-4o-mini, whose spread is wider.
+        # Strict-schema accuracy is 5/5 for both on the `anyOf: [integer,
+        # null]` shape that degrades worst.
+        #
+        # It leads now for a reason the latency bench cannot see: **it is not
+        # billed to the OpenRouter balance.** On 2026-09-14 that balance was
+        # $29.70 of $1457.50 against $5.30/hour of ingest — six hours of
+        # runway. Cloudflare Workers AI draws a separate credit, so the head of
+        # this chain is the difference between ingesting and stopping.
+        CF_STRUCTURED_OUTPUT,         # @cf-json — Workers AI, separate credit
+        "google/gemini-2.5-flash",    # openrouter — fastest, watched on real listings
         "openai/gpt-4o-mini",         # openrouter fallback; strict json_schema reliable
     ),
     ModelRole.TOOL_CHAT: (
@@ -429,7 +453,7 @@ def races(slug: str) -> bool:
     A property of the MODEL's provider, not of the call.
 
     **Nothing races today, and that is the correct answer, not an oversight.**
-    Racing existed for `gonkagate`, which assigned each request to a random
+    Racing existed for a since-retired provider, which assigned each request to a random
     network host and so had an 11–57s latency spread with a long tail; two
     staggered legs cut it. Every remaining provider — including the sdkrouter
     proxy that replaced it — serves from one endpoint at predictable latency,

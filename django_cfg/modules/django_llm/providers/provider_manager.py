@@ -106,7 +106,7 @@ class ProviderManager:
         vendor id and the upstream can move without every caller learning a new
         name.
 
-        Replaced `gonkagate` on 2026-09-02. That provider took a POOL of keys
+        Replaced a prior proxy on 2026-09-02. That provider took a POOL of keys
         and round-robined them, to sidestep a per-key rate limit; this one takes
         a single token, because the limit it had to dodge is not the proxy's.
         If concurrency ever needs several tokens again, the pool belongs on the
