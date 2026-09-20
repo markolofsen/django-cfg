@@ -21,14 +21,14 @@
     "i18n:translate": "i18n translate -d ./i18n/locales"
   },
   "dependencies": {
-    "@djangocfg/api": "^2.1.465",
-    "@djangocfg/centrifugo": "^2.1.465",
+    "@djangocfg/api": "^2.1.561",
+    "@djangocfg/centrifugo": "^2.1.541",
     "@djangocfg/debuger": "^2.1.457",
-    "@djangocfg/i18n": "^2.1.465",
-    "@djangocfg/layouts": "^2.1.465",
+    "@djangocfg/i18n": "^2.1.560",
+    "@djangocfg/layouts": "^2.1.560",
     "@djangocfg/monitor": "^2.1.457",
-    "@djangocfg/ui-core": "^2.1.465",
-    "@djangocfg/ui-tools": "^2.1.465",
+    "@djangocfg/ui-core": "^2.1.560",
+    "@djangocfg/ui-tools": "^2.1.541",
     "@hookform/resolvers": "^5.4.0",
     "clsx": "^2.1.1",
     "consola": "^3.4.2",
@@ -48,8 +48,8 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@djangocfg/nextjs": "^2.1.465",
-    "@djangocfg/typescript-config": "^2.1.465",
+    "@djangocfg/nextjs": "^2.1.561",
+    "@djangocfg/typescript-config": "^2.1.561",
     "@next/bundle-analyzer": "^16.2.10",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/postcss": "^4.3.2",
