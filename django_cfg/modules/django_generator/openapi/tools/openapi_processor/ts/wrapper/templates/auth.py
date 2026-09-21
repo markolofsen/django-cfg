@@ -36,11 +36,24 @@ _ENV_HELPERS_TS = '''\
 /** Detect locale from `NEXT_LOCALE` cookie or `navigator.language`. */
 function detectLocale(): string | null {
   try {
-    if (typeof document !== 'undefined') {
-      const m = document.cookie.match(/(?:^|;\\s*)NEXT_LOCALE=([^;]*)/);
-      const locale = m?.[1];
-      if (locale !== undefined) return decodeURIComponent(locale);
-    }
+    // BROWSER ONLY, and `document` is what decides that.
+    //
+    // `navigator` used to be the browser test and no longer is: Node 18+
+    // defines `navigator.language`, so on a server this returned the HOST's
+    // locale — `en-US` on most machines — and every server-rendered request
+    // carried `Accept-Language: en-US` no matter which locale the page was
+    // being rendered for. A valid header stating the wrong thing, which is
+    // worse than none: nothing looks broken.
+    //
+    // A server caller that knows its locale passes it explicitly with
+    // `setLocale()`. There is nothing here to detect it FROM — the request is
+    // the framework's, not this module's.
+    if (typeof document === 'undefined') return null;
+
+    const m = document.cookie.match(/(?:^|;\\s*)NEXT_LOCALE=([^;]*)/);
+    const locale = m?.[1];
+    if (locale !== undefined) return decodeURIComponent(locale);
+
     if (typeof navigator !== 'undefined' && navigator.language) {
       return navigator.language;
     }

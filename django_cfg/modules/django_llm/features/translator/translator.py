@@ -202,7 +202,8 @@ class DjangoTranslator(BaseCfgModule):
                 source_language=source_language,
                 fail_silently=fail_silently,
                 model=model,
-                temperature=temperature
+                temperature=temperature,
+                domain=domain,
             )
 
         except Exception as e:
@@ -219,6 +220,7 @@ class DjangoTranslator(BaseCfgModule):
         fail_silently: bool = False,
         model: Optional[str] = None,
         temperature: Optional[float] = None,
+        domain: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Translate JSON object.
@@ -232,6 +234,7 @@ class DjangoTranslator(BaseCfgModule):
             fail_silently: Don't raise exceptions on failure
             model: Optional model override
             temperature: Optional temperature override
+            domain: Optional subject matter, e.g. "used car listings"
 
         Returns:
             Translated JSON object

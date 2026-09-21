@@ -70,7 +70,8 @@ Translation:"""
         self,
         json_str: str,
         source_language: str,
-        target_language: str
+        target_language: str,
+        domain: str | None = None,
     ) -> str:
         """
         Build prompt for JSON translation.
@@ -79,11 +80,33 @@ Translation:"""
             json_str: JSON string to translate
             source_language: Source language code
             target_language: Target language code
+            domain: Optional subject matter, e.g. "used car listings". Short
+                values carry no context of their own, and a weak model guesses
+                from the word alone — measured 2026-09-21 against `@cf-json`:
+                "Sunroof" came back as "Крыша-складка" (a folding roof) rather
+                than "Люк", "Alloy wheels" as "Окрашенные диски" (painted),
+                "Leather seats" as "Лаковые сиденья" (lacquered). Prose in the
+                same payload translated correctly. Naming the domain is the
+                cheapest fix that does not require a glossary per language.
 
         Returns:
             JSON translation prompt
         """
+        source_name = self.language_names.get(source_language, source_language)
+        target_name = self.language_names.get(target_language, target_language)
+        domain_line = (
+            f"\nThese values come from {domain}. Use the vocabulary a native "
+            f"{target_name} speaker in that field would use, not a literal "
+            f"word-by-word rendering.\n"
+            if domain else ""
+        )
+
         prompt = f"""You are a professional translator. Your task is to translate ONLY the VALUES in this JSON, NEVER the keys.
+
+TRANSLATE EVERY VALUE. A value returned unchanged in {source_name} is a
+failure unless rule 5 below explicitly exempts it. Short values — one or two
+words — are still values and must be translated.
+{domain_line}
 
 🚨 CRITICAL RULES - VIOLATION WILL RESULT IN FAILURE:
 1. ❌ NEVER TRANSLATE JSON KEYS: "title" stays "title", NOT "título" or "заголовок"
@@ -101,7 +124,7 @@ CORRECT EXAMPLE (DO THIS):
 
 If you translate ANY JSON key, you have FAILED the task completely.
 
-JSON to translate from {source_language} to {target_language}:
+JSON to translate from {source_name} to {target_name}:
 {json_str}
 
 Return ONLY the JSON with translated VALUES and original English keys:"""

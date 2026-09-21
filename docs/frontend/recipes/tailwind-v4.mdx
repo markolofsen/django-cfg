@@ -83,12 +83,20 @@ Arbitrary values like `h-[80px]` may not work reliably in v4. Define tokens in `
 ```
 
 ```typescript
-// Use the token
-<div className="h-[--spacing-header]" />
+// Use the token — parentheses, not brackets
+<div className="h-(--spacing-header)" />
 
 // Or use inline style
 <div style={{ width: '80px', height: '80px' }} />
 ```
+
+> In v4 a variable is read with **parentheses**: `h-(--spacing-header)`. The v3
+> spelling used square brackets, which in v4 mean an arbitrary *value* — it
+> compiles to `height:--spacing-header`, the browser drops the declaration, and
+> the element ends up with no rule at all. Only the bare form is wrong: an
+> arbitrary value that spells the call itself,
+> `right-[calc(var(--sidebar-width)*-1)]`, is correct.
+> `scripts/check-tailwind-var-syntax.mjs` rejects the bad spelling.
 
 ## Breakpoints
 

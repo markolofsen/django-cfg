@@ -315,9 +315,22 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
         # $29.70 of $1457.50 against $5.30/hour of ingest — six hours of
         # runway. Cloudflare Workers AI draws a separate credit, so the head of
         # this chain is the difference between ingesting and stopping.
+        # BOTH TIERS BELOW ARE DEAD, measured 2026-09-17 on production over 24h:
+        # `gemini-2.5-flash` answered 401 ("upstream rejected the proxy's
+        # credentials") 488 times, `gpt-4o-mini` 401/402 170 times. So this is
+        # a chain of three with one working link — `@cf-json` carried 55 007 of
+        # 55 040 normalizations at $0.000000, and the 33 that reached
+        # `gpt-4o-mini` did so before its credit ran out.
+        #
+        # Do NOT read that as "drop the paid tiers". They are what a fallback
+        # is for: all 33 succeeded, on listings `@cf-json` could not parse.
+        # What the numbers say is narrower — the safety net is currently a
+        # formality, and 20 listings in 2 hours fall through it to
+        # `LLM_ROUTER_ERROR`. Restoring either key restores the net; nothing in
+        # this file can.
         CF_STRUCTURED_OUTPUT,         # @cf-json — Workers AI, separate credit
-        "google/gemini-2.5-flash",    # openrouter — fastest, watched on real listings
-        "openai/gpt-4o-mini",         # openrouter fallback; strict json_schema reliable
+        "google/gemini-2.5-flash",    # openrouter — 401 since at least 2026-09-16
+        "openai/gpt-4o-mini",         # openrouter — 401/402 since at least 2026-09-16
     ),
     ModelRole.TOOL_CHAT: (
         # THIS TUPLE IS THE LIVE `auto`+tools PICK. The dispatcher

@@ -46,6 +46,7 @@ class JsonTranslator:
         fail_silently: bool = False,
         model: Optional[str] = None,
         temperature: Optional[float] = None,
+        domain: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Translate JSON object with automatic language detection.
@@ -57,6 +58,8 @@ class JsonTranslator:
             fail_silently: Don't raise exceptions on failure
             model: Optional model override
             temperature: Optional temperature override
+            domain: Optional subject matter, passed to the prompt so short
+                values are read in context rather than word by word
 
         Returns:
             Translated JSON object
@@ -80,7 +83,8 @@ class JsonTranslator:
                 source_language=source_language,
                 model=model,
                 temperature=temperature,
-                fail_silently=fail_silently
+                fail_silently=fail_silently,
+                domain=domain,
             )
 
         except Exception as e:
@@ -98,7 +102,8 @@ class JsonTranslator:
         source_language: str = 'auto',
         model: Optional[str] = None,
         temperature: Optional[float] = None,
-        fail_silently: bool = False
+        fail_silently: bool = False,
+        domain: Optional[str] = None,
     ) -> Any:
         """Translate JSON object with smart text-level caching."""
         try:
@@ -143,7 +148,7 @@ class JsonTranslator:
 
             # Create translation prompt
             prompt = self.prompt_builder.build_json_translation_prompt(
-                json_str, actual_source_lang, target_language
+                json_str, actual_source_lang, target_language, domain=domain
             )
 
             # Make LLM request
