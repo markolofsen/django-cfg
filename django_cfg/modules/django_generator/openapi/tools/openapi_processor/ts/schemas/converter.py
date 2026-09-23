@@ -5,11 +5,11 @@ Entry point: `to_zod(schema, *, lookup) -> str`.
 Rules:
     $ref          → "<Name>Schema"
     enum          → z.enum([...]) for strings, z.union(...) for mixed
-    type=string   → z.string() + .min/.max/.regex/format
+    type=string   → format base (or z.string()) + .min/.max/.regex
     type=integer  → z.number().int() + min/max
     type=number   → z.number()
     type=boolean  → z.boolean()
-    type=array    → z.array(<inner>)
+    type=array    → z.array(<inner>) + min/max items
     type=object   → z.object({...}) with required/optional
     anyOf/oneOf   → z.union([...]) (Optional[T] flattened to .nullable())
     allOf         → merged into a single z.object
@@ -129,12 +129,21 @@ def _js_literal(v: Any) -> str:
 
 
 def _string(schema: dict[str, Any]) -> str:
+    """Base expression from `format`, then the length and pattern bounds.
+
+    The format used to `return` on its own, which silently dropped every
+    bound beside it: `URLField(max_length=256)` reached the client as a bare
+    `z.string()`, and an `EmailField(max_length=254)` as `z.email()`. Each
+    value in `ZOD_FORMAT_MAP` accepts these chained.
+    """
     fmt = schema.get("format")
-    if isinstance(fmt, str) and fmt in ZOD_FORMAT_MAP:
-        return ZOD_FORMAT_MAP[fmt]
-    parts = ["z.string()"]
-    if isinstance(schema.get("minLength"), int):
-        parts.append(f".min({schema['minLength']})")
+    base = ZOD_FORMAT_MAP.get(fmt) if isinstance(fmt, str) else None
+    parts = [base or "z.string()"]
+    min_length = schema.get("minLength")
+    # `minLength: 1` beside a format is noise — every format in the map already
+    # rejects "". A larger bound is a real rule and is kept.
+    if isinstance(min_length, int) and not (base and min_length <= 1):
+        parts.append(f".min({min_length})")
     if isinstance(schema.get("maxLength"), int):
         parts.append(f".max({schema['maxLength']})")
     if isinstance(schema.get("pattern"), str):
@@ -163,7 +172,12 @@ def _number(schema: dict[str, Any]) -> str:
 def _array(schema: dict[str, Any], *, lookup: Callable[[str], bool]) -> str:
     items = schema.get("items")
     inner = to_zod(items, lookup=lookup) if isinstance(items, dict) else "z.unknown()"
-    return f"z.array({inner})"
+    parts = [f"z.array({inner})"]
+    if isinstance(schema.get("minItems"), int):
+        parts.append(f".min({schema['minItems']})")
+    if isinstance(schema.get("maxItems"), int):
+        parts.append(f".max({schema['maxItems']})")
+    return "".join(parts)
 
 
 def _object(schema: dict[str, Any], *, lookup: Callable[[str], bool]) -> str:

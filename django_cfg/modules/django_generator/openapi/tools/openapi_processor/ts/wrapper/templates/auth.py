@@ -472,9 +472,37 @@ function ensureStorageSync(): void {{
  * Terminal-401 subscribers. Unlike the single `onUnauthorized` slot these
  * compose: each registration returns its own unsubscribe, so StrictMode
  * double-mounts and multiple packages can't clobber each other.
+ *
+ * THE SET LIVES ON `globalThis`, and it has to.
+ *
+ * An app that generates its own SDK gets its own compiled copy of this file,
+ * while `AuthProvider` comes from `@djangocfg/api/dist` — a second copy, with
+ * its own module scope. Tokens survive that split because both copies read the
+ * same storage keys and wake each other through `SESSION_SYNC_EVENT`; a plain
+ * module-level `Set` does not. So the app's copy raised the terminal 401 into
+ * an empty set while the provider sat subscribed to the other one, and the
+ * redirect `AuthContext` calls "the ONE exit" never fired: the cabinet kept
+ * polling a dead session and the customer watched the console fill with 401s
+ * instead of being sent to sign in. Carapis reported ten of them.
+ *
+ * Keyed by `ACCESS_KEY` for the same reason `SESSION_SYNC_EVENT` is: two
+ * stores configured against different token keys are different sessions and
+ * must not share subscribers.
  */
 type SessionExpiredHandler = (response: Response) => void;
-const _sessionExpiredHandlers = new Set<SessionExpiredHandler>();
+
+const SESSION_EXPIRED_REGISTRY = `cfg-auth:expired-handlers:${{ACCESS_KEY}}`;
+
+const _sessionExpiredHandlers: Set<SessionExpiredHandler> = (() => {{
+  // No browser guard: Node/SSR has a `globalThis` too, the registry is
+  // per-realm either way, and a server render simply never fires.
+  const g = globalThis as Record<string, unknown>;
+  const existing = g[SESSION_EXPIRED_REGISTRY];
+  if (existing instanceof Set) return existing as Set<SessionExpiredHandler>;
+  const created = new Set<SessionExpiredHandler>();
+  g[SESSION_EXPIRED_REGISTRY] = created;
+  return created;
+}})();
 
 {_HEY_CLIENT_TS}
 /**
