@@ -25,7 +25,7 @@ from collections.abc import Callable
 from typing import Any
 
 from ..naming import schema_constant
-from .format_map import ZOD_FORMAT_MAP
+from .format_map import EMPTY_STRING_FORMATS, ZOD_FORMAT_MAP
 
 
 def to_zod(schema: Any, *, lookup: Callable[[str], bool]) -> str:
@@ -148,6 +148,23 @@ def _string(schema: dict[str, Any]) -> str:
         parts.append(f".max({schema['maxLength']})")
     if isinstance(schema.get("pattern"), str):
         parts.append(f".regex(/{schema['pattern']}/)")
+
+    # A blank-able field accepts "" beside its own rule.
+    #
+    # `URLField(blank=True)` serialises an unset value as "", which `z.url()`
+    # rejects — the portal logged a validation error on every read of a
+    # profile whose owner had never filled the field in. drf-spectacular emits
+    # `minLength: 1` when blank is FORBIDDEN, so its absence is the signal.
+    #
+    # Appended after the bounds so `.max()` still applies to a real value, and
+    # `.or()` last so the union is the outermost expression.
+    if (
+        base
+        and fmt in EMPTY_STRING_FORMATS
+        and not isinstance(min_length, int)
+    ):
+        parts.append('.or(z.literal(""))')
+
     return "".join(parts)
 
 
