@@ -10,31 +10,12 @@ Example:
     python manage.py rqworker default --with-scheduler
 """
 
-import os
-import sys
+from django_cfg.modules.django_rq.fork_safety import fix_macos_fork_safety, prepare_forking_worker
 
-from django_rq.management.commands.rqworker import Command as DjangoRQWorkerCommand
+# Before any import that might initialise ObjC.
+fix_macos_fork_safety()
 
-
-def _fix_macos_fork_safety():
-    """
-    Fix macOS fork() safety issue with Objective-C runtime.
-
-    On macOS Big Sur+, fork() after ObjC initialization causes crashes.
-    Libraries like numpy, httpx, ML frameworks trigger this.
-
-    Setting OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES disables the check.
-    This is safe for RQ workers as they don't share ObjC state.
-
-    Only applied on macOS (darwin).
-    """
-    if sys.platform == "darwin":
-        if "OBJC_DISABLE_INITIALIZE_FORK_SAFETY" not in os.environ:
-            os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
-
-
-# Apply fix before any imports that might initialize ObjC
-_fix_macos_fork_safety()
+from django_rq.management.commands.rqworker import Command as DjangoRQWorkerCommand  # noqa: E402
 
 
 class Command(DjangoRQWorkerCommand):
@@ -51,8 +32,14 @@ class Command(DjangoRQWorkerCommand):
         --worker-ttl SEC     Worker timeout (default: 420)
         --sentry-dsn DSN     Report exceptions to Sentry
 
-    Note: On macOS, OBJC_DISABLE_INITIALIZE_FORK_SAFETY is automatically
-    set to prevent fork() crashes with certain libraries (numpy, httpx, etc.)
+    Every job runs in a forked work horse, so the worker runs without the
+    psycopg pool and a child never reuses its parent's connection — see
+    ``django_cfg.modules.django_rq.fork_safety``. On macOS,
+    OBJC_DISABLE_INITIALIZE_FORK_SAFETY is set to prevent fork() crashes.
     """
 
     help = 'Runs RQ workers for django-cfg (wrapper for django-rq rqworker)'
+
+    def handle(self, *args, **options):
+        prepare_forking_worker()
+        return super().handle(*args, **options)

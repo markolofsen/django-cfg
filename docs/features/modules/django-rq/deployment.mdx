@@ -908,7 +908,10 @@ python manage.py rqworker low knowledge --num-workers 2
 1. **Worker Count**: 1 worker per CPU core recommended
 2. **Queue Separation**: Separate queues for different priorities
 3. **Result TTL**: Set short TTL (300s) for frequent jobs
-4. **Connection Pooling**: Use Redis connection pool (auto-enabled)
+4. **Connection Pooling**: Use Redis connection pool (auto-enabled). Workers
+   run **without** Django's psycopg pool: every job is a forked process, and a
+   pool inherited across `fork()` cannot open connections. `rqworker` removes
+   it automatically — pool at PgBouncer or the server instead.
 5. **Job Timeout**: Set appropriate timeouts per queue
 6. **Batch Processing**: Group similar tasks together
 
