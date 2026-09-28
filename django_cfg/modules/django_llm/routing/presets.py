@@ -35,6 +35,22 @@ from .llm_router import LLMRouter
 T = TypeVar("T", bound=BaseModel)
 
 
+@functools.lru_cache(maxsize=64)
+def _router_cached(role: ModelRole, models: tuple[str, ...], extra: tuple[str, ...]) -> LLMRouter:
+    """One router per distinct (role, chain) — see `_router`.
+
+    Keyed on tuples because `lru_cache` needs hashable arguments, and on the
+    FULL chain because two callers asking for different models must not share a
+    router: the chain is what the router walks.
+
+    `maxsize` bounds it against a caller passing a fresh `models=[...]` per
+    request — that would otherwise trade a leak for a slower leak.
+    """
+    if models:
+        return LLMRouter(list(models))
+    return LLMRouter.for_role(role, extra_models=list(extra) or None)
+
+
 def _router(role: ModelRole, models: list[str] | None, extra_models: list[str] | None) -> LLMRouter:
     """A router for ``role`` — explicit ``models`` win over the role default.
 
@@ -42,10 +58,30 @@ def _router(role: ModelRole, models: list[str] | None, extra_models: list[str] |
     catalog as it walks the chain. Pinning the whole chain to OpenRouter (as this
     used to) was wrong the moment a chain contained a model another provider
     serves exclusively — it sent kimi to a provider that does not serve it.
+
+    **Cached.** Constructing `LLMRouter` constructs an `LLMClient`, which loads
+    the 491-model catalogue, opens three provider clients and allocates a
+    response cache. Building one per call made that per-REQUEST work: measured
+    2026-09-28 on production, 118 `LLMClient initialized` lines against 50
+    vehicles ingested in the same three minutes — 2.4 clients per vehicle. The
+    API container reached 15.99 of its 16 GiB and the kernel OOM-killed a worker
+    twice that night.
+
+    Safe to share. Everything the chain depends on is fixed at construction and
+    only read afterwards. The one field written later is `_sdkrouter_rejected`,
+    and sharing it is an IMPROVEMENT rather than a hazard: it records that the
+    edge proxy refused our credential with a 401/403, which is a fact about the
+    secret, not about the request. A fresh router per call forgot it every time
+    and kept routing through a provider that had already rejected us.
+
+    Sharing also makes the client's own response cache work at all — a per-call
+    client meant a permanently empty cache.
     """
-    if models:
-        return LLMRouter(models)
-    return LLMRouter.for_role(role, extra_models=extra_models)
+    return _router_cached(
+        role,
+        tuple(models or ()),
+        tuple(extra_models or ()),
+    )
 
 
 def extract(

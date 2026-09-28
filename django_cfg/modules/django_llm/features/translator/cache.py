@@ -24,14 +24,10 @@ class TranslationCacheManager:
             cache_dir: Directory for file cache
             ttl_hours: Time-to-live for cache in hours
         """
-        # Default cache directory inside the package module structure
         if cache_dir is None:
-            # Resolve to the django_cfg.modules.django_llm package root
-            module_dir = Path(__file__).parent.parent.parent.parent  # llm/features/translator/cache.py -> django_cfg.modules.django_llm pkg root
-            default_cache_dir = module_dir / ".cache" / "llm_translate"
-
-            # Create cache directory if it doesn't exist
-            default_cache_dir.mkdir(parents=True, exist_ok=True)
+            # Never inside the package: site-packages is read-only for a non-root container user.
+            from ...storage.dirs import get_translator_cache_dir
+            default_cache_dir = get_translator_cache_dir()
         else:
             default_cache_dir = Path(cache_dir)
 

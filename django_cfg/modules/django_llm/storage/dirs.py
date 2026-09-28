@@ -3,8 +3,21 @@ Cache Directory Builder for the cmdop_utils LLM module.
 
 Centralized cache directory management with smart defaults.
 """
+import os
+import tempfile
 from pathlib import Path
 from typing import Optional
+
+#: Overrides the cache location for every django_cfg.modules.django_llm cache.
+CACHE_DIR_ENV = "CMDOP_LLM_CACHE_DIR"
+
+
+def _writable(path: Path) -> Path | None:
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+    return path if os.access(path, os.W_OK) else None
 
 
 class CacheDirectoryBuilder:
@@ -53,10 +66,15 @@ class CacheDirectoryBuilder:
         else:
             cache_dir = base / cache_root
 
-        # Ensure directory exists
-        cache_dir.mkdir(parents=True, exist_ok=True)
-
-        return cache_dir
+        # A read-only working directory (a container with the code mounted
+        # read-only) must not break the caller: the models cache feeds
+        # price_run, and a failure there silently prices every run at nothing.
+        # Fall back to ~/.cache, then the temp dir.
+        tail = cache_dir.relative_to(base / cache_root)
+        for candidate in (cache_dir, Path.home() / ".cache" / tail, Path(tempfile.gettempdir()) / tail):
+            if (ok := _writable(candidate)) is not None:
+                return ok
+        raise PermissionError(f"no writable cache directory (tried {cache_dir})")
 
 
 def get_default_llm_cache_dir(cache_dir: Optional[Path] = None) -> Path:
@@ -77,6 +95,10 @@ def get_default_llm_cache_dir(cache_dir: Optional[Path] = None) -> Path:
     if cache_dir:
         # Use provided directory
         cache_path = Path(cache_dir)
+        cache_path.mkdir(parents=True, exist_ok=True)
+        return cache_path
+    if os.environ.get(CACHE_DIR_ENV):
+        cache_path = Path(os.environ[CACHE_DIR_ENV])
         cache_path.mkdir(parents=True, exist_ok=True)
         return cache_path
 

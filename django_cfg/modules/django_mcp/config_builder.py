@@ -16,6 +16,7 @@ from django_cfg.modules.django_mcp import (
     AppMCPConfig,
     ModelMCPConfig,
     CommandMCPConfig,
+    MCPExtraKey,
     MCPProfile,
     MCPTargetConfig,
 )
@@ -43,6 +44,7 @@ class ProfileBuilder:
         self._access = access
         self._access_key: Optional[str] = None
         self._service_username: Optional[str] = None
+        self._extra_keys: List[MCPExtraKey] = []
         self._tools: List[str] = []
         self._exposures: Dict[str, ModelExposure] = {}
         self._introspection: Optional[IntrospectionConfig] = None
@@ -54,6 +56,15 @@ class ProfileBuilder:
     ) -> "ProfileBuilder":
         self._access_key = key
         self._service_username = service_username
+        return self
+
+    def add_access_key(
+        self, label: str, key: str, service_username: Optional[str] = None
+    ) -> "ProfileBuilder":
+        """Accept a further key, held by ``label``, revocable on its own."""
+        self._extra_keys.append(
+            MCPExtraKey(label=label, access_key=key, service_username=service_username)
+        )
         return self
 
     def tools(self, *names: str) -> "ProfileBuilder":
@@ -117,6 +128,7 @@ class ProfileBuilder:
             access=self._access,
             access_key=self._access_key,
             service_username=self._service_username,
+            extra_keys=self._extra_keys,
             tools=self._tools,
             exposures={
                 key: ModelMCPConfig(
@@ -194,6 +206,7 @@ class MCPConfigBuilder:
         self._enabled: bool = True
         self._access_key: Optional[str] = None
         self._service_username: Optional[str] = None
+        self._extra_keys: List[MCPExtraKey] = []
         self._targets: Dict[str, MCPTargetConfig] = {}
         self._rate_limit: str = "100/minute"
         self._llm_model: str = "openai/gpt-4.1-nano"
@@ -391,6 +404,20 @@ class MCPConfigBuilder:
         self._service_username = service_username
         return self
 
+    def add_access_key(
+        self, label: str, key: str, *, service_username: Optional[str] = None
+    ) -> "MCPConfigBuilder":
+        """Accept a further operator key, held by one named party.
+
+        Use it to give someone their own key: dropping the call revokes them
+        without rotating the key everyone else holds. ``service_username`` has
+        the same meaning as in :meth:`set_access_key`.
+        """
+        self._extra_keys.append(
+            MCPExtraKey(label=label, access_key=key, service_username=service_username)
+        )
+        return self
+
     def add_target(
         self,
         kind: str,
@@ -477,6 +504,11 @@ class MCPConfigBuilder:
         if not self._enabled:
             return None
 
+        if self._extra_keys and not self._access_key:
+            # With no primary key the endpoint is open, so an extra key would
+            # look like protection while guarding nothing.
+            raise ValueError("add_access_key() needs set_access_key() first.")
+
         if self._public_profile is not None and not self._profiles:
             # `enable_public_profile()` — turn the flat settings into the
             # operator profile and add the anonymous one beside it, so the
@@ -495,6 +527,7 @@ class MCPConfigBuilder:
                 "operator", path=DEFAULT_ENDPOINT_PATH, access="key"
             ) as op:
                 op.set_access_key(self._access_key, self._service_username)
+                op._extra_keys = list(self._extra_keys)
                 op.tools(ALL_TOOLS)
                 op._introspection = self._introspection
                 op.set_rate_limit(self._rate_limit)
@@ -537,6 +570,7 @@ class MCPConfigBuilder:
                 name
                 for name, value in (
                     ("set_access_key", self._access_key),
+                    ("add_access_key", self._extra_keys),
                     ("enable_introspection", self._introspection.enabled),
                 )
                 if value
@@ -575,6 +609,7 @@ class MCPConfigBuilder:
             enabled=self._enabled,
             access_key=self._access_key,
             service_username=self._service_username,
+            extra_keys=self._extra_keys,
             rate_limit=self._rate_limit,
             llm_model=self._llm_model,
             introspection=self._introspection,

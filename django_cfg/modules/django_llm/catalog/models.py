@@ -149,9 +149,11 @@ _CATALOG: dict[str, ModelTraits] = {
             ModelRole.TOOL_CHAT: Verdict.GOOD,   # $0.30/$2.50 per M — clears multi-tool chains, thinking disablable
             ModelRole.EXTRACTION: Verdict.OK,
             ModelRole.CLASSIFY: Verdict.GOOD,
+            ModelRole.REPLY: Verdict.AVOID,      # 2026-09-25: judge took 5 of 27 drafts for the broker's own
         },
         issues=(
             "tool-call args sometimes markdown-fenced over OpenRouter",
+            "flattens nested objects in an output tool's args to strings; use native JSON schema output",
         ),
     ),
     "google/gemini-3.5-flash": ModelTraits(
@@ -184,8 +186,50 @@ _CATALOG: dict[str, ModelTraits] = {
         roles={
             ModelRole.ESCALATION: Verdict.GOOD,
             ModelRole.TOOL_CHAT: Verdict.GOOD,
+            ModelRole.REPLY: Verdict.OK,         # 2026-09-25: judge 10/19, but no draft on 21 of 40 replies
         },
         issues=("premium cost — reserve for escalation, not the hot path",),
+    ),
+    # REPLY verdicts (2026-09-25): the MLS reply harness (django_cfg.modules.django_llm.agent, read
+    # tools, typed output) on 40 held-out real replies of a broker, all of which
+    # he answered, so a no-draft is a miss. Judge: gemini-3.1-flash-lite, blind
+    # pairs; +-10 points is noise at this size. Zero-retention routing throughout.
+    "openai/gpt-5-mini": ModelTraits(
+        slug="openai/gpt-5-mini",
+        reasoning=True, reasoning_disablable=False,
+        roles={
+            ModelRole.REPLY: Verdict.GOOD,       # 31/40 drafted, judge 15/31, length x1.21, ~$0.008 a reply
+        },
+        issues=(
+            "ZDR only through Azure on OpenRouter; strict json_schema plus ZDR found no endpoint — send require_parameters false",
+        ),
+    ),
+    "openai/gpt-5": ModelTraits(
+        slug="openai/gpt-5",
+        reasoning=True, reasoning_disablable=False,
+        roles={
+            ModelRole.REPLY: Verdict.OK,         # 26/40 drafted, judge 13/26, ~$0.027 a reply
+        },
+        issues=("three times gpt-5-mini's cost for no measured gain on replies",),
+    ),
+    "openai/gpt-6-luna": ModelTraits(
+        slug="openai/gpt-6-luna",
+        reasoning=True, reasoning_disablable=False,
+        roles={
+            ModelRole.REPLY: Verdict.AVOID,      # 16/40 drafted, judge 4/16; never opened a knowledge entry
+        },
+        issues=("errors under 10 concurrent requests on the Azure ZDR endpoint",),
+    ),
+    "google/gemini-3.8-flash": ModelTraits(
+        slug="google/gemini-3.8-flash",
+        reasoning=True, reasoning_disablable=False,
+        roles={
+            ModelRole.REPLY: Verdict.OK,         # judge 10/20, cleanest punctuation, but no draft on 19 of 40
+        },
+        issues=(
+            "flattens nested objects in an output tool's args to strings; use native JSON schema output",
+            "$0.75/$3.75 per M",
+        ),
     ),
     "meta-llama/llama-3.3-70b-instruct": ModelTraits(
         slug="meta-llama/llama-3.3-70b-instruct",
@@ -356,6 +400,15 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
     ),
     ModelRole.ESCALATION: (
         "anthropic/claude-sonnet-4.6",
+    ),
+    ModelRole.REPLY: (
+        # ADDED 2026-09-25 from a 40-reply evaluation (verdicts in openrouter.py).
+        # Every entry must have a zero-retention endpoint on OpenRouter: the
+        # input is a client's private correspondence. Same family on purpose —
+        # the fallback takes the same tool and output shape without a second
+        # output mode.
+        "openai/gpt-5-mini",
+        "openai/gpt-5",
     ),
 }
 

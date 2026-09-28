@@ -36,9 +36,9 @@ class LLMCache:
             max_size: Maximum number of items in the persistent store and L1 cache
         """
         if cache_dir is None:
-            # Default cache directory inside the llm module structure.
-            module_dir = Path(__file__).parent.parent
-            default_cache_dir = module_dir / ".cache" / "llm"
+            # Never inside the package: site-packages is read-only for a non-root container user.
+            from .dirs import get_default_llm_cache_dir
+            default_cache_dir = get_default_llm_cache_dir() / "llm"
             default_cache_dir.mkdir(parents=True, exist_ok=True)
         else:
             default_cache_dir = Path(cache_dir)

@@ -57,6 +57,10 @@ class ProviderPolicy:
     ignore: tuple[str, ...] | None = None
     #: Route only to providers that honor all request params (e.g. json_schema).
     require_parameters: bool | None = None
+    #: "deny" routes only to providers that do not store or train on prompts.
+    data_collection: Literal["allow", "deny"] | None = None
+    #: Zero data retention: only endpoints that keep nothing.
+    zdr: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Render as the OpenRouter ``provider`` object (omitting None fields)."""
@@ -75,6 +79,10 @@ class ProviderPolicy:
             out["ignore"] = list(self.ignore)
         if self.require_parameters is not None:
             out["require_parameters"] = self.require_parameters
+        if self.data_collection is not None:
+            out["data_collection"] = self.data_collection
+        if self.zdr is not None:
+            out["zdr"] = self.zdr
         return out
 
     def merge_into(self, caller: dict[str, Any] | None) -> dict[str, Any]:

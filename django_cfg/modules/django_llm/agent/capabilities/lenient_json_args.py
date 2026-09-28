@@ -5,6 +5,11 @@ look like JSON arrays/objects. Cheap LLMs (Qwen/DeepSeek/Llama)
 routinely send list/dict params as ``"[\\"x\\"]"`` instead of ``["x"]``;
 pydantic ``ValidationError``s then exhaust ``retries`` and the run
 aborts. Decoding upfront fixes this once for every tool.
+
+The same hook runs on structured output (``before_output_validate``):
+Gemini over OpenRouter sends each nested object of an output tool as a JSON
+string ("Input should be an object" on every item), and a typed output fails
+twice and aborts the run.
 """
 
 from __future__ import annotations
@@ -81,11 +86,36 @@ async def _coerce_json_strings(
     return coerced
 
 
+async def _coerce_output(ctx: RunContext[Any], *, output_context: Any, output: Any) -> Any:
+    """Decode stringified JSON arrays/objects inside structured output.
+
+    ``output`` is the raw tool arguments (a dict, or a JSON string) or the raw
+    text of prompted/native output. A string that parses to an object is
+    decoded so its fields can be fixed too; anything else passes unchanged.
+    """
+    if isinstance(output, str):
+        try:
+            parsed = json.loads(output)
+        except (json.JSONDecodeError, ValueError):
+            return output
+        if not isinstance(parsed, dict):
+            return output
+        output = parsed
+    if not isinstance(output, dict):
+        return output
+    coerced = {k: _maybe_decode(v) for k, v in output.items()}
+    if coerced != output:
+        logger.info("[capability] coerced JSON-string fields in structured output")
+    return coerced
+
+
 def lenient_json_args_capability() -> Hooks[Any]:
     """Hooks capability that JSON-decodes stringified list/dict args.
 
     Attach to an ``Agent`` via ``capabilities=[lenient_json_args_capability()]``.
-    No configuration needed — applies to every tool call.
+    No configuration needed — applies to every tool call and to structured
+    output.
     """
-    hooks: Hooks[Any] = Hooks(before_tool_validate=_coerce_json_strings)
+    hooks: Hooks[Any] = Hooks(before_tool_validate=_coerce_json_strings,
+                              before_output_validate=_coerce_output)
     return hooks

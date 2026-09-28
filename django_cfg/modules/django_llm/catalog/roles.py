@@ -20,6 +20,7 @@ class ModelRole(str, Enum):
     CLASSIFY = "classify"       # cheap structured classification, no tools
     ESCALATION = "escalation"   # hard semantics / customer-facing — quality over cost
     VISION = "vision"           # multimodal image understanding
+    REPLY = "reply"             # an email reply to a client, from private text: zero-retention endpoints only
 
 
 class Verdict(str, Enum):

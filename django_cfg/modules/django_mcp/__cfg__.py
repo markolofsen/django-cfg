@@ -218,6 +218,25 @@ ALL_TOOLS = "*"
 PUBLIC_TOOLS = "public"
 
 
+class MCPExtraKey(BaseModel):
+    """An additional key on a key-protected surface, held by one named party.
+
+    Exists so access can be handed out and withdrawn per holder: removing one
+    entry revokes that holder without rotating the key everyone else uses.
+    """
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    label: str = Field(
+        pattern=r"^[a-z][a-z0-9_-]*$",
+        description="Who holds the key, e.g. 'dan'. Logged on use, never the key.",
+    )
+    access_key: str = Field(min_length=16, repr=False)
+    service_username: Optional[str] = Field(
+        default=None,
+        description="Account this key acts as. None: anonymous, like the primary key.",
+    )
+
+
 class MCPProfile(BaseModel):
     """One MCP surface: who it is for, what it serves, where it is mounted.
 
@@ -269,6 +288,10 @@ class MCPProfile(BaseModel):
     service_username: Optional[str] = Field(
         default=None,
         description="Username the key acts as. See DjangoMCPModuleConfig.",
+    )
+    extra_keys: List[MCPExtraKey] = Field(
+        default_factory=list,
+        description="Further keys accepted alongside access_key, one per holder.",
     )
     tools: List[str] = Field(
         default_factory=list,
@@ -361,6 +384,16 @@ class MCPProfile(BaseModel):
                 f"MCP profile {self.name!r} is anonymous but carries an access "
                 "key. The key would never be checked; remove it, or set "
                 "access='key' so it is enforced."
+            )
+        if self.access == "anonymous" and self.extra_keys:
+            raise ValueError(
+                f"MCP profile {self.name!r} is anonymous but carries extra keys."
+            )
+        keys = [self.access_key] + [k.access_key for k in self.extra_keys]
+        labels = [k.label for k in self.extra_keys]
+        if len(set(keys)) != len(keys) or len(set(labels)) != len(labels):
+            raise ValueError(
+                f"MCP profile {self.name!r} repeats a key or a key label."
             )
         if self.access == "anonymous" and self.service_username:
             raise ValueError(
@@ -458,6 +491,10 @@ class DjangoMCPModuleConfig(BaseModel):
             "`user.is_staff` refuse. Set this to bind the key to a real, "
             "auditable service account instead of widening those gates."
         ),
+    )
+    extra_keys: List[MCPExtraKey] = Field(
+        default_factory=list,
+        description="Further keys accepted alongside access_key, one per holder.",
     )
     rate_limit: str = Field(
         default="100/minute",

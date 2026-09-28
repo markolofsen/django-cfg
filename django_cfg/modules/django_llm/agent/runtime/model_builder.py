@@ -98,11 +98,30 @@ def resolve_provider() -> tuple[str, str, str | None]:
     return "openrouter", "api-key-not-set", urls["openrouter"]
 
 
-def build_chat_model(model_name: str) -> OpenAIChatModel:
-    """Build one chat model on whichever provider ``django_cfg.modules.django_llm`` resolves."""
+def build_chat_model(
+    model_name: str,
+    *,
+    provider_prefs: "ProviderPolicy | dict | None" = None,
+    extra_body: dict | None = None,
+) -> OpenAIChatModel:
+    """Build one chat model on whichever provider ``django_cfg.modules.django_llm`` resolves.
+
+    ``provider_prefs`` and ``extra_body`` mean what they mean on the transport
+    router: OpenRouter's ``provider`` object (e.g. ``data_collection:
+    deny``, ``zdr``) merged into ``extra_body``, sent on every request of every
+    run. Without them an agent routes wherever OpenRouter likes, which is not
+    acceptable for private text.
+    """
+    from django_cfg.modules.django_llm.routing.providers import ProviderPolicy
+
     _, api_key, base_url = resolve_provider()
     provider = OpenAIProvider(base_url=base_url, api_key=api_key)
-    return OpenAIChatModel(model_name, provider=provider)
+    body = dict(extra_body or {})
+    if provider_prefs:
+        prefs = provider_prefs.to_dict() if isinstance(provider_prefs, ProviderPolicy) else dict(provider_prefs)
+        body["provider"] = {**body.get("provider", {}), **prefs}
+    settings = {"extra_body": body} if body else None
+    return OpenAIChatModel(model_name, provider=provider, settings=settings)
 
 
 def parse_fallbacks(raw: str) -> tuple[str, ...]:
@@ -116,16 +135,25 @@ def parse_fallbacks(raw: str) -> tuple[str, ...]:
     return tuple(p for p in parts if p)
 
 
-def build_fallback_model(primary_name: str, fallback_names: tuple[str, ...]) -> Model:
+def build_fallback_model(
+    primary_name: str,
+    fallback_names: tuple[str, ...],
+    *,
+    provider_prefs: "ProviderPolicy | dict | None" = None,
+    extra_body: dict | None = None,
+) -> Model:
     """Compose a ``FallbackModel`` (or a plain model if nothing distinct follows).
 
     The fallback chain retries the next slug on an upstream API error AND on a
     malformed response body — see ``is_malformed_response`` for why the latter must
-    be said explicitly.
+    be said explicitly. ``provider_prefs`` / ``extra_body`` go to EVERY model in
+    the chain: a privacy constraint that held only for the primary would end at
+    the first fallback.
     """
-    primary = build_chat_model(primary_name)
+    kw = {"provider_prefs": provider_prefs, "extra_body": extra_body}
+    primary = build_chat_model(primary_name, **kw)
     fallbacks = tuple(
-        build_chat_model(name)
+        build_chat_model(name, **kw)
         for name in fallback_names
         if name and name != primary_name
     )

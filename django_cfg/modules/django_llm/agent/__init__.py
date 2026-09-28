@@ -59,4 +59,11 @@ Design and rationale live in the seam docstrings (`agent/protocols.py`) and
 
 from __future__ import annotations
 
+import os
+
+# Pydantic AI prints a Logfire advert on the first run of an unobserved agent.
+# A library must not write adverts into its host's logs; a host that wants it
+# sets PYDANTIC_AI_NO_BANNER=0 itself.
+os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
+
 __all__: list[str] = []

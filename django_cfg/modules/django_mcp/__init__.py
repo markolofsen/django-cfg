@@ -12,6 +12,7 @@ from .__cfg__ import (
     IntrospectionConfig,
     CommandMCPConfig,
     MCPProfile,
+    MCPExtraKey,
     MCPTargetConfig,
     RedactionConfig,
 )
@@ -57,6 +58,7 @@ __all__ = [
     "IntrospectionConfig",
     "CommandMCPConfig",
     "MCPProfile",
+    "MCPExtraKey",
     "MCPTargetConfig",
     "RedactionConfig",
     "MCPConfigBuilder",

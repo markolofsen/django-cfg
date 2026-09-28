@@ -54,6 +54,7 @@ from ..core import AllProvidersFailedError
 from ..core.errors import LLMTruncationError, LLMValidationError
 from ..catalog import ModelRole, check, provider_for, recommend
 from ..structured import parse_into_schema
+from .providers import ProviderPolicy
 
 logger = logging.getLogger("django_cfg.modules.django_llm.routing.router")
 
@@ -144,6 +145,8 @@ class LLMRouter:
         race_size: int | None = None,
         race_rounds: int = 2,
         race_stagger_seconds: float = 0.2,
+        provider_prefs: ProviderPolicy | dict | None = None,
+        extra_body: dict | None = None,
     ) -> None:
         if not model_chain:
             raise ValueError("LLMRouter requires a non-empty model_chain")
@@ -175,6 +178,14 @@ class LLMRouter:
         self._race_size_override = max(1, race_size) if race_size is not None else None
         self._race_rounds = max(1, race_rounds)
         self._race_stagger = max(0.0, race_stagger_seconds)
+        # OpenRouter `provider` preferences sent on every call (e.g. data_collection
+        # "deny", zdr) — a privacy constraint of the caller, not of the model.
+        # extra_body: other request fields sent as-is (e.g. reasoning effort).
+        prefs = provider_prefs.to_dict() if isinstance(provider_prefs, ProviderPolicy) else provider_prefs
+        body = dict(extra_body or {})
+        if prefs:
+            body["provider"] = {**(body.get("provider") or {}), **prefs}
+        self._extra_body = body or None
 
     # ── Per-model resolution — the catalog is the source of truth ───────────────
 
@@ -426,6 +437,7 @@ class LLMRouter:
                     # schema during generation. parse_into_schema is the backstop
                     # for any provider that falls through to plain json_object.
                     resp = self._client.chat_completion(
+                        extra_body=self._extra_body,
                         messages=attempt_messages,
                         model=model,
                         max_tokens=attempt_max_tokens,
@@ -553,6 +565,7 @@ class LLMRouter:
 
         def call(model: str) -> tuple[str, str]:
             resp = self._client.chat_completion(
+                extra_body=self._extra_body,
                 messages=full_messages,
                 model=model,
                 # Same CF floor `parse` applies: a `@cf*` model under it returns

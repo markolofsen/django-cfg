@@ -240,13 +240,30 @@ class MCPView(APIView):
             # authenticate one profile's caller as another profile's account.
             credentials = self._get_profile() or mcp_config
             access_key_header = request.headers.get("X-MCP-Access-Key")
-            if (
-                credentials.access_key
-                and access_key_header
-                # compare_digest, not ==, so a wrong key cannot be recovered
-                # byte-by-byte from response timing.
-                and secrets.compare_digest(str(access_key_header), str(credentials.access_key))
-            ):
+            # The primary key plus any per-holder keys, each with its own
+            # account. Every candidate is compared, so timing does not reveal
+            # which one matched.
+            candidates = [
+                (None, credentials.access_key, getattr(credentials, "service_username", None))
+            ] + [
+                (k.label, k.access_key, k.service_username)
+                for k in (getattr(credentials, "extra_keys", None) or [])
+            ]
+            matched = None
+            for label, key, username in candidates:
+                if (
+                    key
+                    and access_key_header
+                    # compare_digest, not ==, so a wrong key cannot be recovered
+                    # byte-by-byte from response timing.
+                    and secrets.compare_digest(str(access_key_header), str(key))
+                    and matched is None
+                ):
+                    matched = (label, username)
+            if matched is not None:
+                label, service_username = matched
+                if label:
+                    logger.info("MCP request authenticated by key %r", label)
                 # Authenticated by access key. By default the caller is a
                 # machine, not a Django user, so represent it as AnonymousUser.
                 #
@@ -255,7 +272,6 @@ class MCPView(APIView):
                 # AttributeError, which the old blanket `except` swallowed —
                 # so a CORRECT key also produced None. That went unnoticed only
                 # because the result was never enforced.
-                service_username = getattr(credentials, "service_username", None)
                 if service_username:
                     # The key is bound to a real account, so tools that gate on
                     # `user.is_staff` can be reached — and every action they
