@@ -47,6 +47,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     webhook path already accepts and safely skips those events.
 - `payments` optional-dependency extra (`stripe>=15.3,<16`).
 
+### Fixed
+- **DRF throttles keyed on raw X-Forwarded-For.** Generated `REST_FRAMEWORK`
+  now defaults `NUM_PROXIES` to `0` while `RealIPMiddleware` is in
+  `MIDDLEWARE`, so `get_ident` returns the resolved `REMOTE_ADDR`. With `None`,
+  DRF returned the whole XFF string (`client,edge`) and one client spread over
+  a bucket per Cloudflare edge. An explicit `NUM_PROXIES` is kept. Per-project
+  `get_ident` overrides that return `REMOTE_ADDR` are no longer needed.
+
 ## [2.2.x] — 2025-10 → 2026-07 (consolidated)
 
 > Changelog maintenance resumed at 2.2.95. The gap since 1.2.25 spans the

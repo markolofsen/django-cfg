@@ -85,6 +85,8 @@ class SettingsOrchestrator:
             # Apply additional settings (user overrides)
             settings.update(self._get_additional_settings())
 
+            self._default_drf_num_proxies(settings)
+
             return settings
 
         except Exception as e:
@@ -260,6 +262,21 @@ class SettingsOrchestrator:
             return generator.generate()
         except Exception as e:
             raise ConfigurationError(f"Failed to generate Tailwind settings: {e}") from e
+
+    @staticmethod
+    def _default_drf_num_proxies(settings: Dict[str, Any]) -> None:
+        """NUM_PROXIES=0 while RealIPMiddleware runs; an explicit value wins.
+
+        RealIPMiddleware has already resolved REMOTE_ADDR. With NUM_PROXIES=None
+        DRF's throttle get_ident keys on the raw X-Forwarded-For string, which
+        varies per CDN edge and splits one client across buckets.
+        """
+        from ..builders.middleware_builder import REAL_IP_MIDDLEWARE
+
+        rest_framework = settings.get("REST_FRAMEWORK")
+        if rest_framework is None or REAL_IP_MIDDLEWARE not in settings.get("MIDDLEWARE", []):
+            return
+        rest_framework.setdefault("NUM_PROXIES", 0)
 
     def _get_additional_settings(self) -> Dict[str, Any]:
         """

@@ -14,6 +14,8 @@ from ..constants import DEFAULT_MIDDLEWARE
 if TYPE_CHECKING:
     from ..base.config_model import DjangoConfig
 
+REAL_IP_MIDDLEWARE = 'django_cfg.middleware.real_ip.RealIPMiddleware'
+
 
 class MiddlewareBuilder:
     """
@@ -57,7 +59,7 @@ class MiddlewareBuilder:
             True
         """
         # Real IP must be first — fixes REMOTE_ADDR behind proxies
-        middleware = ['django_cfg.middleware.real_ip.RealIPMiddleware']
+        middleware = [REAL_IP_MIDDLEWARE]
 
         # Default middleware (includes CorsMiddleware)
         middleware.extend(DEFAULT_MIDDLEWARE)

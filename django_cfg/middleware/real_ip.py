@@ -1,8 +1,10 @@
 """Real IP middleware — fixes REMOTE_ADDR behind proxies.
 
 Overwrites REMOTE_ADDR with the real client IP from proxy headers
-(Cloudflare, nginx, traefik). All downstream code (Django, DRF, Axes,
-ratelimit) automatically sees the correct IP.
+(Cloudflare, nginx, traefik). Code that reads REMOTE_ADDR (Django, Axes,
+ratelimit) sees the client IP. DRF throttles prefer X-Forwarded-For unless
+NUM_PROXIES=0; django-cfg defaults REST_FRAMEWORK["NUM_PROXIES"] to 0 while
+this middleware is installed.
 
 Must be placed early in MIDDLEWARE — before any security/auth middleware.
 """

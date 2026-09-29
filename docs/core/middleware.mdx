@@ -100,6 +100,8 @@ MIDDLEWARE = [
 
 Without this middleware, all downstream code (django-axes, DRF throttling, rate limiting, audit logging) sees the proxy IP instead of the real client address.
 
+**DRF throttling.** DRF ignores `REMOTE_ADDR` whenever `X-Forwarded-For` is present unless `NUM_PROXIES` is set, and then keys every throttle on the whole header. Django-CFG therefore sets `REST_FRAMEWORK["NUM_PROXIES"] = 0` by default, so throttles use the address this middleware found. A value you set yourself is kept.
+
 ---
 
 ## TimezoneMiddleware
