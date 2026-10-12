@@ -232,6 +232,10 @@ class LLMRouter:
         credential will be rejected identically on every subsequent call, so
         continuing to route through it turns one bad secret into a total
         outage rather than a degraded one.
+
+        The one 5xx that counts is the proxy reporting that the vendor refused
+        the proxy's OWN key (502 "upstream rejected the proxy's credentials"):
+        that is a dead secret too, just one hop further away.
         """
         if provider != LLMProvider.SDKROUTER.value or self._sdkrouter_rejected:
             return
@@ -241,7 +245,8 @@ class LLMRouter:
             # message, which is what a wrapped error leaves us.
             status = getattr(getattr(exc, "response", None), "status_code", None)
         text = str(exc)
-        if status in (401, 403) or "401" in text or "403" in text:
+        upstream_refused = "rejected the proxy's credentials" in text
+        if status in (401, 403) or "401" in text or "403" in text or upstream_refused:
             self._sdkrouter_rejected = True
             logger.warning(
                 "sdkrouter rejected our credential (%s) — falling back to the "

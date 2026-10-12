@@ -149,7 +149,7 @@ _CATALOG: dict[str, ModelTraits] = {
             ModelRole.TOOL_CHAT: Verdict.GOOD,   # $0.30/$2.50 per M — clears multi-tool chains, thinking disablable
             ModelRole.EXTRACTION: Verdict.OK,
             ModelRole.CLASSIFY: Verdict.GOOD,
-            ModelRole.REPLY: Verdict.AVOID,      # 2026-09-25: judge took 5 of 27 drafts for the broker's own
+            ModelRole.REPLY: Verdict.AVOID,      # 2026-09-25: judge 5/27; 2026-09-29 archive: 26 % vs gpt-5-mini 58 %, dearer per draft
         },
         issues=(
             "tool-call args sometimes markdown-fenced over OpenRouter",
@@ -162,6 +162,7 @@ _CATALOG: dict[str, ModelTraits] = {
         roles={
             ModelRole.TOOL_CHAT: Verdict.GOOD,   # stable GA, strongest Flash-class reasoning for agentic chains
             ModelRole.ESCALATION: Verdict.OK,
+            ModelRole.REPLY: Verdict.OK,         # 2026-09-29 archive: 12/12 drafted, judge 62.5 %, ~$0.10 a draft
         },
         issues=(
             "premium Flash pricing — $1.50/$9.00 per M; reserve for hard tool chains",
@@ -198,7 +199,7 @@ _CATALOG: dict[str, ModelTraits] = {
         slug="openai/gpt-5-mini",
         reasoning=True, reasoning_disablable=False,
         roles={
-            ModelRole.REPLY: Verdict.GOOD,       # 31/40 drafted, judge 15/31, length x1.21, ~$0.008 a reply
+            ModelRole.REPLY: Verdict.GOOD,       # 31/40 drafted, judge 15/31; 2026-09-29 archive 24/24, judge 58 %, ~$0.016
         },
         issues=(
             "ZDR only through Azure on OpenRouter; strict json_schema plus ZDR found no endpoint — send require_parameters false",
@@ -208,9 +209,9 @@ _CATALOG: dict[str, ModelTraits] = {
         slug="openai/gpt-5",
         reasoning=True, reasoning_disablable=False,
         roles={
-            ModelRole.REPLY: Verdict.OK,         # 26/40 drafted, judge 13/26, ~$0.027 a reply
+            ModelRole.REPLY: Verdict.AVOID,      # 26/40 drafted, judge 13/26, ~$0.027 a reply
         },
-        issues=("three times gpt-5-mini's cost for no measured gain on replies",),
+        issues=("three times gpt-5-mini's cost for no measured gain on replies; never in a chain",),
     ),
     "openai/gpt-6-luna": ModelTraits(
         slug="openai/gpt-6-luna",
@@ -407,8 +408,13 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
         # input is a client's private correspondence. Same family on purpose —
         # the fallback takes the same tool and output shape without a second
         # output mode.
+        # gpt-5 left the chain 2026-09-29: three times the cost for no measured
+        # gain, and as a fallback it billed every upstream hiccup at that price.
+        # gemini-3.5-flash is the fallback: judge 62.5 % vs gpt-5-mini 58.3 % on
+        # the same CarAPIs archive cases, but ~6x the cost, so it runs only
+        # when gpt-5-mini fails upstream.
         "openai/gpt-5-mini",
-        "openai/gpt-5",
+        "google/gemini-3.5-flash",
     ),
 }
 
