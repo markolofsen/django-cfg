@@ -62,7 +62,7 @@ class Mirror:
 MIRRORS: tuple[Mirror, ...] = (
     Mirror("cmdop", "cmdop/projects/solution/cmdop_django/modules/django_llm", "project"),
     Mirror("carapis", "carapis/solution/projects/django/modules/django_llm", "project"),
-    Mirror("mls", "mls/mls-new/projects/django/modules/django_llm", "project"),
+    Mirror("mls", "mls/mls-new/solution/projects/django/modules/django_llm", "project"),
     Mirror("figurino", "figurino/web/projects/django/modules/django_llm", "project"),
     Mirror(
         "package",

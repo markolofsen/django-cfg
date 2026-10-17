@@ -449,6 +449,8 @@ CF_LANE_FOR_ROLE: dict[ModelRole, str] = {
     ModelRole.ESCALATION: CF.BEST,
     # ModelRole.EXTRACTION is ABSENT ON PURPOSE — see below. Adding it here
     # would make ingestion 15-70x slower, silently.
+    # ModelRole.REPLY too: client correspondence goes only to zero-retention
+    # endpoints, which no `@cf` lane promises.
 }
 
 #: Why EXTRACTION has no lane, kept beside the map so the refusal travels with
@@ -468,6 +470,12 @@ CF_LANE_REFUSED_FOR: dict[ModelRole, str] = {
         "latency, not correctness: measured 17.6-78.4s on @cf against "
         "gpt-4o-mini's 1.0-1.3s, over thousands of listings per ingest. "
         "Re-measure @cf-json before revisiting — its head changed."
+    ),
+    ModelRole.REPLY: (
+        "privacy and quality: a client's private correspondence goes only to "
+        "zero-retention OpenRouter endpoints (data_collection deny, zdr true), "
+        "a provider preference a @cf lane does not carry; and no Workers AI "
+        "model was measured on the 40-reply harness that seated gpt-5-mini."
     ),
 }
 

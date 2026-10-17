@@ -17,7 +17,7 @@ in production is a STALL, not an error — 161,931 requests over 7 days with zer
 errors but a P99 of 27.7s. A per-attempt deadline moves off a stalled model,
 and it needs somewhere to move to.
 
-Chain heads as of 2026-09-11, read from `llm-proxy/src/resolve.mjs` — recorded
+Chain heads as of 2026-10-12, read from `llm-proxy/src/resolve.mjs` — recorded
 so drift is visible, not so anyone depends on it:
 
     @cf            -> cf/zai-org/glm-4.7-flash
@@ -26,9 +26,10 @@ so drift is visible, not so anyone depends on it:
     @cf-best       -> cf/zai-org/glm-5.3-flash
     @cf-coder      -> cf/zai-org/glm-4.7-flash
     @cf-reasoning  -> cf/zai-org/glm-5.3-flash
-    @cf-json       -> cf/mistralai/mistral-small-3.1-24b-instruct
+    @cf-json       -> cf/ibm-granite/granite-4.0-h-micro
     @cf-long       -> cf/zai-org/glm-5.3-flash
     @cf-vision     -> cf/zai-org/glm-5.3-flash
+    @cf-translate  -> cf/nvidia/nemotron-3-120b-a12b
 
 `@cf-balanced` and `@cf-smart` were WITHDRAWN by the proxy on 2026-09-10: they
 resolved to the same chains as `@cf` and `@cf-best` respectively, and two names
@@ -36,8 +37,8 @@ for one chain let a retune move one and not the other. The proxy now enforces
 `every alias names a distinct chain` in its own tests, so they cannot come back
 as duplicates.
 
-All NINE aliases the proxy publishes are mirrored here (verified against
-`llm-proxy/src/resolve.mjs` on 2026-09-11). The proxy additionally accepts
+All TEN aliases the proxy publishes are mirrored here (verified against
+`llm-proxy/src/resolve.mjs` on 2026-10-12). The proxy additionally accepts
 `@auto`, which is deliberately NOT an alias on either side: it is a per-request
 decision rather than a lane — image part -> `@cf-vision`, tools -> `@cf-coder`,
 very long -> `@cf-long`, 6+ messages -> `@cf-coder`, else `@cf-cheap`. Mirroring
@@ -118,14 +119,13 @@ class CF:
     #: Seated on a probe, never on a `json_mode` property. `glm-4.7-flash`
     #: managed 1/5 with an HTTP 502 and is deliberately NOT in the chain.
     #:
-    #: **Ordered by ACCURACY, the one chain that is not cheapest-first** (head
-    #: moved to `mistral-small` on 2026-09-11): a structured extraction that
-    #: returns the wrong number costs more than the model that produced it.
-    #: Measured on 10 real property listings x 3 rounds, scored on price AND
-    #: currency AND deal type together, in Russian and Indonesian as well as
-    #: English — `mistral-small` 24/30 at P50 1.54s, `granite` 21/30 at 1.90s,
-    #: `gemma-4-26b` 25/30 but P50 9.17s / P90 22.36s, which is why it is not
-    #: seated. `granite` stays behind it as the cheap fallback.
+    #: **Ordered by ACCURACY first, cost second.** The head moved to
+    #: `mistral-small` on 2026-09-11 (24/30 against `granite`'s 21/30, which
+    #: misread `850K USD`) and back to `granite` on 2026-09-17: 18/18 each on
+    #: real listings, `granite` 4/4 on shorthand prices against `mistral`'s
+    #: 2/4, and 14 billed neurons a request against 225. `mistral-small` stays
+    #: behind it as the fallback. `gemma-4-26b` scored 25/30 but P50 9.17s /
+    #: P90 22.36s, which is why it is not seated.
     #:
     #: The proxy does the load-bearing half: it unwraps the OpenAI `json_schema`
     #: envelope into the native Workers AI shape, measured 5/5 against the
@@ -143,6 +143,11 @@ class CF:
     #: `llama-3.2-11b-vision` needs an agreement nobody has accepted.
     VISION: Final = "@cf-vision"
 
+    #: Translation, which does not rank like extraction: `granite` leads
+    #: `@cf-json` and scores 0/15 here, returning the source unchanged. Added by
+    #: the proxy 2026-09-21; nemotron leads on speed and its 300/min cap.
+    TRANSLATE: Final = "@cf-translate"
+
 
 #: Every alias the proxy publishes, for validation and for listing in a UI.
 CF_ALIASES: Final[frozenset[str]] = frozenset(
@@ -156,6 +161,7 @@ CF_ALIASES: Final[frozenset[str]] = frozenset(
         CF.JSON,
         CF.LONG,
         CF.VISION,
+        CF.TRANSLATE,
     }
 )
 

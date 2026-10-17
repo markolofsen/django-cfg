@@ -36,6 +36,14 @@ def _json(payload: dict[str, Any], status: int = 200, ttl: int | None = None) ->
     return response
 
 
+def _building() -> HttpResponse:
+    """Another request is building this page; ask the caller to come back."""
+    response = _json({"detail": "the sitemap page is being built, retry shortly"}, status=503)
+    response["Retry-After"] = "30"
+    response["Cache-Control"] = "no-store"
+    return response
+
+
 def _json_default(value: Any) -> Any:
     if isinstance(value, datetime):
         return value.isoformat()
@@ -58,8 +66,11 @@ class SitemapIndexView(View):
         if cached is not None:
             return _json(cached, ttl=cfg.cache_index_seconds)
 
-        payload = _build_index(cfg.cache_index_seconds)
-        sitemap_cache.cache_set(key, payload, cfg.cache_index_seconds)
+        payload = sitemap_cache.get_or_build(
+            key, lambda: _build_index(cfg.cache_index_seconds), cfg.cache_index_seconds,
+        )
+        if payload is None:
+            return _building()
         return _json(payload, ttl=cfg.cache_index_seconds)
 
 
@@ -92,8 +103,13 @@ class SitemapFeedView(View):
         if cached is not None:
             return _json(cached, ttl=cfg.cache_feed_seconds)
 
-        payload = _build_feed(source, cursor, cursor_token)
-        sitemap_cache.cache_set(cache_key, payload, cfg.cache_feed_seconds)
+        payload = sitemap_cache.get_or_build(
+            cache_key,
+            lambda: _build_feed(source, cursor, cursor_token),
+            cfg.cache_feed_seconds,
+        )
+        if payload is None:
+            return _building()
         return _json(payload, ttl=cfg.cache_feed_seconds)
 
 
