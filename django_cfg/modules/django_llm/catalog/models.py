@@ -251,8 +251,12 @@ _CATALOG: dict[str, ModelTraits] = {
         # `CF_STRUCTURED_OUTPUT` was repointed from `CF.FAST` to `CF.JSON` on
         # 2026-09-10, so this entry was RE-DESCRIBED — it previously carried
         # `@cf-fast`'s chain and issues under the new name. As of that date the
-        # proxy resolves `@cf-json` to `granite-4.0-h-micro` ->
-        # `gpt-oss-20b` -> `mistral-small-3.1-24b`, and EVERY entry in it was
+        # proxy resolved `@cf-json` to `granite-4.0-h-micro` ->
+        # `gpt-oss-20b` -> `mistral-small-3.1-24b`. As of 2026-10-15 the chain is
+        # `granite-4.0-h-micro` -> `gpt-oss-20b` ONLY: `mistral` was dropped as a
+        # fallback because it bills ~270 neurons a call against `gpt-oss-20b`'s
+        # ~160-190 (measured), and every call that stalled on granite (~20%) was
+        # still answered by `gpt-oss-20b`. EVERY entry in it was
         # probed 5/5 against a deliberately awkward schema (nested object, an
         # enum, and `anyOf: [integer, null]` — the shape
         # `to_strict_json_schema` emits for `int | None`, which degrades worst).

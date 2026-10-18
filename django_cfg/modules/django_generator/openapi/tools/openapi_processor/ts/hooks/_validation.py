@@ -26,10 +26,10 @@ WHEN VALIDATION RUNS:
    a named schema validation kicks in automatically.
 
 OUTPUT:
-   ``imports`` is appended to the file's import block.
-   ``body``     is the inside of the SWR fetcher; it must end with a
-                ``return`` of the validated value (or the unvalidated
-                fallback).
+   ``imports`` is appended to the file's import block (empty: the schema
+                is loaded lazily inside ``body``).
+   ``body``     is the inside of the SWR fetcher; it starts the background
+                validation and returns the raw payload.
 
 The fetcher template substitutes both with no other knowledge of the
 schema layer.
@@ -66,50 +66,59 @@ def runtime_validation_block(op: IROperation) -> ValidationBlock:
     method = op.method.upper()
     path = op.path
 
-    # ``safeParse`` returns ``{success, data}`` / ``{success, error}``.
-    # On success → validated data (already typed by zod).
-    # On failure → log structured info, dispatch a browser event for
-    # global telemetry, fall back to the raw payload so the UI doesn't
-    # crash mid-render. The throw in the old generator was too harsh
-    # — a single drifting field killed the whole page; a soft fallback
-    # plus loud log lets the operator see the issue and keep working.
+    # Validation is diagnostics, so it runs OFF the data path: the schema
+    # module is imported after the response arrives and the hook returns the
+    # raw payload at once. A static import put zod (~100 KB gz) and every
+    # schema into the initial bundle of each app that mounts one hook, for a
+    # check that never changes what the caller gets. On drift: log, dispatch
+    # `zod-validation-error`, keep the UI running (the old throw killed the
+    # page over one field).
+    #
+    # Returning the raw payload drops zod `.default()` fill-ins. Audited
+    # 2026-10-18: every defaulted response field (`requires_2fa`,
+    # `is_new_user`, `unanswered_messages_count`, `total`) is read by
+    # truthiness or not at all, and DRF emits declared fields anyway.
     return ValidationBlock(
-        imports=f'import {{ {schema_const} }} from "../schemas/{ref}";',
-        body=f"""      const parsed = {schema_const}.safeParse(data);
-      if (!parsed.success) {{
-        // Log first so the failure is always visible, even if the
-        // event handler swallows it.
-        console.warn(
-          "[zod] response did not match schema",
-          {{
-            operation: "{op_id}",
-            method: "{method}",
-            path: "{path}",
-            issues: parsed.error.issues,
-            data,
-          }},
-        );
-        if (typeof window !== "undefined") {{
-          try {{
-            window.dispatchEvent(
-              new CustomEvent("zod-validation-error", {{
-                detail: {{
-                  operation: "{op_id}",
-                  method: "{method}",
-                  path: "{path}",
-                  issues: parsed.error.issues,
-                  data,
-                  timestamp: new Date(),
-                }},
-                bubbles: true,
-                cancelable: false,
-              }}),
-            );
-          }} catch {{
-            // Event dispatch is best-effort.
+        imports="",
+        body=f"""      void import("../schemas/{ref}")
+        .then(({{ {schema_const} }}) => {{
+          const parsed = {schema_const}.safeParse(data);
+          if (parsed.success) return;
+          // Log first so the failure is always visible, even if the
+          // event handler swallows it.
+          console.warn(
+            "[zod] response did not match schema",
+            {{
+              operation: "{op_id}",
+              method: "{method}",
+              path: "{path}",
+              issues: parsed.error.issues,
+              data,
+            }},
+          );
+          if (typeof window !== "undefined") {{
+            try {{
+              window.dispatchEvent(
+                new CustomEvent("zod-validation-error", {{
+                  detail: {{
+                    operation: "{op_id}",
+                    method: "{method}",
+                    path: "{path}",
+                    issues: parsed.error.issues,
+                    data,
+                    timestamp: new Date(),
+                  }},
+                  bubbles: true,
+                  cancelable: false,
+                }}),
+              );
+            }} catch {{
+              // Event dispatch is best-effort.
+            }}
           }}
-        }}
-        return data;
-      }}
-      return parsed.data as unknown as Result;""",
+        }})
+        .catch(() => {{
+          // A schema chunk that fails to load is not the caller's problem.
+        }});
+      return data;""",
     )
