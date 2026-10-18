@@ -1,0 +1,197 @@
+---
+title: IndexNow
+description: Push changed sitemap URLs to Bing, Yandex, Seznam and Naver with one config block. The key file is served by Django and rewritten through by Next.js.
+---
+
+import { Callout, Steps } from 'nextra/components';
+
+# IndexNow
+
+[IndexNow](https://www.indexnow.org/) lets a site tell search engines which
+URLs changed, instead of waiting to be crawled. One POST to
+`api.indexnow.org` is shared with every participating engine: Bing, Yandex,
+Seznam, Naver and others.
+
+<Callout type="info">
+Google does not take part in IndexNow. For Google, the
+[sitemap](/features/modules/django-sitemap) stays the channel.
+</Callout>
+
+django-cfg reads the [sitemap sources](/features/modules/django-sitemap) you
+already registered. Every row whose `lastmod_field` falls in the window is
+sent, with the same URL template and fields as the feed. So IndexNow never
+announces a URL your sitemap would not list.
+
+## Setup
+
+<Steps>
+
+### Configure
+
+```python
+from django_cfg import DjangoConfig, IndexNowConfig
+
+class MyConfig(DjangoConfig):
+    indexnow = IndexNowConfig(
+        key="865178f53dba1db23f3fc4fe95e9b64a",  # public by protocol
+        host="example.com",                      # the public host, not the API's
+        trailing_slash=True,                     # match your canonical URLs
+    )
+```
+
+Generate a key with `python -c "import secrets; print(secrets.token_hex(16))"`.
+It is not a secret: every engine fetches it from your site.
+
+### Serve the key file
+
+The protocol proves you own the host by fetching `https://<host>/<key>.txt`.
+Django already answers it at `/cfg/sitemap/indexnow/<key>.txt`. Any other
+name returns 404, so the route cannot be used to probe for the key.
+
+When the public host is a Next.js app, rewrite to Django. Use `fallback`, so
+real files like `robots.txt` always win:
+
+```ts
+// next.config.ts
+import { createBaseNextConfig, indexNowKeyRewrite } from '@djangocfg/nextjs/config';
+
+export default createBaseNextConfig({
+  async rewrites() {
+    return {
+      beforeFiles: [],
+      afterFiles: [],
+      fallback: [indexNowKeyRewrite(process.env.NEXT_PUBLIC_API_URL!)],
+    };
+  },
+});
+```
+
+When Django serves the public host itself, point `key_location` at the
+Django route instead.
+
+### Check, then send
+
+```bash
+curl https://example.com/<key>.txt                # must print the key
+python manage.py indexnow_submit --dry-run        # count and sample, sends nothing
+python manage.py indexnow_submit                  # send the last 25 hours
+```
+
+From then on an RQ job runs daily. It is registered automatically from the
+config; set `schedule_interval=0` to turn it off.
+
+</Steps>
+
+<Callout type="warning">
+The first submission from a new key returns **403
+`SiteVerificationNotCompleted`**, because the service has not fetched your key
+file yet. Retry after a few minutes. If `/<key>.txt` already answers 200, this
+is not a configuration error.
+</Callout>
+
+## Several sites on one backend
+
+When one Django serves several public sites, each on its own domain (one
+catalogue under several brands, say), declare a site per host. IndexNow takes
+one host per request, and every URL in it must be on that host, so each site
+is submitted separately.
+
+```python
+from django_cfg import IndexNowConfig, IndexNowSite
+
+indexnow = IndexNowConfig(
+    key="865178f53dba1db23f3fc4fe95e9b64a",
+    trailing_slash=True,
+    sites=[
+        IndexNowSite(host="caribbean.example.com", source_suffix="-caribbean"),
+        IndexNowSite(host="bali.example.com", source_suffix="-bali"),
+    ],
+)
+```
+
+- A site takes its sources by `source_suffix` (`properties-caribbean`,
+  `stories-caribbean`, …), by an explicit `sources=[...]` list, or both. A
+  source no site takes is not sent anywhere.
+- One key serves every host. Each frontend rewrites `/<key>.txt` to the same
+  Django route (`indexNowKeyRewrite`). Set `key_location` on a site that
+  serves the key elsewhere.
+- `trailing_slash` on a site overrides the config's.
+- `extra_urls` must return **absolute** URLs here: a bare path could belong to
+  any site, so it is skipped with a warning. URLs are grouped by host, and a
+  URL on a host that is not a configured site is refused before sending.
+- Set exactly one of `host` or `sites`.
+
+## Pages that went away
+
+The sitemap only lists what exists, so a page that was just deleted,
+returns 410, or now redirects is invisible to it. Return those from a function
+and name it in `extra_urls`:
+
+```python
+# apps/catalog/indexnow.py
+from datetime import datetime, timedelta
+
+from apps.catalog.models import Listing
+
+
+def gone_urls(since: datetime) -> list[str]:
+    """Listings removed in the window: they now 410."""
+    return [
+        f"/listings/{pk}"
+        for pk in Listing.objects.filter(removed_at__gte=since).values_list("pk", flat=True)
+    ]
+```
+
+```python
+indexnow = IndexNowConfig(key=..., host="example.com", extra_urls="apps.catalog.indexnow.gone_urls")
+```
+
+Paths are joined to `host`; absolute URLs are sent as they are.
+
+## Calling it from code
+
+```python
+from django_cfg.modules.django_sitemap import indexnow
+
+indexnow.submit(["https://example.com/listings/42"])   # request paths: never raises
+indexnow.submit_changed()                              # jobs: raises IndexNowError on a refusal
+```
+
+`submit()` returns `sent`, `accepted` and `errors`. A search engine being
+down must not fail a save, so it reports the failure instead of raising.
+
+## Reference
+
+| Field | Default | Notes |
+|---|---|---|
+| `key` | required | 8–128 characters of `[A-Za-z0-9-]`. |
+| `host` | one of `host`/`sites` | Bare hostname. Every URL must be on it, or the batch is refused with 422. |
+| `sites` | one of `host`/`sites` | `IndexNowSite(host, source_suffix, sources, key_location, trailing_slash)` per public host. |
+| `key_location` | `https://<host>/<key>.txt` | Where the engines fetch the key. |
+| `trailing_slash` | `False` | Append `/` to paths, for slash-canonical sites. |
+| `sources` | every source with a `lastmod_field` | Single-site: limit which sources are read. |
+| `extra_urls` | — | Dotted path to `callable(since) -> list[str]`. |
+| `window_hours` | `25` | How far back a run looks. Keep it above the interval. |
+| `schedule_interval` | `86400` | Seconds between RQ runs. `0` turns the schedule off. |
+| `endpoint` | `https://api.indexnow.org/indexnow` | Shared by every engine. |
+| `timeout` | `30` | Seconds per request. |
+
+| Status | Meaning |
+|---|---|
+| 200, 202 | Received. |
+| 403 | The key file is missing, wrong, or not yet verified (see above). |
+| 422 | A URL is not on `host`, or the key does not match the host. |
+| 429 | Too many requests. The daily job batches 10,000 URLs per POST. |
+
+## Try it in the demo
+
+The demo project wires all of this behind two environment variables:
+
+```bash
+INDEXNOW__KEY=$(python -c "import secrets; print(secrets.token_hex(16))") \
+INDEXNOW__HOST=example.com \
+python manage.py indexnow_submit --dry-run
+```
+
+See `api/settings/config.py` (`indexnow = …`) and `next.config.ts`
+(`indexNowKeyRewrite`) in the demo.

@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **IndexNow — push changed sitemap URLs to Bing, Yandex, Seznam, Naver.**
+  `IndexNowConfig` on `DjangoConfig.indexnow`. Every registered sitemap
+  source row whose `lastmod_field` falls in the window is submitted, using
+  the feed's template and fields, so IndexNow never announces a URL the
+  sitemap would not list.
+  - Daily RQ schedule, registered from the config (`schedule_interval`, `0`
+    to turn it off). `manage.py indexnow_submit [--hours N] [--dry-run]
+    [--url …]` runs it by hand.
+  - `extra_urls`: a dotted path to `callable(since) -> list[str]` for pages
+    the sitemap cannot see, such as deleted ones, 410s or redirects.
+  - The key file is served at `/cfg/sitemap/indexnow/<key>.txt`; any other
+    name returns 404. `indexNowKeyRewrite()` in `@djangocfg/nextjs/config`
+    rewrites `/<key>.txt` to it, so the key lives in one place.
+  - `indexnow.submit(urls)` never raises: it is meant for request paths, and
+    an engine being down must not fail a save. `submit_changed()` raises
+    `IndexNowError` on a refusal, so a failing job shows as failed.
+  - Several sites on one backend: `sites=[IndexNowSite(host=…,
+    source_suffix="-caribbean"), …]`. Each host takes its own sources and is
+    submitted in its own request; one key serves every host.
+  - Replaces two hand-rolled copies, one in carapis and one in cmdop, that
+    had already diverged on error handling and on where the key lived.
 - **Geo: selective country population.** `GeoConfig` gains a `countries`
   allow-list of ISO2 codes; `geo_populate` also accepts `--countries BB,BS,KY`
   (the flag overrides the config). States and cities cascade automatically to

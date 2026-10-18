@@ -17,6 +17,7 @@ Complete example demonstrating all django_cfg features:
 from typing import Dict, Optional
 
 from django_cfg import (
+    IndexNowConfig,
     # Core
     DjangoConfig,
     StartupInfoMode,
@@ -243,6 +244,25 @@ class DjangoCfgConfig(DjangoConfig):
         enabled=True,
         default_currency="USD",
         update_on_startup=False,
+    )
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                          SEARCH ENGINES                                  ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    # IndexNow: every sitemap source row whose lastmod changed in the last 25 h
+    # goes to Bing, Yandex, Seznam and Naver once a day. Off until
+    # INDEXNOW__KEY is set; the key is served at /cfg/sitemap/indexnow/<key>.txt
+    # and the frontend rewrites /<key>.txt there (indexNowKeyRewrite).
+    # Try it: `manage.py indexnow_submit --dry-run`.
+    indexnow: Optional[IndexNowConfig] = (
+        IndexNowConfig(
+            key=env.indexnow.key,
+            host=env.indexnow.host or env.app.domain,
+            trailing_slash=True,
+        )
+        if env.indexnow.key
+        else None
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

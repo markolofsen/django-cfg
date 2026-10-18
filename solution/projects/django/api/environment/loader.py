@@ -126,6 +126,18 @@ class ApiKeysConfig(BaseSettings):
     )
 
 
+class IndexNowEnvConfig(BaseSettings):
+    """IndexNow (Bing, Yandex, …). Empty key = off. The key is public by protocol."""
+
+    key: str = Field(default="", description="8–128 chars [A-Za-z0-9-], served at /<key>.txt")
+    host: str = Field(default="", description="Public host whose URLs are submitted, e.g. example.com")
+
+    model_config = SettingsConfigDict(
+        env_prefix="INDEXNOW__",
+        env_nested_delimiter="__",
+    )
+
+
 class AppConfig(BaseSettings):
     """Application configuration."""
 
@@ -270,6 +282,7 @@ class EnvironmentConfig(BaseSettings):
     telegram: TelegramConfig = Field(default_factory=TelegramConfig)
     api_keys: ApiKeysConfig = Field(default_factory=ApiKeysConfig)
     app: AppConfig = Field(default_factory=AppConfig)
+    indexnow: IndexNowEnvConfig = Field(default_factory=IndexNowEnvConfig)
     env: EnvironmentMode = Field(default_factory=EnvironmentMode)
     centrifugo: CentrifugoConfig = Field(default_factory=CentrifugoConfig)
     github_oauth: GitHubOAuthEnvConfig = Field(default_factory=GitHubOAuthEnvConfig)

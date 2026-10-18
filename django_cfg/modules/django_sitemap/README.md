@@ -34,12 +34,14 @@ django_sitemap/
   sources.py                      # SitemapSource model + resolve_field helper
   cursors.py                      # opaque base64-JSON cursors for keyset pagination
   pagination.py                   # keyset_page() — constant-time per chunk
+  indexnow.py                     # IndexNow: changed URLs from the sources → api.indexnow.org
   cache.py                        # Redis wrappers with versioned keys
   http/
     views.py                      # SitemapIndexView + SitemapFeedView (plain Django)
     urls.py                       # /cfg/sitemap/{index,feed}/
   management/commands/
     sitemap_inspect.py            # CLI — list sources + counts + sample URLs
+    indexnow_submit.py            # CLI — submit changed URLs to IndexNow now
 ```
 
 ## Wire-up
@@ -251,6 +253,75 @@ export default async function sitemap({ id }: { id: string }) {
 `generateSitemaps()` makes Next emit `/sitemap/<id>.xml` per chunk plus
 an auto-generated `<sitemapindex>` at `/sitemap.xml`. Pair with `robots.ts`
 that points at `/sitemap.xml`.
+
+## IndexNow
+
+Pushes changed URLs to Bing, Yandex, Seznam, Naver and the other engines that
+share `api.indexnow.org`. Google does not take part; the sitemap stays its
+channel.
+
+It reads the **sources you already registered**. Every row whose
+`lastmod_field` falls in the window is sent, built with the same template and
+fields as the feed. IndexNow therefore never announces a URL the sitemap would
+not list. An honest `lastmod` matters twice over here: a field that moves on
+every background touch re-sends the whole catalogue every day.
+
+```python
+from django_cfg import DjangoConfig, IndexNowConfig
+
+class MyConfig(DjangoConfig):
+    indexnow = IndexNowConfig(
+        key="865178f53dba1db23f3fc4fe95e9b64a",  # public by protocol
+        host="example.com",                      # the PUBLIC host, not the API's
+        trailing_slash=True,                     # match your canonical URLs
+        extra_urls="apps.catalog.indexnow.gone_urls",  # optional
+    )
+```
+
+| Field | Default | Notes |
+|---|---|---|
+| `key` | required | 8–128 chars `[A-Za-z0-9-]`. Served at `/<key>.txt`. |
+| `host` / `sites` | one of them | One bare hostname, or `IndexNowSite`s for a backend serving several. |
+| `key_location` | `https://<host>/<key>.txt` | Where the engines fetch the key. |
+| `trailing_slash` | `False` | Append `/` to paths, for slash-canonical sites. |
+| `sources` | all with `lastmod_field` | Limit which sources are read. |
+| `extra_urls` | — | Dotted path to `callable(since) -> list[str]`: pages the sitemap cannot see, typically ones that just went away (404, 410, redirect). |
+| `window_hours` | `25` | How far back a run looks. Above the interval, so a late run loses nothing. |
+| `schedule_interval` | `86400` | RQ schedule, registered automatically. `0` turns it off. |
+
+**Several sites on one backend.** Use `sites=[IndexNowSite(host=…,
+source_suffix="-caribbean"), …]` instead of `host`. Each host takes its own
+sources, gets its own request (the protocol takes one host per request), and
+one key serves them all. With several sites, `extra_urls` must return
+absolute URLs.
+
+**The key file.** Django answers `GET /cfg/sitemap/indexnow/<key>.txt` with
+the key. Any other name returns 404, so the route cannot be used to probe for
+the key. When the public host is a Next.js app, rewrite to it:
+
+```ts
+// next.config.ts
+import { indexNowKeyRewrite } from '@djangocfg/nextjs/config';
+
+async rewrites() {
+  return { beforeFiles: [], afterFiles: [], fallback: [indexNowKeyRewrite(API_URL)] };
+}
+```
+
+**Calling it.**
+
+- `indexnow.submit(urls)` is for request paths (publish, unpublish). It never
+  raises: an engine being down must not fail a save. The result returns
+  `sent`, `accepted` and `errors`.
+- `indexnow.submit_changed()` is the scheduled job. It raises
+  `IndexNowError` on a refusal, so the job shows as failed.
+- `manage.py indexnow_submit [--hours N] [--dry-run] [--url URL ...]` runs
+  it by hand.
+
+**The first submission from a new key returns 403
+`SiteVerificationNotCompleted`.** The service has not fetched the key file
+yet. Retry after a few minutes; it is not a configuration error if
+`/<key>.txt` already answers 200.
 
 ## When NOT to use this module
 

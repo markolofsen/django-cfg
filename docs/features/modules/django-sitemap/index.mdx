@@ -1,0 +1,107 @@
+---
+title: Sitemap Module
+description: Register sitemap sources in Django, serve them as a paginated JSON feed, and let Next.js emit the XML. Keyset pagination and Redis caching for catalogues of millions of rows.
+---
+
+import { Callout } from 'nextra/components';
+
+# Sitemap Module
+
+`django_cfg.modules.django_sitemap` turns querysets into sitemap URLs. Django
+publishes them as a typed JSON feed, and the frontend (Next.js, or any other
+consumer) joins its host and writes the XML. It is on by default: there is
+nothing to add to `INSTALLED_APPS` or the URLconf.
+
+It was built for a 2M-row vehicle catalogue:
+
+- pagination is keyset, never `OFFSET`;
+- the index and each feed page are cached in Redis, and a cold key is built
+  by one request, not by every crawler at once;
+- what is eligible is decided by **your queryset**, not by the sitemap.
+
+## Register a source
+
+Create `sitemap_sources.py` next to `models.py`. It is imported when the app
+loads, and the import is the registration.
+
+```python
+from django_cfg.modules.django_sitemap import SitemapSource, register
+
+from apps.catalog.models import Vehicle
+
+register(SitemapSource(
+    name="vehicles",
+    url_template="/catalog/{brand_slug}/{id}",
+    queryset_factory=lambda: Vehicle.objects.filter(status="active").select_related("brand"),
+    fields={"id": "id", "brand_slug": "brand.slug"},
+    lastmod_field="updated_at",
+    cursor_fields=("updated_at", "id"),
+    order="-updated_at,-id",
+))
+```
+
+Check what each source yields:
+
+```bash
+python manage.py sitemap_inspect
+```
+
+| Field | Notes |
+|---|---|
+| `name` | URL-safe and unique. Re-registering a name replaces the source. |
+| `url_template` | A **path**, `str.format` style. The frontend adds the host, so one backend can serve several sites. |
+| `queryset_factory` | Zero-argument callable, called on every build. Put your quality filter here. |
+| `fields` | `{template_arg: dotted_path}`, for example `{"brand_slug": "brand.slug"}`. |
+| `lastmod_field` | A field or an annotation. Omit it to emit no `<lastmod>`. |
+| `cursor_fields`, `order` | The keyset. They must match an index prefix on the table. |
+| `page_size` | Default 50,000, the protocol's cap per file. |
+
+<Callout type="warning">
+Google uses `<lastmod>` only when it tracks the page. A timestamp that moves
+whenever a background job touches the row, while the page stays the same,
+teaches Google to ignore every date in the file. If your "updated" column is
+bookkeeping, annotate the date the page actually changed and point
+`lastmod_field` at that.
+</Callout>
+
+## HTTP contract
+
+| Endpoint | Returns |
+|---|---|
+| `GET /cfg/sitemap/index/` | Every source with its chunks (`id`, `cursor_to`, `count_estimate`). |
+| `GET /cfg/sitemap/feed/?source=<name>&cursor=<opaque>` | One chunk: `entries[{loc, lastmod}]`, `has_more`, `next_cursor`. |
+| `GET /cfg/sitemap/indexnow/<key>.txt` | The IndexNow key, when [IndexNow](/features/modules/django-sitemap/indexnow) is configured. |
+
+Both feed endpoints send `Cache-Control: public, s-maxage=…,
+stale-while-revalidate=…`, so a CDN can serve them stale through an origin
+hiccup.
+
+## Next.js
+
+`@djangocfg/nextjs/sitemap` reads the index and the feeds and emits
+`/sitemap/<id>.xml` per chunk:
+
+```ts
+// app/sitemap.ts
+import { createDjangoSitemap } from '@djangocfg/nextjs/sitemap';
+
+const { generateSitemaps, sitemap } = createDjangoSitemap({
+  host: process.env.NEXT_PUBLIC_SITE_URL!,
+  apiUrl: process.env.NEXT_PUBLIC_API_URL!,
+});
+
+export { generateSitemaps };
+export default sitemap;
+```
+
+## Tuning
+
+`SitemapConfig` sets the cache TTLs and the page size. Set it once at startup
+with `set_sitemap_config(SitemapConfig(cache_index_seconds=…,
+cache_feed_seconds=…))`. With a large catalogue, rebuild the index on a
+schedule, before its TTL runs out, so a crawler never pays for the build.
+
+## Next
+
+- [IndexNow](/features/modules/django-sitemap/indexnow): push the same URLs to
+  Bing, Yandex and others the day they change.

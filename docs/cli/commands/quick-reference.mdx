@@ -237,6 +237,22 @@ python manage.py otp_reset_throttle
 python manage.py geo_populate
 ```
 
+## 🗺️ Sitemap & IndexNow
+
+```bash
+# Registered sitemap sources, row counts, sample URLs
+python manage.py sitemap_inspect
+
+# IndexNow: count and sample what would be sent, send nothing
+python manage.py indexnow_submit --dry-run
+
+# Send what changed in the last 72 hours, or specific URLs
+python manage.py indexnow_submit --hours 72
+python manage.py indexnow_submit --url https://example.com/a/ --url https://example.com/b/
+```
+
+See [IndexNow](/features/modules/django-sitemap/indexnow).
+
 ## ⏰ Cron Jobs
 
 Commonly used commands in cron:

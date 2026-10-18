@@ -539,6 +539,7 @@ class DjangoRQConfig(BaseModel):
 
         Currently supports:
         - CurrencyConfig: currency rate update task
+        - IndexNowConfig: changed-URL submission
         - Accounts: OTP cleanup (every 10 min), JWT blacklist flush (daily)
 
         Args:
@@ -555,6 +556,13 @@ class DjangoRQConfig(BaseModel):
                 currency_schedules = config.currency.get_rq_schedules()
                 if currency_schedules:
                     schedules.extend(currency_schedules)
+            except Exception:
+                pass
+
+        # IndexNow submissions, when configured
+        if getattr(config, 'indexnow', None):
+            try:
+                schedules.extend(config.indexnow.get_rq_schedules())
             except Exception:
                 pass
 

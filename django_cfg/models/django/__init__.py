@@ -11,6 +11,7 @@ from .currency import CurrencyConfig
 from .django_rq import DjangoRQConfig, RQQueueConfig
 from .environment import EnvironmentConfig
 from .geo import GeoConfig
+from .indexnow import IndexNowConfig, IndexNowSite
 from .openapi import OpenAPIClientConfig
 from .payments import PaymentsConfig
 from .rq_health import QueueHealthThresholds, RQHealthConfig
@@ -25,6 +26,7 @@ __all__ = [
     "RQHealthConfig",
     "QueueHealthThresholds",
     "GeoConfig",
+    "IndexNowConfig", "IndexNowSite",
     "OpenAPIClientConfig",
     "PaymentsConfig",
     "AxesConfig",

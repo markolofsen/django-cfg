@@ -32,6 +32,7 @@ from ...models import (
     DRFConfig,
     EmailConfig,
     GeoConfig,
+    IndexNowConfig,
     PaymentsConfig,
     SimpleHistoryConfig,
     GitHubOAuthConfig,
@@ -385,6 +386,11 @@ class DjangoConfig(BaseModel):
     geo: Optional[GeoConfig] = Field(
         default=None,
         description="Geographic data (countries, states, cities)",
+    )
+
+    indexnow: Optional[IndexNowConfig] = Field(
+        default=None,
+        description="IndexNow: push changed sitemap URLs to Bing, Yandex and others",
     )
 
     # ALWAYS ON. Unlike every other app here, this defaults to an *instance*, not

@@ -209,3 +209,23 @@ def _derive_chunk_id(source: str, cursor_token: str | None) -> str:
     if cursor_token is None:
         return f"{source}-1"
     return f"{source}@{cursor_token[:12]}"
+
+
+class IndexNowKeyView(View):
+    """`/cfg/sitemap/indexnow/<key>.txt` — the IndexNow key, as plain text.
+
+    The protocol proves host ownership by fetching the key from the host. Only
+    the configured key answers; every other name 404s, so this route cannot be
+    used to probe for one. A Next.js frontend on the public host rewrites
+    `/<key>.txt` here (`indexNowKeyRewrite()` in `@djangocfg/nextjs/config`).
+    """
+
+    def get(self, request: HttpRequest, key: str) -> HttpResponse:
+        from ..indexnow import get_config
+
+        config = get_config()
+        if config is None or key != config.key:
+            return HttpResponse(status=404)
+        response = HttpResponse(config.key, content_type="text/plain; charset=utf-8")
+        response["Cache-Control"] = "public, max-age=86400"
+        return response

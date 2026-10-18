@@ -30,6 +30,7 @@ export default {
   'django-mcp': 'MCP (AI Agents)',
 
   // ── Data & Tools ─────────────────────────────────────────────
+  'django-sitemap': 'Sitemap & IndexNow',
   'django-currency': 'Currency',
   'django-import-export': 'Import / Export',
   'django-cleanup': 'File Cleanup',

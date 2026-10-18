@@ -44,6 +44,7 @@ from .django.storage import FileCleanupConfig, StorageConfig
 from .django.storage_backend import S3StorageConfig
 from .django.environment import EnvironmentConfig
 from .django.geo import GeoConfig
+from .django.indexnow import IndexNowConfig, IndexNowSite
 from .django.analytics import AnalyticsConfig
 from .django.openapi import OpenAPIClientConfig
 from .django.simple_history import SimpleHistoryConfig
@@ -89,6 +90,7 @@ __all__ = [
     "DjangoRQConfig",
     "RQQueueConfig",
     "GeoConfig",
+    "IndexNowConfig", "IndexNowSite",
     "AnalyticsConfig",
     "SimpleHistoryConfig",
     "StorageConfig",
