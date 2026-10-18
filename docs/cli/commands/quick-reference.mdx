@@ -243,11 +243,14 @@ python manage.py geo_populate
 # Registered sitemap sources, row counts, sample URLs
 python manage.py sitemap_inspect
 
-# IndexNow: count and sample what would be sent, send nothing
+# IndexNow: what the next run would send; records nothing
 python manage.py indexnow_submit --dry-run
 
-# Send what changed in the last 72 hours, or specific URLs
-python manage.py indexnow_submit --hours 72
+# One run now (new, changed and removed URLs since the last accepted run)
+python manage.py indexnow_submit
+
+# Forget the state (next run records, sends nothing), or push specific URLs
+python manage.py indexnow_submit --reseed
 python manage.py indexnow_submit --url https://example.com/a/ --url https://example.com/b/
 ```
 

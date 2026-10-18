@@ -8,4 +8,5 @@ export default {
   'ui-components': 'UI Components',
   'tailwind-v4': 'Tailwind v4',
   'extensions': 'Extensions',
+  'sitemap-and-indexnow': 'Sitemap & IndexNow',
 }

@@ -1,0 +1,199 @@
+---
+title: Sitemap & IndexNow
+description: Wire a Django-backed sitemap into a Next.js app end to end — sources, chunked sitemaps, the index, robots.txt, and IndexNow — for one site or several brands on one backend.
+---
+
+import { Callout, Steps, Tabs } from 'nextra/components';
+
+# Sitemap & IndexNow
+
+Django decides which URLs exist. Next.js writes the XML on the public host,
+and IndexNow tells Bing, Yandex and the others when something changed. This
+recipe wires all three. The module reference is at
+[Sitemap Module](/features/modules/django-sitemap) and
+[IndexNow](/features/modules/django-sitemap/indexnow).
+
+```
+Django  sitemap_sources.py ──► /cfg/sitemap/index/ + /feed/ ──► Next.js /sitemap/<id>.xml
+        IndexNowConfig ──────► api.indexnow.org (hourly)         /sitemap.xml → index
+        /cfg/sitemap/indexnow/<key>.txt ◄──────────────────────── /<key>.txt (rewrite)
+```
+
+<Steps>
+
+### Django: register sources
+
+```python
+# apps/catalog/sitemap_sources.py
+from django_cfg.modules.django_sitemap import SitemapSource, register
+
+from apps.catalog.models import Listing
+
+register(SitemapSource(
+    name="listings",
+    url_template="/listings/{slug}",
+    # The predicate your detail page uses: a sitemap URL must not 404.
+    queryset_factory=lambda: Listing.objects.published().only("slug", "updated_at"),
+    fields={"slug": "slug"},
+    lastmod_field="updated_at",       # when the PAGE changed, not any write
+    cursor_fields=("updated_at", "id"),
+    order="-updated_at,-id",
+))
+```
+
+`python manage.py sitemap_inspect` shows each source's count and a sample URL.
+
+### Django: turn on IndexNow
+
+```python
+from django_cfg import DjangoConfig, IndexNowConfig
+
+class MyConfig(DjangoConfig):
+    indexnow = IndexNowConfig(
+        key=env.indexnow.key,           # secrets.token_hex(16); public by protocol
+        host="example.com",
+        trailing_slash=True,            # match the frontend's canonical URLs
+    )
+```
+
+### Next.js: chunked sitemaps
+
+```ts
+// app/sitemap.ts
+import { createDjangoSitemap } from '@djangocfg/nextjs/sitemap';
+
+const { generateSitemaps, sitemap } = createDjangoSitemap({
+  host: process.env.NEXT_PUBLIC_SITE_URL!,
+  apiUrl: process.env.NEXT_PUBLIC_API_URL!,
+  staticRoutes: [{ path: '/' }, { path: '/about' }],
+});
+
+export { generateSitemaps };
+export default sitemap;
+export const revalidate = 3600;
+```
+
+### Next.js: the index and robots.txt
+
+`generateSitemaps()` emits `/sitemap/<id>.xml` but no index, and Next.js
+reserves `/sitemap.xml`. So serve the index from its own route and rewrite
+the familiar name onto it.
+
+```ts
+// app/sitemap_index.xml/route.ts
+import { createSitemapIndex } from '@djangocfg/nextjs/sitemap';
+
+export const revalidate = 600;
+export const { GET } = createSitemapIndex({
+  host: process.env.NEXT_PUBLIC_SITE_URL!,
+  apiUrl: process.env.NEXT_PUBLIC_API_URL,
+});
+```
+
+```ts
+// app/robots.ts
+import { createRobots } from '@djangocfg/nextjs/sitemap';
+
+const host = process.env.NEXT_PUBLIC_SITE_URL!;
+export default createRobots({ host, sitemap: `${host}/sitemap.xml` });
+```
+
+### Next.js: rewrites
+
+```ts
+// next.config.ts
+import { createBaseNextConfig, indexNowKeyRewrite } from '@djangocfg/nextjs/config';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+
+export default createBaseNextConfig({
+  async rewrites() {
+    return {
+      beforeFiles: [{ source: '/sitemap.xml', destination: '/sitemap_index.xml' }],
+      afterFiles: [],
+      // /<key>.txt → Django's key route. Fallback: real files win.
+      fallback: [indexNowKeyRewrite(API_URL)],
+    };
+  },
+});
+```
+
+`host` and `apiUrl` must be the same in `sitemap.ts` and the index route.
+Otherwise the index lists chunks the chunk route will not build.
+
+### Check
+
+```bash
+curl -s https://example.com/sitemap.xml | head        # the index, listing /sitemap/<id>.xml
+curl -s https://example.com/<key>.txt                 # prints the key
+python manage.py migrate                              # IndexNow state tables
+python manage.py indexnow_submit --dry-run            # what the next run will send
+python manage.py indexnow_submit                      # first run: records, sends nothing
+```
+
+</Steps>
+
+<Callout type="warning">
+The first submission from a new key returns 403
+`SiteVerificationNotCompleted`. Retry after a few minutes, once the service
+has fetched `/<key>.txt`.
+</Callout>
+
+## Several brands on one backend
+
+One Django serving several sites, each on its own domain, registers a source
+per brand. Each frontend then claims its own sources by name, and IndexNow
+submits each host separately.
+
+<Tabs items={['Django', 'Each Next.js app']}>
+<Tabs.Tab>
+
+```python
+# apps/catalog/sitemap_sources.py — one source per brand
+for brand in ("caribbean", "bali"):
+    register(SitemapSource(
+        name=f"listings-{brand}",
+        url_template="/listings/{slug}",
+        queryset_factory=partial(published_in, brand),
+        fields={"slug": "slug"},
+        lastmod_field="updated_at",
+        cursor_fields=("updated_at", "id"),
+        order="-updated_at,-id",
+    ))
+```
+
+```python
+from django_cfg import IndexNowConfig, IndexNowSite
+
+indexnow = IndexNowConfig(
+    key=env.indexnow.key,                 # one key, served on every host
+    trailing_slash=True,
+    sites=[
+        IndexNowSite(host="caribbean.example.com", source_suffix="-caribbean"),
+        IndexNowSite(host="bali.example.com", source_suffix="-bali"),
+    ],
+)
+```
+
+</Tabs.Tab>
+<Tabs.Tab>
+
+```ts
+// app/sitemap.ts and app/sitemap_index.xml/route.ts — the SAME selector in both
+const sources = (name: string) => name.endsWith('-caribbean');
+
+createDjangoSitemap({ host, apiUrl, sources });
+createSitemapIndex({ host, apiUrl, sources });
+```
+
+The `indexNowKeyRewrite` in each app points at the same Django route, so one
+key answers on every host.
+
+</Tabs.Tab>
+</Tabs>
+
+<Callout type="info">
+A frontend that leaves out `sources` advertises every brand's URLs under its
+own host: every one of them a 404, and the whole sitemap loses credit. Use
+the same selector in `sitemap.ts` and the index route.
+</Callout>

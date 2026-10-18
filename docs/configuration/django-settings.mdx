@@ -246,6 +246,15 @@ class DjangoConfig(BaseModel):
     )
 
     # ══════════════════════════════════════════════════════════════
+    #                       SEARCH ENGINES
+    # ══════════════════════════════════════════════════════════════
+
+    indexnow: Optional[IndexNowConfig] = Field(
+        default=None,
+        description="IndexNow: push changed sitemap URLs to Bing, Yandex and others",
+    )
+
+    # ══════════════════════════════════════════════════════════════
     #                          ANALYTICS
     # ══════════════════════════════════════════════════════════════
 
@@ -872,6 +881,7 @@ config = MyConfig(
 ### Modules
 - [**File Cleanup**](/features/modules/django-cleanup) - Automatic file cleanup for FileField/ImageField
 - [**Currency**](/features/modules/django-currency) - Currency conversion and exchange rates
+- [**Sitemap & IndexNow**](/features/modules/django-sitemap) - Sitemap sources for Next.js; IndexNow push
 - [**Telegram**](/features/modules/django-telegram) - Telegram bot notifications
 - [**Unfold Admin**](/features/modules/django-unfold) - Modern admin interface
 

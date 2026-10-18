@@ -166,6 +166,8 @@ export default withNextIntl(config);
 
 Auto-handles: standalone output (production), transpile packages, dev webpack optimizations, update checks, CORS, and iframe CSP.
 
+The same entry exports `indexNowKeyRewrite(apiUrl)`, which serves the IndexNow key from Django at `/<key>.txt`. See [Sitemap & IndexNow](/frontend/recipes/sitemap-and-indexnow).
+
 ## Server vs Client Component Split
 
 | Component | Directive | Use for |

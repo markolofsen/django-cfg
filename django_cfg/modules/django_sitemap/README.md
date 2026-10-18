@@ -34,14 +34,20 @@ django_sitemap/
   sources.py                      # SitemapSource model + resolve_field helper
   cursors.py                      # opaque base64-JSON cursors for keyset pagination
   pagination.py                   # keyset_page() — constant-time per chunk
-  indexnow.py                     # IndexNow: changed URLs from the sources → api.indexnow.org
+  indexnow/                       # IndexNow: diff the sources against what was accepted → api.indexnow.org
+    urls.py                       #   what the sources produce, as absolute URLs
+    transport.py                  #   one POST + its log row; submit() for request paths
+    state.py                      #   the diff, seed, commit, reseed
+    sweep.py                      #   one run per host; submit_changed() (the RQ job)
+  models.py                       # IndexNowHost, IndexNowUrl (diff state), IndexNowSubmission (log)
+  admin.py                        # read-only admin over the IndexNow state
   cache.py                        # Redis wrappers with versioned keys
   http/
     views.py                      # SitemapIndexView + SitemapFeedView (plain Django)
     urls.py                       # /cfg/sitemap/{index,feed}/
   management/commands/
     sitemap_inspect.py            # CLI — list sources + counts + sample URLs
-    indexnow_submit.py            # CLI — submit changed URLs to IndexNow now
+    indexnow_submit.py            # CLI — one IndexNow run; --dry-run, --host, --reseed, --url
 ```
 
 ## Wire-up
@@ -260,11 +266,23 @@ Pushes changed URLs to Bing, Yandex, Seznam, Naver and the other engines that
 share `api.indexnow.org`. Google does not take part; the sitemap stays its
 channel.
 
-It reads the **sources you already registered**. Every row whose
-`lastmod_field` falls in the window is sent, built with the same template and
-fields as the feed. IndexNow therefore never announces a URL the sitemap would
-not list. An honest `lastmod` matters twice over here: a field that moves on
-every background touch re-sends the whole catalogue every day.
+It reads the **sources you already registered**, with the same template and
+fields as the feed, so it never announces a URL the sitemap would not list.
+Each run diffs them per host against `IndexNowUrl`, the last accepted state,
+and sends new URLs, URLs whose lastmod moved, and URLs that left a source.
+
+- Only an accepted batch (200/202) is recorded. A refused or failed run is
+  retried by the next one, so nothing is lost to a missed schedule.
+- The first run for a host records and sends nothing.
+- A source that raises, an empty read, or more than `shrink_share` of known
+  URLs vanishing at once sends nothing. A partial read must not reach the
+  engines as a mass removal. `--reseed` accepts a real one.
+- At most `max_urls_per_run` per host per run. Runs hold a cache lock.
+- Every POST is logged in `IndexNowSubmission`; admin shows each host's
+  `last_status`.
+
+An honest `lastmod` still matters: a field that moves on every background
+touch re-sends every row it touches.
 
 ```python
 from django_cfg import DjangoConfig, IndexNowConfig
@@ -284,19 +302,21 @@ class MyConfig(DjangoConfig):
 | `host` / `sites` | one of them | One bare hostname, or `IndexNowSite`s for a backend serving several. |
 | `key_location` | `https://<host>/<key>.txt` | Where the engines fetch the key. |
 | `trailing_slash` | `False` | Append `/` to paths, for slash-canonical sites. |
-| `sources` | all with `lastmod_field` | Limit which sources are read. |
-| `extra_urls` | — | Dotted path to `callable(since) -> list[str]`: pages the sitemap cannot see, typically ones that just went away (404, 410, redirect). |
-| `window_hours` | `25` | How far back a run looks. Above the interval, so a late run loses nothing. |
-| `schedule_interval` | `86400` | RQ schedule, registered automatically. `0` turns it off. |
+| `sources` | every enabled source | Limit which sources are read. Without `lastmod_field`, a URL is sent only when it appears or goes. |
+| `extra_urls` | — | Dotted path to `callable(since) -> list[str]`: URLs the sitemap never listed, sent once, not diffed. `since` is the host's last fully successful run. |
+| `max_urls_per_run` | `10000` | Per host per run; the rest goes next run. |
+| `shrink_share` / `shrink_floor` | `0.2` / `50` | Above this many vanished URLs, the run sends nothing. |
+| `schedule_interval` | `3600` | RQ schedule, registered automatically. `0` turns it off. |
 
 **Several sites on one backend.** Use `sites=[IndexNowSite(host=…,
 source_suffix="-caribbean"), …]` instead of `host`. Each host takes its own
-sources, gets its own request (the protocol takes one host per request), and
-one key serves them all. With several sites, `extra_urls` must return
-absolute URLs.
+sources, gets its own request (the protocol takes one host per request) and
+its own diff state. One key serves them all unless a site sets
+`IndexNowSite(key=…)`. With several sites, `extra_urls` must return absolute
+URLs.
 
 **The key file.** Django answers `GET /cfg/sitemap/indexnow/<key>.txt` with
-the key. Any other name returns 404, so the route cannot be used to probe for
+any configured key. Any other name returns 404, so the route cannot be used to probe for
 the key. When the public host is a Next.js app, rewrite to it:
 
 ```ts
@@ -312,11 +332,12 @@ async rewrites() {
 
 - `indexnow.submit(urls)` is for request paths (publish, unpublish). It never
   raises: an engine being down must not fail a save. The result returns
-  `sent`, `accepted` and `errors`.
+  `sent`, `accepted` and `errors`. It is logged and not diffed.
 - `indexnow.submit_changed()` is the scheduled job. It raises
-  `IndexNowError` on a refusal, so the job shows as failed.
-- `manage.py indexnow_submit [--hours N] [--dry-run] [--url URL ...]` runs
-  it by hand.
+  `IndexNowError` after every host has run if any refused, so the job shows
+  as failed.
+- `manage.py indexnow_submit [--dry-run] [--host H] [--reseed] [--url URL ...]`
+  runs it by hand.
 
 **The first submission from a new key returns 403
 `SiteVerificationNotCompleted`.** The service has not fetched the key file

@@ -9,13 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **IndexNow — push changed sitemap URLs to Bing, Yandex, Seznam, Naver.**
-  `IndexNowConfig` on `DjangoConfig.indexnow`. Every registered sitemap
-  source row whose `lastmod_field` falls in the window is submitted, using
-  the feed's template and fields, so IndexNow never announces a URL the
-  sitemap would not list.
-  - Daily RQ schedule, registered from the config (`schedule_interval`, `0`
-    to turn it off). `manage.py indexnow_submit [--hours N] [--dry-run]
-    [--url …]` runs it by hand.
+  `IndexNowConfig` on `DjangoConfig.indexnow`. It reads the registered
+  sitemap sources with the feed's template and fields, so IndexNow never
+  announces a URL the sitemap would not list. How a run decides what to send
+  is under **Changed** below.
+  - RQ schedule, registered from the config (`schedule_interval`, `0` to turn
+    it off). `manage.py indexnow_submit` runs it by hand.
   - `extra_urls`: a dotted path to `callable(since) -> list[str]` for pages
     the sitemap cannot see, such as deleted ones, 410s or redirects.
   - The key file is served at `/cfg/sitemap/indexnow/<key>.txt`; any other
@@ -68,7 +67,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     webhook path already accepts and safely skips those events.
 - `payments` optional-dependency extra (`stripe>=15.3,<16`).
 
+### Changed
+- **IndexNow remembers what it sent.** It used to submit whatever had a
+  `lastmod` in a 25-hour window, which lost changes whenever a run failed and
+  could not see removals. Each run now diffs every host's sitemap sources
+  against `IndexNowUrl`, the last accepted state, and sends new, changed and
+  removed URLs.
+  - Only an accepted batch is recorded, so a failed run is retried.
+  - The first run for a host records and sends nothing.
+  - A source error, an empty read, or a shrink of more than `shrink_share`
+    sends nothing.
+  - At most `max_urls_per_run` per host per run; runs hold a cache lock.
+  - Every POST is logged in `IndexNowSubmission`. Hosts and submissions show
+    read-only in admin.
+  - **Needs `manage.py migrate`** (`django_sitemap.0001`). The first run after
+    upgrading seeds and sends nothing.
+  - `IndexNowSite(key=…)` gives a host its own key. The key route answers
+    every configured key.
+  - `extra_urls(since)` now gets the host's last fully successful run.
+  - `indexnow_submit` gains `--host` and `--reseed`.
+  - **Removed:** `window_hours`, `--hours` and `changed_urls()`.
+    `schedule_interval` now defaults to 3600 s. The scheduled func path is
+    unchanged, so registered schedules keep their job ID.
+  - `indexnow` is now a package (`urls`, `transport`, `state`, `sweep`); the
+    public names import from it as before.
+
 ### Fixed
+- **A schedule removed from the config no longer keeps firing.** rq-scheduler
+  keeps a job until something cancels it. Before this fix a dropped
+  `RQScheduleConfig` stayed in Redis, and once its function was deleted it
+  raised an ImportError on every run. Registration now records the schedule
+  IDs it registered in a per-project Redis set. On the next start it cancels
+  any ID in that set that is no longer configured. Jobs enqueued from code,
+  and jobs registered by another project on the same Redis DB, are never in
+  the set, so they are never touched. Schedules registered before this
+  release are not in the set yet; cancel those by hand once.
 - **DRF throttles keyed on raw X-Forwarded-For.** Generated `REST_FRAMEWORK`
   now defaults `NUM_PROXIES` to `0` while `RealIPMiddleware` is in
   `MIDDLEWARE`, so `get_ident` returns the resolved `REMOTE_ADDR`. With `None`,

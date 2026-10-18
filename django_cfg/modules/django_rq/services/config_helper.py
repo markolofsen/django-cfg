@@ -252,6 +252,50 @@ def _cleanup_old_schedules(scheduler, job_id: str, connection=None, queue_name: 
                 logger.debug(f"Failed to cleanup registry {registry_key} for {job_id}: {e}")
 
 
+def _registered_ids_key() -> str:
+    """Redis set of the schedule IDs this project registered last time.
+
+    Per project, so two projects on one Redis DB never prune each other.
+    """
+    try:
+        from django_cfg.core.state import get_current_config
+
+        name = get_current_config().project_name
+    except Exception:
+        name = "default"
+    return f"django_cfg:schedule_ids:{name}"
+
+
+def _prune_unconfigured_schedules(scheduler, connection, configured_ids: set) -> list:
+    """Cancel schedules this project registered before and no longer configures.
+
+    rq-scheduler keeps a job until it is cancelled, so a schedule removed from
+    the config kept firing — after its function was deleted, an ImportError
+    every run. Only IDs from our own previous registration are candidates:
+    jobs enqueued by code, or by another project, are never touched.
+    """
+    key = _registered_ids_key()
+    previous = {m.decode() if isinstance(m, bytes) else m for m in connection.smembers(key)}
+    pruned = []
+    for job_id in sorted(previous - configured_ids):
+        queue_name = "default"
+        try:
+            from rq.job import Job
+
+            queue_name = Job.fetch(job_id, connection=connection).origin or queue_name
+        except Exception:
+            pass
+        _cleanup_old_schedules(scheduler, job_id, connection=connection, queue_name=queue_name)
+        pruned.append(job_id)
+        logger.info(f"Pruned schedule no longer in config: {job_id}")
+    pipe = connection.pipeline()
+    pipe.delete(key)
+    if configured_ids:
+        pipe.sadd(key, *configured_ids)
+    pipe.execute()
+    return pruned
+
+
 def register_schedules_from_config():
     """
     Register scheduled jobs from django-cfg config in rq-scheduler.
@@ -280,11 +324,9 @@ def register_schedules_from_config():
             logger.debug("RQ not enabled, skipping schedule registration")
             return
 
-        # Get all schedules including auto-cleanup tasks
+        # Get all schedules including auto-cleanup tasks. An empty list still
+        # runs: the last schedule removed from the config must be pruned too.
         schedules = config.get_all_schedules()
-        if not schedules:
-            logger.debug("No schedules configured")
-            return
 
         # Determine which queue the rqscheduler daemon is running for
         # by checking --queue argument. This is important because
@@ -321,6 +363,11 @@ def register_schedules_from_config():
 
         try:
             logger.info(f"Registering {len(schedules)} scheduled jobs from config...")
+
+            # IDs of everything configured, whether or not it registers below:
+            # a schedule whose import fails is still configured, not removed.
+            configured_ids = {sc.job_id or _generate_deterministic_job_id(sc) for sc in schedules}
+            _prune_unconfigured_schedules(scheduler, connection, configured_ids)
 
             for schedule_config in schedules:
                 try:

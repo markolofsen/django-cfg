@@ -215,8 +215,8 @@ class IndexNowKeyView(View):
     """`/cfg/sitemap/indexnow/<key>.txt` — the IndexNow key, as plain text.
 
     The protocol proves host ownership by fetching the key from the host. Only
-    the configured key answers; every other name 404s, so this route cannot be
-    used to probe for one. A Next.js frontend on the public host rewrites
+    a configured key answers (the shared one or a site's own); every other name
+    404s, so this route cannot be used to probe for one. A Next.js frontend on the public host rewrites
     `/<key>.txt` here (`indexNowKeyRewrite()` in `@djangocfg/nextjs/config`).
     """
 
@@ -224,8 +224,8 @@ class IndexNowKeyView(View):
         from ..indexnow import get_config
 
         config = get_config()
-        if config is None or key != config.key:
+        if config is None or key not in config.all_keys():
             return HttpResponse(status=404)
-        response = HttpResponse(config.key, content_type="text/plain; charset=utf-8")
+        response = HttpResponse(key, content_type="text/plain; charset=utf-8")
         response["Cache-Control"] = "public, max-age=86400"
         return response

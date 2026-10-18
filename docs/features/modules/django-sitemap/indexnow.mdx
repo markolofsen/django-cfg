@@ -1,6 +1,6 @@
 ---
 title: IndexNow
-description: Push changed sitemap URLs to Bing, Yandex, Seznam and Naver with one config block. The key file is served by Django and rewritten through by Next.js.
+description: Push new, changed and removed sitemap URLs to Bing, Yandex, Seznam and Naver with one config block. Each run diffs against what was last accepted, so nothing is sent twice and nothing is lost to a failed run.
 ---
 
 import { Callout, Steps } from 'nextra/components';
@@ -18,9 +18,35 @@ Google does not take part in IndexNow. For Google, the
 </Callout>
 
 django-cfg reads the [sitemap sources](/features/modules/django-sitemap) you
-already registered. Every row whose `lastmod_field` falls in the window is
-sent, with the same URL template and fields as the feed. So IndexNow never
-announces a URL your sitemap would not list.
+already registered, with the same URL template and fields as the feed, so
+IndexNow never announces a URL your sitemap would not list. Each run compares
+them with what the engines last accepted for the host, and sends:
+
+- **new** URLs, which no earlier run sent;
+- **changed** URLs, whose `lastmod` moved;
+- **removed** URLs, which left a source; the engine recrawls them and sees
+  the 404 or redirect.
+
+## How a run behaves
+
+- **Only an accepted batch is recorded.** A 429, a 403 or a timeout leaves the
+  state as it was, so the next run sends the same URLs again. A missed or
+  failed run loses nothing.
+- **The first run for a host records and sends nothing.** The engines already
+  have those URLs from your sitemap, and pushing a whole catalogue at once is
+  what earns a 429.
+- **A degraded read is not sent as fact.** If any source raises, or the read
+  is empty, nothing is sent. The same holds when more than `shrink_share`
+  (20%) of known URLs vanish in one run: a partial read must not reach Bing as
+  a mass removal. If the withdrawal is real, run
+  `indexnow_submit --reseed`.
+- **At most `max_urls_per_run` per host per run** (10,000). Whatever is left
+  goes out on the next run.
+- **One run at a time.** Runs take a cache lock, so a slow run that overlaps
+  the next schedule cannot send the same diff twice.
+- **Everything is visible.** Admin → Sitemap shows each host's
+  `last_status`, `last_run_at` and `last_success_at`, and logs every POST with
+  its HTTP status.
 
 ## Setup
 
@@ -73,12 +99,13 @@ Django route instead.
 
 ```bash
 curl https://example.com/<key>.txt                # must print the key
-python manage.py indexnow_submit --dry-run        # count and sample, sends nothing
-python manage.py indexnow_submit                  # send the last 25 hours
+python manage.py migrate                          # the state tables (django_sitemap)
+python manage.py indexnow_submit --dry-run        # what would be sent; records nothing
+python manage.py indexnow_submit                  # first run: records, sends nothing
 ```
 
-From then on an RQ job runs daily. It is registered automatically from the
-config; set `schedule_interval=0` to turn it off.
+From then on an RQ job runs hourly. It is registered automatically from the
+config. Set `schedule_interval=0` to turn it off.
 
 </Steps>
 
@@ -112,19 +139,21 @@ indexnow = IndexNowConfig(
 - A site takes its sources by `source_suffix` (`properties-caribbean`,
   `stories-caribbean`, …), by an explicit `sources=[...]` list, or both. A
   source no site takes is not sent anywhere.
-- One key serves every host. Each frontend rewrites `/<key>.txt` to the same
-  Django route (`indexNowKeyRewrite`). Set `key_location` on a site that
-  serves the key elsewhere.
+- One key serves every host by default. Give a site its own with
+  `IndexNowSite(key=...)`. The Django route answers every configured key, and
+  each frontend rewrites `/<key>.txt` to it (`indexNowKeyRewrite`). Set
+  `key_location` on a site that serves its key elsewhere.
 - `trailing_slash` on a site overrides the config's.
 - `extra_urls` must return **absolute** URLs here: a bare path could belong to
   any site, so it is skipped with a warning. URLs are grouped by host, and a
   URL on a host that is not a configured site is refused before sending.
 - Set exactly one of `host` or `sites`.
 
-## Pages that went away
+## URLs the sitemap never listed
 
-The sitemap only lists what exists, so a page that was just deleted,
-returns 410, or now redirects is invisible to it. Return those from a function
+The diff covers every URL that enters or leaves a sitemap source. Some pages
+change their answer without ever having been in a sitemap: a listing your
+sitemap never offered that now returns 410, say. Return those from a function
 and name it in `extra_urls`:
 
 ```python
@@ -135,7 +164,7 @@ from apps.catalog.models import Listing
 
 
 def gone_urls(since: datetime) -> list[str]:
-    """Listings removed in the window: they now 410."""
+    """Listings removed since the last successful run: they now 410."""
     return [
         f"/listings/{pk}"
         for pk in Listing.objects.filter(removed_at__gte=since).values_list("pk", flat=True)
@@ -146,7 +175,9 @@ def gone_urls(since: datetime) -> list[str]:
 indexnow = IndexNowConfig(key=..., host="example.com", extra_urls="apps.catalog.indexnow.gone_urls")
 ```
 
-Paths are joined to `host`; absolute URLs are sent as they are.
+`since` is the start of the host's last fully successful run, so a failed run
+does not skip a span. These URLs are sent once and are not diffed. Paths are
+joined to `host`; absolute URLs are sent as they are.
 
 ## Calling it from code
 
@@ -154,11 +185,23 @@ Paths are joined to `host`; absolute URLs are sent as they are.
 from django_cfg.modules.django_sitemap import indexnow
 
 indexnow.submit(["https://example.com/listings/42"])   # request paths: never raises
-indexnow.submit_changed()                              # jobs: raises IndexNowError on a refusal
+indexnow.submit_changed()                              # the run: raises IndexNowError on a refusal
 ```
 
 `submit()` returns `sent`, `accepted` and `errors`. A search engine being
-down must not fail a save, so it reports the failure instead of raising.
+down must not fail a save, so it reports the failure instead of raising. It
+is logged, but it does not update the diff state, so the next run may send the
+same URL once more.
+
+## Commands
+
+```bash
+python manage.py indexnow_submit                    # one run, every site
+python manage.py indexnow_submit --dry-run          # counts and a sample; records nothing
+python manage.py indexnow_submit --host example.com # one site
+python manage.py indexnow_submit --reseed           # forget the state; the next run records and sends nothing
+python manage.py indexnow_submit --url https://example.com/a/   # push these now
+```
 
 ## Reference
 
@@ -166,13 +209,14 @@ down must not fail a save, so it reports the failure instead of raising.
 |---|---|---|
 | `key` | required | 8–128 characters of `[A-Za-z0-9-]`. |
 | `host` | one of `host`/`sites` | Bare hostname. Every URL must be on it, or the batch is refused with 422. |
-| `sites` | one of `host`/`sites` | `IndexNowSite(host, source_suffix, sources, key_location, trailing_slash)` per public host. |
+| `sites` | one of `host`/`sites` | `IndexNowSite(host, key, source_suffix, sources, key_location, trailing_slash)` per public host. |
 | `key_location` | `https://<host>/<key>.txt` | Where the engines fetch the key. |
 | `trailing_slash` | `False` | Append `/` to paths, for slash-canonical sites. |
-| `sources` | every source with a `lastmod_field` | Single-site: limit which sources are read. |
+| `sources` | every enabled source | Single-site: limit which sources are read. A source without `lastmod_field` is sent only when a URL appears or goes. |
 | `extra_urls` | — | Dotted path to `callable(since) -> list[str]`. |
-| `window_hours` | `25` | How far back a run looks. Keep it above the interval. |
-| `schedule_interval` | `86400` | Seconds between RQ runs. `0` turns the schedule off. |
+| `max_urls_per_run` | `10000` | Per host per run; the rest goes on the next run. |
+| `shrink_share` / `shrink_floor` | `0.2` / `50` | A run that loses more than this many known URLs sends nothing. |
+| `schedule_interval` | `3600` | Seconds between RQ runs. `0` turns the schedule off. |
 | `endpoint` | `https://api.indexnow.org/indexnow` | Shared by every engine. |
 | `timeout` | `30` | Seconds per request. |
 
@@ -181,7 +225,7 @@ down must not fail a save, so it reports the failure instead of raising.
 | 200, 202 | Received. |
 | 403 | The key file is missing, wrong, or not yet verified (see above). |
 | 422 | A URL is not on `host`, or the key does not match the host. |
-| 429 | Too many requests. The daily job batches 10,000 URLs per POST. |
+| 429 | Too many requests. Nothing is recorded, so the next run retries. |
 
 ## Try it in the demo
 

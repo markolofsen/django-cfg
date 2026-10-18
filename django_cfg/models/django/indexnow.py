@@ -14,6 +14,12 @@ if TYPE_CHECKING:
 _KEY = re.compile(r"^[A-Za-z0-9-]{8,128}$")
 
 
+def _valid_key(v: str) -> str:
+    if not _KEY.match(v):
+        raise ValueError("IndexNow key must be 8–128 characters of A-Z, a-z, 0-9 or '-'")
+    return v
+
+
 def _bare_host(v: str) -> str:
     v = v.strip().lower()
     if "://" in v or "/" in v:
@@ -30,6 +36,9 @@ class IndexNowSite(BaseModel):
     """
 
     host: str = Field(..., description="Bare public hostname: 'example.com'.")
+    key: Optional[str] = Field(
+        default=None, description="This host's own key. Default: the config's shared key.",
+    )
     sources: Optional[List[str]] = Field(
         default=None, description="Sitemap source names on this host.",
     )
@@ -49,6 +58,11 @@ class IndexNowSite(BaseModel):
     def _host(cls, v: str) -> str:
         return _bare_host(v)
 
+    @field_validator("key")
+    @classmethod
+    def _key(cls, v: Optional[str]) -> Optional[str]:
+        return None if v is None else _valid_key(v)
+
     def takes(self, source_name: str) -> bool:
         if self.sources is None and self.source_suffix is None:
             return True
@@ -65,9 +79,10 @@ class IndexNowConfig(BaseModel):
     engine. Google does not take part — the sitemap stays its channel.
 
     The URLs come from the sitemap sources you already registered
-    (`sitemap_sources.py`): every row whose `lastmod_field` falls in the
-    window. Anything the sitemap cannot see — pages that just went away —
-    comes from `extra_urls`.
+    (`sitemap_sources.py`). Each run diffs them against what was last
+    submitted for the host: new URLs, URLs whose lastmod moved, and URLs that
+    left a source are sent. Only an accepted batch is recorded, so a failed
+    run is retried by the next one. The first run records and sends nothing.
 
     The key is PUBLIC by protocol: it must be served as plain text at
     `https://<host>/<key>.txt`. Django serves it at
@@ -129,27 +144,40 @@ class IndexNowConfig(BaseModel):
     sources: Optional[List[str]] = Field(
         default=None,
         description=(
-            "Single-site only: sitemap source names to read. None means every source with a "
-            "lastmod_field. With `sites`, each site names its own."
+            "Single-site only: sitemap source names to read. None means every enabled source. "
+            "With `sites`, each site names its own."
         ),
     )
 
     extra_urls: Optional[str] = Field(
         default=None,
         description=(
-            "Dotted path to `callable(since: datetime) -> list[str]` returning absolute URLs "
-            "the sitemap cannot see — typically pages that just went away (404/410/redirect)."
+            "Dotted path to `callable(since: datetime) -> list[str]`: URLs the sitemap never "
+            "listed, sent once and not diffed. `since` is the host's last fully successful "
+            "run, so a failed run loses nothing."
         ),
     )
 
-    window_hours: int = Field(
-        default=25,
+    max_urls_per_run: int = Field(
+        default=10_000,
         ge=1,
-        description="How far back each scheduled run looks. Above the interval, so a late run loses nothing.",
+        description="Per host per run. The rest is found again by the next run.",
     )
 
+    shrink_share: float = Field(
+        default=0.2,
+        gt=0,
+        le=1,
+        description=(
+            "If more than this share of known URLs vanish in one run (and more than "
+            "`shrink_floor`), the read is treated as degraded and nothing is sent."
+        ),
+    )
+
+    shrink_floor: int = Field(default=50, ge=0, description="See `shrink_share`.")
+
     schedule_interval: int = Field(
-        default=24 * 3600,
+        default=3600,
         ge=0,
         description="Seconds between scheduled runs (RQ). 0 disables the schedule; the command still works.",
     )
@@ -159,9 +187,7 @@ class IndexNowConfig(BaseModel):
     @field_validator("key")
     @classmethod
     def _valid_key(cls, v: str) -> str:
-        if not _KEY.match(v):
-            raise ValueError("IndexNow key must be 8–128 characters of A-Z, a-z, 0-9 or '-'")
-        return v
+        return _valid_key(v)
 
     @field_validator("host")
     @classmethod
@@ -191,8 +217,15 @@ class IndexNowConfig(BaseModel):
             for s in self.sites
         ]
 
+    def key_for(self, site: IndexNowSite) -> str:
+        return site.key or self.key
+
+    def all_keys(self) -> set[str]:
+        """Every key a host may serve: the shared one and each site's own."""
+        return {self.key, *(s.key for s in self.sites if s.key)}
+
     def key_location_for(self, site: IndexNowSite) -> str:
-        return site.key_location or f"https://{site.host}/{self.key}.txt"
+        return site.key_location or f"https://{site.host}/{self.key_for(site)}.txt"
 
     def resolved_key_location(self) -> str:
         """The single-site key location. With `sites`, use `key_location_for`."""
