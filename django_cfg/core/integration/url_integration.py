@@ -130,7 +130,7 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
 
     This function adds:
     - Django CFG management URLs (/cfg/, /healthz, etc.)
-    - "/" redirecting to the public site (site_url), unless the project routes "" itself
+    - "/" redirecting api.<domain> to <domain>, unless the project routes "" itself
     - Django Client URLs (if available)
     - Static files serving (DEBUG mode only)
     - Media files serving (all environments via serve view)

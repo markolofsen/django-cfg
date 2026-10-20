@@ -42,6 +42,7 @@ from __future__ import annotations
 import asyncio
 import concurrent.futures as _futures
 import logging
+import threading
 import time
 from typing import Callable, TypeVar
 
@@ -186,6 +187,10 @@ class LLMRouter:
         if prefs:
             body["provider"] = {**(body.get("provider") or {}), **prefs}
         self._extra_body = body or None
+
+        # Built on first use and kept: circuit state lives in its breakers.
+        self._model_router: ModelRouter | None = None
+        self._model_router_lock = threading.Lock()
 
     # ── Per-model resolution — the catalog is the source of truth ───────────────
 
@@ -620,18 +625,29 @@ class LLMRouter:
     # ── Internals ──────────────────────────────────────────────────────────────
 
     def _router(self) -> ModelRouter:
-        """A fresh ModelRouter over the chain — one attempt per model, then cascade.
+        """The ModelRouter over the chain — one attempt per model, then cascade.
+
+        Built once per LLMRouter and reused: ModelRouter owns one breaker per
+        model, so a router rebuilt per call discards every recorded failure
+        and the breaker never opens.
 
         The chain is capped at ``max_total_attempts`` so total work stays
         bounded even if a longer chain is supplied. ``base_delay`` maps to
         the configured retry cadence (unused at max_attempts=1, but kept so
         any future within-model retry honours it).
         """
-        return ModelRouter(
-            self._chain[: self._max_total_attempts],
-            max_attempts=1,
-            base_delay=self._retry_delay,
-        )
+        router = self._model_router
+        if router is None:
+            with self._model_router_lock:
+                router = self._model_router
+                if router is None:
+                    router = ModelRouter(
+                        self._chain[: self._max_total_attempts],
+                        max_attempts=1,
+                        base_delay=self._retry_delay,
+                    )
+                    self._model_router = router
+        return router
 
     @staticmethod
     def _build_messages(messages: list[dict], system: str | None) -> list[dict]:
