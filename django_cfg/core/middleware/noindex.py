@@ -1,71 +1,29 @@
-"""
-Django-CFG Middleware: Prevent Search Engine Indexing
+"""Keep a Django-CFG backend out of search results.
 
-Universal middleware that adds X-Robots-Tag header to prevent search engines
-from indexing the entire Django project.
+A django-cfg project is an API and an admin, usually on `api.<domain>`; its
+public pages live in a separate frontend. So every response carries
+`X-Robots-Tag`, on by default (`DjangoConfig.search_indexing = False`).
 
-This ensures that your Django application (admin panels, APIs, internal tools, etc.)
-is not exposed in search engine results.
+A header, not `robots.txt`: JSON is not governed by robots.txt, and a URL
+disallowed from crawling never has its noindex read.
 """
+
+from typing import Callable
 
 from django.http import HttpRequest, HttpResponse
-from typing import Callable
+
+X_ROBOTS_TAG = "noindex, nofollow, noarchive"
 
 
 class NoIndexMiddleware:
-    """
-    Universal middleware to prevent search engine indexing of entire Django project.
-
-    Adds X-Robots-Tag: noindex, nofollow header to ALL responses.
-    Adds Cache-Control headers to sensitive paths (/cfg/, /admin/).
-
-    Usage:
-        Add to MIDDLEWARE in settings.py:
-        ```python
-        MIDDLEWARE = [
-            ...
-            'django_cfg.core.middleware.noindex.NoIndexMiddleware',
-            ...
-        ]
-        ```
-
-    Headers Added:
-        - X-Robots-Tag: noindex, nofollow (ALL responses)
-        - Cache-Control: no-cache, no-store, must-revalidate (for /cfg/* and /admin/* paths)
-
-    Example Response:
-        HTTP/1.1 200 OK
-        X-Robots-Tag: noindex, nofollow
-        Cache-Control: no-cache, no-store, must-revalidate
-    """
+    """Add `X-Robots-Tag` to every response; no-store on /cfg/ and /admin/."""
 
     def __init__(self, get_response: Callable[[HttpRequest], HttpResponse]):
-        """
-        Initialize middleware.
-
-        Args:
-            get_response: Next middleware or view in chain
-        """
         self.get_response = get_response
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
-        """
-        Process request and add noindex header to ALL responses.
-
-        Args:
-            request: HTTP request
-
-        Returns:
-            HTTP response with X-Robots-Tag header on all responses
-        """
-        # Get response from next middleware/view
         response = self.get_response(request)
-
-        # Add X-Robots-Tag header to ALL responses to prevent indexing
-        response['X-Robots-Tag'] = 'noindex, nofollow'
-
-        # Add Cache-Control to prevent caching for sensitive paths (security best practice)
-        if request.path.startswith('/cfg/') or request.path.startswith('/admin/'):
-            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-
+        response["X-Robots-Tag"] = X_ROBOTS_TAG
+        if request.path.startswith(("/cfg/", "/admin/")):
+            response["Cache-Control"] = "no-cache, no-store, must-revalidate"
         return response

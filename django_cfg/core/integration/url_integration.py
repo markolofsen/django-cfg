@@ -130,6 +130,7 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
 
     This function adds:
     - Django CFG management URLs (/cfg/, /healthz, etc.)
+    - "/" redirecting to the public site (site_url), unless the project routes "" itself
     - Django Client URLs (if available)
     - Static files serving (DEBUG mode only)
     - Media files serving (all environments via serve view)
@@ -157,8 +158,12 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
     """
     # Add django_cfg API URLs
     # Note: URL prefixes (cfg/, healthz, etc.) are defined in django_cfg.apps.urls
+    from .root_view import root_view
+
+    # The root route comes after the project's, so a project's own "" route wins.
     new_patterns = urlpatterns + [
         path("", include("django_cfg.apps.urls")),
+        path("", root_view, name="django_cfg_root"),
     ]
 
     # Automatically add OpenAPI group URLs from config

@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from ..base.config_model import DjangoConfig
 
 REAL_IP_MIDDLEWARE = 'django_cfg.middleware.real_ip.RealIPMiddleware'
+NOINDEX_MIDDLEWARE = 'django_cfg.core.middleware.noindex.NoIndexMiddleware'
 
 
 class MiddlewareBuilder:
@@ -60,6 +61,10 @@ class MiddlewareBuilder:
         """
         # Real IP must be first — fixes REMOTE_ADDR behind proxies
         middleware = [REAL_IP_MIDDLEWARE]
+
+        # Outermost after Real IP, so error responses from inner middleware carry it too
+        if not self.config.search_indexing:
+            middleware.append(NOINDEX_MIDDLEWARE)
 
         # Default middleware (includes CorsMiddleware)
         middleware.extend(DEFAULT_MIDDLEWARE)

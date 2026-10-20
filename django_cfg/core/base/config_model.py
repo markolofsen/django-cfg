@@ -236,6 +236,14 @@ class DjangoConfig(BaseModel):
         description="Enable explicit connection pool cleanup middleware",
     )
 
+    search_indexing: bool = Field(
+        default=False,
+        description=(
+            "Let search engines index this backend. Off by default: every "
+            "response carries X-Robots-Tag noindex (NoIndexMiddleware)"
+        ),
+    )
+
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                               CACHE                                       ║
     # ╚══════════════════════════════════════════════════════════════════════════╝

@@ -87,8 +87,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `extra_urls(since)` now gets the host's last fully successful run.
   - `indexnow_submit` gains `--host` and `--reseed`.
   - **Removed:** `window_hours`, `--hours` and `changed_urls()`.
-    `schedule_interval` now defaults to 3600 s. The scheduled func path is
-    unchanged, so registered schedules keep their job ID.
+    `schedule_interval` now defaults to 3600 s. The func path is unchanged,
+    but the job ID includes the interval. A project upgrading from 2.3.326
+    keeps the old daily job in Redis beside the new hourly one; cancel
+    `schedule_submit_changed_*` with `interval=86400` once.
   - `indexnow` is now a package (`urls`, `transport`, `state`, `sweep`); the
     public names import from it as before.
 
