@@ -68,6 +68,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `payments` optional-dependency extra (`stripe>=15.3,<16`).
 
 ### Changed
+- **Media stays on local disk outside production.** `StorageConfig.backend`
+  now takes effect only when `env_mode` is production. Before this, a dev run
+  or a test suite uploaded into the real bucket, and cleanup signals deleted
+  objects there. In development and test every write and delete goes to
+  `MEDIA_ROOT=<base_dir>/media`, with no opt-out. When the declared backend
+  has a `custom_domain`, the default storage is
+  `django_cfg.core.backends.storage.LocalStorageWithRemoteURLs`: `url()` of a
+  file that is not on local disk returns the remote public URL
+  (`custom_domain` + `environment`/`location`), so a database restored from a
+  production dump still shows its media. Only `url()` falls back; `open()`,
+  `exists()`, `size()` and `delete()` stay local. Without a `custom_domain` it
+  is plain `FileSystemStorage`. `MEDIA_URL` is no longer derived from
+  `custom_domain` outside production. Production settings are unchanged.
 - **IndexNow remembers what it sent.** It used to submit whatever had a
   `lastmod` in a 25-hour window, which lost changes whenever a run failed and
   could not see removals. Each run now diffs every host's sitemap sources

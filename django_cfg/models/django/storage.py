@@ -111,8 +111,10 @@ class StorageConfig(BaseModel):
     Groups file-storage concerns that are configured independently:
 
     - `cleanup` — automatic deletion of orphaned files (see `FileCleanupConfig`).
-    - `backend` — where media is stored. `None` keeps Django's local
-      filesystem storage (see `S3StorageConfig`).
+    - `backend` — where media is stored in production. `None` keeps Django's
+      local filesystem storage (see `S3StorageConfig`). Development and test
+      always write and delete on local disk; with a `custom_domain`, `url()`
+      of a file missing locally points at the remote copy (read-only).
 
     Example:
         ```python
@@ -142,7 +144,10 @@ class StorageConfig(BaseModel):
 
     backend: Optional[S3StorageConfig] = Field(
         default=None,
-        description="Object storage for media; None uses local filesystem storage",
+        description="Object storage for media in production; None uses local "
+        "filesystem storage. Development and test always write and delete on "
+        "local disk; only url() of a file missing locally falls back to the "
+        "backend's custom_domain",
     )
 
     @model_validator(mode="before")
@@ -182,6 +187,15 @@ class StorageConfig(BaseModel):
         )
         data["cleanup"] = FileCleanupConfig(**legacy)
         return data
+
+    def effective_backend(self, *, production: bool) -> Optional[S3StorageConfig]:
+        """
+        Backend actually in use: `backend` in production, None elsewhere.
+
+        A dev or test run must never reach the bucket: uploads would land next
+        to production objects, and cleanup signals would delete them.
+        """
+        return self.backend if production else None
 
     def __getattr__(self, name: str) -> Any:
         """Read cleanup fields off the container, as the flat form allowed."""

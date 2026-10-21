@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any, Dict
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig
 
+LOCAL_WITH_REMOTE_URLS = "django_cfg.core.backends.storage.LocalStorageWithRemoteURLs"
+
 
 class StaticFilesGenerator:
     """
@@ -100,7 +102,8 @@ class StaticFilesGenerator:
         ]
 
         # Object storage serves media from its own host; MEDIA_ROOT stays for
-        # local mode only.
+        # local mode only. Outside production the backend is None, so dev keeps
+        # config.media_url.
         backend = self._get_backend()
         if backend is not None:
             media_url = backend.media_url()
@@ -110,9 +113,29 @@ class StaticFilesGenerator:
         return settings
 
     def _get_backend(self):
-        """The configured object-storage backend, or None for local storage."""
+        """
+        The object-storage backend in effect, or None for local storage.
+
+        Production only: development and test always store on local disk, so
+        neither uploads nor cleanup deletes ever reach the bucket.
+        """
         storage = getattr(self.config, "storage", None)
-        return getattr(storage, "backend", None) if storage else None
+        if storage is None:
+            return None
+        return storage.effective_backend(production=self.config.is_production)
+
+    def _remote_read_url(self):
+        """
+        Public URL prefix of a backend declared but not in effect, else None.
+
+        Lets dev show media restored from a production dump. Without a
+        custom_domain there is no public URL to build, so dev stays plain local.
+        """
+        storage = getattr(self.config, "storage", None)
+        declared = getattr(storage, "backend", None) if storage else None
+        if declared is None or self._get_backend() is not None:
+            return None
+        return declared.media_url()
 
     def _build_storages(self, static_backend: str) -> Dict[str, Any]:
         """
@@ -128,6 +151,12 @@ class StaticFilesGenerator:
 
         backend = self._get_backend()
         if backend is None:
+            remote_url = self._remote_read_url()
+            if remote_url:
+                storages["default"] = {
+                    "BACKEND": LOCAL_WITH_REMOTE_URLS,
+                    "OPTIONS": {"remote_base_url": remote_url},
+                }
             return storages
 
         backend.check_dependencies()

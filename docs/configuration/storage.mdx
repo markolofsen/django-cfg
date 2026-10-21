@@ -184,6 +184,23 @@ Do not design against these — R2 does not implement them:
 
 ## Environments
 
+`backend` applies in **production only**. When `env_mode` is `development` or
+`test`, every write and delete goes to local disk, and there is no switch to
+reach the bucket from there:
+
+| Setting | Development / test | Production |
+|---|---|---|
+| `STORAGES["default"]` | `LocalStorageWithRemoteURLs` (with `custom_domain`), else `FileSystemStorage` | `storages.backends.s3.S3Storage` |
+| `MEDIA_ROOT` | `<base_dir>/media` | `<base_dir>/media` (unused) |
+| `MEDIA_URL` | `media_url` (`<api_url>/media/` in development) | from `custom_domain` when set |
+
+`LocalStorageWithRemoteURLs` saves and deletes on local disk. Its `url()` returns
+the remote public URL for a file that is not on disk, built from `custom_domain`
+plus the `environment`/`location` prefix. A development database restored from
+a production dump therefore still shows its media. Only `url()` falls back:
+`open()`, `exists()`, `size()` and `delete()` stay local, so development never
+reads from or changes the bucket.
+
 Give each environment its own bucket where you can — it is the cleanest
 boundary, and bucket count is not what you pay for.
 
