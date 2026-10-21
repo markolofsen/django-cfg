@@ -12,6 +12,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpRequest
 
+from ..core.admin_access import get_admin_prefix
 from ..modules.base import BaseCfgModule
 
 
@@ -88,7 +89,7 @@ def search_callback(request: HttpRequest, query: str) -> List[Dict[str, Any]]:
     for user in users:
         results.append({
             "title": f"User: {user['username']}",
-            "url": f"/admin/auth/user/{user['id']}/change/",
+            "url": f"{get_admin_prefix()}auth/user/{user['id']}/change/",
             "description": user.get('email', ''),
         })
 
@@ -100,7 +101,7 @@ def search_callback(request: HttpRequest, query: str) -> List[Dict[str, Any]]:
     for ct in content_types:
         results.append({
             "title": f"Model: {ct['app_label']}.{ct['model']}",
-            "url": f"/admin/{ct['app_label']}/{ct['model']}/",
+            "url": f"{get_admin_prefix()}{ct['app_label']}/{ct['model']}/",
             "description": f"Manage {ct['model']} objects",
         })
 
@@ -128,7 +129,7 @@ def badge_callback(request: HttpRequest) -> List[Dict[str, Any]]:
             "title": "New Users",
             "count": new_users,
             "color": "primary",
-            "url": "/admin/auth/user/?date_joined__gte=" + yesterday.strftime('%Y-%m-%d'),
+            "url": get_admin_prefix() + "auth/user/?date_joined__gte=" + yesterday.strftime('%Y-%m-%d'),
         })
 
     # Add system health badge
@@ -136,7 +137,7 @@ def badge_callback(request: HttpRequest) -> List[Dict[str, Any]]:
         "title": "System",
         "count": "OK",
         "color": "success",
-        "url": "/admin/",
+        "url": get_admin_prefix(),
     })
 
     return badges

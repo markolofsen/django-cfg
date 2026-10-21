@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 REAL_IP_MIDDLEWARE = 'django_cfg.middleware.real_ip.RealIPMiddleware'
 NOINDEX_MIDDLEWARE = 'django_cfg.core.middleware.noindex.NoIndexMiddleware'
+ADMIN_ACCESS_MIDDLEWARE = 'django_cfg.middleware.admin_access.AdminAccessMiddleware'
 
 
 class MiddlewareBuilder:
@@ -65,6 +66,13 @@ class MiddlewareBuilder:
         # Outermost after Real IP, so error responses from inner middleware carry it too
         if not self.config.search_indexing:
             middleware.append(NOINDEX_MIDDLEWARE)
+
+        # Right after Real IP (it reads the real client IP) and before anything
+        # that does work for a request that will 404. Only when it can act, so a
+        # default project's MIDDLEWARE is unchanged.
+        access = self.config.admin_access
+        if not access.enabled or access.allowed_networks:
+            middleware.append(ADMIN_ACCESS_MIDDLEWARE)
 
         # Default middleware (includes CorsMiddleware)
         middleware.extend(DEFAULT_MIDDLEWARE)

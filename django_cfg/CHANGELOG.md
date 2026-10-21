@@ -8,6 +8,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`admin_access`: where the Django admin lives and who may reach it.**
+  `AdminAccessConfig` on `DjangoConfig.admin_access`. Scanners probe `/admin/`
+  on every host; the location and availability are now core-config settings,
+  not a line hard-wired in each project's `urls.py`.
+  - `enabled` (default `True`): `False` mounts nothing, so the route answers
+    404, nothing links to it, and management commands are unaffected.
+  - `path` (default `"admin/"`): the URL prefix. No leading slash, ends with a
+    slash, URL-safe characters only, no `..`; anything else fails at startup.
+  - `allowed_networks` (default `[]`): a CIDR allowlist (IPv4/IPv6). When set,
+    any request under the admin prefix from outside it gets **404, never
+    403**. The address is `REMOTE_ADDR`, which `RealIPMiddleware` rewrites from
+    `CF-Connecting-IP` / `X-Forwarded-For`; that is only trustworthy when the
+    app is reachable through the proxy alone. Defence in depth: the primary
+    control belongs at the proxy (Traefik, Cloudflare).
+  - Env, the same nested `__` style as `DATABASE__URL`: `ADMIN_ACCESS__ENABLED`,
+    `ADMIN_ACCESS__PATH`, `ADMIN_ACCESS__ALLOWED_NETWORKS` (comma-separated or a
+    JSON list). It works for a project that never mentions `admin_access`; a
+    value passed in code wins over env.
+  - One-line wiring: `*admin_urlpatterns()` (`from django_cfg import
+    admin_urlpatterns`) replaces `path("admin/", admin.site.urls)` and returns
+    `[]` when disabled. The old line keeps working untouched.
+  - The framework's own staff surface under `/cfg/admin/` (dashboard tabs, the
+    Next.js admin) follows the same `enabled` / allowlist rules.
+  - New system checks, both warnings: `django_cfg.W011` (production with the
+    admin at the default `/admin/`; suggests `secrets.token_urlsafe`) and
+    `django_cfg.W012` (`admin_access` asks for a path or `enabled=False` but the
+    admin is still mounted elsewhere, e.g. a hard-coded `path("admin/", ...)`,
+    so setting only the env var would change nothing). **W011 becomes an error
+    in a later release**; existing projects start unchanged today.
+  - Anything that assumed `/admin/` now reads the configured prefix:
+    `PublicEndpointsMiddleware`, admin login notifications, `NoIndexMiddleware`
+    (no-store), dashboard quick actions, the `get_admin_url` tag, extension
+    navigation links, the URL list and endpoint-status tools, the Unfold search
+    and badge callbacks. With the admin disabled the dashboard quick actions
+    omit it and `get_admin_url` returns `""`.
+  - **Behaviour change:** `/cfg/admin/dashboard/` (staff-only, opened inside the
+    admin) now answers 404 to anyone who is not staff, where it used to redirect
+    to `admin:login`. The redirect failed with the admin disabled, and with a
+    moved admin it told an anonymous scanner where the admin lives.
 - **IndexNow — push changed sitemap URLs to Bing, Yandex, Seznam, Naver.**
   `IndexNowConfig` on `DjangoConfig.indexnow`. It reads the registered
   sitemap sources with the feed's template and fields, so IndexNow never

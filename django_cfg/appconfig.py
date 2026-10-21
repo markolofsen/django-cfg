@@ -13,6 +13,7 @@ Each startup concern lives in its own module under django_cfg/startup/:
   type_stubs.py         — Auto-install DRF validated_data type stubs (dev only)
   registry_validation.py — Validate DJANGO_CFG_REGISTRY entries at startup
   command_shadowing.py  — Warn when a project command shares a name with a django-cfg one
+  admin_access.py       — Warn about the default /admin/ in production and unwired admin_access
 """
 
 import logging
@@ -50,6 +51,10 @@ class DjangoCfgConfig(AppConfig):
             from django_cfg.startup import command_shadowing  # noqa: F401
         except Exception as exc:  # noqa: BLE001
             logger.warning("django_cfg command_shadowing check not registered: %s", exc)
+        try:
+            from django_cfg.startup import admin_access  # noqa: F401  (registers the check)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("django_cfg admin_access check not registered: %s", exc)
         from django_cfg.startup.constance import register_constance_admin
         from django_cfg.startup.drf_patch import patch_drf_authentication
         from django_cfg.startup.mime_types import register_media_types

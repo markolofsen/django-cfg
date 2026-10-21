@@ -18,6 +18,7 @@ from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
 from django.utils import timezone
 
+from django_cfg.core.admin_access import is_admin_path
 from django_cfg.modules.django_telegram import DjangoTelegram
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ def notify_admin_login_success(sender, request, user, **kwargs):
     Send Telegram notification on successful admin panel login.
 
     Triggers only for:
-    - Requests to /admin/ paths
+    - Requests under the admin prefix (`admin_access.path`)
     - Users with staff or superuser permissions
 
     Notification includes:
@@ -52,7 +53,7 @@ def notify_admin_login_success(sender, request, user, **kwargs):
         **kwargs: Additional signal arguments
     """
     # Only monitor admin panel logins
-    if not request or not request.path.startswith('/admin/'):
+    if not request or not is_admin_path(request.path):
         return
 
     # Only monitor staff/superuser access
@@ -109,7 +110,7 @@ try:
             **kwargs: Additional signal arguments
         """
         # Only monitor admin panel
-        if not request or not request.path.startswith('/admin/'):
+        if not request or not is_admin_path(request.path):
             return
 
         # Handle missing credentials
@@ -151,7 +152,7 @@ try:
             **kwargs: Additional signal arguments
         """
         # Only monitor admin panel
-        if not request or not request.path.startswith('/admin/'):
+        if not request or not is_admin_path(request.path):
             return
 
         # Handle missing credentials

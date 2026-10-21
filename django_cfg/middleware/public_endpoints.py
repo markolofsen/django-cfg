@@ -37,7 +37,6 @@ class PublicEndpointsMiddleware(MiddlewareMixin):
         r'^/api/accounts/token/refresh/', # Token refresh
         r'^/cfg/accounts/token/refresh/', # CFG Token refresh
         r'^/healthz(?:/|$)',              # Health check endpoints
-        r'^/admin/login/',                # Django admin login
         r'^/api/schema/',                 # API schema endpoints
         r'^/api/docs/',                   # API documentation
     ]
@@ -68,9 +67,14 @@ class PublicEndpointsMiddleware(MiddlewareMixin):
             logger.debug(f"Using custom public patterns: {len(custom_patterns)} patterns")
             return custom_patterns
 
-        # Use defaults
-        logger.debug(f"Using default public patterns: {len(self.DEFAULT_PUBLIC_PATTERNS)} patterns")
-        return self.DEFAULT_PUBLIC_PATTERNS
+        # Use defaults. The admin login follows `admin_access.path`; patterns are
+        # compiled at startup, before URLs load, so this reads config, not reverse().
+        from django_cfg.core.admin_access import get_admin_access
+
+        admin_login = rf'^{re.escape("/" + get_admin_access().path)}login/'
+        patterns = [*self.DEFAULT_PUBLIC_PATTERNS, admin_login]
+        logger.debug(f"Using default public patterns: {len(patterns)} patterns")
+        return patterns
 
     def _is_public_endpoint(self, path: str) -> bool:
         """Check if the request path matches any public endpoint pattern."""

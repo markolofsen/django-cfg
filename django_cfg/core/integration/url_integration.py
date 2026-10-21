@@ -145,11 +145,13 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
 
     Example:
         # In your main urls.py
-        from django_cfg import add_django_cfg_urls
+        from django_cfg import add_django_cfg_urls, admin_urlpatterns
 
         urlpatterns = [
             path("", home_view, name="home"),
-            path("admin/", admin.site.urls),
+            # Honours config.admin_access (enabled / path); [] when disabled.
+            # The old `path("admin/", admin.site.urls)` keeps working.
+            *admin_urlpatterns(),
         ]
 
         # Automatically adds django_cfg URLs with proper prefixes

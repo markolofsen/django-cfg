@@ -258,12 +258,16 @@ class SystemHealthService:
                 self.logger.debug(f"Could not reverse URL '{url_name}', using fallback: {fallback}")
                 return fallback
 
-        actions = [
+        from django_cfg.core.admin_access import get_admin_prefix, get_mounted_admin_prefix
+
+        admin_prefix = get_admin_prefix()
+
+        admin_actions = [
             {
                 'title': 'Admin Panel',
                 'description': 'Open Django admin interface',
                 'icon': 'admin_panel_settings',
-                'link': safe_reverse('admin:index', '/admin/'),
+                'link': safe_reverse('admin:index', admin_prefix),
                 'color': 'primary',
                 'category': 'admin',
             },
@@ -271,7 +275,7 @@ class SystemHealthService:
                 'title': 'User Management',
                 'description': 'Manage users and permissions',
                 'icon': 'people',
-                'link': safe_reverse('admin:auth_user_changelist', '/admin/auth/user/'),
+                'link': safe_reverse('admin:auth_user_changelist', admin_prefix + 'auth/user/'),
                 'color': 'primary',
                 'category': 'admin',
             },
@@ -279,10 +283,13 @@ class SystemHealthService:
                 'title': 'Settings',
                 'description': 'Configure application settings',
                 'icon': 'settings',
-                'link': safe_reverse('admin:constance_config_changelist', '/admin/constance/config/'),
+                'link': safe_reverse('admin:constance_config_changelist', admin_prefix + 'constance/config/'),
                 'color': 'default',
                 'category': 'admin',
             },
+        ]
+
+        actions = [
             {
                 'title': 'System Health',
                 'description': 'Check system health status',
@@ -324,5 +331,9 @@ class SystemHealthService:
                 'category': 'admin',
             },
         ]
+
+        # No admin route (admin_access.enabled=False): do not link to it.
+        if get_mounted_admin_prefix() is not None:
+            actions = admin_actions + actions
 
         return actions

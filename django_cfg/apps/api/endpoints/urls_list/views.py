@@ -108,7 +108,10 @@ class DRFURLsListView(APIView):
         if filter_type == 'api':
             return [url for url in urls if url['pattern'].startswith('api/')]
         elif filter_type == 'admin':
-            return [url for url in urls if url['pattern'].startswith('admin/')]
+            from django_cfg.core.admin_access import get_admin_path
+
+            admin_path = get_admin_path()
+            return [url for url in urls if url['pattern'].startswith(admin_path)]
         elif filter_type == 'cfg':
             return [url for url in urls if url['pattern'].startswith('cfg/')]
         else:

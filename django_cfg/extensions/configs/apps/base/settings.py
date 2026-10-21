@@ -74,7 +74,9 @@ class BaseExtensionSettings(BaseModel):
         Returns:
             Admin changelist URL (e.g., "/admin/cfg_payments/payment/")
         """
-        return f"/admin/{self.full_app_label}/{model}/"
+        from django_cfg.core.admin_access import get_admin_prefix
+
+        return f"{get_admin_prefix()}{self.full_app_label}/{model}/"
 
     # Features
     admin_enabled: bool = Field(default=True, description="Enable admin interface")

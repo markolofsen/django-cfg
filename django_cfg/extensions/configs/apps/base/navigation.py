@@ -27,7 +27,7 @@ class NavigationItem(UnfoldNavigationItem):
             app="payments",      # Extension name
             model="payment",     # Model name
         )
-        # Generates: /admin/cfg_payments/payment/
+        # Generates: <admin prefix>cfg_payments/payment/
     """
 
     # Extension shortcut: app + model -> auto-generates admin URL
@@ -43,7 +43,9 @@ class NavigationItem(UnfoldNavigationItem):
             from django_cfg.modules.django_unfold.utils import auto_resolve_url
             return auto_resolve_url(self.link)
         if self.app and self.model:
-            return f"/admin/{APP_LABEL_PREFIX}{self.app}/{self.model}/"
+            from django_cfg.core.admin_access import get_admin_prefix
+
+            return f"{get_admin_prefix()}{APP_LABEL_PREFIX}{self.app}/{self.model}/"
         return "#"
 
     def get_link_for_unfold(self):

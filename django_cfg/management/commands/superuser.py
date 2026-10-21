@@ -238,7 +238,12 @@ class Command(InteractiveCommand):
         """Show next steps after creating superuser"""
         self.stdout.write(self.style.SUCCESS('\n🎉 Next Steps:'))
         self.stdout.write('1. 🚀 Start your Django server: python manage.py runserver')
-        self.stdout.write('2. 🌐 Visit Django admin: http://localhost:8000/admin/')
+        from django_cfg.core.admin_access import get_admin_prefix, get_mounted_admin_prefix
+
+        if get_mounted_admin_prefix() is not None:
+            self.stdout.write(f'2. 🌐 Visit Django admin: http://localhost:8000{get_admin_prefix()}')
+        else:
+            self.stdout.write('2. 🌐 The admin is disabled (admin_access.enabled=False)')
         self.stdout.write('3. 🔑 Login with your superuser credentials')
         self.stdout.write('4. ⚙️  Configure your application settings')
         self.stdout.write('5. 📚 Read the Django Config Toolkit documentation')

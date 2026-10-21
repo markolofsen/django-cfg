@@ -109,7 +109,7 @@ def add_class(field, css_class):
 @register.simple_tag(takes_context=True)
 def get_admin_url(context):
     """
-    Get admin URL from settings or default.
+    Get admin URL from settings or the configured prefix ('' when the admin is disabled).
 
     Usage:
         {% load tailwind_info %}
@@ -117,16 +117,17 @@ def get_admin_url(context):
         <a href="{{ admin_url }}">Admin</a>
     """
     from django.conf import settings
-    from django.urls import reverse
 
     # Try to get custom admin URL from settings
     admin_url = getattr(settings, 'ADMIN_URL', None)
 
     if not admin_url:
-        try:
-            admin_url = reverse('admin:index')
-        except Exception:
-            admin_url = '/admin/'
+        from django_cfg.core.admin_access import get_admin_access, get_admin_prefix, get_mounted_admin_prefix
+
+        # Disabled and not mounted: an empty URL, so `{% if admin_url %}` hides the link.
+        if not get_admin_access().enabled and get_mounted_admin_prefix() is None:
+            return ''
+        admin_url = get_admin_prefix()
 
     return admin_url
 

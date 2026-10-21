@@ -33,6 +33,7 @@ from ...models import (
     EmailConfig,
     GeoConfig,
     IndexNowConfig,
+    AdminAccessConfig,
     PaymentsConfig,
     SimpleHistoryConfig,
     GitHubOAuthConfig,
@@ -242,6 +243,13 @@ class DjangoConfig(BaseModel):
             "Let search engines index this backend. Off by default: every "
             "response carries X-Robots-Tag noindex (NoIndexMiddleware)"
         ),
+    )
+
+    # An instance, not None: env (ADMIN_ACCESS__*) must work for a project that
+    # never mentions it, so an operator can move or close the admin per deploy.
+    admin_access: AdminAccessConfig = Field(
+        default_factory=AdminAccessConfig,
+        description="Django admin availability, URL prefix and optional CIDR allowlist",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

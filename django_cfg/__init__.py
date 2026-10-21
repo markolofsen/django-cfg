@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.3.333"
+__version__ = "2.3.334"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -56,6 +56,7 @@ __author__ = LIB_NAME
 # ---------------------------------------------------------------------------
 from .core.config import DjangoConfig, StartupInfoMode, set_current_config
 from .core.integration import add_django_cfg_urls, get_django_cfg_urls_info
+from .core.admin_access import admin_urlpatterns
 from .core.exceptions import (
     DjangoCfgException,
     ConfigurationError,
@@ -94,6 +95,7 @@ from .models.django.rq_health import QueueHealthThresholds, RQHealthConfig
 from .modules.django_logging.__cfg__ import DjangoLoggingConfig
 from .models.django.currency import CurrencyConfig
 from .models.django.payments import PaymentsConfig
+from .models.django.admin_access import AdminAccessConfig
 from .models.django.geo import GeoConfig
 from .models.django.indexnow import IndexNowConfig, IndexNowSite
 from .models.django.analytics import AnalyticsConfig
@@ -260,7 +262,7 @@ __all__ = [
     "LIB_NAME", "LIB_SITE_URL", "LIB_HEALTH_URL", "get_default_dropdown_items",
     # core
     "DjangoConfig", "StartupInfoMode", "set_current_config",
-    "add_django_cfg_urls", "get_django_cfg_urls_info",
+    "add_django_cfg_urls", "get_django_cfg_urls_info", "admin_urlpatterns",
     "DjangoCfgException", "ConfigurationError", "ValidationError",
     "DatabaseError", "CacheError", "EnvironmentError",
     "get_ticket_url", "get_otp_url", "get_media_url", "build_media_url", "build_api_url", "get_api_url",
@@ -275,7 +277,7 @@ __all__ = [
     "DjangoRQConfig", "RQQueueConfig", "RQScheduleConfig",
     "RQHealthConfig", "QueueHealthThresholds",
     "DjangoLoggingConfig",
-    "CurrencyConfig", "PaymentsConfig", "GeoConfig", "IndexNowConfig", "IndexNowSite", "AnalyticsConfig", "SimpleHistoryConfig",
+    "CurrencyConfig", "PaymentsConfig", "AdminAccessConfig", "GeoConfig", "IndexNowConfig", "IndexNowSite", "AnalyticsConfig", "SimpleHistoryConfig",
     "ConstanceConfig", "ConstanceField", "StorageConfig", "FileCleanupConfig", "S3StorageConfig", "OpenAPIClientConfig",
     "EmailConfig", "TelegramConfig",
     # middleware (lazy — DRF reads settings at import time)

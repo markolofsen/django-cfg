@@ -75,6 +75,12 @@ def should_check_endpoint(url_pattern: str, url_name: Optional[str] = None) -> b
         if re.match(pattern, url_pattern):
             return False
 
+    # The admin may live elsewhere than /admin/ (admin_access.path)
+    from django_cfg.core.admin_access import get_admin_path
+
+    if url_pattern.lstrip('/').startswith(get_admin_path()):
+        return False
+
     # Exclude DRF format suffix patterns (e.g., \.(?P<format>[a-z0-9]+))
     # These cause "got an unexpected keyword argument 'format'" errors in action methods
     if r'\.(?P<format>' in url_pattern or '<drf_format_suffix:' in url_pattern:

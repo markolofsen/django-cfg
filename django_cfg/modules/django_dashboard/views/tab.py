@@ -1,10 +1,30 @@
-from django.contrib.admin.views.decorators import staff_member_required
+from functools import wraps
+
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 from ..registry import TabRegistry
+
+
+def staff_member_required(view):
+    """Staff only; anyone else gets 404 instead of a redirect to the admin login.
+
+    The stock decorator redirects to `admin:login`, which (1) fails when the
+    admin is not mounted (`admin_access.enabled=False`) and (2) tells an
+    anonymous scanner where a moved admin lives. These views are only ever
+    opened by staff, inside the admin.
+    """
+
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        user = request.user
+        if not (user.is_active and user.is_staff):
+            raise Http404
+        return view(request, *args, **kwargs)
+
+    return wrapper
 
 
 def _get_dashboard_config():
