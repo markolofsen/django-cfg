@@ -151,5 +151,7 @@ def setup_warnings_debug(
                 message=pattern
             )
 
-    print(f"🔍 Django-CFG Warnings Debug enabled for: {[c.__name__ for c in categories]}")
-    print(f"   Patterns: {patterns}")
+    # stderr, not stdout: management commands such as `fleet_enroll_token` print machine-readable
+    # output on stdout, and this banner broke pipes and polluted captured values.
+    print(f"🔍 Django-CFG Warnings Debug enabled for: {[c.__name__ for c in categories]}", file=sys.stderr)
+    print(f"   Patterns: {patterns}", file=sys.stderr)

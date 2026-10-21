@@ -108,6 +108,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     public names import from it as before.
 
 ### Fixed
+
+- **API datetimes were shifted by the visitor's UTC offset while labelled
+  `Z`.** `REST_FRAMEWORK["DATETIME_FORMAT"]` is `%Y-%m-%dT%H:%M:%SZ` (literal
+  `Z`), but DRF converts an aware datetime to the *active* timezone before
+  formatting, and `TimezoneMiddleware` activates the visitor's zone from
+  `X-Timezone` (the generated TS SDK sends it). A visitor at +08:00 got local
+  wall-clock time marked as UTC: `expires_at` 8 hours late, timers firing 8
+  hours late. Plain curl without the header was correct, a browser was not.
+  - Fix: `DateTimeField.to_representation` now renders under
+    `timezone.override(UTC)`. The wire format is unchanged (literal `Z`).
+  - Chosen over a serializer/base-class override because patching DRF's own
+    `DateTimeField` covers plain `serializers.DateTimeField()`, ModelSerializer
+    fields and subclasses with no project changes. It is applied when
+    `django_cfg.middleware.timezone` is imported (that is, whenever the
+    middleware is installed); `AppConfig.ready` is not used because
+    `django_cfg/apps/` shadows `apps.py`, so `ready()` never runs.
+  - Not changed: `TimezoneMiddleware` still activates the zone for templates,
+    admin and ORM-side code. Input parsing is untouched, so a naive datetime
+    in a request body is still read as visitor-local. A field with an explicit
+    `default_timezone=` keeps it.
+  - Visible effect: clients that worked around the shift will now show
+    correct times; clients that did not were showing wrong ones.
 - **A schedule removed from the config no longer keeps firing.** rq-scheduler
   keeps a job until something cancels it. Before this fix a dropped
   `RQScheduleConfig` stayed in Redis, and once its function was deleted it

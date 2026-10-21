@@ -11,6 +11,10 @@ Persistence: when an authenticated user's timezone differs from what is
 stored on their profile, the field is updated via a single UPDATE query.
 A 24-hour in-process cache (keyed by user_pk + tz string) prevents
 hitting the DB on every request.
+
+API output: DRF datetimes always render in UTC (see
+``django_cfg.startup.drf_datetime_utc``); the active zone still drives
+templates, admin and ORM-side code.
 """
 
 import logging
@@ -20,12 +24,19 @@ from datetime import datetime
 from django.contrib.auth import get_user_model
 from django.utils import timezone as dj_timezone
 
+from django_cfg.startup.drf_datetime_utc import patch_drf_datetime_utc
+
 logger = logging.getLogger(__name__)
 
 # In-process cache: {user_pk: tz_string} — refreshed when tz changes or
 # process restarts. Bounded to 2000 entries to cap memory on busy workers.
 _PERSISTED: dict[int, str] = {}
 _PERSIST_MAX = 2000
+
+# The middleware activates the visitor zone; DRF would then render API
+# datetimes in it under a literal "Z". Pin API output to UTC, as soon as
+# the middleware exists (AppConfig.ready is not wired for django_cfg).
+patch_drf_datetime_utc()
 
 
 class TimezoneMiddleware:
