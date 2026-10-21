@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
 def _caller_ip(context) -> str:
     """Best-effort caller address for the access log.
 
-    An anonymous profile has no key and no account, so the address is the only
-    thing distinguishing one caller from another when reading the log after the
+    A shared key or a machine account does not identify the caller, so the address
+    is the only thing distinguishing one caller from another when reading the log after the
     fact. ``X-Forwarded-For`` is trusted here only because this endpoint sits
     behind the deployment's own proxy; it is a log field, never an auth input.
     """
@@ -133,7 +133,7 @@ class ToolsHandler:
             getattr(profile, "name", "-"),
             tool_name,
             _caller_ip(context),
-            # Argument NAMES only. On an anonymous endpoint the values are
+            # Argument NAMES only. On a public profile the values are
             # attacker-supplied and may carry a search phrase or an id a caller
             # would not expect us to retain; the names are enough to tell which
             # shape of call was made.

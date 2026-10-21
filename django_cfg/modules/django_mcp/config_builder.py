@@ -10,6 +10,7 @@ from functools import wraps
 
 from django_cfg.modules.django_mcp import (
     ALL_TOOLS,
+    ANONYMOUS_REMOVED,
     PUBLIC_TOOLS,
     DjangoMCPModuleConfig,
     IntrospectionConfig,
@@ -38,10 +39,13 @@ class ProfileBuilder:
     the reader notices rather than a silent reassignment to the wrong profile.
     """
 
-    def __init__(self, name: str, path: str, access: str):
+    def __init__(self, name: str, path: str, access: str = "key"):
+        if access != "key":
+            raise ValueError(ANONYMOUS_REMOVED)
         self._name = name
         self._path = path
         self._access = access
+        self._key_validator: Optional[str] = None
         self._access_key: Optional[str] = None
         self._service_username: Optional[str] = None
         self._extra_keys: List[MCPExtraKey] = []
@@ -49,7 +53,6 @@ class ProfileBuilder:
         self._exposures: Dict[str, ModelExposure] = {}
         self._introspection: Optional[IntrospectionConfig] = None
         self._rate_limit: str = "100/minute"
-        self._public_info: Optional[bool] = None
 
     def set_access_key(
         self, key: str, service_username: Optional[str] = None
@@ -115,9 +118,13 @@ class ProfileBuilder:
         self._rate_limit = limit
         return self
 
-    def set_public_info(self, public: bool) -> "ProfileBuilder":
-        """Override whether ``<path>info/`` lists tools without a credential."""
-        self._public_info = public
+    def set_key_validator(self, dotted_path: str) -> "ProfileBuilder":
+        """Accept keys checked by ``callable(key: str) -> user | True | None``.
+
+        For per-user API keys stored in the project's database; see
+        :mod:`django_cfg.modules.django_mcp.auth`.
+        """
+        self._key_validator = dotted_path
         return self
 
     def build(self) -> MCPProfile:
@@ -142,7 +149,7 @@ class ProfileBuilder:
             },
             introspection=self._introspection,
             rate_limit=self._rate_limit,
-            public_info=self._public_info,
+            key_validator=self._key_validator,
         )
 
     def __enter__(self) -> "ProfileBuilder":
@@ -219,45 +226,51 @@ class MCPConfigBuilder:
         path: str = "/mcp/",
         rate_limit: str = "20/minute",
         expose: Optional[Dict[str, Dict[str, Any]]] = None,
-        operator_public_info: bool = False,
+        *,
+        key_validator: Optional[str] = None,
+        public_keys: Optional[Dict[str, str]] = None,
     ) -> "MCPConfigBuilder":
-        """Serve an anonymous, read-only surface beside the operator one.
+        """Serve a read-only, public-tools surface beside the operator one.
 
             mcp.set_access_key(key, service_username=user)
-            mcp.enable_public_profile()
+            mcp.enable_public_profile(key_validator="api.mcp_keys.validate")
 
-        It serves whatever declares ``public = True`` on its tool class — the
-        project never restates the list, so adding a tool cannot silently
-        change what is public in either direction.
+        It is still key-protected: a caller presents ``X-MCP-Access-Key`` and
+        sees only tools that declare ``public = True`` on their class. At least
+        one credential path is required (the operator keys do NOT open it):
 
-        The flat settings above become the ``operator`` profile automatically;
-        that is why this does not trip the "profiles must not be mixed with
-        flat settings" rule, which exists for a *hand-written* profile leaving
-        flat calls stranded.
+        - ``key_validator``: dotted path to ``callable(key) -> user | True |
+          None``, for per-user API keys kept in the project's database;
+        - ``public_keys``: ``{label: key}`` static keys, one per holder.
 
-        ``rate_limit`` defaults tighter than the operator's: an anonymous
-        caller has no key to revoke, so the rate is the only lever.
+        The flat settings become the ``operator`` profile automatically; that
+        is why this does not trip the "profiles must not be mixed with flat
+        settings" rule, which exists for a *hand-written* profile.
 
-        ``operator_public_info`` keeps the OPERATOR endpoint's ``/info/``
-        listing readable without a key. Default False: that listing names every
-        tool with its full input schema, which describes the internals to
-        anyone who asks. Set True only to preserve pre-2.3 behaviour a project
-        already depends on — the public profile has its own listing, and that
-        one is anonymous by design.
+        ``rate_limit`` defaults tighter than the operator's. ``/info/`` is
+        gated by the same keys.
         """
+        if not key_validator and not public_keys:
+            raise ValueError(
+                "enable_public_profile() needs a key path: pass key_validator="
+                "'pkg.mod.func' (per-user API keys) and/or public_keys="
+                "{'label': 'key'}. Anonymous public access was removed."
+            )
         self._public_profile = {
             "path": path,
             "rate_limit": rate_limit,
             "expose": expose or {},
-            "operator_public_info": operator_public_info,
+            "key_validator": key_validator,
+            "public_keys": public_keys or {},
         }
         return self
 
-    def profile(self, name: str, path: str, access: str) -> ProfileBuilder:
-        """Declare one MCP surface.
+    def profile(self, name: str, path: str, access: str = "key") -> ProfileBuilder:
+        """Declare one MCP surface (always key-protected).
 
-            with mcp.profile("public", path="/mcp/", access="anonymous") as p:
-                p.tools("catalog_search", "catalog_get")
+            with mcp.profile("public", path="/mcp/") as p:
+                p.set_key_validator("api.mcp_keys.validate")
+                p.tools(PUBLIC_TOOLS)
                 p.set_rate_limit("20/minute")
 
         Declaring any profile means the flat ``set_access_key`` /
@@ -505,23 +518,17 @@ class MCPConfigBuilder:
             return None
 
         if self._extra_keys and not self._access_key:
-            # With no primary key the endpoint is open, so an extra key would
-            # look like protection while guarding nothing.
             raise ValueError("add_access_key() needs set_access_key() first.")
 
         if self._public_profile is not None and not self._profiles:
             # `enable_public_profile()` — turn the flat settings into the
-            # operator profile and add the anonymous one beside it, so the
+            # operator profile and add the public one beside it, so the
             # project states its intent once instead of writing both out.
             spec = self._public_profile
             if not self._access_key:
-                # The operator profile requires a key; without one there is
-                # nothing to protect and a public-only server is not what
-                # `enable_public_profile` means.
                 raise ValueError(
-                    "enable_public_profile() needs an operator access key. Call "
-                    "set_access_key() first: without it the operator surface "
-                    "would be anonymous too, which is not what this asks for."
+                    "enable_public_profile() needs an operator access key. "
+                    "Call set_access_key() first."
                 )
             with self.profile(
                 "operator", path=DEFAULT_ENDPOINT_PATH, access="key"
@@ -531,7 +538,6 @@ class MCPConfigBuilder:
                 op.tools(ALL_TOOLS)
                 op._introspection = self._introspection
                 op.set_rate_limit(self._rate_limit)
-                op.set_public_info(spec["operator_public_info"])
                 for model_key, exposure in self._models.items():
                     op.expose(
                         model_key,
@@ -540,7 +546,11 @@ class MCPConfigBuilder:
                         max_results=exposure.max_results,
                         operations=exposure.operations,
                     )
-            with self.profile("public", path=spec["path"], access="anonymous") as pub:
+            with self.profile("public", path=spec["path"]) as pub:
+                if spec["key_validator"]:
+                    pub.set_key_validator(spec["key_validator"])
+                for label, key in spec["public_keys"].items():
+                    pub.add_access_key(label, key)
                 pub.tools(PUBLIC_TOOLS)
                 pub.set_rate_limit(spec["rate_limit"])
                 for model_key, kwargs in spec["expose"].items():

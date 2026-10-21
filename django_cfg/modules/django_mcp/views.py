@@ -3,7 +3,6 @@
 import hashlib
 import json
 import logging
-import secrets
 from typing import Any, Dict
 
 from django.http import JsonResponse
@@ -11,6 +10,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import Throttled
 from rest_framework.views import APIView
 
+from django_cfg.modules.django_mcp.auth import HEADER, authenticate
 from django_cfg.modules.django_mcp.throttling import MCPRateThrottle
 
 from django_cfg.modules.django_mcp.exceptions import (
@@ -98,15 +98,10 @@ class MCPView(APIView):
                 request_id=None,
             )
 
-        # Step 2: Authenticate user
-        #
-        # The return value MUST be enforced. It previously was not: a request
-        # with a wrong key — or no key at all — produced user=None, which then
-        # travelled into MCPContext unchecked, so every tool ran anyway. The
-        # endpoint was effectively public, and because `tools/list` still
-        # answered 200 nothing looked wrong.
+        # Step 2: Authenticate. Mandatory on every profile: there is no
+        # anonymous surface, so no credential (or a wrong one) is always a 401.
         user = self._authenticate(request)
-        if user is None and self._access_key_required():
+        if user is None:
             return self._create_error_response(
                 error_code=INVALID_REQUEST,
                 error_message="Unauthorized: a valid X-MCP-Access-Key header is required.",
@@ -204,126 +199,17 @@ class MCPView(APIView):
         except Exception:
             return None
 
-    def _access_key_required(self) -> bool:
-        """Whether a configured access key must be presented.
-
-        A project that never set one is deliberately open (local development),
-        so requiring a key it does not have would lock it out of its own server.
-        Once a key IS configured, presenting it is mandatory.
-
-        Reads the profile, falling back to the flat field when no profile is
-        resolvable — the fallback matters because an unresolvable profile is
-        exactly the case where the config is broken, and it must fail closed
-        rather than answer as if no policy existed.
-        """
-        try:
-            profile = self._get_profile()
-            if profile is not None:
-                return profile.access == "key"
-            return bool(self._get_mcp_config().access_key)
-        except Exception:
-            # Config unavailable: fail closed. An endpoint whose policy cannot be
-            # read must not answer as if no policy existed.
-            return True
-
     def _authenticate(self, request) -> Any:
-        """Authenticate the caller by MCP access key.
+        """The caller for this request's profile, or ``None`` to refuse.
 
-        Returns the MCP agent user on success and ``None`` on failure. Callers
-        MUST treat ``None`` as a rejection when :meth:`_access_key_required` is
-        true — this method only decides identity, never access.
+        Credentials come from the profile itself; a config that cannot be read
+        refuses (fail closed). See :mod:`django_cfg.modules.django_mcp.auth`.
         """
         try:
-            mcp_config = self._get_mcp_config()
-            # One source for both, or they drift: a key taken from the profile
-            # and a service_username taken from the flat config would
-            # authenticate one profile's caller as another profile's account.
-            credentials = self._get_profile() or mcp_config
-            access_key_header = request.headers.get("X-MCP-Access-Key")
-            # The primary key plus any per-holder keys, each with its own
-            # account. Every candidate is compared, so timing does not reveal
-            # which one matched.
-            candidates = [
-                (None, credentials.access_key, getattr(credentials, "service_username", None))
-            ] + [
-                (k.label, k.access_key, k.service_username)
-                for k in (getattr(credentials, "extra_keys", None) or [])
-            ]
-            matched = None
-            for label, key, username in candidates:
-                if (
-                    key
-                    and access_key_header
-                    # compare_digest, not ==, so a wrong key cannot be recovered
-                    # byte-by-byte from response timing.
-                    and secrets.compare_digest(str(access_key_header), str(key))
-                    and matched is None
-                ):
-                    matched = (label, username)
-            if matched is not None:
-                label, service_username = matched
-                if label:
-                    logger.info("MCP request authenticated by key %r", label)
-                # Authenticated by access key. By default the caller is a
-                # machine, not a Django user, so represent it as AnonymousUser.
-                #
-                # NOT `get_user_model().get_anonymous()`: that only exists on
-                # guardian-style user models. On a plain custom user it raises
-                # AttributeError, which the old blanket `except` swallowed —
-                # so a CORRECT key also produced None. That went unnoticed only
-                # because the result was never enforced.
-                if service_username:
-                    # The key is bound to a real account, so tools that gate on
-                    # `user.is_staff` can be reached — and every action they
-                    # take is attributable to a username rather than to
-                    # "somebody with the key".
-                    #
-                    # A missing account is a rejection, never a silent fallback
-                    # to AnonymousUser: an operator who configured a service
-                    # user and got anonymous access instead would see tools
-                    # refusing with a permission error and go looking for the
-                    # bug in the tool.
-                    from django.contrib.auth import get_user_model
-
-                    model = get_user_model()
-                    account = model.objects.filter(
-                        **{model.USERNAME_FIELD: service_username}
-                    ).first()
-
-                    if account is None:
-                        logger.error(
-                            "MCP service_username=%r is configured but no such "
-                            "user exists; rejecting the request.",
-                            service_username,
-                        )
-                        return None
-
-                    # Deactivating an account is how every operator revokes
-                    # access, and it silently did nothing here: `objects.get`
-                    # returns an inactive user perfectly happily, so the key
-                    # kept working while the admin listed the service account as
-                    # disabled. That gap is invisible from both ends — the
-                    # operator sees "inactive", the endpoint keeps serving — and
-                    # it is the one place where the reasonable belief "I turned
-                    # that account off" is simply false.
-                    if not account.is_active:
-                        logger.error(
-                            "MCP service_username=%r is inactive; rejecting the "
-                            "request. Re-activate the account or clear "
-                            "service_username to fall back to anonymous.",
-                            service_username,
-                        )
-                        return None
-
-                    return account
-
-                from django.contrib.auth.models import AnonymousUser
-                return AnonymousUser()
+            credentials = self._get_profile() or self._get_mcp_config()
         except Exception:
-            logger.exception("MCP access-key authentication failed unexpectedly")
             return None
-
-        return None
+        return authenticate(request.headers.get(HEADER), credentials)
 
     def _get_session_key(self, request, user) -> str:
         """Generate session key for initialization tracking."""

@@ -107,12 +107,12 @@ class MCPTool(ABC):
 - `input_schema` is sent verbatim to the LLM as the function parameter schema in OpenAI tool format.
 - `execute()` must always return a `str`. For structured data, return a JSON-encoded string. For errors, return a plain error message string — do not raise exceptions (the runner catches them and returns the message).
 - `is_available(context)` may be called with `context=None` — the `/info/` listing checks availability without a request context. If you override `is_available`, it must tolerate a missing context rather than assume one is always present.
-- `public` (`bool`, default `False`) declares whether an anonymous [profile](/features/modules/django-mcp/configuration#profiles) may serve this tool. The default is the design: the tool, declared beside its own code, is the only place that knows whether it is safe to expose. Set it `True` only for a tool that reads data that is already public, returns no personal data, and cannot mutate anything.
+- `public` (`bool`, default `False`) declares whether the public [profile](/features/modules/django-mcp/configuration#profiles) may serve this tool. The default is the design: the tool, declared beside its own code, is the only place that knows whether it is safe to expose. Set it `True` only for a tool that reads data that is already public, returns no personal data, and cannot mutate anything.
 - `schema_for(profile)` returns the input schema a given profile should be shown. See [Profile-aware schemas](#profile-aware-schemas) below.
 
 ## Profile-aware schemas
 
-A tool whose limit differs per profile must advertise the ceiling that actually applies. `input_schema` is a class attribute evaluated once at import, so without an override an anonymous listing would keep advertising the operator ceiling while `execute` quietly returned fewer rows — and an agent reads the schema as the contract, so it reports the clamp as a broken server.
+A tool whose limit differs per profile must advertise the ceiling that actually applies. `input_schema` is a class attribute evaluated once at import, so without an override the public listing would keep advertising the operator ceiling while `execute` quietly returned fewer rows — and an agent reads the schema as the contract, so it reports the clamp as a broken server.
 
 Override `schema_for` to say so:
 
@@ -132,7 +132,7 @@ class CatalogSearchTool(MCPTool):
     }
 
     def schema_for(self, profile):
-        if profile is not None and profile.access == "anonymous":
+        if profile is not None and profile.name == "public":
             # A NEW dict — see the warning below.
             schema = copy.deepcopy(self.input_schema)
             schema["properties"]["limit"]["maximum"] = 20
@@ -148,7 +148,7 @@ class CatalogSearchTool(MCPTool):
 
 ## Access logging
 
-Every `tools/call` writes one line to the `django_cfg.modules.django_mcp.handlers.tools` logger. On an anonymous profile there is no key to revoke and no account to disable, so this log is the only record of what a caller did.
+Every `tools/call` writes one line to the `django_cfg.modules.django_mcp.handlers.tools` logger. A shared or per-user key does not name the individual caller, so this log is the record of what a caller did.
 
 ```text
 mcp.call profile=public tool=catalog_search ip=198.51.100.7 args=limit,query ms=42 bytes=1731 outcome=ok
@@ -165,7 +165,7 @@ mcp.call profile=public tool=catalog_search ip=198.51.100.7 args=limit,query ms=
 | `outcome` | `ok`, `error`, or `refused` |
 
 <Callout type="info">
-**Argument names are logged; argument values never are.** On an anonymous endpoint the values are attacker-supplied, and a search phrase is the caller's own words — logging them would make the access log the thing worth stealing. The names still say which shape of call was made.
+**Argument names are logged; argument values never are.** On a public profile the values are attacker-supplied, and a search phrase is the caller's own words — logging them would make the access log the thing worth stealing. The names still say which shape of call was made.
 </Callout>
 
 Three outcomes:
@@ -174,7 +174,7 @@ Three outcomes:
 - `outcome=error` at `WARNING`, carrying `error=<ExceptionClassName>` — the class name only, not the message, which may quote the arguments.
 - `outcome=refused` at `INFO`, when the profile does not serve the requested tool. These are the lines worth reading: an `operator_*` name posted at the public endpoint is the signal. A refusal is logged before execution, so it carries no `args`, `ms`, or `bytes`.
 
-`X-Forwarded-For` is preferred over `REMOTE_ADDR` because behind a proxy the latter would make every anonymous caller look like one address. It is a **log field, never an auth input**.
+`X-Forwarded-For` is preferred over `REMOTE_ADDR` because behind a proxy the latter would make every caller look like one address. It is a **log field, never an auth input**.
 
 This is independent of `enable_audit_log` / `MCPAuditLog`, which records MCP operations to the database.
 

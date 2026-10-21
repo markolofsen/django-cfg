@@ -3,10 +3,9 @@
 Every check here exists because the failure it catches looks like success, or
 looks like an empty database, from where the operator is standing.
 
-1. **An empty access key OPENS the endpoint.** ``_access_key_required()``
-   returns ``bool(access_key)`` — "no key configured" means "no key required".
-   Correct on a laptop, catastrophic in production, where every probe answers
-   200 instead of 401 and *nothing looks wrong*.
+1. **A missing access key must never mean an open endpoint.** Authorisation is
+   mandatory, so config refuses to build without a key; the checks below still
+   probe the live endpoint, because a deployment may run an older django-cfg.
 2. **A key with no identity is nobody.** A valid key authenticates as
    ``AnonymousUser`` unless bound to an account, so every tool gated on
    ``user.is_staff`` refuses — and to an agent a refusal reads almost exactly
@@ -61,9 +60,8 @@ def _check_key(config: Any) -> list[Finding]:
             Finding(
                 "fail",
                 "access key",
-                "not set — and an empty key does not disable the endpoint. "
-                "django_cfg reads 'no key configured' as 'no key required', so "
-                "/cfg/mcp/ answers every unauthenticated caller.",
+                "not set. Authorisation is mandatory: the endpoint refuses to "
+                "start without a key (older django-cfg served it open).",
                 "set MCP__ACCESS_KEY, or call mcp.set_access_key(...)",
             )
         ]
@@ -111,8 +109,8 @@ def _check_identity(config: Any) -> list[Finding]:
                 f"bound to {username!r}, which matches no account. A missing "
                 f"account is a rejection, not a downgrade: every request 401s."
                 + hint,
-                f"create the account, or clear MCP__SERVICE_USERNAME to fall "
-                "back to anonymous",
+                f"create the account, or clear MCP__SERVICE_USERNAME (the key "
+                "then acts as a machine caller)",
             )
         ]
 
@@ -219,11 +217,11 @@ def _check_reachable(targets: dict[str, Target]) -> list[Finding]:
     """Two different questions, and they need two different requests.
 
     ``probe`` asks ``/info/``. **Since 2.2.158 that route is gated by the same
-    key as JSON-RPC** unless the project opts out with ``public_info``, so its
-    status code no longer answers the same question it used to:
+    key as JSON-RPC**, so its status code no longer answers the same question
+    it used to:
 
     ==========  ====================================================
-    ``200``     up, and this profile serves its listing anonymously
+    ``200``     up (only an older django-cfg answers this without a key)
     ``401``     up, and gated — the normal shape for a keyed endpoint
     ==========  ====================================================
 
@@ -258,8 +256,8 @@ def _check_reachable(targets: dict[str, Target]) -> list[Finding]:
                         "fail",
                         f"reachable {kind}",
                         f"{target.url} answers 200 WITHOUT a key — it is serving "
-                        "every caller. An empty access key does not disable this "
-                        "endpoint, it opens it.",
+                        "every caller. Upgrade django-cfg (authorisation is mandatory "
+                        "since 2.3.x) and set an access key.",
                         "set MCP__ACCESS_KEY in that deployment and redeploy",
                     )
                 )

@@ -51,10 +51,10 @@ class MCPAgentChatView(generics.GenericAPIView):
             if not mcp_config:
                 return None
 
-            access_key = self.get_authenticate_key(request)
-            expected_key = getattr(mcp_config, 'access_key', None)
-            if expected_key and access_key == expected_key:
-                return AnonymousUser()
+            from django_cfg.modules.django_mcp.auth import authenticate
+
+            credentials = (getattr(mcp_config, "profiles", None) or {}).get("default") or mcp_config
+            return authenticate(self.get_authenticate_key(request), credentials)
         except Exception as e:
             logger.warning(f"MCP agent auth error: {e}")
         return None

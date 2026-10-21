@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (BREAKING)
+- **MCP: authorisation is mandatory, there is no anonymous mode.** No MCP route
+  answers without a credential: JSON-RPC, `GET <path>info/` and the agent chat
+  all return `401` (`WWW-Authenticate: MCPAccessKey`) without a valid
+  `X-MCP-Access-Key`. The server serves no other unauthenticated MCP route (it
+  implements no OAuth, so there is no `/.well-known` discovery to keep).
+  - Removed `access="anonymous"` (`MCPProfile`, `MCPConfigBuilder.profile`),
+    `public_info` (config, profile, `set_public_info`) and
+    `enable_public_profile(operator_public_info=...)`. Each raises `ValueError`
+    with migration advice.
+  - An enabled config with no key (no `access_key`, no `extra_keys`) now raises
+    at build instead of serving open. `/info/` always needs the key.
+  - `enable_public_profile()` needs a key path and the profile is key-protected:
+    `key_validator="pkg.mod.func"` (`callable(key) -> user | True | None`, for
+    per-user API keys in the project's DB) and/or `public_keys={"label": key}`.
+    It serves only `public = True` tools; operator keys do not open it.
+  - New `MCPProfile.key_validator` / `ProfileBuilder.set_key_validator`, and one
+    credential check (`django_mcp/auth.py`) shared by JSON-RPC, `/info/` and
+    agent chat. Static keys, `extra_keys` and `service_username` work as before.
+  - Migration: keep `set_access_key()` for the operator, and give the public
+    surface keys, e.g. `mcp.enable_public_profile(key_validator="api.mcp.validate_key")`.
+
 ### Added
 - **`admin_access`: where the Django admin lives and who may reach it.**
   `AdminAccessConfig` on `DjangoConfig.admin_access`. Scanners probe `/admin/`

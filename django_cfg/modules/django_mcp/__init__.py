@@ -5,6 +5,7 @@ default_app_config = "django_cfg.modules.django_mcp.apps.DjangoMCPConfig"
 from .exceptions import MCPError, MCPPermissionDenied, MCPValidationError
 from .__cfg__ import (
     ALL_TOOLS,
+    ANONYMOUS_REMOVED,
     PUBLIC_TOOLS,
     DjangoMCPModuleConfig,
     AppMCPConfig,

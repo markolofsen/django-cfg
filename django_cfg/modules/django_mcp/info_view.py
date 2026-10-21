@@ -1,15 +1,9 @@
 """MCP Server Info View — server metadata and the tool listing.
 
-**The listing is a capability map, and it is gated.** Until 2026-09-03 this
-endpoint answered 200 to anyone while JSON-RPC on the same deployment answered
-401 — measured on a production instance, which returned all 30 tools with their
-full input schemas to an unauthenticated caller. No data leaked (every tool
-still needs the key to execute), but the names alone disclosed that the service
-managed leads, published assets, exposed user API keys to agents and could run
-arbitrary model queries, plus the exact argument shape to attempt each.
-
-The gate follows the JSON-RPC endpoint: if a key is required there, it is
-required here. `public_info=True` opts back out, deliberately.
+The listing is a capability map (tool names, descriptions, input schemas), so
+it needs the same credential as JSON-RPC on the same profile. There is no
+opt-out and no unauthenticated MCP route: anything unauthenticated would
+publish what the keyed endpoint withholds.
 """
 
 import logging
@@ -18,6 +12,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
+from django_cfg.modules.django_mcp.auth import HEADER, authenticate
 from django_cfg.modules.django_mcp.handlers.tools import tool_registry
 from django_cfg.modules.django_mcp.throttling import MCPRateThrottle
 
@@ -69,55 +64,20 @@ class MCPInfoView(APIView):
         except Exception:
             return None
 
-    def _listing_requires_key(self, mcp_config) -> bool:
-        """Whether this listing is gated.
-
-        Gated when the JSON-RPC endpoint is gated, unless the project opts out
-        with ``public_info``. Mirrors ``MCPView._access_key_required`` including
-        its fail-closed behaviour: a policy that cannot be read is not the same
-        as no policy.
-        """
-        try:
-            if mcp_config is None:
-                return False  # MCP unconfigured — nothing to protect
-            profile = self._get_profile(mcp_config)
-            if profile is not None:
-                return not profile.public_info_effective
-            if getattr(mcp_config, "public_info", False):
-                return False
-            return bool(getattr(mcp_config, "access_key", None))
-        except Exception:
-            return True
-
     def _authorized(self, request, mcp_config) -> bool:
-        """Constant-time comparison of the presented key, as on the RPC path.
-
-        Never raises. Reading the config can fail after the gate decided a key
-        is required — and an exception here would escape as a 500, which leaks
-        more than the 401 it replaced and tells the caller nothing.
-        """
-        import secrets
-
+        """Same credential check as the JSON-RPC path; never raises."""
         try:
-            presented = request.headers.get("X-MCP-Access-Key")
-            # Same source as the gate above, or a profile could be gated by one
-            # key and unlocked by another.
             credentials = self._get_profile(mcp_config) or mcp_config
-            configured = getattr(credentials, "access_key", None)
-            if not presented or not configured:
-                return False
-            return secrets.compare_digest(str(presented), str(configured))
         except Exception:
             return False
+        return authenticate(request.headers.get(HEADER), credentials) is not None
 
     def get(self, request):
         from django_cfg.core.state import get_current_config
         config = get_current_config()
         mcp_config = config.mcp if config and config.mcp else None
 
-        if self._listing_requires_key(mcp_config) and not self._authorized(
-            request, mcp_config
-        ):
+        if not self._authorized(request, mcp_config):
             response = JsonResponse(
                 {
                     "detail": (
@@ -156,9 +116,7 @@ class MCPInfoView(APIView):
         profile = self._get_profile(mcp_config)
         if profile is not None:
             server_info["profile"] = profile.name
-            server_info["authentication"] = (
-                "none" if profile.access == "anonymous" else "access-key"
-            )
+            server_info["authentication"] = "access-key"
 
         tools = []
         for tool in tool_registry.get_all_tools(None, profile=profile):

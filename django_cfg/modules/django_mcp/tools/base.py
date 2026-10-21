@@ -14,7 +14,7 @@ class MCPTool(ABC):
     description: str = ""
     input_schema: Dict[str, Any] = {}
 
-    #: Whether an anonymous profile may serve this tool.
+    #: Whether the public profile may serve this tool.
     #:
     #: **Defaults to False, and the default is the design.** A tool declared
     #: beside its own code is the only place that knows whether it is safe to
@@ -30,7 +30,7 @@ class MCPTool(ABC):
         """The input schema this profile should be shown.
 
         Default: the class attribute, unchanged. Override when a limit differs
-        by profile — an anonymous surface that caps rows lower than the operator
+        by profile — a public surface that caps rows lower than the operator
         one must *say so*, or the listing advertises a ceiling the call will not
         honour and the agent reads the clamp as a bug.
 

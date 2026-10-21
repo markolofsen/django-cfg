@@ -217,6 +217,19 @@ ALL_TOOLS = "*"
 #: set rather than restating it.
 PUBLIC_TOOLS = "public"
 
+ANONYMOUS_REMOVED = (
+    "MCP access='anonymous' was removed: authorisation is mandatory. Migrate: "
+    "give the surface keys instead. For a public-tools surface use "
+    "mcp.enable_public_profile(key_validator='pkg.mod.func') (per-user API "
+    "keys) and/or public_keys={'label': 'key'} (static keys); a hand-written "
+    "profile uses access='key' with set_access_key()/add_access_key() and "
+    "tools(PUBLIC_TOOLS)."
+)
+PUBLIC_INFO_REMOVED = (
+    "MCP public_info was removed: the /info/ listing needs the same key as "
+    "JSON-RPC. Drop public_info / set_public_info / operator_public_info."
+)
+
 
 class MCPExtraKey(BaseModel):
     """An additional key on a key-protected surface, held by one named party.
@@ -233,34 +246,20 @@ class MCPExtraKey(BaseModel):
     access_key: str = Field(min_length=16, repr=False)
     service_username: Optional[str] = Field(
         default=None,
-        description="Account this key acts as. None: anonymous, like the primary key.",
+        description="Account this key acts as. None: a machine caller (AnonymousUser), like the primary key.",
     )
 
 
 class MCPProfile(BaseModel):
-    """One MCP surface: who it is for, what it serves, where it is mounted.
+    """One MCP surface: who may use it, what it serves, where it is mounted.
 
-    A profile binds three things that must never be set independently::
+        profile = (credentials, tool set, mount path)
 
-        profile = (access rule, tool set, mount path)
-
-    Binding them is the point. When they are separable, "no key configured"
-    silently becomes "public server" — the endpoint answers 200 to anyone, and
-    the four situations that produce it are indistinguishable:
-
-        "I want a public server"      access_key is None
-        forgot the env var in prod    access_key is None
-        typo in the variable name     access_key is None
-        secret never reached the pod  access_key is None
-
-    Three of those are accidents with identical logs. A profile makes the
-    deliberate case a named choice, so the accidents keep failing.
-
-    This is **not** a return of ``allow_unauthenticated`` (removed above). That
-    flag was a second way to say "open" that could contradict the first:
-    ``allow_unauthenticated=False`` plus an empty key served everything
-    anonymously. Here anonymity is stated once, on the profile, and validated
-    against what the profile exposes.
+    **Authorisation is mandatory.** There is no anonymous profile: every
+    request must present a credential (``X-MCP-Access-Key``) accepted by the
+    profile it arrived on. A "public" profile is one that serves only
+    ``public=True`` tools to a wider set of key holders (``extra_keys`` or a
+    ``key_validator`` over per-user API keys), never to nobody.
     """
     model_config = ConfigDict(extra="forbid", frozen=False)
 
@@ -273,17 +272,13 @@ class MCPProfile(BaseModel):
         description="URL path this profile is mounted at.",
     )
     access: str = Field(
-        pattern="^(key|anonymous)$",
-        description=(
-            "How a caller proves they may use this profile. 'key' requires "
-            "X-MCP-Access-Key; 'anonymous' requires nothing and MUST be stated "
-            "deliberately — it is never inferred from a missing key."
-        ),
+        default="key",
+        description="Always 'key'. 'anonymous' was removed: authorisation is mandatory.",
     )
     access_key: Optional[str] = Field(
         default=None,
         repr=False,
-        description="Required when access='key', forbidden when 'anonymous'.",
+        description="Primary key. At least one of access_key, extra_keys, key_validator is required.",
     )
     service_username: Optional[str] = Field(
         default=None,
@@ -307,19 +302,19 @@ class MCPProfile(BaseModel):
     )
     introspection: Optional[IntrospectionConfig] = Field(
         default=None,
-        description="Introspection for this profile. Forbidden when anonymous.",
+        description="Introspection for this profile.",
+    )
+    key_validator: Optional[str] = Field(
+        default=None,
+        description=(
+            "Dotted path to ``callable(key: str) -> user | True | None`` that "
+            "accepts per-user API keys held in the project's database. Checked "
+            "after the static keys; return None to refuse."
+        ),
     )
     rate_limit: str = Field(
         default="100/minute",
         description="Rate limit for this profile's endpoints.",
-    )
-    public_info: Optional[bool] = Field(
-        default=None,
-        description=(
-            "Whether <path>info/ lists tools without a credential. None (the "
-            "default) follows `access`: a key profile keeps its listing behind "
-            "the key, an anonymous one serves it."
-        ),
     )
 
     @property
@@ -352,12 +347,6 @@ class MCPProfile(BaseModel):
 
         return False
 
-    @property
-    def public_info_effective(self) -> bool:
-        if self.public_info is not None:
-            return self.public_info
-        return self.access == "anonymous"
-
     @field_validator("rate_limit")
     @classmethod
     def _validate_rate_limit(cls, v: str) -> str:
@@ -370,88 +359,40 @@ class MCPProfile(BaseModel):
             raise ValueError("Period must be one of: second, minute, hour, day")
         return v
 
+    @model_validator(mode="before")
+    @classmethod
+    def _no_anonymous(cls, data):
+        if isinstance(data, dict):
+            if data.get("access", "key") != "key":
+                raise ValueError(ANONYMOUS_REMOVED)
+            if "public_info" in data:
+                raise ValueError(PUBLIC_INFO_REMOVED)
+        return data
+
     @model_validator(mode="after")
     def _access_must_be_coherent(self) -> "MCPProfile":
-        if self.access == "key" and not self.access_key:
+        if not (self.access_key or self.extra_keys or self.key_validator):
             raise ValueError(
-                f"MCP profile {self.name!r} declares access='key' but no key is "
-                "configured. An empty key does not disable the endpoint — it "
-                "would serve every anonymous request. Set access_key, or "
-                "declare access='anonymous' if that is what you mean."
+                f"MCP profile {self.name!r} has no credential. Set access_key, "
+                "add extra_keys, or set key_validator: an endpoint with no key "
+                "configured is refused, never served open."
             )
-        if self.access == "anonymous" and self.access_key:
-            raise ValueError(
-                f"MCP profile {self.name!r} is anonymous but carries an access "
-                "key. The key would never be checked; remove it, or set "
-                "access='key' so it is enforced."
-            )
-        if self.access == "anonymous" and self.extra_keys:
-            raise ValueError(
-                f"MCP profile {self.name!r} is anonymous but carries extra keys."
-            )
-        keys = [self.access_key] + [k.access_key for k in self.extra_keys]
+        keys = [k for k in [self.access_key] + [e.access_key for e in self.extra_keys] if k]
         labels = [k.label for k in self.extra_keys]
         if len(set(keys)) != len(keys) or len(set(labels)) != len(labels):
             raise ValueError(
                 f"MCP profile {self.name!r} repeats a key or a key label."
             )
-        if self.access == "anonymous" and self.service_username:
-            raise ValueError(
-                f"MCP profile {self.name!r} is anonymous but names a service "
-                "user. service_username binds a KEY to an account; with no key "
-                "to bind it grants that account's privileges to everyone."
-            )
         return self
 
     @classmethod
     def _legacy_default(cls, **kwargs) -> "MCPProfile":
-        """Build the implicit `default` profile from the flat config fields.
+        """The implicit ``default`` profile of a config that declared none.
 
-        **Bypasses the anonymous-profile restrictions, deliberately.** Those
-        exist for a profile a project *declares*: they make an unsafe public
-        endpoint hard to express. The legacy default is not a declaration — it
-        is today's behaviour rendered in the new shape, and today a deployment
-        with no key serves every tool anonymously. That is the documented
-        local-development case (`_access_key_required` returns False when no key
-        is configured), and a framework upgrade must not start refusing to boot
-        for it.
-
-        The restrictions arrive with the opt-in: a project that writes
-        ``.profile(access="anonymous")`` is stating an intent, and gets checked.
+        ``model_construct`` skips validation so a *disabled* config without a
+        key still loads; ``DjangoMCPModuleConfig`` refuses an enabled one.
         """
         return cls.model_construct(**kwargs)
-
-    @model_validator(mode="after")
-    def _anonymous_profiles_stay_narrow(self) -> "MCPProfile":
-        """An anonymous profile must not be able to describe or change anything.
-
-        These are the properties a reviewer would otherwise have to check by
-        reading the project's config. Checked here so an unsafe public endpoint
-        is hard to express rather than merely discouraged.
-        """
-        if self.access != "anonymous":
-            return self
-
-        if self.introspection is not None and self.introspection.enabled:
-            raise ValueError(
-                f"MCP profile {self.name!r} is anonymous with introspection "
-                "enabled. Introspection describes internal URLs, models and "
-                "schemas to whoever asks."
-            )
-        if self.serves_all_tools:
-            raise ValueError(
-                f"MCP profile {self.name!r} is anonymous and serves ALL tools. "
-                "List the tools it should serve: an anonymous endpoint that "
-                "inherits every registered tool publishes the operator surface "
-                "the moment one is added."
-            )
-        for key, exposure in self.exposures.items():
-            if not exposure.read_only:
-                raise ValueError(
-                    f"MCP profile {self.name!r} is anonymous and exposes {key!r} "
-                    "for writes."
-                )
-        return self
 
 
 class DjangoMCPModuleConfig(BaseModel):
@@ -500,18 +441,7 @@ class DjangoMCPModuleConfig(BaseModel):
         default="100/minute",
         description="Rate limit for MCP requests",
     )
-    public_info: bool = Field(
-        default=False,
-        description=(
-            "Whether GET <endpoint>/info/ lists tools without a credential. "
-            "Default False: the listing is a capability map — tool names, "
-            "descriptions and full input schemas — and a deployment that "
-            "requires a key for JSON-RPC should not hand that map to anonymous "
-            "callers. Has no effect when no access_key is configured; there is "
-            "nothing to require. Set True to restore the pre-2.3 behaviour."
-        ),
-    )
-    # REMOVED: allow_unauthenticated - use access_key instead
+    # REMOVED: allow_unauthenticated, public_info — authorisation is mandatory.
 
     install_targets: Dict[str, MCPTargetConfig] = Field(
         default_factory=dict,
@@ -529,37 +459,44 @@ class DjangoMCPModuleConfig(BaseModel):
             "(the default) means the flat fields above describe a single "
             "implicit surface — every existing deployment. Declare profiles to "
             "serve more than one, e.g. an operator endpoint behind a key plus "
-            "an anonymous public one."
+            "a public-tools one (still key-protected)."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_public_info(cls, data):
+        if isinstance(data, dict) and "public_info" in data:
+            raise ValueError(PUBLIC_INFO_REMOVED)
+        return data
 
     @model_validator(mode="after")
     def _synthesise_default_profile(self) -> "DjangoMCPModuleConfig":
         """Represent the flat fields as one profile named ``default``.
 
-        Every deployment that never declares a profile still has exactly one
-        surface; giving it a name means the request path can read a profile
-        unconditionally instead of branching on whether profiles exist.
-
-        ``access`` mirrors today's rule — a key is required when one is
-        configured, and its absence is open. That is deliberately the *inferred*
-        openness this whole feature exists to replace, and it stays inferred
-        here: changing it would break every local deployment on upgrade. The
-        replacement is opt-in, not retroactive.
+        An enabled config with no key is refused: "no key configured" never
+        means "open".
         """
         if not self.profiles:
+            if self.enabled and not (self.access_key or self.extra_keys):
+                raise ValueError(
+                    "MCP is enabled but no access key is configured. "
+                    "Authorisation is mandatory: call mcp.set_access_key(...) "
+                    "(env MCP__ACCESS_KEY), or disable MCP."
+                )
             self.profiles = {
                 "default": MCPProfile._legacy_default(
                     name="default",
                     path=self.endpoint_path,
-                    access="key" if self.access_key else "anonymous",
+                    access="key",
                     access_key=self.access_key,
                     service_username=self.service_username,
+                    extra_keys=self.extra_keys,
+                    key_validator=None,
                     tools=[ALL_TOOLS],
                     exposures={},
                     introspection=None,
                     rate_limit=self.rate_limit,
-                    public_info=self.public_info,
                 )
             }
         return self
@@ -588,8 +525,8 @@ class DjangoMCPModuleConfig(BaseModel):
 
         Mounting is by URL, so the second registration would never be reached —
         and which one wins depends on dict ordering, not on anything a reader
-        could see. An anonymous profile shadowed by a key-protected one looks
-        like a broken public endpoint; the reverse silently publishes the
+        could see. A public profile shadowed by the operator one looks
+        like a broken endpoint; the reverse silently publishes the
         operator surface.
         """
         seen: Dict[str, str] = {}

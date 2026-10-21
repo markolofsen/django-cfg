@@ -32,6 +32,9 @@ mcp.enable_introspection(expose_urls=True)
 # Set access key (required)
 mcp.set_access_key("your-secret-key")
 
+# Optional: a key-protected surface limited to `public = True` tools
+mcp.enable_public_profile(key_validator="api.mcp_keys.validate")  # per-user keys
+
 # Custom tools
 @mcp.tool(name="get_stats", description="Get system stats")
 def get_stats(ctx) -> str:
@@ -81,19 +84,17 @@ curl -X POST http://localhost:8000/cfg/mcp/agent/ \
 
 | Layer | Mechanism |
 |-------|-----------|
-| **Auth** | `X-MCP-Access-Key`, enforced with `401` — **only when `access_key` is set**; unset means open |
+| **Auth** | `X-MCP-Access-Key`, mandatory on every endpoint (`401` otherwise); no key configured = the config refuses to build |
 | **Models** | Deny-by-default — only exposed models accessible |
 | **Fields** | Automatic PII redaction (emails, phones, keys) |
 | **Queries** | Max rows, cost estimation, read-only by default |
 | **Commands** | Whitelist only, 30s timeout, stdout captured |
 
-`GET /cfg/mcp/info/` lists every tool with its schema. It used to answer `200`
-to anyone; since 2.2.158 it is gated by the same access key as the JSON-RPC
-endpoint, so no proxy rule is needed. Never a data leak — execution always
-required the key — but the capability map is worth gating too. An anonymous
-*profile* serves its own `/info/` anonymously by design, listing only that
-profile's tools; `public_info=True` restores the old always-public behaviour
-deliberately.
+`GET /cfg/mcp/info/` lists every tool with its schema and needs the same access
+key as the JSON-RPC endpoint. There is no anonymous mode: `access="anonymous"`
+and `public_info` were removed and raise at build with migration advice. A
+"public" profile serves only `public = True` tools, to holders of a per-user key
+(`key_validator`) or static `public_keys`.
 
 > **Check a deployed server before trusting its auth.** Until 2026-08-04 the
 > access key was compared and then ignored, so tools ran for unauthenticated
