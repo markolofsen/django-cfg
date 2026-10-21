@@ -33,15 +33,18 @@ def _get_version() -> str:
         return "unknown"
 
 
-def _find_project_root() -> Path:
-    """Walk up from cwd to find project root (contains manage.py or pyrightconfig.json)."""
+def _find_project_root() -> Path | None:
+    """Walk up from cwd to find project root (contains manage.py or pyrightconfig.json).
+
+    Returns None when there is none: stubs are never written into an arbitrary cwd.
+    """
     cwd = Path.cwd()
     for directory in [cwd, *cwd.parents]:
         if (directory / "manage.py").exists() or (directory / "pyrightconfig.json").exists():
             return directory
         if directory == directory.parent or directory == Path.home():
             break
-    return cwd
+    return None
 
 
 def _get_stubs_source() -> Path:
@@ -118,6 +121,8 @@ def install(force: bool = False) -> None:
     Safe to call multiple times — re-runs only when django-cfg version changes.
     """
     project_root = _find_project_root()
+    if project_root is None:
+        return
     version = _get_version()
 
     if not force and _is_current_version_installed(project_root, version):

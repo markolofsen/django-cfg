@@ -3,7 +3,7 @@ django_cfg.startup.registry_validation — Validate DJANGO_CFG_REGISTRY at start
 
 Iterates all registry entries, attempts importlib.import_module + getattr for each.
 Optional-dependency entries that fail because their package isn't installed are
-logged at DEBUG level only. Required entries that fail are logged as ERROR.
+logged at DEBUG level only. Required entries that fail are logged as WARNING (never an error: a config that works must not be rejected).
 
 The lazy-import mechanism (__getattr__ in django_cfg/__init__.py) is NOT touched —
 this is a read-only validation pass that surfaces broken entries at startup rather
@@ -32,8 +32,15 @@ def validate_registry() -> None:
     """
     try:
         from django_cfg.registry import DJANGO_CFG_REGISTRY
+    except ModuleNotFoundError as exc:
+        if exc.name == "django_cfg.registry":
+            # The lazy-import registry was removed; nothing to validate.
+            logger.debug("django_cfg registry module not present, validation skipped")
+            return
+        logger.warning("Failed to import DJANGO_CFG_REGISTRY: %s", exc)
+        return
     except Exception as exc:
-        logger.error("Failed to import DJANGO_CFG_REGISTRY: %s", exc)
+        logger.warning("Failed to import DJANGO_CFG_REGISTRY: %s", exc)
         return
 
     broken: list[str] = []
@@ -41,7 +48,7 @@ def validate_registry() -> None:
         try:
             mod = importlib.import_module(module_path)
             if not hasattr(mod, attr_name):
-                logger.error(
+                logger.warning(
                     "Registry entry '%s': module '%s' has no attribute '%s'",
                     symbol, module_path, attr_name,
                 )
@@ -54,13 +61,13 @@ def validate_registry() -> None:
                     symbol, exc,
                 )
             else:
-                logger.error(
+                logger.warning(
                     "Registry entry '%s': cannot import '%s' — %s",
                     symbol, module_path, exc,
                 )
                 broken.append(symbol)
         except Exception as exc:
-            logger.error(
+            logger.warning(
                 "Registry entry '%s': unexpected error importing '%s.%s' — %s",
                 symbol, module_path, attr_name, exc,
             )

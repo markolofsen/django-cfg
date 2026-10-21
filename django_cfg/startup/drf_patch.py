@@ -5,11 +5,15 @@ Ensures that AuthenticationFailed raised by non-JWT backends does not block
 JWT authentication when the request carries a JWT Bearer token.
 """
 
+import logging
+
+logger = logging.getLogger("django_cfg.startup")
+
 
 def patch_drf_authentication() -> None:
     """Apply JWT-aware DRF authentication patch. Called after all apps are loaded."""
     try:
         from django_cfg.middleware.authentication import _patch_drf_authenticate
         _patch_drf_authenticate()
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("django-cfg: could not apply the DRF authentication patch: %s", exc)

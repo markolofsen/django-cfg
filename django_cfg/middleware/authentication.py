@@ -68,6 +68,9 @@ def _patch_drf_authenticate():
 
         self._not_authenticated()
 
+    if getattr(DRFRequest._authenticate, "_django_cfg_jwt_aware", False):
+        return  # already applied (module import and AppConfig.ready() both call this)
+    _jwt_aware_authenticate._django_cfg_jwt_aware = True  # type: ignore[attr-defined]
     DRFRequest._authenticate = _jwt_aware_authenticate  # type: ignore[method-assign]
 
 
@@ -75,7 +78,7 @@ def _patch_drf_authenticate():
 # This module is always imported by DRF before the first request because
 # 'django_cfg.middleware.authentication.JWTAuthenticationWithLastLogin' is in
 # DEFAULT_AUTHENTICATION_CLASSES — DRF imports it on first authenticate() call.
-# The patch is idempotent: re-running it is safe (replaces the same method again).
+# The patch is idempotent: a marker on the patched method makes a second call a no-op.
 # DjangoCfgConfig.ready() also calls it for even earlier application.
 _patch_drf_authenticate()
 
