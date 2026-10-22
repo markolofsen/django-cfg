@@ -32,6 +32,8 @@ import re
 from pathlib import Path
 from typing import Any, Optional
 
+from django_cfg.core.utils.display_name import slugify_name
+
 from .keys import read_env_file
 from .targets import Target
 
@@ -90,8 +92,7 @@ def project_slug() -> str:
     if not raw:
         base = base_dir()
         raw = base.name if base else "django_cfg"
-    slug = re.sub(r"[^0-9a-zA-Z]+", "_", str(raw)).strip("_").lower()
-    return slug or "django_cfg"
+    return slugify_name(str(raw))
 
 
 def declared_kinds() -> list[str]:

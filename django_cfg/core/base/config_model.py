@@ -45,6 +45,7 @@ from ...models import (
     UnfoldConfig,
 )
 from ...modules.django_dashboard.models import DashboardConfig
+from ..utils.display_name import normalize_display_name, slugify_name
 from ..exceptions import ConfigurationError
 from ..types.enums import EnvironmentMode, StartupInfoMode
 
@@ -499,13 +500,12 @@ class DjangoConfig(BaseModel):
     @field_validator("project_name")
     @classmethod
     def validate_project_name(cls, v: str) -> str:
-        """Validate project name format."""
-        if not v.replace(" ", "").replace("-", "").replace("_", "").isalnum():
-            raise ValueError(
-                "Project name must contain only alphanumeric characters, "
-                "spaces, hyphens, and underscores"
-            )
-        return v
+        """Validate and normalise the project name.
+
+        A display name, not an identifier: a domain (``gptkino.com``) or ``Acme, Inc.``
+        is fine. Identifier use goes through ``project_slug()``, never the raw name.
+        """
+        return normalize_display_name(v)
 
     @field_validator("secret_key")
     @classmethod
@@ -667,6 +667,11 @@ class DjangoConfig(BaseModel):
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                            PROPERTIES                                     ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    @property
+    def project_slug(self) -> str:
+        """``project_name`` as an identifier: ``gptkino.com`` → ``gptkino_com``."""
+        return slugify_name(self.project_name)
 
     @property
     def is_development(self) -> bool:

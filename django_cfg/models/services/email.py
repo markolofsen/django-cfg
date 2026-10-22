@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import Field, field_validator, model_validator
 
+from ...core.utils.display_name import normalize_display_name
 from ..base import BaseConfig
 
 
@@ -141,6 +142,12 @@ class EmailConfig(BaseConfig):
                 "backend='gateway' requires gateway_url and gateway_secret"
             )
         return self
+
+    @field_validator('default_from_name')
+    @classmethod
+    def validate_from_name(cls, v: Optional[str]) -> Optional[str]:
+        """Same rules as the project name: it becomes the `From` display name."""
+        return normalize_display_name(v) if v else v
 
     @field_validator('default_from', 'reply_to')
     @classmethod

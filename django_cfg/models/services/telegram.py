@@ -41,6 +41,15 @@ class TelegramConfig(BaseModel):
         description="Message parse mode",
     )
 
+    use_project_slug: bool = Field(
+        default=False,
+        description=(
+            "Prefix messages with the project slug (`gptkino_com`) instead of the "
+            "project name (`gptkino.com`). The name is escaped per parse mode, so "
+            "this is only for a chat or bot that should see a plain identifier."
+        ),
+    )
+
     disable_notification: bool = Field(
         default=False,
         description="Send messages silently",

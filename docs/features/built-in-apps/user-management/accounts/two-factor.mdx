@@ -182,21 +182,15 @@ Admin can change: enable/disable globally, enforcement policy, session timeout, 
 
 ## Frontend
 
-`AuthLayout` handles the full 2FA flow automatically — no extra code needed:
+`AuthLayout` handles the sign-in challenge automatically — no extra code needed:
 
 ```tsx
 import { AuthLayout } from '@djangocfg/layouts'
 
-// Automatically handles: identifier → otp → 2fa (if required) → success
-<AuthLayout githubOAuthEnabled={true} redirectUrl="/dashboard" />
+<AuthLayout enableGithubAuth redirectUrl="/dashboard" />
 ```
 
-Steps rendered by `AuthContent`:
-- `identifier` — email input
-- `otp` — 6-digit OTP input
-- `2fa` — TOTP authenticator code
-- `2fa-setup` — enroll new TOTP device
-- `success` — confirmation + auto-redirect
+The form steps are `identifier → otp → success`. When the account has 2FA, `TwoFactorChallengeDialog` opens over the page (authenticator code, backup-code fallback) and the form moves to `success` once it is verified. Enrolling a device is separate: render `TwoFactorSetup` on a settings page. Details and the hooks behind both: [Frontend Integration](./frontend#two-factor-challenge).
 
 TAGS: 2fa, totp, TwoFactorConfig, backup codes, authenticator app
 DEPENDS_ON: [index, otp, jwt]

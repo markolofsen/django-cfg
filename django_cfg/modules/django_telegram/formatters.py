@@ -16,6 +16,21 @@ logger = get_logger("django_cfg.telegram.formatters")
 
 
 # Emoji mappings for different message types
+_MARKDOWN_V2_RESERVED = re.compile(r"([_*\[\]()~`>#+\-=|{}.!\\])")
+_MARKDOWN_RESERVED = re.compile(r"([_*`\[])")
+
+
+def escape_for_parse_mode(text: str, parse_mode: "str | None") -> str:
+    """Escape text that is data, not markup, for the given Telegram parse mode."""
+    if parse_mode == "HTML":
+        return _html_module.escape(text, quote=False)
+    if parse_mode == "MarkdownV2":
+        return _MARKDOWN_V2_RESERVED.sub(r"\\\1", text)
+    if parse_mode == "Markdown":
+        return _MARKDOWN_RESERVED.sub(r"\\\1", text)
+    return text
+
+
 EMOJI_MAP = {
     "success": "\u2705",      # ✅
     "error": "\u274c",        # ❌

@@ -37,10 +37,12 @@ export default function LoginPage() {
 ### Auth steps
 
 ```
-identifier  →  otp  →  [2fa]  →  [2fa-setup]  →  success → redirect
+identifier  →  otp  →  success → redirect
 ```
 
-`2fa` and `2fa-setup` steps appear automatically if 2FA is enabled for the user.
+The code screen opens as soon as the email is submitted and rolls back to the identifier step if the request fails. The resend link counts down from the server's `resend_in` (30 s fallback). Sign-ins are remembered for 30 days by default.
+
+If the account has 2FA, a [challenge dialog](#two-factor-challenge) opens over the page after the code is accepted — it is not a step of the form.
 
 ### Props
 
@@ -49,13 +51,13 @@ identifier  →  otp  →  [2fa]  →  [2fa-setup]  →  success → redirect
 | `redirectUrl` | `string` | `/dashboard` | Where to go after success |
 | `sourceUrl` | `string` | — | App URL for analytics / OTP emails |
 | `enableGithubAuth` | `boolean` | `false` | Show GitHub OAuth button |
-| `enablePhoneAuth` | `boolean` | `false` | Allow phone number input |
-| `enable2FASetup` | `boolean` | `true` | Prompt 2FA setup after first login |
-| `logoUrl` | `string` | — | Logo on the success screen |
+| `logo` | `ReactNode` | — | Brand mark (inline SVG, `<img>`, lock-up); sits on the media half or above the form |
+| `variant` | `'fullsplit' \| 'centered' \| 'split'` | `'fullsplit'` | Shell layout |
 | `termsUrl` | `string` | — | Terms of service link |
 | `privacyUrl` | `string` | — | Privacy policy link |
 | `supportUrl` | `string` | — | Support page link |
 | `marketingConsent` | `AuthMarketingConsentConfig` | — | Opt-in marketing checkbox on the identifier step (absent ⇒ no checkbox) |
+| `rememberMe` | `{ enabled?, label? }` | hidden | Sign-ins last 30 days; `enabled: true` adds a checkbox (checked by default) |
 | `children` | `ReactNode` | — | Custom header — rendered on `identifier` step only |
 
 ### Callbacks
@@ -76,6 +78,20 @@ import { useAuthFormContext } from '@djangocfg/layouts'
 
 const { step, identifier, isLoading } = useAuthFormContext()
 ```
+
+### Two-factor challenge
+
+The form holds no 2FA state. A step that receives `requires_2fa` publishes the pending session, and `TwoFactorChallengeDialog` — mounted by `AuthLayout` — opens over the page: authenticator code, backup-code fallback, attempts left.
+
+```tsx
+import { beginTwoFactorChallenge, useTwoFactorChallenge } from '@djangocfg/api/auth'
+import { TwoFactorChallengeDialog, TwoFactorSetup } from '@djangocfg/layouts'
+
+beginTwoFactorChallenge({ sessionId })   // what a sign-in step does on requires_2fa
+const challenge = useTwoFactorChallenge() // { sessionId } | null
+```
+
+`TwoFactorChallengeDialog` takes `onVerified`, `onCancel` and `redirectUrl`; without `onVerified` it navigates after success. `TwoFactorSetup` (QR, confirmation code, backup codes) is the enrol flow for a settings page and shows the backup codes before calling `onComplete`.
 
 ### Marketing-consent checkbox
 
@@ -151,7 +167,7 @@ const { user, isAuthenticated, isLoading, requestOTP, verifyOTP, logout } = useA
 | `user` | `UserProfile \| null` | Current user |
 | `isAuthenticated` | `boolean` | — |
 | `isLoading` | `boolean` | Initial auth check in progress |
-| `requestOTP` | `fn` | Send OTP to email — `requestOTP(identifier, sourceUrl?, consent?)`; optional `consent` = `{ marketingConsent, disclosureVersion }` |
+| `requestOTP` | `fn` | Send OTP to email — `requestOTP(identifier, sourceUrl?, consent?)`; `consent` = `{ marketingConsent, disclosureVersion }`; resolves with `resendIn` seconds when the server states one |
 | `verifyOTP` | `fn` | Verify code → stores JWT |
 | `logout` | `fn` | Clears tokens |
 
@@ -172,11 +188,12 @@ if (!isAllowed) return null
 import { useAuthForm } from '@djangocfg/api/auth'
 
 const {
-  step,                      // 'identifier' | 'otp' | '2fa' | '2fa-setup' | 'success'
+  step,                      // 'identifier' | 'otp' | 'success'
   identifier, setIdentifier,
   otp, setOtp,
   isLoading, error,
   isRateLimited, rateLimitLabel,   // countdown string e.g. "1:30"
+  resendSeconds, resendLabel,      // countdown before another code may be requested
   handleIdentifierSubmit,
   handleOTPSubmit,
   handleResendOTP,
@@ -205,18 +222,19 @@ const { startGithubAuth, isLoading, error } = useGithubAuth({
 
 OAuth callback is handled automatically by `AuthLayout`.
 
-### `useTwoFactor` — verify TOTP during login
+### `useTwoFactor` — verify, set up, manage
 
 ```tsx
 'use client'
 import { useTwoFactor } from '@djangocfg/api/auth'
 
-const { verify, isLoading, error } = useTwoFactor({
-  sessionId,
-  onSuccess: (user) => {},
-  redirectUrl: '/dashboard',
-})
+const two = useTwoFactor({ verify: { redirectUrl: '/dashboard' } })
+
+await two.verify.verifyTOTP(sessionId, '123456')  // login challenge
+await two.verify.verifyBackupCode(sessionId, code)
 ```
+
+The sub-hooks (`useTwoFactorVerify`, `useTwoFactorSetup`, `useTwoFactorStatus`) can be used alone.
 
 ### `useTwoFactorSetup` — enable/disable 2FA for authenticated users
 
@@ -224,10 +242,7 @@ const { verify, isLoading, error } = useTwoFactor({
 'use client'
 import { useTwoFactorSetup } from '@djangocfg/api/auth'
 
-const { qrCode, secret, isEnabled, startSetup, verifySetup, disable } = useTwoFactorSetup({
-  onSetupComplete: () => {},
-  onDisabled: () => {},
-})
+const { setupData, backupCodes, setupStep, startSetup, confirmSetup } = useTwoFactorSetup()
 ```
 
 ### `useTwoFactorStatus` — check and manage 2FA status

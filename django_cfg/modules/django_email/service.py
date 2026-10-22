@@ -8,6 +8,7 @@ without requiring manual parameter passing.
 import re
 import socket
 import threading
+from email.utils import formataddr
 from html import unescape
 from smtplib import SMTPAuthenticationError, SMTPDataError, SMTPException, SMTPRecipientsRefused, SMTPSenderRefused
 from typing import Any, Dict, List, Optional
@@ -999,7 +1000,7 @@ class DjangoEmailService(BaseCfgModule):
         if self.email_config:
             name = getattr(self.email_config, 'default_from_name', None)
         name = name or self.config.project_name
-        return f'"{name}" <{from_email}>'
+        return formataddr((name, from_email))
 
     def _get_reply_to(self) -> Optional[List[str]]:
         """Configured Reply-To, as the list Django's message classes expect.

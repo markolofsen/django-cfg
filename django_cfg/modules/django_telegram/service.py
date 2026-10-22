@@ -18,7 +18,7 @@ from ..base import BaseCfgModule
 from ..django_logging import get_logger
 
 from .exceptions import TelegramConfigError, TelegramSendError
-from .formatters import EMOJI_MAP
+from .formatters import EMOJI_MAP, escape_for_parse_mode
 from .queue import MessagePriority, telegram_queue
 from .types import TelegramParseMode
 
@@ -71,27 +71,35 @@ class DjangoTelegram(BaseCfgModule):
         """Get the DjangoConfig instance."""
         return self.get_config()
 
-    @property
-    def project_prefix(self) -> str:
-        """Get project name prefix for messages, including env mode.
+    def prefix_for(self, parse_mode: Optional[str] = None) -> str:
+        """Project name prefix for messages, including env mode.
 
-        Format: [ProjectName dev] or [ProjectName prod]
+        Format: [ProjectName dev] or [ProjectName prod]. The name is escaped for
+        ``parse_mode`` — an unescaped ``&`` or ``.`` is rejected by Telegram and
+        the whole alert is lost.
         """
         if self._disable_prefix:
             return ""
         try:
             config = self.config
             if config and config.project_name:
+                use_slug = bool(config.telegram and config.telegram.use_project_slug)
+                label = config.project_slug if use_slug else config.project_name
                 if config.is_development:
                     env = " dev"
                 elif config.is_test:
                     env = " test"
                 else:
                     env = ""
-                return f"[{config.project_name}{env}] "
+                return escape_for_parse_mode(f"[{label}{env}] ", parse_mode)
         except Exception:
             pass
         return ""
+
+    @property
+    def project_prefix(self) -> str:
+        """Prefix for plain text (no parse mode)."""
+        return self.prefix_for(None)
 
     @property
     def is_configured(self) -> bool:
@@ -259,7 +267,7 @@ class DjangoTelegram(BaseCfgModule):
             bot_instance = self._get_bot(effective_token)
 
             def _do_send():
-                prefixed_message = f"{self.project_prefix}{message}"
+                prefixed_message = f"{self.prefix_for(parse_mode_str)}{message}"
                 bot_instance.send_message(
                     chat_id=target_chat_id,
                     text=prefixed_message,
@@ -312,10 +320,9 @@ class DjangoTelegram(BaseCfgModule):
             bot_instance = self._get_bot(effective_token)
 
             def _do_send():
+                prefix = self.prefix_for(parse_mode_str)
                 prefixed_caption = (
-                    f"{self.project_prefix}{caption}"
-                    if caption
-                    else self.project_prefix.strip() if self.project_prefix else None
+                    f"{prefix}{caption}" if caption else prefix.strip() or None
                 )
                 bot_instance.send_photo(
                     chat_id=target_chat_id,
@@ -368,10 +375,9 @@ class DjangoTelegram(BaseCfgModule):
             bot_instance = self._get_bot(effective_token)
 
             def _do_send():
+                prefix = self.prefix_for(parse_mode_str)
                 prefixed_caption = (
-                    f"{self.project_prefix}{caption}"
-                    if caption
-                    else self.project_prefix.strip() if self.project_prefix else None
+                    f"{prefix}{caption}" if caption else prefix.strip() or None
                 )
                 bot_instance.send_document(
                     chat_id=target_chat_id,

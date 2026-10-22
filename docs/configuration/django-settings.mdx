@@ -369,19 +369,27 @@ class DjangoConfig(BaseModel):
 
 DjangoConfig includes comprehensive validators to ensure configuration correctness:
 
+### Project name and slug
+
+`project_name` is a display name. Letters and digits of any script, spaces and `. , ' & ( ) - _` are accepted (`gptkino.com`, `Acme, Inc.`, `Café Münchën`); whitespace is collapsed. Rejected: `" \ < > : @`, control and invisible characters (bidi overrides, zero-width), and names with no letter or digit. The error names each offending character.
+
+`project_slug` is derived from it as an identifier — ASCII, lower-case, `_`-separated (`gptkino.com` → `gptkino_com`; a name with no ASCII letters falls back to `django_cfg`).
+
+| Where the name appears | Value used |
+|---|---|
+| Email `From` display name (unless `EmailConfig.default_from_name` is set), subjects, templates, login alerts | `project_name`; the header is quoted and encoded for you |
+| Telegram message prefix | `project_name`, escaped for the parse mode; `TelegramConfig.use_project_slug=True` switches to `project_slug` |
+| 2FA issuer in authenticator apps, API title, startup banner, health | `project_name` |
+| MCP registration names | `project_slug` |
+
 ### Field Validators
 
 ```python
 @field_validator("project_name")
 @classmethod
 def validate_project_name(cls, v: str) -> str:
-    """Validate project name format."""
-    if not v.replace(" ", "").replace("-", "").replace("_", "").isalnum():
-        raise ValueError(
-            "Project name must contain only alphanumeric characters, "
-            "spaces, hyphens, and underscores"
-        )
-    return v
+    """Normalise whitespace and Unicode; reject unsupported characters."""
+    return normalize_display_name(v)
 
 @field_validator("secret_key")
 @classmethod

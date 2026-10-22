@@ -27,9 +27,9 @@ sequenceDiagram
     V->>S: request_otp(email, source_url)
     S->>DB: get_or_create CustomUser (active only)
     S->>DB: reuse valid OTP or create new OTPSecret
-    S->>E: send OTP email
     S->>T: record_sent(email)
-    V-->>C: 200 {message}
+    V-->>C: 200 {message, resend_in, expires_in, webmail?}
+    S-->>E: deliver email after commit (background)
 
     C->>V: POST /otp/verify/ {identifier, otp, remember_me?}
     V->>V: is_ratelimited(IP, 20/min)?
@@ -50,6 +50,8 @@ sequenceDiagram
 ### Key design decisions
 
 - **Anti-enumeration** — all failure paths return identical `HTTP 401 {"error": "Authentication failed"}`. Wrong OTP, expired OTP, unknown email, and locked account are indistinguishable.
+- **Asynchronous delivery** — the response is sent once the OTP row is committed. Rendering and sending the email, the send-log write and the operator Telegram notice run after commit in the background, so the client can open the code screen immediately. A delivery failure is logged and reported to operators, not returned to the client; the user can resend.
+- **Timing hints** — a successful request returns `resend_in` (seconds until a new code may be requested, from `OTP_RESEND_COOLDOWN_SECONDS`) and `expires_in` (seconds the code stays valid), so a client can show a resend countdown without hard-coding either value.
 - **OTP reuse** — if a valid unexpired OTP exists, a re-request returns the same code. Reduces SMTP load, avoids confusing users with multiple codes in inbox.
 - **Active-only lookup** — `OTPService` always filters `deleted_at__isnull=True`. Soft-deleted accounts cannot authenticate.
 - **Test account bypass** — users with `is_test_account=True` accept any OTP code. Intended for App Store review / CI environments where real email delivery isn't available.
@@ -183,7 +185,6 @@ directly to the mailer and is never read from the copy row.
 The body also shows the code large, and states a 10-minute expiry in the
 notification copy — that's the email's own wording, not necessarily the
 enforced `OTPSecret` TTL; check the model directly if you need the actual
-enforced lifetime.
 
 ---
 
@@ -204,7 +205,7 @@ graph LR
     L1 -->|pass| L2
 
     subgraph L2["Layer 2: OTPRequestThrottle (per-email)"]
-        C1[Cooldown: 60s between resends]
+        C1[Cooldown: 30s between resends]
         C2[Hourly budget: 10 requests]
         C3[Daily budget: 20 requests]
     end
@@ -246,7 +247,7 @@ Default limits (override via settings):
 
 | Limit | Default | Setting |
 |-------|---------|---------|
-| Resend cooldown | 60 seconds | `OTP_RESEND_COOLDOWN_SECONDS` |
+| Resend cooldown | 30 seconds | `OTP_RESEND_COOLDOWN_SECONDS` |
 | Hourly per email | 10 requests | `OTP_HOURLY_LIMIT` |
 | Daily per email | 20 requests | `OTP_DAILY_LIMIT` |
 
@@ -347,7 +348,7 @@ result = OTPService.request_otp(
 )
 # result.success: bool
 # result.error_code: "invalid_email" | "cooldown" | "hourly_limit" | "daily_limit"
-#                    | "user_creation_failed" | "email_send_failed" | "internal_error" | ""
+#                    | "user_creation_failed" | "internal_error" | ""
 # result.retry_after: int | None  (seconds until retry allowed)
 
 # Verify OTP

@@ -33,6 +33,7 @@ from django_cfg.models.services.telegram import TelegramConfig
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `parse_mode` | `"HTML" \| "Markdown" \| "MarkdownV2" \| None` | `"HTML"` | Message parse mode |
+| `use_project_slug` | `bool` | `False` | Prefix messages with `project_slug` (`gptkino_com`) instead of `project_name` (`gptkino.com`). The name is escaped per parse mode either way |
 | `disable_notification` | `bool` | `False` | Send silently — no sound or vibration |
 | `disable_web_page_preview` | `bool` | `False` | Disable link preview in messages |
 
