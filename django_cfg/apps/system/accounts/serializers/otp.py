@@ -186,6 +186,16 @@ class OTPRequestResponseSerializer(serializers.Serializer):
         allow_null=True,
         help_text="Webmail deep-link for the recipient's provider, or null if the domain is unknown.",
     )
+    resend_in = serializers.IntegerField(
+        required=False,
+        min_value=0,
+        help_text="Seconds until a new code may be requested for this email.",
+    )
+    expires_in = serializers.IntegerField(
+        required=False,
+        min_value=0,
+        help_text="Seconds the code stays valid.",
+    )
 
 
 class OTPErrorResponseSerializer(serializers.Serializer):

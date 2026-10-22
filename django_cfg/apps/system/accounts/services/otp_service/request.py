@@ -1,4 +1,4 @@
-"""OTP request — generate a code, persist it, send the email + notifications.
+"""OTP request — generate a code, persist it, schedule delivery.
 
 Split out of the original monolithic ``otp_service.py`` so the request
 and verify paths can be tested and iterated on independently. Public
@@ -13,13 +13,12 @@ from typing import Optional
 from django.db import transaction
 from django.utils import timezone
 
-from django_cfg.modules.django_telegram import DjangoTelegram
 from django_cfg.utils import get_logger
 
 from ...models import CustomUser, OTPSecret
-from ...utils.notifications import AccountNotifications
 from ..brute_force_service import OTPRequestThrottle
 from ..email_validator import EmailValidationError, validate_email_address
+from .delivery import dispatch_otp_delivery
 from .types import ConsentCapture, OTPRequestResult
 
 logger = get_logger(__name__)
@@ -32,7 +31,7 @@ def request_otp(
     accept_language: Optional[str] = None,
     consent: Optional[ConsentCapture] = None,
 ) -> OTPRequestResult:
-    """Generate and send OTP to email. Returns OTPRequestResult."""
+    """Create the OTP and schedule its delivery. Returns OTPRequestResult."""
     cleaned_email = CustomUser.objects.clean_email(email)
     if not cleaned_email:
         return OTPRequestResult(success=False, error_code="invalid_email")
@@ -88,6 +87,7 @@ def request_otp(
     ).first()
 
     if existing_otp and existing_otp.is_valid:
+        otp_obj = existing_otp
         otp_code = existing_otp.secret
         logger.info(f"Reusing active OTP for {cleaned_email}")
         # Latest explicit consent choice wins; a consent-less resend keeps it.
@@ -104,7 +104,7 @@ def request_otp(
             is_used=True
         )
         otp_code = OTPSecret.generate_otp()
-        OTPSecret.objects.create(
+        otp_obj = OTPSecret.objects.create(
             email=cleaned_email,
             secret=otp_code,
             marketing_consent=consent.marketing_consent if consent else None,
@@ -113,54 +113,12 @@ def request_otp(
         )
         logger.info(f"Generated new OTP for {cleaned_email}")
 
-    # Send email using AccountNotifications
-    try:
-        should_send_email = not user.is_test_account
-        if user.is_test_account:
-            logger.info(f"[TEST ACCOUNT] Skipping OTP email for {cleaned_email}")
+    # Delivery runs after commit, off the request path.
+    dispatch_otp_delivery(user.pk, otp_code, created, source_url)
+    OTPRequestThrottle.record_sent(cleaned_email)
 
-        AccountNotifications.send_otp_notification(
-            user=user,
-            otp_code=otp_code,
-            is_new_user=created,
-            source_url=source_url,
-            send_email=should_send_email,
-            send_telegram=False,  # sent separately below
-        )
-
-        # No welcome email here: this is OTP *request*, so the address is not
-        # proven yet and OAuth signups never reach this code at all. The welcome
-        # letter is sent from the ``user_email_verified`` receiver instead —
-        # see ``services/welcome.py``.
-
-        # Telegram operator notification for the request
-        try:
-            notification_data = {
-                "Email": cleaned_email,
-                "User Type": "New User" if created else "Existing User",
-                "OTP Code": otp_code,
-                "Source URL": source_url or "Direct",
-                "Timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
-            }
-            if user.is_test_account:
-                notification_data["Mode"] = "🧪 TEST ACCOUNT (Email skipped)"
-
-            if created:
-                DjangoTelegram.send_success("New User OTP Request", notification_data)
-            elif user.is_test_account:
-                DjangoTelegram.send_warning("Test Account OTP Request", notification_data)
-            else:
-                DjangoTelegram.send_info("OTP Login Request", notification_data)
-
-            logger.info(f"Telegram OTP notification sent for {cleaned_email}")
-        except ImportError:
-            logger.warning("django_cfg DjangoTelegram not available for OTP notifications")
-        except Exception as telegram_error:
-            logger.error(f"Failed to send Telegram OTP notification: {telegram_error}")
-
-        OTPRequestThrottle.record_sent(cleaned_email)
-        return OTPRequestResult(success=True)
-
-    except Exception as e:
-        logger.error(f"Failed to send OTP email: {e}")
-        return OTPRequestResult(success=False, error_code="email_send_failed")
+    return OTPRequestResult(
+        success=True,
+        resend_in=OTPRequestThrottle.cooldown_seconds(),
+        expires_in=max(0, int((otp_obj.expires_at - timezone.now()).total_seconds())),
+    )

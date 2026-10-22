@@ -43,6 +43,7 @@ import httpx
 
 from ..._integration import BaseCfgModule, get_api_keys
 from ...providers import PROVIDER_BASE_URLS
+from ...providers.vault_proxy import vault_httpx_kwargs
 from .errors import ImageEditError, NoImageReturnedError
 from .composite_models import CompositeImageEditRequest
 from .models import (
@@ -322,8 +323,9 @@ class ImageEditClient(BaseCfgModule):
             "HTTP-Referer": self.app_url,
             "X-Title": self.app_title,
         }
+        vault = {} if self.transport is not None else vault_httpx_kwargs("openrouter")
         with httpx.Client(
-            timeout=self.timeout, transport=self.transport,
+            timeout=self.timeout, transport=self.transport, **vault,
         ) as client:
             r = client.post(url, headers=headers, json=payload)
             try:

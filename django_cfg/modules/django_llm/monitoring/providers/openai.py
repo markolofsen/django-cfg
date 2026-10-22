@@ -11,6 +11,7 @@ the API key by making a test request (list models) and detects:
 from openai import OpenAI, AuthenticationError, RateLimitError, APIError
 
 from ..._integration import get_current_config
+from ...providers.vault_proxy import vault_http_client
 
 from .base import BaseLLMProvider
 from ..schemas import BalanceResponse
@@ -75,7 +76,7 @@ class OpenAIProvider(BaseLLMProvider):
 
         try:
             # Initialize OpenAI client
-            client = OpenAI(api_key=api_key)
+            client = OpenAI(api_key=api_key, http_client=vault_http_client("openai"))
 
             # Make test request - list models (lightweight operation)
             models = client.models.list()

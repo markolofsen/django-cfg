@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from ..._integration import BaseCfgModule, get_api_keys
 from ...providers import PROVIDER_BASE_URLS
+from ...providers.vault_proxy import vault_http_client
 from .image_encoder import ImageEncoder
 from .image_fetcher import ImageFetcher, ImageFetchError
 from .image_resizer import DetailMode
@@ -112,10 +113,12 @@ class VisionClient(BaseCfgModule):
         self._client = OpenAI(
             base_url=PROVIDER_BASE_URLS["openrouter"],
             api_key=self.api_key,
+            http_client=vault_http_client("openrouter"),
         )
         self._async_client = AsyncOpenAI(
             base_url=PROVIDER_BASE_URLS["openrouter"],
             api_key=self.api_key,
+            http_client=vault_http_client("openrouter", asynchronous=True),
         )
         logger.info("VisionClient initialized with OpenRouter")
 

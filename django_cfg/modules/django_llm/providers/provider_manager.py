@@ -11,6 +11,7 @@ from typing import Any, Dict, Literal, Optional, Union
 from openai import OpenAI
 
 from .config_builder import PROVIDER_BASE_URLS, ConfigBuilder
+from .vault_proxy import vault_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -79,10 +80,15 @@ class ProviderManager:
         if self.apikey_openrouter:
             try:
                 headers = ConfigBuilder.get_openrouter_headers(self.config)
+                extra = {}
+                http_client = vault_http_client("openrouter")
+                if http_client is not None:
+                    extra["http_client"] = http_client
                 self.clients["openrouter"] = OpenAI(
                     base_url=PROVIDER_BASE_URLS["openrouter"],
                     api_key=self.apikey_openrouter,
-                    default_headers=headers
+                    default_headers=headers,
+                    **extra,
                 )
                 logger.info("OpenRouter client initialized")
             except Exception as e:
@@ -92,7 +98,11 @@ class ProviderManager:
         """Initialize OpenAI client if API key is available."""
         if self.apikey_openai:
             try:
-                self.clients["openai"] = OpenAI(api_key=self.apikey_openai)
+                extra = {}
+                http_client = vault_http_client("openai")
+                if http_client is not None:
+                    extra["http_client"] = http_client
+                self.clients["openai"] = OpenAI(api_key=self.apikey_openai, **extra)
                 logger.info("OpenAI client initialized")
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
@@ -115,9 +125,14 @@ class ProviderManager:
         if not self.apikey_sdkrouter:
             return
         try:
+            extra = {}
+            http_client = vault_http_client("sdkrouter")
+            if http_client is not None:
+                extra["http_client"] = http_client
             self.clients["sdkrouter"] = OpenAI(
                 base_url=PROVIDER_BASE_URLS["sdkrouter"],
                 api_key=self.apikey_sdkrouter,
+                **extra,
             )
             logger.info("sdkrouter edge client initialized")
         except Exception as e:

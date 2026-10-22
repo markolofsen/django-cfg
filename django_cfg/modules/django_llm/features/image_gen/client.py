@@ -12,6 +12,7 @@ from openai import OpenAI
 
 from ..._integration import BaseCfgModule, get_api_keys
 from ...providers import PROVIDER_BASE_URLS
+from ...providers.vault_proxy import vault_http_client, vault_httpx_kwargs
 from ..image_edit.response_parser import extract_text
 from .errors import ImageGenerationError, NoImageGeneratedError
 from .models import (
@@ -106,8 +107,9 @@ class ImageGenClient(BaseCfgModule):
             "HTTP-Referer": self.app_url,
             "X-Title": self.app_title,
         }
+        vault = {} if self.transport is not None else vault_httpx_kwargs("openrouter")
         with httpx.Client(
-            timeout=self.timeout, transport=self.transport, follow_redirects=True,
+            timeout=self.timeout, transport=self.transport, follow_redirects=True, **vault,
         ) as client:
             response = client.post(f"{self.base_url}/chat/completions", headers=headers, json=body)
             try:
@@ -192,7 +194,10 @@ class ImageGenClient(BaseCfgModule):
                 model_text="\n".join(value for value in texts if value),
             )
 
-        client = OpenAI(base_url=self.base_url, api_key=self.api_key)
+        client = OpenAI(
+            base_url=self.base_url, api_key=self.api_key,
+            http_client=vault_http_client("openrouter"),
+        )
         response = client.images.generate(
             model=selected_model, prompt=prompt, n=n, size=size,
             quality=quality, style=style, response_format=response_format,

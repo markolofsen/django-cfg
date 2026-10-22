@@ -25,6 +25,8 @@ class OTPRequestResult:
 
     success: bool
     # 'ok' | 'invalid_email' | 'cooldown' | 'hourly_limit' | 'daily_limit'
-    # | 'user_creation_failed' | 'email_send_failed'
+    # | 'user_creation_failed'
     error_code: str = ""
     retry_after: int = 0  # seconds until retry is allowed (0 = no restriction)
+    resend_in: int = 0  # success: seconds until a new code may be requested
+    expires_in: int = 0  # success: seconds the code stays valid

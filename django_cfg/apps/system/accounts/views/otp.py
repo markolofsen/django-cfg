@@ -116,7 +116,11 @@ class OTPViewSet(viewsets.GenericViewSet):
             )
 
         if result.success:
-            payload = {"message": "OTP sent to your email address"}
+            payload = {
+                "message": "OTP sent to your email address",
+                "resend_in": result.resend_in,
+                "expires_in": result.expires_in,
+            }
 
             # Webmail deep-link (best-effort, never blocks login). Lets the
             # frontend show an "Open Gmail / Mail.ru / …" button that jumps
@@ -162,11 +166,6 @@ class OTPViewSet(viewsets.GenericViewSet):
                     "retry_after": result.retry_after,
                 },
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
-            )
-        elif result.error_code == "email_send_failed":
-            return Response(
-                {"error": "Failed to send verification code. Please try again.", "error_code": "send_failed"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         else:
             logger.error(f"Unknown error code: {result.error_code} for identifier: {identifier}")

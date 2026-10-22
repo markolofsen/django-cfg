@@ -53,6 +53,11 @@ class OTPRequestThrottle:
             return cls.DEFAULT_COOLDOWN_SECONDS
 
     @classmethod
+    def cooldown_seconds(cls) -> int:
+        """Per-email resend cooldown, as enforced by ``check_email``."""
+        return int(cls._get_cooldown_seconds())
+
+    @classmethod
     def _get_daily_limit(cls) -> int:
         try:
             from django.conf import settings
@@ -110,7 +115,7 @@ class OTPRequestThrottle:
 
     @classmethod
     def record_sent(cls, email: str) -> None:
-        """Record that an OTP was sent to this email. Call after successful send."""
+        """Record an OTP request for this email (cooldown + hourly/daily counters)."""
         email_hash = _hash_identifier(email)
         cooldown_secs = cls._get_cooldown_seconds()
 

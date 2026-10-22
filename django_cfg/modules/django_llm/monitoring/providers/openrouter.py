@@ -7,6 +7,7 @@ Uses OpenRouter REST API to fetch key info and usage stats.
 import httpx
 
 from ..._integration import get_current_config
+from ...providers.vault_proxy import vault_httpx_kwargs
 
 from .base import BaseLLMProvider
 from ..schemas import BalanceResponse
@@ -70,7 +71,7 @@ class OpenRouterProvider(BaseLLMProvider):
         logger.debug(f"OpenRouter API key length: {len(api_key)}")
 
         try:
-            with httpx.Client(timeout=30.0) as client:
+            with httpx.Client(timeout=30.0, **vault_httpx_kwargs("openrouter")) as client:
                 response = client.get(
                     self.API_URL,
                     headers={
