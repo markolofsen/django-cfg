@@ -40,7 +40,9 @@ class MCPAgentChatView(generics.GenericAPIView):
 
     def get_authenticate_key(self, request):
         """Extract MCP access key from request."""
-        return request.headers.get("X-MCP-Access-Key", "") or request.META.get("HTTP_X_MCP_ACCESS_KEY", "")
+        from django_cfg.modules.django_mcp.auth import presented_credential
+
+        return presented_credential(request) or ""
 
     def authenticate(self, request):
         """Check X-MCP-Access-Key header."""

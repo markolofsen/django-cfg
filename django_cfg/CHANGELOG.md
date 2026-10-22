@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **MCP: OAuth 2.1 sign-in on a profile** (`django_mcp/oauth.py`). Claude (web,
+  Desktop), ChatGPT, Claude Code, Codex, Cursor and VS Code connect by URL and
+  sign in, with no pasted key. `mcp.enable_public_profile(..., oauth_consent_url=
+  "https://my.example.com/mcp/connect", oauth_issuer="https://mcp.example.com")`
+  or `ProfileBuilder.enable_oauth()`.
+  - Stateless: client ids (RFC 7591), consent requests, codes and tokens are
+    signed with `SECRET_KEY`; nothing is stored, no migration. PKCE S256 only.
+  - Discovery at the host root: `/.well-known/oauth-protected-resource[/<path>/]`
+    and `/.well-known/oauth-authorization-server`; endpoints under the profile
+    (`<path>oauth/register|authorize|approve|token/`). A 401 on that profile
+    answers `WWW-Authenticate: Bearer resource_metadata=...`.
+  - The project's frontend identifies the user: `authorize` redirects to
+    `consent_url?request=<signed>&client=<name>`, the page signs in with
+    django-cfg auth and POSTs `{request, allow}` to `oauth/approve/` with the
+    user's JWT, then navigates to the returned `redirect_to`.
+  - Redirects only to the clients' own callbacks (claude.ai, chatgpt.com,
+    platform.openai.com, `cursor://anysphere.cursor-mcp`, vscode.dev) or
+    loopback.
+  - Every MCP endpoint now also reads the credential from `Authorization:
+    Bearer`, so a per-user key works in bearer-only clients too.
+
 ### Changed (BREAKING)
 - **MCP: authorisation is mandatory, there is no anonymous mode.** No MCP route
   answers without a credential: JSON-RPC, `GET <path>info/` and the agent chat

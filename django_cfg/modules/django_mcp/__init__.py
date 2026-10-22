@@ -14,6 +14,7 @@ from .__cfg__ import (
     CommandMCPConfig,
     MCPProfile,
     MCPExtraKey,
+    MCPOAuthConfig,
     MCPTargetConfig,
     RedactionConfig,
 )
@@ -60,6 +61,7 @@ __all__ = [
     "CommandMCPConfig",
     "MCPProfile",
     "MCPExtraKey",
+    "MCPOAuthConfig",
     "MCPTargetConfig",
     "RedactionConfig",
     "MCPConfigBuilder",

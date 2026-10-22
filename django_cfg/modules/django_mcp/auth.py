@@ -5,9 +5,14 @@ presents a credential accepted by the profile it arrived on or it is refused.
 One function decides, so the endpoints cannot drift apart.
 
 A credential is any of: the profile's ``access_key``, one of its ``extra_keys``,
-or a key accepted by its ``key_validator`` (a dotted path to
+a key accepted by its ``key_validator`` (a dotted path to
 ``callable(key: str) -> user | True | None``, for per-user API keys that live in
-the project's database).
+the project's database), or, on a profile with ``oauth``, an access token issued
+by :mod:`django_cfg.modules.django_mcp.oauth`.
+
+It arrives in ``X-MCP-Access-Key`` or as ``Authorization: Bearer``; the second
+is what every OAuth client sends, and lets a key work in clients that take only
+a bearer (``codex --bearer-token-env-var``).
 """
 
 import logging
@@ -17,6 +22,26 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 HEADER = "X-MCP-Access-Key"
+
+
+def presented_credential(request) -> Optional[str]:
+    """The credential on ``request``: the MCP header, else a bearer token."""
+    key = request.headers.get(HEADER)
+    if key:
+        return key
+    scheme, _, token = (request.headers.get("Authorization") or "").partition(" ")
+    if scheme.lower() == "bearer" and token.strip():
+        return token.strip()
+    return None
+
+
+def challenge(request, credentials: Any) -> str:
+    """``WWW-Authenticate`` for a 401: OAuth discovery where the profile has it."""
+    if getattr(credentials, "oauth", None):
+        from .oauth import www_authenticate
+
+        return www_authenticate(request, credentials)
+    return 'MCPAccessKey realm="mcp", header="X-MCP-Access-Key"'
 
 
 def authenticate(presented: Optional[str], credentials: Any) -> Any:
@@ -46,6 +71,13 @@ def authenticate(presented: Optional[str], credentials: Any) -> Any:
             if label:
                 logger.info("MCP request authenticated by key %r", label)
             return _service_account(username)
+
+        if getattr(credentials, "oauth", None):
+            from .oauth import user_for_access_token
+
+            user = user_for_access_token(presented, credentials)
+            if user is not None:
+                return user
 
         validator = getattr(credentials, "key_validator", None)
         if validator:

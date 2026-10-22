@@ -18,6 +18,7 @@ from django_cfg.modules.django_mcp import (
     ModelMCPConfig,
     CommandMCPConfig,
     MCPExtraKey,
+    MCPOAuthConfig,
     MCPProfile,
     MCPTargetConfig,
 )
@@ -53,6 +54,16 @@ class ProfileBuilder:
         self._exposures: Dict[str, ModelExposure] = {}
         self._introspection: Optional[IntrospectionConfig] = None
         self._rate_limit: str = "100/minute"
+        self._oauth: Optional[MCPOAuthConfig] = None
+
+    def enable_oauth(self, consent_url: str, issuer: Optional[str] = None, **ttl: int) -> "ProfileBuilder":
+        """Let clients sign in (OAuth 2.1, PKCE) instead of sending a key.
+
+        ``consent_url`` is the project's page that signs the user in and
+        approves the client; see :mod:`django_cfg.modules.django_mcp.oauth`.
+        """
+        self._oauth = MCPOAuthConfig(consent_url=consent_url, issuer=issuer, **ttl)
+        return self
 
     def set_access_key(
         self, key: str, service_username: Optional[str] = None
@@ -150,6 +161,7 @@ class ProfileBuilder:
             introspection=self._introspection,
             rate_limit=self._rate_limit,
             key_validator=self._key_validator,
+            oauth=self._oauth,
         )
 
     def __enter__(self) -> "ProfileBuilder":
@@ -229,6 +241,8 @@ class MCPConfigBuilder:
         *,
         key_validator: Optional[str] = None,
         public_keys: Optional[Dict[str, str]] = None,
+        oauth_consent_url: Optional[str] = None,
+        oauth_issuer: Optional[str] = None,
     ) -> "MCPConfigBuilder":
         """Serve a read-only, public-tools surface beside the operator one.
 
@@ -242,6 +256,11 @@ class MCPConfigBuilder:
         - ``key_validator``: dotted path to ``callable(key) -> user | True |
           None``, for per-user API keys kept in the project's database;
         - ``public_keys``: ``{label: key}`` static keys, one per holder.
+
+        ``oauth_consent_url`` also lets clients sign in instead (OAuth 2.1; the
+        page signs the user in and approves the client). It needs a
+        ``key_validator``-style user model either way: the token acts as the
+        user who approved it.
 
         The flat settings become the ``operator`` profile automatically; that
         is why this does not trip the "profiles must not be mixed with flat
@@ -262,6 +281,8 @@ class MCPConfigBuilder:
             "expose": expose or {},
             "key_validator": key_validator,
             "public_keys": public_keys or {},
+            "oauth_consent_url": oauth_consent_url,
+            "oauth_issuer": oauth_issuer,
         }
         return self
 
@@ -551,6 +572,8 @@ class MCPConfigBuilder:
                     pub.set_key_validator(spec["key_validator"])
                 for label, key in spec["public_keys"].items():
                     pub.add_access_key(label, key)
+                if spec["oauth_consent_url"]:
+                    pub.enable_oauth(spec["oauth_consent_url"], issuer=spec["oauth_issuer"])
                 pub.tools(PUBLIC_TOOLS)
                 pub.set_rate_limit(spec["rate_limit"])
                 for model_key, kwargs in spec["expose"].items():

@@ -12,7 +12,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
-from django_cfg.modules.django_mcp.auth import HEADER, authenticate
+from django_cfg.modules.django_mcp.auth import authenticate, challenge, presented_credential
 from django_cfg.modules.django_mcp.handlers.tools import tool_registry
 from django_cfg.modules.django_mcp.throttling import MCPRateThrottle
 
@@ -70,7 +70,7 @@ class MCPInfoView(APIView):
             credentials = self._get_profile(mcp_config) or mcp_config
         except Exception:
             return False
-        return authenticate(request.headers.get(HEADER), credentials) is not None
+        return authenticate(presented_credential(request), credentials) is not None
 
     def get(self, request):
         from django_cfg.core.state import get_current_config
@@ -91,9 +91,12 @@ class MCPInfoView(APIView):
             # NOT `Bearer`: MCP clients read that as OAuth 2.0 and go fetch
             # `/.well-known/oauth-protected-resource`, which this server does
             # not implement.
-            response["WWW-Authenticate"] = (
-                'MCPAccessKey realm="mcp", header="X-MCP-Access-Key"'
-            )
+            try:
+                response["WWW-Authenticate"] = challenge(
+                    request, self._get_profile(mcp_config) or mcp_config
+                )
+            except Exception:
+                response["WWW-Authenticate"] = 'MCPAccessKey realm="mcp", header="X-MCP-Access-Key"'
             return response
 
         server_info = {

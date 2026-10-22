@@ -250,6 +250,31 @@ class MCPExtraKey(BaseModel):
     )
 
 
+class MCPOAuthConfig(BaseModel):
+    """OAuth 2.1 for a profile: what lets Claude, ChatGPT, Claude Code, Codex,
+    Cursor and VS Code connect with a sign-in instead of a pasted key.
+
+    Stateless: client ids, codes and tokens are signed with ``SECRET_KEY``, so
+    nothing is stored. The user is identified by the project's own frontend:
+    ``authorize`` hands a signed request to ``consent_url``, the page signs the
+    visitor in its usual way and posts it back to ``oauth/approve/`` with the
+    user's API credentials. See ``django_mcp/oauth.py``.
+    """
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    consent_url: str = Field(
+        pattern=r"^https?://\S+$",
+        description="Frontend page that asks the signed-in user to allow the client.",
+    )
+    issuer: Optional[str] = Field(
+        default=None,
+        pattern=r"^https?://[^/\s]+$",
+        description="Public origin of the MCP host, e.g. 'https://mcp.example.com'. Default: the request's origin.",
+    )
+    access_ttl: int = Field(default=60 * 60 * 24 * 30, ge=60, description="Access token lifetime, seconds.")
+    refresh_ttl: int = Field(default=60 * 60 * 24 * 180, ge=60, description="Refresh token lifetime, seconds.")
+
+
 class MCPProfile(BaseModel):
     """One MCP surface: who may use it, what it serves, where it is mounted.
 
@@ -315,6 +340,10 @@ class MCPProfile(BaseModel):
     rate_limit: str = Field(
         default="100/minute",
         description="Rate limit for this profile's endpoints.",
+    )
+    oauth: Optional[MCPOAuthConfig] = Field(
+        default=None,
+        description="OAuth sign-in for this profile; None keeps it key-only.",
     )
 
     @property

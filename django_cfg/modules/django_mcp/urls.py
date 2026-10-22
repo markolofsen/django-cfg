@@ -76,7 +76,29 @@ def _patterns_for(config) -> list:
                 name=f"mcp-{name}-info",
             )
         )
+        if getattr(profile, "oauth", None):
+            patterns += _oauth_patterns(name, prefix)
     return patterns
+
+
+def _oauth_patterns(name: str, prefix: str) -> list:
+    """OAuth endpoints under the profile, discovery at the host root."""
+    from . import oauth
+
+    return [
+        path(f"{prefix}/oauth/register/", oauth.RegisterView.as_view(profile=name), name=f"mcp-{name}-oauth-register"),
+        path(f"{prefix}/oauth/authorize/", oauth.AuthorizeView.as_view(profile=name), name=f"mcp-{name}-oauth-authorize"),
+        path(f"{prefix}/oauth/approve/", oauth.ApproveView.as_view(profile=name), name=f"mcp-{name}-oauth-approve"),
+        path(f"{prefix}/oauth/token/", oauth.TokenView.as_view(profile=name), name=f"mcp-{name}-oauth-token"),
+        # RFC 9728 path-suffixed form first, then the bare ones clients also try.
+        path(f".well-known/oauth-protected-resource/{prefix}/", oauth.ProtectedResourceView.as_view(profile=name)),
+        path(f".well-known/oauth-protected-resource/{prefix}", oauth.ProtectedResourceView.as_view(profile=name)),
+        path(".well-known/oauth-protected-resource", oauth.ProtectedResourceView.as_view(profile=name)),
+        path(f".well-known/oauth-authorization-server/{prefix}/", oauth.AuthorizationServerView.as_view(profile=name)),
+        path(f".well-known/oauth-authorization-server/{prefix}", oauth.AuthorizationServerView.as_view(profile=name)),
+        path(".well-known/oauth-authorization-server", oauth.AuthorizationServerView.as_view(profile=name)),
+        path(".well-known/openid-configuration", oauth.AuthorizationServerView.as_view(profile=name)),
+    ]
 
 
 class _LazyProfileURLConf:

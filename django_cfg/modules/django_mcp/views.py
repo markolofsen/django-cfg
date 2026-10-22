@@ -10,7 +10,7 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.exceptions import Throttled
 from rest_framework.views import APIView
 
-from django_cfg.modules.django_mcp.auth import HEADER, authenticate
+from django_cfg.modules.django_mcp.auth import authenticate, challenge, presented_credential
 from django_cfg.modules.django_mcp.throttling import MCPRateThrottle
 
 from django_cfg.modules.django_mcp.exceptions import (
@@ -102,12 +102,19 @@ class MCPView(APIView):
         # anonymous surface, so no credential (or a wrong one) is always a 401.
         user = self._authenticate(request)
         if user is None:
-            return self._create_error_response(
+            response = self._create_error_response(
                 error_code=INVALID_REQUEST,
-                error_message="Unauthorized: a valid X-MCP-Access-Key header is required.",
+                error_message="Unauthorized: sign in (OAuth) or send a valid X-MCP-Access-Key header.",
                 request_id=rpc_request.id,
                 status=401,
             )
+            try:
+                response["WWW-Authenticate"] = challenge(
+                    request, self._get_profile() or self._get_mcp_config()
+                )
+            except Exception:
+                pass
+            return response
 
         # Step 3: Track the session, but do NOT gate on it.
         #
@@ -209,7 +216,7 @@ class MCPView(APIView):
             credentials = self._get_profile() or self._get_mcp_config()
         except Exception:
             return None
-        return authenticate(request.headers.get(HEADER), credentials)
+        return authenticate(presented_credential(request), credentials)
 
     def _get_session_key(self, request, user) -> str:
         """Generate session key for initialization tracking."""
