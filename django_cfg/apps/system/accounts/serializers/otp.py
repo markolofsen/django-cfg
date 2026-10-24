@@ -65,12 +65,6 @@ class OTPVerifySerializer(serializers.Serializer):
         allow_blank=True,
         help_text="Source URL for tracking login (e.g., https://my.djangocfg.com)",
     )
-    remember_me = serializers.BooleanField(
-        required=False,
-        default=False,
-        help_text="Keep this browser signed in for 30 days",
-    )
-
     def validate_identifier(self, value):
         """Validate and normalize email address."""
         try:
@@ -133,10 +127,6 @@ class OTPVerifyResponseSerializer(serializers.Serializer):
     should_prompt_2fa = serializers.BooleanField(
         required=False,
         help_text="Whether user should be prompted to enable 2FA"
-    )
-    persistent_session = serializers.BooleanField(
-        required=False,
-        help_text="Whether this login should persist across browser restarts",
     )
 
 

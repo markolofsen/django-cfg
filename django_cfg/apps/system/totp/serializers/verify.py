@@ -62,9 +62,6 @@ class VerifyResponseSerializer(serializers.Serializer):
     user = TotpVerifyUserSerializer(
         help_text="User profile data"
     )
-    persistent_session = serializers.BooleanField(
-        help_text="Whether this login should persist across browser restarts",
-    )
     remaining_backup_codes = serializers.IntegerField(
         required=False,
         help_text="Number of remaining backup codes (if backup code was used)",

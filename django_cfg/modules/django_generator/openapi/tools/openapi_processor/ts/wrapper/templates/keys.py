@@ -59,7 +59,6 @@ export const CFG_KEYS = {
   redirectUrlTs: k('cfg.auth.redirect_url_ts', 'session', true),
   oauthState: k('cfg.auth.oauth_state', 'session', true),
   oauthProvider: k('cfg.auth.oauth_provider', 'session', true),
-  oauthRememberMe: k('cfg.auth.oauth_remember_me', 'session', true),
   profileCache: k('cfg.profile.cache', 'local', true),
   monitorSessionId: k('cfg.monitor.session_id', 'local', false),
   monitorSessionCookie: k('cfg.monitor.session_id', 'cookie', false),

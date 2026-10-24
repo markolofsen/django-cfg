@@ -57,12 +57,6 @@ class OAuthCallbackRequestSerializer(serializers.Serializer):
         allow_blank=True,
         help_text="Same redirect_uri used in authorize request. If not provided, uses config's site_url + callback_path"
     )
-    remember_me = serializers.BooleanField(
-        required=False,
-        default=False,
-        help_text="Keep this browser signed in for 30 days",
-    )
-
 
 class OAuthTokenResponseSerializer(serializers.Serializer):
     """
@@ -123,10 +117,6 @@ class OAuthTokenResponseSerializer(serializers.Serializer):
     should_prompt_2fa = serializers.BooleanField(
         required=False,
         help_text="True if user should be prompted to enable 2FA"
-    )
-    persistent_session = serializers.BooleanField(
-        required=False,
-        help_text="Whether this login should persist across browser restarts",
     )
 
 

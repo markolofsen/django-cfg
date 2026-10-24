@@ -52,20 +52,6 @@ class CustomTokenRefreshView(TokenRefreshView):
             if response.status_code == 200 and isinstance(response.data, dict):
                 incoming = request.data.get("refresh")
                 incoming_token = RefreshToken(incoming) if incoming else None
-                session_expires_at = incoming_token.get("cfg_session_expires_at") if incoming_token else None
-                if session_expires_at:
-                    # SimpleJWT creates every rotated refresh with its global
-                    # lifetime. Re-apply the original remembered-session
-                    # deadline so refresh activity cannot extend 30 days.
-                    access = AccessToken(response.data["access"])
-                    access["exp"] = min(int(access["exp"]), int(session_expires_at))
-                    response.data["access"] = str(access)
-                    if response.data.get("refresh"):
-                        refresh = RefreshToken(response.data["refresh"])
-                        refresh["exp"] = int(session_expires_at)
-                        refresh["cfg_session_expires_at"] = int(session_expires_at)
-                        response.data["refresh"] = str(refresh)
-
                 if is_dpop_enabled() and incoming_token:
                     cnf = incoming_token.get("cnf")
                     if cnf:
@@ -98,7 +84,7 @@ class CustomTokenBlacklistView(TokenBlacklistView):
 
 token_patterns = [
     # Password grant. Mints through the same helper as OTP/OAuth/TOTP, so the
-    # pair carries the same DPoP `cnf` binding and remembered-session deadline.
+    # pair carries the same DPoP `cnf` binding.
     path('', PasswordLoginView.as_view(), name='token_obtain_pair'),
     path('refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('blacklist/', CustomTokenBlacklistView.as_view(), name='token_blacklist'),

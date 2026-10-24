@@ -127,8 +127,8 @@ first `setSession`. Public clients support only `'localStorage' | 'cookie'`.
 
 <Callout type="info">
 Storage mode is *where* the token lives, not *how long the session lasts*.
-Session length is a server decision — see
-[Persistent Session (`remember_me`)](/features/built-in-apps/user-management/accounts/otp#persistent-session-remember_me).
+Session length is the server's refresh-token lifetime — see
+[Session Length](/features/built-in-apps/user-management/accounts/otp#session-length).
 There is no `persist`/`remember` parameter on the client store.
 </Callout>
 

@@ -9,8 +9,8 @@ It deliberately reuses the OTP path's machinery rather than SimpleJWT's
 ``TokenObtainPairView``:
 
 * tokens come from ``mint_tokens_for_request`` — the ONE mint helper — so the
-  pair carries the same ``cnf.jkt`` DPoP binding and the same remembered-session
-  deadline as OTP/OAuth/TOTP. Stock ``TokenObtainPairSerializer.get_token``
+  pair carries the same ``cnf.jkt`` DPoP binding and the same
+  token lifetime as OTP/OAuth/TOTP. Stock ``TokenObtainPairSerializer.get_token``
   calls ``RefreshToken.for_user`` directly and would silently issue unbound
   tokens.
 * the 2FA branch is identical, so enabling TOTP does not leave a password
@@ -120,15 +120,12 @@ class PasswordLoginView(TokenObtainPairView):
             )
 
         user = serializer.user
-        remember_me: bool = serializer.validated_data.get("remember_me", False) or bool(
-            request.data.get("remember_me")
-        )
 
         PasswordLoginThrottle.record_success(user.email)
 
         # 2FA gate — identical to the OTP path, so a password cannot bypass it.
         if BaseCfgModule().is_totp_enabled() and TOTPService.has_active_device(user):
-            session = TwoFactorSessionService.create_session(user, request, remember_me=remember_me)
+            session = TwoFactorSessionService.create_session(user, request)
             logger.info("2FA required for password login %s, session %s", user.email, session.id)
             return Response(
                 {
@@ -138,19 +135,14 @@ class PasswordLoginView(TokenObtainPairView):
                     "access": None,
                     "user": None,
                     "should_prompt_2fa": False,
-                    "persistent_session": remember_me,
                 },
                 status=status.HTTP_200_OK,
             )
 
         # Mint via the shared helper — DPoP-bound when a login proof is present.
-        from django_cfg.middleware.dpop import REMEMBER_ME_LIFETIME, mint_tokens_for_request
+        from django_cfg.middleware.dpop import mint_tokens_for_request
 
-        refresh, access = mint_tokens_for_request(
-            user,
-            request,
-            refresh_lifetime=REMEMBER_ME_LIFETIME if remember_me else None,
-        )
+        refresh, access = mint_tokens_for_request(user, request)
 
         from ..signals import user_authenticated
 
@@ -164,7 +156,6 @@ class PasswordLoginView(TokenObtainPairView):
                 "access": str(access),
                 "user": UserSerializer(user, context={"request": request}).data,
                 "should_prompt_2fa": user.should_prompt_2fa,
-                "persistent_session": remember_me,
             },
             status=status.HTTP_200_OK,
         )

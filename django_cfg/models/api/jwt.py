@@ -43,13 +43,14 @@ class JWTConfig(BaseModel):
     )
 
     refresh_token_lifetime_days: Optional[int] = Field(
-        default=90,
+        default=365,
         ge=1,
         le=365,  # 1 year max
         description=(
-            "Refresh token lifetime in days (default 90; None = maximum 365). "
-            "Long-lived so users 'log in once' and aren't logged out; rotation + "
-            "blacklist (below) revoke a reused/stolen refresh token."
+            "Refresh token lifetime in days (default and maximum 365; None = 365). "
+            "Long-lived so users 'log in once' and aren't logged out — there is no "
+            "remember-me option; rotation extends it on every use and the blacklist "
+            "(below) revokes a reused/stolen refresh token."
         )
     )
 

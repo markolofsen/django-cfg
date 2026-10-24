@@ -31,7 +31,7 @@ sequenceDiagram
     V-->>C: 200 {message, resend_in, expires_in, webmail?}
     S-->>E: deliver email after commit (background)
 
-    C->>V: POST /otp/verify/ {identifier, otp, remember_me?}
+    C->>V: POST /otp/verify/ {identifier, otp}
     V->>V: is_ratelimited(IP, 20/min)?
     V->>S: verify_otp(email, code)
     S->>S: OTPVerifyThrottle.is_locked(email)?
@@ -43,7 +43,7 @@ sequenceDiagram
         S->>DB: mark OTP as used
         S->>S: fire user_email_verified(user, consent)
         S->>S: record_success → clear lockout
-        V-->>C: 200 {access, refresh, user, requires_2fa, persistent_session}
+        V-->>C: 200 {access, refresh, user, requires_2fa}
     end
 ```
 
@@ -58,40 +58,11 @@ sequenceDiagram
 
 ---
 
-## Persistent Session (`remember_me`)
+## Session Length
 
-`POST /cfg/accounts/otp/verify/` accepts an optional `remember_me` boolean
-(default `false`). When `true`, the issued refresh token gets a **30-day**
-lifetime (`REMEMBER_ME_LIFETIME`) plus an absolute `cfg_session_expires_at`
-deadline; without it the refresh token uses the server's default SimpleJWT
-lifetime.
-
-The deadline is a hard ceiling: `CustomTokenRefreshView` re-reads
-`cfg_session_expires_at` on every rotation and re-clamps the new tokens to it, so
-continued refresh activity cannot extend the 30-day window.
-
-Both branches of the verify response now report the outcome:
-
-```jsonc
-// POST /cfg/accounts/otp/verify/  { "identifier": "...", "otp": "...", "remember_me": true }
-{
-  "access": "...",
-  "refresh": "...",
-  "user": { /* ... */ },
-  "requires_2fa": false,
-  "persistent_session": true   // mirrors the effective remember_me
-}
-```
-
-When `requires_2fa` is `true`, no tokens are minted yet; the `remember_me` choice
-is carried on the 2FA session and applied after the second factor — see
-[Two-Factor Authentication](./two-factor#persistent-session).
-
-<Callout type="info">
-Session **length** is a server decision (`remember_me` → refresh-token lifetime).
-It is not the same as *where* the generated client stores the token — see
-[Storage modes](/features/api-generation/generated-clients#storage-modes).
-</Callout>
+Session **length** is a server decision: the refresh-token lifetime. There is no
+remember-me option. It is not the same as *where* the generated client stores the
+token — see [Storage modes](/features/api-generation/generated-clients#storage-modes).
 
 ---
 

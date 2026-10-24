@@ -28,17 +28,11 @@ class PasswordLoginSerializer(TokenObtainPairSerializer):
 
     Subclasses SimpleJWT so the field/validation contract stays theirs, but
     replaces ``validate()`` — the token pair itself is minted by the view via
-    ``mint_tokens_for_request`` so the DPoP binding and remembered-session
+    ``mint_tokens_for_request`` so the DPoP binding and token
     lifetime match OTP, OAuth and TOTP exactly.
     """
 
     username_field = CustomUser.USERNAME_FIELD  # "email"
-
-    remember_me = serializers.BooleanField(
-        required=False,
-        default=False,
-        help_text="Keep this browser signed in for 30 days",
-    )
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -110,10 +104,6 @@ class PasswordLoginResponseSerializer(serializers.Serializer):
     should_prompt_2fa = serializers.BooleanField(
         required=False,
         help_text="Whether user should be prompted to enable 2FA",
-    )
-    persistent_session = serializers.BooleanField(
-        required=False,
-        help_text="Whether this login should persist across browser restarts",
     )
 
 

@@ -309,7 +309,7 @@ function backendFor(mode: StorageMode): KVStore {{
  * to the client, and every request would go out unauthenticated.
  *
  * Session LENGTH is therefore not a client concern. The server decides it when
- * minting the refresh token (`remember_me`); the client just stores whatever it
+ * minting the refresh token; the client just stores whatever it
  * was given, in one place.
  */
 let _storageMode: StorageMode = 'localStorage';

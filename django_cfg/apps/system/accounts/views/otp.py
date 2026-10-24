@@ -228,7 +228,6 @@ class OTPViewSet(viewsets.GenericViewSet):
         identifier: str = serializer.validated_data["identifier"]  # type: ignore[index]
         otp: str = serializer.validated_data["otp"]  # type: ignore[index]
         source_url: str | None = serializer.validated_data.get("source_url")  # type: ignore[union-attr]
-        remember_me: bool = serializer.validated_data["remember_me"]  # type: ignore[index]
 
         ip_address = request.META.get('REMOTE_ADDR', 'Unknown')
         user = OTPService.verify_otp(
@@ -249,7 +248,7 @@ class OTPViewSet(viewsets.GenericViewSet):
 
             if is_2fa_enabled and has_device:
                 # Create 2FA session
-                session = TwoFactorSessionService.create_session(user, request, remember_me=remember_me)
+                session = TwoFactorSessionService.create_session(user, request)
                 logger.info(f"2FA required for user {user.email}, session {session.id}")
 
                 return Response(
@@ -260,18 +259,13 @@ class OTPViewSet(viewsets.GenericViewSet):
                         "access": None,
                         "user": None,
                         "should_prompt_2fa": False,
-                        "persistent_session": remember_me,
                     },
                     status=status.HTTP_200_OK,
                 )
 
             # No 2FA — mint tokens (DPoP-bound when a login proof is present).
-            from django_cfg.middleware.dpop import REMEMBER_ME_LIFETIME, mint_tokens_for_request
-            refresh, access = mint_tokens_for_request(
-                user,
-                request,
-                refresh_lifetime=REMEMBER_ME_LIFETIME if remember_me else None,
-            )
+            from django_cfg.middleware.dpop import mint_tokens_for_request
+            refresh, access = mint_tokens_for_request(user, request)
 
             # Fire auth signal (login alert, activity logging, etc.)
             from ..signals import user_authenticated
@@ -285,7 +279,6 @@ class OTPViewSet(viewsets.GenericViewSet):
                     "access": str(access),
                     "user": UserSerializer(user, context={'request': request}).data,
                     "should_prompt_2fa": user.should_prompt_2fa,
-                    "persistent_session": remember_me,
                 },
                 status=status.HTTP_200_OK,
             )
