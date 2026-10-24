@@ -1,16 +1,13 @@
-"""
-URLs for Crypto app.
-"""
+"""URL configuration for Crypto app."""
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import CoinViewSet, ExchangeViewSet, WalletViewSet
+
+from apps.crypto.api import CoinListingViewSet
 
 router = DefaultRouter()
-router.register(r'coins', CoinViewSet, basename='coin')
-router.register(r'exchanges', ExchangeViewSet, basename='exchange')
-router.register(r'wallets', WalletViewSet, basename='wallet')
+router.register(r"coins", CoinListingViewSet, basename="Coins")
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path("", include(router.urls)),
 ]

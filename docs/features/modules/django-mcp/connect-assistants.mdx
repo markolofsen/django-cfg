@@ -1,0 +1,95 @@
+---
+title: Connect assistants
+description: Let Claude, ChatGPT, Claude Code, Codex, Cursor and VS Code connect to your MCP server with a sign-in instead of a pasted key.
+---
+
+Let people connect Claude, ChatGPT, Claude Code, Codex, Cursor and VS Code to your MCP server by URL and a sign-in, with no key to paste.
+
+## 1. Backend: one line
+
+```python
+mcp.enable_public_profile(
+    key_validator="api.mcp_keys.validate",          # or public_keys={...}; scripts keep working
+    oauth_consent_url="https://my.example.com/mcp/connect",   # your frontend page
+    oauth_issuer="https://mcp.example.com",         # public origin of the MCP host
+)
+```
+
+On a hand-written profile use `ProfileBuilder.enable_oauth(consent_url, issuer=None, access_ttl=..., refresh_ttl=...)`. `issuer` defaults to the request origin; set it when a proxy hides the public host. Defaults: access token 30 days, refresh token 180 days.
+
+It is **stateless**: client ids, consent requests, codes and tokens are signed with `SECRET_KEY`. No tables, no migration. Rotating `SECRET_KEY` signs everyone out.
+
+What the server then serves:
+
+| Route | Purpose |
+|---|---|
+| `/.well-known/oauth-protected-resource[/<path>/]` | Which authorization server protects the resource |
+| `/.well-known/oauth-authorization-server` | Endpoints, PKCE `S256` only |
+| `<path>oauth/register/` | Dynamic client registration (RFC 7591) |
+| `<path>oauth/authorize/` | Validates the request, redirects to your consent page |
+| `<path>oauth/approve/` | Your page posts the user's decision here |
+| `<path>oauth/token/` | Code for tokens, and refresh |
+
+Redirects are accepted only for the clients' own callbacks (claude.ai, chatgpt.com, platform.openai.com, `cursor://anysphere.cursor-mcp`, vscode.dev) and for loopback addresses (Claude Code, Codex, VS Code desktop). Anything else is refused at registration.
+
+`X-MCP-Access-Key` keeps working beside it. The `operator` profile never accepts OAuth tokens: the profile name is inside the token.
+
+## 2. Frontend: the consent page
+
+Create the route you gave as `oauth_consent_url`. The contract:
+
+1. `authorize` redirects the browser to `consent_url?request=<signed>&client=<client name>`.
+2. Signed out: send the visitor through your usual sign-in and come back to this same URL with the query intact.
+3. Signed in: show "*&lt;client&gt;* wants to use *&lt;project&gt;* as *&lt;email&gt;*" with **Allow** and **Cancel**.
+4. `POST <api><path>oauth/approve/` with the user's JWT and `{"request": "<signed>", "allow": true|false}`.
+5. The answer is `{"redirect_to": "..."}`. Do `window.location = redirect_to`. Cancel goes the same way and reaches the client as `access_denied`.
+6. A `400` means the request expired (10 minutes) or is invalid: say "start again from your assistant".
+
+Never put a key or token in a URL of your own. The page needs only the signed `request`.
+
+<Callout type="info">
+The ready-made version is `@djangocfg/widget-mcp`: `<McpConsent apiUrl="..." product="..." />` is this page, mounted at `oauth_consent_url`, and `<McpConnect>` is the install step below. Without the widget, the page above is about 60 lines in any app that uses `useAuth` from `@djangocfg/api/auth`.
+</Callout>
+
+## After Allow: what each client does
+
+Your page only navigates to `redirect_to`. The client's own screen finishes the job, so there is nothing to build for the last step.
+
+| Client | `redirect_to` points at | Then |
+|---|---|---|
+| Claude (web, Desktop) | `https://claude.ai/api/mcp/auth_callback` | Claude exchanges the code, shows the connector as connected and returns to the chat |
+| ChatGPT | `https://chatgpt.com/connector_platform_oauth_redirect` (or `/connector/oauth/<id>`) | ChatGPT completes the connector itself |
+| Claude Code | `http://localhost:<port>/callback` | Its local listener takes the code; the terminal reports the sign-in and the tab can be closed |
+| Codex | `http://127.0.0.1:<port>/callback/<id>` | Same: the local listener finishes `codex mcp login` |
+| Cursor | `cursor://anysphere.cursor-mcp/oauth/callback` | The browser hands control back to the Cursor app |
+| VS Code | `https://vscode.dev/redirect` or `http://127.0.0.1:33418` | Hands control back to VS Code |
+
+Cancel takes the same road with `error=access_denied`; the client shows its own "not connected" state.
+
+Show your own message only when the page cannot navigate: no `request` in the URL (send the visitor to where the install buttons are) or a `400` from `approve` (the request expired after 10 minutes: "start again from your assistant").
+
+The browser briefly shows the `authorize` address. It is public anyway (it is in the discovery document); set `oauth_issuer` to a dedicated MCP host such as `https://mcp.example.com` so the main API host is not the one in the address bar. No key or token is ever in a URL: only the signed `request` (10 minutes) and the `code` (2 minutes, useless without the client's PKCE verifier).
+
+## 3. Frontend: install buttons
+
+`<McpConnect server={{ url, alias, name }} loadKey={...} />` from `@djangocfg/widget-mcp` renders all of these. Claude and ChatGPT go through OAuth as below; Claude Code, Codex, Cursor and VS Code get the signed-in user's own key in the command or deeplink, which works in bearer-only clients too. A hand-built page can use either path.
+
+Each assistant gets one action, built from the endpoint URL (`E`) and a short alias (`A`):
+
+| Assistant | Action |
+|---|---|
+| Claude (web, Desktop) | Link `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=<A>&connectorUrl=<E>`; the user confirms and signs in |
+| ChatGPT | Copy `E`, open `https://chatgpt.com/`: Settings, Connectors, Create, paste URL, auth OAuth (no prefill link exists) |
+| Claude Code | Copy `claude mcp add --transport http <A> <E>`; sign in on first use with `/mcp` |
+| Codex | Copy `codex mcp add <A> --url <E> && codex mcp login <A>` |
+| Cursor | `cursor://anysphere.cursor-deeplink/mcp/install?name=<A>&config=<base64 of {"url":E}>` |
+| VS Code | `https://vscode.dev/redirect/mcp/install?name=<A>&config=<url-encoded {"type":"http","url":E}>` |
+
+## Checked against real clients
+
+A local server was driven with Claude Code 2.1 and Codex 0.146. Their registrations:
+
+- Claude Code: `redirect_uris: ["http://localhost:<port>/callback"]`.
+- Codex: `redirect_uris: ["http://127.0.0.1:<port>/callback/<id>"]`, `application_type: "native"`. It completed the whole sign-in.
+
+The authorization-server metadata does **not** advertise `authorization_response_iss_parameter_supported`. The `iss` parameter is still sent on every redirect, but Codex insists on `iss` when told it is supported and then drops it from its own callback ("response missing required issuer"). Advertising the flag would only lock it out.

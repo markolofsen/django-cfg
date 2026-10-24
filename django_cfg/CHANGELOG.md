@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **One browser-storage key scheme: `cfg.<area>.<name>`** (lower case, dots,
+  `snake_case`). The generated client gains `helpers/keys.ts`: a registry of every
+  key (`CFG_KEYS`, `CFG_FAMILIES`), guarded `read/write/remove` (SSR, private
+  mode, quota), `clearAll()` for sign-out, `onChange()` for other tabs, and
+  `createStorage('<owner>')` for apps (`storage.key('area', 'name')`).
+  `helpers/auth.ts` uses it; the DPoP IndexedDB is now `cfg.auth.dpop`.
+  Exported light from `@djangocfg/api/storage`. Rules: `@djangocfg/api/@docs/STORAGE_KEYS.md`.
+  - **Breaking, no migration:** old keys (`cfg.access_token`, `auth_email`,
+    `user_profile_cache`, `fm_session_id`, `djc.chat.*`, …) are not read. Signed-in
+    users sign in once; the DPoP key is regenerated.
+  - The Django-served admin bridge (`auth_token`, `refresh_token`), `NEXT_LOCALE`
+    and `sidebar_state` keep their names.
+
 ### Added
 - **MCP: OAuth 2.1 sign-in on a profile** (`django_mcp/oauth.py`). Claude (web,
   Desktop), ChatGPT, Claude Code, Codex, Cursor and VS Code connect by URL and
@@ -25,7 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     user's JWT, then navigates to the returned `redirect_to`.
   - Redirects only to the clients' own callbacks (claude.ai, chatgpt.com,
     platform.openai.com, `cursor://anysphere.cursor-mcp`, vscode.dev) or
-    loopback.
+    loopback. Checked against Claude Code 2.1 and Codex 0.146 on a local
+    server; a test per client's callback shape.
+  - The metadata does not advertise `authorization_response_iss_parameter_supported`
+    (`iss` is still sent): Codex requires `iss` when it is advertised, then drops
+    it from its loopback callback and fails the sign-in.
+  - Guide: `@docs/connect-assistants.md` and the docs site page "Connect
+    assistants" (backend line, consent-page contract, install-button links).
+    A ready-made consent page and install widget for the frontend packages are
+    not part of this release.
   - Every MCP endpoint now also reads the credential from `Authorization:
     Bearer`, so a per-user key works in bearer-only clients too.
 
@@ -33,8 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **MCP: authorisation is mandatory, there is no anonymous mode.** No MCP route
   answers without a credential: JSON-RPC, `GET <path>info/` and the agent chat
   all return `401` (`WWW-Authenticate: MCPAccessKey`) without a valid
-  `X-MCP-Access-Key`. The server serves no other unauthenticated MCP route (it
-  implements no OAuth, so there is no `/.well-known` discovery to keep).
+  `X-MCP-Access-Key`. The only unauthenticated MCP routes are OAuth discovery
+  and sign-in on a profile that enables OAuth (see Added).
   - Removed `access="anonymous"` (`MCPProfile`, `MCPConfigBuilder.profile`),
     `public_info` (config, profile, `set_public_info`) and
     `enable_public_profile(operator_public_info=...)`. Each raises `ValueError`

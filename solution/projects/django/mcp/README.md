@@ -2,7 +2,7 @@
 
 Exposes this Django project to AI agents over the Model Context Protocol.
 
-- **Config:** [`../api/settings/mcp_config.py`](../api/settings/mcp_config.py) —
+- **Config:** [`../api/settings/builders/mcp.py`](../api/settings/builders/mcp.py) —
   the *only* place access is declared. It moved out of `__init__.py` on
   2026-09-02; see that file's docstring for why. Tools in [`tools/`](tools/) are
   still auto-discovered at startup.
@@ -28,7 +28,7 @@ Exposes this Django project to AI agents over the Model Context Protocol.
 reads `_access_key_required()` as `bool(access_key)`: no key configured means no
 key *required*, which is right for a laptop and catastrophic in production,
 where every probe answers 200 instead of 401 and nothing looks wrong. So
-`mcp_config.py` raises in production rather than starting unauthenticated, and
+`builders/mcp.py` raises in production rather than starting unauthenticated, and
 falls back locally to `dev-only-insecure-mcp-key` — deliberately not
 secret-shaped, so nobody can paste it into a production `.env` and have it work.
 

@@ -2,7 +2,7 @@
 
 **The configuration is not here.** Models exposed, the access key, the
 introspection switch and the LLM model are declared once, in
-``api/settings/mcp_config.py``, and reach Django through the ``mcp:`` field of
+``api/settings/builders/mcp.py``, and reach Django through the ``mcp:`` field of
 ``api/settings/config.py``.
 
 It moved out of this file on 2026-09-02. While both existed, two objects

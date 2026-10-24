@@ -1,0 +1,21 @@
+{% extends 'django_tailwind/simple.html' %}
+
+{% block title %}Access Denied - Support Chat{% endblock %}
+
+{% block icon %}🚫{% endblock %}
+
+{% block heading %}Access Denied{% endblock %}
+
+{% block message %}
+You don't have permission to view this support ticket.
+<div class="text-sm text-gray-500 dark:text-gray-400 mt-4">
+    Ticket #{{ ticket.uuid|slice:":8" }}
+</div>
+{% endblock %}
+
+{% block actions %}
+<a href="javascript:history.back()"
+   class="inline-flex items-center px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+    ← Go Back
+</a>
+{% endblock %}

@@ -84,7 +84,7 @@ curl -X POST http://localhost:8000/cfg/mcp/agent/ \
 
 | Layer | Mechanism |
 |-------|-----------|
-| **Auth** | `X-MCP-Access-Key`, mandatory on every endpoint (`401` otherwise); no key configured = the config refuses to build |
+| **Auth** | `X-MCP-Access-Key` or `Authorization: Bearer`, mandatory on every endpoint (`401` otherwise); no key configured = the config refuses to build |
 | **Models** | Deny-by-default — only exposed models accessible |
 | **Fields** | Automatic PII redaction (emails, phones, keys) |
 | **Queries** | Max rows, cost estimation, read-only by default |
@@ -95,6 +95,12 @@ key as the JSON-RPC endpoint. There is no anonymous mode: `access="anonymous"`
 and `public_info` were removed and raise at build with migration advice. A
 "public" profile serves only `public = True` tools, to holders of a per-user key
 (`key_validator`) or static `public_keys`.
+
+A public profile can also let assistants (Claude, ChatGPT, Claude Code, Codex,
+Cursor, VS Code) connect by URL and a sign-in instead of a pasted key: add
+`oauth_consent_url=` and `oauth_issuer=` to `enable_public_profile()`. It is
+stateless (signed with `SECRET_KEY`, no tables). See
+[connect-assistants.md](./@docs/connect-assistants.md).
 
 > **Check a deployed server before trusting its auth.** Until 2026-08-04 the
 > access key was compared and then ignored, so tools ran for unauthenticated
@@ -153,5 +159,6 @@ Module-level detail lives in [`@docs/`](./@docs/README.md):
 | [tools.md](./@docs/tools.md) | You are writing a tool. |
 | [configuration.md](./@docs/configuration.md) | You need a config field's exact effect. |
 | [agent-chat.md](./@docs/agent-chat.md) | You are touching the admin SSE chat. |
+| [connect-assistants.md](./@docs/connect-assistants.md) | You are letting people connect Claude, ChatGPT, Codex, Cursor or VS Code with a sign-in. |
 | [redis.md](./@docs/redis.md) | Cache, budget, or chat history. |
 | [remote-consumption.md](./@docs/remote-consumption.md) | You are *calling* a remote MCP server rather than serving one. |

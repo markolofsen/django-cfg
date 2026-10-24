@@ -1,18 +1,4 @@
-"""
-Django CFG Sample Project Configuration
-
-Complete example demonstrating all django_cfg features:
-- Type-safe configuration with Pydantic v2
-- YAML-based environment configuration
-- Database, Cache, Email, Telegram
-- JWT & OAuth authentication
-- Unfold admin interface
-- Constance dynamic settings
-- DRF API & OpenAPI generation
-- Background tasks (Django-RQ)
-- Real-time (Centrifugo, gRPC)
-- Database backups
-"""
+"""Sample project configuration: one typed ``DjangoConfig`` built from ``api.environment``; declarations live in ``builders/``."""
 
 from typing import Dict, Optional
 
@@ -26,16 +12,16 @@ from django_cfg import (
     DatabaseConfig,
     ApiKeys,
     AxesConfig,
+    FileCleanupConfig,
     StorageConfig,
     CurrencyConfig,
-    FrontendMonitorConfig,
-    CloudflareConfig,
     # Services
     EmailConfig,
     TelegramConfig,
     # Auth
     JWTConfig,
     GitHubOAuthConfig,
+    TwoFactorConfig,
     # Admin
     UnfoldConfig,
     # Dashboard tabs
@@ -44,35 +30,24 @@ from django_cfg import (
     OpenAPIClientConfig,
     # Background Tasks
     DjangoRQConfig,
-    # Integrations
-    DjangoCfgCentrifugoConfig,
-    DjangoGrpcModuleConfig,
-    NgrokConfig,
     # Dynamic Settings
     ConstanceConfig,
+    # MCP (Model Context Protocol for AI agents)
+    DjangoMCPModuleConfig,
 )
 from api.environment import env
 
-from .configs.admin import build_unfold_config
-from .configs.applications import build_project_apps
-from .configs.background import build_rq_config
-from .configs.constance import build_constance_config
-from .configs.dashboard import build_dashboard_config
-from .configs.integrations import (
-    build_centrifugo_config,
-    build_cloudflare_config,
-    build_grpc_module_config,
-    build_ngrok_config,
-)
-from .configs.openapi import build_api_keys, build_openapi_client_config
+from .builders.admin import build_unfold_config
+from .builders.applications import build_project_apps
+from .builders.background import build_rq_config
+from .builders.constance import build_constance_config
+from .builders.dashboard import build_dashboard_config
+from .builders.openapi import build_api_keys, build_openapi_client_config
+from .builders.mcp import build_mcp_config
 
 
 class DjangoCfgConfig(DjangoConfig):
-    """
-    Django CFG Demo Project Configuration.
-
-    All settings are organized by logical groups matching DjangoConfig structure.
-    """
+    """Sample settings, grouped like ``DjangoConfig``."""
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                         PROJECT INFORMATION                              ║
@@ -80,8 +55,7 @@ class DjangoCfgConfig(DjangoConfig):
 
     project_name: str = env.app.name
     project_version: str = "1.0.0"
-    project_description: str = "Demo Project"
-    project_logo: str = env.app.logo_url
+    project_description: str = "Django CFG Project"
     admin_emails: list[str] = env.admin_emails
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
@@ -170,10 +144,10 @@ class DjangoCfgConfig(DjangoConfig):
     # ║                        AUTHENTICATION & OAUTH                            ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    jwt: Optional[JWTConfig] = JWTConfig(
-        access_token_lifetime_hours=None,  # Max: 1 year
-        refresh_token_lifetime_days=None,  # Max: 1 year
-    )
+    # Secure defaults (short access + long refresh) live in JWTConfig — inherit them.
+    # DPoP (RFC 9449) ON: tokens are bound to the client's non-extractable key
+    # (frontend sets `dpop: true` in next.config) so a stolen token is useless.
+    jwt: Optional[JWTConfig] = JWTConfig(dpop_enabled=True)
 
     github_oauth: Optional[GitHubOAuthConfig] = (
         GitHubOAuthConfig(
@@ -183,6 +157,19 @@ class DjangoCfgConfig(DjangoConfig):
         )
         if env.github_oauth.client_id and env.github_oauth.client_secret
         else None
+    )
+
+    # Two-Factor Authentication (TOTP)
+    two_factor: TwoFactorConfig = TwoFactorConfig(
+        enabled=True,
+        enforcement="required",  # optional, encouraged, required, admin_only
+        session_lifetime_minutes=5,
+        max_failed_attempts=5,
+        grace_period_days=7,
+        allow_totp=True,
+        allow_backup_codes=True,
+        backup_codes_count=10,
+        issuer_name=env.app.name,
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
@@ -214,27 +201,13 @@ class DjangoCfgConfig(DjangoConfig):
     # ║                           INTEGRATIONS                                   ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    centrifugo: Optional[DjangoCfgCentrifugoConfig] = build_centrifugo_config()
-
-    grpc_module: Optional[DjangoGrpcModuleConfig] = build_grpc_module_config()
-
-    ngrok: Optional[NgrokConfig] = build_ngrok_config()
-
     # ╔══════════════════════════════════════════════════════════════════════════╗
-    # ║                        CLOUDFLARE D1                                     ║
+    # ║                     AI AGENTS & MCP                                      ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    cloudflare: Optional[CloudflareConfig] = build_cloudflare_config()
-
-    # ╔══════════════════════════════════════════════════════════════════════════╗
-    # ║                       FRONTEND MONITORING                                ║
-    # ╚══════════════════════════════════════════════════════════════════════════╝
-
-    frontend_monitor: FrontendMonitorConfig = FrontendMonitorConfig(
-        enabled=True,
-        retention_days=90,
-        telegram_alerts_enabled=True,
-    )
+    # Declared in `api/settings/builders/mcp.py` — see that module for why it is
+    # one declaration rather than an auto-discovered `mcp/` package.
+    mcp: Optional[DjangoMCPModuleConfig] = build_mcp_config()
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                          CURRENCY & MONEY                                ║
@@ -271,9 +244,11 @@ class DjangoCfgConfig(DjangoConfig):
 
     # Automatic file cleanup for FileField/ImageField
     storage: StorageConfig = StorageConfig(
-        auto_cleanup=True,
-        delete_on_replace=True,
-        log_deletions=env.debug,  # Log deletions in development
+        cleanup=FileCleanupConfig(
+            auto_cleanup=True,
+            delete_on_replace=True,
+            log_deletions=env.debug,  # Log deletions in development
+        )
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

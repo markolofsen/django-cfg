@@ -1,0 +1,3174 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Django CFG API",
+    "version": "1.0.0",
+    "description": "RESTful API with modern architecture"
+  },
+  "paths": {
+    "/cfg/accounts/api-key/": {
+      "get": {
+        "operationId": "cfg_accounts_api_key_retrieve",
+        "description": "Retrieve the current user's API key (masked) and metadata.",
+        "summary": "Get API key details",
+        "tags": [
+          "cfg_accounts_api_key"
+        ],
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIKey"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Authentication credentials were not provided."
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/api-key/regenerate/": {
+      "post": {
+        "operationId": "cfg_accounts_api_key_regenerate_create",
+        "description": "Generate a new API key. The full key is returned only once.",
+        "summary": "Regenerate API key",
+        "tags": [
+          "cfg_accounts_api_key"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/APIKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIKeyRegenerate"
+                },
+                "examples": {
+                  "RegenerateResponse": {
+                    "value": {
+                      "key": "d0b45e78-1234-5678-9abc-def012345678",
+                      "reissued_at": "2024-01-15T10:30:00Z"
+                    },
+                    "summary": "Regenerate Response"
+                  }
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Authentication credentials were not provided."
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/api-key/reveal/": {
+      "post": {
+        "operationId": "cfg_accounts_api_key_reveal_create",
+        "description": "Return the current full API key WITHOUT rotating it. The same durable value every one of the user's agents uses — for the signed-in user to copy and paste into agent onboarding. Default GET stays masked; this is the explicit reveal action.",
+        "summary": "Reveal API key",
+        "tags": [
+          "cfg_accounts_api_key"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/APIKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIKeyReveal"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Authentication credentials were not provided."
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/api-key/test/": {
+      "post": {
+        "operationId": "cfg_accounts_api_key_test_create",
+        "description": "Test whether an API key is valid without consuming it.",
+        "summary": "Test API key",
+        "tags": [
+          "cfg_accounts_api_key"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/APIKeyTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "cookieAuth": []
+          },
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIKeyTestResult"
+                },
+                "examples": {
+                  "ValidKey": {
+                    "value": {
+                      "valid": true,
+                      "user_id": "42"
+                    },
+                    "summary": "Valid Key"
+                  },
+                  "InvalidKey": {
+                    "value": {
+                      "valid": false,
+                      "user_id": null
+                    },
+                    "summary": "Invalid Key"
+                  }
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/oauth/connections/": {
+      "get": {
+        "operationId": "cfg_accounts_oauth_connections_list",
+        "description": "Get all OAuth connections for the current user.",
+        "summary": "List OAuth connections",
+        "tags": [
+          "cfg_accounts_oauth"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/cfg_accounts_oauth_connections_response_200_AutoRef"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/oauth/disconnect/": {
+      "post": {
+        "operationId": "cfg_accounts_oauth_disconnect_create",
+        "description": "Remove OAuth connection for the specified provider.",
+        "summary": "Disconnect OAuth provider",
+        "tags": [
+          "cfg_accounts_oauth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthDisconnectRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/cfg_accounts_oauth_disconnect_response_200_AutoRef"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/oauth/github/authorize/": {
+      "post": {
+        "operationId": "cfg_accounts_oauth_github_authorize_create",
+        "description": "Generate GitHub OAuth authorization URL. Redirect user to this URL to start authentication.",
+        "summary": "Start GitHub OAuth",
+        "tags": [
+          "cfg_accounts_oauth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthAuthorizeRequestRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthAuthorizeResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/oauth/github/callback/": {
+      "post": {
+        "operationId": "cfg_accounts_oauth_github_callback_create",
+        "description": "Exchange authorization code for JWT tokens. Call this after GitHub redirects back with code.",
+        "summary": "Complete GitHub OAuth",
+        "tags": [
+          "cfg_accounts_oauth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthCallbackRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthTokenResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/oauth/providers/": {
+      "get": {
+        "operationId": "cfg_accounts_oauth_providers_retrieve",
+        "description": "Get list of available OAuth providers for authentication.",
+        "summary": "List OAuth providers",
+        "tags": [
+          "cfg_accounts_oauth"
+        ],
+        "security": [
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthProvidersResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/otp/consent-policy/": {
+      "get": {
+        "operationId": "cfg_accounts_otp_consent_policy_retrieve",
+        "description": "Marketing-consent checkbox policy for the caller's jurisdiction.\n\nDerived from the edge-provided CF-IPCountry — the same signal stored\nas consent evidence at request time. Unknown country fails safe to\n\"unchecked\".",
+        "tags": [
+          "cfg_accounts_otp"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentPolicy"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/otp/request/": {
+      "post": {
+        "operationId": "cfg_accounts_otp_request_create",
+        "description": "Request OTP code to email.",
+        "tags": [
+          "cfg_accounts_otp"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OTPRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPRequestResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPErrorResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPErrorResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPErrorResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/otp/verify/": {
+      "post": {
+        "operationId": "cfg_accounts_otp_verify_create",
+        "description": "Verify OTP code and return JWT tokens or 2FA session.\n\nIf user has 2FA enabled:\n- Returns requires_2fa=True with session_id\n- Client must complete 2FA verification at /cfg/totp/verify/\n\nIf user has no 2FA:\n- Returns JWT tokens and user data directly",
+        "tags": [
+          "cfg_accounts_otp"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OTPVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPVerifyResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPErrorResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPErrorResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/profile/": {
+      "get": {
+        "operationId": "cfg_accounts_profile_retrieve",
+        "description": "Retrieve the current authenticated user's profile information.",
+        "summary": "Get current user profile",
+        "tags": [
+          "cfg_accounts_profile"
+        ],
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Authentication credentials were not provided."
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/profile/avatar/": {
+      "post": {
+        "operationId": "cfg_accounts_profile_avatar_create",
+        "description": "Upload avatar image for the current authenticated user. Accepts multipart/form-data with 'avatar' field.",
+        "summary": "Upload user avatar",
+        "tags": [
+          "cfg_accounts_profile"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Avatar image file (JPEG, PNG, GIF, WebP, max 5MB)"
+                  }
+                },
+                "required": [
+                  "avatar"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid file or validation error."
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Authentication credentials were not provided."
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/profile/delete/": {
+      "post": {
+        "operationId": "cfg_accounts_profile_delete_create",
+        "description": "\n    Permanently delete the current user's account.\n\n    This operation:\n    - Deactivates the account (user cannot log in)\n    - Anonymizes personal data (GDPR compliance)\n    - Frees up the email address for re-registration\n    - Preserves audit trail\n\n    The account can be restored by an administrator if needed.\n    ",
+        "summary": "Delete user account",
+        "tags": [
+          "cfg_accounts_profile"
+        ],
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeleteResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Authentication credentials were not provided."
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Account is already deleted."
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/profile/partial/": {
+      "put": {
+        "operationId": "cfg_accounts_profile_partial_update",
+        "description": "Partially update the current authenticated user's profile information. Supports avatar upload.",
+        "summary": "Partial update user profile",
+        "tags": [
+          "cfg_accounts_profile"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CfgUserUpdateRequest"
+              },
+              "examples": {
+                "ProfileUpdateWithAvatar": {
+                  "value": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "company": "Tech Corp",
+                    "phone": "+1 (555) 123-4567",
+                    "position": "Software Engineer"
+                  },
+                  "summary": "Profile Update with Avatar"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid data provided."
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Authentication credentials were not provided."
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "patch": {
+        "operationId": "cfg_accounts_profile_partial_partial_update",
+        "description": "Partially update the current authenticated user's profile information. Supports avatar upload.",
+        "summary": "Partial update user profile",
+        "tags": [
+          "cfg_accounts_profile"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedCfgUserUpdateRequest"
+              },
+              "examples": {
+                "ProfileUpdateWithAvatar": {
+                  "value": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "company": "Tech Corp",
+                    "phone": "+1 (555) 123-4567",
+                    "position": "Software Engineer"
+                  },
+                  "summary": "Profile Update with Avatar"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid data provided."
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Authentication credentials were not provided."
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/profile/update/": {
+      "put": {
+        "operationId": "cfg_accounts_profile_update_update",
+        "description": "Update the current authenticated user's profile information.",
+        "summary": "Update user profile",
+        "tags": [
+          "cfg_accounts_profile"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CfgUserUpdateRequest"
+              },
+              "examples": {
+                "ValidProfileUpdate": {
+                  "value": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "company": "Tech Corp",
+                    "phone": "+1 (555) 123-4567",
+                    "position": "Software Engineer"
+                  },
+                  "summary": "Valid Profile Update"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid data provided."
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Authentication credentials were not provided."
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "patch": {
+        "operationId": "cfg_accounts_profile_update_partial_update",
+        "description": "Update the current authenticated user's profile information.",
+        "summary": "Update user profile",
+        "tags": [
+          "cfg_accounts_profile"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedCfgUserUpdateRequest"
+              },
+              "examples": {
+                "ValidProfileUpdate": {
+                  "value": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "company": "Tech Corp",
+                    "phone": "+1 (555) 123-4567",
+                    "position": "Software Engineer"
+                  },
+                  "summary": "Valid Profile Update"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid data provided."
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Authentication credentials were not provided."
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/token/": {
+      "post": {
+        "operationId": "cfg_accounts_token_create",
+        "description": "Obtain a JWT pair with email + password.\n\nReturns the same envelope as OTP verify: either ``requires_2fa=True`` with\na session id, or the token pair plus the user object. Failures are uniform\n(401 ``invalid_credentials``) whether the email is unknown, the password is\nwrong, or the account is inactive/soft-deleted — no enumeration.",
+        "tags": [
+          "cfg_accounts_auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordLoginResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordLoginError"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordLoginError"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/token/blacklist/": {
+      "post": {
+        "operationId": "cfg_accounts_token_blacklist_create",
+        "description": "Revoke a refresh token (logout).\n\nBlacklists the posted refresh token so it can never mint another access\ntoken. Called best-effort by the client's logout — without it, \"logout\"\nis purely client-side and a stolen refresh token survives until expiry.",
+        "tags": [
+          "cfg_accounts_auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenBlacklistRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "No response body"
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/token/refresh/": {
+      "post": {
+        "operationId": "cfg_accounts_token_refresh_create",
+        "description": "Refresh JWT token.\n\nDPoP-aware: when the incoming refresh token is key-bound (`cnf.jkt`), the\nrotated access/refresh in the response are re-stamped with the same `cnf`\n(stock SimpleJWT drops it from the derived access), and a matching DPoP\nproof is required on the refresh request — so a stolen refresh token can't\nbe used to mint fresh tokens.",
+        "tags": [
+          "cfg_accounts_auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenRefresh"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/backup-codes/": {
+      "get": {
+        "operationId": "cfg_totp_backup_codes_retrieve",
+        "description": "Get backup codes status for user.",
+        "tags": [
+          "cfg_totp_backup_codes"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupCodesStatus"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/backup-codes/regenerate/": {
+      "post": {
+        "operationId": "cfg_totp_backup_codes_regenerate_create",
+        "description": "Regenerate backup codes.\n\nRequires TOTP code for verification.\nInvalidates all existing codes.",
+        "tags": [
+          "cfg_totp_backup_codes"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupCodesRegenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupCodesRegenerateResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid code or 2FA not enabled"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/devices/": {
+      "get": {
+        "operationId": "cfg_totp_devices_retrieve",
+        "description": "List all TOTP devices for user.",
+        "tags": [
+          "cfg_totp"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceListResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/devices/{id}/": {
+      "delete": {
+        "operationId": "cfg_totp_devices_destroy",
+        "description": "Delete a TOTP device.\n\nRequires verification code if removing the last/primary device.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "cfg_totp"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/disable/": {
+      "post": {
+        "operationId": "cfg_totp_disable_create",
+        "description": "Completely disable 2FA for account.\n\nRequires verification code.",
+        "tags": [
+          "cfg_totp"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisableRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/cfg_totp_disable_response_200_AutoRef"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid code"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/setup/": {
+      "post": {
+        "operationId": "cfg_totp_setup_create",
+        "description": "Start 2FA setup process.\n\nCreates a new TOTP device and returns QR code for scanning.",
+        "tags": [
+          "cfg_totp_setup"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "2FA already enabled or invalid request"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/setup/confirm/": {
+      "post": {
+        "operationId": "cfg_totp_setup_confirm_create",
+        "description": "Confirm 2FA setup with first valid code.\n\nActivates the device and generates backup codes.",
+        "tags": [
+          "cfg_totp_setup"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmSetupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmSetupResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid code or setup expired"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/verify/": {
+      "post": {
+        "operationId": "cfg_totp_verify_create",
+        "description": "Verify TOTP code for 2FA session.\n\nCompletes authentication and returns JWT tokens on success.",
+        "tags": [
+          "cfg_totp_verify"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid code or session"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Too many attempts"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/verify/backup/": {
+      "post": {
+        "operationId": "cfg_totp_verify_backup_create",
+        "description": "Verify backup recovery code for 2FA session.\n\nAlternative verification method when TOTP device unavailable.",
+        "tags": [
+          "cfg_totp_verify"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyBackupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid backup code or session"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "APIKey": {
+        "type": "object",
+        "description": "Serializer for API key response (masked).",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Masked API key"
+          },
+          "reissued_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the key was last regenerated"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the key was created"
+          }
+        },
+        "required": [
+          "created_at",
+          "key",
+          "reissued_at"
+        ]
+      },
+      "APIKeyRegenerate": {
+        "type": "object",
+        "description": "Serializer for API key regeneration response (full key shown once).",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "New API key (shown only once)"
+          },
+          "reissued_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the key was regenerated"
+          }
+        },
+        "required": [
+          "key",
+          "reissued_at"
+        ]
+      },
+      "APIKeyRequest": {
+        "type": "object",
+        "description": "Serializer for API key response (masked).",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Masked API key"
+          },
+          "reissued_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the key was last regenerated"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the key was created"
+          }
+        },
+        "required": [
+          "created_at",
+          "key",
+          "reissued_at"
+        ]
+      },
+      "APIKeyReveal": {
+        "type": "object",
+        "description": "Serializer for revealing the current (unrotated) full API key.",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Full API key (current value, not rotated)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the key was created"
+          },
+          "reissued_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When the key was last regenerated"
+          }
+        },
+        "required": [
+          "created_at",
+          "key",
+          "reissued_at"
+        ]
+      },
+      "APIKeyTestRequest": {
+        "type": "object",
+        "description": "Serializer for testing an API key.",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "API key to test"
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
+      "APIKeyTestResult": {
+        "type": "object",
+        "description": "Serializer for API key test result.",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the key is valid"
+          },
+          "user_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "User ID if valid, null otherwise"
+          }
+        },
+        "required": [
+          "user_id",
+          "valid"
+        ]
+      },
+      "AccountDeleteResponse": {
+        "type": "object",
+        "description": "Response serializer for account deletion.",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the account was successfully deleted"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable message about the deletion"
+          }
+        },
+        "required": [
+          "message",
+          "success"
+        ]
+      },
+      "BackupCodesRegenerateRequest": {
+        "type": "object",
+        "description": "Serializer for regenerating backup codes.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "description": "TOTP code for verification",
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "BackupCodesRegenerateResponse": {
+        "type": "object",
+        "description": "Response serializer for backup codes regeneration.",
+        "properties": {
+          "backup_codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of new backup codes (save these!)"
+          },
+          "warning": {
+            "type": "string",
+            "description": "Warning about previous codes being invalidated"
+          }
+        },
+        "required": [
+          "backup_codes",
+          "warning"
+        ]
+      },
+      "BackupCodesStatus": {
+        "type": "object",
+        "description": "Serializer for backup codes status.",
+        "properties": {
+          "remaining_count": {
+            "type": "integer",
+            "description": "Number of unused backup codes"
+          },
+          "total_generated": {
+            "type": "integer",
+            "description": "Total number of codes generated"
+          },
+          "warning": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Warning if running low on codes"
+          }
+        },
+        "required": [
+          "remaining_count",
+          "total_generated"
+        ]
+      },
+      "CfgUserUpdateRequest": {
+        "type": "object",
+        "description": "Serializer for updating user profile.",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "last_name": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "position": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 10
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA timezone name (e.g. 'Asia/Seoul'). Auto-detected from browser via X-Timezone header.",
+            "maxLength": 64
+          }
+        }
+      },
+      "ConfirmSetupRequest": {
+        "type": "object",
+        "description": "Serializer for confirming 2FA setup with first code.",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Device ID from setup response"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "description": "6-digit TOTP code from authenticator app",
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "code",
+          "device_id"
+        ]
+      },
+      "ConfirmSetupResponse": {
+        "type": "object",
+        "description": "Response serializer for setup confirmation.",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "backup_codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of backup recovery codes (save these!)"
+          },
+          "backup_codes_warning": {
+            "type": "string",
+            "description": "Warning message about backup codes"
+          }
+        },
+        "required": [
+          "backup_codes",
+          "backup_codes_warning",
+          "message"
+        ]
+      },
+      "ConsentPolicy": {
+        "type": "object",
+        "description": "Marketing-consent UI policy derived from the request's geo context.",
+        "properties": {
+          "country": {
+            "type": "string",
+            "description": "Country code seen by the edge (CF-IPCountry), '' if unknown"
+          },
+          "marketing_consent_default": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MarketingConsentDefaultEnum"
+              }
+            ],
+            "description": "Default state for the marketing-consent checkbox\n\n* `checked` - checked\n* `unchecked` - unchecked"
+          }
+        },
+        "required": [
+          "country",
+          "marketing_consent_default"
+        ]
+      },
+      "DeviceList": {
+        "type": "object",
+        "description": "Serializer for listing TOTP devices.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Device name for identification"
+          },
+          "is_primary": {
+            "type": "boolean",
+            "readOnly": true,
+            "description": "Primary device used for verification"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeviceStatusEnum"
+              }
+            ],
+            "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "confirmed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "readOnly": true,
+            "description": "When device setup was confirmed"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "readOnly": true,
+            "description": "Last successful verification"
+          }
+        },
+        "required": [
+          "confirmed_at",
+          "created_at",
+          "id",
+          "is_primary",
+          "last_used_at",
+          "name",
+          "status"
+        ]
+      },
+      "DeviceListResponse": {
+        "type": "object",
+        "description": "Response serializer for device list endpoint.",
+        "properties": {
+          "devices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceList"
+            }
+          },
+          "has_2fa_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "devices",
+          "has_2fa_enabled"
+        ]
+      },
+      "DeviceStatusEnum": {
+        "enum": [
+          "pending",
+          "active",
+          "disabled"
+        ],
+        "type": "string",
+        "description": "* `pending` - Pending Confirmation\n* `active` - Active\n* `disabled` - Disabled"
+      },
+      "DisableRequest": {
+        "type": "object",
+        "description": "Serializer for completely disabling 2FA.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "description": "TOTP code for verification",
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "MarketingConsentDefaultEnum": {
+        "enum": [
+          "checked",
+          "unchecked"
+        ],
+        "type": "string",
+        "description": "* `checked` - checked\n* `unchecked` - unchecked"
+      },
+      "OAuthAuthorizeRequestRequest": {
+        "type": "object",
+        "description": "Request to start OAuth flow.",
+        "properties": {
+          "redirect_uri": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to redirect after OAuth authorization. If not provided, uses config's site_url + callback_path"
+          },
+          "source_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Optional source URL for registration tracking"
+          }
+        }
+      },
+      "OAuthAuthorizeResponse": {
+        "type": "object",
+        "description": "Response with OAuth authorization URL.",
+        "properties": {
+          "authorization_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Full URL to redirect user to OAuth provider"
+          },
+          "state": {
+            "type": "string",
+            "description": "State token for CSRF protection. Store this and verify on callback."
+          }
+        },
+        "required": [
+          "authorization_url",
+          "state"
+        ]
+      },
+      "OAuthCallbackRequestRequest": {
+        "type": "object",
+        "description": "Request to complete OAuth flow (callback handler).",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Authorization code from OAuth provider callback",
+            "maxLength": 500
+          },
+          "state": {
+            "type": "string",
+            "minLength": 20,
+            "description": "State token for CSRF verification (from authorize response)",
+            "maxLength": 100
+          },
+          "redirect_uri": {
+            "type": "string",
+            "format": "uri",
+            "description": "Same redirect_uri used in authorize request. If not provided, uses config's site_url + callback_path"
+          },
+          "remember_me": {
+            "type": "boolean",
+            "default": false,
+            "description": "Keep this browser signed in for 30 days"
+          }
+        },
+        "required": [
+          "code",
+          "state"
+        ]
+      },
+      "OAuthConnection": {
+        "type": "object",
+        "description": "Serializer for OAuth connection info (user-facing).",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "provider": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthProviderEnum"
+              }
+            ],
+            "readOnly": true,
+            "description": "OAuth provider name (github, google, etc.)\n\n* `github` - GitHub"
+          },
+          "provider_display": {
+            "type": "string",
+            "readOnly": true
+          },
+          "provider_username": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Username on the OAuth provider platform"
+          },
+          "provider_email": {
+            "type": "string",
+            "format": "email",
+            "readOnly": true,
+            "description": "Email from OAuth provider (may differ from user.email)"
+          },
+          "provider_avatar_url": {
+            "type": "string",
+            "format": "uri",
+            "readOnly": true,
+            "description": "Avatar URL from OAuth provider"
+          },
+          "connected_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "description": "When this OAuth connection was created"
+          },
+          "last_login_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true,
+            "description": "Last time this OAuth connection was used for login"
+          }
+        },
+        "required": [
+          "connected_at",
+          "id",
+          "last_login_at",
+          "provider",
+          "provider_avatar_url",
+          "provider_display",
+          "provider_email",
+          "provider_username"
+        ]
+      },
+      "OAuthDisconnectRequestRequest": {
+        "type": "object",
+        "description": "Request to disconnect OAuth provider.",
+        "properties": {
+          "provider": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthProviderEnum"
+              }
+            ],
+            "description": "OAuth provider to disconnect\n\n* `github` - GitHub"
+          }
+        },
+        "required": [
+          "provider"
+        ]
+      },
+      "OAuthError": {
+        "type": "object",
+        "description": "Error response for OAuth endpoints.",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error code"
+          },
+          "error_description": {
+            "type": "string",
+            "description": "Human-readable error description"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "OAuthProviderEnum": {
+        "enum": [
+          "github"
+        ],
+        "type": "string",
+        "description": "* `github` - GitHub"
+      },
+      "OAuthProvidersResponse": {
+        "type": "object",
+        "description": "Response with available OAuth providers.",
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "description": "List of available OAuth providers"
+          }
+        },
+        "required": [
+          "providers"
+        ]
+      },
+      "OAuthTokenResponse": {
+        "type": "object",
+        "description": "Response with JWT tokens after OAuth authentication.\n\nWhen 2FA is required:\n- requires_2fa: True\n- session_id: UUID of 2FA verification session\n- access/refresh/user: null\n\nWhen 2FA is not required:\n- requires_2fa: False\n- session_id: null\n- access/refresh/user: populated",
+        "properties": {
+          "requires_2fa": {
+            "type": "boolean",
+            "default": false,
+            "description": "True if 2FA verification is required"
+          },
+          "session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "2FA session ID (only when requires_2fa=True)"
+          },
+          "access": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "JWT access token (null when requires_2fa=True)"
+          },
+          "refresh": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "JWT refresh token (null when requires_2fa=True)"
+          },
+          "user": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {},
+            "description": "Authenticated user info (null when requires_2fa=True)"
+          },
+          "is_new_user": {
+            "type": "boolean",
+            "default": false,
+            "description": "True if a new user was created during this OAuth flow"
+          },
+          "is_new_connection": {
+            "type": "boolean",
+            "default": false,
+            "description": "True if a new OAuth connection was created"
+          },
+          "should_prompt_2fa": {
+            "type": "boolean",
+            "description": "True if user should be prompted to enable 2FA"
+          },
+          "persistent_session": {
+            "type": "boolean",
+            "description": "Whether this login should persist across browser restarts"
+          }
+        }
+      },
+      "OTPErrorResponse": {
+        "type": "object",
+        "description": "Typed error response for OTP operations.\n\nerror_code values:\n  - invalid_identifier   — malformed email\n  - cooldown             — too soon after last request (retry_after = seconds)\n  - hourly_limit         — hourly quota exceeded   (retry_after = seconds until reset)\n  - daily_limit          — daily quota exceeded    (retry_after = seconds until reset)\n  - rate_limited         — IP-level rate limit hit (no retry_after)\n  - user_creation_failed — internal error creating account\n  - send_failed          — transport error (email / SMS)\n  - internal_error       — unexpected server error",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "error_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Machine-readable error code"
+          },
+          "retry_after": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Seconds until the client may retry (present only for rate-limit errors)"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "OTPRequestRequest": {
+        "type": "object",
+        "description": "Serializer for OTP request.",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address for OTP delivery"
+          },
+          "source_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Source URL for tracking registration (e.g., https://my.djangocfg.com)"
+          },
+          "marketing_consent": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Marketing-consent choice made at signup (absent/null = not asked, false = declined)"
+          },
+          "consent_disclosure_version": {
+            "type": "string",
+            "description": "Version of the consent disclosure text shown (e.g. product-updates-reg-v1)",
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "identifier"
+        ]
+      },
+      "OTPRequestResponse": {
+        "type": "object",
+        "description": "OTP request response.",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Success message"
+          },
+          "webmail": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/WebmailLink"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Webmail deep-link for the recipient's provider, or null if the domain is unknown."
+          },
+          "resend_in": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Seconds until a new code may be requested for this email."
+          },
+          "expires_in": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Seconds the code stays valid."
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "OTPVerifyRequest": {
+        "type": "object",
+        "description": "Serializer for OTP verification.",
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email address used for OTP request"
+          },
+          "otp": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 4
+          },
+          "source_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Source URL for tracking login (e.g., https://my.djangocfg.com)"
+          },
+          "remember_me": {
+            "type": "boolean",
+            "default": false,
+            "description": "Keep this browser signed in for 30 days"
+          }
+        },
+        "required": [
+          "identifier",
+          "otp"
+        ]
+      },
+      "OTPVerifyResponse": {
+        "type": "object",
+        "description": "OTP verification response.\n\nWhen 2FA is required:\n- requires_2fa: True\n- session_id: UUID of 2FA verification session\n- refresh/access/user: null\n\nWhen 2FA is not required:\n- requires_2fa: False\n- session_id: null\n- refresh/access/user: populated",
+        "properties": {
+          "requires_2fa": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether 2FA verification is required"
+          },
+          "session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "2FA session ID (if requires_2fa is True)"
+          },
+          "refresh": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "JWT refresh token (if requires_2fa is False)"
+          },
+          "access": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "JWT access token (if requires_2fa is False)"
+          },
+          "user": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User information (if requires_2fa is False)"
+          },
+          "should_prompt_2fa": {
+            "type": "boolean",
+            "description": "Whether user should be prompted to enable 2FA"
+          },
+          "persistent_session": {
+            "type": "boolean",
+            "description": "Whether this login should persist across browser restarts"
+          }
+        }
+      },
+      "PasswordLoginError": {
+        "type": "object",
+        "description": "Typed error response for password login.\n\nerror_code values:\n  - invalid_credentials — wrong email/password, inactive or deleted account\n  - rate_limited        — IP rate limit hit\n  - locked_out          — too many failed attempts for this email",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message"
+          },
+          "error_code": {
+            "type": "string",
+            "description": "Machine-readable error code"
+          },
+          "retry_after": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Seconds until the caller may retry (throttled responses only)"
+          }
+        },
+        "required": [
+          "error",
+          "error_code"
+        ]
+      },
+      "PasswordLoginRequest": {
+        "type": "object",
+        "description": "Validate email+password against live accounts only.\n\nSubclasses SimpleJWT so the field/validation contract stays theirs, but\nreplaces ``validate()`` — the token pair itself is minted by the view via\n``mint_tokens_for_request`` so the DPoP binding and remembered-session\nlifetime match OTP, OAuth and TOTP exactly.",
+        "properties": {
+          "remember_me": {
+            "type": "boolean",
+            "default": false,
+            "description": "Keep this browser signed in for 30 days"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "writeOnly": true,
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "PasswordLoginResponse": {
+        "type": "object",
+        "description": "Password-login response.\n\nMirrors the OTP verify response so a client can treat every login flow\nidentically. ``requires_2fa=True`` carries a session id instead of tokens.",
+        "properties": {
+          "requires_2fa": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether 2FA verification is required"
+          },
+          "session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "2FA session ID (if requires_2fa is True)"
+          },
+          "refresh": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "JWT refresh token (if requires_2fa is False)"
+          },
+          "access": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "JWT access token (if requires_2fa is False)"
+          },
+          "user": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User information (if requires_2fa is False)"
+          },
+          "should_prompt_2fa": {
+            "type": "boolean",
+            "description": "Whether user should be prompted to enable 2FA"
+          },
+          "persistent_session": {
+            "type": "boolean",
+            "description": "Whether this login should persist across browser restarts"
+          }
+        }
+      },
+      "PatchedCfgUserUpdateRequest": {
+        "type": "object",
+        "description": "Serializer for updating user profile.",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "last_name": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "position": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "language": {
+            "type": "string",
+            "maxLength": 10
+          },
+          "timezone": {
+            "type": "string",
+            "description": "IANA timezone name (e.g. 'Asia/Seoul'). Auto-detected from browser via X-Timezone header.",
+            "maxLength": 64
+          }
+        }
+      },
+      "SetupRequest": {
+        "type": "object",
+        "description": "Serializer for starting 2FA setup.",
+        "properties": {
+          "device_name": {
+            "type": "string",
+            "minLength": 1,
+            "default": "Authenticator",
+            "description": "Device name for identification (e.g., 'My iPhone')",
+            "maxLength": 100
+          }
+        }
+      },
+      "SetupResponse": {
+        "type": "object",
+        "description": "Response serializer for setup initiation.",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Device ID to use for confirmation"
+          },
+          "secret": {
+            "type": "string",
+            "description": "Base32-encoded TOTP secret (for manual entry)"
+          },
+          "provisioning_uri": {
+            "type": "string",
+            "description": "otpauth:// URI for QR code generation"
+          },
+          "qr_code_base64": {
+            "type": "string",
+            "description": "Base64-encoded QR code image (data URI)"
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "Seconds until setup expires (typically 600 = 10 minutes)"
+          }
+        },
+        "required": [
+          "device_id",
+          "expires_in",
+          "provisioning_uri",
+          "qr_code_base64",
+          "secret"
+        ]
+      },
+      "TokenBlacklistRequest": {
+        "type": "object",
+        "properties": {
+          "refresh": {
+            "type": "string",
+            "writeOnly": true,
+            "minLength": 1
+          }
+        },
+        "required": [
+          "refresh"
+        ]
+      },
+      "TokenRefresh": {
+        "type": "object",
+        "properties": {
+          "access": {
+            "type": "string",
+            "readOnly": true
+          },
+          "refresh": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "access",
+          "refresh"
+        ]
+      },
+      "TokenRefreshRequest": {
+        "type": "object",
+        "properties": {
+          "refresh": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "refresh"
+        ]
+      },
+      "TotpVerifyUser": {
+        "type": "object",
+        "description": "User data returned after 2FA verification.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "readOnly": true
+          },
+          "first_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 50
+          },
+          "last_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 50
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Get user's full name.",
+            "readOnly": true
+          },
+          "initials": {
+            "type": "string",
+            "description": "Get user's initials for avatar fallback.",
+            "readOnly": true
+          },
+          "display_username": {
+            "type": "string",
+            "description": "Get formatted username for display.",
+            "readOnly": true
+          },
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 20
+          },
+          "position": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 10
+          },
+          "timezone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 64
+          },
+          "avatar": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "readOnly": true
+          },
+          "is_staff": {
+            "type": "boolean",
+            "readOnly": true,
+            "title": "Staff status",
+            "description": "Designates whether the user can log into this admin site."
+          },
+          "is_superuser": {
+            "type": "boolean",
+            "readOnly": true,
+            "title": "Superuser status",
+            "description": "Designates that this user has all permissions without explicitly assigning them."
+          },
+          "date_joined": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "last_login": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "readOnly": true
+          },
+          "unanswered_messages_count": {
+            "type": "integer",
+            "readOnly": true,
+            "default": 0
+          },
+          "api_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "api_key",
+          "avatar",
+          "date_joined",
+          "display_username",
+          "email",
+          "full_name",
+          "id",
+          "initials",
+          "is_staff",
+          "is_superuser",
+          "last_login",
+          "unanswered_messages_count"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "description": "Serializer for user details.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "readOnly": true
+          },
+          "first_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 50
+          },
+          "last_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 50
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Get user's full name.",
+            "readOnly": true
+          },
+          "initials": {
+            "type": "string",
+            "description": "Get user's initials for avatar fallback.",
+            "readOnly": true
+          },
+          "display_username": {
+            "type": "string",
+            "description": "Get formatted username for display.",
+            "readOnly": true
+          },
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 20
+          },
+          "position": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 10
+          },
+          "timezone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 64
+          },
+          "avatar": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "readOnly": true
+          },
+          "is_staff": {
+            "type": "boolean",
+            "readOnly": true,
+            "title": "Staff status",
+            "description": "Designates whether the user can log into this admin site."
+          },
+          "is_superuser": {
+            "type": "boolean",
+            "readOnly": true,
+            "title": "Superuser status",
+            "description": "Designates that this user has all permissions without explicitly assigning them."
+          },
+          "date_joined": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "last_login": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "readOnly": true
+          },
+          "unanswered_messages_count": {
+            "type": "integer",
+            "readOnly": true,
+            "default": 0
+          },
+          "api_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "api_key",
+          "avatar",
+          "date_joined",
+          "display_username",
+          "email",
+          "full_name",
+          "id",
+          "initials",
+          "is_staff",
+          "is_superuser",
+          "last_login",
+          "unanswered_messages_count"
+        ]
+      },
+      "VerifyBackupRequest": {
+        "type": "object",
+        "description": "Serializer for backup code verification during login.",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "2FA session ID from login response"
+          },
+          "backup_code": {
+            "type": "string",
+            "minLength": 8,
+            "description": "8-character backup recovery code",
+            "maxLength": 8
+          }
+        },
+        "required": [
+          "backup_code",
+          "session_id"
+        ]
+      },
+      "VerifyRequest": {
+        "type": "object",
+        "description": "Serializer for TOTP code verification during login.",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "2FA session ID from login response"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "description": "6-digit TOTP code from authenticator app",
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "code",
+          "session_id"
+        ]
+      },
+      "VerifyResponse": {
+        "type": "object",
+        "description": "Response serializer for successful 2FA verification.",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "access_token": {
+            "type": "string",
+            "description": "JWT access token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "JWT refresh token"
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TotpVerifyUser"
+              }
+            ],
+            "description": "User profile data"
+          },
+          "persistent_session": {
+            "type": "boolean",
+            "description": "Whether this login should persist across browser restarts"
+          },
+          "remaining_backup_codes": {
+            "type": "integer",
+            "description": "Number of remaining backup codes (if backup code was used)"
+          },
+          "warning": {
+            "type": "string",
+            "description": "Warning message (e.g., low backup codes)"
+          }
+        },
+        "required": [
+          "access_token",
+          "message",
+          "persistent_session",
+          "refresh_token",
+          "user"
+        ]
+      },
+      "WebmailLink": {
+        "type": "object",
+        "description": "Deep-link that opens the user's webmail on a search for our login email.\n\nPresent only when the recipient's email domain maps to a known webmail\nprovider (Gmail, Outlook, Mail.ru, Yandex, iCloud, …). For unknown/corporate\ndomains this whole object is null and the frontend shows no button.",
+        "properties": {
+          "provider": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WebmailLinkProviderEnum"
+              }
+            ],
+            "description": "Provider slug (e.g. 'gmail', 'outlook', 'mail_ru'). Also selects the brand icon on the frontend.\n\n* `gmail` - gmail\n* `outlook` - outlook\n* `yahoo` - yahoo\n* `icloud` - icloud\n* `proton` - proton\n* `zoho` - zoho\n* `aol` - aol\n* `fastmail` - fastmail\n* `gmx` - gmx\n* `mailcom` - mailcom\n* `mail_ru` - mail_ru\n* `yandex` - yandex\n* `rambler` - rambler\n* `qq` - qq\n* `netease` - netease\n* `sina` - sina\n* `aliyun` - aliyun\n* `naver` - naver\n* `daum` - daum\n* `web_de` - web_de\n* `tonline` - tonline\n* `seznam` - seznam\n* `wp_pl` - wp_pl\n* `o2_pl` - o2_pl\n* `interia` - interia\n* `libero` - libero\n* `virgilio` - virgilio\n* `orange` - orange\n* `laposte` - laposte\n* `free_fr` - free_fr\n* `sfr` - sfr"
+          },
+          "provider_name": {
+            "type": "string",
+            "description": "Human-facing provider name, e.g. 'Gmail'."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Absolute URL to open in a new tab (a sender-filtered search, or the inbox as fallback)."
+          },
+          "is_search": {
+            "type": "boolean",
+            "description": "True if the URL opens a search filtered to our sender; False if it only opens the inbox."
+          }
+        },
+        "required": [
+          "is_search",
+          "provider",
+          "provider_name",
+          "url"
+        ]
+      },
+      "WebmailLinkProviderEnum": {
+        "enum": [
+          "gmail",
+          "outlook",
+          "yahoo",
+          "icloud",
+          "proton",
+          "zoho",
+          "aol",
+          "fastmail",
+          "gmx",
+          "mailcom",
+          "mail_ru",
+          "yandex",
+          "rambler",
+          "qq",
+          "netease",
+          "sina",
+          "aliyun",
+          "naver",
+          "daum",
+          "web_de",
+          "tonline",
+          "seznam",
+          "wp_pl",
+          "o2_pl",
+          "interia",
+          "libero",
+          "virgilio",
+          "orange",
+          "laposte",
+          "free_fr",
+          "sfr"
+        ],
+        "type": "string",
+        "description": "* `gmail` - gmail\n* `outlook` - outlook\n* `yahoo` - yahoo\n* `icloud` - icloud\n* `proton` - proton\n* `zoho` - zoho\n* `aol` - aol\n* `fastmail` - fastmail\n* `gmx` - gmx\n* `mailcom` - mailcom\n* `mail_ru` - mail_ru\n* `yandex` - yandex\n* `rambler` - rambler\n* `qq` - qq\n* `netease` - netease\n* `sina` - sina\n* `aliyun` - aliyun\n* `naver` - naver\n* `daum` - daum\n* `web_de` - web_de\n* `tonline` - tonline\n* `seznam` - seznam\n* `wp_pl` - wp_pl\n* `o2_pl` - o2_pl\n* `interia` - interia\n* `libero` - libero\n* `virgilio` - virgilio\n* `orange` - orange\n* `laposte` - laposte\n* `free_fr` - free_fr\n* `sfr` - sfr"
+      },
+      "cfg_accounts_oauth_connections_response_200_AutoRef": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/OAuthConnection"
+        }
+      },
+      "cfg_accounts_oauth_disconnect_response_200_AutoRef": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "cfg_totp_disable_response_200_AutoRef": {
+        "description": "2FA disabled successfully"
+      }
+    },
+    "securitySchemes": {
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      },
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid"
+      },
+      "jwtAuthWithLastLogin": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "tokenAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Token-based authentication with required prefix \"Token\""
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000"
+    }
+  ]
+}

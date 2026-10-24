@@ -42,9 +42,6 @@ make populate  # Clears DB and creates examples
 ```bash
 # Development server (automatically kills processes on port 8000)
 make dev
-
-# With ngrok tunnel
-make dev-ngrok
 ```
 
 Server will start at http://127.0.0.1:8000
@@ -55,7 +52,6 @@ Server will start at http://127.0.0.1:8000
 
 ```bash
 make dev           # Run development server
-make dev-ngrok     # Run with ngrok tunnel
 make kill-ports    # Kill processes on port 8000
 make shell         # Django shell
 make claude        # Start Claude Code

@@ -9,6 +9,7 @@ Architecture (new layout — single shared SDK at target root):
       core/                 — hey-api core
       helpers/
         storage.ts          — Local/Memory/Cookie adapters (one copy)
+        keys.ts             — storage key registry, guarded access
         errors.ts           — APIError + NetworkError
         logger.ts           — APILogger (consola)
         validation-events.ts — Zod CustomEvent dispatcher
@@ -46,6 +47,7 @@ from pathlib import Path
 
 from .templates import (
     ERRORS_TS,
+    KEYS_TS,
     LOGGER_TS,
     STORAGE_TS,
     VALIDATION_EVENTS_TS,
@@ -182,8 +184,8 @@ def discover_group_dirs(target_dir: Path) -> list[tuple[str, list[GroupSpec]]]:
 def generate(
     target_dir: Path,
     *,
-    access_key: str = "cfg.access_token",
-    refresh_key: str = "cfg.refresh_token",
+    access_key: str = "cfg.auth.access_token",
+    refresh_key: str = "cfg.auth.refresh_token",
     refresh_path: str | None = DEFAULT_REFRESH_PATH,
     auth_mode: str = "auto",
 ) -> WrapperResult:
@@ -226,6 +228,7 @@ def generate(
     helpers_dir.mkdir(parents=True, exist_ok=True)
     written.append(_write(helpers_dir / "storage.ts", STORAGE_TS))
     written.append(_write(helpers_dir / "errors.ts", ERRORS_TS))
+    written.append(_write(helpers_dir / "keys.ts", KEYS_TS))
     written.append(_write(helpers_dir / "logger.ts", LOGGER_TS))
     written.append(_write(helpers_dir / "validation-events.ts", VALIDATION_EVENTS_TS))
     written.append(_write(helpers_dir / "auth.ts", auth_ts))
@@ -276,6 +279,18 @@ export {
   CookieStorageAdapter,
 } from './storage';
 export { APIError, NetworkError } from './errors';
+export {
+  CFG_KEYS,
+  CFG_FAMILIES,
+  cfgStorage,
+  createStorage,
+  normalizeSegment,
+  type KeySpec,
+  type FamilySpec,
+  type KeyStore,
+  type GuardedStorage,
+  type StorageOptions,
+} from './keys';
 export {
   APILogger,
   defaultLogger,

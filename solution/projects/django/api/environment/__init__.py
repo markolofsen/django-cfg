@@ -12,8 +12,8 @@ from .loader import (
     TelegramConfig,
     AppConfig,
     EnvironmentMode,
-    CentrifugoConfig,
     GitHubOAuthEnvConfig,
+    WebPushEnvConfig,
 )
 
 __all__ = [
@@ -24,6 +24,6 @@ __all__ = [
     "TelegramConfig",
     "AppConfig",
     "EnvironmentMode",
-    "CentrifugoConfig",
     "GitHubOAuthEnvConfig",
+    "WebPushEnvConfig",
 ]

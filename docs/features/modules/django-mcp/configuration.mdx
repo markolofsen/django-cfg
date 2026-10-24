@@ -63,7 +63,7 @@ The ergonomic entry point is `MCPConfigBuilder.set_access_key(key, service_usern
 
 There is no anonymous mode. A missing key, `access="anonymous"` and the old `public_info` flag all raise a `ValueError` with migration advice. `GET <endpoint>/info/` returns the tool listing (names, descriptions, full input schemas) — a capability map — so it requires the same `X-MCP-Access-Key` as JSON-RPC on that profile. No MCP route is served without a credential.
 
-An unauthorized request gets `401` with `WWW-Authenticate: MCPAccessKey realm="mcp", header="X-MCP-Access-Key"` — not `Bearer`, deliberately, so MCP clients don't mistake it for OAuth and go looking for `/.well-known/oauth-protected-resource` (the server implements none).
+An unauthorized request gets `401` with `WWW-Authenticate: MCPAccessKey realm="mcp", header="X-MCP-Access-Key"` — not `Bearer`, deliberately, so MCP clients don't mistake it for OAuth and go looking for discovery that isn't there. A profile that enables [OAuth sign-in](/features/modules/django-mcp/connect-assistants) answers `Bearer resource_metadata=...` instead, and every profile reads the credential from `X-MCP-Access-Key` or `Authorization: Bearer`.
 
 ## Profiles
 

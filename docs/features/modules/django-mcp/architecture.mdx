@@ -73,7 +73,7 @@ Browser JS reads ReadableStream, renders tool calls + final answer
 The transport is intentionally **stateless**, per the MCP Streamable HTTP spec. The server never issues an `Mcp-Session-Id` header, and nothing is gated on `_is_initialized` or any other session state — every `tools/call` is authenticated and authorized independently of whether `initialize` was ever called on that connection. Gating on session state without issuing a session ID previously broke every spec-compliant client: state was keyed on a hash of IP + User-Agent, so `initialize` and the following `tools/call` looked like different sessions whenever a client's requests didn't share one identical User-Agent — which is exactly what happens with real MCP clients spread across worker processes.
 </Callout>
 
-A `401` response carries `WWW-Authenticate: MCPAccessKey realm="mcp", header="X-MCP-Access-Key"` — a custom scheme, not `Bearer`. `Bearer` reads as OAuth 2.0 to MCP clients, which then go looking for `/.well-known/oauth-protected-resource` and fail in a way that's harder to diagnose than a plain 401.
+A `401` response carries `WWW-Authenticate: MCPAccessKey realm="mcp", header="X-MCP-Access-Key"` — a custom scheme, not `Bearer`. `Bearer` reads as OAuth 2.0 to MCP clients, which then go looking for `/.well-known/oauth-protected-resource` and fail in a way that's harder to diagnose than a plain 401. The one exception is a profile with [OAuth sign-in](/features/modules/django-mcp/connect-assistants) enabled: it does serve that discovery, so it answers `Bearer resource_metadata=...`.
 
 ## Profile routing
 

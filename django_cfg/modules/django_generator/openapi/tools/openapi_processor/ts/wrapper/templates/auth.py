@@ -26,6 +26,8 @@ Switch via `auth.setStorageMode('cookie')` early in app bootstrap.
 
 from __future__ import annotations
 
+import re
+
 
 # ── Shared TS fragments ──────────────────────────────────────────────────────
 # Emitted verbatim into BOTH auth stores (JWT + public). Single source for
@@ -169,11 +171,14 @@ _ERROR_INTERCEPTOR_TS = '''\
 '''
 
 
+_STORAGE_KEY_RE = re.compile(r"[a-z][a-z0-9_]*(\.[a-z0-9_]+)+")
+
+
 def render_auth_ts(
     *,
-    access_key: str = "cfg.access_token",
-    refresh_key: str = "cfg.refresh_token",
-    api_key_storage_key: str = "cfg.api_key",
+    access_key: str = "cfg.auth.access_token",
+    refresh_key: str = "cfg.auth.refresh_token",
+    api_key_storage_key: str = "cfg.auth.api_key",
     refresh_path: str | None = "/cfg/accounts/token/refresh/",
 ) -> str:
     """Render `helpers/auth.ts` — the global auth store + interceptor installer.
@@ -187,6 +192,20 @@ def render_auth_ts(
     ``auth.setRefreshHandler(...)`` (last write wins); pass ``None`` to skip
     emission for non-django_cfg backends.
     """
+
+    for name, value in (
+        ("access_key", access_key),
+        ("refresh_key", refresh_key),
+        ("api_key_storage_key", api_key_storage_key),
+    ):
+        # The registry's guarded storage accepts only `<owner>.<area>.<name>`
+        # keys; failing here beats a store that silently never persists a token.
+        if not _STORAGE_KEY_RE.fullmatch(value):
+            raise ValueError(f"{name}={value!r} must match <owner>.<area>.<name> (lower case, snake_case)")
+    owners = {access_key.split(".")[0], refresh_key.split(".")[0], api_key_storage_key.split(".")[0]}
+    if len(owners) != 1:
+        raise ValueError(f"the three storage keys must share one owner prefix, got {sorted(owners)}")
+    owner = owners.pop()
 
     auto_refresh_import = ""
     auto_refresh_block = ""
@@ -239,10 +258,14 @@ auth.setRefreshHandler(async (refresh) => {{
 // DO NOT EDIT — re-run `make gen`.
 
 import {{ APIError }} from './errors';
+import {{ cfgStorage, createStorage, type KeyStore }} from './keys';
 {auto_refresh_import}
 const ACCESS_KEY = '{access_key}';
 const REFRESH_KEY = '{refresh_key}';
 const API_KEY_KEY = '{api_key_storage_key}';
+
+// The framework's own keys use the shared registry; a custom owner gets the same guarded helpers.
+const storage = '{owner}' === 'cfg' ? cfgStorage : createStorage('{owner}');
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -255,68 +278,24 @@ interface KVStore {{
   set(key: string, value: string | null): void;
 }}
 
-const localStorageBackend: KVStore = {{
-  get(key) {{
-    if (!isBrowser) return null;
-    try {{ return window.localStorage.getItem(key); }} catch {{ return null; }}
-  }},
-  set(key, value) {{
-    if (!isBrowser) return;
-    try {{
-      if (value === null) window.localStorage.removeItem(key);
-      else window.localStorage.setItem(key, value);
-    }} catch {{}}
-  }},
-}};
-
-const sessionStorageBackend: KVStore = {{
-  get(key) {{
-    if (!isBrowser) return null;
-    try {{ return window.sessionStorage.getItem(key); }} catch {{ return null; }}
-  }},
-  set(key, value) {{
-    if (!isBrowser) return;
-    try {{
-      if (value === null) window.sessionStorage.removeItem(key);
-      else window.sessionStorage.setItem(key, value);
-    }} catch {{}}
-  }},
-}};
-
-/** 30 days, matches typical refresh-token lifetime. */
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
-
-const cookieBackend: KVStore = {{
-  get(key) {{
-    if (!isBrowser) return null;
-    try {{
-      const re = new RegExp(`(?:^|;\\\\s*)${{encodeURIComponent(key)}}=([^;]*)`);
-      const m = document.cookie.match(re);
-      const value = m?.[1];
-      return value === undefined ? null : decodeURIComponent(value);
-    }} catch {{ return null; }}
-  }},
-  set(key, value) {{
-    if (!isBrowser) return;
-    try {{
-      const k = encodeURIComponent(key);
-      const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-      if (value === null) {{
-        document.cookie = `${{k}}=; Path=/; Max-Age=0; SameSite=Lax${{secure}}`;
-      }} else {{
-        const v = encodeURIComponent(value);
-        document.cookie = `${{k}}=${{v}}; Path=/; Max-Age=${{COOKIE_MAX_AGE}}; SameSite=Lax${{secure}}`;
-      }}
-    }} catch {{}}
-  }},
+// Every read and write goes through the registry's guarded storage: SSR-safe,
+// private-mode and quota safe, and a key written under an older spelling is
+// moved to its `cfg.auth.*` name on first read.
+const STORE_OF: Record<StorageMode, KeyStore> = {{
+  localStorage: 'local',
+  sessionStorage: 'session',
+  cookie: 'cookie',
 }};
 
 function backendFor(mode: StorageMode): KVStore {{
-  return mode === 'cookie'
-    ? cookieBackend
-    : mode === 'sessionStorage'
-      ? sessionStorageBackend
-      : localStorageBackend;
+  const store = STORE_OF[mode];
+  return {{
+    get: (key) => storage.read(key, store),
+    set(key, value) {{
+      if (value === null) storage.remove(key, store);
+      else storage.write(key, value, store);
+    }},
+  }};
 }}
 
 /**
@@ -546,10 +525,13 @@ export const auth = {{
     // Clear every backend, not just the active one. Sign-out must leave nothing
     // behind anywhere — including tokens an older build stranded in
     // sessionStorage — or the next page load could resurrect a dead session.
-    for (const backend of [localStorageBackend, sessionStorageBackend, cookieBackend]) {{
+    for (const mode of ['localStorage', 'sessionStorage', 'cookie'] as const) {{
+      const backend = backendFor(mode);
       backend.set(ACCESS_KEY, null);
       backend.set(REFRESH_KEY, null);
     }}
+    // The rest of the signed-in user's keys (profile cache, OAuth leftovers) go with the tokens.
+    storage.clearAll();
     notifySessionChanged();
   }},
   /** Session-aware: token PRESENT and not past its `exp` (or a live refresh
@@ -814,7 +796,7 @@ function dpopEnabled(): boolean {{
   }} catch {{ return false; }}
 }}
 
-const _DPOP_DB = 'cfg-auth';
+const _DPOP_DB = 'cfg.auth.dpop';
 const _DPOP_STORE = 'keys';
 const _DPOP_KEY_ID = 'dpop-ec-p256';
 

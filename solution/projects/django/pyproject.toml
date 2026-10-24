@@ -7,11 +7,10 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
     # Django framework (required by django-cfg)
     "django>=5.2.0,<6.0",
-
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # IMPORTANT FOR AI/LLM: DO NOT TOUCH THIS LINE!
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # Django-CFG is installed from PyPI with full extras (grpc, dramatiq, centrifugo)
+    # Django-CFG is installed from PyPI with full extras (grpc, dramatiq)
     #
     # HOW IT WORKS:
     # - By default, django-cfg is installed from PyPI via `uv sync`
@@ -39,11 +38,16 @@ dependencies = [
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     "django-cfg[full]",
     # pydantic-ai is pulled by django-cfg automatically
-
+    # Fake data generation
+    "faker>=37.5.3,<38.0",
     # Markdown support
     "markdown>=3.9,<4.0",
     # ASGI server for async support
     "uvicorn[standard]>=0.34.0,<1.0",
+    "streamlit (>=1.54.0,<2.0.0)",
+    "pyjwt (>=2.11.0,<3.0.0)",
+    "pandas (<3)",
+    "cloudflare>=4.3.1",
 ]
 
 [[project.authors]]
@@ -85,6 +89,6 @@ known_django = "django"
 known_first_party = "apps,config"
 sections = ["FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 
-[tool.uv.sources]
-django-cfg = { path = "/Users/markinmatrix/djangocfg", editable = true }
+
+
 

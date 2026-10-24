@@ -44,7 +44,7 @@ tools/
 ## Three facts worth knowing before you change anything
 
 **The config is not in `mcp/`.** It lives in
-[`../../api/settings/mcp_config.py`](../../../api/settings/mcp_config.py). It
+[`../../api/settings/builders/mcp.py`](../../../api/settings/builders/mcp.py). It
 moved there on 2026-08-18 because two declarations existed and the auto-loader
 silently kept the wrong one — while the committed key was the one winning at
 runtime. `mcp/` holds tools only. A page pointing at `mcp/__init__.py` is

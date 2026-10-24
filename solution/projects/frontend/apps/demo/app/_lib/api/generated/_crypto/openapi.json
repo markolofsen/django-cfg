@@ -1,0 +1,562 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Django CFG API",
+    "version": "1.0.0",
+    "description": "RESTful API with modern architecture"
+  },
+  "paths": {
+    "/apix/crypto/coins/": {
+      "get": {
+        "operationId": "crypto_coins_list",
+        "description": "Get a paginated list of all coin listings ordered by market cap.",
+        "summary": "List coin listings",
+        "parameters": [
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedCoinListingList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "post": {
+        "operationId": "crypto_coins_create",
+        "description": "Create a new coin listing.",
+        "summary": "Create coin listing",
+        "tags": [
+          "crypto"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoinListingWriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoinListingWrite"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/apix/crypto/coins/{id}/": {
+      "get": {
+        "operationId": "crypto_coins_retrieve",
+        "description": "Get detailed information about a specific coin listing.",
+        "summary": "Get coin listing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this coin listing.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoinListing"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "put": {
+        "operationId": "crypto_coins_update",
+        "description": "Update coin listing fields.",
+        "summary": "Update coin listing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this coin listing.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoinListingWriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoinListingWrite"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "patch": {
+        "operationId": "crypto_coins_partial_update",
+        "description": "Partially update coin listing fields.",
+        "summary": "Partially update coin listing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this coin listing.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchedCoinListingWriteRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoinListingWrite"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      },
+      "delete": {
+        "operationId": "crypto_coins_destroy",
+        "description": "Delete a coin listing.",
+        "summary": "Delete coin listing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this coin listing.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "crypto"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "x-async-capable": false
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CoinListing": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "symbol": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,13}(?:\\.\\d{0,2})?$"
+          },
+          "market_cap": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,13}(?:\\.\\d{0,2})?$"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "symbol",
+          "updated_at"
+        ]
+      },
+      "CoinListingWrite": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,13}(?:\\.\\d{0,2})?$"
+          },
+          "market_cap": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,13}(?:\\.\\d{0,2})?$"
+          }
+        },
+        "required": [
+          "name",
+          "symbol"
+        ]
+      },
+      "CoinListingWriteRequest": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,13}(?:\\.\\d{0,2})?$"
+          },
+          "market_cap": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,13}(?:\\.\\d{0,2})?$"
+          }
+        },
+        "required": [
+          "name",
+          "symbol"
+        ]
+      },
+      "PaginatedCoinListingList": {
+        "type": "object",
+        "required": [
+          "count",
+          "page",
+          "pages",
+          "page_size",
+          "has_next",
+          "has_previous",
+          "results"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "example": 150
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (1-based)",
+            "example": 2
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 15
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "has_previous": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": true
+          },
+          "next_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Next page number (null if no next page)",
+            "example": 3
+          },
+          "previous_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Previous page number (null if no previous page)",
+            "example": 1
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoinListing"
+            },
+            "description": "Array of items for current page"
+          }
+        }
+      },
+      "PatchedCoinListingWriteRequest": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,13}(?:\\.\\d{0,2})?$"
+          },
+          "market_cap": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "decimal",
+            "pattern": "^-?\\d{0,13}(?:\\.\\d{0,2})?$"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      },
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid"
+      },
+      "jwtAuthWithLastLogin": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "tokenAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Token-based authentication with required prefix \"Token\""
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000"
+    }
+  ]
+}

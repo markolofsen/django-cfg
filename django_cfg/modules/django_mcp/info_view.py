@@ -87,10 +87,10 @@ class MCPInfoView(APIView):
                 },
                 status=401,
             )
-            # RFC 7235 §3.1 makes the header mandatory on a 401. The scheme is
-            # NOT `Bearer`: MCP clients read that as OAuth 2.0 and go fetch
-            # `/.well-known/oauth-protected-resource`, which this server does
-            # not implement.
+            # RFC 7235 §3.1 makes the header mandatory on a 401. `challenge()`
+            # answers `Bearer` only on a profile that serves OAuth discovery;
+            # elsewhere it is `MCPAccessKey`, so clients do not go looking for
+            # `/.well-known/oauth-protected-resource` that is not there.
             try:
                 response["WWW-Authenticate"] = challenge(
                     request, self._get_profile(mcp_config) or mcp_config

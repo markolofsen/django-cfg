@@ -58,7 +58,7 @@ by the module existing upstream.
 **On payments**: the framework ships `django_cfg.apps.payments`, and this
 repository runs its own live `modules/payments/` domain — Stripe-first, with
 the RQ schedules `reconcile_pending_payments` and `sync_stripe_subscriptions`
-(both hourly, `low` queue, declared in `api/settings/configs/background.py`), a
+(both hourly, `low` queue, declared in `api/settings/builders/background.py`), a
 `payments` OpenAPI group, and MCP tools. **Billing authority is a product
 policy and stays here.** Do not migrate the domain upstream, and do not assume
 the upstream app is what serves this service's money paths.
@@ -75,14 +75,14 @@ currently used.
 
 1. **Confirm the module is active and configured.** The registry is
    `api/settings/config.py` (the `DjangoCfgConfig(DjangoConfig)` class) plus
-   `api/settings/configs/` — apps in `configs/applications.py`
+   `api/settings/builders/` — apps in `builders/applications.py`
    (`build_project_apps()`), OpenAPI groups and `enum_name_overrides` in
-   `configs/openapi.py`, RQ queues and schedules in `configs/background.py`.
+   `builders/openapi.py`, RQ queues and schedules in `builders/background.py`.
    Confirm the installed package version too.
 
    > **Retraction.** Version 1.0 of this page pointed step 1 at `api/config.py`.
    > **That file no longer exists** — it was split into `api/settings/config.py`
-   > and the six modules under `api/settings/configs/`. A reader following the
+   > and the six modules under `api/settings/builders/`. A reader following the
    > old instruction found nothing and could reasonably have concluded the
    > registry was gone.
 

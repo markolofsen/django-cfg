@@ -1,0 +1,960 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Django CFG API",
+    "version": "1.0.0",
+    "description": "RESTful API with modern architecture"
+  },
+  "paths": {
+    "/cfg/totp/backup-codes/": {
+      "get": {
+        "operationId": "cfg_totp_backup_codes_retrieve",
+        "description": "Get backup codes status for user.",
+        "tags": [
+          "cfg_totp_backup_codes"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupCodesStatus"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/backup-codes/regenerate/": {
+      "post": {
+        "operationId": "cfg_totp_backup_codes_regenerate_create",
+        "description": "Regenerate backup codes.\n\nRequires TOTP code for verification.\nInvalidates all existing codes.",
+        "tags": [
+          "cfg_totp_backup_codes"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupCodesRegenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupCodesRegenerateResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid code or 2FA not enabled"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/devices/": {
+      "get": {
+        "operationId": "cfg_totp_devices_retrieve",
+        "description": "List all TOTP devices for user.",
+        "tags": [
+          "cfg_totp"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceListResponse"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/devices/{id}/": {
+      "delete": {
+        "operationId": "cfg_totp_devices_destroy",
+        "description": "Delete a TOTP device.\n\nRequires verification code if removing the last/primary device.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true
+          }
+        ],
+        "tags": [
+          "cfg_totp"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No response body"
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/disable/": {
+      "post": {
+        "operationId": "cfg_totp_disable_create",
+        "description": "Completely disable 2FA for account.\n\nRequires verification code.",
+        "tags": [
+          "cfg_totp"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisableRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "2FA disabled successfully"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid code"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/setup/": {
+      "post": {
+        "operationId": "cfg_totp_setup_create",
+        "description": "Start 2FA setup process.\n\nCreates a new TOTP device and returns QR code for scanning.",
+        "tags": [
+          "cfg_totp_setup"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "2FA already enabled or invalid request"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/setup/confirm/": {
+      "post": {
+        "operationId": "cfg_totp_setup_confirm_create",
+        "description": "Confirm 2FA setup with first valid code.\n\nActivates the device and generates backup codes.",
+        "tags": [
+          "cfg_totp_setup"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmSetupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmSetupResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid code or setup expired"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/verify/": {
+      "post": {
+        "operationId": "cfg_totp_verify_create",
+        "description": "Verify TOTP code for 2FA session.\n\nCompletes authentication and returns JWT tokens on success.",
+        "tags": [
+          "cfg_totp_verify"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid code or session"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Too many attempts"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/totp/verify/backup/": {
+      "post": {
+        "operationId": "cfg_totp_verify_backup_create",
+        "description": "Verify backup recovery code for 2FA session.\n\nAlternative verification method when TOTP device unavailable.",
+        "tags": [
+          "cfg_totp_verify"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyBackupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "Invalid backup code or session"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BackupCodesRegenerateRequest": {
+        "type": "object",
+        "description": "Serializer for regenerating backup codes.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "description": "TOTP code for verification",
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "BackupCodesRegenerateResponse": {
+        "type": "object",
+        "description": "Response serializer for backup codes regeneration.",
+        "properties": {
+          "backup_codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of new backup codes (save these!)"
+          },
+          "warning": {
+            "type": "string",
+            "description": "Warning about previous codes being invalidated"
+          }
+        },
+        "required": [
+          "backup_codes",
+          "warning"
+        ]
+      },
+      "BackupCodesStatus": {
+        "type": "object",
+        "description": "Serializer for backup codes status.",
+        "properties": {
+          "remaining_count": {
+            "type": "integer",
+            "description": "Number of unused backup codes"
+          },
+          "total_generated": {
+            "type": "integer",
+            "description": "Total number of codes generated"
+          },
+          "warning": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Warning if running low on codes"
+          }
+        },
+        "required": [
+          "remaining_count",
+          "total_generated"
+        ]
+      },
+      "ConfirmSetupRequest": {
+        "type": "object",
+        "description": "Serializer for confirming 2FA setup with first code.",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Device ID from setup response"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "description": "6-digit TOTP code from authenticator app",
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "code",
+          "device_id"
+        ]
+      },
+      "ConfirmSetupResponse": {
+        "type": "object",
+        "description": "Response serializer for setup confirmation.",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "backup_codes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of backup recovery codes (save these!)"
+          },
+          "backup_codes_warning": {
+            "type": "string",
+            "description": "Warning message about backup codes"
+          }
+        },
+        "required": [
+          "backup_codes",
+          "backup_codes_warning",
+          "message"
+        ]
+      },
+      "DeviceList": {
+        "type": "object",
+        "description": "Serializer for listing TOTP devices.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Device name for identification"
+          },
+          "is_primary": {
+            "type": "boolean",
+            "readOnly": true,
+            "description": "Primary device used for verification"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeviceStatusEnum"
+              }
+            ],
+            "readOnly": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "confirmed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "readOnly": true,
+            "description": "When device setup was confirmed"
+          },
+          "last_used_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "readOnly": true,
+            "description": "Last successful verification"
+          }
+        },
+        "required": [
+          "confirmed_at",
+          "created_at",
+          "id",
+          "is_primary",
+          "last_used_at",
+          "name",
+          "status"
+        ]
+      },
+      "DeviceListResponse": {
+        "type": "object",
+        "description": "Response serializer for device list endpoint.",
+        "properties": {
+          "devices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeviceList"
+            }
+          },
+          "has_2fa_enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "devices",
+          "has_2fa_enabled"
+        ]
+      },
+      "DeviceStatusEnum": {
+        "enum": [
+          "pending",
+          "active",
+          "disabled"
+        ],
+        "type": "string",
+        "description": "* `pending` - Pending Confirmation\n* `active` - Active\n* `disabled` - Disabled"
+      },
+      "DisableRequest": {
+        "type": "object",
+        "description": "Serializer for completely disabling 2FA.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "description": "TOTP code for verification",
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "code"
+        ]
+      },
+      "SetupRequest": {
+        "type": "object",
+        "description": "Serializer for starting 2FA setup.",
+        "properties": {
+          "device_name": {
+            "type": "string",
+            "minLength": 1,
+            "default": "Authenticator",
+            "description": "Device name for identification (e.g., 'My iPhone')",
+            "maxLength": 100
+          }
+        }
+      },
+      "SetupResponse": {
+        "type": "object",
+        "description": "Response serializer for setup initiation.",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Device ID to use for confirmation"
+          },
+          "secret": {
+            "type": "string",
+            "description": "Base32-encoded TOTP secret (for manual entry)"
+          },
+          "provisioning_uri": {
+            "type": "string",
+            "description": "otpauth:// URI for QR code generation"
+          },
+          "qr_code_base64": {
+            "type": "string",
+            "description": "Base64-encoded QR code image (data URI)"
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "Seconds until setup expires (typically 600 = 10 minutes)"
+          }
+        },
+        "required": [
+          "device_id",
+          "expires_in",
+          "provisioning_uri",
+          "qr_code_base64",
+          "secret"
+        ]
+      },
+      "TotpVerifyUser": {
+        "type": "object",
+        "description": "User data returned after 2FA verification.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "readOnly": true
+          },
+          "first_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 50
+          },
+          "last_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 50
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Get user's full name.",
+            "readOnly": true
+          },
+          "initials": {
+            "type": "string",
+            "description": "Get user's initials for avatar fallback.",
+            "readOnly": true
+          },
+          "display_username": {
+            "type": "string",
+            "description": "Get formatted username for display.",
+            "readOnly": true
+          },
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 20
+          },
+          "position": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 10
+          },
+          "timezone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 64
+          },
+          "avatar": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "readOnly": true
+          },
+          "is_staff": {
+            "type": "boolean",
+            "readOnly": true,
+            "title": "Staff status",
+            "description": "Designates whether the user can log into this admin site."
+          },
+          "is_superuser": {
+            "type": "boolean",
+            "readOnly": true,
+            "title": "Superuser status",
+            "description": "Designates that this user has all permissions without explicitly assigning them."
+          },
+          "date_joined": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "last_login": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "readOnly": true
+          },
+          "unanswered_messages_count": {
+            "type": "integer",
+            "readOnly": true,
+            "default": 0
+          },
+          "api_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "readOnly": true
+          }
+        },
+        "required": [
+          "api_key",
+          "avatar",
+          "date_joined",
+          "display_username",
+          "email",
+          "full_name",
+          "id",
+          "initials",
+          "is_staff",
+          "is_superuser",
+          "last_login",
+          "unanswered_messages_count"
+        ]
+      },
+      "VerifyBackupRequest": {
+        "type": "object",
+        "description": "Serializer for backup code verification during login.",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "2FA session ID from login response"
+          },
+          "backup_code": {
+            "type": "string",
+            "minLength": 8,
+            "description": "8-character backup recovery code",
+            "maxLength": 8
+          }
+        },
+        "required": [
+          "backup_code",
+          "session_id"
+        ]
+      },
+      "VerifyRequest": {
+        "type": "object",
+        "description": "Serializer for TOTP code verification during login.",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "2FA session ID from login response"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 6,
+            "description": "6-digit TOTP code from authenticator app",
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "code",
+          "session_id"
+        ]
+      },
+      "VerifyResponse": {
+        "type": "object",
+        "description": "Response serializer for successful 2FA verification.",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "access_token": {
+            "type": "string",
+            "description": "JWT access token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "JWT refresh token"
+          },
+          "user": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TotpVerifyUser"
+              }
+            ],
+            "description": "User profile data"
+          },
+          "persistent_session": {
+            "type": "boolean",
+            "description": "Whether this login should persist across browser restarts"
+          },
+          "remaining_backup_codes": {
+            "type": "integer",
+            "description": "Number of remaining backup codes (if backup code was used)"
+          },
+          "warning": {
+            "type": "string",
+            "description": "Warning message (e.g., low backup codes)"
+          }
+        },
+        "required": [
+          "access_token",
+          "message",
+          "persistent_session",
+          "refresh_token",
+          "user"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      },
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sessionid"
+      },
+      "jwtAuthWithLastLogin": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "tokenAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Token-based authentication with required prefix \"Token\""
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000"
+    }
+  ]
+}

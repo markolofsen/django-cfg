@@ -247,8 +247,10 @@ class AuthorizationServerView(_ProfileView):
                 "grant_types_supported": ["authorization_code", "refresh_token"],
                 "code_challenge_methods_supported": ["S256"],
                 "token_endpoint_auth_methods_supported": ["none"],
-                # RFC 9207: every authorization response carries `iss`.
-                "authorization_response_iss_parameter_supported": True,
+                # RFC 9207: every authorization response carries `iss`. It is
+                # NOT advertised: Codex then insists on `iss` yet drops it from
+                # its loopback callback ("response missing required issuer"),
+                # so the flag would only lock that client out.
             },
             cache=True,
         )

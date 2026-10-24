@@ -9,13 +9,13 @@
 # - [tool.uv.sources] configures local editable path
 # - uv sync automatically uses the local path when available
 
-.PHONY: help install install-local env test commit kill-ports kill-grpc kill-all dev dev-ngrok asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api api-ws gen gen-ts gen-py gen-admin gen-dry gen-list claude codex
+.PHONY: help install install-local install-local-uv env test commit kill-ports kill-grpc kill-all dev asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api api-web api-ws gen gen-ts gen-py gen-admin gen-api gen-dry gen-list claude codex
 
-# uv binary
-UV := $(shell which uv || echo $(HOME)/.local/bin/uv)
+# uv binary (full path for Make compatibility — Make uses a restricted PATH)
+UV := $(HOME)/.local/bin/uv
 # Python from virtual environment — direct path avoids uv run which auto-syncs and reverts editable installs
 PYTHON := .venv/bin/python
-# Path to local django-cfg for development
+# Path to local django-cfg for development (~/djangocfg symlink → @projects/djangocfg/projects/django-cfg)
 DJANGO_CFG_LOCAL := $(HOME)/djangocfg
 
 help:
@@ -31,9 +31,8 @@ help:
 	@echo "  make migrate   - Run migrations"
 	@echo "  make shell     - Django shell"
 	@echo "  make superuser - Create superuser"
-	@echo "  make gen       - Generate API clients (all)"
-	@echo "  make gen-ts    - Generate TypeScript clients"
-	@echo "  make gen-admin - Generate admin clients only"
+	@echo "  make api       - Generate API clients"
+	@echo "  make api-web   - Generate web API clients"
 	@echo ""
 	@echo "RQ:"
 	@echo "  make rq            - Start RQ worker (all queues)"
@@ -48,23 +47,42 @@ help:
 
 install:
 	@echo "Installing dependencies (PyPI django-cfg)..."
-	$(UV) sync --no-sources
+	@# Remove local source override if exists
+	@grep -q '^\[tool\.uv\.sources\]' pyproject.toml && \
+		sed -i '' '/^\[tool\.uv\.sources\]/,/^$$/d' pyproject.toml || true
+	$(UV) sync
 	@echo "Installed django-cfg from PyPI"
-	@echo "To use local django-cfg: make install-local"
+	@echo "To use local django-cfg: make install-local or make install-local-uv"
 
+# Install local django-cfg using the project's install script (pip editable, no pyproject.toml changes)
 install-local:
-	@$(UV) sync
-	@bash $(HOME)/djangocfg/scripts/install_local_djangocfg.sh --venv .venv
+	@echo "Installing dependencies from PyPI first..."
+	@grep -q '^\[tool\.uv\.sources\]' pyproject.toml && \
+		sed -i '' '/^\[tool\.uv\.sources\]/,/^$$/d' pyproject.toml || true
+	$(UV) sync
+	@echo "Switching django-cfg to local editable (via install script)..."
+	@bash $(DJANGO_CFG_LOCAL)/scripts/install_local_djangocfg.sh --venv .venv
 	@# uv copies files into site-packages even for editable installs — remove so .pth takes effect
 	@SITE=$$(.venv/bin/python -c "import sysconfig; print(sysconfig.get_path('purelib'))") && \
 		rm -rf "$$SITE/django_cfg"
 	@echo ""
-	@echo "✅ Local django-cfg installed (editable mode)"
+	@echo "✅ Local django-cfg installed (editable mode, pyproject.toml unchanged)"
 	@echo "📍 Changes in $(DJANGO_CFG_LOCAL) will be immediately reflected"
-	@echo "⚠️  Note: Do not run uv sync - it will revert to PyPI versions"
+	@echo "⚠️  Do not run uv sync — it will revert to PyPI"
+
+# Install local django-cfg using uv sources (adds path to pyproject.toml temporarily)
+install-local-uv:
+	@echo "Configuring [tool.uv.sources] for local django-cfg..."
+	@grep -q '^\[tool\.uv\.sources\]' pyproject.toml || \
+		printf '\n[tool.uv.sources]\ndjango-cfg = { path = "$(DJANGO_CFG_LOCAL)", editable = true }\n' >> pyproject.toml
+	$(UV) sync
+	@echo ""
+	@echo "✅ Done — django-cfg installed from $(DJANGO_CFG_LOCAL) (uv editable)"
+	@echo "📍 Run: uv run python manage.py ..."
+	@echo "⚠️  pyproject.toml now has local path — run 'make install' to revert to PyPI"
 
 env:
-	@uv run python -c "import sys; print(sys.prefix)"
+	@$(UV) run python -c "import sys; print(sys.prefix)"
 
 test:
 	$(PYTHON) manage.py test
@@ -108,12 +126,10 @@ kill-all:
 dev: kill-ports
 	$(PYTHON) manage.py runserver
 
-dev-ngrok: kill-ports
-	$(PYTHON) manage.py runserver_ngrok
 
 asgi: kill-ports
 	@echo "Starting ASGI server on port 8000 (uvicorn)..."
-	uv run uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload
+	$(UV) run uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload
 
 grpc:
 	@echo "Starting gRPC server on port 50051..."
@@ -140,7 +156,7 @@ run-all: kill-all
 		GRPC_PID=$$!; \
 		sleep 1; \
 		echo "Starting ASGI server on port 8000 (uvicorn)..."; \
-		uv run uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload & \
+		$(UV) run uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload & \
 		ASGI_PID=$$!; \
 		sleep 1; \
 		echo "Starting RQ worker (all queues)..."; \
@@ -187,7 +203,11 @@ check:
 superuser:
 	$(PYTHON) manage.py superuser
 
-# API Generation (unified via generation.py config)
+# API Generation (unified via generation.py config).
+#
+# Two ways to run:
+#   make gen                          — via Django manage.py wrapper (supports flags)
+#   python generation.py              — standalone (self-bootstrapping)
 gen:
 	$(PYTHON) manage.py gen
 
@@ -197,8 +217,14 @@ gen-ts:
 gen-py:
 	$(PYTHON) manage.py gen --py
 
-gen-admin:
-	$(PYTHON) manage.py gen --target admin
+gen-go:
+	$(PYTHON) manage.py gen --go
+
+gen-target:
+	$(PYTHON) manage.py gen --target $(T)
+
+gen-groups:
+	$(PYTHON) manage.py gen --groups $(G)
 
 gen-dry:
 	$(PYTHON) manage.py gen --dry-run
@@ -208,9 +234,7 @@ gen-list:
 
 # Legacy aliases (deprecated - use gen commands)
 api: gen
-api-ws:
-	$(PYTHON) manage.py generate_centrifugo_clients
-
+api-web: gen-ts
 # Start Claude Code with dangerously-skip-permissions flag
 claude:
 	claude --dangerously-skip-permissions --chrome

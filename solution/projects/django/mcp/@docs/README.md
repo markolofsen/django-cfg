@@ -58,7 +58,7 @@ invisible.
   characters each; none reached the model that asked.
 
 **The config is not in this directory's parent.** It is
-[`../../api/settings/mcp_config.py`](../../api/settings/mcp_config.py), moved
+[`../../api/settings/builders/mcp.py`](../../api/settings/builders/mcp.py), moved
 there on 2026-08-18 because two declarations existed and the loader silently
 kept the wrong one. `mcp/` holds tools. A page pointing at `mcp/__init__.py` is
 stale — fix it.

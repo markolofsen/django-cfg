@@ -98,7 +98,7 @@ check is inert and exits 0 — this is by design, not a gap.
    `~/djangocfg/src/django_cfg/`. Read the module's `__init__.py` `__all__`,
    not a docs example.
 3. **This repository's own settings and tests** — principally
-   `api/settings/config.py` and `api/settings/configs/`.
+   `api/settings/config.py` and `api/settings/builders/`.
 
 **Source and exports win when prose is stale.** A documentation example that
 fails is a documentation defect: fix it in the owning framework workflow rather

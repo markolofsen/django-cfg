@@ -40,7 +40,7 @@ variable at request time instead of writing it into the config file).
 already live in the Django config.** Anything external has to be told them
 again, and a second copy of a credential goes stale silently. The machinery is
 `django_cfg.modules.django_mcp.install`; this project only declares its targets
-in [`../../api/settings/mcp_config.py`](../../../api/settings/mcp_config.py),
+in [`../../api/settings/builders/mcp.py`](../../../api/settings/builders/mcp.py),
 beside the key itself.
 
 ## Local and prod are two registrations, not one setting

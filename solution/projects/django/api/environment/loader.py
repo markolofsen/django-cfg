@@ -124,8 +124,6 @@ class ApiKeysConfig(BaseSettings):
         env_prefix="API_KEYS__",
         env_nested_delimiter="__",
     )
-
-
 class IndexNowEnvConfig(BaseSettings):
     """IndexNow (Bing, Yandex, …). Empty key = off. The key is public by protocol."""
 
@@ -142,7 +140,6 @@ class AppConfig(BaseSettings):
     """Application configuration."""
 
     name: str = Field(default="Django CFG", description="Application name")
-    logo_url: str = Field(default="https://djangocfg.com/img/logo.png", description="Application logo URL")
     domain: str = Field(default="localhost", description="Application domain")
     api_url: str = Field(default="http://localhost:8000", description="API base URL")
     site_url: str = Field(default="http://localhost:3000", description="Site base URL")
@@ -165,45 +162,17 @@ class GitHubOAuthEnvConfig(BaseSettings):
     )
 
 
-class CentrifugoConfig(BaseSettings):
-    """Centrifugo WebSocket pub/sub configuration."""
 
-    enabled: bool = Field(default=True, description="Enable Centrifugo client")
+class WebPushEnvConfig(BaseSettings):
+    """Web Push notifications configuration (VAPID protocol)."""
 
-    # Wrapper configuration (for Django backend publishing)
-    wrapper_url: str = Field(default="http://localhost:8000/cfg/centrifugo", description="Centrifugo wrapper URL")
-    wrapper_api_key: Optional[str] = Field(default=None, description="Centrifugo wrapper API key")
-
-    # Centrifugo server configuration (for browser WebSocket connections)
-    centrifugo_url: str = Field(
-        default="ws://localhost:8120/connection/websocket",
-        description="Centrifugo WebSocket URL for browser clients"
-    )
-    centrifugo_api_url: str = Field(
-        default="http://localhost:8120/api",
-        description="Centrifugo HTTP API URL"
-    )
-    centrifugo_api_key: str = Field(
-        default="centrifugo-api-key-change-in-production-min-32-chars",
-        description="Centrifugo API key for server-to-server calls"
-    )
-    # IMPORTANT: Must match CENTRIFUGO_TOKEN_HMAC_SECRET (Centrifugo server) for JWT token validation
-    centrifugo_token_hmac_secret: str = Field(
-        default="django-secret-key-change-in-production-at-least-32-chars",
-        description="HMAC secret for JWT token generation (client auth)"
-    )
-
-    # Timeouts and behavior
-    default_ack_timeout: int = Field(default=10, description="Default ACK timeout in seconds")
-    log_publishes: bool = Field(default=True, description="Log all publish operations")
-    log_level: str = Field(default="INFO", description="Logging level")
-
-    # Database logging configuration
-    log_all_calls: bool = Field(default=True, description="Log all publish calls to database")
-    log_only_with_ack: bool = Field(default=False, description="Only log calls that wait for ACK")
+    enabled: bool = Field(default=True, description="Enable Web Push notifications")
+    vapid_private_key: Optional[str] = Field(default=None, description="VAPID private key for authentication")
+    vapid_public_key: Optional[str] = Field(default=None, description="VAPID public key for client subscription")
+    vapid_mailto: str = Field(default="mailto:noreply@djangocfg.com", description="VAPID mailto claim (RFC 8292)")
 
     model_config = SettingsConfigDict(
-        env_prefix="CENTRIFUGO__",
+        env_prefix="WEBPUSH__",
         env_nested_delimiter="__",
     )
 
@@ -242,19 +211,6 @@ class EnvironmentMode(BaseSettings):
     )
 
 
-class CloudflareEnvConfig(BaseSettings):
-    """Cloudflare D1 integration configuration."""
-
-    account_id: str = Field(default="", description="Cloudflare Account ID")
-    api_token: str = Field(default="", description="Cloudflare API token (D1:Edit permission)")
-    d1_database_id: str = Field(default="", description="D1 database UUID")
-
-    model_config = SettingsConfigDict(
-        env_prefix="CLOUDFLARE__",
-        env_nested_delimiter="__",
-    )
-
-
 class EnvironmentConfig(BaseSettings):
     """
     Complete environment configuration with automatic ENV and .env loading.
@@ -266,15 +222,17 @@ class EnvironmentConfig(BaseSettings):
     """
 
     # Core Django settings
-    # IMPORTANT: Must match CENTRIFUGO_TOKEN_HMAC_SECRET for JWT token generation
     secret_key: str = Field(
         default="django-secret-key-change-in-production-at-least-32-chars",
-        description="Django secret key (also used for Centrifugo JWT tokens)"
+        description="Django secret key"
     )
     debug: bool = Field(default=True, description="Enable debug mode")
 
     # Admin Configuration
-    admin_emails: Optional[list[str]] = Field(default_factory=list, description="Admin email addresses")
+    admin_emails: list[str] = Field(
+        default=["markolofsen@gmail.com"],
+        description="Admin email addresses for notifications"
+    )
 
     # Configuration sections (nested configs)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
@@ -284,15 +242,8 @@ class EnvironmentConfig(BaseSettings):
     app: AppConfig = Field(default_factory=AppConfig)
     indexnow: IndexNowEnvConfig = Field(default_factory=IndexNowEnvConfig)
     env: EnvironmentMode = Field(default_factory=EnvironmentMode)
-    centrifugo: CentrifugoConfig = Field(default_factory=CentrifugoConfig)
     github_oauth: GitHubOAuthEnvConfig = Field(default_factory=GitHubOAuthEnvConfig)
-    cloudflare: CloudflareEnvConfig = Field(default_factory=CloudflareEnvConfig)
-
-    # gRPC Configuration
-    grpc_url: Optional[str] = Field(
-        default=None,
-        description="Public gRPC URL for clients (e.g., grpc.djangocfg.com:443). If None, auto-generated from api_url",
-    )
+    webpush: WebPushEnvConfig = Field(default_factory=WebPushEnvConfig)
 
     # Cache Configuration
     # IMPORTANT: Redis URL for django-cfg CacheConfig
@@ -305,10 +256,14 @@ class EnvironmentConfig(BaseSettings):
     # Security domains
     security_domains: Optional[list[str]] = Field(
         default=[
-            "democfg.com",
-            "api.democfg.com",
+            "djangocfg.com",
+            "api.djangocfg.com",
+            "playground.djangocfg.com",
+            "hub.djangocfg.com",
             "localhost",
             "127.0.0.1",
+            # Docker internal service names (for container-to-container communication)
+            "djangocfg-api",  # Django API container
             # Docker exposed ports for CSRF (CORS uses regex for all ports)
             "localhost:3777",  # Next.js Admin App
             "localhost:7301",  # Django API

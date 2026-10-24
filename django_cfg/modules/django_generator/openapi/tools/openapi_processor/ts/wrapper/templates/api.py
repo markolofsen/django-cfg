@@ -100,8 +100,8 @@ def render_group_api_ts(
     *,
     groups: list[GroupSpec],
     routes: list[OpRoute] | None = None,
-    access_key: str = "cfg.access_token",  # kept for signature compat
-    refresh_key: str = "cfg.refresh_token",
+    access_key: str = "cfg.auth.access_token",  # kept for signature compat
+    refresh_key: str = "cfg.auth.refresh_token",
 ) -> str:
     """Render `<group>/api.ts` — thin proxy over the global `auth` store."""
 

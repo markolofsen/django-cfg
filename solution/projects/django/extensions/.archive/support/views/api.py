@@ -1,0 +1,185 @@
+"""
+Support API Views
+
+REST API ViewSets for tickets and messages.
+"""
+
+from django_cfg.middleware.pagination import DefaultPagination
+from django_cfg.mixins import ClientAPIMixin
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
+from rest_framework import viewsets
+
+from ..models import Message, Ticket
+from ..serializers import MessageCreateSerializer, MessageSerializer, TicketSerializer
+
+
+class TicketViewSet(ClientAPIMixin, viewsets.ModelViewSet):
+    """
+    ViewSet for managing support tickets.
+
+    Requires authenticated user (JWT or Session).
+    Staff users can see all tickets, regular users see only their own.
+    """
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
+
+    serializer_class = TicketSerializer
+    lookup_field = 'uuid'
+    lookup_url_kwarg = 'uuid'
+
+    def get_queryset(self):
+        # Handle swagger fake view
+        if getattr(self, 'swagger_fake_view', False):
+            return Ticket.objects.none()
+
+        if self.request.user.is_staff:
+            return Ticket.objects.all().order_by('-created_at')
+        return Ticket.objects.filter(user=self.request.user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class MessageViewSet(ClientAPIMixin, viewsets.ModelViewSet):
+    """
+    ViewSet for managing support messages.
+
+    Requires authenticated user (JWT or Session).
+    Users can only access messages for their own tickets.
+    """
+
+    # Pagination for list endpoint
+    pagination_class = DefaultPagination
+
+    serializer_class = MessageSerializer
+    lookup_field = 'uuid'
+    lookup_url_kwarg = 'uuid'
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='ticket_uuid',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='UUID of the ticket'
+            ),
+            OpenApiParameter(
+                name='uuid',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='UUID of the message'
+            ),
+        ]
+    )
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='ticket_uuid',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='UUID of the ticket'
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='ticket_uuid',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='UUID of the ticket'
+            ),
+        ]
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='ticket_uuid',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='UUID of the ticket'
+            ),
+            OpenApiParameter(
+                name='uuid',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='UUID of the message'
+            ),
+        ]
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='ticket_uuid',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='UUID of the ticket'
+            ),
+            OpenApiParameter(
+                name='uuid',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='UUID of the message'
+            ),
+        ]
+    )
+    def partial_update(self, request, *args, **kwargs):
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='ticket_uuid',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='UUID of the ticket'
+            ),
+            OpenApiParameter(
+                name='uuid',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='UUID of the message'
+            ),
+        ]
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)
+
+    def get_queryset(self):
+        # Handle swagger fake view
+        if getattr(self, 'swagger_fake_view', False):
+            return Message.objects.none()
+
+        ticket_uuid = self.kwargs.get('ticket_uuid')
+
+        # Base queryset filtered by ticket
+        queryset = Message.objects.filter(ticket__uuid=ticket_uuid)
+
+        # Additional permission filtering
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(ticket__user=self.request.user)
+
+        return queryset.order_by('created_at')
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return MessageCreateSerializer
+        return MessageSerializer
+
+    def perform_create(self, serializer):
+        ticket_uuid = self.kwargs.get('ticket_uuid')
+        ticket = Ticket.objects.get(uuid=ticket_uuid)
+        serializer.save(sender=self.request.user, ticket=ticket)

@@ -2,166 +2,112 @@
 {% block tab_content %}
 
 <style>
+  /* Vercel/Geist: near-black surfaces, hairline borders, one accent, tabular
+     numerals. The horizontal gutter comes from .dashboard-tab-content in the
+     base template — do not add padding here. */
+
+  .sys { color: #ededed; font-variant-numeric: tabular-nums; }
+
   .sys-notice {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(250, 204, 21, 0.08);
-    border: 1px solid rgba(250, 204, 21, 0.2);
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 28px;
-    font-size: 13px;
-    color: rgba(250, 204, 21, 0.9);
+    display: flex; align-items: center; gap: 10px;
+    background: #1a1a1a; border: 1px solid #2e2e2e;
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 24px;
+    font-size: 13px; color: #a1a1a1;
   }
-  .sys-notice .icon {
-    font-size: 18px;
-    flex-shrink: 0;
+  .sys-notice__icon {
     font-family: 'Material Symbols Outlined', sans-serif;
+    font-size: 16px; color: #8f8f8f; flex-shrink: 0;
+  }
+  .sys-notice strong { color: #ededed; font-weight: 500; }
+  .sys-notice code {
+    background: #0a0a0a; border: 1px solid #2e2e2e;
+    padding: 1px 5px; border-radius: 4px; font-size: 12px;
   }
 
-  .db-grid-2 {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 32px;
+  /* Stat row: a single bordered block split by hairlines, not four floating
+     cards. Fewer edges, less noise. */
+  .sys-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 1px; background: #2e2e2e;
+    border: 1px solid #2e2e2e; border-radius: 12px;
+    overflow: hidden; margin-bottom: 24px;
   }
-  .db-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    padding: 22px 20px;
+  .sys-stat { background: #0a0a0a; padding: 18px 20px; }
+  .sys-stat__label { font-size: 12px; color: #8f8f8f; margin-bottom: 8px; }
+  .sys-stat__value {
+    font-size: 26px; font-weight: 600; letter-spacing: -0.02em;
+    line-height: 1; color: #fff; word-break: break-word;
   }
-  .db-card__icon {
-    font-family: 'Material Symbols Outlined', sans-serif;
-    font-size: 22px;
-    color: rgba(255, 255, 255, 0.3);
-    margin-bottom: 12px;
-    display: block;
+  .sys-stat__sub { font-size: 12px; color: #666; margin-top: 6px; }
+
+  .sys-card {
+    background: #0a0a0a; border: 1px solid #2e2e2e;
+    border-radius: 12px; overflow: hidden;
   }
-  .db-card__label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.4);
-    margin-bottom: 6px;
-  }
-  .db-card__value {
-    font-size: 22px;
-    font-weight: 700;
-    color: #f1f5f9;
-    line-height: 1.1;
-    word-break: break-all;
-  }
-  .db-card__sub {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.3);
-    margin-top: 5px;
+  .sys-card__head {
+    padding: 14px 16px; border-bottom: 1px solid #2e2e2e;
+    font-size: 13px; font-weight: 500; color: #ededed;
   }
 
-  .db-section-title {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.4);
-    margin: 0 0 14px 0;
+  .sys-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; font-size: 13px;
+    border-bottom: 1px solid #1f1f1f;
   }
-
-  .db-table-wrap {
-    overflow-x: auto;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .db-kv-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-  .db-kv-table tr { border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
-  .db-kv-table tr:last-child { border-bottom: none; }
-  .db-kv-table td {
-    padding: 12px 16px;
-    vertical-align: top;
-  }
-  .db-kv-table td:first-child {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.4);
-    width: 200px;
-    white-space: nowrap;
-  }
-  .db-kv-table td:last-child {
-    color: #e2e8f0;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    font-size: 13px;
-  }
-
-  .accent-green { color: #4ade80; }
-  .accent-blue  { color: #60a5fa; }
+  .sys-row:last-child { border-bottom: none; }
+  .sys-row__key { color: #8f8f8f; }
+  .sys-row__val { color: #ededed; font-weight: 500; }
 </style>
 
-<!-- Superuser-only notice -->
-<div class="sys-notice">
-  <span class="icon">lock</span>
-  <span>
-    <strong>Superuser only tab</strong> — staff members cannot see this.
-    Only accounts with <code style="background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;">is_superuser=True</code> have access.
-  </span>
-</div>
+<div class="sys">
 
-<!-- Runtime info cards -->
-<div class="db-grid-2">
-  <div class="db-card">
-    <span class="db-card__icon">widgets</span>
-    <div class="db-card__label">Django Version</div>
-    <div class="db-card__value accent-green">{{ django_version }}</div>
-    <div class="db-card__sub">framework runtime</div>
+  <div class="sys-notice">
+    <span class="sys-notice__icon">lock</span>
+    <span>
+      <strong>Superuser only</strong> — staff members cannot see this tab.
+      Requires <code>is_superuser=True</code>.
+    </span>
   </div>
-  <div class="db-card">
-    <span class="db-card__icon">terminal</span>
-    <div class="db-card__label">Python Version</div>
-    <div class="db-card__value accent-blue">{{ python_version }}</div>
-    <div class="db-card__sub">interpreter</div>
-  </div>
-  <div class="db-card">
-    <span class="db-card__icon">computer</span>
-    <div class="db-card__label">Platform</div>
-    <div class="db-card__value">{{ platform }}</div>
-    <div class="db-card__sub">operating system</div>
-  </div>
-  <div class="db-card">
-    <span class="db-card__icon">table_chart</span>
-    <div class="db-card__label">DB Tables</div>
-    <div class="db-card__value">{{ db_table_count }}</div>
-    <div class="db-card__sub">in public schema</div>
-  </div>
-</div>
 
-<!-- Users summary -->
-<p class="db-section-title">Users Summary</p>
-<div class="db-table-wrap">
-  <table class="db-kv-table">
-    <tr>
-      <td>Total Users</td>
-      <td>{{ total_users }}</td>
-    </tr>
-    <tr>
-      <td>Superusers</td>
-      <td><span style="color:#f87171;">{{ superusers }}</span></td>
-    </tr>
-    <tr>
-      <td>Staff Members</td>
-      <td><span style="color:#facc15;">{{ staff_users }}</span></td>
-    </tr>
-    <tr>
-      <td>Regular Users</td>
-      <td>{{ total_users|add:"-"|add:superusers }}</td>
-    </tr>
-  </table>
+  <div class="sys-stats">
+    <div class="sys-stat">
+      <div class="sys-stat__label">Django</div>
+      <div class="sys-stat__value">{{ django_version }}</div>
+      <div class="sys-stat__sub">framework runtime</div>
+    </div>
+    <div class="sys-stat">
+      <div class="sys-stat__label">Python</div>
+      <div class="sys-stat__value">{{ python_version }}</div>
+      <div class="sys-stat__sub">interpreter</div>
+    </div>
+    <div class="sys-stat">
+      <div class="sys-stat__label">Platform</div>
+      <div class="sys-stat__value">{{ platform }}</div>
+      <div class="sys-stat__sub">operating system</div>
+    </div>
+    <div class="sys-stat">
+      <div class="sys-stat__label">Tables</div>
+      <div class="sys-stat__value">{{ db_table_count }}</div>
+      <div class="sys-stat__sub">in public schema</div>
+    </div>
+  </div>
+
+  <div class="sys-card">
+    <div class="sys-card__head">Users</div>
+    <div class="sys-row">
+      <span class="sys-row__key">Total</span>
+      <span class="sys-row__val">{{ total_users }}</span>
+    </div>
+    <div class="sys-row">
+      <span class="sys-row__key">Superusers</span>
+      <span class="sys-row__val">{{ superusers }}</span>
+    </div>
+    <div class="sys-row">
+      <span class="sys-row__key">Staff</span>
+      <span class="sys-row__val">{{ staff_users }}</span>
+    </div>
+  </div>
+
 </div>
 
 {% endblock %}

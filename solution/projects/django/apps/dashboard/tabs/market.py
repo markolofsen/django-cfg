@@ -1,22 +1,27 @@
+from django.db.models import Count, Sum
 from django.http import HttpRequest
-from django.db.models import Avg, Count, Sum
 
 
 def callback(request: HttpRequest) -> dict:
-    from apps.crypto.models.coin import Coin
+    """Market overview, from the CoinListing table.
 
-    coins = Coin.objects.filter(is_active=True).order_by('rank')[:20]
-    total = Coin.objects.count()
-    active = Coin.objects.filter(is_active=True).count()
-    gainers = Coin.objects.filter(price_change_24h_percent__gt=0).count()
-    losers = Coin.objects.filter(price_change_24h_percent__lt=0).count()
-    avg_change = Coin.objects.aggregate(avg=Avg('price_change_24h_percent'))['avg'] or 0
+    This used to import `apps.crypto.models.coin.Coin` and query `is_active`,
+    `rank` and `price_change_24h_percent` — a model that does not exist in this
+    project. `apps.crypto.models` is a MODULE, not a package, and the model it
+    defines is `CoinListing`, which has none of those fields. Every render raised
+    ModuleNotFoundError.
+    """
+    from apps.crypto.models import CoinListing
+
+    coins = CoinListing.objects.order_by("-market_cap")[:20]
+
+    agg = CoinListing.objects.aggregate(
+        total=Count("id"),
+        market_cap=Sum("market_cap"),
+    )
 
     return {
-        'coins': coins,
-        'total_coins': total,
-        'active_coins': active,
-        'gainers': gainers,
-        'losers': losers,
-        'avg_change_24h': round(float(avg_change), 2),
+        "coins": coins,
+        "total_coins": agg["total"] or 0,
+        "total_market_cap": agg["market_cap"] or 0,
     }

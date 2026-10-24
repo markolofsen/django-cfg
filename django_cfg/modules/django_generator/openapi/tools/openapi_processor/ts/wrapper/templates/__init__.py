@@ -2,6 +2,7 @@
 
 from .storage import STORAGE_TS
 from .errors import ERRORS_TS
+from .keys import KEYS_TS
 from .logger import LOGGER_TS
 from .validation_events import VALIDATION_EVENTS_TS
 from .auth import render_auth_public_ts, render_auth_ts
@@ -15,6 +16,7 @@ from .api import (
 __all__ = [
     "STORAGE_TS",
     "ERRORS_TS",
+    "KEYS_TS",
     "LOGGER_TS",
     "VALIDATION_EVENTS_TS",
     "GroupSpec",

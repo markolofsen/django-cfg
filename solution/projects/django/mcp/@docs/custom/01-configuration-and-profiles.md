@@ -1,7 +1,7 @@
 # 01 — Configuration and profiles
 
 Everything on this page is
-[`api/settings/mcp_config.py`](../../../api/settings/mcp_config.py). Read it
+[`api/settings/builders/mcp.py`](../../../api/settings/builders/mcp.py). Read it
 alongside; this explains the decisions, it does not restate the file.
 
 ## Why the config is not in `mcp/`
