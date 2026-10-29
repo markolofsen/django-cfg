@@ -96,6 +96,12 @@ and `public_info` were removed and raise at build with migration advice. A
 "public" profile serves only `public = True` tools, to holders of a per-user key
 (`key_validator`) or static `public_keys`.
 
+**Tool hints decide whether the client asks.** `tools/list` carries `title` and four
+annotations per tool (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`).
+Claude and ChatGPT run a read-only tool without a confirmation and always ask for the
+rest, so every tool that only reads declares `read_only = True`; one that declares
+nothing is a destructive writer. See [tools.md](./@docs/tools.md#declare-what-the-tool-does-read_only).
+
 A public profile can also let assistants (Claude, ChatGPT, Claude Code, Codex,
 Cursor, VS Code) connect by URL and a sign-in instead of a pasted key: add
 `oauth_consent_url=` and `oauth_issuer=` to `enable_public_profile()`. It is
