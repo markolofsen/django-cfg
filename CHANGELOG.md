@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **MCP tool hints.** `MCPTool` gains `read_only`, `destructive`, `idempotent`, `open_world`
+  and `title`; `tools/list` now carries `title` and all four `annotations`. Claude and ChatGPT
+  run a read-only tool without a per-call confirmation, so every built-in reader
+  (`query_model`, `get_object`, `list_apps`, `aggregate_model`, ...) is marked, and a tool that
+  declares nothing stays a prompting writer. `@mcp_tool` and `mcp.tool` accept `read_only=True`.
+
 ### Changed
 - **One browser-storage key scheme: `cfg.<area>.<name>`** (lower case, dots,
   `snake_case`). The generated client gains `helpers/keys.ts`: a registry of every

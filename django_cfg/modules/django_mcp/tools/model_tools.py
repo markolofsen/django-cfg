@@ -13,6 +13,7 @@ from django_cfg.modules.django_mcp.services.redactor import apply_redaction, Red
 class QueryModelTool(MCPTool):
     """Query a Django model with filters."""
 
+    read_only = True
     name = "query_model"
     description = "Query a Django model with filters. Returns a list of matching records."
     input_schema = {
@@ -100,6 +101,7 @@ class QueryModelTool(MCPTool):
 class GetObjectTool(MCPTool):
     """Get a single object by primary key."""
 
+    read_only = True
     name = "get_object"
     description = "Get a single Django model object by its primary key."
     input_schema = {

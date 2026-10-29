@@ -26,6 +26,35 @@ class MCPTool(ABC):
     #: personal data, and cannot mutate anything.
     public: bool = False
 
+    #: What the tool does to the world, declared next to its code like `public`.
+    #:
+    #: Clients (Claude, ChatGPT, Codex) read these four hints to decide whether a
+    #: call needs the user's confirmation: a read-only tool runs without asking,
+    #: a tool that may change data always asks. A tool that declares nothing is
+    #: treated as a writer, so the safe default also nags: mark every reader.
+    #: `read_only`: only reads, no side effect on its environment.
+    #: `destructive`: may delete or overwrite (None = yes unless `read_only`).
+    #: `idempotent`: a repeated call with the same arguments changes nothing more.
+    #: `open_world`: reaches systems outside this server (web, third-party APIs).
+    #: `title`: human label for the client's tool list ("" = derived from `name`).
+    read_only: bool = False
+    destructive: Optional[bool] = None
+    idempotent: Optional[bool] = None
+    open_world: bool = False
+    title: str = ""
+
+    def annotations(self) -> Dict[str, Any]:
+        """The four MCP hints, always all present (ChatGPT's review rejects a tool that omits one)."""
+        destructive = (not self.read_only) if self.destructive is None else bool(self.destructive)
+        idempotent = self.read_only if self.idempotent is None else bool(self.idempotent)
+        return {
+            "title": self.title or self.name.replace("_", " ").capitalize(),
+            "readOnlyHint": bool(self.read_only),
+            "destructiveHint": False if self.read_only else destructive,
+            "idempotentHint": idempotent,
+            "openWorldHint": bool(self.open_world),
+        }
+
     def schema_for(self, profile) -> Dict[str, Any]:
         """The input schema this profile should be shown.
 
@@ -46,10 +75,13 @@ class MCPTool(ABC):
         ``profile`` is optional so every existing caller keeps working; when
         given, the schema is the one that profile should see.
         """
+        annotations = self.annotations()
         return {
             "name": self.name,
+            "title": annotations["title"],
             "description": self.description,
             "inputSchema": self.schema_for(profile) if profile is not None else self.input_schema,
+            "annotations": annotations,
         }
 
     def is_available(self, context: Optional[MCPContext]) -> bool:

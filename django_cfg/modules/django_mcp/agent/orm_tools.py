@@ -34,6 +34,7 @@ class AggregateModelTool(MCPTool):
     Supports COUNT, SUM, AVG, MIN, MAX with optional GROUP BY.
     """
 
+    read_only = True
     name = "aggregate_model"
     description = (
         "Aggregate data from a model: count, sum, avg, min, max. "
@@ -164,6 +165,7 @@ class TimeSeriesTool(MCPTool):
     Safe — uses pre-optimized SQL template via Django ORM.
     """
 
+    read_only = True
     name = "time_series"
     description = (
         "Group data by time intervals (hourly, daily, monthly, yearly). "
@@ -278,6 +280,7 @@ class TopValuesTool(MCPTool):
     Uses values().annotate(count=Count('id')).order_by('-count')[:limit].
     """
 
+    read_only = True
     name = "top_values"
     description = (
         "Find the most frequent values in a field. "
@@ -347,6 +350,7 @@ class DistributionTool(MCPTool):
     Uses percentile_cont for median and quartiles via raw SQL.
     """
 
+    read_only = True
     name = "distribution"
     description = (
         "Get statistical distribution of a numeric field: "

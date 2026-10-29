@@ -382,7 +382,7 @@ class MCPConfigBuilder:
         )
         return self
 
-    def tool(self, name: str, description: str, input_schema: Optional[Dict[str, Any]] = None):
+    def tool(self, name: str, description: str, input_schema: Optional[Dict[str, Any]] = None, *, read_only: bool = False, **hints: Any):
         """
         Decorator to define a custom tool for agents.
 
@@ -401,6 +401,9 @@ class MCPConfigBuilder:
                     self.description = description
                     self.input_schema = input_schema
                     self.func = func
+                    self.read_only = read_only
+                    for hint, value in hints.items():  # destructive, idempotent, open_world, title
+                        setattr(self, hint, value)
 
                 def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> str:
                     return self.func(context, **arguments)

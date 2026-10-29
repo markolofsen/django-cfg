@@ -42,6 +42,7 @@ def mcp_viewset(
         # Create tools for each operation
         if "list" in operations:
             class ListTool(MCPTool):
+                read_only = True
                 name = f"{tool_prefix}_list"
                 description = f"List {model._meta.verbose_name_plural}"
                 input_schema = {
@@ -63,6 +64,7 @@ def mcp_viewset(
 
         if "retrieve" in operations:
             class RetrieveTool(MCPTool):
+                read_only = True
                 name = f"{tool_prefix}_retrieve"
                 description = f"Get a single {model._meta.verbose_name}"
                 input_schema = {
@@ -88,6 +90,7 @@ def mcp_viewset(
 
         if "create" in operations:
             class CreateTool(MCPTool):
+                destructive = False  # adds a row, never overwrites one
                 name = f"{tool_prefix}_create"
                 description = f"Create a new {model._meta.verbose_name}"
                 input_schema = {
@@ -116,9 +119,11 @@ def mcp_viewset(
     return decorator
 
 
-def mcp_tool(name: str, description: str, input_schema: Dict[str, Any]):
+def mcp_tool(name: str, description: str, input_schema: Dict[str, Any], *, read_only: bool = False, **hints: Any):
     """
     Decorator to expose a function as an MCP tool.
+
+    Pass `read_only=True` for a tool that only reads: clients then run it without asking the user each time.
 
     Usage:
         @mcp_tool(
@@ -144,6 +149,9 @@ def mcp_tool(name: str, description: str, input_schema: Dict[str, Any]):
                 self.description = description
                 self.input_schema = input_schema
                 self.func = func
+                self.read_only = read_only
+                for hint, value in hints.items():  # destructive, idempotent, open_world, title
+                    setattr(self, hint, value)
 
             def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> str:
                 return self.func(context, **arguments)

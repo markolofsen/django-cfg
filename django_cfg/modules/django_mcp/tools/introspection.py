@@ -66,6 +66,7 @@ def _as_int(value: Any, default: int) -> int:
 class ListAppsTool(MCPTool):
     """List all installed Django apps and their models."""
 
+    read_only = True
     name = "list_apps"
     description = "List all installed Django applications and their models. Use this to discover the application structure."
     input_schema = {
@@ -116,6 +117,7 @@ class ListAppsTool(MCPTool):
 class GetModelSchemaTool(MCPTool):
     """Get detailed schema for a Django model."""
 
+    read_only = True
     name = "get_model_schema"
     description = "Get detailed schema for a specific Django model including fields, relationships, and constraints."
     input_schema = {
@@ -216,6 +218,7 @@ class ListURLsTool(MCPTool):
     DEFAULT_LIMIT = 200
     MAX_LIMIT = 2000
 
+    read_only = True
     name = "list_urls"
     description = (
         "List URL patterns registered in Django. Only available when introspection "

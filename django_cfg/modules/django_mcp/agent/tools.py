@@ -40,6 +40,7 @@ class QueryModelTool(MCPTool):
     Supports safe ORM queries only — no raw SQL.
     """
 
+    read_only = True
     name = "query_model"
     description = (
         "Query a Django model. Supports filtering, ordering, pagination, "
@@ -211,6 +212,7 @@ class CountRecordsTool(MCPTool):
     Use this to check how many records match a filter before fetching them.
     """
 
+    read_only = True
     name = "count_records"
     description = (
         "Count records matching a filter without loading them. "
@@ -272,6 +274,7 @@ class RawSQLTool(MCPTool):
     5. Parameterized queries only
     """
 
+    read_only = True
     name = "raw_sql"
     description = (
         "Execute a raw SQL query (read-only only). "

@@ -30,6 +30,7 @@ class GetUserInfoTool(MCPTool):
     Sensitive fields (passwords, tokens) are always blocked.
     """
 
+    read_only = True
     name = "get_user_info"
     description = (
         "Look up user information by user_id, email, or username. "
