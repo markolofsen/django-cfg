@@ -69,6 +69,12 @@ def _patterns_for(config) -> list:
         patterns.append(
             path(f"{prefix}/", MCPView.as_view(profile=name), name=f"mcp-{name}")
         )
+        # The same endpoint without the trailing slash. Clients (Claude among
+        # them) strip it from the connector URL before they POST, and APPEND_SLASH
+        # cannot redirect a POST, so without this route the call is a 404.
+        patterns.append(
+            path(prefix, MCPView.as_view(profile=name), name=f"mcp-{name}-bare")
+        )
         patterns.append(
             path(
                 f"{prefix}/info/",
