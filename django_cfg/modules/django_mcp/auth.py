@@ -127,3 +127,23 @@ def _service_account(username: Optional[str]) -> Any:
         )
         return None
     return account
+
+
+def validate_user_api_key(secret: str) -> Any:
+    """Default ``key_validator``: a user's own ``UserAPIKey`` (a UUID).
+
+    One indexed lookup on the unique ``key`` column. Returns the active user or
+    ``None``; a regenerated key no longer matches, so rotating ends access.
+    """
+    import uuid
+
+    try:
+        key = uuid.UUID(str(secret).strip())
+    except (ValueError, AttributeError):
+        return None
+    try:
+        from django_cfg.apps.system.accounts.models import UserAPIKey
+    except ImportError:
+        return None
+    row = UserAPIKey.objects.select_related("user").filter(key=key, user__is_active=True).first()
+    return row.user if row else None

@@ -84,26 +84,7 @@ def _patterns_for(config) -> list:
         )
         if getattr(profile, "oauth", None):
             patterns += _oauth_patterns(name, prefix)
-        # Opt-in only, and the views demand a signed-in user, not an MCP key.
-        if getattr(profile, "manage_enabled", False):
-            patterns += _manage_patterns(prefix, profile)
     return patterns
-
-
-def _manage_patterns(prefix: str, profile) -> list:
-    """The self-service keys / connections / usage API under ``<prefix>/manage/``."""
-    from django.urls import include
-
-    from .manage import manage_urlpatterns
-    from .manage.default_store import DefaultAccessStore
-    from .manage.store import load_store
-
-    store = (
-        load_store(profile.access_store)
-        if profile.access_store
-        else DefaultAccessStore(stateful_oauth=profile.stateful_oauth)
-    )
-    return [path(f"{prefix}/manage/", include(manage_urlpatterns(store)))]
 
 
 def _oauth_patterns(name: str, prefix: str) -> list:

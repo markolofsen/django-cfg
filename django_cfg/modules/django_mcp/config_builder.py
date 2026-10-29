@@ -30,8 +30,8 @@ from django_cfg.modules.django_mcp.services.context import MCPContext
 #: config cannot disagree about the default.
 DEFAULT_ENDPOINT_PATH = DjangoMCPModuleConfig.model_fields["endpoint_path"].default
 
-#: ``key_validator`` for keys issued by the default access store.
-DEFAULT_KEY_VALIDATOR = "django_cfg.modules.django_mcp.manage.default_store.validate_key"
+#: ``key_validator`` used when none is given: the user's own ``UserAPIKey``.
+DEFAULT_KEY_VALIDATOR = "django_cfg.modules.django_mcp.auth.validate_user_api_key"
 
 
 class ProfileBuilder:
@@ -58,20 +58,6 @@ class ProfileBuilder:
         self._introspection: Optional[IntrospectionConfig] = None
         self._rate_limit: str = "100/minute"
         self._oauth: Optional[MCPOAuthConfig] = None
-        self._manage = False
-        self._access_store: Optional[str] = None
-        self._stateful_oauth = False
-
-    def enable_manage(self, access_store: Optional[str] = None, *, stateful_oauth: bool = False) -> "ProfileBuilder":
-        """Mount the keys / connections / usage API for signed-in users at ``<path>manage/``.
-
-        ``access_store`` is a dotted path to an ``AccessStore``; the default
-        store keeps keys in ``McpKey`` (see ``@docs/manage.md``).
-        """
-        self._manage = True
-        self._access_store = access_store
-        self._stateful_oauth = stateful_oauth
-        return self
 
     def enable_oauth(self, consent_url: str, issuer: Optional[str] = None, **ttl: int) -> "ProfileBuilder":
         """Let clients sign in (OAuth 2.1, PKCE) instead of sending a key.
@@ -146,6 +132,11 @@ class ProfileBuilder:
         self._rate_limit = limit
         return self
 
+    def use_user_api_keys(self) -> "ProfileBuilder":
+        """Accept each user's own django-cfg ``UserAPIKey`` (the default validator)."""
+        self._key_validator = DEFAULT_KEY_VALIDATOR
+        return self
+
     def set_key_validator(self, dotted_path: str) -> "ProfileBuilder":
         """Accept keys checked by ``callable(key: str) -> user | True | None``.
 
@@ -179,9 +170,6 @@ class ProfileBuilder:
             rate_limit=self._rate_limit,
             key_validator=self._key_validator,
             oauth=self._oauth,
-            manage=self._manage,
-            access_store=self._access_store,
-            stateful_oauth=self._stateful_oauth,
         )
 
     def __enter__(self) -> "ProfileBuilder":
@@ -263,9 +251,6 @@ class MCPConfigBuilder:
         public_keys: Optional[Dict[str, str]] = None,
         oauth_consent_url: Optional[str] = None,
         oauth_issuer: Optional[str] = None,
-        enable_manage: bool = False,
-        access_store: Optional[str] = None,
-        stateful_oauth: bool = False,
     ) -> "MCPConfigBuilder":
         """Serve a read-only, public-tools surface beside the operator one.
 
@@ -273,8 +258,8 @@ class MCPConfigBuilder:
             mcp.enable_public_profile(key_validator="api.mcp_keys.validate")
 
         It is still key-protected: a caller presents ``X-MCP-Access-Key`` and
-        sees only tools that declare ``public = True`` on their class. At least
-        one credential path is required (the operator keys do NOT open it):
+        sees only tools that declare ``public = True`` on their class. The
+        operator keys do NOT open it. Credential paths:
 
         - ``key_validator``: dotted path to ``callable(key) -> user | True |
           None``, for per-user API keys kept in the project's database;
@@ -285,11 +270,9 @@ class MCPConfigBuilder:
         ``key_validator``-style user model either way: the token acts as the
         user who approved it.
 
-        ``enable_manage=True`` (or naming an ``access_store``) mounts the
-        self-service keys / connections / usage API at ``<path>manage/`` for
-        signed-in users. Without a ``key_validator`` the default store's
-        ``validate_key`` is used, so the keys it issues authenticate here.
-        See ``@docs/manage.md``.
+        With neither ``key_validator`` nor ``public_keys`` the profile accepts
+        each user's own django-cfg ``UserAPIKey`` (``auth.validate_user_api_key``):
+        one key per user, rotated by ``POST cfg/accounts/api-key/regenerate/``.
 
         The flat settings become the ``operator`` profile automatically; that
         is why this does not trip the "profiles must not be mixed with flat
@@ -298,14 +281,8 @@ class MCPConfigBuilder:
         ``rate_limit`` defaults tighter than the operator's. ``/info/`` is
         gated by the same keys.
         """
-        if (enable_manage or access_store) and not key_validator and not access_store:
-            key_validator = DEFAULT_KEY_VALIDATOR
         if not key_validator and not public_keys:
-            raise ValueError(
-                "enable_public_profile() needs a key path: pass key_validator="
-                "'pkg.mod.func' (per-user API keys) and/or public_keys="
-                "{'label': 'key'}. Anonymous public access was removed."
-            )
+            key_validator = DEFAULT_KEY_VALIDATOR
         self._public_profile = {
             "path": path,
             "rate_limit": rate_limit,
@@ -314,9 +291,6 @@ class MCPConfigBuilder:
             "public_keys": public_keys or {},
             "oauth_consent_url": oauth_consent_url,
             "oauth_issuer": oauth_issuer,
-            "manage": bool(enable_manage or access_store),
-            "access_store": access_store,
-            "stateful_oauth": stateful_oauth,
         }
         return self
 
@@ -611,8 +585,6 @@ class MCPConfigBuilder:
                     pub.add_access_key(label, key)
                 if spec["oauth_consent_url"]:
                     pub.enable_oauth(spec["oauth_consent_url"], issuer=spec["oauth_issuer"])
-                if spec["manage"]:
-                    pub.enable_manage(spec["access_store"], stateful_oauth=spec["stateful_oauth"])
                 pub.tools(PUBLIC_TOOLS)
                 pub.set_rate_limit(spec["rate_limit"])
                 for model_key, kwargs in spec["expose"].items():

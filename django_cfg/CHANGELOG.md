@@ -16,21 +16,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mcp_key_user_revoked_idx` fails when the project already has one.
 
 ### Added
-- **MCP: manage backend for keys, connections and usage** (`django_mcp/manage`). Signed-in users
-  list, create (secret shown once) and revoke MCP keys, list and revoke OAuth connections and see
-  usage, with no views to write. Opt in with `enable_public_profile(enable_manage=True)`,
-  `access_store="dotted.path"` or `ProfileBuilder.enable_manage()`; routes appear under the profile
-  path + `manage/`, or mount `manage_urlpatterns(store)` yourself. A pluggable `AccessStore`
-  (every method optional, a missing one 404s) and a default store on new `McpKey` / `McpGrant`
-  tables (migration `0002`, additive) with `validate_key` as a ready `key_validator`. OAuth stays
-  stateless: connections are listed only with `stateful_oauth=True`. See `django_mcp/@docs/manage.md`.
 - **MCP tool hints.** `MCPTool` gains `read_only`, `destructive`, `idempotent`, `open_world`
   and `title`; `tools/list` now carries `title` and all four `annotations`. Claude and ChatGPT
   run a read-only tool without a per-call confirmation, so every built-in reader
   (`query_model`, `get_object`, `list_apps`, `aggregate_model`, ...) is marked, and a tool that
   declares nothing stays a prompting writer. `@mcp_tool` and `mcp.tool` accept `read_only=True`.
 
+### Removed
+- **MCP: the `McpKey` / `McpGrant` tables, the keys / connections / usage manage API (`django_mcp/manage`),
+  the `AccessStore` protocol, `access_store=` / `stateful_oauth=`** (shipped in 2.3.352 to 2.3.354; one user,
+  gptkino). The MCP credential is now the user's existing `UserAPIKey`. Migration `0003` drops
+  `django_cfg_mcp_mcpkey` and `django_cfg_mcp_mcpgrant`; keys issued from them stop working, users copy
+  their `UserAPIKey` instead. No new tables.
+
 ### Changed
+- **MCP: the default key validator is the user's `UserAPIKey`.** `enable_public_profile()` with neither
+  `key_validator` nor `public_keys` (and `ProfileBuilder.use_user_api_keys()`) accepts the key UUID, as
+  `Authorization: Bearer` or `X-MCP-Access-Key`, through `auth.validate_user_api_key` (one indexed lookup,
+  active users only). "Renew" is the existing `POST cfg/accounts/api-key/regenerate/`. An explicit
+  `key_validator` is unchanged; the `operator` profile never accepts user keys.
+- **MCP OAuth: tokens carry the key generation (`kg`).** Access and refresh tokens hold
+  `UserAPIKey.reissued_at` in integer microseconds (0 when never regenerated or no key row); a token whose
+  generation differs from the user's current one is refused (refresh answers `invalid_grant`), so
+  regenerating the key ends every OAuth connection too. Tokens without `kg` count as generation 0, so
+  tokens issued before this release keep working until the user regenerates. One extra query per check.
 - **One browser-storage key scheme: `cfg.<area>.<name>`** (lower case, dots,
   `snake_case`). The generated client gains `helpers/keys.ts`: a registry of every
   key (`CFG_KEYS`, `CFG_FAMILIES`), guarded `read/write/remove` (SSR, private

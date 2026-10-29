@@ -25,6 +25,7 @@ Code), so a stolen client id cannot send a code anywhere else.
 from __future__ import annotations
 
 import base64
+import calendar
 import hashlib
 import logging
 import re
@@ -118,11 +119,34 @@ def client_from_id(client_id: Optional[str]) -> Optional[dict]:
 # ── tokens ───────────────────────────────────────────────────────────────────
 
 
+def key_generation(user_pk: Any) -> int:
+    """The user's key generation: ``UserAPIKey.reissued_at`` as integer microseconds.
+
+    0 when the key was never regenerated or the user has no key row. Microseconds,
+    not seconds: two regenerations in the same second would otherwise share a
+    generation and the older tokens would survive the second one. Costs one query.
+    """
+    from django_cfg.apps.system.accounts.models import UserAPIKey
+
+    at = UserAPIKey.objects.filter(user_id=user_pk).values_list("reissued_at", flat=True).first()
+    if at is None:
+        return 0
+    return calendar.timegm(at.utctimetuple()) * 1_000_000 + at.microsecond
+
+
+def token_generation(payload: dict) -> int:
+    """A token without ``kg`` (issued before regenerating counted) is generation 0."""
+    kg = payload.get("kg")
+    return kg if isinstance(kg, int) and not isinstance(kg, bool) and kg > 0 else 0
+
+
 def issue_tokens(profile, user_pk: Any, client_id: str) -> dict:
+    """Both tokens carry the user's key generation (``kg``); regenerating the key outdates them."""
     now = time.time()
-    access = seal({"typ": "access", "uid": user_pk, "prof": profile.name, "exp": now + profile.oauth.access_ttl})
+    kg = key_generation(user_pk)
+    access = seal({"typ": "access", "uid": user_pk, "kg": kg, "prof": profile.name, "exp": now + profile.oauth.access_ttl})
     refresh = seal(
-        {"typ": "refresh", "uid": user_pk, "prof": profile.name, "cid": client_id, "exp": now + profile.oauth.refresh_ttl}
+        {"typ": "refresh", "uid": user_pk, "kg": kg, "prof": profile.name, "cid": client_id, "exp": now + profile.oauth.refresh_ttl}
     )
     return {
         "access_token": access,
@@ -137,15 +161,18 @@ def user_for_access_token(token: str, profile) -> Any:
     payload = unseal(token, "access")
     if not payload or payload.get("prof") != getattr(profile, "name", None):
         return None
-    return _active_user(payload.get("uid"))
+    return _active_user(payload.get("uid"), payload)
 
 
-def _active_user(pk: Any) -> Any:
+def _active_user(pk: Any, token: Optional[dict] = None) -> Any:
+    """The active user; with a ``token`` payload, only if its key generation is still current."""
     from django.contrib.auth import get_user_model
 
     if pk is None:
         return None
     user = get_user_model().objects.filter(pk=pk, is_active=True).first()
+    if user is not None and token is not None and token_generation(token) != key_generation(user.pk):
+        return None
     return user
 
 
@@ -411,7 +438,7 @@ class TokenView(_ProfileView):
             refresh = unseal(get("refresh_token"), "refresh")
             if not refresh or refresh.get("prof") != profile.name or not client_from_id(refresh.get("cid")):
                 return _error("invalid_grant", "The refresh token is not valid.")
-            if _active_user(refresh.get("uid")) is None:
+            if _active_user(refresh.get("uid"), refresh) is None:
                 return _error("invalid_grant", "The account is not active.")
             return _json(issue_tokens(profile, refresh["uid"], refresh["cid"]))
 

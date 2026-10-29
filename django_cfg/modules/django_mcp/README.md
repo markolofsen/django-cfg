@@ -94,7 +94,9 @@ curl -X POST http://localhost:8000/cfg/mcp/agent/ \
 key as the JSON-RPC endpoint. There is no anonymous mode: `access="anonymous"`
 and `public_info` were removed and raise at build with migration advice. A
 "public" profile serves only `public = True` tools, to holders of a per-user key
-(`key_validator`) or static `public_keys`.
+(`key_validator`) or static `public_keys`. With neither, `enable_public_profile()`
+accepts each user's own django-cfg `UserAPIKey` (one key per user; see
+[connect-assistants.md](./@docs/connect-assistants.md#one-key-per-user)).
 
 **Tool hints decide whether the client asks.** `tools/list` carries `title` and four
 annotations per tool (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`).
@@ -105,11 +107,8 @@ nothing is a destructive writer. See [tools.md](./@docs/tools.md#declare-what-th
 A public profile can also let assistants (Claude, ChatGPT, Claude Code, Codex,
 Cursor, VS Code) connect by URL and a sign-in instead of a pasted key: add
 `oauth_consent_url=` and `oauth_issuer=` to `enable_public_profile()`. It is
-stateless (signed with `SECRET_KEY`, no tables). See
+stateless (signed with `SECRET_KEY`, no tables); regenerating the user's key ends every connection. See
 [connect-assistants.md](./@docs/connect-assistants.md).
-
-`enable_manage=True` (or `access_store=`) also mounts a self-service API for keys,
-connections and usage at `<path>manage/`; see [manage.md](./@docs/manage.md).
 
 > **Check a deployed server before trusting its auth.** Until 2026-08-04 the
 > access key was compared and then ignored, so tools ran for unauthenticated
@@ -169,6 +168,5 @@ Module-level detail lives in [`@docs/`](./@docs/README.md):
 | [configuration.md](./@docs/configuration.md) | You need a config field's exact effect. |
 | [agent-chat.md](./@docs/agent-chat.md) | You are touching the admin SSE chat. |
 | [connect-assistants.md](./@docs/connect-assistants.md) | You are letting people connect Claude, ChatGPT, Codex, Cursor or VS Code with a sign-in. |
-| [manage.md](./@docs/manage.md) | You are letting signed-in users manage their own MCP keys and connections (`enable_manage=True`). |
 | [redis.md](./@docs/redis.md) | Cache, budget, or chat history. |
 | [remote-consumption.md](./@docs/remote-consumption.md) | You are *calling* a remote MCP server rather than serving one. |
