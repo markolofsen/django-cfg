@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **MCP: `McpKey` / `McpGrant` reverse names no longer clash with a project's own MCP models.** The user
+  relations were `mcp_keys` / `mcp_grants` (Django check E304/E305 in projects that keep models of the same
+  name); they are now `django_cfg_mcp_keys` / `django_cfg_mcp_grants` (migration `0003`, no SQL).
+  The index names (`mcp_key_user_revoked_idx`, `mcp_grant_user_revoked_idx`, check E030) are prefixed
+  `dcfg_` for the same reason (renamed in `0003`).
+
 ### Added
 - **MCP: manage backend for keys, connections and usage** (`django_mcp/manage`). Signed-in users
   list, create (secret shown once) and revoke MCP keys, list and revoke OAuth connections and see

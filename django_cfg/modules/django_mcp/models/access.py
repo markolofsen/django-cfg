@@ -8,7 +8,7 @@ from django.utils import timezone
 class McpKey(models.Model):
     """A per-user MCP key. Only the sha256 of the secret is stored; the secret is shown once, at creation."""
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="mcp_keys")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="django_cfg_mcp_keys")
     name = models.CharField(max_length=40)
     prefix = models.CharField(max_length=12, help_text="First characters of the key, for the user's list")
     key_hash = models.CharField(max_length=64, unique=True, editable=False)
@@ -20,7 +20,7 @@ class McpKey(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
-        indexes = [models.Index(fields=["user", "revoked_at"], name="mcp_key_user_revoked_idx")]
+        indexes = [models.Index(fields=["user", "revoked_at"], name="dcfg_mcpkey_user_revoked_idx")]
 
     def __str__(self) -> str:
         return f"{self.prefix}... ({self.name})"
@@ -39,7 +39,7 @@ class McpGrant(models.Model):
     is here for a project that issues grants itself (``stateful_oauth=True``).
     """
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="mcp_grants")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="django_cfg_mcp_grants")
     client_name = models.CharField(max_length=80)
     scopes = models.JSONField(default=list, blank=True)
     refresh_gen = models.PositiveIntegerField(default=0, help_text="Generation of the one refresh token that is valid")
@@ -49,7 +49,7 @@ class McpGrant(models.Model):
 
     class Meta:
         ordering = ["-created_at", "-id"]
-        indexes = [models.Index(fields=["user", "revoked_at"], name="mcp_grant_user_revoked_idx")]
+        indexes = [models.Index(fields=["user", "revoked_at"], name="dcfg_mcpgrant_user_revoked_idx")]
 
     def __str__(self) -> str:
         return f"{self.client_name} (user {self.user_id})"
