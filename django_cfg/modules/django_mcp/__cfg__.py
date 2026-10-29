@@ -345,6 +345,25 @@ class MCPProfile(BaseModel):
         default=None,
         description="OAuth sign-in for this profile; None keeps it key-only.",
     )
+    manage: bool = Field(
+        default=False,
+        description=(
+            "Mount the self-service manage API (keys, connections, usage) under "
+            "this profile's path + 'manage/'. Off unless asked; implied by access_store."
+        ),
+    )
+    access_store: Optional[str] = Field(
+        default=None,
+        description="Dotted path to the AccessStore behind the manage API; None = the default store. Naming one turns manage on.",
+    )
+    stateful_oauth: bool = Field(
+        default=False,
+        description="Default store only: list and revoke OAuth connections (McpGrant). Needs a project that issues grants.",
+    )
+
+    @property
+    def manage_enabled(self) -> bool:
+        return bool(self.manage or self.access_store)
 
     @property
     def serves_all_tools(self) -> bool:

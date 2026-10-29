@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **MCP: manage backend for keys, connections and usage** (`django_mcp/manage`). Signed-in users
+  list, create (secret shown once) and revoke MCP keys, list and revoke OAuth connections and see
+  usage, with no views to write. Opt in with `enable_public_profile(enable_manage=True)`,
+  `access_store="dotted.path"` or `ProfileBuilder.enable_manage()`; routes appear under the profile
+  path + `manage/`, or mount `manage_urlpatterns(store)` yourself. A pluggable `AccessStore`
+  (every method optional, a missing one 404s) and a default store on new `McpKey` / `McpGrant`
+  tables (migration `0002`, additive) with `validate_key` as a ready `key_validator`. OAuth stays
+  stateless: connections are listed only with `stateful_oauth=True`. See `django_mcp/@docs/manage.md`.
 - **MCP tool hints.** `MCPTool` gains `read_only`, `destructive`, `idempotent`, `open_world`
   and `title`; `tools/list` now carries `title` and all four `annotations`. Claude and ChatGPT
   run a read-only tool without a per-call confirmation, so every built-in reader

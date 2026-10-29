@@ -44,3 +44,6 @@ class MCPAuditLog(models.Model):
     def __str__(self):
         status = "OK" if self.success else f"ERR: {self.error_message[:50]}"
         return f"MCP {self.tool_name} — {self.rows_returned} rows, {self.execution_ms:.0f}ms — {status}"
+
+
+from .access import McpGrant, McpKey  # noqa: E402,F401
