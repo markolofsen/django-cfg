@@ -6,7 +6,7 @@ web ones can send a custom header. This is the smallest server they accept:
 
 - discovery: RFC 9728 protected-resource and RFC 8414 server metadata;
 - RFC 7591 dynamic registration, public clients, PKCE S256 only;
-- stateless: the client id, the consent request, the code and both tokens are
+- stateless (one cache entry per spent code makes codes single-use): the client id, the consent request, the code and both tokens are
   signed with ``SECRET_KEY`` (``django.core.signing``), so nothing is stored
   and nothing needs a migration.
 
@@ -54,8 +54,8 @@ MAX_REDIRECTS = 5
 # ── signing ──────────────────────────────────────────────────────────────────
 
 
-def seal(payload: dict) -> str:
-    return signing.dumps(payload, salt=SALT, compress=True)
+def seal(payload: dict, compress: bool = True) -> str:
+    return signing.dumps(payload, salt=SALT, compress=compress)
 
 
 def unseal(token: Optional[str], typ: str) -> Optional[dict]:
@@ -72,6 +72,26 @@ def unseal(token: Optional[str], typ: str) -> Optional[dict]:
     if isinstance(exp, (int, float)) and exp < time.time():
         return None
     return payload
+
+
+def destination(uri: str) -> str:
+    """Where a redirect URI sends the browser, for the consent page: ``host[:port]``, or ``scheme://host`` for a custom scheme."""
+    url = urlparse(uri)
+    if url.scheme in ("http", "https"):
+        return url.netloc.lower()
+    return f"{url.scheme}://{url.netloc}".lower()
+
+
+def _spend_code(code: str) -> bool:
+    """True once per code. ``cache.add`` is atomic; a cache that cannot be written refuses (fails safe)."""
+    from django.core.cache import cache
+
+    key = "django_cfg.mcp.oauth.code." + hashlib.sha256(code.encode()).hexdigest()
+    try:
+        return bool(cache.add(key, 1, CODE_TTL + 5))
+    except Exception:
+        logger.exception("MCP OAuth: code replay guard unavailable; refusing the exchange")
+        return False
 
 
 def challenge_for(verifier: str) -> str:
@@ -347,18 +367,26 @@ class AuthorizeView(_ProfileView):
             and len(challenge) >= 43
         ):
             return _error("invalid_request", "Unknown client, redirect_uri, or PKCE S256 missing.")
+        # Not compressed, so the consent page can read `name` and `dest` for display
+        # (base64 JSON before the first ":"). Safe: the page only DISPLAYS them; the
+        # grant is made by /oauth/approve/, which verifies this same signature and uses
+        # its own `uri`. Editing the display breaks the signature, so a forged display
+        # cannot ride on a genuine grant, and a genuine request always shows its real
+        # destination (`dest` is derived from the validated `uri` right here).
         consent = seal(
             {
                 "typ": "request",
                 "cid": q.get("client_id"),
                 "name": client.get("name") or "MCP client",
                 "uri": redirect_uri,
+                "dest": destination(redirect_uri),
                 "ch": challenge,
                 "st": q.get("state") or "",
                 "prof": profile.name,
                 "iss": issuer(request, profile),
                 "exp": time.time() + REQUEST_TTL,
-            }
+            },
+            compress=False,
         )
         target = f"{profile.oauth.consent_url}{'&' if '?' in profile.oauth.consent_url else '?'}"
         target += urlencode({"request": consent, "client": client.get("name") or "MCP client"})
@@ -432,6 +460,10 @@ class TokenView(_ProfileView):
                 return _error("invalid_grant", "PKCE verification failed.")
             if _active_user(code.get("uid")) is None:
                 return _error("invalid_grant", "The account is not active.")
+            # Single use. Spent only after PKCE passed, so nobody without the verifier can burn it.
+            # Refresh tokens are not rotated: they are bound to the key generation, and Renew key revokes them.
+            if not _spend_code(get("code")):
+                return _error("invalid_grant", "The code was already used.")
             return _json(issue_tokens(profile, code["uid"], code["cid"]))
 
         if grant == "refresh_token":

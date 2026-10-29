@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **MCP OAuth: the consent page shows where the grant goes, and codes are single use.** The signed consent
+  request (now uncompressed) carries `dest`, the validated redirect host (`claude.ai`, `127.0.0.1:3118`,
+  `cursor://anysphere.cursor-mcp`), next to the client name; `<McpConsent>` shows both from that signed value
+  ("Sends the result to ..."). Authorization codes are spent once through the Django cache (`cache.add`, no
+  table); an unwritable cache refuses the exchange. Refresh tokens stay reusable; Renew key revokes them.
+
 ### Fixed
 - **MCP: `McpKey` / `McpGrant` reverse names no longer clash with a project's own MCP models.** The user
   relations were `mcp_keys` / `mcp_grants` (Django check E304/E305 in projects that keep models of the same
