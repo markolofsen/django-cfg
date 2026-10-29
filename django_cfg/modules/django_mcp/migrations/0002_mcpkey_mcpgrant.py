@@ -23,11 +23,11 @@ class Migration(migrations.Migration):
                 ("revoked_at", models.DateTimeField(blank=True, null=True)),
                 ("last_used_at", models.DateTimeField(blank=True, null=True)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
-                ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="mcp_keys", to=settings.AUTH_USER_MODEL)),
+                ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="django_cfg_mcp_keys", to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 "ordering": ["-created_at", "-id"],
-                "indexes": [models.Index(fields=["user", "revoked_at"], name="mcp_key_user_revoked_idx")],
+                "indexes": [models.Index(fields=["user", "revoked_at"], name="dcfg_mcpkey_user_revoked_idx")],
             },
         ),
         migrations.CreateModel(
@@ -40,11 +40,11 @@ class Migration(migrations.Migration):
                 ("last_used_at", models.DateTimeField(blank=True, null=True)),
                 ("revoked_at", models.DateTimeField(blank=True, null=True)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
-                ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="mcp_grants", to=settings.AUTH_USER_MODEL)),
+                ("user", models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="django_cfg_mcp_grants", to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 "ordering": ["-created_at", "-id"],
-                "indexes": [models.Index(fields=["user", "revoked_at"], name="mcp_grant_user_revoked_idx")],
+                "indexes": [models.Index(fields=["user", "revoked_at"], name="dcfg_mcpgrant_user_revoked_idx")],
             },
         ),
     ]
