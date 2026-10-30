@@ -96,6 +96,15 @@ function defaultBaseUrl(): string {
   return '';
 }
 
+/** The browser's IANA zone; null where Intl cannot tell (e.g. a bare server runtime). */
+function detectTimezone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Default API key fallback from `NEXT_PUBLIC_API_KEY`.
  *
  * Both browser and server: if NEXT_PUBLIC_API_KEY is set it is used as a
@@ -150,10 +159,8 @@ _COMMON_REQUEST_HEADERS_TS = '''\
     const apiKey = auth.getApiKey();
     if (apiKey && !request.headers.has('X-API-Key')) request.headers.set('X-API-Key', apiKey);
 
-    try {
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      if (tz) request.headers.set('X-Timezone', tz);
-    } catch {}
+    const tz = auth.getTimezone();
+    if (tz) request.headers.set('X-Timezone', tz);
     request.headers.set('X-Client-Time', new Date().toISOString());
 '''
 
@@ -318,6 +325,7 @@ let _storage: KVStore = backendFor(_storageMode);
 {_ENV_HELPERS_TS}
 // ── In-memory overrides (win over storage / env) ───────────────────────────
 let _localeOverride: string | null = null;
+let _timezoneOverride: string | null = null;
 let _apiKeyOverride: string | null = null;
 let _baseUrlOverride: string | null = null;
 let _withCredentials = true;
@@ -603,6 +611,11 @@ export const auth = {{
   // ── Locale ────────────────────────────────────────────────────────
   getLocale(): string | null {{ return _localeOverride ?? detectLocale(); }},
   setLocale(locale: string | null): void {{ _localeOverride = locale; }},
+
+  // ── Time zone ─────────────────────────────────────────────────────
+  // IANA name sent as `X-Timezone`. `null` override = follow the browser.
+  getTimezone(): string | null {{ return _timezoneOverride ?? detectTimezone(); }},
+  setTimezone(timezone: string | null): void {{ _timezoneOverride = timezone; }},
 
   // ── Base URL ──────────────────────────────────────────────────────
   getBaseUrl(): string {{
@@ -991,6 +1004,7 @@ export type StorageMode = 'localStorage' | 'cookie';
 {_ENV_HELPERS_TS}
 // ── In-memory overrides (win over env) ─────────────────────────────────────
 let _localeOverride: string | null = null;
+let _timezoneOverride: string | null = null;
 let _apiKeyOverride: string | null = null;
 let _baseUrlOverride: string | null = null;
 let _withCredentials = true;
@@ -1026,6 +1040,11 @@ export const auth = {{
   // ── Locale ────────────────────────────────────────────────────────
   getLocale(): string | null {{ return _localeOverride ?? detectLocale(); }},
   setLocale(locale: string | null): void {{ _localeOverride = locale; }},
+
+  // ── Time zone ─────────────────────────────────────────────────────
+  // IANA name sent as `X-Timezone`. `null` override = follow the browser.
+  getTimezone(): string | null {{ return _timezoneOverride ?? detectTimezone(); }},
+  setTimezone(timezone: string | null): void {{ _timezoneOverride = timezone; }},
 
   // ── Base URL ──────────────────────────────────────────────────────
   getBaseUrl(): string {{
