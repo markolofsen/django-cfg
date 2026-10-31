@@ -23,6 +23,7 @@ from .cleanup import (
     get_file_fields,
     has_soft_delete,
     is_field_excluded,
+    is_file_shared,
     is_model_excluded,
     is_soft_deleted,
 )
@@ -154,20 +155,37 @@ def file_cleanup_post_save(
     _clear_cache(instance)
 
 
+def _storage_alias(storage: Any) -> str | None:
+    """The `STORAGES` alias a field's storage instance is registered under, or None."""
+    from django.core.files.storage import storages
+    from django.utils.functional import empty
+
+    inner = getattr(storage, "_wrapped", None)
+    if inner is empty:
+        storage._setup()
+        inner = storage._wrapped
+    inner = inner if inner is not None else storage
+    for alias in storages.backends:
+        if storages[alias] is inner:
+            return alias
+    return None
+
+
 def file_cleanup_post_delete(
     sender: Type[Model],
     instance: Model,
     **kwargs: Any,
 ) -> None:
     """
-    Post-delete signal handler to cleanup files.
+    Post-delete signal handler: the files of a deleted instance go away.
 
-    Deletes all files associated with the deleted instance.
+    Two sources: the instance's FileField columns, and keys declared with
+    `register_owned_files`. With `outbox` on, both are written to the outbox
+    inside the transaction (a rollback discards them) and a worker deletes the
+    files later. With it off, FileField files are deleted directly in
+    `transaction.on_commit`.
     """
     config = get_config()
-
-    if not config.auto_cleanup:
-        return
 
     if is_model_excluded(sender, config):
         return
@@ -181,31 +199,100 @@ def file_cleanup_post_delete(
             )
             return
 
-    # Capture instance data for closure
-    # We need to collect file info before the transaction commits
-    # because the instance might be garbage collected
-    files_to_delete = []
-    file_fields = get_file_fields(sender)
-
-    for field_name, field in file_fields:
-        if is_field_excluded(sender, field_name, config):
-            continue
-
-        file_field = getattr(instance, field_name)
-        if file_field and file_field.name:
+    # Capture instance data now: the instance may be gone by commit time.
+    files_to_delete: list = []
+    if config.auto_cleanup:
+        for field_name, field in get_file_fields(sender):
+            if is_field_excluded(sender, field_name, config):
+                continue
+            file_field = getattr(instance, field_name)
+            if not (file_field and file_field.name):
+                continue
+            if config.check_shared_files and is_file_shared(sender, field_name, file_field.name, instance.pk):
+                logger.debug(f"Skipping shared file: {file_field.name}")
+                continue
             files_to_delete.append((field.storage, file_field.name))
 
-    if not files_to_delete:
+    from .sync.owned import owned_entries
+
+    owned = owned_entries(instance)
+
+    if owned and not config.outbox:
+        logger.warning(
+            "%s has register_owned_files() but FileCleanupConfig.outbox is off: its files are not deleted",
+            sender._meta.label,
+        )
+        owned = []
+
+    if not files_to_delete and not owned:
         return
 
-    log_deletions = config.log_deletions
+    using = kwargs.get("using")
 
-    # Use transaction.on_commit for safety
-    def cleanup() -> None:
-        for storage, file_name in files_to_delete:
-            delete_file_by_name(storage, file_name, log_deletions)
+    if config.outbox:
+        direct = _enqueue(sender, instance, files_to_delete, owned, config, using)
+    else:
+        direct = files_to_delete
 
-    transaction.on_commit(cleanup)
+    if direct:
+        log_deletions = config.log_deletions
+
+        def cleanup() -> None:
+            for storage, file_name in direct:
+                delete_file_by_name(storage, file_name, log_deletions)
+
+        transaction.on_commit(cleanup, using=using)
+
+
+def _enqueue(sender: Type[Model], instance: Model, files: list, owned: list, config: StorageCleanupConfig, using: Any) -> list:
+    """Write outbox rows in the open transaction. Returns FileField files whose storage has no alias (deleted directly)."""
+    from django.utils import timezone
+
+    from .models import StorageDeletion
+
+    now = timezone.now()
+    external = "external" if config.mode == "queue_only" else ""
+    rows = []
+    direct = []
+
+    for storage, name in files:
+        alias = _storage_alias(storage)
+        if alias is None:
+            direct.append((storage, name))
+            continue
+        rows.append((alias, name, False, external))
+    for entry, key in owned:
+        rows.append((entry.storage, key, key.endswith("/"), "external" if entry.mode == "queue_only" else external))
+
+    if rows:
+        StorageDeletion.objects.using(using).bulk_create(
+            [
+                StorageDeletion(
+                    storage_alias=alias,
+                    key=key,
+                    is_prefix=is_prefix,
+                    model_label=sender._meta.label,
+                    object_pk=str(instance.pk),
+                    next_attempt_at=now,
+                    claimed_by=claimed,
+                )
+                for alias, key, is_prefix, claimed in rows
+            ]
+        )
+        if any(not claimed for *_, claimed in rows):
+            from .sync.tasks import enqueue_drain
+
+            transaction.on_commit(enqueue_drain, using=using)
+    return direct
+
+
+def connect_delete_signal(model: Type[Model]) -> None:
+    """Connect only the post_delete handler (used by `register_owned_files`); idempotent."""
+    post_delete.connect(
+        file_cleanup_post_delete,
+        sender=model,
+        dispatch_uid=f"storage_cleanup_post_delete_{model._meta.label}",
+    )
 
 
 def connect_signals_for_model(model: Type[Model]) -> None:

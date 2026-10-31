@@ -7,7 +7,7 @@ onto `cleanup` with a DeprecationWarning.
 """
 
 import warnings
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, List, Literal, Optional, Set
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -93,6 +93,38 @@ class FileCleanupConfig(BaseModel):
         description="Field names that indicate soft-delete pattern",
     )
 
+    outbox: bool = Field(
+        default=False,
+        description="Record deletions in the StorageDeletion table inside the transaction and "
+        "let a worker delete the files (retries, backoff, CDN purge). Needed for "
+        "`register_owned_files`. Off keeps the direct on-commit delete of FileField files.",
+    )
+
+    mode: Literal["delete", "queue_only"] = Field(
+        default="delete",
+        description="`delete`: this project's worker deletes the files. `queue_only`: rows are "
+        "written but nothing is deleted here; another service owns the files and drains the table.",
+    )
+
+    allowed_prefixes: List[str] = Field(
+        default_factory=list,
+        description="Key prefixes the outbox may delete under, e.g. ['films/', 'avatars/']. A key "
+        "outside them is refused. Without any, only exact FileField keys are deleted; "
+        "prefix deletions are refused.",
+    )
+
+    dry_run: bool = Field(
+        default=False,
+        description="The worker logs what it would delete and changes nothing",
+    )
+
+    max_attempts: int = Field(default=8, ge=1, description="Attempts before a row is marked failed")
+    backoff_seconds: int = Field(default=30, ge=1, description="Base of the exponential retry delay")
+    batch_size: int = Field(default=200, ge=1, description="Outbox rows taken per worker run")
+    schedule_interval: int = Field(
+        default=60, ge=0, description="Seconds between scheduled worker runs (0 = no schedule); needs django_rq"
+    )
+
     @model_validator(mode="before")
     @classmethod
     def _coerce_sets(cls, data: Any) -> Any:
@@ -102,6 +134,30 @@ class FileCleanupConfig(BaseModel):
                 if isinstance(data.get(name), list):
                     data[name] = set(data[name])
         return data
+
+
+class CDNPurgeConfig(BaseModel):
+    """
+    Cloudflare cache purge by URL, run after a file is deleted from storage.
+
+    The token and zone id are read from the environment when the worker runs,
+    never stored in code. Without a token the purge is skipped and counted.
+
+    Example:
+        ```python
+        StorageConfig(cdn=CDNPurgeConfig(base_url="https://cdn.example.com"))
+        ```
+    """
+
+    provider: Literal["cloudflare"] = "cloudflare"
+    base_url: Optional[str] = Field(
+        default=None,
+        description="Public origin the files are served from; defaults to https://<backend.custom_domain>",
+    )
+    zone_id_env: str = Field(default="CLOUDFLARE_ZONE_ID", description="Env var holding the zone id")
+    api_token_env: str = Field(default="CLOUDFLARE_API_TOKEN", description="Env var holding the API token")
+    batch_size: int = Field(default=30, ge=1, le=100, description="URLs per purge request (Cloudflare's per-call limit)")
+    timeout: int = Field(default=15, ge=1, description="Seconds per request")
 
 
 class StorageConfig(BaseModel):
@@ -150,6 +206,11 @@ class StorageConfig(BaseModel):
         "backend's custom_domain",
     )
 
+    cdn: Optional[CDNPurgeConfig] = Field(
+        default=None,
+        description="Purge these URLs from the CDN after their files are deleted (outbox worker)",
+    )
+
     @model_validator(mode="before")
     @classmethod
     def _migrate_flat_cleanup_fields(cls, data: Any) -> Any:
@@ -188,6 +249,24 @@ class StorageConfig(BaseModel):
         data["cleanup"] = FileCleanupConfig(**legacy)
         return data
 
+    def get_rq_schedules(self) -> list:
+        """The outbox worker's schedule; empty unless the outbox runs deletions here."""
+        cleanup = self.cleanup
+        if not (self.enabled and cleanup.outbox and cleanup.mode == "delete" and cleanup.schedule_interval):
+            return []
+
+        from django_cfg.models.django.django_rq import RQScheduleConfig
+
+        return [
+            RQScheduleConfig(
+                func="django_cfg.modules.django_cleanup.sync.tasks.drain_storage_outbox",
+                interval=cleanup.schedule_interval,
+                timeout=900,
+                queue="default",
+                description=f"Delete files queued by the storage outbox (every {cleanup.schedule_interval}s)",
+            )
+        ]
+
     def effective_backend(self, *, production: bool) -> Optional[S3StorageConfig]:
         """
         Backend actually in use: `backend` in production, None elsewhere.
@@ -210,4 +289,4 @@ class StorageConfig(BaseModel):
         return self.cleanup.model_dump()
 
 
-__all__ = ["StorageConfig", "FileCleanupConfig", "S3StorageConfig"]
+__all__ = ["StorageConfig", "FileCleanupConfig", "CDNPurgeConfig", "S3StorageConfig"]

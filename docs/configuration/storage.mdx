@@ -48,8 +48,9 @@ class MyConfig(DjangoConfig):
 existing projects are unaffected.
 
 `StorageConfig` also carries `cleanup`, the automatic file-deletion settings
-documented in [File Cleanup](/features/modules/django-cleanup). The two are
-independent; you can set either, both, or neither.
+documented in [File Cleanup](/features/modules/django-cleanup), and `cdn`, which
+purges deleted files' URLs from Cloudflare (see [Delete sync](/features/modules/django-cleanup#delete-sync)).
+They are independent of `backend`; you can set any, all, or none.
 
 ### Presets
 
@@ -230,6 +231,32 @@ production objects behind those keys. There is no undo.
 </Callout>
 
 Omit `environment` and nothing changes: keys keep using `location` alone.
+
+---
+
+## CDN purge on delete
+
+With [delete sync](/features/modules/django-cleanup#delete-sync) on, the worker can purge the URLs of deleted files from Cloudflare after it removes them from the bucket:
+
+```python
+from django_cfg import CDNPurgeConfig
+
+StorageConfig(
+    backend=S3StorageConfig.r2(account_id="…", bucket_name="media", custom_domain="cdn.example.com"),
+    cleanup=FileCleanupConfig(outbox=True, allowed_prefixes=["films/"]),
+    cdn=CDNPurgeConfig(),   # base_url follows custom_domain
+)
+```
+
+The token and zone come from `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ZONE_ID`. Without them the purge is skipped and counted; the bucket delete still happens.
+
+| `CDNPurgeConfig` field | Default | Description |
+|---|---|---|
+| `provider` | `"cloudflare"` | The only provider today |
+| `base_url` | `https://<custom_domain>` | Public origin the URLs are built on |
+| `zone_id_env` / `api_token_env` | `CLOUDFLARE_ZONE_ID` / `CLOUDFLARE_API_TOKEN` | Environment variables holding the zone and token |
+| `batch_size` | `30` | URLs per purge call (Cloudflare's limit) |
+| `timeout` | `15` | Seconds per call |
 
 ---
 

@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   table); an unwritable cache refuses the exchange. Refresh tokens stay reusable; Renew key revokes them.
 
 ### Fixed
+- **Storage cleanup: a rollback no longer loses files, and shared files are kept.** `FileCleanupMixin.delete()`
+  and `FileCleanupQuerySet.delete()` delete files in `transaction.on_commit` (they used to delete first, so a
+  rolled-back delete lost the files while the row survived). The `post_delete` signal now honours
+  `check_shared_files`, as its docs always said.
 - **MCP: `McpKey` / `McpGrant` reverse names no longer clash with a project's own MCP models.** The user
   relations were `mcp_keys` / `mcp_grants` (Django check E304/E305 in projects that keep models of the same
   name); they are now `django_cfg_mcp_keys` / `django_cfg_mcp_grants` (in `0002` itself).
@@ -23,6 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mcp_key_user_revoked_idx` fails when the project already has one.
 
 ### Added
+- **Storage delete sync (opt-in): row deleted, files in R2/S3 deleted, CDN purged.** `FileCleanupConfig(outbox=True)`
+  writes `StorageDeletion` rows inside the transaction (new table, migration `0001` of `django_cleanup`); a worker
+  (RQ schedule, `manage.py storage_outbox --drain`) deletes the files with retries and backoff, behind an
+  `allowed_prefixes` allowlist, with `dry_run` and a `queue_only` mode for files another service owns.
+  `register_owned_files(Model, keys=...)` declares prefixes or keys a model owns; `StorageConfig(cdn=CDNPurgeConfig(...))`
+  purges the URLs from Cloudflare afterwards; `manage.py storage_orphans` reports files no owner claims (report only).
+  Nothing changes until a project opts in. See `modules/django_cleanup/@docs/outbox.md`.
 - **MCP tool hints.** `MCPTool` gains `read_only`, `destructive`, `idempotent`, `open_world`
   and `title`; `tools/list` now carries `title` and all four `annotations`. Claude and ChatGPT
   run a read-only tool without a per-call confirmation, so every built-in reader

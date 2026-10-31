@@ -6,7 +6,7 @@ Loads configuration from DjangoConfig.storage or falls back to Django settings.
 
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import TYPE_CHECKING, Optional, Set
+from typing import TYPE_CHECKING, Any, List, Optional, Set
 
 if TYPE_CHECKING:
     from django_cfg.models.django.storage import StorageConfig as PydanticStorageConfig
@@ -47,6 +47,19 @@ class StorageCleanupConfig:
         default_factory=lambda: {"deleted_at", "is_deleted", "deleted"}
     )
 
+    # Outbox: deletions are recorded in the transaction and a worker deletes the files
+    outbox: bool = False
+    mode: str = "delete"
+    allowed_prefixes: List[str] = field(default_factory=list)
+    dry_run: bool = False
+    max_attempts: int = 8
+    backoff_seconds: int = 30
+    batch_size: int = 200
+
+    # `CDNPurgeConfig` of `StorageConfig.cdn` and the backend's custom domain, as given
+    cdn: Optional[Any] = None
+    backend_domain: Optional[str] = None
+
     def __post_init__(self) -> None:
         """Convert lists to sets if needed."""
         if isinstance(self.exclude_models, list):
@@ -79,6 +92,15 @@ class StorageCleanupConfig:
             check_shared_files=cleanup.check_shared_files,
             respect_soft_delete=cleanup.respect_soft_delete,
             soft_delete_fields=set(cleanup.soft_delete_fields),
+            outbox=cleanup.outbox,
+            mode=cleanup.mode,
+            allowed_prefixes=list(cleanup.allowed_prefixes),
+            dry_run=cleanup.dry_run,
+            max_attempts=cleanup.max_attempts,
+            backoff_seconds=cleanup.backoff_seconds,
+            batch_size=cleanup.batch_size,
+            cdn=config.cdn,
+            backend_domain=getattr(config.backend, "custom_domain", None) if config.backend else None,
         )
 
 

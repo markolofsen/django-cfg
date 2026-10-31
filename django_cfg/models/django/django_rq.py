@@ -540,6 +540,7 @@ class DjangoRQConfig(BaseModel):
         Currently supports:
         - CurrencyConfig: currency rate update task
         - IndexNowConfig: changed-URL submission
+        - StorageConfig: storage outbox worker
         - Accounts: OTP cleanup (every 10 min), JWT blacklist flush (daily)
 
         Args:
@@ -563,6 +564,13 @@ class DjangoRQConfig(BaseModel):
         if getattr(config, 'indexnow', None):
             try:
                 schedules.extend(config.indexnow.get_rq_schedules())
+            except Exception:
+                pass
+
+        # Storage outbox worker, when the outbox deletes files here
+        if getattr(config, 'storage', None):
+            try:
+                schedules.extend(config.storage.get_rq_schedules())
             except Exception:
                 pass
 

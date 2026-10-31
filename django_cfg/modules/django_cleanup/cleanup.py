@@ -189,6 +189,36 @@ def is_file_shared(
     return queryset.exists()
 
 
+def collect_instance_files(
+    instance: Model,
+    config: StorageCleanupConfig,
+    fields_to_clean: Optional[List[str]] = None,
+) -> List[Tuple[object, str]]:
+    """
+    `(storage, name)` of every file an instance owns, without deleting anything.
+
+    Same selection as `cleanup_instance_files` (exclusions, shared files), so a
+    caller can delete after the transaction commits.
+    """
+    model = type(instance)
+    if is_model_excluded(model, config):
+        return []
+
+    found: List[Tuple[object, str]] = []
+    for field_name, field in get_file_fields(model):
+        if fields_to_clean and field_name not in fields_to_clean:
+            continue
+        if is_field_excluded(model, field_name, config):
+            continue
+        file_field = getattr(instance, field_name)
+        if not (file_field and file_field.name):
+            continue
+        if config.check_shared_files and is_file_shared(model, field_name, file_field.name, instance.pk):
+            continue
+        found.append((field.storage, file_field.name))
+    return found
+
+
 def cleanup_instance_files(
     instance: Model,
     config: StorageCleanupConfig,

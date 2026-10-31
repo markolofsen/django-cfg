@@ -6,6 +6,12 @@ export default {
       typesetting: 'article'
     }
   },
+  'v2-3-361': {
+    title: 'v2.3.361',
+    theme: {
+      typesetting: 'article'
+    }
+  },
   'v2-3-0': {
     title: 'v2.3.0',
     theme: {

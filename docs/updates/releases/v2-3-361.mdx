@@ -1,0 +1,45 @@
+---
+title: "Release v2.3.361"
+description: "Delete sync: a deleted row removes its files from R2/S3 and the CDN, with an outbox, retries and a guard. MCP sign-in is approved inside the Settings dialog without a question."
+---
+
+import { Callout } from 'nextra/components'
+
+# Release v2.3.361
+
+**Released:** October 31, 2026
+
+Two changes: files follow a deleted row all the way to the bucket and the CDN, and connecting an AI assistant no longer stops on a confirmation card.
+
+## Delete sync (opt-in)
+
+Deleting a row used to remove its `FileField` files in `transaction.on_commit` and nothing more. A crash between commit and callback, or one failed storage call, left the file in the bucket for good, and the CDN kept serving it.
+
+`FileCleanupConfig(outbox=True)` fixes this. The delete handler writes a `StorageDeletion` row inside the transaction; a worker deletes the files afterwards with retries and exponential backoff, behind an `allowed_prefixes` allowlist.
+
+```python
+StorageConfig(
+    cleanup=FileCleanupConfig(outbox=True, allowed_prefixes=["films/"]),
+    cdn=CDNPurgeConfig(),
+)
+```
+
+- `register_owned_files(Model, keys=...)` declares files that are not a `FileField` (a folder of renditions, a cover derived from the slug).
+- `CDNPurgeConfig` purges the URLs from Cloudflare after the bucket delete (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID`).
+- `dry_run` logs without deleting; `mode="queue_only"` writes rows for a service that owns the files.
+- `manage.py storage_outbox` shows and drains the queue; `manage.py storage_orphans` reports files no owner claims.
+
+Nothing changes until you opt in, apart from one new table (`django_cleanup_storagedeletion`, migration `0001`): run `migrate` after updating. Full guide: [File Cleanup](/features/modules/django-cleanup#delete-sync), [Media Storage](/configuration/storage#cdn-purge-on-delete).
+
+### Fixed in the same release
+
+- `FileCleanupMixin.delete()` and `FileCleanupQuerySet.delete()` now delete files in `on_commit`. They used to delete first, so a rolled-back delete lost the files while the row survived.
+- The `post_delete` signal path honours `check_shared_files`, as the docs always said.
+
+## MCP: approval inside the Settings dialog
+
+With `oauth_consent_url="https://host/#settings/mcp"` the host's Settings dialog (`@djangocfg/widget-mcp` 0.4.10, `@djangocfg/layouts` 2.1.595) approves a signed-in user's request at once. It shows one status line above the connect list and returns the person to their assistant. No Allow or Cancel step.
+
+<Callout type="warning">
+  Any link `…/#settings/mcp?request=<valid signed request>` opened by a signed-in user connects that client. If your product holds sensitive data, keep the asking card at your own route. The legacy `/mcp/connect` page still asks. Details: [Connect assistants](/features/modules/django-mcp/connect-assistants).
+</Callout>

@@ -88,6 +88,14 @@ class MyConfig(DjangoConfig):
 | `check_shared_files` | `bool` | `False` | Check if another record references the same file before deleting |
 | `respect_soft_delete` | `bool` | `True` | Skip file deletion for soft-deleted instances |
 | `soft_delete_fields` | `set[str]` | `{"deleted_at", "is_deleted", "deleted"}` | Field names that indicate a soft-delete pattern |
+| `outbox` | `bool` | `False` | Record deletions in a database table and let a worker delete the files with retries. See [Delete sync](#delete-sync) |
+| `mode` | `"delete" \| "queue_only"` | `"delete"` | `queue_only` writes the rows and deletes nothing here: another service owns the files |
+| `allowed_prefixes` | `list[str]` | `[]` | Key roots the worker may delete under. Required for prefix deletes |
+| `dry_run` | `bool` | `False` | Log what would be deleted, change nothing |
+| `max_attempts` | `int` | `8` | Attempts before a row is marked `failed` |
+| `backoff_seconds` | `int` | `30` | First retry delay; grows exponentially with jitter, capped at 6 hours |
+| `batch_size` | `int` | `200` | Rows per worker run |
+| `schedule_interval` | `int` | `60` | Seconds between scheduled runs (needs `django_rq`) |
 
 <Callout type="warning">
 `check_shared_files=True` adds one extra DB query per file field at deletion time. Enable only when your data model shares file paths across rows.
@@ -204,6 +212,68 @@ Report.objects.filter(archived=True).delete()
 `FileCleanupQuerySet.delete()` fetches all matching instances before deleting. It is more expensive than regular bulk delete but ensures files are cleaned up.
 </Callout>
 
+## Delete sync
+
+Deleting a row should also remove its files from the bucket and their URLs from the CDN. The default `on_commit` delete cannot promise that: if the process dies between the commit and the callback, or the storage call fails once, the file stays forever. Delete sync is the opt-in fix: `FileCleanupConfig(outbox=True)`.
+
+The delete handler writes a `StorageDeletion` row **inside the transaction**. A rollback discards it, a commit makes it durable. A worker then deletes the files with retries and exponential backoff, never inside a transaction.
+
+```python
+StorageConfig(
+    backend=S3StorageConfig.r2(account_id="…", bucket_name="media"),
+    cleanup=FileCleanupConfig(
+        outbox=True,
+        allowed_prefixes=["films/", "avatars/"],   # roots the worker may delete under
+    ),
+    cdn=CDNPurgeConfig(base_url="https://cdn.example.com"),   # optional
+)
+```
+
+### Declare what an object owns
+
+`FileField` columns are covered automatically. Files that are not a field (a folder of renditions, a cover derived from the slug) are declared once, in `AppConfig.ready()`:
+
+```python
+from django_cfg.modules.django_cleanup import register_owned_files
+
+register_owned_files(
+    Film,
+    keys=lambda film: [f"films/{film.pk}/", f"covers/{film.slug}.jpg"],   # a trailing "/" is a prefix
+    storage="default",                                                    # a STORAGES alias
+    all_keys=lambda: (f"films/{pk}/" for pk in Film.objects.values_list("pk", flat=True)),
+)
+```
+
+It works for models you cannot edit. `all_keys` lists every key that is live today; `storage_orphans` needs it to tell an orphan from a live file.
+
+### What the worker does
+
+Scheduled through `django_rq` when it is on, nudged after each commit, and runnable by hand. For every due row it:
+
+1. claims the row with a 15 minute lease, so two workers never take the same one;
+2. refuses what the guard dislikes: an empty key, `..`, a leading `/`, a prefix outside `allowed_prefixes`, a prefix equal to an allowed root, any prefix when no list is set;
+3. expands a prefix, deletes each key (a missing object counts as deleted) and logs it;
+4. purges the URLs from Cloudflare in batches. The token and zone come from `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ZONE_ID`. A failed purge is retried alone; with no token the purge is skipped and counted;
+5. on an error, backs off and retries; after `max_attempts` the row is `failed`.
+
+A row ends as `done`, `failed` or `refused`.
+
+### Commands
+
+| Command | Does |
+| --- | --- |
+| `manage.py storage_outbox [--json]` | Row counts and the age of the oldest pending row |
+| `manage.py storage_outbox --drain [--dry-run] [--limit N]` | One worker run by hand |
+| `manage.py storage_outbox --retry-failed` | Give failed rows a fresh set of attempts |
+| `manage.py storage_orphans [--json] [--limit N]` | Files under `allowed_prefixes` that no registration claims. Report only |
+| `manage.py storage_orphans --enqueue` | Write the orphans to the outbox; the guard still applies |
+
+<Callout type="warning">
+Not caught: `_raw_delete`, database-level `ON DELETE CASCADE` and raw SQL fire no `post_delete`. Plain `QuerySet.delete()` and ORM cascades do. `storage_orphans` finds what the other routes leave behind. Try a new registration on a test bucket first, and set `environment` on a shared bucket (see [Media Storage](/configuration/storage#environments)).
+</Callout>
+
+Updating the package adds one table (`django_cleanup_storagedeletion`). Nothing else changes until you opt in.
+
 ## Public API
 
 All public symbols are importable from `django_cfg.modules.django_cleanup`:
@@ -229,6 +299,9 @@ from django_cfg.modules.django_cleanup import (
     # Signal management
     connect_signals_for_model,
     disconnect_signals_for_model,
+    # Delete sync
+    register_owned_files,
+    collect_instance_files,
 )
 ```
 
@@ -250,6 +323,10 @@ unreachable. `DjangoConfig` is the single source of truth.
 1. Check if model is excluded: `is_model_excluded(MyModel, get_config())`
 2. Check if soft-delete is active: `is_soft_deleted(instance, get_config())`
 3. Enable logging: `FileCleanupConfig(log_deletions=True)`
+
+### Rows stay in the outbox
+
+`manage.py storage_outbox` shows the counts. `failed` rows carry `last_error`; fix the cause (credentials, a prefix missing from `allowed_prefixes`) and run `storage_outbox --retry-failed`. A `refused` row broke a guard rule and will not run on its own.
 
 ### Files Deleted Unexpectedly
 

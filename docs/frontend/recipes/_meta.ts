@@ -9,4 +9,5 @@ export default {
   'tailwind-v4': 'Tailwind v4',
   'extensions': 'Extensions',
   'sitemap-and-indexnow': 'Sitemap & IndexNow',
+  'human-check': 'Human check gate',
 }

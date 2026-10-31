@@ -1,0 +1,88 @@
+---
+title: Human check gate
+description: Optional "verify you are human" gate for a Next.js site — Cloudflare edge rule or the opt-in @djangocfg/nextjs/human-check proxy — with crawler bypass, a noindex gate route and an agent-visible stop message.
+---
+
+import { Callout } from 'nextra/components';
+
+# Human check gate
+
+An opt-in gate that sends visitors without a clearance cookie to a separate
+`/__human-check` page. The gate is **off by default** and never runs in
+development.
+
+<Callout type="warning">
+The page text asks cooperating AI agents (browser agents, assistants) to stop and hand
+back to the user. That is a request, not a control: **no vendor documents that agents
+stop on page text**, and this has not been confirmed by a live test yet. The enforcement is
+the server-verified Turnstile cookie.
+</Callout>
+
+## Edge or Next.js?
+
+| Situation | Use |
+|---|---|
+| Site is behind Cloudflare | The edge rule (Managed Challenge, `not cf.client.bot`). Set the proxy gate `enabled: false` for that host. **Never both**: two gates on one host means two challenges. |
+| No Cloudflare, or a cabinet/app host you want gated while the marketing host stays open | `@djangocfg/nextjs/human-check` with `scope: { kind: 'hosts', ... }` |
+| Per-action protection (a form, login) | A Turnstile widget on that form, not this gate |
+
+Bot Fight Mode cannot honour an allowlist; keep it off on a zone that uses the edge rule.
+
+## Setup (Next.js)
+
+```ts
+// proxy.ts
+import { createHumanCheck, withHumanCheck } from '@djangocfg/nextjs/human-check';
+
+const humanCheck = createHumanCheck({
+  enabled: true,
+  scope: { kind: 'hosts', hosts: { 'app.example.com': 'site' } }, // unlisted hosts stay open
+});
+
+export default withHumanCheck(humanCheck, intlProxy);
+```
+
+Environment (production fails closed and logs loudly if any is missing):
+
+| Variable | Purpose |
+|---|---|
+| `HUMAN_CHECK_SECRET` | Cookie signing. Comma-separated for rotation: first signs, all verify |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Widget key, mode `non-interactive` |
+| `TURNSTILE_SECRET_KEY` | Server `siteverify` |
+
+The proxy serves the gate route itself, so there is no app route to add (an
+`app/__human-check` folder would be a Next private folder and never routable).
+
+### Order of checks
+
+disabled → development skip → always-open paths (robots, sitemaps, `/.well-known/`, `_next/*`, OG, health, webhooks) → scope → link-preview bots (GET/HEAD) → verified crawlers (IP ranges) → valid cookie → `302` to the gate.
+
+### Development and staging
+
+`isDev` comes from `@djangocfg/api`. In development the gate is skipped and `/__human-check` answers `404`, so `next dev`, local Docker and Playwright runs need no keys. `NODE_ENV=production` is also what staging builds use, so limit staging with `scope: { kind: 'hosts' }`, or set `enabledIn: 'all'` to test the gate locally.
+
+### What the gate page is
+
+`200` with `X-Robots-Tag: noindex, nofollow` and `Cache-Control: private, no-store` (not 403: Google drops 4xx URLs; not 503: it invites retry loops). The title, one `<h1>` and the stop text are in the first HTML, before any script, and repeated in `<noscript>`. Turnstile verification is checked for `success`, `hostname` and `action`. The page continues only after server verification plus a 3 s minimum dwell.
+
+### Crawlers
+
+Googlebot and Bingbot are matched by **published IP ranges**, not by User-Agent. A fake Googlebot UA from another IP is gated. If no list has ever loaded, a UA that claims to be a crawler passes (`onListUnavailable: 'allow-claimed'`) so an outage cannot de-index the site. A failed refresh keeps the last good list and logs when it is older than 7 days. Behind Cloudflare, set `trustCloudflareIp: true` only if the origin accepts Cloudflare traffic only.
+
+### CDN and caches
+
+In-scope responses (including crawler and cookie passes) carry `Cache-Control: private, no-store` and `Vary: Cookie, User-Agent`, so a crawler's response is never served to a visitor without a cookie. Make the CDN respect it: bypass cache for gated hosts/paths. Marketing paths outside the scope stay cacheable.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix | Check |
+|---|---|---|---|
+| `/__human-check` is 404 in production | `enabled` is false, or the build runs with `NODE_ENV=development` | Set `enabled: true`; build with `NODE_ENV=production` | `curl -I https://host/__human-check` returns 200 |
+| Gate page says "not configured correctly" | A key or secret env var is missing | Set all three variables; see the startup log line `[human-check] ENABLED but misconfigured` | Log line gone after redeploy |
+| Redirect loop between gate and page | Cookie not stored: `Secure` cookie on plain http, or a proxy strips `Set-Cookie` | Serve https; check that the POST response carries `Set-Cookie` | Browser devtools, cookie `__hc` present |
+| Googlebot gets the gate | Crawler list never loaded, or `onListUnavailable: 'gate'`; or the real client IP is hidden behind a proxy | Check outbound fetch of the range lists; pass the real IP in `x-forwarded-for`/`cf-connecting-ip` | Search Console URL Inspection returns the page |
+| Link preview shows the gate text | Preview fetcher uses an unlisted User-Agent | Add the path to `bypass.paths` (OG routes) | Re-run the platform's card debugger |
+| Challenge shown twice on a Cloudflare zone | Edge rule and proxy gate both on | Disable the proxy gate for that host | One challenge only |
+| `timeout-or-duplicate` after a long wait | Token is valid 300 s and single use | The widget resets itself; reload if blocked by an extension | Second attempt succeeds |
+| Every request gated after changing the secret | Old cookies no longer verify | Rotate by listing both secrets: `new,old` | Existing sessions pass |
+| Build says gate route private | Folder named `__human-check` under `app/` | Delete it; the proxy serves the route | Route answers without an app folder |

@@ -10,7 +10,7 @@ Let people connect Claude, ChatGPT, Claude Code, Codex, Cursor and VS Code to yo
 ```python
 mcp.enable_public_profile(
     key_validator="api.mcp_keys.validate",          # or public_keys={...}; scripts keep working
-    oauth_consent_url="https://my.example.com/mcp/connect",   # your frontend page
+    oauth_consent_url="https://my.example.com/#settings/mcp",   # the Settings dialog; or your own consent route
     oauth_issuer="https://mcp.example.com",         # public origin of the MCP host
 )
 ```
@@ -46,6 +46,16 @@ Create the route you gave as `oauth_consent_url`. The contract:
 6. A `400` means the request expired (10 minutes) or is invalid: say "start again from your assistant".
 
 Never put a key or token in a URL of your own. The page needs only the signed `request`.
+
+### Consent inside the Settings dialog (no route of your own)
+
+`consent_url` may carry a fragment: `oauth_consent_url="https://app.example.com/#settings/mcp"`. `authorize` appends the query after it (`…/#settings/mcp?request=…&client=…`), the browser never sends a fragment to a server, so the signed request stays out of server and CDN logs. A host whose Settings dialog has the widget's MCP section (`mcpSettingsSection()`) then answers the consent there, and needs no `/mcp/connect` page. A request lives 10 minutes, so after changing `consent_url` the old route can go once that time has passed.
+
+**The dialog does not ask.** A signed-in user who lands on `…/#settings/mcp?request=…` is approved at once: the dialog shows one status line above the connect list ("Connecting Claude…", then "Claude is connected. Returning to your assistant…") and the browser follows `redirect_to` back to the assistant. There is no Allow or Cancel step; the person already pressed Connect in their assistant. A signed-out visitor signs in first and the dialog picks the request up afterwards. A `400` shows "start again from your assistant".
+
+<Callout type="warning">
+What this trades away: any link `…/#settings/mcp?request=<valid signed request>` opened by a signed-in user connects that client. The request is signed, expires in 10 minutes, and can only point at the clients' own callbacks and loopback addresses, but a person tricked into opening a link prepared by someone else grants that client. If your product holds sensitive data, keep the asking card (`<McpConsent>` at your own route) instead. The old `/mcp/connect` route keeps asking.
+</Callout>
 
 <Callout type="info">
 The ready-made version is `@djangocfg/widget-mcp`: `<McpConsent apiUrl="..." product="..." />` is this page, mounted at `oauth_consent_url`, and `<McpConnect>` is the install step below. Without the widget, the page above is about 60 lines in any app that uses `useAuth` from `@djangocfg/api/auth`.

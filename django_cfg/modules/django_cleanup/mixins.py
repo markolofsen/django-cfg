@@ -11,11 +11,25 @@ from typing import TYPE_CHECKING, ClassVar, List, Optional
 
 from django.db import models
 
-from .cleanup import cleanup_instance_files, delete_file, get_file_fields
+from django.db import transaction
+
+from .cleanup import cleanup_instance_files, collect_instance_files, delete_file, delete_file_by_name, get_file_fields
 from .config import get_config
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
+
+
+def _delete_after_commit(files: list, log_deletions: bool, using: Optional[str]) -> None:
+    """Delete `(storage, name)` pairs when the surrounding transaction commits (now, outside one)."""
+    if not files:
+        return
+
+    def run() -> None:
+        for storage, name in files:
+            delete_file_by_name(storage, name, log_deletions)
+
+    transaction.on_commit(run, using=using)
 
 
 class FileCleanupMixin(models.Model):
@@ -45,7 +59,7 @@ class FileCleanupMixin(models.Model):
         using: Optional[str] = None,
         keep_parents: bool = False,
     ) -> tuple:
-        """Override delete to cleanup files before deletion."""
+        """Delete the row, then its files once the transaction commits (a rollback keeps both)."""
         config = get_config()
 
         # Get fields to clean (exclude specified)
@@ -56,10 +70,10 @@ class FileCleanupMixin(models.Model):
             if name not in self.file_cleanup_exclude_fields
         ]
 
-        # Cleanup files before delete
-        cleanup_instance_files(self, config, fields_to_clean)
-
-        return super().delete(using=using, keep_parents=keep_parents)
+        files = collect_instance_files(self, config, fields_to_clean)
+        result = super().delete(using=using, keep_parents=keep_parents)
+        _delete_after_commit(files, config.log_deletions, using)
+        return result
 
     def save(self, *args, **kwargs) -> None:  # noqa: ANN002, ANN003
         """Override save to cleanup replaced files."""
@@ -149,13 +163,7 @@ class FileCleanupQuerySet(models.QuerySet):
                 if file_field and file_field.name:
                     files_to_delete.append((field.storage, file_field.name))
 
-        # Perform the delete
+        # Perform the delete, then remove the files once the transaction commits
         result = super().delete()
-
-        # Now delete the files
-        from .cleanup import delete_file_by_name
-
-        for storage, file_name in files_to_delete:
-            delete_file_by_name(storage, file_name, config.log_deletions)
-
+        _delete_after_commit(files_to_delete, config.log_deletions, self.db)
         return result

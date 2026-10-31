@@ -41,6 +41,7 @@ deprecated; see `models/django/storage.py`.
 
 from .cleanup import (
     cleanup_instance_files,
+    collect_instance_files,
     delete_file,
     delete_file_by_name,
     get_file_fields,
@@ -51,6 +52,7 @@ from .cleanup import (
 )
 from .config import StorageCleanupConfig, clear_config_cache, get_config, is_enabled
 from .signals import connect_signals_for_model, disconnect_signals_for_model
+from .sync.owned import OwnedFiles, register_owned_files
 
 
 def __getattr__(name: str):
@@ -72,6 +74,7 @@ __all__ = [
     "is_enabled",
     # Cleanup functions
     "cleanup_instance_files",
+    "collect_instance_files",
     "delete_file",
     "delete_file_by_name",
     "get_file_fields",
@@ -82,6 +85,9 @@ __all__ = [
     # Mixins (lazy loaded)
     "FileCleanupMixin",
     "FileCleanupQuerySet",
+    # Declared ownership (outbox)
+    "OwnedFiles",
+    "register_owned_files",
     # Signal management
     "connect_signals_for_model",
     "disconnect_signals_for_model",

@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.3.360"
+__version__ = "2.3.361"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -101,7 +101,7 @@ from .models.django.indexnow import IndexNowConfig, IndexNowSite
 from .models.django.analytics import AnalyticsConfig
 from .models.django.simple_history import SimpleHistoryConfig
 from .models.django.constance import ConstanceConfig, ConstanceField
-from .models.django.storage import FileCleanupConfig, StorageConfig
+from .models.django.storage import CDNPurgeConfig, FileCleanupConfig, StorageConfig
 from .models.django.storage_backend import S3StorageConfig
 from .models.django.openapi import OpenAPIClientConfig
 from .models.services import EmailConfig, TelegramConfig
@@ -278,7 +278,7 @@ __all__ = [
     "RQHealthConfig", "QueueHealthThresholds",
     "DjangoLoggingConfig",
     "CurrencyConfig", "PaymentsConfig", "AdminAccessConfig", "GeoConfig", "IndexNowConfig", "IndexNowSite", "AnalyticsConfig", "SimpleHistoryConfig",
-    "ConstanceConfig", "ConstanceField", "StorageConfig", "FileCleanupConfig", "S3StorageConfig", "OpenAPIClientConfig",
+    "ConstanceConfig", "ConstanceField", "StorageConfig", "FileCleanupConfig", "CDNPurgeConfig", "S3StorageConfig", "OpenAPIClientConfig",
     "EmailConfig", "TelegramConfig",
     # middleware (lazy — DRF reads settings at import time)
     "DefaultPagination", "LargePagination", "SmallPagination", "NoPagination",
