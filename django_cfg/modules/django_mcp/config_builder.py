@@ -59,11 +59,12 @@ class ProfileBuilder:
         self._rate_limit: str = "100/minute"
         self._oauth: Optional[MCPOAuthConfig] = None
 
-    def enable_oauth(self, consent_url: str, issuer: Optional[str] = None, **ttl: int) -> "ProfileBuilder":
+    def enable_oauth(self, consent_url: Optional[str] = None, issuer: Optional[str] = None, **ttl: int) -> "ProfileBuilder":
         """Let clients sign in (OAuth 2.1, PKCE) instead of sending a key.
 
         ``consent_url`` is the project's page that signs the user in and
-        approves the client; see :mod:`django_cfg.modules.django_mcp.oauth`.
+        approves the client; leave it out to use the Settings dialog of
+        ``DjangoConfig.site_url``. See :mod:`django_cfg.modules.django_mcp.oauth`.
         """
         self._oauth = MCPOAuthConfig(consent_url=consent_url, issuer=issuer, **ttl)
         return self
@@ -249,6 +250,7 @@ class MCPConfigBuilder:
         *,
         key_validator: Optional[str] = None,
         public_keys: Optional[Dict[str, str]] = None,
+        oauth: bool = False,
         oauth_consent_url: Optional[str] = None,
         oauth_issuer: Optional[str] = None,
     ) -> "MCPConfigBuilder":
@@ -265,7 +267,9 @@ class MCPConfigBuilder:
           None``, for per-user API keys kept in the project's database;
         - ``public_keys``: ``{label: key}`` static keys, one per holder.
 
-        ``oauth_consent_url`` also lets clients sign in instead (OAuth 2.1; the
+        ``oauth=True`` also lets clients sign in instead; the approval page is
+        ``<site_url>/#settings/mcp`` unless ``oauth_consent_url`` overrides it.
+        Passing ``oauth_consent_url`` alone enables it too. It lets clients sign in instead (OAuth 2.1; the
         page signs the user in and approves the client). It needs a
         ``key_validator``-style user model either way: the token acts as the
         user who approved it.
@@ -289,6 +293,7 @@ class MCPConfigBuilder:
             "expose": expose or {},
             "key_validator": key_validator,
             "public_keys": public_keys or {},
+            "oauth": bool(oauth or oauth_consent_url),
             "oauth_consent_url": oauth_consent_url,
             "oauth_issuer": oauth_issuer,
         }
@@ -583,7 +588,7 @@ class MCPConfigBuilder:
                     pub.set_key_validator(spec["key_validator"])
                 for label, key in spec["public_keys"].items():
                     pub.add_access_key(label, key)
-                if spec["oauth_consent_url"]:
+                if spec["oauth"]:
                     pub.enable_oauth(spec["oauth_consent_url"], issuer=spec["oauth_issuer"])
                 pub.tools(PUBLIC_TOOLS)
                 pub.set_rate_limit(spec["rate_limit"])

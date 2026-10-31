@@ -10,12 +10,14 @@ Let people connect Claude, ChatGPT, Claude Code, Codex, Cursor and VS Code to yo
 ```python
 mcp.enable_public_profile(
     key_validator="api.mcp_keys.validate",          # or public_keys={...}; scripts keep working
-    oauth_consent_url="https://my.example.com/#settings/mcp",   # the Settings dialog; or your own consent route
+    oauth=True,                                     # approval page = <site_url>/#settings/mcp
     oauth_issuer="https://mcp.example.com",         # public origin of the MCP host
 )
 ```
 
-On a hand-written profile use `ProfileBuilder.enable_oauth(consent_url, issuer=None, access_ttl=..., refresh_ttl=...)`. `issuer` defaults to the request origin; set it when a proxy hides the public host. Defaults: access token 30 days, refresh token 180 days.
+`oauth=True` is all a project with the widget's Settings dialog needs: the approval page is `DjangoConfig.site_url` + `/#settings/mcp`. Pass `oauth_consent_url="https://…"` only to send people somewhere else (your own consent route, a frontend on another domain); an explicit URL always wins, and passing it alone also turns OAuth on.
+
+On a hand-written profile use `ProfileBuilder.enable_oauth(consent_url=None, issuer=None, access_ttl=..., refresh_ttl=...)`. `issuer` defaults to the request origin; set it when a proxy hides the public host. Defaults: access token 30 days, refresh token 180 days.
 
 It is **stateless**: client ids, consent requests, codes and tokens are signed with `SECRET_KEY`. No tables, no migration. Rotating `SECRET_KEY` signs everyone out.
 
@@ -49,7 +51,7 @@ Never put a key or token in a URL of your own. The page needs only the signed `r
 
 ### Consent inside the Settings dialog (no route of your own)
 
-`consent_url` may carry a fragment: `oauth_consent_url="https://app.example.com/#settings/mcp"`. `authorize` appends the query after it (`…/#settings/mcp?request=…&client=…`), the browser never sends a fragment to a server, so the signed request stays out of server and CDN logs. A host whose Settings dialog has the widget's MCP section (`mcpSettingsSection()`) then answers the consent there, and needs no `/mcp/connect` page. A request lives 10 minutes, so after changing `consent_url` the old route can go once that time has passed.
+The default `consent_url` is `<site_url>/#settings/mcp`; a custom one may carry a fragment the same way, e.g. `oauth_consent_url="https://app.example.com/#settings/mcp"`. `authorize` appends the query after it (`…/#settings/mcp?request=…&client=…`), the browser never sends a fragment to a server, so the signed request stays out of server and CDN logs. A host whose Settings dialog has the widget's MCP section (`mcpSettingsSection()`) then answers the consent there, and needs no `/mcp/connect` page. A request lives 10 minutes, so after changing `consent_url` the old route can go once that time has passed.
 
 **The dialog does not ask.** A signed-in user who lands on `…/#settings/mcp?request=…` is approved at once: the dialog shows one status line above the connect list ("Connecting Claude…", then "Claude is connected. Returning to your assistant…") and the browser follows `redirect_to` back to the assistant. There is no Allow or Cancel step; the person already pressed Connect in their assistant. A signed-out visitor signs in first and the dialog picks the request up afterwards. A `400` shows "start again from your assistant".
 

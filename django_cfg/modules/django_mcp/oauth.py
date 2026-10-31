@@ -388,9 +388,21 @@ class AuthorizeView(_ProfileView):
             },
             compress=False,
         )
-        target = f"{profile.oauth.consent_url}{'&' if '?' in profile.oauth.consent_url else '?'}"
+        consent_url = consent_page(profile.oauth)
+        target = f"{consent_url}{'&' if '?' in consent_url else '?'}"
         target += urlencode({"request": consent, "client": client.get("name") or "MCP client"})
         return HttpResponseRedirect(target)
+
+
+def consent_page(oauth) -> str:
+    """The page that approves a request: the configured URL, else the host's Settings dialog."""
+    if oauth.consent_url:
+        return oauth.consent_url
+    from django_cfg.core.state import get_current_config
+
+    config = get_current_config()
+    site = config.site_url if config else "http://localhost:3000"
+    return f"{site.rstrip('/')}/#settings/mcp"
 
 
 def _with_params(uri: str, params: dict) -> str:

@@ -262,9 +262,13 @@ class MCPOAuthConfig(BaseModel):
     """
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    consent_url: str = Field(
+    consent_url: Optional[str] = Field(
+        default=None,
         pattern=r"^https?://\S+$",
-        description="Frontend page that asks the signed-in user to allow the client.",
+        description=(
+            "Frontend page that approves the client. Default: the Settings dialog of "
+            "``DjangoConfig.site_url`` (``<site_url>/#settings/mcp``)."
+        ),
     )
     issuer: Optional[str] = Field(
         default=None,

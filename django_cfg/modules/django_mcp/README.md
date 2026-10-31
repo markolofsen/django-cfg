@@ -106,8 +106,8 @@ nothing is a destructive writer. See [tools.md](./@docs/tools.md#declare-what-th
 
 A public profile can also let assistants (Claude, ChatGPT, Claude Code, Codex,
 Cursor, VS Code) connect by URL and a sign-in instead of a pasted key: add
-`oauth_consent_url=` and `oauth_issuer=` to `enable_public_profile()`. It is
-stateless (signed with `SECRET_KEY`, no tables; codes are single use through the Django cache, so use a shared cache such as Redis; the consent request carries the redirect host for display); regenerating the user's key ends every connection. See
+`oauth=True` to `enable_public_profile()` (the approval page defaults to `<site_url>/#settings/mcp`; `oauth_consent_url=` and `oauth_issuer=` override). It is
+stateless (signed with `SECRET_KEY`, no tables; codes are single use through the Django cache, so use a shared cache such as Redis; the consent request carries the redirect host for display); on that default the host's Settings dialog approves a signed-in user's request at once, without a question; regenerating the user's key ends every connection. See
 [connect-assistants.md](./@docs/connect-assistants.md).
 
 > **Check a deployed server before trusting its auth.** Until 2026-08-04 the

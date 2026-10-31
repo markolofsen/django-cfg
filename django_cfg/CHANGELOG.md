@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mcp_key_user_revoked_idx` fails when the project already has one.
 
 ### Added
+- **MCP OAuth: `enable_public_profile(oauth=True)` needs no consent URL.** The approval page defaults to the Settings
+  dialog of `DjangoConfig.site_url` (`<site_url>/#settings/mcp`); `oauth_consent_url` stays as an override and still
+  enables OAuth on its own. `ProfileBuilder.enable_oauth()` takes `consent_url=None` too.
 - **Storage delete sync (opt-in): row deleted, files in R2/S3 deleted, CDN purged.** `FileCleanupConfig(outbox=True)`
   writes `StorageDeletion` rows inside the transaction (new table, migration `0001` of `django_cleanup`); a worker
   (RQ schedule, `manage.py storage_outbox --drain`) deletes the files with retries and backoff, behind an
