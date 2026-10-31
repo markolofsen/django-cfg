@@ -1,0 +1,35 @@
+---
+title: "Release v2.3.365"
+description: "MCP OAuth needs no consent URL (oauth=True), a guest on a Settings deep link is sent to sign-in and back, cold deep links open the right section, and the monitor ingest endpoint no longer answers 500."
+---
+
+import { Callout } from 'nextra/components'
+
+# Release v2.3.365
+
+**Released:** October 31, 2026 (covers 2.3.362 to 2.3.365; `@djangocfg/*` 2.1.597 and 2.1.598, `widget-mcp` 0.4.13)
+
+## `oauth=True` is the whole OAuth setup
+
+```python
+mcp.enable_public_profile(oauth=True)
+```
+
+The approval page defaults to `DjangoConfig.site_url` + `/#settings/mcp`, the Settings dialog with the widget's MCP section. `oauth_consent_url="https://…"` still wins when given (and alone also turns OAuth on); use it when the frontend lives on another origin than `site_url`. `ProfileBuilder.enable_oauth()` takes `consent_url=None` the same way.
+
+<Callout type="info">
+Check `site_url` before switching a project: it must be the public origin of the frontend that has the Settings dialog. Projects with the consent screen on a different host keep the explicit URL.
+</Callout>
+
+## Settings deep links (`@djangocfg/layouts` 2.1.597, 2.1.598)
+
+- **Cold load** (2.1.597): opening `#settings/mcp?request=…` in a fresh tab landed on Account and rewrote the hash, because the MCP section registers after the first render. The requested section is now kept until it registers.
+- **Guest** (2.1.598): the dialog opens only for a signed-in user, so an assistant's link used to land on a page where nothing happened. A guest on `#settings/<section>?<query>` is now sent to sign-in and returned to the same link; a plain `#settings` is left alone.
+
+## Fixed
+
+`POST /cfg/monitor/ingest/` answered 500 to a browser-like `Accept: text/html` header (DRF's browsable renderer asked the view for a serializer). The view now declares its `serializer_class` and always answers JSON; URL and payload are unchanged, a malformed body is a 400.
+
+## For contributors
+
+Shared pytest fixtures `api_client`, `fresh_cache` and `openapi_schema` live in the package `conftest.py`, with a "Test recipes" section in the package `CLAUDE.md`.

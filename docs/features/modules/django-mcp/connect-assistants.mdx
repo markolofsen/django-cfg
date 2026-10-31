@@ -15,7 +15,7 @@ mcp.enable_public_profile(
 )
 ```
 
-`oauth=True` is all a project with the widget's Settings dialog needs: the approval page is `DjangoConfig.site_url` + `/#settings/mcp`. Pass `oauth_consent_url="https://…"` only to send people somewhere else (your own consent route, a frontend on another domain); an explicit URL always wins, and passing it alone also turns OAuth on.
+`oauth=True` is all a project with the widget's Settings dialog needs: the approval page is `DjangoConfig.site_url` + `/#settings/mcp`. Pass `oauth_consent_url="https://…"` only to send people somewhere else (the frontend lives on another origin than `site_url`); an explicit URL always wins, and passing it alone also turns OAuth on.
 
 On a hand-written profile use `ProfileBuilder.enable_oauth(consent_url=None, issuer=None, access_ttl=..., refresh_ttl=...)`. `issuer` defaults to the request origin; set it when a proxy hides the public host. Defaults: access token 30 days, refresh token 180 days.
 
@@ -36,32 +36,29 @@ Redirects are accepted only for the clients' own callbacks (claude.ai, chatgpt.c
 
 `X-MCP-Access-Key` keeps working beside it. The `operator` profile never accepts OAuth tokens: the profile name is inside the token.
 
-## 2. Frontend: the consent page
+## 2. Frontend: the Settings dialog
 
-Create the route you gave as `oauth_consent_url`. The contract:
+The person approves inside the host's Settings dialog; there is no consent page to build. Add the widget's section once:
 
-1. `authorize` redirects the browser to `consent_url?request=<signed>&client=<client name>`.
-2. Signed out: send the visitor through your usual sign-in and come back to this same URL with the query intact.
-3. Signed in: show "*&lt;client&gt;* wants to use *&lt;project&gt;* as *&lt;email&gt;*" with **Allow** and **Cancel**.
-4. `POST <api><path>oauth/approve/` with the user's JWT and `{"request": "<signed>", "allow": true|false}`.
-5. The answer is `{"redirect_to": "..."}`. Do `window.location = redirect_to`. Cancel goes the same way and reaches the client as `access_denied`.
-6. A `400` means the request expired (10 minutes) or is invalid: say "start again from your assistant".
+```tsx
+import { SettingsDialog } from '@djangocfg/layouts';
+import { mcpSettingsSection } from '@djangocfg/widget-mcp';
 
-Never put a key or token in a URL of your own. The page needs only the signed `request`.
+<SettingsDialog sections={[mcpSettingsSection()]} />
+```
 
-### Consent inside the Settings dialog (no route of your own)
+What happens:
 
-The default `consent_url` is `<site_url>/#settings/mcp`; a custom one may carry a fragment the same way, e.g. `oauth_consent_url="https://app.example.com/#settings/mcp"`. `authorize` appends the query after it (`…/#settings/mcp?request=…&client=…`), the browser never sends a fragment to a server, so the signed request stays out of server and CDN logs. A host whose Settings dialog has the widget's MCP section (`mcpSettingsSection()`) then answers the consent there, and needs no `/mcp/connect` page. A request lives 10 minutes, so after changing `consent_url` the old route can go once that time has passed.
+1. `authorize` redirects the browser to `<site_url>/#settings/mcp?request=<signed>&client=<name>`. The fragment never reaches a server, so the signed request stays out of server and CDN logs.
+2. A guest is sent to sign-in and brought back to the same link (`@djangocfg/layouts` ≥ 2.1.598).
+3. A signed-in user is approved at once: the dialog posts the `request` with the user's JWT to `POST <api><path>oauth/approve/`, shows one status line above the connect list ("Connecting Claude…", then "Claude is connected. Returning to your assistant…") and follows the returned `redirect_to`. There is no Allow or Cancel step; the person already pressed Connect in their assistant.
+4. A `400` means the request expired (10 minutes) or is invalid: the line says to start again from the assistant.
 
-**The dialog does not ask.** A signed-in user who lands on `…/#settings/mcp?request=…` is approved at once: the dialog shows one status line above the connect list ("Connecting Claude…", then "Claude is connected. Returning to your assistant…") and the browser follows `redirect_to` back to the assistant. There is no Allow or Cancel step; the person already pressed Connect in their assistant. A signed-out visitor signs in first and the dialog picks the request up afterwards. A `400` shows "start again from your assistant".
+The signed `request` is `base64url(json):timestamp:signature`; approve verifies the signature and uses its own copy, so nothing the page displays can ride on a real grant. Authorization codes are single use (the guard is one Django cache entry per code, so the cache must be shared across workers, e.g. Redis, and a cache outage refuses rather than allows). Refresh tokens are not rotated: renewing the key (Renew access) is the revocation. Never put a key or token in a URL.
 
-<Callout type="warning">
-What this trades away: any link `…/#settings/mcp?request=<valid signed request>` opened by a signed-in user connects that client. The request is signed, expires in 10 minutes, and can only point at the clients' own callbacks and loopback addresses, but a person tricked into opening a link prepared by someone else grants that client. If your product holds sensitive data, keep the asking card (`<McpConsent>` at your own route) instead. The old `/mcp/connect` route keeps asking.
-</Callout>
+`site_url` must be the public origin of the frontend that mounts the dialog. When that frontend lives elsewhere, set `oauth_consent_url="https://app.example.com/#settings/mcp"`; the flow is the same.
 
-<Callout type="info">
-The ready-made version is `@djangocfg/widget-mcp`: `<McpConsent apiUrl="..." product="..." />` is this page, mounted at `oauth_consent_url`, and `<McpConnect>` is the install step below. Without the widget, the page above is about 60 lines in any app that uses `useAuth` from `@djangocfg/api/auth`.
-</Callout>
+**What this trades away.**
 
 ## After Allow: what each client does
 
