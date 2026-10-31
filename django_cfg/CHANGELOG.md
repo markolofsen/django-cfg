@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   table); an unwritable cache refuses the exchange. Refresh tokens stay reusable; Renew key revokes them.
 
 ### Fixed
+- **`POST /cfg/monitor/ingest/` answered 500 to a browser-like `Accept` header.** `MonitorIngestViewSet` had no
+  `serializer_class`, and DRF's browsable-API renderer (picked for `Accept: text/html`) asks the view for one:
+  `AssertionError: 'MonitorIngestViewSet' should either include a serializer_class`. The view now declares
+  `serializer_class = IngestBatchSerializer` and answers JSON whatever `Accept` says. URL and payload are unchanged;
+  a malformed body is a 400. Every other `GenericViewSet` in the package already declares its serializer.
 - **Storage cleanup: a rollback no longer loses files, and shared files are kept.** `FileCleanupMixin.delete()`
   and `FileCleanupQuerySet.delete()` delete files in `transaction.on_commit` (they used to delete first, so a
   rolled-back delete lost the files while the row survived). The `post_delete` signal now honours

@@ -16,7 +16,9 @@ from django_ratelimit.core import is_ratelimited
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.negotiation import BaseContentNegotiation
 from rest_framework.parsers import JSONParser
+from rest_framework.renderers import JSONRenderer
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
@@ -45,6 +47,23 @@ class PlainTextJSONParser(JSONParser):
     media_type = "text/plain"
 
 
+class AlwaysJSON(BaseContentNegotiation):
+    """Answer in JSON whatever `Accept` says.
+
+    The caller is an SDK that never reads the body. A 406 for `Accept: text/html`
+    would only turn a harmless event into a lost one.
+    """
+
+    def select_parser(self, request, parsers):
+        # Same rule as DRF's default: the first parser whose media type matches.
+        from rest_framework.negotiation import DefaultContentNegotiation
+
+        return DefaultContentNegotiation().select_parser(request, parsers)
+
+    def select_renderer(self, request, renderers, format_suffix=None):
+        return renderers[0], renderers[0].media_type
+
+
 def _get_client_ip(request) -> str:
     x_forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
     if x_forwarded:
@@ -62,6 +81,14 @@ class MonitorIngestViewSet(viewsets.GenericViewSet):
 
     permission_classes = [AllowAny]
     authentication_classes = []
+
+    # The request shape. Also what the browsable-API renderer asks for through
+    # get_serializer() when a browser-like client sends `Accept: text/html`:
+    # without it that renderer raised an AssertionError and the response was a 500.
+    serializer_class = IngestBatchSerializer
+    # JSON only: a machine endpoint has no use for the HTML form renderer.
+    renderer_classes = [JSONRenderer]
+    content_negotiation_class = AlwaysJSON
 
     # text/plain is required for the SDK's page-unload flush to survive CORS.
     parser_classes = [JSONParser, PlainTextJSONParser]
