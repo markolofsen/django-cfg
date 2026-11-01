@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List
 from urllib.parse import urlparse
 
+from ..site import SiteAccess, declared_urls, derive_access
+
 if TYPE_CHECKING:
     from ..base.config_model import DjangoConfig
 
@@ -22,12 +24,11 @@ class SecurityBuilder:
     Universal logic for Docker and bare metal in both dev and prod environments.
 
     Responsibilities:
-    - Generate ALLOWED_HOSTS from security_domains
-    - Configure CORS settings (open in dev, strict in prod)
-    - Configure CSRF trusted origins
+    - Take ALLOWED_HOSTS, CORS and CSRF origins from the site registry
+      (``core.site.derive_access``): it holds the one derivation
+    - Open CORS in dev, strict in prod
     - Handle SSL redirect configuration
     - Auto-detect Docker environment
-    - Normalize domain formats (with/without protocol)
 
     Example:
         ```python
@@ -66,19 +67,18 @@ class SecurityBuilder:
             >>> 'ALLOWED_HOSTS' in settings
             True
         """
-        # Get all security domains including auto-extracted from api_url and site_url
-        all_domains = self._get_all_security_domains()
+        access = derive_access(self.config)
 
         # Production mode has highest priority for security settings
         # Debug flag should NOT weaken security in production
         if self.config.is_production:
-            return self._prod_mode_universal(all_domains)
+            return self._prod_mode_universal(access)
         else:
-            return self._dev_mode_universal()
+            return self._dev_mode_universal(access)
 
     def build_allowed_hosts(self) -> List[str]:
         """
-        Build ALLOWED_HOSTS from security_domains.
+        Build ALLOWED_HOSTS from the site registry.
 
         DEPRECATED: Use build_security_settings() instead.
         Kept for backward compatibility.
@@ -89,7 +89,7 @@ class SecurityBuilder:
         settings = self.build_security_settings()
         return settings.get('ALLOWED_HOSTS', ['*'])
 
-    def _dev_mode_universal(self) -> Dict[str, Any]:
+    def _dev_mode_universal(self, access: SiteAccess) -> Dict[str, Any]:
         """
         DEVELOPMENT mode: Fully open (Docker + bare metal).
 
@@ -103,13 +103,9 @@ class SecurityBuilder:
         Returns:
             Dictionary with dev security settings
         """
-        # Get all security domains including auto-extracted from api_url and site_url
-        all_domains = self._get_all_security_domains()
-        normalized = self._normalize_domains(all_domains)
-
         # CSRF is the only setting that still needs an explicit port list:
         # Django matches CSRF_TRUSTED_ORIGINS literally and accepts no regex.
-        dev_csrf_origins = self._get_dev_csrf_origins() + normalized['csrf_origins']
+        dev_csrf_origins = self._get_dev_csrf_origins() + list(access.csrf_origins)
 
         return {
             # === CORS: localhost on any port, via regex ===
@@ -118,7 +114,7 @@ class SecurityBuilder:
             # cookies work, and one pattern replaces a port-by-port list.
             'CORS_ALLOW_ALL_ORIGINS': False,
             'CORS_ALLOW_CREDENTIALS': True,
-            'CORS_ALLOWED_ORIGINS': normalized['cors_origins'],
+            'CORS_ALLOWED_ORIGINS': list(access.cors_origins),
             # Desktop apps use custom URL schemes (wails://, app://, tauri://)
             # that http-only whitelists reject. Regex list covers them.
             'CORS_ALLOWED_ORIGIN_REGEXES': (
@@ -131,7 +127,7 @@ class SecurityBuilder:
             # Docker health checks, internal IPs, localhost, all!
             'ALLOWED_HOSTS': ['*'],
 
-            # === CSRF: dev ports + security_domains ===
+            # === CSRF: dev ports + registry origins ===
             # Browser requests only — Docker-to-Docker carries no Referer.
             'CSRF_TRUSTED_ORIGINS': dev_csrf_origins,
 
@@ -156,7 +152,7 @@ class SecurityBuilder:
             ],
         }
 
-    def _prod_mode_universal(self, security_domains: List[str]) -> Dict[str, Any]:
+    def _prod_mode_universal(self, access: SiteAccess) -> Dict[str, Any]:
         """
         PRODUCTION mode: Strict whitelist + Docker support.
 
@@ -166,37 +162,36 @@ class SecurityBuilder:
         - Health checks must work (ALLOWED_HOSTS)
 
         Args:
-            security_domains: List of production domains
+            access: Hosts and origins derived from the site registry
 
         Returns:
             Dictionary with prod security settings
 
         Raises:
-            ConfigurationError: If security_domains is empty
+            ConfigurationError: If no host is declared
         """
-        if not security_domains:
+        if not access.domains:
             from ..exceptions import ConfigurationError
             raise ConfigurationError(
-                "security_domains REQUIRED in production!",
+                "No hosts declared in production!",
                 suggestions=[
-                    "Add domains: security_domains: ['example.com', 'api.example.com']"
+                    "Set api_url and site_url (or sites=[SiteConfig(...)]); "
+                    "security_domains adds extra hosts: ['mcp.example.com']"
                 ]
             )
-
-        normalized = self._normalize_domains(security_domains)
 
         # Check if localhost is in security_domains for universal CORS regex
         has_localhost = any(
             domain in ('localhost', '127.0.0.1')
-            for domain in security_domains
+            for domain in access.domains
         )
 
         return {
-            # === CORS: Only security_domains ===
+            # === CORS: Only registry origins ===
             # Docker-to-Docker requests don't have Origin header - CORS doesn't apply
             'CORS_ALLOW_ALL_ORIGINS': False,
             'CORS_ALLOW_CREDENTIALS': True,
-            'CORS_ALLOWED_ORIGINS': normalized['cors_origins'],
+            'CORS_ALLOWED_ORIGINS': list(access.cors_origins),
             # Desktop-app custom schemes (wails://, app://, tauri://) are
             # always trusted — the binary is our build and carries a
             # native JWT. Localhost regex only when explicitly opted-in
@@ -207,12 +202,12 @@ class SecurityBuilder:
             ),
             'CORS_ALLOW_HEADERS': self.config.cors_allow_headers,
 
-            # === ALLOWED_HOSTS: security_domains + Docker patterns ===
+            # === ALLOWED_HOSTS: registry hosts + Docker patterns ===
             # Need to allow internal health checks, but safely
-            'ALLOWED_HOSTS': self._get_prod_allowed_hosts(normalized['allowed_hosts']),
+            'ALLOWED_HOSTS': self._get_prod_allowed_hosts(list(access.allowed_hosts)),
 
-            # === CSRF: Only security_domains ===
-            'CSRF_TRUSTED_ORIGINS': normalized['csrf_origins'] + (
+            # === CSRF: Only registry origins ===
+            'CSRF_TRUSTED_ORIGINS': list(access.csrf_origins) + (
                 self._get_localhost_csrf_origins() if has_localhost else []
             ),
 
@@ -278,7 +273,7 @@ class SecurityBuilder:
         Production ALLOWED_HOSTS with Docker support.
 
         In production we're strict, but need to allow:
-        - Public domains (security_domains)
+        - Public domains (site registry)
         - Docker internal service names (auto-detected)
         - Docker health checks (internal IPs, if needed)
 
@@ -553,15 +548,15 @@ class SecurityBuilder:
     def _get_dev_csrf_ports(self) -> List[int]:
         """Loopback ports this project actually uses, plus the common defaults.
 
-        Ports are read from site_url, api_url and security_domains, so a dev
-        server on an unusual port is covered by naming it in the config rather
-        than by guessing here.
+        Ports are read from the site registry (every site's URLs and the
+        deployment api_url) and security_domains, so a dev server on an unusual
+        port is covered by naming it in the config rather than by guessing here.
         """
         from urllib.parse import urlsplit
 
         ports = set(self._COMMON_DEV_PORTS)
 
-        candidates = [self.config.site_url, self.config.api_url]
+        candidates = declared_urls(self.config)
         candidates.extend(self.config.security_domains)
 
         for candidate in candidates:
@@ -759,186 +754,6 @@ class SecurityBuilder:
                     'REMOTE_ADDR',           # Fallback to direct connection
                 ],
             }
-
-    def _get_all_security_domains(self) -> List[str]:
-        """
-        Get all security domains including auto-extracted from api_url and site_url.
-
-        Automatically extracts domains from:
-        - config.security_domains (user-defined)
-        - config.api_url (backend URL)
-        - config.site_url (frontend URL)
-
-        Smart deduplication by hostname:port (ignoring protocol differences).
-
-        Returns:
-            List of all unique security domains
-
-        Example:
-            >>> config = DjangoConfig(
-            ...     api_url="https://api.example.com",
-            ...     site_url="https://example.com",
-            ...     security_domains=["localhost"]
-            ... )
-            >>> builder = SecurityBuilder(config)
-            >>> domains = builder._get_all_security_domains()
-            >>> len([d for d in domains if 'api.example.com' in d])
-            1
-            >>> len([d for d in domains if 'example.com' in d and 'api' not in d])
-            1
-        """
-        domains = list(self.config.security_domains)
-
-        # Extract domain from api_url
-        if self.config.api_url:
-            try:
-                parsed = urlparse(self.config.api_url)
-                if parsed.netloc:
-                    # Add full URL with protocol and port if present
-                    if parsed.port:
-                        domains.append(f"{parsed.scheme}://{parsed.hostname}:{parsed.port}")
-                    else:
-                        domains.append(f"{parsed.scheme}://{parsed.hostname}")
-            except Exception:
-                pass  # Ignore parsing errors
-
-        # Extract domain from site_url
-        if self.config.site_url:
-            try:
-                parsed = urlparse(self.config.site_url)
-                if parsed.netloc:
-                    # Add full URL with protocol and port if present
-                    if parsed.port:
-                        domains.append(f"{parsed.scheme}://{parsed.hostname}:{parsed.port}")
-                    else:
-                        domains.append(f"{parsed.scheme}://{parsed.hostname}")
-            except Exception:
-                pass  # Ignore parsing errors
-
-        # Smart deduplication: track by hostname:port, keep first occurrence with protocol
-        seen_hostports = {}  # hostname:port -> full domain string
-        unique_domains = []
-
-        for domain in domains:
-            if not domain or not domain.strip():
-                continue
-
-            domain = domain.strip()
-
-            # Normalize for comparison: parse to get hostname:port key
-            try:
-                # Add protocol if missing for parsing
-                if not domain.startswith(("http://", "https://")):
-                    parse_domain = f"http://{domain}"
-                else:
-                    parse_domain = domain
-
-                parsed = urlparse(parse_domain)
-                hostname = (parsed.hostname or parsed.netloc.split(':')[0]).lower()  # Lowercase for case-insensitive comparison
-                port = parsed.port
-
-                # Create unique key: hostname:port or just hostname (lowercase for case-insensitivity)
-                if port:
-                    hostport_key = f"{hostname}:{port}"
-                else:
-                    hostport_key = hostname
-
-                # Only add if we haven't seen this hostname:port combination
-                if hostport_key not in seen_hostports:
-                    # Normalize domain to lowercase but preserve original format (with/without protocol)
-                    # Reconstruct normalized domain
-                    if domain.startswith(("http://", "https://")):
-                        # Has protocol - normalize hostname part only
-                        if port:
-                            normalized_domain = f"{parsed.scheme}://{hostname}:{port}"
-                        else:
-                            normalized_domain = f"{parsed.scheme}://{hostname}"
-                    else:
-                        # No protocol - just lowercase the whole thing
-                        normalized_domain = domain.lower()
-
-                    seen_hostports[hostport_key] = normalized_domain
-                    unique_domains.append(normalized_domain)
-
-            except Exception:
-                # If parsing fails, use simple string deduplication with lowercase
-                domain_lower = domain.lower()
-                if domain_lower not in seen_hostports.values():
-                    seen_hostports[domain_lower] = domain_lower
-                    unique_domains.append(domain_lower)
-
-        return unique_domains
-
-    def _normalize_domains(self, domains: List[str]) -> Dict[str, List[str]]:
-        """
-        Normalize domains in ANY format.
-
-        Accepts domains in any format:
-        - "example.com" → https://example.com (CORS), example.com (ALLOWED_HOSTS)
-        - "https://api.example.com" → https://api.example.com (as is)
-        - "http://staging.com:8080" → http://staging.com:8080 (as is)
-        - "192.168.1.10" → http://192.168.1.10
-        - "localhost" → http://localhost (regex handles all ports via CORS_ALLOWED_ORIGIN_REGEXES)
-
-        Args:
-            domains: List of domains in any format
-
-        Returns:
-            Dictionary with normalized domains for different settings:
-            - 'allowed_hosts': Without protocol/port
-            - 'cors_origins': With protocol
-            - 'csrf_origins': With protocol
-        """
-        allowed_hosts = []
-        cors_origins = []
-        csrf_origins = []
-
-        # Default protocol
-        default_protocol = "https" if self.config.is_production else "http"
-
-        for domain in domains:
-            if not domain or not domain.strip():
-                continue
-
-            domain = domain.strip()
-
-            # Add protocol if missing
-            if not domain.startswith(("http://", "https://")):
-                full_url = f"{default_protocol}://{domain}"
-            else:
-                full_url = domain
-
-            try:
-                parsed = urlparse(full_url)
-
-                # ALLOWED_HOSTS - only hostname (no protocol, no port)
-                hostname = parsed.hostname or parsed.netloc.split(':')[0]
-                if hostname:
-                    allowed_hosts.append(hostname)
-
-                # CORS/CSRF - full URL with protocol
-                if parsed.port:
-                    origin = f"{parsed.scheme}://{parsed.hostname}:{parsed.port}"
-                else:
-                    origin = f"{parsed.scheme}://{parsed.hostname}"
-
-                cors_origins.append(origin)
-                csrf_origins.append(origin)
-
-            except Exception as e:
-                import warnings
-                warnings.warn(
-                    f"Failed to parse domain '{domain}': {e}",
-                    UserWarning,
-                    stacklevel=2
-                )
-                continue
-
-        return {
-            'allowed_hosts': list(set(filter(None, allowed_hosts))),
-            'cors_origins': list(set(filter(None, cors_origins))),
-            'csrf_origins': list(set(filter(None, csrf_origins))),
-        }
 
 
 # Export builder

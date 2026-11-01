@@ -96,10 +96,10 @@ class ConfigurationValidator:
                         )
                         break
 
-        # Allowed hosts validation (now generated from security_domains)
+        # Allowed hosts validation (derived from the site registry and security_domains)
         allowed_hosts = config.get_allowed_hosts()
         if not allowed_hosts:
-            errors.append("ALLOWED_HOSTS cannot be empty (configure security_domains)")
+            errors.append("ALLOWED_HOSTS cannot be empty (set api_url and site_url, or declare sites)")
         else:
             # Validate each host
             for i, host in enumerate(allowed_hosts):

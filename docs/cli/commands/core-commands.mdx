@@ -106,6 +106,7 @@ django-cfg info --verbose
 - Admin & UI packages (Unfold, Constance)
 - 📊 API & documentation tools (DRF, Spectacular)
 - Background processing (Django-RQ, Redis)
+- The configured [sites](/configuration/sites): per site its key, name, `site_url`, API URL, web origins, sender, `Reply-To` and locale. A value taken from the deployment is marked `(inherited)` (`api_url` when the site sets none, `from_email` from `email.default_from`). Printed only when `DJANGO_SETTINGS_MODULE` loads; outside a project the section is skipped.
 
 ---
 
@@ -121,9 +122,10 @@ python manage.py show_config [OPTIONS]
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `--format` | `json\|yaml\|table` | `yaml` | Output format |
+| `--format` | `table\|json` | `table` | Output format |
 | `--include-secrets` | `flag` | `False` | Include sensitive values (use with caution) |
-| `--section` | `TEXT` | - | Show specific configuration section |
+
+The table has a Sites section, with `(inherited)` next to values a site took from the deployment. The JSON has a `sites` array (`key`, `name`, `site_url`, `api_url`, `origins`, `from_email`, `from_name`, `support_email`, `logo_url`, `locale`) and, per site, `inherited`: the names taken from the deployment. See [Sites](/configuration/sites#inspecting).
 
 **Examples:**
 
@@ -133,9 +135,6 @@ python manage.py show_config
 
 # JSON format for automation
 python manage.py show_config --format json
-
-# Show only database configuration
-python manage.py show_config --section database
 
 # Include sensitive values (be careful!)
 python manage.py show_config --include-secrets
@@ -702,6 +701,29 @@ python manage.py create_token admin --expires-in 30
 ```
 
 ---
+
+### `oauth_check`
+
+Diagnose Google and GitHub sign-in and print what to register at each provider.
+
+```bash
+python manage.py oauth_check
+python manage.py oauth_check --probe
+```
+
+| Option | Description |
+|--------|-------------|
+| `--probe` | Ask each enabled provider whether the client id and secret are accepted (one token-endpoint call with a dummy code; `invalid_grant` = accepted, `invalid_client` = wrong) |
+
+Per provider it prints on or off (and which variables turn it on), the redirect URIs for every site origin, the console link, then the setup findings (`django_cfg.W030` to `W035`). Exit code 1 on any finding or failed probe. See [OAuth configuration](/features/integrations/oauth/configuration#diagnostics) and [Google Cloud setup](/features/integrations/oauth/google).
+
+### `email_key_report`
+
+List emails that map to more than one live user (accounts created before the canonical `email_key` existed). Reports only, never merges. Exit code 1 when duplicates exist.
+
+```bash
+python manage.py email_key_report
+```
 
 ## URL Management
 

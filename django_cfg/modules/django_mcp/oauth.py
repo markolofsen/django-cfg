@@ -199,11 +199,37 @@ def _active_user(pk: Any, token: Optional[dict] = None) -> Any:
 # ── where things live ────────────────────────────────────────────────────────
 
 
+class IssuerNotAllowed(Exception):
+    """The request arrived on a host that is not an issuer of this server."""
+
+
 def issuer(request, profile) -> str:
+    """The public origin of this authorization server.
+
+    The configured ``oauth.issuer`` wins. Without one it is the request's own
+    origin, but only when its host is the ``api_url`` host of a site: a forged
+    ``Host`` must not put its own origin into the discovery documents and into
+    the consent request. Anything else raises ``IssuerNotAllowed``. Development
+    accepts any host (``localhost`` and ``127.0.0.1`` are one server).
+    """
     configured = profile.oauth.issuer
     if configured:
         return configured.rstrip("/")
-    return request.build_absolute_uri("/").rstrip("/")
+    origin = request.build_absolute_uri("/").rstrip("/")
+    if not _issuer_allowed(origin):
+        raise IssuerNotAllowed(origin)
+    return origin
+
+
+def _issuer_allowed(origin: str) -> bool:
+    from django_cfg.core.site import sites
+    from django_cfg.core.state import get_current_config
+
+    config = get_current_config()
+    if config is not None and config.is_development:
+        return True
+    host = urlparse(origin).netloc.lower()
+    return any(urlparse(site.api_url).netloc.lower() == host for site in sites())
 
 
 def resource_url(request, profile) -> str:
@@ -247,6 +273,13 @@ class _ProfileView(View):
 
     def get_profile(self):
         return _profile(self.profile)
+
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            return super().dispatch(request, *args, **kwargs)
+        except IssuerNotAllowed:
+            logger.warning("MCP OAuth refused: host %r is not a site api_url host", request.get_host())
+            return _error("invalid_request", "This host is not an issuer of this server.")
 
     def options(self, request, *args, **kwargs):
         # Browser-based clients (Claude web, ChatGPT) preflight these.
@@ -388,21 +421,19 @@ class AuthorizeView(_ProfileView):
             },
             compress=False,
         )
-        consent_url = consent_page(profile.oauth)
+        consent_url = consent_page(profile.oauth, request)
         target = f"{consent_url}{'&' if '?' in consent_url else '?'}"
         target += urlencode({"request": consent, "client": client.get("name") or "MCP client"})
         return HttpResponseRedirect(target)
 
 
-def consent_page(oauth) -> str:
-    """The page that approves a request: the configured URL, else the host's Settings dialog."""
+def consent_page(oauth, request=None) -> str:
+    """The page that approves a request: the configured URL, else the Settings dialog of the request's site."""
     if oauth.consent_url:
         return oauth.consent_url
-    from django_cfg.core.state import get_current_config
+    from django_cfg.core.site import site_for
 
-    config = get_current_config()
-    site = config.site_url if config else "http://localhost:3000"
-    return f"{site.rstrip('/')}/#settings/mcp"
+    return site_for(request).url("/#settings/mcp")
 
 
 def _with_params(uri: str, params: dict) -> str:

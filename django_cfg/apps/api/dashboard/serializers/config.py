@@ -144,18 +144,15 @@ class NextJSAdminConfigSerializer(serializers.Serializer):
 
 class GitHubOAuthConfigSerializer(serializers.Serializer):
     """GitHub OAuth configuration."""
-    enabled = serializers.BooleanField(required=False, allow_null=True)
     client_id = serializers.CharField(required=False, allow_null=True)
     client_secret = serializers.CharField(required=False, allow_null=True)
-    scope = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
-    authorize_url = serializers.CharField(required=False, allow_null=True)
-    token_url = serializers.CharField(required=False, allow_null=True)
-    user_api_url = serializers.CharField(required=False, allow_null=True)
-    emails_api_url = serializers.CharField(required=False, allow_null=True)
-    callback_path = serializers.CharField(required=False, allow_null=True)
-    state_timeout_seconds = serializers.IntegerField(required=False, allow_null=True)
-    allow_account_linking = serializers.BooleanField(required=False, allow_null=True)
-    auto_create_user = serializers.BooleanField(required=False, allow_null=True)
+
+
+class GoogleOAuthConfigSerializer(serializers.Serializer):
+    """Google OAuth configuration."""
+    client_id = serializers.CharField(required=False, allow_null=True)
+    client_secret = serializers.CharField(required=False, allow_null=True)
+    allowed_hosted_domains = serializers.ListField(child=serializers.CharField(), required=False, allow_null=True)
 
 
 class DjangoConfigSerializer(serializers.Serializer):
@@ -213,6 +210,7 @@ class DjangoConfigSerializer(serializers.Serializer):
     telegram = TelegramConfigSerializer(required=False, allow_null=True)
     axes = AxesConfigSerializer(required=False, allow_null=True)
     github_oauth = GitHubOAuthConfigSerializer(required=False, allow_null=True)
+    google_oauth = GoogleOAuthConfigSerializer(required=False, allow_null=True)
     unfold = serializers.JSONField(required=False, allow_null=True)  # Complex Unfold config object
     admin_timezone = serializers.CharField(required=False, allow_null=True)
     tailwind_app_name = serializers.CharField(required=False, allow_null=True)

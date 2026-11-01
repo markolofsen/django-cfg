@@ -38,9 +38,12 @@ def presented_credential(request) -> Optional[str]:
 def challenge(request, credentials: Any) -> str:
     """``WWW-Authenticate`` for a 401: OAuth discovery where the profile has it."""
     if getattr(credentials, "oauth", None):
-        from .oauth import www_authenticate
+        from .oauth import IssuerNotAllowed, www_authenticate
 
-        return www_authenticate(request, credentials)
+        try:
+            return www_authenticate(request, credentials)
+        except IssuerNotAllowed:
+            return 'Bearer'
     return 'MCPAccessKey realm="mcp", header="X-MCP-Access-Key"'
 
 

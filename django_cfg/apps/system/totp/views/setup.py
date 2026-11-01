@@ -91,7 +91,7 @@ class SetupViewSet(viewsets.GenericViewSet):
         # Generate QR code
         from django_cfg.core.config import get_current_config
         config = get_current_config()
-        issuer_name = config.project_name if config else "Django CFG"
+        issuer_name = config.project_name if config else ""
         provisioning_uri = TOTPService.get_provisioning_uri(device, issuer=issuer_name)
         qr_code_base64 = TOTPService.generate_qr_code(provisioning_uri)
 

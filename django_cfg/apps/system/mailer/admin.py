@@ -79,7 +79,8 @@ class EmailContentAdmin(PydanticAdmin):
                     "One paragraph per line in the multi-line fields; the template "
                     "adds the markup. Leave a field empty to fall back to the "
                     "template's own wording for that part. "
-                    "{{ project_name }} and {{ site_url }} are substituted — "
+                    "{{ project_name }}, {{ site_name }}, {{ site_url }}, {{ support_email }}, "
+                    "{{ logo_url }} and (OTP letter) {{ otp_code }} are substituted — "
                     "nothing else is, so stored text cannot reach the rest of the "
                     "template context."
                 ),

@@ -14,8 +14,6 @@ from __future__ import annotations
 
 from typing import Optional
 
-from django_cfg.core.utils import get_otp_url
-
 from ...models import CustomUser
 from .request import request_otp as _request_otp
 from .types import ConsentCapture, OTPRequestResult
@@ -25,19 +23,25 @@ from .verify import verify_otp as _verify_otp
 class OTPService:
     """Simple OTP service for authentication."""
 
-    # Backward-compat: callers historically reached for this attribute
-    _get_otp_url = staticmethod(get_otp_url)
-
     @staticmethod
     def request_otp(
         email: str,
         source_url: Optional[str] = None,
         accept_language: Optional[str] = None,
         consent: Optional[ConsentCapture] = None,
+        site_key: Optional[str] = None,
     ) -> OTPRequestResult:
-        """Generate and send OTP to email. Returns OTPRequestResult."""
+        """Generate and send OTP to email. Returns OTPRequestResult.
+
+        ``site_key`` is the site the letter speaks for (``site_key(request)``);
+        None is the default site.
+        """
         return _request_otp(
-            email, source_url=source_url, accept_language=accept_language, consent=consent
+            email,
+            source_url=source_url,
+            accept_language=accept_language,
+            consent=consent,
+            site_key=site_key,
         )
 
     @staticmethod

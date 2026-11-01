@@ -17,9 +17,12 @@ import logging
 import threading
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from django.utils import timezone
+from django.utils.translation import gettext_noop
+
+from django_cfg.core.site import site_key
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -104,20 +107,30 @@ def _was_recently_seen(user: CustomUser, fingerprint: str) -> bool:
     ).exists()
 
 
-def _send_alert_email(user: CustomUser, ctx: LoginContext) -> None:
-    """Send the login alert email (runs in background thread)."""
-    from django_cfg.core.state import get_current_config
+def _send_alert_email(user: CustomUser, ctx: LoginContext, site_key: Optional[str] = None) -> None:
+    """Send the login alert email (runs in background thread).
+
+    ``site_key`` was captured from the request on the request thread; this one
+    has no request to ask.
+    """
+    from django_cfg.core.site import site_for
     from django_cfg.modules.django_email import DjangoEmailService
 
-    config = get_current_config()
-    project_name = config.project_name if config else "App"
-    site_url = config.site_url if config else ""
+    from ..utils.notifications import _locale, _resolve_copy, _subject
+
+    site = site_for(key=site_key, user=user)
+    locale = _locale(user, site)
 
     device_label = f"{ctx.browser} on {ctx.os}"
     if ctx.device_type in ("mobile", "tablet"):
         device_label = f"{ctx.browser} on {ctx.os} ({ctx.device_type})"
 
-    subject = f"New sign-in to your {project_name} account"
+    subject = _subject(
+        gettext_noop("New sign-in to your %(project_name)s account"),
+        _resolve_copy("login_alert_email", locale),
+        locale,
+        site.as_context(),
+    )
     logger.info("Login alert email sending to %s (%s, IP %s)", user.email, device_label, ctx.ip_address)
 
     email_service = DjangoEmailService()
@@ -129,10 +142,11 @@ def _send_alert_email(user: CustomUser, ctx: LoginContext) -> None:
             "device": device_label,
             "ip_address": ctx.ip_address,
             "login_time": ctx.login_time,
-            "project_name": project_name,
-            "button_url": site_url or "",
+            "button_url": site.site_url,
         },
         recipient_list=[user.email],
+        locale=locale,
+        site=site,
     )
     logger.info("Login alert email sent to %s", user.email)
 
@@ -152,7 +166,7 @@ def _log_activity(user: CustomUser, ctx: LoginContext) -> None:
     )
 
 
-def _do_login_alert(user: CustomUser, ctx: LoginContext) -> None:
+def _do_login_alert(user: CustomUser, ctx: LoginContext, site_key: Optional[str] = None) -> None:
     """Execute login alert logic outside the request transaction.
 
     This runs via transaction.on_commit() so DB writes here cannot
@@ -186,7 +200,7 @@ def _do_login_alert(user: CustomUser, ctx: LoginContext) -> None:
         # --- Send email in background thread ---
         thread = threading.Thread(
             target=_send_alert_email,
-            args=(user, ctx),
+            args=(user, ctx, site_key),
             daemon=True,
             name=f"login-alert-{user.pk}",
         )
@@ -208,11 +222,14 @@ def send_login_alert(user: CustomUser, request: HttpRequest) -> None:
 
     try:
         ctx = _build_login_context(request)
+        # Resolved here, on the request thread: the alert runs after commit, in
+        # a worker thread with no request.
+        key = site_key(request)
 
         if connection.in_atomic_block:
-            transaction.on_commit(lambda: _do_login_alert(user, ctx))
+            transaction.on_commit(lambda: _do_login_alert(user, ctx, key))
         else:
-            _do_login_alert(user, ctx)
+            _do_login_alert(user, ctx, key)
 
     except Exception:
         # Never break authentication flow

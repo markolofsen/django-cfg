@@ -33,6 +33,22 @@ served by ``OpenAI(base_url=...)``.
 """
 
 
+def openrouter_identity(config: Optional[Any] = None) -> tuple[str, str]:
+    """``(X-Title, HTTP-Referer)`` OpenRouter shows for this project.
+
+    The title is the deployment's ``project_name`` (the ops identity, which is
+    what a bill is read against), the referer its ``site_url``. Without a
+    configured project the title is a neutral ``"Project"`` and the referer is
+    empty: this package must not announce another product's name or domain.
+    """
+    if config is None:
+        from django_cfg.core.state import get_current_config
+
+        config = get_current_config()
+    title = getattr(config, "project_name", "") or "Project"
+    return title, getattr(config, "site_url", "") or ""
+
+
 class ConfigBuilder:
     """Builds configuration for LLM providers."""
 
@@ -47,18 +63,10 @@ class ConfigBuilder:
         Returns:
             Dictionary of headers for OpenRouter
         """
-        headers = {}
-
-        if config:
-            try:
-                site_url = getattr(config, "site_url", "http://localhost:8000")
-                project_name = getattr(config, "project_name", "cmdop-llm")
-                headers.update({
-                    "HTTP-Referer": site_url,
-                    "X-Title": project_name
-                })
-            except Exception as e:
-                logger.warning(f"Failed to extract config for OpenRouter headers: {e}")
+        title, referer = openrouter_identity(config)
+        headers = {"X-Title": title}
+        if referer:
+            headers["HTTP-Referer"] = referer
 
         return headers
 

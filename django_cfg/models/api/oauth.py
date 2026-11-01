@@ -1,29 +1,33 @@
 """
-OAuth Configuration for Django CFG
-Type-safe OAuth provider configuration with Pydantic v2
+OAuth provider configuration.
+
+A provider needs a client id and a secret and nothing else. Scopes, callback
+path, state lifetime, endpoints and account linking are constants of the
+provider code (``apps.system.accounts.services.oauth``), not knobs.
+
+When ``DjangoConfig.github_oauth`` / ``google_oauth`` is left ``None``, the
+settings generator builds the config from the process environment:
+
+    GITHUB_OAUTH__CLIENT_ID / GITHUB_OAUTH__CLIENT_SECRET
+    GOOGLE_OAUTH__CLIENT_ID / GOOGLE_OAUTH__CLIENT_SECRET
+
+Both set means the provider is on. An explicit config object wins over env.
 """
 
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+import os
+import warnings
+from typing import Any, ClassVar, Dict, List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+# Env prefix per provider id: ``<PREFIX>__CLIENT_ID`` and ``<PREFIX>__CLIENT_SECRET``.
+OAUTH_ENV_PREFIX: Dict[str, str] = {"github": "GITHUB_OAUTH", "google": "GOOGLE_OAUTH"}
 
 
-class GitHubOAuthConfig(BaseModel):
-    """
-    GitHub OAuth Configuration
-
-    Type-safe GitHub OAuth settings for social authentication.
-    Follows Django-CFG configuration patterns.
-
-    Example:
-        ```python
-        github_oauth = GitHubOAuthConfig(
-            enabled=True,
-            client_id="your_client_id",
-            client_secret="your_client_secret",
-        )
-        ```
-    """
+class OAuthProviderConfig(BaseModel):
+    """Credentials of one OAuth provider."""
 
     model_config = ConfigDict(
         validate_assignment=True,
@@ -31,192 +35,125 @@ class GitHubOAuthConfig(BaseModel):
         str_strip_whitespace=True,
     )
 
-    # === Enable/Disable ===
-    enabled: bool = Field(
-        default=False,
-        description="Enable GitHub OAuth authentication"
-    )
+    # Provider id (``github``); set by subclasses, used for env auto-detect.
+    provider_id: ClassVar[str] = ""
 
-    # === Credentials ===
-    client_id: str = Field(
-        default="",
-        description="GitHub OAuth App Client ID"
-    )
-
-    client_secret: str = Field(
-        default="",
-        description="GitHub OAuth App Client Secret"
-    )
-
-    # === OAuth Scopes ===
-    scope: List[str] = Field(
-        default=["user:email", "read:user"],
-        description="OAuth scopes to request from GitHub"
-    )
-
-    # === GitHub OAuth Endpoints (rarely need customization) ===
-    authorize_url: str = Field(
-        default="https://github.com/login/oauth/authorize",
-        description="GitHub OAuth authorization URL"
-    )
-
-    token_url: str = Field(
-        default="https://github.com/login/oauth/access_token",
-        description="GitHub OAuth token exchange URL"
-    )
-
-    user_api_url: str = Field(
-        default="https://api.github.com/user",
-        description="GitHub API URL for user info"
-    )
-
-    emails_api_url: str = Field(
-        default="https://api.github.com/user/emails",
-        description="GitHub API URL for user emails"
-    )
-
-    # === Callback Configuration ===
-    callback_path: str = Field(
-        default="/auth",
-        description="Frontend OAuth callback path (appended to site_url to form redirect_uri)"
-    )
-
-    # === Security Settings ===
-    state_timeout_seconds: int = Field(
-        default=300,
-        ge=60,
-        le=600,
-        description="State token timeout in seconds (for CSRF protection)"
-    )
-
-    allow_account_linking: bool = Field(
-        default=True,
-        description="Allow linking GitHub to existing accounts with same email"
-    )
-
-    auto_create_user: bool = Field(
-        default=True,
-        description="Automatically create new user if not found"
-    )
-
-    @field_validator("scope")
-    @classmethod
-    def validate_scope(cls, v: List[str]) -> List[str]:
-        """Ensure user:email scope is always included."""
-        if "user:email" not in v:
-            v = ["user:email"] + v
-        return v
-
-    @field_validator("client_id", "client_secret")
-    @classmethod
-    def validate_credentials(cls, v: str) -> str:
-        """Strip whitespace from credentials."""
-        return v.strip()
+    client_id: str = Field(default="", description="OAuth client id")
+    client_secret: str = Field(default="", description="OAuth client secret")
 
     def is_configured(self) -> bool:
-        """
-        Check if GitHub OAuth is properly configured.
+        """True when both credentials are set: this is what turns the provider on."""
+        return bool(self.client_id and self.client_secret)
 
-        Returns:
-            True if enabled and credentials are set
-        """
-        return bool(self.enabled and self.client_id and self.client_secret)
+    @classmethod
+    def env_names(cls) -> tuple[str, str]:
+        prefix = OAUTH_ENV_PREFIX[cls.provider_id]
+        return f"{prefix}__CLIENT_ID", f"{prefix}__CLIENT_SECRET"
 
-    def get_scope_string(self) -> str:
-        """
-        Get scope as space-separated string.
-
-        Returns:
-            Scopes joined by space (GitHub format)
-        """
-        return " ".join(self.scope)
-
-    def get_redirect_uri(self, provider: str = "github") -> Optional[str]:
-        """
-        Get full redirect URI using site_url from config.
-
-        Args:
-            provider: OAuth provider name (default: "github")
-
-        Returns:
-            Full redirect URI or None if config not available
-            Example: https://myapp.com/auth?provider=github
-        """
-        try:
-            from django_cfg.core import get_current_config
-            config = get_current_config()
-            if config and hasattr(config, 'site_url') and config.site_url:
-                base_url = config.site_url.rstrip('/')
-                path = self.callback_path.lstrip('/')
-                return f"{base_url}/{path}?provider={provider}"
-        except Exception:
-            pass
+    @classmethod
+    def from_env(cls) -> Optional["OAuthProviderConfig"]:
+        """Build from ``os.environ``; ``None`` unless both the id and the secret are set."""
+        id_name, secret_name = cls.env_names()
+        client_id = os.environ.get(id_name, "").strip()
+        client_secret = os.environ.get(secret_name, "").strip()
+        if client_id and client_secret:
+            return cls(client_id=client_id, client_secret=client_secret)
         return None
 
     def get_info(self) -> Dict[str, Any]:
-        """
-        Get human-readable configuration info.
+        """Status for ``show_config``; never includes the secret."""
+        return {"configured": self.is_configured(), "client_id": self.client_id}
 
-        Returns:
-            Dictionary with configuration status
-        """
-        return {
-            "enabled": self.enabled,
-            "configured": self.is_configured(),
-            "scopes": self.scope,
-            "allow_account_linking": self.allow_account_linking,
-            "auto_create_user": self.auto_create_user,
-            "callback_path": self.callback_path,
-            "redirect_uri": self.get_redirect_uri(),
-        }
+
+# Knobs that used to be configurable and are now constants. Accepted for one
+# minor release so existing configs keep loading, then rejected.
+_DEPRECATED_GITHUB_FIELDS = frozenset({
+    "enabled", "scope", "authorize_url", "token_url", "user_api_url",
+    "emails_api_url", "callback_path", "state_timeout_seconds",
+    "allow_account_linking", "auto_create_user",
+})
+
+
+class GitHubOAuthConfig(OAuthProviderConfig):
+    """
+    GitHub OAuth app credentials.
+
+    ```python
+    github_oauth = GitHubOAuthConfig(client_id="...", client_secret="...")
+    ```
+
+    Or set ``GITHUB_OAUTH__CLIENT_ID`` and ``GITHUB_OAUTH__CLIENT_SECRET`` and
+    leave ``DjangoConfig.github_oauth`` unset.
+    """
+
+    provider_id: ClassVar[str] = "github"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_deprecated(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        stale = sorted(_DEPRECATED_GITHUB_FIELDS & data.keys())
+        if not stale:
+            return data
+        warnings.warn(
+            f"GitHubOAuthConfig: {', '.join(stale)} are no longer configurable and are ignored "
+            "(constants now; the provider is on when client_id and client_secret are set, "
+            "remove the config object to turn it off). Delete these arguments; "
+            "they are rejected in the next minor release.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return {k: v for k, v in data.items() if k not in _DEPRECATED_GITHUB_FIELDS}
+
+
+class GoogleOAuthConfig(OAuthProviderConfig):
+    """
+    Google OAuth client credentials (Google Cloud "Web application" client).
+
+    ```python
+    google_oauth = GoogleOAuthConfig(client_id="...apps.googleusercontent.com", client_secret="...")
+    ```
+
+    Or set ``GOOGLE_OAUTH__CLIENT_ID`` and ``GOOGLE_OAUTH__CLIENT_SECRET``.
+    """
+
+    provider_id: ClassVar[str] = "google"
+
+    allowed_hosted_domains: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Google Workspace domains allowed to sign in. Empty = any Google account. "
+            "Checked against the signed `hd` claim of the ID token."
+        ),
+    )
+
+    @field_validator("allowed_hosted_domains")
+    @classmethod
+    def _normalize_domains(cls, v: List[str]) -> List[str]:
+        return [d.strip().lower() for d in v if d and d.strip()]
 
 
 class OAuthConfig(BaseModel):
-    """
-    Aggregated OAuth Configuration
+    """Container for every provider's configuration."""
 
-    Container for all OAuth provider configurations.
-    Extensible for future providers (Google, GitLab, etc.)
-    """
+    model_config = ConfigDict(validate_assignment=True, extra="forbid")
 
-    model_config = ConfigDict(
-        validate_assignment=True,
-        extra="forbid",
-    )
-
-    github: GitHubOAuthConfig = Field(
-        default_factory=GitHubOAuthConfig,
-        description="GitHub OAuth configuration"
-    )
-
-    # Future providers:
-    # google: GoogleOAuthConfig = Field(default_factory=GoogleOAuthConfig)
-    # gitlab: GitLabOAuthConfig = Field(default_factory=GitLabOAuthConfig)
+    github: GitHubOAuthConfig = Field(default_factory=GitHubOAuthConfig)
+    google: GoogleOAuthConfig = Field(default_factory=GoogleOAuthConfig)
 
     def get_enabled_providers(self) -> List[str]:
-        """
-        Get list of enabled OAuth providers.
-
-        Returns:
-            List of provider names that are enabled and configured
-        """
-        providers = []
-        if self.github.is_configured():
-            providers.append("github")
-        return providers
+        """Ids of the providers whose credentials are set."""
+        return [pid for pid in ("github", "google") if getattr(self, pid).is_configured()]
 
     def has_any_provider(self) -> bool:
-        """
-        Check if any OAuth provider is configured.
-
-        Returns:
-            True if at least one provider is enabled and configured
-        """
-        return len(self.get_enabled_providers()) > 0
+        return bool(self.get_enabled_providers())
 
 
-# Export
 __all__ = [
+    "OAUTH_ENV_PREFIX",
     "GitHubOAuthConfig",
+    "GoogleOAuthConfig",
     "OAuthConfig",
+    "OAuthProviderConfig",
 ]

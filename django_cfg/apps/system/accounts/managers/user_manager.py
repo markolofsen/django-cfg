@@ -12,6 +12,8 @@ from .user_queryset import UserQuerySet
 
 logger = logging.getLogger(__name__)
 
+_GMAIL_DOMAINS = frozenset({'gmail.com', 'googlemail.com'})
+
 
 # Compose Django's UserManager (for create_user / create_superuser
 # helpers) with our UserQuerySet predicates. ``from_queryset`` returns
@@ -51,6 +53,45 @@ class UserManager(_BaseUserManager):
         if not email:
             return ''
         return email.strip().lower()
+
+    @staticmethod
+    def canonical_email(email: str) -> str:
+        """
+        The key under which one mailbox is one user.
+
+        Lower case and stripped, like ``clean_email``. For ``gmail.com`` and
+        ``googlemail.com`` only (Google ignores dots and ``+tag`` there): dots
+        removed from the local part, everything from the first ``+`` dropped,
+        domain ``gmail.com``. Other providers treat ``a.b`` and ``ab`` as
+        different mailboxes, so they are left alone.
+
+        The address as typed stays in ``email``; this is only for matching.
+        """
+        cleaned = email.strip().lower() if email else ''
+        local, sep, domain = cleaned.rpartition('@')
+        if not sep or domain not in _GMAIL_DOMAINS:
+            return cleaned
+        local = local.split('+', 1)[0].replace('.', '')
+        return f"{local}@gmail.com" if local else cleaned
+
+    def by_email(self, email: str):
+        """
+        The user (active or not, never soft-deleted) whose mailbox is ``email``, or None.
+
+        Matches on ``email_key``; the ``email__iexact`` branch only serves rows
+        written by code that predates the key (a rolling deploy, ``bulk_create``).
+        """
+        from django.db.models import Q
+
+        cleaned = self.clean_email(email)
+        if not cleaned:
+            return None
+        return (
+            self.filter(deleted_at__isnull=True)
+            .filter(Q(email_key=self.canonical_email(cleaned)) | Q(email__iexact=cleaned))
+            .order_by('pk')
+            .first()
+        )
 
     @staticmethod
     def clean_phone(phone: str) -> str:
@@ -164,10 +205,9 @@ class UserManager(_BaseUserManager):
 
             # Look up only active (non-deleted) accounts.
             # Deleted accounts are archived — re-registration creates a fresh account.
-            # Use iexact to guard against any case inconsistencies in stored emails.
-            user = self.model.objects.filter(
-                email__iexact=email, deleted_at__isnull=True
-            ).first()
+            # Matched on ``email_key``: ``J.Doe+x@googlemail.com`` and
+            # ``jdoe@gmail.com`` are one mailbox, so one user.
+            user = self.by_email(email)
 
             if user is not None:
                 created = False
@@ -206,6 +246,13 @@ class UserManager(_BaseUserManager):
         """
         try:
             from django_cfg.apps.system.accounts.models import RegistrationSource, UserRegistrationSource
+            from django_cfg.core.site import resolve_source_url
+
+            # The source is a site, never the client's raw string: unbounded
+            # URLs would otherwise become unbounded rows.
+            source_url = resolve_source_url(source_url)
+            if not source_url:
+                return
 
             # Get or create source
             source, source_created = RegistrationSource.objects.get_or_create(

@@ -93,7 +93,7 @@ class ThirdPartyIntegrationsGenerator:
         if not self.config.unfold:
             return {}
 
-        unfold_settings = self.config.unfold.to_django_settings()
+        unfold_settings = self.config.unfold.to_django_settings(self.config.project_name)
         self.integrations.append("unfold")
 
         return unfold_settings

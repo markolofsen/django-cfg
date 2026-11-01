@@ -12,6 +12,7 @@ from openai import OpenAI
 
 from ..._integration import BaseCfgModule, get_api_keys
 from ...providers import PROVIDER_BASE_URLS
+from ...providers.config_builder import openrouter_identity
 from ...providers.vault_proxy import vault_http_client, vault_httpx_kwargs
 from ..image_edit.response_parser import extract_text
 from .errors import ImageGenerationError, NoImageGeneratedError
@@ -53,8 +54,8 @@ class ImageGenClient(BaseCfgModule):
         *,
         base_url: str = PROVIDER_BASE_URLS["openrouter"],
         timeout: float = 300.0,
-        app_title: str = "django_cfg.modules.django_llm-image_gen",
-        app_url: str = "https://cmdop.com/",
+        app_title: Optional[str] = None,
+        app_url: Optional[str] = None,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         super().__init__()
@@ -66,8 +67,9 @@ class ImageGenClient(BaseCfgModule):
         self._default_model = default_model
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        self.app_title = app_title
-        self.app_url = app_url
+        title, url = openrouter_identity()
+        self.app_title = app_title or title
+        self.app_url = app_url or url
         self.transport = transport
 
     @property

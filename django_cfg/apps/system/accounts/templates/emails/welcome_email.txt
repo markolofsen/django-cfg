@@ -1,4 +1,4 @@
-Welcome to {{ project_name }}
+Welcome to {{ site_name }}
 
 Hi {{ user.get_full_name|default:user.username }},
 
@@ -15,7 +15,7 @@ Nothing to remember
 
 Request a login code whenever you want to sign in.
 
-Questions? We're happy to help.
+Questions? {% if support_email %}Write to {{ support_email }}.{% else %}We're happy to help.{% endif %}
 
 ---
-The {{ project_name }} Team
+The {{ site_name }} Team

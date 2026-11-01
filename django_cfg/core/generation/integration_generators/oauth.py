@@ -1,64 +1,36 @@
 """
 OAuth settings generator.
 
-Handles OAuth provider configuration for Django settings.
+Emits ``<PROVIDER>_OAUTH_CONFIG`` for every provider that has credentials: the
+explicit ``DjangoConfig.<provider>_oauth`` object, else one built from the
+process environment (``GITHUB_OAUTH__CLIENT_ID`` ... see ``models.api.oauth``).
 """
 
 from typing import TYPE_CHECKING, Any, Dict
 
+from ....models.api.oauth import GitHubOAuthConfig, GoogleOAuthConfig
+
 if TYPE_CHECKING:
     from ...base.config_model import DjangoConfig
 
+# provider id -> config class; the order is the order buttons are shown in.
+PROVIDER_CONFIGS = {"github": GitHubOAuthConfig, "google": GoogleOAuthConfig}
+
 
 class OAuthSettingsGenerator:
-    """
-    Generates OAuth settings.
-
-    Responsibilities:
-    - GITHUB_OAUTH_CONFIG for GitHub OAuth
-    - Future: GOOGLE_OAUTH_CONFIG, etc.
-
-    Example:
-        ```python
-        generator = OAuthSettingsGenerator(config)
-        settings = generator.generate()
-        # Returns: {'GITHUB_OAUTH_CONFIG': GitHubOAuthConfig(...)}
-        ```
-    """
+    """Generates the ``GITHUB_OAUTH_CONFIG`` / ``GOOGLE_OAUTH_CONFIG`` settings."""
 
     def __init__(self, config: "DjangoConfig"):
-        """
-        Initialize generator with configuration.
-
-        Args:
-            config: DjangoConfig instance
-        """
         self.config = config
 
     def generate(self) -> Dict[str, Any]:
-        """
-        Generate OAuth settings.
-
-        Returns:
-            Dictionary with OAuth configuration objects
-
-        Example:
-            >>> generator = OAuthSettingsGenerator(config)
-            >>> settings = generator.generate()
-            >>> 'GITHUB_OAUTH_CONFIG' in settings
-            True
-        """
         settings: Dict[str, Any] = {}
-
-        # GitHub OAuth
-        if self.config.github_oauth:
-            settings['GITHUB_OAUTH_CONFIG'] = self.config.github_oauth
-
-        # Future providers can be added here:
-        # if self.config.google_oauth:
-        #     settings['GOOGLE_OAUTH_CONFIG'] = self.config.google_oauth
-
+        for provider_id, config_cls in PROVIDER_CONFIGS.items():
+            # An explicit object wins, even a half-filled one (a system check reports it).
+            provider_config = getattr(self.config, f"{provider_id}_oauth", None) or config_cls.from_env()
+            if provider_config is not None:
+                settings[f"{provider_id.upper()}_OAUTH_CONFIG"] = provider_config
         return settings
 
 
-__all__ = ["OAuthSettingsGenerator"]
+__all__ = ["OAuthSettingsGenerator", "PROVIDER_CONFIGS"]

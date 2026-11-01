@@ -51,7 +51,7 @@ class DRFHealthCheckView(APIView):
             health_data = {
                 "status": "healthy",
                 "timestamp": timezone.now(),
-                "service": config.project_name if config else "Django CFG",
+                "service": config.project_name if config else "unknown",
                 "version": get_current_version(),
                 "checks": {}
             }
@@ -59,7 +59,7 @@ class DRFHealthCheckView(APIView):
             health_data = {
                 "status": "healthy",
                 "timestamp": timezone.now(),
-                "service": "Django CFG",
+                "service": "unknown",
                 "version": get_current_version(),
                 "checks": {}
             }

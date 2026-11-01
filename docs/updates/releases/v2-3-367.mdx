@@ -1,0 +1,152 @@
+---
+title: "Release v2.3.367"
+description: "Sites: one identity contract (DjangoConfig.sites, site_for) for mail, sign-in, MCP, IndexNow and analytics; deployment + sites configuration shape (hosts derived from the sites); Google sign-in next to GitHub; one verified email is one user; MCP issuer rule (breaking); an upgrade checklist."
+---
+
+import { Callout } from 'nextra/components'
+
+# Release v2.3.367
+
+**Prepared:** November 1, 2026 (django-cfg backend and the `@djangocfg/*` login screen)
+
+## Sites: one identity contract
+
+`DjangoConfig.sites` declares the public sites one Django serves; `site_for(request)` resolves the one a request belongs to (key, then user, then Origin and Referer, then Host, then the first site). A project that declares nothing gets one `default` site built from `project_name`, `site_url` and `api_url`, and behaves as before. `SiteMiddleware` adds `request.site` only when more than one site exists. ALLOWED_HOSTS, CORS and CSRF are derived from the sites (see Configuration shape), and `Site.accepts` is what OTP, OAuth and MCP consent check against. System check `django_cfg.W020` flags a `security_domains` entry that a site already declares. `show_config` (table and JSON) and `django-cfg info` print the sites, marking values a site took from the deployment `(inherited)`. See [Sites](/configuration/sites).
+
+- **Email.** One sending address (`from_email`, else `email.default_from`, else `DEFAULT_FROM_EMAIL`), a per-site display name (`from_name`, default `name`) and `Reply-To` from `support_email`. Templates read `site_name` and print `support_email` and `logo_url` when set. `send_html` and `send_template` take `site=`. The locale falls back to the site's `locale` before `en`. Subjects are gettext strings; the OTP subject keeps the code even when a stored subject lacks it.
+- **Accounts.** `source_url` is resolved to a site's `site_url` in the OTP and OAuth serializers, and `RegistrationSource` is created from it. `AccountNotifications` sending methods take `site=` (default: the user's registration site, then the default site). The login alert captures the site key on the request thread.
+- **MCP.** Consent goes to the `site_url` of the resolved site (`/#settings/mcp`). See the issuer rule under Upgrading.
+- **IndexNow and analytics.** `IndexNowConfig.host` and `IndexNowSite.host` are optional: the single site's host is used, or `IndexNowSite(site="key")`. Analytics trusts the hosts of every declared site without a second entry in `security_domains`.
+- **LLM.** OpenRouter `X-Title` is `project_name` (neutral `Project` when unset) and `HTTP-Referer` is `site_url`; image, video and edit clients accept `app_title` and `app_url`.
+- **Neutral defaults.** The Unfold admin titles default to `<project_name> Admin`, MCP `server_name` defaults to the project slug, and `EmailConfig.default_from` is `None` unless set.
+
+## Configuration shape: deployment + sites
+
+`DjangoConfig` now has two layers, and each fact is typed in one place.
+
+| Layer | Fields |
+|---|---|
+| Deployment (this Django process) | `api_url`, `project_name`, `media_url`, and `security_domains` for **extra** hosts only (`mcp.*`, internal names, wildcards) |
+| Site (`SiteConfig`) | `name`, `site_url`, `extra_origins`, `support_email`, `from_name`, `from_email`, `logo_url`, `locale`, and an optional `api_url` |
+
+- `SiteConfig.api_url` is optional. Unset, the site uses the deployment `api_url`, so three sites that share one API host write it once. `Site.api_url` is always resolved; `Site.inherited` names what came from the deployment (`api_url`, `from_email`).
+- ALLOWED_HOSTS, CORS and CSRF come from one derivation (`derive_access` in `django_cfg.core.site`): every site origin, every site's API host, the deployment `api_url` and the `security_domains` extras. Lists are de-duplicated in order and are stable between runs.
+- **Single-site projects are unchanged.** Without `sites`, `site_url`, `support_email`, `logo_url`, `default_locale` and `security_domains` work as before; a test pins the resolved ALLOWED_HOSTS, CORS and CSRF of a gptkino-like and a cmdop-like config.
+- With `sites` declared, `site_url`, `support_email`, `logo_url` and `default_locale` must not be set on `DjangoConfig` (a subclass that redefines the field counts). The config fails to load and names each field and the `SiteConfig` field it moves to. `project_name` and `api_url` stay.
+- `django_cfg.W020` now warns when `security_domains` repeats a host a site (or the deployment `api_url`) already declares. It is a warning only.
+
+```python filename="config.py"
+class MlsConfig(DjangoConfig):
+    project_name: str = "MLS"
+    api_url: str = env.app.api_url                  # one API host for all three
+    sites: list[SiteConfig] = [
+        SiteConfig(key="caribbean", name="Caribbean MLS", site_url="https://caribbeanrealestatemls.com"),
+        SiteConfig(key="bali", name="Bali MLS", site_url="https://mlsbali.com"),
+        SiteConfig(key="danmerriam", name="Dan Merriam", site_url="https://danmerriam.com"),
+    ]
+    security_domains: list[str] = ["mcp.caribbeanrealestatemls.com"]   # extras only
+```
+
+See [Sites](/configuration/sites#which-field-owns-what) and [Security settings](/configuration/security#where-the-hosts-come-from).
+
+## Sign in with Google
+
+Set `GOOGLE_OAUTH__CLIENT_ID` and `GOOGLE_OAUTH__CLIENT_SECRET` and the provider is on; no config object is needed. New endpoints `POST /cfg/accounts/oauth/google/authorize/` and `.../google/callback/`, and `GET /cfg/accounts/oauth/providers/` now lists `google` next to `github`. Server-side code flow with PKCE (S256) and an OIDC nonce; the ID token signature is verified against Google's keys and every failure closes.
+
+Create the client once with the [Google Cloud setup](/features/integrations/oauth/google) checklist, then run:
+
+```bash
+python manage.py oauth_check --probe
+```
+
+It prints the redirect URIs to register for every site origin and asks Google whether the client id and secret are accepted. Six system checks (`django_cfg.W030` to `W035`) warn about a half-filled pair, a non-https `site_url` in production, a single-site host missing from `security_domains`, a malformed Google client id, no Redis cache and no `RealIPMiddleware`.
+
+`GoogleOAuthConfig(allowed_hosted_domains=[...])` restricts sign-in to Google Workspace domains.
+
+## One verified email is one user
+
+Email code, GitHub and Google now resolve to the same account in any order. Linking rule: the provider account (`sub`) first, then the canonical email (`CustomUser.email_key`: lower case, Gmail dots, `+tag` and `googlemail.com` folded), then create. Staff and superusers are never linked by email (`link_not_allowed`). An account that was never verified is linked and its password made unusable. Email is mandatory: no verified email, no sign-in and no registration.
+
+<Callout type="warning">
+Behaviour change: GitHub used to link to an existing account without looking at verification and left a pre-set password usable. Both are closed. Run `python manage.py email_key_report` after migrating to list accounts that already share a canonical email; it never merges them.
+</Callout>
+
+## GitHub
+
+- The state is consumed atomically: of two parallel callbacks one wins, and any failure after the state is read leaves it spent.
+- `mark_user_verified` no longer runs for the `login@github.local` placeholder email.
+- Expired `OAuthState` rows are purged on each flow and by a scheduled job every 10 minutes.
+- The provider code lives behind one registry; `GitHubOAuthService` and `GitHubOAuthError` (internal) are removed.
+- `GitHubOAuthConfig` keeps only `client_id` and `client_secret`. The old arguments (`enabled`, `scope`, `callback_path`, `state_timeout_seconds`, `allow_account_linking`, `auto_create_user`, endpoint URLs) are accepted with a `DeprecationWarning` and ignored for this minor release; delete them. `get_redirect_uri()` is gone: redirect URIs are `<site origin>/auth?provider=<id>` from the `Site` contract, and an origin no site accepts answers `origin_not_allowed`.
+
+## Frontend sign-in
+
+`useOAuthLogin` and `useOAuthProviders` (`@djangocfg/api/auth`) serve every provider; `AuthLayout` draws the buttons the server reports (`oauthProviders` only narrows or orders them) and handles the `/auth?provider=<id>` callback. `enableGithubAuth` is deprecated and has no effect. `GoogleIcon` and `GithubIcon` are internal to `AuthLayout`. Storybook stories run the real hooks against `oauthApiMock` from `@djangocfg/layouts/testing`; the runner needs Playwright Chromium (`pnpm --filter @djangocfg/storybook exec playwright install chromium`, once). See [Frontend integration](/features/built-in-apps/user-management/accounts/frontend).
+
+## Migration and schema
+
+One accounts migration: `OAuthState.code_verifier` and `nonce`, `OAuthConnection.provider_user_id` widened to 255, `access_token` may be blank, `google` added to the provider choices, and `CustomUser.email_key` (indexed) with a backfill. The OpenAPI schema changes: `google` operations, a typed providers response, the closed `error` enum (named `OAuthErrorCodeEnum`), and the dashboard config serializer gains `google_oauth`; regenerate the clients after upgrading.
+
+## Generated client
+
+`helpers/keys.ts` gains `oauthProviders` (`cfg.auth.oauth_providers`, `sessionStorage`), used by `useOAuthProviders` to show the buttons at once on a reload. Additive. `BaseCfgModule.is_github_oauth_enabled()` is removed (no caller found); use `is_oauth_provider_enabled("github")`.
+
+## Upgrading to 2.3.367
+
+Most items need no action unless you used the API listed. Items marked **breaking** change behaviour.
+
+| Change | Who is affected | What to do |
+|---|---|---|
+| **MCP issuer rule (breaking).** Without `oauth_issuer`, the request host must be a site `api_url` host (any host in development); otherwise the OAuth endpoints answer `400 invalid_request` | Projects serving MCP on a host that is not a site `api_url`, such as `mcp.example.com` | Set `oauth_issuer` (mls needs it for its `mcp.` host). See [Connect assistants](/features/modules/django-mcp/connect-assistants) |
+| **MCP `server_name`** default `None` is now the project slug | MCP clients matching the old `django-cfg-mcp` name | Re-register the connector, or set `server_name` |
+| `TwoFactorConfig.issuer_name` and `TOTP__ISSUER_NAME` removed; the issuer is `project_name` | Projects setting either | Delete it. `TOTPService.get_provisioning_uri(device, issuer)` requires `issuer` |
+| `EmailConfig.default_from` is `None` unless set; `DEFAULT_FROM_EMAIL` is only set when configured | `smtp` or `gateway` in production without it | Set `default_from`; startup raises `ConfigurationError` otherwise |
+| Built-in email templates read `site_name`; the context still carries `project_name` with the same value | Project templates that override the built-in ones | None required; prefer `site_name` |
+| `AccountNotifications._config()` removed; sending methods take `site=` | Code calling it | Pass `site=` or rely on the default |
+| Subjects are gettext strings | Anything matching an English subject | Match on the stored `EmailContent` or the translated string; the OTP subject still carries the code |
+| `source_url` is normalised to a site's `site_url` | Code storing or comparing raw origins | Expect the site URL |
+| `normalize_origin` drops default ports (`:80`, `:443`) | Comparisons of origins with explicit default ports | Compare normalised origins |
+| `root_view` no longer strips `api.` or redirects loopback hosts | Deployments relying on the guess | Declare a `Site` with `api_url` |
+| `urls_list` `base_url` is now `api_url` | Scripts reading it | Read `api_url` |
+| `get_otp_url` and `get_ticket_url` removed | Callers | Build the URL from `Site.url(path)` |
+| `templatetags/django_cfg_lib.py` removed | `{% load django_cfg_lib %}` | Use `{% load django_cfg %}`; `{% project_name %}` falls back to `""` |
+| Neutral fallbacks: `unknown`, `Project`; Tailwind no longer appends "Django CFG" | Anything matching the old strings | None expected |
+| Unfold titles default to `<project_name> Admin`; the framework dropdown and `get_default_dropdown_items` removed; `UnfoldConfig.to_django_settings(project_name)` | Projects relying on the default dropdown | Set titles and dropdown explicitly |
+| Login alert passes `user.language` | Projects with custom alert copy | None |
+| `best_supported(header, fallback=None)` | Direct callers | Pass the fallback if needed |
+| **Brand fields next to `sites` (breaking).** `site_url`, `support_email`, `logo_url` or `default_locale` set on `DjangoConfig` together with `sites` fails at startup (`ConfigurationError` naming the field and its `SiteConfig` field). "Set" means an init argument or a subclass that redefines the field, as in `site_url: str = env.app.site_url` | Projects that add `sites`; today only mls | Move the values onto the `SiteConfig` entries; see the mls migration below |
+| With `sites`, the scalar `site_url` (default `http://localhost:3000`) no longer reaches ALLOWED_HOSTS, CORS or CSRF | None; one stray origin less | |
+| A site's locale is `SiteConfig.locale`, else `en`; `default_locale` is single-site only | Multi-site projects with a locale other than `en` | Set `locale=` per site |
+| `SiteConfig.api_url` may be omitted (inherits the deployment `api_url`); `Site` gains `inherited` | None; additive | |
+| A site that inherits the API host may not share a host with its `site_url`; the https rule covers the inherited API URL | Multi-site projects with `http://` or same-host URLs outside development | Use distinct hosts and `https` |
+| `django_cfg.W020` now means "`security_domains` repeats a declared host"; `startup.sites.check_site_hosts` is renamed `check_redundant_security_domains`; the old "site host not in ALLOWED_HOSTS" check is gone, and `W032` no longer fires for declared sites | Anyone filtering on W020 in `SILENCED_SYSTEM_CHECKS` | The filter still works but silences a different warning; review it |
+| `SecurityBuilder._get_all_security_domains` and `_normalize_domains` removed; `_prod_mode_universal` and `_dev_mode_universal` take a `SiteAccess` | Code calling these private methods (none in the known consumers) | Call `derive_access(config)` |
+| `test_email` requires `--email` (the personal default address is gone) | Anyone running it without arguments | Pass `--email you@example.com` |
+| `IndexNowSite.host` optional (exactly one of `host` or `site`) | None; additive | |
+| Analytics trusts site hosts | None; additive | |
+| OpenRouter `app_title` and `app_url` default to the project | Callers that relied on the framework name | Pass them explicitly |
+| `ErrorEnum` in the generated schema is now `OAuthErrorCodeEnum` | Code importing the old name | Regenerate the clients and rename |
+| `BaseCfgModule.is_github_oauth_enabled()` removed | Callers | `is_oauth_provider_enabled("github")` |
+| `GitHubOAuthConfig` old arguments ignored (`DeprecationWarning`); `GitHubOAuthService`, `GitHubOAuthError` and `get_redirect_uri()` removed | Projects passing them | Delete them |
+| `enableGithubAuth` on `AuthLayout` deprecated | Frontends passing it | Remove it |
+
+**mls migration** (`solution/projects/django/api/settings/config.py`). Keys equal `Portal.slug`. Keep `project_name` and `api_url`; do not keep `site_url`, `support_email`, `logo_url` or `default_locale` on the class. The `mcp.` host still needs `oauth_issuer`, and W020 lists any `security_domains` entry left over from the old flat list.
+
+```diff
+-    site_url: str = env.app.site_url
+     api_url: str = env.app.api_url
++    sites: list[SiteConfig] = [
++        SiteConfig(key="caribbean", name="Caribbean MLS", site_url="https://caribbeanrealestatemls.com",
++                   extra_origins=[<portal>, <studio>]),
++        SiteConfig(key="bali", name="Bali MLS", site_url="https://..."),
++        SiteConfig(key="danmerriam", name="Dan Merriam", site_url="https://danmerriam.com"),
++    ]
+-    security_domains: list[str] = env.security_domains or []
++    security_domains: list[str] = ["mcp.caribbeanrealestatemls.com"]   # extras only
+```
+
+gptkino, cmdop, carapis and reforms set no `sites`; nothing changes for them.
+
+Steps: upgrade, run `python manage.py migrate`, regenerate the API clients, run `python manage.py check` (read W020 and W030 to W035), run `python manage.py oauth_check --probe` if Google or GitHub sign-in is on, and `python manage.py email_key_report` to list accounts that share a canonical email.
+
+Reference: [OAuth sign-in](/features/built-in-apps/user-management/accounts/oauth), [configuration](/features/integrations/oauth/configuration).

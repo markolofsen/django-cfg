@@ -14,6 +14,30 @@ from ..utils import (
 )
 
 
+def _echo_sites() -> None:
+    """Print the resolved sites of the project ``DJANGO_SETTINGS_MODULE`` points at; silent otherwise."""
+    import importlib
+    import os
+
+    module = os.environ.get("DJANGO_SETTINGS_MODULE")
+    if not module:
+        return
+    try:
+        config = getattr(importlib.import_module(module), "config", None)
+        from django_cfg.core.site import describe_sites
+
+        lines = describe_sites(config) if config is not None else []
+    except Exception as exc:  # a project that does not import is not a reason to fail `info`
+        click.echo(f"🌐 Sites: unavailable ({type(exc).__name__}: {exc})")
+        click.echo()
+        return
+    if lines:
+        click.echo("🌐 Sites:")
+        for line in lines:
+            click.echo(f"   {line}")
+        click.echo()
+
+
 @click.command()
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed information")
 def info(verbose: bool):
@@ -39,6 +63,9 @@ def info(verbose: bool):
         click.echo(f"📁 Installation: {package_info['path']}")
 
     click.echo()
+
+    # The project in the current directory, when DJANGO_SETTINGS_MODULE names one
+    _echo_sites()
 
     # Template information
     template_info = get_template_info()

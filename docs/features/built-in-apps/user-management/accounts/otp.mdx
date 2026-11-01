@@ -97,8 +97,8 @@ from django_cfg.apps.system.accounts.signals import user_email_verified
 # }  — or None when the request carried no consent data
 ```
 
-The **same signal also fires on OAuth login** (GitHub's email is already
-verified), but there `consent` is `None` — no consent UI is involved. So a
+The **same signal also fires on OAuth login** (the provider-verified email of
+Google or GitHub), but there `consent` is `None` — no consent UI is involved. So a
 single receiver covers every login path; just default `consent=None` and handle
 the missing-evidence case.
 
@@ -133,7 +133,7 @@ The default is derived from the edge-provided `CF-IPCountry` header against the 
 ## OTP Code In The Email Subject
 
 The OTP email's subject line **includes the plaintext code**:
-`subject=f"Your OTP code: {otp_code}"` (`utils/notifications.py`). This is
+the subject is the gettext string `"Your OTP code: %(otp_code)s"` (`utils/notifications.py`). This is
 deliberate, not an oversight — the recipient can read the code straight off a
 lock-screen or preview-pane notification without opening the email.
 
@@ -150,8 +150,20 @@ integration), assume the code is there in plaintext by design.
 
 The letter's `copy_key` (`otp_code`) only supplies admin-editable **body**
 copy — see [editable per-locale copy](./welcome-email#editable-per-locale-copy).
-It cannot move the code out of the subject: the subject string is passed
-directly to the mailer and is never read from the copy row.
+A stored per-locale subject on that row replaces the gettext default, but the
+code is kept: if the stored subject does not contain it, the code is appended
+(`subject_ensure`). Copy cannot move the code out of the subject.
+
+## Which site the letter speaks for
+
+The OTP view resolves the [site](/configuration/sites) of the request
+(`site_for(request)`) and passes its key through `OTPService.request_otp` and the
+delivery job, so the letter, its `From` name, `Reply-To`, links and locale
+fallback are those of the site the user is signing in on. `source_url` is
+normalised to that site's `site_url` (`resolve_source_url`): an Origin that
+belongs to a site maps to it, anything else maps to the default site. The user's
+`RegistrationSource` is created from that URL. The operator Telegram notice
+carries the site key.
 
 The body also shows the code large, and states a 10-minute expiry in the
 notification copy — that's the email's own wording, not necessarily the
@@ -311,6 +323,7 @@ from django_cfg.apps.system.accounts.services.otp_service.types import ConsentCa
 result = OTPService.request_otp(
     email="user@example.com",
     source_url="https://myapp.com",
+    site_key="acme",                      # optional — the site the letter speaks for
     consent=ConsentCapture(               # optional — see Marketing Consent Capture
         marketing_consent=True,
         disclosure_version="product-updates-reg-v1",

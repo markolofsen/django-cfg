@@ -37,12 +37,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any
+from typing import Any, Optional
 
 import httpx
 
 from ..._integration import BaseCfgModule, get_api_keys
 from ...providers import PROVIDER_BASE_URLS
+from ...providers.config_builder import openrouter_identity
 from ...providers.vault_proxy import vault_httpx_kwargs
 from .errors import ImageEditError, NoImageReturnedError
 from .composite_models import CompositeImageEditRequest
@@ -84,8 +85,8 @@ class ImageEditClient(BaseCfgModule):
         default_model: str | None = None,
         base_url: str = OPENROUTER_BASE_URL,
         timeout: float = 120.0,
-        app_title: str = "django_cfg.modules.django_llm-image_edit",
-        app_url: str = "https://djangocfg.com/",
+        app_title: Optional[str] = None,
+        app_url: Optional[str] = None,
         transport: httpx.BaseTransport | None = None,
         default_transport_mode: ImageEditTransportMode = "chat-completions",
     ):
@@ -100,8 +101,9 @@ class ImageEditClient(BaseCfgModule):
         self.default_model = default_model or DEFAULT_EDIT_MODEL
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        self.app_title = app_title
-        self.app_url = app_url
+        title, url = openrouter_identity()
+        self.app_title = app_title or title
+        self.app_url = app_url or url
         if default_transport_mode not in {"chat-completions", "image-api"}:
             raise ValueError(
                 "default_transport_mode must be 'chat-completions' or 'image-api'"

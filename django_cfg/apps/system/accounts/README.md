@@ -46,7 +46,7 @@ API Key:  X-API-Key: <uuid>  →  any authenticated endpoint (skips JWT)
 | `LoginAlertService` | New-device login emails |
 | `OTPRequestThrottle` | Per-email cooldown + hourly/daily limits |
 | `OTPVerifyThrottle` | Failed-attempt lockout |
-| `GitHubOAuthService` | GitHub OAuth flow |
+| `OAuthService` (`services/oauth/`) | Google and GitHub sign-in: state, linking, user creation |
 | `ActivityService` | User activity audit log |
 | `AccountNotifications` | Email + Telegram notifications |
 | `validate_email_address` | 5-layer email validation |

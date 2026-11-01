@@ -20,12 +20,15 @@ register = template.Library()
 
 # The only placeholders stored copy may use. Anything else is left as written,
 # so a typo shows up in review instead of silently resolving to something.
-ALLOWED = ("project_name", "site_url")
+ALLOWED = ("project_name", "site_name", "site_url", "support_email", "logo_url", "otp_code")
 
 
-@register.simple_tag(takes_context=True)
-def render_copy(context, value):
-    """Substitute the allowed placeholders in one stored string."""
+def fill_placeholders(value, context) -> str:
+    """Substitute the allowed placeholders in one stored string.
+
+    ``context`` is anything supporting ``in`` and ``[]``: a template ``Context``
+    or a plain dict. Also used for subjects, which never pass through a template.
+    """
     if not value:
         return ""
     text = str(value)
@@ -36,6 +39,12 @@ def render_copy(context, value):
             text = text.replace("{{%s}}" % name, replacement)
     # Escaped by the caller via `|escape`; copy is plain prose, never markup.
     return text
+
+
+@register.simple_tag(takes_context=True)
+def render_copy(context, value):
+    """Substitute the allowed placeholders in one stored string."""
+    return fill_placeholders(value, context)
 
 
 @register.filter(name="copy_paragraphs")

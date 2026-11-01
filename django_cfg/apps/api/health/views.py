@@ -24,9 +24,9 @@ def _base_health_payload() -> Dict[str, Any]:
     """Return fields shared by all health surfaces."""
     try:
         config = getattr(settings, 'config', None)
-        service = config.project_name if config else "Django CFG"
+        service = config.project_name if config else "unknown"
     except Exception:
-        service = "Django CFG"
+        service = "unknown"
 
     return {
         "status": "ok",

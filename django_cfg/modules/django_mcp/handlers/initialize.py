@@ -10,6 +10,16 @@ from django_cfg.modules.django_mcp.protocols.types import (
 from django_cfg.modules.django_mcp.services.context import MCPContext
 
 
+def resolve_server_name(explicit: Any = None) -> str:
+    """The connector name clients show: ``server_name`` if set, else the project slug."""
+    if explicit:
+        return explicit
+    from django_cfg.core.state import get_current_config
+
+    config = get_current_config()
+    return getattr(config, "project_slug", None) or "mcp"
+
+
 class InitializeHandler:
     """Handle MCP initialize handshake."""
 
@@ -25,7 +35,7 @@ class InitializeHandler:
         # Handle both dict and model instances
         if isinstance(config, dict):
             introspection = config.get("introspection", {})
-            server_name = config.get("server_name", "django-cfg-mcp")
+            server_name = resolve_server_name(config.get("server_name"))
             server_version = config.get("server_version", "1.0.0")
             protocol_version = config.get("protocol_version", "2025-03-26")
             if isinstance(introspection, dict):
@@ -34,7 +44,7 @@ class InitializeHandler:
                 introspection_enabled = getattr(introspection, "enabled", False)
         else:
             introspection = config.introspection
-            server_name = config.server_name
+            server_name = resolve_server_name(config.server_name)
             server_version = config.server_version
             protocol_version = config.protocol_version
             if isinstance(introspection, dict):

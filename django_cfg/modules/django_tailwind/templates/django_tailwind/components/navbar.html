@@ -2,7 +2,7 @@
 Universal Navbar Component
 
 Parameters:
-- title: Navbar title (default: "Django CFG")
+- title: Navbar title (default: empty)
 - icon: Emoji or HTML icon (default: "💎")
 - nav_items: List of navigation items (optional)
   Example: [
@@ -58,7 +58,7 @@ Custom navbar (extending):
                     <span class="text-2xl">{{ icon }}</span>
                     {% endif %}
                     <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
-                        {{ title|default:"Django CFG" }}
+                        {{ title|default:"" }}
                     </h1>
                 </div>
 

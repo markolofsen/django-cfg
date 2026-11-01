@@ -1,10 +1,30 @@
 ---
 title: OAuth Authentication
-description: GitHub OAuth social login configuration.
+description: "Google and GitHub sign-in from a client id and a secret: setup, configuration, security and the oauth_check command."
 ---
 
-import { Callout } from 'nextra/components'
+# OAuth Authentication
 
-<Callout type="info">
-This page has moved. See [OAuth (GitHub)](../../built-in-apps/user-management/accounts/oauth) for the full OAuth documentation.
-</Callout>
+Google and GitHub sign-in on the same endpoints and token body as the email code. Set the two environment variables of a provider and it is on; scopes, PKCE, nonce, state, redirect URIs and account linking are built in. One verified email is one user, whichever way they sign in.
+
+<Cards>
+  <Cards.Card title="OAuth sign-in" href="/features/built-in-apps/user-management/accounts/oauth">
+    The flow, the linking rule, `email_key`, endpoints and error codes
+  </Cards.Card>
+  <Cards.Card title="Google Cloud setup" href="/features/integrations/oauth/google">
+    Create the Google client: the one-time checklist
+  </Cards.Card>
+  <Cards.Card title="GitHub setup" href="/features/integrations/oauth/github">
+    Create the GitHub OAuth App
+  </Cards.Card>
+  <Cards.Card title="Configuration" href="/features/integrations/oauth/configuration">
+    Env vars, config classes, system checks, `oauth_check`
+  </Cards.Card>
+  <Cards.Card title="Security" href="/features/integrations/oauth/security">
+    What is verified, what is never stored, what to watch
+  </Cards.Card>
+</Cards>
+
+```bash
+python manage.py oauth_check --probe
+```

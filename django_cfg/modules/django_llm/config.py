@@ -95,7 +95,7 @@ class LLMConfig(BaseSettings):
         extra="ignore",
     )
 
-    project_name: str = "cmdop"
+    project_name: str = ""
     environment: str = ""
     telegram: _TelegramSettings = Field(default_factory=_TelegramSettings)
     api_keys: APIKeys = Field(default_factory=APIKeys)

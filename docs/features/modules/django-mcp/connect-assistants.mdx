@@ -15,9 +15,15 @@ mcp.enable_public_profile(
 )
 ```
 
-`oauth=True` is all a project with the widget's Settings dialog needs: the approval page is `DjangoConfig.site_url` + `/#settings/mcp`. Pass `oauth_consent_url="https://…"` only to send people somewhere else (the frontend lives on another origin than `site_url`); an explicit URL always wins, and passing it alone also turns OAuth on.
+`oauth=True` is all a project with the widget's Settings dialog needs: the approval page is the `site_url` of the [site](/configuration/sites) the request belongs to (`site_for(request)`) + `/#settings/mcp`. Pass `oauth_consent_url="https://…"` only to send people somewhere else (the frontend lives on another origin than `site_url`); an explicit URL always wins, and passing it alone also turns OAuth on.
 
-On a hand-written profile use `ProfileBuilder.enable_oauth(consent_url=None, issuer=None, access_ttl=..., refresh_ttl=...)`. `issuer` defaults to the request origin; set it when a proxy hides the public host. Defaults: access token 30 days, refresh token 180 days.
+On a hand-written profile use `ProfileBuilder.enable_oauth(consent_url=None, issuer=None, access_ttl=..., refresh_ttl=...)`. `issuer` defaults to the request origin, subject to the issuer rule below; set it when a proxy hides the public host. Defaults: access token 30 days, refresh token 180 days.
+
+### Issuer rule
+
+<Callout type="warn">
+Breaking in 2.3.367. The server no longer trusts any request host as its issuer. Without `oauth_issuer`, the request host must be the `api_url` host of a configured site (in development any host is accepted). Any other host gets `400 invalid_request` ("This host is not an issuer of this server.") on the OAuth endpoints, and the refusal is logged. A project whose MCP lives on its own host (for example `mcp.example.com`, which is not a site `api_url`) must set `oauth_issuer`, or discovery and authorization stop working.
+</Callout>
 
 It is **stateless**: client ids, consent requests, codes and tokens are signed with `SECRET_KEY`. No tables, no migration. Rotating `SECRET_KEY` signs everyone out.
 
@@ -57,8 +63,6 @@ What happens:
 The signed `request` is `base64url(json):timestamp:signature`; approve verifies the signature and uses its own copy, so nothing the page displays can ride on a real grant. Authorization codes are single use (the guard is one Django cache entry per code, so the cache must be shared across workers, e.g. Redis, and a cache outage refuses rather than allows). Refresh tokens are not rotated: renewing the key (Renew access) is the revocation. Never put a key or token in a URL.
 
 `site_url` must be the public origin of the frontend that mounts the dialog. When that frontend lives elsewhere, set `oauth_consent_url="https://app.example.com/#settings/mcp"`; the flow is the same.
-
-**What this trades away.**
 
 ## After Allow: what each client does
 

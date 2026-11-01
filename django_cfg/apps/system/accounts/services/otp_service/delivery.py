@@ -50,8 +50,13 @@ def deliver_otp(
     otp_code: str,
     is_new_user: bool,
     source_url: Optional[str],
+    site_key: Optional[str] = None,
 ) -> None:
-    """Send the OTP email and the Telegram operator notice. Never raises."""
+    """Send the OTP email and the Telegram operator notice. Never raises.
+
+    ``site_key`` is captured on the request thread: the worker has no request to
+    ask which site the visitor was on.
+    """
     from ...models import CustomUser
     from ...utils.notifications import AccountNotifications
 
@@ -68,17 +73,20 @@ def deliver_otp(
                 otp_code=otp_code,
                 is_new_user=is_new_user,
                 source_url=source_url,
+                site=site_key,
                 send_email=True,
                 send_telegram=False,
             )
 
-        _notify_operators(user, otp_code, is_new_user, source_url)
+        _notify_operators(user, otp_code, is_new_user, source_url, site_key)
     except Exception as exc:
         logger.error(f"OTP delivery failed for {email or user_id}: {exc}", exc_info=True)
         _notify_operators_failure(email or str(user_id), exc)
 
 
-def _notify_operators(user, otp_code: str, is_new_user: bool, source_url: Optional[str]) -> None:
+def _notify_operators(
+    user, otp_code: str, is_new_user: bool, source_url: Optional[str], site_key: Optional[str] = None
+) -> None:
     try:
         from django_cfg.modules.django_telegram import DjangoTelegram
 
@@ -87,6 +95,7 @@ def _notify_operators(user, otp_code: str, is_new_user: bool, source_url: Option
             "User Type": "New User" if is_new_user else "Existing User",
             "OTP Code": otp_code,
             "Source URL": source_url or "Direct",
+            "Site": site_key or "default",
             "Timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC"),
         }
         if user.is_test_account:
@@ -109,11 +118,12 @@ def dispatch_otp_delivery(
     otp_code: str,
     is_new_user: bool,
     source_url: Optional[str],
+    site_key: Optional[str] = None,
 ) -> None:
     """Schedule delivery to start once the surrounding transaction commits."""
 
     def _start() -> None:
-        args = (user_id, otp_code, is_new_user, source_url)
+        args = (user_id, otp_code, is_new_user, source_url, site_key)
         if _run_inline():
             deliver_otp(*args)
             return

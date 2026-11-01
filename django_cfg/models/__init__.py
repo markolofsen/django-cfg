@@ -29,7 +29,7 @@ from .api.drf.swagger import SwaggerUISettings
 from .api.jwt import JWTConfig
 from .api.keys import ApiKeys
 from .api.limits import LimitsConfig
-from .api.oauth import GitHubOAuthConfig, OAuthConfig
+from .api.oauth import GitHubOAuthConfig, GoogleOAuthConfig, OAuthConfig
 from .api.twofactor import TwoFactorConfig
 from .base.config import BaseConfig, BaseSettings
 from .base.module import BaseCfgAutoModule
@@ -107,6 +107,7 @@ __all__ = [
     "ServiceConfig",
     # OAuth
     "GitHubOAuthConfig",
+    "GoogleOAuthConfig",
     "OAuthConfig",
     # 2FA
     "TwoFactorConfig",

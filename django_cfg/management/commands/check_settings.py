@@ -341,4 +341,4 @@ class Command(SafeCommand):
         self.stdout.write("\n  📚 For more help:")
         self.stdout.write("     - Check your config.dev.yaml email settings")
         self.stdout.write("     - Verify SMTP credentials with your email provider")
-        self.stdout.write("     - Test with: python manage.py test_email")
+        self.stdout.write("     - Test with: python manage.py test_email --email you@example.com")

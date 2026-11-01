@@ -93,9 +93,9 @@ class OAuthConnectionAdmin(ModelAdmin):
     provider_badge.short_description = 'Provider'
 
     def access_token_masked(self, obj):
-        if obj.access_token:
+        if len(obj.access_token) > 16:
             return f"{obj.access_token[:8]}...{obj.access_token[-4:]}"
-        return "-"
+        return "set" if obj.access_token else "-"
     access_token_masked.short_description = 'Access Token'
 
     def has_add_permission(self, request):
@@ -128,6 +128,9 @@ class OAuthStateAdmin(ModelAdmin):
         'state',
         'redirect_uri',
     ]
+
+    # `code_verifier` and `nonce` are secrets of an attempt in flight: not shown anywhere.
+    exclude = ['code_verifier', 'nonce']
 
     readonly_fields = [
         'state',

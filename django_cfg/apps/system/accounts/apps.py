@@ -17,3 +17,4 @@ class AccountsConfig(AppConfig):
         """Initialize the accounts application."""
         # Import signal handlers
         import django_cfg.apps.system.accounts.signals  # noqa
+        from . import checks  # noqa: F401  (registers the OAuth setup checks)

@@ -60,10 +60,15 @@ from django_cfg import DjangoConfig, IndexNowConfig
 class MyConfig(DjangoConfig):
     indexnow = IndexNowConfig(
         key="865178f53dba1db23f3fc4fe95e9b64a",  # public by protocol
-        host="example.com",                      # the public host, not the API's
+        host="example.com",                      # optional: the public host, not the API's
         trailing_slash=True,                     # match your canonical URLs
     )
 ```
+
+`host` is optional. Without `host` or `sites`, the host of the project's
+single [site](/configuration/sites) (the host of its `site_url`) is used. With
+several sites declared, name them with `sites` or `host`, otherwise the config
+is rejected ("set `sites` or `host`").
 
 Generate a key with `python -c "import secrets; print(secrets.token_hex(16))"`.
 It is not a secret: every engine fetches it from your site.
@@ -147,7 +152,20 @@ indexnow = IndexNowConfig(
 - `extra_urls` must return **absolute** URLs here: a bare path could belong to
   any site, so it is skipped with a warning. URLs are grouped by host, and a
   URL on a host that is not a configured site is refused before sending.
-- Set exactly one of `host` or `sites`.
+- Name a site by `host`, or by `site="key"`, a `DjangoConfig.sites` key whose
+  `site_url` host becomes the host. Set exactly one of the two on each
+  `IndexNowSite`.
+- `host` and `sites` on the config are mutually exclusive.
+
+```python
+indexnow = IndexNowConfig(
+    key="865178f53dba1db23f3fc4fe95e9b64a",
+    sites=[
+        IndexNowSite(site="caribbean", source_suffix="-caribbean"),
+        IndexNowSite(site="bali", source_suffix="-bali"),
+    ],
+)
+```
 
 ## URLs the sitemap never listed
 
@@ -208,8 +226,8 @@ python manage.py indexnow_submit --url https://example.com/a/   # push these now
 | Field | Default | Notes |
 |---|---|---|
 | `key` | required | 8–128 characters of `[A-Za-z0-9-]`. |
-| `host` | one of `host`/`sites` | Bare hostname. Every URL must be on it, or the batch is refused with 422. |
-| `sites` | one of `host`/`sites` | `IndexNowSite(host, key, source_suffix, sources, key_location, trailing_slash)` per public host. |
+| `host` | the project's site host | Bare hostname. Every URL must be on it, or the batch is refused with 422. Exclusive with `sites`. |
+| `sites` | — | `IndexNowSite(host or site, key, source_suffix, sources, key_location, trailing_slash)` per public host. |
 | `key_location` | `https://<host>/<key>.txt` | Where the engines fetch the key. |
 | `trailing_slash` | `False` | Append `/` to paths, for slash-canonical sites. |
 | `sources` | every enabled source | Single-site: limit which sources are read. A source without `lastmod_field` is sent only when a URL appears or goes. |

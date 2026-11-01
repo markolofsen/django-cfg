@@ -7,9 +7,10 @@ analytics, where nobody notices until they open a dashboard weeks later and it
 is empty.
 
 Single source of truth: ``security_domains`` already declares which domains
-belong to this project (it drives ALLOWED_HOSTS, CORS and CSRF). Analytics
-derives from it rather than asking the operator to restate the same fact in a
-second place, where the two would inevitably drift.
+belong to this project (it drives ALLOWED_HOSTS, CORS and CSRF), and the web
+origins of ``DjangoConfig.sites`` join them. Analytics derives from these rather
+than asking the operator to restate the same fact in a second place, where the
+two would inevitably drift.
 
 A domain NOT in security_domains is still rejected — that is the tenant
 boundary, and auto-creating a row for any domain that POSTs at us would let a
@@ -22,6 +23,8 @@ import logging
 from urllib.parse import urlparse
 
 from django.db import DatabaseError, IntegrityError, transaction
+
+from django_cfg.core.site import sites
 
 from ..models import AnalyticsProperty, AnalyticsSite
 
@@ -43,6 +46,11 @@ def _trusted_domains() -> set[str]:
         domain = raw.strip().lower().lstrip("*.")
         if domain:
             domains.add(domain)
+    # The web hosts of every site: a declared site is trusted without also being
+    # listed in `security_domains`.
+    for site in sites():
+        domains.update(urlparse(origin).hostname or "" for origin in site.origins)
+    domains.discard("")
     return domains
 
 

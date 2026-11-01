@@ -40,6 +40,24 @@ def cleanup_expired_otps() -> dict:
     return {"deleted": total}
 
 
+def cleanup_expired_oauth_states() -> dict:
+    """
+    Delete OAuth sign-in states past their expiry.
+
+    Runs every 10 minutes. A state is spent when its callback arrives; the rows
+    left are attempts the user abandoned (closed the tab on the consent screen).
+
+    Returns:
+        dict with 'deleted' count.
+    """
+    from .oauth.service import OAuthService
+
+    deleted = OAuthService.purge_expired()
+    if deleted:
+        logger.info(f"OAuth state cleanup: deleted {deleted} expired states")
+    return {"deleted": deleted}
+
+
 def cleanup_jwt_blacklist() -> dict:
     """
     Flush expired tokens from the simplejwt blacklist.
@@ -79,6 +97,12 @@ def get_rq_schedules() -> list:
             cron="*/10 * * * *",  # Every 10 minutes
             queue="low",
             description="Delete expired/used OTP secrets",
+        ),
+        RQScheduleConfig(
+            func="django_cfg.apps.system.accounts.services.cleanup_service.cleanup_expired_oauth_states",
+            cron="*/10 * * * *",  # Every 10 minutes
+            queue="low",
+            description="Delete expired OAuth sign-in states",
         ),
         RQScheduleConfig(
             func="django_cfg.apps.system.accounts.services.cleanup_service.cleanup_jwt_blacklist",

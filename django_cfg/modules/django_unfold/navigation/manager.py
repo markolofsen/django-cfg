@@ -70,7 +70,7 @@ class NavigationManager(BaseCfgModule):
             sections.append(build_analytics_section())
 
         sections.append(build_accounts_section(
-            is_github_oauth_enabled=self.is_github_oauth_enabled()
+            is_oauth_enabled=self.is_oauth_provider_enabled("github") or self.is_oauth_provider_enabled("google")
         ))
 
         if self.is_totp_enabled():

@@ -53,8 +53,8 @@ class DRFURLsListView(APIView):
         try:
             config = getattr(settings, 'config', None)
 
-            # Get base URL from config or settings
-            base_url = getattr(config, 'site_url', None) if config else None
+            # API endpoints live on the API origin
+            base_url = getattr(config, 'api_url', None) if config else None
             if not base_url:
                 base_url = request.build_absolute_uri('/').rstrip('/')
 
@@ -63,7 +63,7 @@ class DRFURLsListView(APIView):
 
             urls_data = {
                 "status": "success",
-                "service": config.project_name if config else "Django CFG",
+                "service": config.project_name if config else "unknown",
                 "version": get_current_version(),
                 "base_url": base_url,
                 "filter": url_filter,

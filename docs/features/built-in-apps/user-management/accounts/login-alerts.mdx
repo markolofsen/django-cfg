@@ -62,8 +62,11 @@ Context variables:
 | `device` | Friendly label (e.g., "Chrome on Windows (mobile)") |
 | `ip_address` | Client IP address |
 | `login_time` | Formatted timestamp ("April 03, 2026 at 14:32 UTC") |
-| `project_name` | From DjangoConfig |
-| `button_url` | Site URL for "review activity" button |
+| `project_name` | `DjangoConfig.project_name` |
+| `site_name`, `site_url`, `support_email`, `logo_url` | From the user's [site](/configuration/sites); templates read `site_name` |
+| `button_url` | The site's `site_url`, for the "review activity" button |
+
+The subject is the gettext string `"New sign-in to your %(project_name)s account"`, unless a stored `EmailContent` subject replaces it. The recipient's language is `user.language`, then the site's `locale`. The site key is captured from the request on the request thread, so the background job speaks for the site the sign-in happened on.
 
 ## How It Works
 

@@ -131,9 +131,7 @@ def _try_dev_bypass(cleaned_email: str, source_url: Optional[str]) -> Optional[C
             return None
 
         logger.info(f"[DEV MODE] Bypassing OTP verification for {cleaned_email}")
-        user = CustomUser.objects.filter(
-            email__iexact=cleaned_email, deleted_at__isnull=True,
-        ).first()
+        user = CustomUser.objects.by_email(cleaned_email)
 
         # If email not found, fall back to first superuser (convenience login)
         if not user:
@@ -173,9 +171,7 @@ def _try_test_account_bypass(
     cleaned_email: str, source_url: Optional[str], ip_address: Optional[str],
 ) -> Optional[CustomUser]:
     try:
-        user = CustomUser.objects.filter(
-            email__iexact=cleaned_email, deleted_at__isnull=True,
-        ).first()
+        user = CustomUser.objects.by_email(cleaned_email)
 
         if user and not user.is_active:
             logger.warning(f"[DELETED ACCOUNT] OTP attempt for deleted account: {cleaned_email}")
@@ -238,9 +234,7 @@ def _verify_real_otp(
 
         otp_secret.mark_used()
 
-        user = CustomUser.objects.filter(
-            email__iexact=cleaned_email, deleted_at__isnull=True,
-        ).first()
+        user = CustomUser.objects.by_email(cleaned_email)
 
         # `.first()` yields None rather than raising, so the account being
         # gone has to be checked here. Without it `user.is_active` raises

@@ -35,7 +35,14 @@ class IndexNowSite(BaseModel):
     must be on that host, so each site is submitted separately.
     """
 
-    host: str = Field(..., description="Bare public hostname: 'example.com'.")
+    host: Optional[str] = Field(
+        default=None,
+        description="Bare public hostname: 'example.com'. Default: the host of `site`.",
+    )
+    site: Optional[str] = Field(
+        default=None,
+        description="Key of a `DjangoConfig.sites` entry whose `site_url` host is this site's host.",
+    )
     key: Optional[str] = Field(
         default=None, description="This host's own key. Default: the config's shared key.",
     )
@@ -55,13 +62,32 @@ class IndexNowSite(BaseModel):
 
     @field_validator("host")
     @classmethod
-    def _host(cls, v: str) -> str:
-        return _bare_host(v)
+    def _host(cls, v: Optional[str]) -> Optional[str]:
+        return None if v is None else _bare_host(v)
 
     @field_validator("key")
     @classmethod
     def _key(cls, v: Optional[str]) -> Optional[str]:
         return None if v is None else _valid_key(v)
+
+    @model_validator(mode="after")
+    def _host_or_site(self) -> "IndexNowSite":
+        if bool(self.host) == bool(self.site):
+            raise ValueError("set exactly one of `host` or `site` (a DjangoConfig.sites key)")
+        return self
+
+    def with_host(self) -> "IndexNowSite":
+        """This site with ``host`` filled in from its ``site`` key (``Site.site_url``)."""
+        if self.host:
+            return self
+        from urllib.parse import urlsplit
+
+        from django_cfg.core.site import sites
+
+        registry = {s.key: s for s in sites()}
+        if self.site not in registry:
+            raise ValueError(f"IndexNowSite: no site with key {self.site!r} in DjangoConfig.sites")
+        return self.model_copy(update={"host": urlsplit(registry[self.site].site_url).hostname})
 
     def takes(self, source_name: str) -> bool:
         if self.sources is None and self.source_suffix is None:
@@ -118,7 +144,10 @@ class IndexNowConfig(BaseModel):
 
     host: Optional[str] = Field(
         default=None,
-        description="One public host, without scheme: 'example.com'. Or use `sites` for several.",
+        description=(
+            "One public host, without scheme: 'example.com'. Or use `sites` for several. "
+            "Neither: the host of the project's site (`DjangoConfig.site_url`)."
+        ),
     )
 
     sites: List[IndexNowSite] = Field(
@@ -196,26 +225,40 @@ class IndexNowConfig(BaseModel):
 
     @model_validator(mode="after")
     def _one_shape(self) -> "IndexNowConfig":
-        if bool(self.host) == bool(self.sites):
-            raise ValueError("set exactly one of `host` (one site) or `sites` (several)")
+        if self.host and self.sites:
+            raise ValueError("set `host` (one site) or `sites` (several), not both")
         hosts = [s.host for s in self.sites]
         if len(hosts) != len(set(hosts)):
             raise ValueError("each host may appear in `sites` once")
         return self
 
     def resolved_sites(self) -> List[IndexNowSite]:
-        """Every site, with the config's defaults filled in."""
+        """Every site, with the config's defaults filled in and hosts resolved.
+
+        Without ``host`` or ``sites`` the one site of the project is used: the
+        host of its ``site_url``. Several declared sites need their hosts named.
+        """
+        if self.sites:
+            return [
+                s.with_host().model_copy(update={
+                    "trailing_slash": self.trailing_slash if s.trailing_slash is None else s.trailing_slash,
+                })
+                for s in self.sites
+            ]
         if self.host:
-            return [IndexNowSite(
-                host=self.host, sources=self.sources,
-                key_location=self.key_location, trailing_slash=self.trailing_slash,
-            )]
-        return [
-            s.model_copy(update={
-                "trailing_slash": self.trailing_slash if s.trailing_slash is None else s.trailing_slash,
-            })
-            for s in self.sites
-        ]
+            single = IndexNowSite(host=self.host)
+        else:
+            from urllib.parse import urlsplit
+
+            from django_cfg.core.site import sites
+
+            registry = sites()
+            if len(registry) != 1:
+                raise ValueError("IndexNowConfig: the project has several sites; set `sites` or `host`")
+            single = IndexNowSite(host=urlsplit(registry[0].site_url).hostname)
+        return [single.model_copy(update={
+            "sources": self.sources, "key_location": self.key_location, "trailing_slash": self.trailing_slash,
+        })]
 
     def key_for(self, site: IndexNowSite) -> str:
         return site.key or self.key

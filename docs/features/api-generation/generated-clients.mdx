@@ -132,6 +132,16 @@ Session length is the server's refresh-token lifetime — see
 There is no `persist`/`remember` parameter on the client store.
 </Callout>
 
+#### Other storage keys
+
+`helpers/keys.ts` is the registry of every key the framework writes
+(`CFG_KEYS`, `cfgStorage`): tokens, the saved return URL, the sign-in attempt
+(`oauthState`, `oauthProvider`, wiped on sign-out) and the cached list of
+enabled sign-in providers (`oauthProviders`, `sessionStorage`, kept across
+sign-out because it is public server state). Read and write through
+`cfgStorage` rather than the raw browser API; regenerate to pick up new keys,
+never edit the file.
+
 #### React — subscribe to the session
 
 ```tsx
@@ -173,6 +183,29 @@ minimal store instead: no `Authorization` header, no token storage, no refresh
 machinery. This also prevents a logged-in user's Bearer token from leaking
 onto public endpoints. No configuration needed — the mode is derived from the
 spec's `security` requirements.
+
+### Enum names
+
+Each OpenAPI enum becomes a named TypeScript `enum` plus a zod schema. A
+`TextChoices` class on a model is named after the class (`OAuthProviderEnum`).
+An enum that comes from a plain `Enum` or a hand-written `ChoiceField` is named
+after the field (`ErrorEnum`, `StatusEnum`), which collides as soon as two
+fields share the name and then gets a hash suffix that changes between runs.
+Pin such a name in `SpectacularConfig.enum_name_overrides`; the value is a
+dotted path to a `TextChoices` class or to a callable returning `(value, label)`
+pairs identical to the field's `choices` (labels are part of the match):
+
+```python
+SpectacularConfig(
+    enum_name_overrides={
+        "PaymentErrorCodeEnum": "myapp.payments.codes.payment_error_choices",
+    },
+)
+```
+
+`python manage.py suggest_enum_overrides` prints a working dictionary for every
+hash-suffixed name. django-cfg pins its own: `SystemHealthStatusEnum` and, since
+2.3.367, `OAuthErrorCodeEnum` (the `error` of the OAuth endpoints).
 
 ### Multiple Groups
 

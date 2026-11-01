@@ -27,7 +27,7 @@ class AllowedHostsHintMiddleware:
             host = request.META.get("HTTP_HOST", "unknown")
             logger.error(
                 "Host '%s' not in ALLOWED_HOSTS. "
-                "Fix: add '%s' to security_domains in your DjangoConfig, "
+                "Fix: declare the host as a site or API URL, or add '%s' to security_domains in your DjangoConfig, "
                 "or set DJANGO_INTERNAL_HOSTS=%s in Docker env.",
                 host, host.split(":")[0], host.split(":")[0],
             )

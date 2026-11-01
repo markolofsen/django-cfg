@@ -9,7 +9,7 @@
       caller's subject with it so a localized letter states its own. A title
       that drops a caller's value (a one-time code) drops it from the inbox.
     {% endcomment %}
-    <title>{% if email_title %}{{ email_title }} — {{ project_name }}{% else %}{{ subject }}{% endif %}</title>
+    <title>{% if email_title %}{{ email_title }} — {{ site_name }}{% else %}{{ subject }}{% endif %}</title>
     <!--[if mso]>
     <noscript>
       <xml>
@@ -126,7 +126,7 @@
       <div class="email-card">
 
         <div class="email-header">
-          <a href="{{ site_url }}" class="brand-name">{{ project_name }}</a>
+          {% if logo_url %}<a href="{{ site_url|default:'#' }}"><img src="{{ logo_url }}" alt="{{ site_name }}" height="32" style="border:0;max-height:32px;" /></a>{% else %}<a href="{{ site_url|default:'#' }}" class="brand-name">{{ site_name }}</a>{% endif %}
         </div>
 
         <div class="email-body">
@@ -166,15 +166,15 @@
           <hr class="divider" />
 
           <p class="email-signature">
-            Need help? Reach out to our support team.<br />
-            <strong>The {{ project_name }} Team</strong>
+            {% if support_email %}Need help? Write to <a href="mailto:{{ support_email }}">{{ support_email }}</a>.{% else %}Need help? Reach out to our support team.{% endif %}<br />
+            <strong>The {{ site_name }} Team</strong>
           </p>
 
         </div>
 
         <div class="email-footer">
-          {% if subscribe_url %}<p>P.S. Want {{ project_name }} product updates? <a href="{{ subscribe_url }}">One click — subscribe</a>.</p>{% endif %}
-          <p>&copy; {% now "Y" %} {{ project_name }}. All rights reserved.</p>
+          {% if subscribe_url %}<p>P.S. Want {{ site_name }} product updates? <a href="{{ subscribe_url }}">One click — subscribe</a>.</p>{% endif %}
+          <p>&copy; {% now "Y" %} {{ site_name }}. All rights reserved.</p>
           <p>You received this email because it relates to your account.</p>
           {% if site_url %}<p><a href="{{ site_url }}">{{ site_url }}</a></p>{% endif %}
         </div>

@@ -17,30 +17,28 @@ Commands for development, testing, and debugging Django-CFG projects.
 
 ### `test_email`
 
-Test email configuration and send test messages.
+Send the built-in email templates to one address through the configured backend.
 
 ```bash
-python manage.py test_email [OPTIONS]
+python manage.py test_email --email ADDRESS [--type TYPE]
 ```
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `--to` | `TEXT` | - | Recipient email address |
-| `--subject` | `TEXT` | `"Django-CFG Test Email"` | Email subject |
-| `--backend` | `TEXT` | - | Email backend to test |
+| `--email` | `TEXT` | *required* | Recipient address. A user with this email is created if none exists |
+| `--type` | `TEXT` | `all` | Template to send: `all`, `base`, `otp`, `welcome`, `login_alert` |
 
 **Examples:**
 
 ```bash
-# Test email to specific address
-python manage.py test_email --to admin@example.com
+# All templates
+python manage.py test_email --email admin@example.com
 
-# Custom subject
-python manage.py test_email --to test@test.com --subject "Configuration Test"
-
-# Test specific backend
-python manage.py test_email --to admin@test.com --backend smtp
+# One template
+python manage.py test_email --email admin@example.com --type otp
 ```
+
+The command has no default recipient: running it without `--email` is an error.
 
 ---
 
@@ -278,7 +276,7 @@ curl -X POST https://<your-public-url>/api/webhooks/stripe/ \
 
 ```bash
 # 1. Test email configuration
-python manage.py test_email --to admin@test.com
+python manage.py test_email --email admin@test.com
 
 # 2. Test Telegram bot
 python manage.py test_telegram --message "Deploy test"
@@ -332,7 +330,7 @@ python manage.py shell -c "from myapp.models import User; print(User.objects.cou
 
 | Problem | Solution |
 |---------|----------|
-| Email test failing | Check: `check_settings --email-test`, `show_config --section email` |
+| Email test failing | Check: `check_settings --email-test`, `show_config` |
 | Script errors | Run: `script my_script.py --verbosity 2` |
 
 ## See Also

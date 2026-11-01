@@ -29,6 +29,8 @@ from typing import Optional
 
 from django.utils import timezone
 
+from django_cfg.core.site import Site, site_for
+
 from ..models import CustomUser
 
 logger = logging.getLogger(__name__)
@@ -67,10 +69,11 @@ def persist_user_language(user: CustomUser, accept_language: str) -> None:
         user.save(update_fields=["language"])
 
 
-def resolve_locale(user: CustomUser, accept_language: str = "") -> str:
+def resolve_locale(user: CustomUser, accept_language: str = "", site=None) -> str:
     """The locale to render this user's email in.
 
-    Order: the user's stored ``language`` → ``Accept-Language`` → ``en``.
+    Order: the user's stored ``language`` → ``Accept-Language`` → the site's
+    ``locale`` (``site``: a ``Site``, or None to skip it) → ``en``.
 
     ``settings.LANGUAGE_CODE`` is deliberately NOT in that chain. It is the
     project's own default, not a statement about this reader: on a project
@@ -84,11 +87,14 @@ def resolve_locale(user: CustomUser, accept_language: str = "") -> str:
         if matched:
             return matched
 
-    return best_supported(accept_language) or DEFAULT_LOCALE
+    return best_supported(accept_language, fallback=site.locale if site else None) or DEFAULT_LOCALE
 
 
-def send_welcome_email(user: CustomUser, accept_language: str = "") -> bool:
+def send_welcome_email(user: CustomUser, accept_language: str = "", site=None) -> bool:
     """Send the welcome letter, at most once per user.
+
+    ``site`` is a ``Site``, a site key or None: then the site the user registered
+    on (``site_for(user=)``), then the default site.
 
     Returns True if this call sent it, False if it was already sent, the user is
     a test account, or the address is unusable.
@@ -107,7 +113,8 @@ def send_welcome_email(user: CustomUser, accept_language: str = "") -> bool:
     if not claimed:
         return False
 
-    locale = resolve_locale(user, accept_language)
+    site = site if isinstance(site, Site) else site_for(key=site, user=user)
+    locale = resolve_locale(user, accept_language, site)
 
     # Imported here: AccountNotifications imports this module's siblings, and a
     # module-level import would close the cycle.
@@ -115,7 +122,7 @@ def send_welcome_email(user: CustomUser, accept_language: str = "") -> bool:
 
     try:
         AccountNotifications.send_welcome_email(
-            user=user, locale=locale, send_email=True, send_telegram=False
+            user=user, locale=locale, send_email=True, send_telegram=False, site=site
         )
     except Exception:
         # Release the claim so a retry can still deliver. Sending itself is

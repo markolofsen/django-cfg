@@ -86,6 +86,7 @@ CORE_REGISTRY = {
     "ApiKeys": ("django_cfg.models.api.keys", "ApiKeys"),
     "JWTConfig": ("django_cfg.models.api.jwt", "JWTConfig"),
     "GitHubOAuthConfig": ("django_cfg.models.api.oauth", "GitHubOAuthConfig"),
+    "GoogleOAuthConfig": ("django_cfg.models.api.oauth", "GoogleOAuthConfig"),
     "TwoFactorConfig": ("django_cfg.models.api.twofactor", "TwoFactorConfig"),
 
     # Background tasks
@@ -105,8 +106,6 @@ CORE_REGISTRY = {
 
     # Utils
     "HealthService": ("django_cfg.modules.django_health", "HealthService"),
-    "get_ticket_url": ("django_cfg.core.utils.url_helpers", "get_ticket_url"),
-    "get_otp_url": ("django_cfg.core.utils.url_helpers", "get_otp_url"),
 }
 ```
 

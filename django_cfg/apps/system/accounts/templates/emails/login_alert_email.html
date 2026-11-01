@@ -8,7 +8,7 @@
       This title becomes the Subject: header — send_template overrides the
       caller's subject with it, so a localized letter states its own here.
     {% endcomment %}
-    <title>New sign-in detected — {{ project_name }}</title>
+    <title>New sign-in detected — {{ site_name }}</title>
     <style type="text/css">
       * { box-sizing: border-box; }
       body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
@@ -86,7 +86,7 @@
     <div class="email-card">
 
       <div class="email-header">
-        <a href="{{ site_url|default:'#' }}" class="brand-name">{{ project_name }}</a>
+        {% if logo_url %}<a href="{{ site_url|default:'#' }}"><img src="{{ logo_url }}" alt="{{ site_name }}" height="32" style="border:0;max-height:32px;" /></a>{% else %}<a href="{{ site_url|default:'#' }}" class="brand-name">{{ site_name }}</a>{% endif %}
       </div>
 
       <div class="email-body">
@@ -94,7 +94,7 @@
         <h1 class="email-title">New sign-in detected</h1>
         <p class="email-text">
           Hi {{ user.get_full_name|default:user.username }}, we noticed a new sign-in
-          to your {{ project_name }} account.
+          to your {{ site_name }} account.
         </p>
 
         <table border="0" cellspacing="0" cellpadding="0" width="100%"
@@ -136,14 +136,15 @@
         <hr class="divider" />
 
         <p class="email-signature">
-          <strong>The {{ project_name }} Security Team</strong>
+          <strong>The {{ site_name }} Security Team</strong>
         </p>
 
       </div>
 
       <div class="email-footer">
-        <p>This is an automated security notification from {{ project_name }}.</p>
+        <p>This is an automated security notification from {{ site_name }}.</p>
         <p>You received this because a sign-in occurred on your account.</p>
+        {% if support_email %}<p>Not you? Write to <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</p>{% endif %}
         {% if site_url %}<p><a href="{{ site_url }}">{{ site_url }}</a></p>{% endif %}
       </div>
 

@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.3.366"
+__version__ = "2.3.368"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -48,7 +48,7 @@ except ImportError:
     pass
 
 # Library metadata
-from .config import LIB_NAME, LIB_SITE_URL, LIB_HEALTH_URL, get_default_dropdown_items
+from .config import LIB_NAME, LIB_SITE_URL, LIB_HEALTH_URL
 __author__ = LIB_NAME
 
 # ---------------------------------------------------------------------------
@@ -65,7 +65,7 @@ from .core.exceptions import (
     CacheError,
     EnvironmentError,
 )
-from .core.utils.url_helpers import get_ticket_url, get_otp_url, get_media_url, build_media_url, build_api_url, get_api_url
+from .core.utils.url_helpers import get_media_url, build_media_url, build_api_url, get_api_url
 
 # ---------------------------------------------------------------------------
 # [GROUP 2] Infrastructure models
@@ -80,7 +80,7 @@ from .models.infrastructure.logging import LoggingConfig
 # ---------------------------------------------------------------------------
 from .models.api.drf import DRFConfig, SpectacularConfig, SwaggerUISettings, RedocUISettings
 from .models.api.jwt import JWTConfig
-from .models.api.oauth import GitHubOAuthConfig, OAuthConfig
+from .models.api.oauth import GitHubOAuthConfig, GoogleOAuthConfig, OAuthConfig
 from .models.api.limits import LimitsConfig
 from .models.api.keys import ApiKeys
 from .models.api.twofactor import TwoFactorConfig
@@ -98,6 +98,7 @@ from .models.django.payments import PaymentsConfig
 from .models.django.admin_access import AdminAccessConfig
 from .models.django.geo import GeoConfig
 from .models.django.indexnow import IndexNowConfig, IndexNowSite
+from .core.site import Site, SiteConfig, site_for, site_key, sites
 from .models.django.analytics import AnalyticsConfig
 from .models.django.simple_history import SimpleHistoryConfig
 from .models.django.constance import ConstanceConfig, ConstanceField
@@ -259,25 +260,25 @@ def __getattr__(name: str):
 # ---------------------------------------------------------------------------
 __all__ = [
     # metadata
-    "LIB_NAME", "LIB_SITE_URL", "LIB_HEALTH_URL", "get_default_dropdown_items",
+    "LIB_NAME", "LIB_SITE_URL", "LIB_HEALTH_URL",
     # core
     "DjangoConfig", "StartupInfoMode", "set_current_config",
     "add_django_cfg_urls", "get_django_cfg_urls_info", "admin_urlpatterns",
     "DjangoCfgException", "ConfigurationError", "ValidationError",
     "DatabaseError", "CacheError", "EnvironmentError",
-    "get_ticket_url", "get_otp_url", "get_media_url", "build_media_url", "build_api_url", "get_api_url",
+    "get_media_url", "build_media_url", "build_api_url", "get_api_url",
     # infrastructure
     "DatabaseConfig", "CacheConfig", "SecurityConfig", "LoggingConfig",
     # API
     "DRFConfig", "SpectacularConfig", "SwaggerUISettings", "RedocUISettings",
-    "JWTConfig", "GitHubOAuthConfig", "OAuthConfig", "LimitsConfig",
+    "JWTConfig", "GitHubOAuthConfig", "GoogleOAuthConfig", "OAuthConfig", "LimitsConfig",
     "ApiKeys", "TwoFactorConfig",
     # Django models
     "EnvironmentConfig", "AxesConfig",
     "DjangoRQConfig", "RQQueueConfig", "RQScheduleConfig",
     "RQHealthConfig", "QueueHealthThresholds",
     "DjangoLoggingConfig",
-    "CurrencyConfig", "PaymentsConfig", "AdminAccessConfig", "GeoConfig", "IndexNowConfig", "IndexNowSite", "AnalyticsConfig", "SimpleHistoryConfig",
+    "CurrencyConfig", "PaymentsConfig", "AdminAccessConfig", "GeoConfig", "IndexNowConfig", "IndexNowSite", "Site", "SiteConfig", "site_for", "site_key", "sites", "AnalyticsConfig", "SimpleHistoryConfig",
     "ConstanceConfig", "ConstanceField", "StorageConfig", "FileCleanupConfig", "CDNPurgeConfig", "S3StorageConfig", "OpenAPIClientConfig",
     "EmailConfig", "TelegramConfig",
     # middleware (lazy — DRF reads settings at import time)

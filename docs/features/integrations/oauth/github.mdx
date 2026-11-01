@@ -1,10 +1,29 @@
 ---
 title: GitHub OAuth Setup
-description: Detailed GitHub OAuth App setup guide.
+description: Create the GitHub OAuth App for Sign in with GitHub and the redirect URIs to register.
 ---
 
-import { Callout } from 'nextra/components'
+# GitHub OAuth Setup
 
-<Callout type="info">
-This page has moved. See [OAuth (GitHub)](../../built-in-apps/user-management/accounts/oauth) for the full documentation.
-</Callout>
+django-cfg switches GitHub sign-in on when `GITHUB_OAUTH__CLIENT_ID` and `GITHUB_OAUTH__CLIENT_SECRET` are set.
+
+1. Run `python manage.py oauth_check` and keep the printed GitHub redirect URIs at hand.
+2. Open [GitHub Settings, Developer settings, OAuth Apps, New](https://github.com/settings/developers).
+3. Fill in the application name, the homepage URL (your `site_url`) and **Authorization callback URL**: `https://<site>/auth?provider=github`. GitHub allows one callback URL per app; for several site origins register the primary one and create one OAuth App per extra origin, or keep to a single origin.
+4. Copy the **Client ID** and generate a **Client secret** into the environment:
+
+   ```bash
+   GITHUB_OAUTH__CLIENT_ID=Iv1.abc123
+   GITHUB_OAUTH__CLIENT_SECRET=...
+   ```
+
+5. Deploy and run `python manage.py oauth_check --probe`; it must say the client id and secret are accepted.
+
+## What GitHub returns
+
+The scope is `user:email read:user`. A profile email counts only when GitHub's `/user/emails` lists it as verified; otherwise the primary verified address is used. An account that hides every email gets a `login@github.local` placeholder user, created unverified: it is never marked verified and no verification signal fires for it. The access token is kept (GitHub is the only provider that stores one).
+
+Linking, errors and the callback body are the same as for Google: [OAuth sign-in](/features/built-in-apps/user-management/accounts/oauth).
+
+TAGS: github, oauth, setup
+DEPENDS_ON: [index, configuration]

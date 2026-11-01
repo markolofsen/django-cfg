@@ -209,6 +209,10 @@ client = VisionClient()  # Uses django_config.api_keys.get_openrouter_key()
 client = VisionClient(api_key="sk-or-v1-...")
 ```
 
+## OpenRouter attribution
+
+OpenRouter requests carry `X-Title` and `HTTP-Referer` headers. They default to your project, not to django-cfg: `X-Title` is `DjangoConfig.project_name` (`Project` when it is unset) and `HTTP-Referer` is `DjangoConfig.site_url` (empty when unset). The image, video and edit clients accept `app_title` and `app_url` to override them for one client.
+
 ## Related Documentation
 
 - [Vision & OCR](./vision)

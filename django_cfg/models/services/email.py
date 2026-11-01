@@ -72,9 +72,12 @@ class EmailConfig(BaseConfig):
     )
 
     # Email addresses
-    default_from: str = Field(
-        default="noreply@example.com",
-        description="Default 'from' email address"
+    default_from: Optional[str] = Field(
+        default=None,
+        description=(
+            "Default 'from' email address. Required in production with a "
+            "sending backend (smtp/gateway)."
+        ),
     )
 
     default_from_name: Optional[str] = Field(
@@ -188,7 +191,6 @@ class EmailConfig(BaseConfig):
                 'EMAIL_USE_TLS': self.use_tls,
                 'EMAIL_USE_SSL': self.use_ssl,
                 'EMAIL_TIMEOUT': self.timeout,
-                'DEFAULT_FROM_EMAIL': self.default_from,
             }
 
             if self.username:
@@ -200,26 +202,22 @@ class EmailConfig(BaseConfig):
         elif self.backend == 'console':
             settings = {
                 'EMAIL_BACKEND': 'django.core.mail.backends.console.EmailBackend',
-                'DEFAULT_FROM_EMAIL': self.default_from,
             }
 
         elif self.backend == 'file':
             settings = {
                 'EMAIL_BACKEND': 'django.core.mail.backends.filebased.EmailBackend',
                 'EMAIL_FILE_PATH': self.file_path,
-                'DEFAULT_FROM_EMAIL': self.default_from,
             }
 
         elif self.backend == 'memory':
             settings = {
                 'EMAIL_BACKEND': 'django.core.mail.backends.locmem.EmailBackend',
-                'DEFAULT_FROM_EMAIL': self.default_from,
             }
 
         elif self.backend == 'dummy':
             settings = {
                 'EMAIL_BACKEND': 'django.core.mail.backends.dummy.EmailBackend',
-                'DEFAULT_FROM_EMAIL': self.default_from,
             }
 
         elif self.backend == 'gateway':
@@ -228,11 +226,13 @@ class EmailConfig(BaseConfig):
                 'EMAIL_GATEWAY_URL': self.gateway_url,
                 'EMAIL_GATEWAY_SECRET': self.gateway_secret,
                 'EMAIL_TIMEOUT': self.timeout,
-                'DEFAULT_FROM_EMAIL': self.default_from,
             }
 
         else:
             raise ValueError(f"Unsupported email backend: {self.backend}")
+
+        if self.default_from:
+            settings['DEFAULT_FROM_EMAIL'] = self.default_from
 
         if self.subscribe_url:
             settings['EMAIL_SUBSCRIBE_URL'] = self.subscribe_url

@@ -11,17 +11,22 @@ import threading
 from email.utils import formataddr
 from html import unescape
 from smtplib import SMTPAuthenticationError, SMTPDataError, SMTPException, SMTPRecipientsRefused, SMTPSenderRefused
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
+from ...core.site import Site, site_for
 from ..base import BaseCfgModule
 from ..django_logging import get_logger
 
 logger = get_logger("django_cfg.email")
+
+# A site as callers hand it over: the resolved object, or its key (what a job
+# captured at enqueue time). None is the default site.
+SiteArg = Union[Site, str, None]
 
 # The locale whose file doubles as the fallback for every untranslated locale.
 # Kept next to the resolver rather than imported from the accounts app: this
@@ -554,6 +559,7 @@ class DjangoEmailService(BaseCfgModule):
         log_key: str = "",
         log_locale: str = "",
         text_only: bool = False,
+        site: SiteArg = None,
     ) -> bool:
         """
         Send an HTML email with optional plain text alternative in background thread (non-blocking).
@@ -569,12 +575,15 @@ class DjangoEmailService(BaseCfgModule):
                 the first person reads better this way — the client renders it in
                 its own font, so it looks like a message a person typed instead of
                 a page imitating one, and no client can break the layout.
+            site: The site this letter speaks for (a ``Site`` or its key). Sets
+                the From display name and Reply-To; None is the default site.
 
         Returns:
             True if email queued successfully
         """
-        from_email = self._get_formatted_from_email(from_email)
-        reply_to = self._get_reply_to()
+        site = self._resolve_site(site)
+        from_email = self._get_formatted_from_email(from_email, site)
+        reply_to = self._get_reply_to(site)
 
         if text_message is None:
             text_message = html_to_text(html_message)
@@ -687,6 +696,7 @@ class DjangoEmailService(BaseCfgModule):
         fail_silently: bool = False,
         locale: Optional[str] = None,
         text_only: bool = False,
+        site: SiteArg = None,
     ) -> bool:
         """
         Send an email using a Django template in background thread (non-blocking).
@@ -702,14 +712,19 @@ class DjangoEmailService(BaseCfgModule):
                 ``<template_name>.<locale>.html``, falling back to
                 ``<template_name>.html``. Also exposed to the template as
                 ``locale`` so the base shell can set ``<html lang>``.
+            site: The site this letter speaks for (a ``Site`` or its key, e.g.
+                from a job that captured ``site_key`` at enqueue time). Supplies
+                the template vocabulary (``site_name``, ``site_url``,
+                ``support_email``, ``logo_url``), the From display name, the
+                Reply-To and the tracking base. None is the default site.
 
         Returns:
             True if email queued successfully
         """
-        from_email = self._get_formatted_from_email(from_email)
+        site = self._resolve_site(site)
 
         # Prepare context with auto-added values
-        context = self._prepare_template_context(context)
+        context = self._prepare_template_context(context, site=site)
         if locale:
             context.setdefault("locale", locale)
 
@@ -754,6 +769,7 @@ class DjangoEmailService(BaseCfgModule):
             log_key=(template_name or "").rstrip("/").split("/")[-1],
             log_locale=locale or "",
             text_only=text_only,
+            site=site,
         )
 
     def send_multipart(
@@ -925,33 +941,41 @@ class DjangoEmailService(BaseCfgModule):
             fail_silently=fail_silently,
         )
 
-    def _prepare_template_context(self, context: Dict[str, Any], email_log_id: Optional[str] = None) -> Dict[str, Any]:
+    @staticmethod
+    def _resolve_site(site: SiteArg = None) -> Site:
+        """A ``Site`` from a ``Site``, a site key, or None (the default site)."""
+        if isinstance(site, Site):
+            return site
+        return site_for(key=site)
+
+    def _prepare_template_context(
+        self,
+        context: Dict[str, Any],
+        email_log_id: Optional[str] = None,
+        site: SiteArg = None,
+    ) -> Dict[str, Any]:
         """
-        Prepare template context with auto-added values from config.
+        Prepare template context with auto-added values from the site.
 
         Args:
-            context: Original context dictionary
+            context: Original context dictionary; a caller's own keys win
             email_log_id: Optional email log ID for tracking
+            site: The site the letter speaks for; None is the default site
 
         Returns:
             Updated context with auto-added values
         """
-        # Create a copy to avoid modifying the original
-        updated_context = context.copy()
+        site = self._resolve_site(site)
 
-        # Auto-add project_name from config if not provided
-        if 'project_name' not in updated_context:
-            updated_context['project_name'] = self.config.project_name
+        # Site vocabulary first, caller's keys over it.
+        updated_context = {**site.as_context(), **context}
 
-        # `site_name` is the same fact under the name the templates ask for;
-        # without it every letter falls back to its literal default. One
-        # source, two names — a caller passing its own still wins.
-        if 'site_name' not in updated_context:
-            updated_context['site_name'] = updated_context['project_name']
-
-        # Auto-add site_url from config if not provided
-        if 'site_url' not in updated_context:
-            updated_context['site_url'] = self.config.site_url
+        # `project_name` and `site_name` are one fact under two names; a caller
+        # passing only one of them gets it in both.
+        if 'site_name' not in context and 'project_name' in context:
+            updated_context['site_name'] = context['project_name']
+        elif 'project_name' not in context and 'site_name' in context:
+            updated_context['project_name'] = context['site_name']
 
         # Auto-add subscribe_url (P.S. footer) — absent unless configured
         if 'subscribe_url' not in updated_context:
@@ -962,55 +986,60 @@ class DjangoEmailService(BaseCfgModule):
 
         # Add tracking URLs if email_log_id is provided
         if email_log_id:
-            base_url = self.config.api_url.rstrip('/')
+            base_url = site.api_url.rstrip('/')
             updated_context['tracking_pixel_url'] = f"{base_url}/cfg/newsletter/track/open/{email_log_id}/"
             updated_context['tracking_click_url'] = f"{base_url}/cfg/newsletter/track/click/{email_log_id}"
 
         return updated_context
 
-    def _get_default_from_email(self) -> str:
-        """Get the default from email address."""
+    def _get_default_from_email(self, site: Optional[Site] = None) -> str:
+        """The sender address: the site's ``from_email`` (its own, or the project's default)."""
+        if site is not None and site.from_email:
+            return site.from_email
+
         if self.email_config and self.email_config.default_from:
             return self.email_config.default_from
 
-        # Fallback to Django settings
-        return getattr(settings, 'DEFAULT_FROM_EMAIL', 'webmaster@localhost')
+        return settings.DEFAULT_FROM_EMAIL
 
-    def _get_formatted_from_email(self, from_email: Optional[str] = None) -> str:
+    def _get_formatted_from_email(self, from_email: Optional[str] = None, site: Optional[Site] = None) -> str:
         """
-        Get formatted from email with project name.
+        Get formatted from email with the site's display name.
 
         Args:
             from_email: Optional custom from email
+            site: The site whose display name to use; None is the default site
 
         Returns:
-            Formatted email in format: "Project Name <email@example.com>"
+            Formatted email in format: "Site Name <email@example.com>"
         """
+        site = self._resolve_site(site)
         if from_email is None:
-            from_email = self._get_default_from_email()
+            from_email = self._get_default_from_email(site)
 
         # If email already contains name (has < and >), return as is
         if '<' in from_email and '>' in from_email:
             return from_email
 
-        # An explicit display name wins over the project name: a letter written
-        # in the first person should arrive from a person, and the name is what
-        # the reader sees before deciding whether to open it at all.
-        name = None
-        if self.email_config:
-            name = getattr(self.email_config, 'default_from_name', None)
-        name = name or self.config.project_name
-        return formataddr((name, from_email))
+        # The site's display name (its `from_name`, else its name; the default
+        # site gets `default_from_name` there). A letter written in the first
+        # person should arrive from a person, and the name is what the reader
+        # sees before deciding whether to open it at all.
+        return formataddr((site.from_name, from_email))
 
-    def _get_reply_to(self) -> Optional[List[str]]:
-        """Configured Reply-To, as the list Django's message classes expect.
+    def _get_reply_to(self, site: Optional[Site] = None) -> Optional[List[str]]:
+        """Reply-To, as the list Django's message classes expect.
 
         Separate from the sender because the two answer different questions: the
         `From` is an identity the gateway pins, while replies have to reach a
         mailbox someone reads. A letter that invites a reply from an unattended
-        address discards it silently.
+        address discards it silently. The site's ``support_email`` is that
+        mailbox; without one, the configured ``reply_to``.
         """
-        reply_to = getattr(self.email_config, 'reply_to', None) if self.email_config else None
+        site = self._resolve_site(site)
+        reply_to = site.support_email or (
+            getattr(self.email_config, 'reply_to', None) if self.email_config else None
+        )
         return [reply_to] if reply_to else None
 
     def is_configured(self) -> bool:

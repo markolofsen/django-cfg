@@ -11,9 +11,7 @@ from django.utils import timezone
 class OAuthProvider(models.TextChoices):
     """Supported OAuth providers."""
     GITHUB = 'github', 'GitHub'
-    # Future providers:
-    # GOOGLE = 'google', 'Google'
-    # GITLAB = 'gitlab', 'GitLab'
+    GOOGLE = 'google', 'Google'
 
 
 class OAuthConnection(models.Model):
@@ -49,8 +47,8 @@ class OAuthConnection(models.Model):
 
     # Provider-specific user data
     provider_user_id = models.CharField(
-        max_length=100,
-        help_text="User ID from the OAuth provider"
+        max_length=255,
+        help_text="Stable user id at the provider (GitHub numeric id, Google `sub`)"
     )
 
     provider_email = models.EmailField(
@@ -78,7 +76,8 @@ class OAuthConnection(models.Model):
 
     # Token storage
     access_token = models.TextField(
-        help_text="OAuth access token"
+        blank=True,
+        help_text="OAuth access token (empty for Google: no Google API is called after sign-in)"
     )
 
     refresh_token = models.TextField(
@@ -203,9 +202,11 @@ class OAuthConnection(models.Model):
 
 class OAuthState(models.Model):
     """
-    Temporary storage for OAuth state tokens (CSRF protection).
+    One row per sign-in attempt: the CSRF ``state`` (primary key) and the
+    server-side secrets of the attempt (PKCE verifier, nonce).
 
-    States are automatically cleaned up after expiration.
+    A state is single use: ``OAuthService.consume_state`` deletes the row before
+    anything else. Expired rows are purged by a scheduled job.
     """
 
     state = models.CharField(
@@ -223,7 +224,19 @@ class OAuthState(models.Model):
 
     redirect_uri = models.URLField(
         max_length=500,
-        help_text="Redirect URI for callback"
+        help_text="Redirect URI resolved at start; the token exchange reuses exactly this value"
+    )
+
+    code_verifier = models.CharField(
+        max_length=128,
+        blank=True,
+        help_text="PKCE code verifier (server-side only; the challenge goes to the provider)"
+    )
+
+    nonce = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="OIDC nonce the ID token must echo"
     )
 
     source_url = models.URLField(

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable, Sequence
 from decimal import Decimal
+from typing import Optional
 import time
 from urllib.parse import quote, urljoin, urlsplit
 
@@ -13,6 +14,7 @@ from pydantic import ValidationError
 
 from ..._integration import BaseCfgModule, get_api_keys
 from ...providers import PROVIDER_BASE_URLS
+from ...providers.config_builder import openrouter_identity
 from .errors import (
     VideoGenerationFailedError,
     VideoGenerationHTTPError,
@@ -54,8 +56,8 @@ class OpenRouterVideoGenClient(BaseCfgModule):
         base_url: str = PROVIDER_BASE_URLS["openrouter"],
         timeout: float = 60.0,
         transport: httpx.AsyncBaseTransport | None = None,
-        app_title: str = "django_cfg.modules.django_llm-video_gen",
-        app_url: str = "https://cmdop.com/",
+        app_title: Optional[str] = None,
+        app_url: Optional[str] = None,
         max_download_bytes: int = 512 * 1024 * 1024,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         monotonic: Callable[[], float] = time.monotonic,
@@ -71,8 +73,9 @@ class OpenRouterVideoGenClient(BaseCfgModule):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.transport = transport
-        self.app_title = app_title
-        self.app_url = app_url
+        title, url = openrouter_identity()
+        self.app_title = app_title or title
+        self.app_url = app_url or url
         self.max_download_bytes = max_download_bytes
         self._sleep = sleep
         self._monotonic = monotonic

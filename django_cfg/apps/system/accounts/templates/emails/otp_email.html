@@ -107,7 +107,7 @@
     <div class="email-card">
 
       <div class="email-header">
-        <a href="{{ site_url|default:'#' }}" class="brand-name">{{ site_name }}</a>
+        {% if logo_url %}<a href="{{ site_url|default:'#' }}"><img src="{{ logo_url }}" alt="{{ site_name }}" height="32" style="border:0;max-height:32px;" /></a>{% else %}<a href="{{ site_url|default:'#' }}" class="brand-name">{{ site_name }}</a>{% endif %}
       </div>
 
       <div class="email-body">
@@ -129,7 +129,7 @@
         <hr class="divider" />
 
         <p class="email-signature">
-          Questions? Contact our support team.<br />
+          {% if support_email %}Questions? Write to <a href="mailto:{{ support_email }}">{{ support_email }}</a>.{% else %}Questions? Contact our support team.{% endif %}<br />
           <strong>The {{ site_name }} Team</strong>
         </p>
 

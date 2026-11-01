@@ -1,6 +1,7 @@
 export default {
   'index': { display: 'hidden' },
   'environment': 'Environment',
+  'sites': 'Sites',
   'database': 'Database',
   'cache': 'Cache',
   'email': 'Email',

@@ -70,7 +70,7 @@ class Command(SafeCommand):
             # Fallback: create a minimal config from Django settings
             from django_cfg import DjangoConfig
             return DjangoConfig(
-                project_name=getattr(settings, 'PROJECT_NAME', 'Django Project'),
+                project_name=getattr(settings, 'PROJECT_NAME', 'Project'),
                 secret_key=settings.SECRET_KEY,
                 debug=settings.DEBUG,
                 allowed_hosts=settings.ALLOWED_HOSTS,
@@ -94,6 +94,14 @@ class Command(SafeCommand):
 
         for key, value in project_data:
             self.stdout.write(f'  {key:<20}: {value}')
+
+        # Sites section
+        from django_cfg.core.site import describe_sites
+
+        self.stdout.write(self.style.SUCCESS('\n🌐 Sites'))
+        self.stdout.write('-' * 40)
+        for line in describe_sites(config):
+            self.stdout.write(f'  {line}')
 
         # Environment section
         self.stdout.write(self.style.SUCCESS('\n🌍 Environment'))
@@ -178,12 +186,30 @@ class Command(SafeCommand):
 
     def _show_json_format(self, config, include_secrets=False):
         """Show configuration in JSON format."""
+        from django_cfg.core.site import resolve_sites
+
         config_data = {
             'project': {
                 'name': config.project_name,
                 'version': getattr(config, 'project_version', None),
                 'description': getattr(config, 'project_description', None),
             },
+            'sites': [
+                {
+                    'key': site.key,
+                    'name': site.name,
+                    'site_url': site.site_url,
+                    'api_url': site.api_url,
+                    'origins': sorted(site.origins),
+                    'from_email': site.from_email,
+                    'from_name': site.from_name,
+                    'support_email': site.support_email,
+                    'logo_url': site.logo_url,
+                    'locale': site.locale,
+                    'inherited': sorted(site.inherited),
+                }
+                for site in resolve_sites(config)
+            ],
             'environment': {
                 'environment': getattr(config, 'env_mode', 'auto-detected'),
                 'debug': config.debug,

@@ -1,12 +1,16 @@
 """
 OAuth Views
 
-REST API endpoints for OAuth authentication flow.
+One authorize/callback pair per provider, built from the provider registry
+(``make_views``), so GitHub and Google share every line of the flow. URLs stay
+literal per provider (``oauth/github/*``, ``oauth/google/*``) to keep generated
+operation ids stable.
 """
 
-import asyncio
 import logging
+from typing import Dict, Tuple, Type
 
+from django.db import transaction
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -14,9 +18,6 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from django_cfg.apps.system.totp.services import TOTPService, TwoFactorSessionService
-from django_cfg.modules.base import BaseCfgModule
 
 from ..models.oauth import OAuthConnection
 from ..serializers.oauth import (
@@ -29,18 +30,32 @@ from ..serializers.oauth import (
     OAuthProvidersResponseSerializer,
     OAuthTokenResponseSerializer,
 )
-from ..services.github_service import GitHubOAuthError, GitHubOAuthService
+from ..services.oauth import (
+    OAuthError,
+    OAuthErrorCode,
+    OAuthService,
+    all_providers,
+    enabled_providers,
+    finalize_login,
+    get_provider,
+)
+from ..services.oauth.redirect import resolve_redirect_uri
 
 logger = logging.getLogger(__name__)
 
 
+def error_response(code: OAuthErrorCode, description: str = "", status_code: int = 0) -> Response:
+    """The wire shape of every OAuth failure: ``{error, error_description}``."""
+    error = OAuthError(code, description or None)
+    return Response(
+        {"error": error.code.value, "error_description": error.description},
+        status=status_code or error.status,
+    )
+
+
 @extend_schema(tags=["cfg_accounts_oauth"])
 class OAuthProvidersView(APIView):
-    """
-    List available OAuth providers.
-
-    Returns list of OAuth providers that are enabled and configured.
-    """
+    """List the sign-in providers that are configured."""
 
     permission_classes = [AllowAny]
     authentication_classes = []
@@ -48,280 +63,141 @@ class OAuthProvidersView(APIView):
     @extend_schema(
         responses={200: OAuthProvidersResponseSerializer},
         summary="List OAuth providers",
-        description="Get list of available OAuth providers for authentication.",
+        description="Providers that are configured, in display order. The login screen shows exactly these buttons.",
     )
     def get(self, request):  # noqa: ARG002
-        providers = []
-
-        if GitHubOAuthService.is_enabled():
-            providers.append({
-                'id': 'github',
-                'name': 'GitHub',
-                'icon': 'github',
-            })
-
-        # Future providers would be added here
-
         return Response({
-            'providers': providers,
+            "providers": [{"id": p.id, "name": p.name, "icon": p.icon} for p in enabled_providers()],
         })
 
 
-@extend_schema_view(
-    post=extend_schema(
-        tags=["cfg_accounts_oauth"],
-        request=OAuthAuthorizeRequestSerializer,
-        responses={
-            200: OAuthAuthorizeResponseSerializer,
-            503: OAuthErrorSerializer,
-        },
-        summary="Start GitHub OAuth",
-        description="Generate GitHub OAuth authorization URL. Redirect user to this URL to start authentication.",
-    )
-)
-@method_decorator(ratelimit(key='ip', rate='20/m', block=False), name='post')
-class GitHubAuthorizeView(APIView):
-    """
-    Start GitHub OAuth flow.
-
-    Returns authorization URL and state token.
-    Frontend should redirect user to the authorization URL,
-    then handle the callback with the code and state.
-    """
+# The flow runs outside the request transaction: the state must be spent for
+# good the moment it is read (a rollback would un-spend it), and no transaction
+# should stay open across calls to the provider.
+@method_decorator(transaction.non_atomic_requests, name="dispatch")
+class OAuthAuthorizeView(APIView):
+    """Start the flow for ``provider_id``: returns the authorization URL and the state."""
 
     permission_classes = [AllowAny]
     authentication_classes = []
+    provider_id = ""
 
     def post(self, request):
-        if getattr(request, 'limited', False):
-            return Response({"error": "Too many requests"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        provider = get_provider(self.provider_id)
+        if not provider.is_enabled():
+            return error_response(provider.disabled_code)
+        if getattr(request, "limited", False):
+            return error_response(OAuthErrorCode.RATE_LIMITED)
 
         serializer = OAuthAuthorizeRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        if not GitHubOAuthService.is_enabled():
-            return Response(
-                {
-                    'error': 'github_oauth_disabled',
-                    'error_description': 'GitHub OAuth is not enabled',
-                },
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-
         try:
-            # Get redirect_uri from request or auto-generate from config
-            redirect_uri = serializer.validated_data.get('redirect_uri')
-            if not redirect_uri:
-                config = GitHubOAuthService._get_config()
-                if config:
-                    redirect_uri = config.get_redirect_uri(provider="github")
-                if not redirect_uri:
-                    return Response(
-                        {
-                            'error': 'missing_redirect_uri',
-                            'error_description': 'redirect_uri not provided and site_url not configured',
-                        },
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-            source_url = serializer.validated_data.get('source_url', '')
-
-            authorization_url, state = GitHubOAuthService.get_authorization_url(
+            redirect_uri = resolve_redirect_uri(
+                request, provider.id, serializer.validated_data.get("redirect_uri", "")
+            )
+            authorization_url, state = OAuthService.start(
+                provider,
                 redirect_uri=redirect_uri,
-                source_url=source_url,
+                source_url=serializer.validated_data.get("source_url", ""),
             )
+        except OAuthError as exc:
+            logger.warning("OAuth %s authorize refused: %s", provider.id, exc.code.value)
+            return error_response(exc.code, exc.description)
+        except Exception:
+            logger.exception("OAuth %s authorize failed", provider.id)
+            return error_response(OAuthErrorCode.SERVER_ERROR)
 
-            return Response({
-                'authorization_url': authorization_url,
-                'state': state,
-            })
-
-        except GitHubOAuthError as e:
-            logger.error(f"GitHub OAuth authorize error: {e}")
-            return Response(
-                {
-                    'error': 'oauth_error',
-                    'error_description': str(e),
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        return Response({"authorization_url": authorization_url, "state": state})
 
 
-@extend_schema_view(
-    post=extend_schema(
-        tags=["cfg_accounts_oauth"],
-        request=OAuthCallbackRequestSerializer,
-        responses={
-            200: OAuthTokenResponseSerializer,
-            400: OAuthErrorSerializer,
-        },
-        summary="Complete GitHub OAuth",
-        description="Exchange authorization code for JWT tokens. Call this after GitHub redirects back with code.",
-    )
-)
-@method_decorator(ratelimit(key='ip', rate='10/m', block=False), name='post')
-class GitHubCallbackView(APIView):
-    """
-    Handle GitHub OAuth callback.
-
-    Exchanges authorization code for access token, fetches user info,
-    creates/links user account, and returns JWT tokens.
-    """
+@method_decorator(transaction.non_atomic_requests, name="dispatch")
+class OAuthCallbackView(APIView):
+    """Finish the flow for ``provider_id``: consume the state, exchange the code, sign the user in."""
 
     permission_classes = [AllowAny]
     authentication_classes = []
+    provider_id = ""
 
     def post(self, request):
-        if getattr(request, 'limited', False):
-            return Response({"error": "Too many requests"}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        provider = get_provider(self.provider_id)
+        if not provider.is_enabled():
+            return error_response(provider.disabled_code)
+        if getattr(request, "limited", False):
+            return error_response(OAuthErrorCode.RATE_LIMITED)
 
         serializer = OAuthCallbackRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        code = serializer.validated_data['code']
-        state = serializer.validated_data['state']
-
-        # Get redirect_uri from request or auto-generate from config
-        redirect_uri = serializer.validated_data.get('redirect_uri')
-        if not redirect_uri:
-            config = GitHubOAuthService._get_config()
-            if config:
-                redirect_uri = config.get_redirect_uri(provider="github")
-            if not redirect_uri:
-                return Response(
-                    {
-                        'error': 'missing_redirect_uri',
-                        'error_description': 'redirect_uri not provided and site_url not configured',
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-        # Verify state
-        oauth_state = GitHubOAuthService.verify_state(state, redirect_uri)
-        if not oauth_state:
-            return Response(
-                {
-                    'error': 'invalid_state',
-                    'error_description': 'Invalid or expired state token',
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        source_url = oauth_state.source_url
-
-        # Delete used state
-        oauth_state.delete()
+        if not serializer.is_valid():
+            return error_response(OAuthErrorCode.INVALID_STATE)
 
         try:
-            # Run async code in sync context
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-            try:
-                # Exchange code for token
-                token_data = loop.run_until_complete(
-                    GitHubOAuthService.exchange_code_for_token(
-                        code=code,
-                        redirect_uri=redirect_uri,
-                    )
-                )
-                access_token = token_data['access_token']
-                scopes = token_data.get('scope', '').split(',')
-
-                # Get GitHub user info
-                github_user = loop.run_until_complete(
-                    GitHubOAuthService.get_github_user(access_token)
-                )
-            finally:
-                loop.close()
-
-            # Create/link user (sync)
-            user, user_created, connection_created = GitHubOAuthService.authenticate_or_create_user(
-                github_user=github_user,
-                access_token=access_token,
-                scopes=scopes,
-                source_url=source_url,
+            result = OAuthService.complete(
+                provider,
+                code=serializer.validated_data["code"],
+                state=serializer.validated_data["state"],
             )
+            body = finalize_login(request, result, sender=type(self))
+        except OAuthError as exc:
+            logger.warning("OAuth %s callback refused: %s", provider.id, exc.code.value)
+            return error_response(exc.code, exc.description)
+        except Exception:
+            logger.exception("OAuth %s callback failed", provider.id)
+            return error_response(OAuthErrorCode.SERVER_ERROR)
 
-            # Check if 2FA is enabled system-wide AND user has TOTP device
-            is_2fa_enabled = BaseCfgModule().is_totp_enabled()
-            has_device = TOTPService.has_active_device(user)
+        return Response(body)
 
-            if is_2fa_enabled and has_device:
-                # Create 2FA session
-                session = TwoFactorSessionService.create_session(user, request)
-                logger.info(f"2FA required for OAuth user {user.email}, session {session.id}")
 
-                return Response({
-                    'requires_2fa': True,
-                    'session_id': str(session.id),
-                    'access': None,
-                    'refresh': None,
-                    'user': None,
-                    'is_new_user': user_created,
-                    'is_new_connection': connection_created,
-                    'should_prompt_2fa': False,
-                })
+def make_views(provider) -> Tuple[Type[APIView], Type[APIView]]:
+    """The authorize and callback view classes of one provider, documented for OpenAPI."""
+    authorize = type(
+        f"{provider.name}AuthorizeView",
+        (OAuthAuthorizeView,),
+        {"provider_id": provider.id, "__doc__": f"Start {provider.name} sign-in."},
+    )
+    callback = type(
+        f"{provider.name}CallbackView",
+        (OAuthCallbackView,),
+        {"provider_id": provider.id, "__doc__": f"Complete {provider.name} sign-in."},
+    )
+    authorize = method_decorator(ratelimit(key="ip", rate="20/m", block=False), name="post")(authorize)
+    callback = method_decorator(ratelimit(key="ip", rate="10/m", block=False), name="post")(callback)
+    authorize = extend_schema_view(
+        post=extend_schema(
+            tags=["cfg_accounts_oauth"],
+            request=OAuthAuthorizeRequestSerializer,
+            responses={200: OAuthAuthorizeResponseSerializer, 400: OAuthErrorSerializer, 503: OAuthErrorSerializer},
+            summary=f"Start {provider.name} OAuth",
+            description=(
+                f"Generate the {provider.name} authorization URL. Redirect the user to it to start "
+                "authentication. The redirect URI is derived from the request Origin."
+            ),
+        )
+    )(authorize)
+    callback = extend_schema_view(
+        post=extend_schema(
+            tags=["cfg_accounts_oauth"],
+            request=OAuthCallbackRequestSerializer,
+            responses={
+                200: OAuthTokenResponseSerializer,
+                400: OAuthErrorSerializer,
+                403: OAuthErrorSerializer,
+                429: OAuthErrorSerializer,
+                502: OAuthErrorSerializer,
+                503: OAuthErrorSerializer,
+            },
+            summary=f"Complete {provider.name} OAuth",
+            description=(
+                f"Exchange the authorization code for JWT tokens. Call this after {provider.name} "
+                "redirects back with a code. The state is single use."
+            ),
+        )
+    )(callback)
+    return authorize, callback
 
-            # Generate JWT tokens. Remembered sessions are capped at 30 days.
-            from django_cfg.middleware.dpop import mint_tokens_for_request
-            refresh, access = mint_tokens_for_request(user, request)
 
-            # Fire auth signal (login alert, activity logging, etc.)
-            from ..signals import user_authenticated
-            user_authenticated.send(sender=self.__class__, user=user, request=request)
-
-            # Persist the browser's language before announcing verification:
-            # the welcome-email receiver reads ``user.language``, and this is the
-            # only point on the OAuth path where a language is observable at all
-            # (there is no OTP request to carry it).
-            from ..services.welcome import persist_user_language
-            persist_user_language(
-                user, request.META.get('HTTP_ACCEPT_LANGUAGE', '') or ''
-            )
-
-            # The OAuth provider (GitHub) hands us an already-verified primary
-            # email, so announce it the same way the OTP path does — this is the
-            # extension point products use to enroll a newsletter subscription.
-            # The framework passes no consent; the product's receiver decides.
-            from ..services.verification import mark_user_verified
-            mark_user_verified(user)
-
-            return Response({
-                'requires_2fa': False,
-                'session_id': None,
-                'access': str(access),
-                'refresh': str(refresh),
-                'user': {
-                    'id': user.pk,
-                    'email': user.email,
-                    'username': user.username,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name,
-                },
-                'is_new_user': user_created,
-                'is_new_connection': connection_created,
-                'should_prompt_2fa': user.should_prompt_2fa,
-            })
-
-        except GitHubOAuthError as e:
-            logger.error(f"GitHub OAuth callback error: {e}")
-            return Response(
-                {
-                    'error': 'oauth_error',
-                    'error_description': str(e),
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        except Exception as e:
-            logger.exception(f"GitHub OAuth unexpected error: {e}")
-            return Response(
-                {
-                    'error': 'server_error',
-                    'error_description': 'Authentication failed',
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+PROVIDER_VIEWS: Dict[str, Tuple[Type[APIView], Type[APIView]]] = {
+    provider.id: make_views(provider) for provider in all_providers()
+}
 
 
 @extend_schema(tags=["cfg_accounts_oauth"])
@@ -382,7 +258,7 @@ class OAuthDisconnectView(APIView):
         if not connection:
             return Response(
                 {
-                    'error': 'not_found',
+                    'error': OAuthErrorCode.NOT_FOUND.value,
                     'error_description': f'No {provider} connection found',
                 },
                 status=status.HTTP_404_NOT_FOUND

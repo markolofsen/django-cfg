@@ -1,30 +1,37 @@
 """What a person sees opening the backend's own address (`api.<domain>/`).
 
-Not a page of ours: a redirect to the same domain without the `api.` label —
-`api.mlsbali.com/` → `https://mlsbali.com/`. Read from the request's host, so
-one Django serving several brands sends each to its own site. A host with no
-`api.` label (localhost, an IP, an internal name) gets a one-line text answer.
+Not a page of ours: a redirect to the site whose `api_url` host this is —
+`api.mlsbali.com/` → `https://mlsbali.com/`. One Django serving several sites
+sends each to its own; a single-site project has one. Any other host (localhost,
+an IP, an internal name, an unregistered domain) gets a one-line text answer.
 
 Added by `add_django_cfg_urls` after the project's routes, so a project's own
 `""` route still wins.
 """
 
+from urllib.parse import urlsplit
+
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 
-API_LABEL = "api."
+from django_cfg.core.site import sites
 
 
 def public_site_for(host: str) -> str | None:
-    """`https://<domain>/` for `api.<domain>[:port]`, else None."""
+    """The `site_url` of the site whose `api_url` host is `host`, with a trailing slash."""
     name = host.split(":")[0].strip().lower().rstrip(".")
-    if not name.startswith(API_LABEL) or "." not in name[len(API_LABEL):]:
+    # A loopback API host never has a public page to send people to, and a
+    # site whose API lives on its own host would redirect to itself.
+    if name in {"localhost", "127.0.0.1", "::1"} or name.endswith(".localhost"):
         return None
-    return f"https://{name[len(API_LABEL):]}/"
+    for site in sites():
+        if urlsplit(site.api_url).hostname == name and urlsplit(site.site_url).hostname != name:
+            return site.site_url + "/"
+    return None
 
 
 def root_view(request: HttpRequest) -> HttpResponse:
     # 302, not 301: a permanent redirect is cached by browsers for good.
-    site = public_site_for(request.get_host())
-    if site:
-        return HttpResponseRedirect(site)
+    target = public_site_for(request.get_host())
+    if target:
+        return HttpResponseRedirect(target)
     return HttpResponse("OK\n", content_type="text/plain; charset=utf-8")

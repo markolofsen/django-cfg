@@ -1,13 +1,6 @@
 """
-Django-CFG Template Tags — backward-compatibility shim.
-
-All tags are implemented in:
-  - django_cfg_lib       → lib metadata, env, frontend detection
-  - django_cfg_auth      → JWT tokens, user permissions
-  - django_cfg_dashboard → custom admin dashboard tabs
-
-This file re-exports all of them so existing {% load django_cfg %} keeps working.
-New templates should {% load django_cfg_lib %} / {% load django_cfg_auth %} etc. directly.
+Django-CFG template tags: lib metadata, environment, frontend detection,
+JWT tokens, admin dashboard tabs. Load with ``{% load django_cfg %}``.
 """
 
 import socket
@@ -101,12 +94,11 @@ def version_update_info():
 
 @register.simple_tag
 def project_name():
-    from django_cfg.config import LIB_NAME
     from django_cfg.core.state import get_current_config
     config = get_current_config()
     if config and hasattr(config, 'project_name'):
         return config.project_name
-    return LIB_NAME
+    return ""
 
 
 @register.simple_tag

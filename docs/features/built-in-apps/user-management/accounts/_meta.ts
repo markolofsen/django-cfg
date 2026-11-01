@@ -5,6 +5,6 @@ export default {
   'welcome-email': 'Welcome Email',
   'jwt': 'JWT Configuration',
   'two-factor': 'Two-Factor Auth (2FA)',
-  'oauth': 'OAuth (GitHub)',
+  'oauth': 'OAuth (Google, GitHub)',
   'login-alerts': 'Login Alerts',
 }

@@ -62,7 +62,7 @@ class BaseCfgModule(ABC):
             from django_cfg.core.config import DjangoConfig
 
             return DjangoConfig(
-                project_name=getattr(settings, "PROJECT_NAME", "Django Project"),
+                project_name=getattr(settings, "PROJECT_NAME", "Project"),
                 secret_key=settings.SECRET_KEY,
                 debug=settings.DEBUG,
                 allowed_hosts=settings.ALLOWED_HOSTS,
@@ -244,20 +244,17 @@ class BaseCfgModule(ABC):
         # Default: enabled (TOTP app is always available)
         return True
 
-    def is_github_oauth_enabled(self) -> bool:
+    def is_oauth_provider_enabled(self, name: str) -> bool:
         """
-        Check if GitHub OAuth is enabled and configured.
+        Check if an OAuth provider (``github``, ``google``) has credentials.
 
-        Returns:
-            True if GitHub OAuth is properly configured, False otherwise
+        Reads the generated ``<NAME>_OAUTH_CONFIG`` setting, so it also sees a
+        provider switched on through the environment alone.
         """
-        github_oauth_config = self._get_config_key('github_oauth', None)
+        from django.conf import settings
 
-        # Check if github_oauth config exists and is properly configured
-        if github_oauth_config and hasattr(github_oauth_config, 'is_configured'):
-            return github_oauth_config.is_configured()
-
-        return False
+        provider_config = getattr(settings, f"{name.upper()}_OAUTH_CONFIG", None)
+        return bool(provider_config and provider_config.is_configured())
 
 
 # Export the base class

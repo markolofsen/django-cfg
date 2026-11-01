@@ -160,19 +160,19 @@ class UnfoldConfig(BaseModel):
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
 
     # Site branding
-    site_title: str = Field(
-        default="Django-CFG Admin",
-        description="Site title shown in admin"
+    site_title: Optional[str] = Field(
+        default=None,
+        description="Site title shown in admin (default: '<project_name> Admin')"
     )
 
-    site_header: str = Field(
-        default="Django Config Toolkit",
-        description="Site header text"
+    site_header: Optional[str] = Field(
+        default=None,
+        description="Site header text (default: project_name)"
     )
 
-    site_subheader: str = Field(
-        default="🚀 Type-safe Django Configuration",
-        description="Site subheader text"
+    site_subheader: Optional[str] = Field(
+        default=None,
+        description="Site subheader text (default: none)"
     )
 
     site_symbol: str = Field(
@@ -427,13 +427,12 @@ class UnfoldConfig(BaseModel):
             }
         }
 
-    def to_django_settings(self) -> Dict[str, Any]:
-        """Generate Django settings for Unfold."""
+    def to_django_settings(self, project_name: str = "") -> Dict[str, Any]:
+        """Generate Django settings for Unfold. Unset titles come from ``project_name``."""
         # Base Unfold configuration
         unfold_settings = {
-            "SITE_TITLE": self.site_title,
-            "SITE_HEADER": self.site_header,
-            "SITE_SUBHEADER": self.site_subheader,
+            "SITE_TITLE": self.site_title or f"{project_name} Admin".strip(),
+            "SITE_HEADER": self.site_header or project_name or "Admin",
             "SITE_URL": self.site_url,
             "SITE_SYMBOL": self.site_symbol,
             "SHOW_HISTORY": self.show_history,
@@ -499,17 +498,11 @@ class UnfoldConfig(BaseModel):
         sidebar_config["navigation"] = get_navigation
         unfold_settings["SIDEBAR"] = sidebar_config
 
-        # Add site dropdown - combine default from dashboard + project dropdown
+        if self.site_subheader:
+            unfold_settings["SITE_SUBHEADER"] = self.site_subheader
+
+        # Site dropdown: only what the project declares
         dropdown_items = []
-
-        # First add default dropdown items
-        try:
-            from django_cfg.config import get_default_dropdown_items
-            dropdown_items.extend([item.to_dict() for item in get_default_dropdown_items()])
-        except (ImportError, Exception):
-            pass
-
-        # Then add project-specific dropdown items
         if self.site_dropdown:
             dropdown_items.extend([item.to_dict() for item in self.site_dropdown])
         elif self.site_dropdown_items:

@@ -26,7 +26,6 @@ export default function LoginPage() {
   return (
     <AuthLayout
       redirectUrl="/dashboard"
-      enableGithubAuth={true}
       termsUrl="/terms"
       privacyUrl="/privacy"
     />
@@ -48,9 +47,10 @@ If the account has 2FA, a [challenge dialog](#two-factor-challenge) opens over t
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `redirectUrl` | `string` | `/dashboard` | Where to go after success |
+| `redirectUrl` | `string` | `/private` | Where to go after success, unless a saved return URL exists |
 | `sourceUrl` | `string` | — | App URL for analytics / OTP emails |
-| `enableGithubAuth` | `boolean` | `false` | Show GitHub OAuth button |
+| `oauthProviders` | `('github' \| 'google')[]` | server list | Optional. Only narrows (and orders) the providers the server reports; it cannot show one the server has not enabled |
+| `enableGithubAuth` | `boolean` | — | Deprecated, no effect. Buttons come from `GET /cfg/accounts/oauth/providers/` |
 | `logo` | `ReactNode` | — | Brand mark (inline SVG, `<img>`, lock-up); sits on the media half or above the form |
 | `variant` | `'fullsplit' \| 'centered' \| 'split'` | `'fullsplit'` | Shell layout |
 | `termsUrl` | `string` | — | Terms of service link |
@@ -207,19 +207,49 @@ const {
 })
 ```
 
-### `useGithubAuth` — OAuth
+### `useOAuthLogin` — OAuth
+
+One hook for every provider (`github`, `google`). `AuthLayout` already uses it; call it directly only for a custom screen.
 
 ```tsx
 'use client'
-import { useGithubAuth } from '@djangocfg/api/auth'
+import { useOAuthLogin, useOAuthProviders } from '@djangocfg/api/auth'
 
-const { startGithubAuth, isLoading, error } = useGithubAuth({
+const { providers, isReady } = useOAuthProviders() // enabled providers, server order
+const { start, complete, isLoading, loadingProvider, error, errorCode } = useOAuthLogin({
   sourceUrl: window.location.origin,
+  redirectUrl: '/dashboard',
+  onSuccess: (user, isNewUser, provider) => {},
+  onError: (message, code) => {},
 })
-// startGithubAuth() → redirects to GitHub
+// start('google') → same-tab redirect to the provider
+// complete(provider, code, state) → on the /auth?provider=<id> page
 ```
 
-OAuth callback is handled automatically by `AuthLayout`.
+`useOAuthProviders` keeps the last answer in `sessionStorage` (`cfg.auth.oauth_providers`), so the buttons are there on a reload or after a failed attempt while the server answer revalidates; a failed request shows that list, else none. Error `code` values are the generated `OAuthErrorCodeEnum`.
+
+`complete` requires the `state` saved by `start`, single use. A missing or different state fails with `invalid_state`. The saved return URL is honoured, then `redirectUrl`, then `/private`. `AuthLayout` handles the `/auth?provider=<id>` callback itself, strips `code`/`state` from the URL and shows a translated message for each error code.
+
+`useGithubAuth` is a deprecated alias of `useOAuthLogin('github')`, kept for one minor.
+
+#### Provider icons
+
+The buttons draw their icons from `GoogleIcon` and `GithubIcon` in `packages/layouts/src/layouts/AuthLayout/components/oauth/`, picked through `OAUTH_PROVIDER_UI`. They are internal, not package exports. `GoogleIcon` is the four-colour "G" and keeps its own colours in light and dark; `GithubIcon` uses `currentColor`. Both are `aria-hidden`; the button text carries the name.
+
+### Testing sign-in in Storybook
+
+`AuthFlow.stories.tsx` runs the real hooks against a faked network. `oauthApiMock` from `@djangocfg/layouts/testing` (used as a story `beforeEach`) answers `GET /oauth/providers/` and the `authorize` and `callback` POSTs at the `fetch` level, for any of the 16 error codes with their HTTP status. It refuses every other request and holds back full-page navigations, so the story iframe stays put; `getOAuthApiMock()` returns the recorded calls and navigations for `play` assertions.
+
+- Pair it with `MockAuthFormProvider` and its `oauthFromServer` prop for the button list, or render the whole `AuthLayout` for a callback round trip.
+- `seedOAuthBrowser` puts the provider's parameters in the address bar and the stored state in `sessionStorage`, as a real return leaves them.
+- `OAUTH_SERVER_ERROR_CODES` and `mockOAuthState` are exported from the same entry point.
+
+```bash
+pnpm --filter @djangocfg/storybook test:stories:contracts   # sign-in contract stories
+pnpm --filter @djangocfg/storybook test:stories:all
+```
+
+The runner drives Playwright Chromium. Install it once with `pnpm --filter @djangocfg/storybook exec playwright install chromium`.
 
 ### `useTwoFactor` — verify, set up, manage
 
@@ -307,7 +337,7 @@ Auth events are tracked automatically when analytics is configured in `AppLayout
 |---|---|
 | `AUTH_LOGIN_SUCCESS` | OTP verify or OAuth success |
 | `AUTH_LOGOUT` | `logout()` called |
-| `AUTH_OAUTH_START` / `_SUCCESS` / `_FAIL` | GitHub OAuth flow |
+| `AUTH_OAUTH_START` / `_SUCCESS` / `_FAIL` | Provider sign-in flow (Google or GitHub) |
 | `AUTH_2FA_SETUP_COMPLETE` | 2FA enabled |
 | `AUTH_2FA_VERIFY_SUCCESS` / `_FAIL` | 2FA code verification |
 
@@ -317,7 +347,6 @@ Auth events are tracked automatically when analytics is configured in `AppLayout
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_GITHUB_CLIENT_ID=Iv1.abc123  # OAuth only
 ```
 
 ---
@@ -325,7 +354,7 @@ NEXT_PUBLIC_GITHUB_CLIENT_ID=Iv1.abc123  # OAuth only
 ## See Also
 
 - **[OTP & Brute-Force Protection](./otp)** — throttle layers, anti-enumeration
-- **[OAuth (GitHub)](./oauth)** — backend setup and account linking
+- **[OAuth (Google, GitHub)](./oauth)** — backend setup, linking rule, error codes
 - **[Two-Factor Auth](./two-factor)** — TOTP enforcement and backup codes
 - **[JWT Configuration](./jwt)** — token lifetimes, rotation
 

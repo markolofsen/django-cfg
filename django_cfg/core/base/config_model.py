@@ -37,6 +37,7 @@ from ...models import (
     PaymentsConfig,
     SimpleHistoryConfig,
     GitHubOAuthConfig,
+    GoogleOAuthConfig,
     LimitsConfig,
     SpectacularConfig,
     StorageConfig,
@@ -47,7 +48,16 @@ from ...models import (
 from ...modules.django_dashboard.models import DashboardConfig
 from ..utils.display_name import normalize_display_name, slugify_name
 from ..exceptions import ConfigurationError
+from ..site import SiteConfig, _netloc, check_email, check_locale, check_logo_url, normalize_origin
 from ..types.enums import EnvironmentMode, StartupInfoMode
+
+# Brand fields a site owns once `sites` is declared: DjangoConfig field -> SiteConfig field.
+_SITE_OWNED_FIELDS = {
+    "site_url": "site_url",
+    "support_email": "support_email",
+    "logo_url": "logo_url",
+    "default_locale": "locale",
+}
 
 
 class DjangoConfig(BaseModel):
@@ -146,7 +156,10 @@ class DjangoConfig(BaseModel):
 
     security_domains: List[str] = Field(
         default_factory=lambda: ["localhost", "127.0.0.1"],
-        description="Domains for ALLOWED_HOSTS, CORS, CSRF (auto-configured)",
+        description=(
+            "Extra hosts for ALLOWED_HOSTS, CORS, CSRF: mcp.*, internal names, wildcards. "
+            "Single-site: the project's own hosts too. Declared sites add theirs automatically."
+        ),
     )
 
     ssl_redirect: Optional[bool] = Field(
@@ -201,12 +214,33 @@ class DjangoConfig(BaseModel):
 
     site_url: str = Field(
         default="http://localhost:3000",
-        description="Frontend site URL",
+        description="Frontend site URL (single-site; with `sites`, set it per SiteConfig).",
     )
 
     api_url: str = Field(
         default="http://localhost:8000",
-        description="Backend API URL",
+        description="Backend API URL: where this Django answers. A site without its own api_url inherits it.",
+    )
+
+    sites: List[SiteConfig] = Field(
+        default_factory=list,
+        description=(
+            "Sites this Django serves, first is the default. Empty = one site built from "
+            "project_name, site_url and api_url. With sites, site_url, support_email, logo_url and "
+            "default_locale must stay unset: each site owns them. See django_cfg.core.site."
+        ),
+    )
+
+    support_email: Optional[str] = Field(
+        default=None, description="Support address shown to users (single-site; per site: SiteConfig).",
+    )
+
+    logo_url: Optional[str] = Field(
+        default=None, description="Absolute URL of the logo for mail (single-site; per site: SiteConfig).",
+    )
+
+    default_locale: Optional[str] = Field(
+        default=None, description="Default locale for mail and copy, e.g. 'en'. Default 'en'.",
     )
 
     media_url: str = Field(
@@ -311,7 +345,18 @@ class DjangoConfig(BaseModel):
 
     github_oauth: Optional[GitHubOAuthConfig] = Field(
         default=None,
-        description="GitHub OAuth for social authentication",
+        description=(
+            "GitHub sign-in. None = built from GITHUB_OAUTH__CLIENT_ID / GITHUB_OAUTH__CLIENT_SECRET "
+            "when both are set; otherwise off."
+        ),
+    )
+
+    google_oauth: Optional[GoogleOAuthConfig] = Field(
+        default=None,
+        description=(
+            "Google sign-in. None = built from GOOGLE_OAUTH__CLIENT_ID / GOOGLE_OAUTH__CLIENT_SECRET "
+            "when both are set; otherwise off."
+        ),
     )
 
     two_factor: Optional[TwoFactorConfig] = Field(
@@ -492,6 +537,7 @@ class DjangoConfig(BaseModel):
     _base_dir: Optional[Path] = PrivateAttr(default=None)
     _django_settings: Optional[Dict[str, Any]] = PrivateAttr(default=None)
     _service: Optional[Any] = PrivateAttr(default=None)
+    _sites: Optional[tuple] = PrivateAttr(default=None)
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                            VALIDATORS                                     ║
@@ -506,6 +552,21 @@ class DjangoConfig(BaseModel):
         is fine. Identifier use goes through ``project_slug()``, never the raw name.
         """
         return normalize_display_name(v)
+
+    @field_validator("support_email")
+    @classmethod
+    def validate_support_email(cls, v: Optional[str]) -> Optional[str]:
+        return check_email(v)
+
+    @field_validator("logo_url")
+    @classmethod
+    def validate_logo_url(cls, v: Optional[str]) -> Optional[str]:
+        return check_logo_url(v)
+
+    @field_validator("default_locale")
+    @classmethod
+    def validate_default_locale(cls, v: Optional[str]) -> Optional[str]:
+        return check_locale(v)
 
     @field_validator("secret_key")
     @classmethod
@@ -604,7 +665,76 @@ class DjangoConfig(BaseModel):
                 suggestions=[f"Add database configurations for: {', '.join(missing_databases)}"],
             )
 
+        # A sending backend with no sender would mail from Django's built-in
+        # placeholder address.
+        if (
+            self.is_production
+            and self.email
+            and self.email.backend in ("smtp", "gateway")
+            and not self.email.default_from
+        ):
+            raise ConfigurationError(
+                f"EmailConfig(backend={self.email.backend!r}) needs default_from in production",
+                suggestions=["Set EmailConfig(default_from='noreply@your-domain')"],
+            )
+
         return self
+
+    def _set_explicitly(self, name: str) -> bool:
+        """True when the project gave ``name`` a value: an init argument, or a subclass that
+        redefines the field (the way env-built consumers write ``site_url: str = env.app.site_url``).
+        ``None`` on an optional field is no value."""
+        redefined = type(self).model_fields[name].default != DjangoConfig.model_fields[name].default
+        if getattr(self, name) is None:
+            return False
+        return name in self.model_fields_set or redefined
+
+    @model_validator(mode="after")
+    def validate_sites(self) -> "DjangoConfig":
+        """Site keys and origins are unique; the brand fields live on the sites only.
+        (The https rule runs in model_post_init, once the environment is known.)"""
+        keys = [s.key for s in self.sites]
+        dup_keys = sorted({k for k in keys if keys.count(k) > 1})
+        if dup_keys:
+            raise ConfigurationError(
+                f"Duplicate site keys: {dup_keys}", suggestions=["Give each SiteConfig its own key"],
+            )
+        owner: Dict[str, str] = {}
+        for site in self.sites:
+            for origin in (site.site_url, *site.extra_origins):
+                if owner.setdefault(origin, site.key) != site.key:
+                    raise ConfigurationError(
+                        f"Origin {origin} belongs to both sites {owner[origin]!r} and {site.key!r}",
+                        suggestions=["An origin picks one site: remove it from one of them"],
+                    )
+        if self.sites:
+            self._reject_deployment_brand_fields()
+            for site in self.sites:
+                if site.api_url is None and _netloc(site.site_url) == _netloc(self.api_url):
+                    raise ConfigurationError(
+                        f"site {site.key!r}: site_url and the deployment api_url share the host "
+                        f"{_netloc(site.site_url)!r}",
+                        suggestions=["Give the site its own api_url, or point DjangoConfig.api_url at the API host"],
+                    )
+        return self
+
+    def _reject_deployment_brand_fields(self) -> None:
+        """With `sites`, the sites own site_url, support_email, logo_url and the locale."""
+        misplaced = [name for name in _SITE_OWNED_FIELDS if self._set_explicitly(name)]
+        if not misplaced:
+            return
+        moves = [f"{name} -> SiteConfig({_SITE_OWNED_FIELDS[name]}=...)" for name in misplaced]
+        raise ConfigurationError(
+            f"DjangoConfig.{', DjangoConfig.'.join(misplaced)} set while `sites` is declared; "
+            f"the sites own these fields. Move: {'; '.join(moves)}.",
+            suggestions=[
+                "Delete the field from DjangoConfig and set it on the SiteConfig that owns it, "
+                f"for example sites=[SiteConfig(key={self.sites[0].key!r}, ...)]",
+                "A value built from the environment (site_url=env.app.site_url) moves with it: "
+                "give it to the SiteConfig instead",
+                "project_name and api_url stay on DjangoConfig: they describe the deployment, not a site",
+            ],
+        )
 
     @model_validator(mode="after")
     def enforce_production_security(self) -> "DjangoConfig":
@@ -663,6 +793,25 @@ class DjangoConfig(BaseModel):
                     elif env_normalized in ('test', 'testing'):
                         object.__setattr__(self, 'env_mode', EnvironmentMode.TEST)
                         break
+
+        self._require_https_sites()
+
+    def _require_https_sites(self) -> None:
+        """Declared sites and the logo are https outside development and tests."""
+        if self.is_development or self.is_test:
+            return
+        urls = [
+            u for s in self.sites
+            for u in (s.site_url, s.api_url or self.api_url, *s.extra_origins, s.logo_url) if u
+        ]
+        if self.logo_url:
+            urls.append(self.logo_url)
+        insecure = [u for u in urls if normalize_origin(u) and not u.lower().startswith("https://")]
+        if insecure:
+            raise ConfigurationError(
+                f"Sites must use https outside development: {insecure}",
+                suggestions=["Use https:// URLs, or set env_mode='development'"],
+            )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                            PROPERTIES                                     ║
@@ -758,6 +907,7 @@ class DjangoConfig(BaseModel):
     def invalidate_cache(self) -> None:
         """Invalidate cached Django settings."""
         self._django_settings = None
+        self._sites = None
 
     def model_dump_for_django(self, **kwargs) -> Dict[str, Any]:
         """Serialize model data in Django-compatible format."""

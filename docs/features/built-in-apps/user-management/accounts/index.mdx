@@ -15,7 +15,7 @@ The **Accounts** app is the authentication backbone of every Django-CFG project 
 flowchart LR
     subgraph Frontend["Next.js"]
         AL["AuthLayout\n(@djangocfg/layouts)"]
-        H["@djangocfg/api/auth\nuseAuth · useAuthForm\nuseGithubAuth · useTwoFactor"]
+        H["@djangocfg/api/auth\nuseAuth · useAuthForm\nuseOAuthLogin · useTwoFactor"]
     end
 
     subgraph Backend["Django"]
@@ -42,7 +42,7 @@ flowchart LR
 | **OTP Login** | Passwordless email — 4-digit codes, 10-min expiry |
 | **JWT Tokens** | Access + refresh with rotation and blacklist |
 | **2FA (TOTP)** | Google Auth, Authy, any TOTP app |
-| **OAuth** | GitHub social login |
+| **OAuth** | Google and GitHub sign-in; one verified email is one user across email code, Google and GitHub |
 | **Brute-force protection** | 4-layer defense — IP rate limits, per-email throttle, lockout |
 | **Email validation** | RFC syntax check + normalization (no blocklist, no MX/DNS lookups) |
 | **Soft delete** | GDPR-safe account archive |
@@ -111,8 +111,8 @@ def purge_product_data(sender, user, **kwargs):
 ```
 
 `user_email_verified` is the hook to enroll a newsletter/marketing subscription
-on sign-up. It fires for **both** login paths — OTP verify and OAuth (GitHub's
-primary email arrives already verified) — so a receiver connected to it covers
+on sign-up. It fires for **both** login paths — OTP verify and OAuth (the provider-verified
+email of Google or GitHub) — so a receiver connected to it covers
 every way a user reaches your service. The framework stores no subscription and
 sends no consent of its own on the OAuth path (`consent=None`); your receiver
 decides what proof it requires and where the subscription lives:
@@ -155,8 +155,8 @@ class MyConfig(DjangoConfig):
   <Card title="Two-Factor Auth" href="/features/built-in-apps/user-management/accounts/two-factor">
     TOTP setup, enforcement, backup codes
   </Card>
-  <Card title="OAuth (GitHub)" href="/features/built-in-apps/user-management/accounts/oauth">
-    Social login, account linking, CSRF protection
+  <Card title="OAuth (Google, GitHub)" href="/features/built-in-apps/user-management/accounts/oauth">
+    Social login, linking rule, PKCE and single-use state, error codes
   </Card>
 </Cards>
 

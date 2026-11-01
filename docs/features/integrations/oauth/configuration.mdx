@@ -1,10 +1,103 @@
 ---
 title: OAuth Configuration Reference
-description: All GitHubOAuthConfig options.
+description: Environment variables, config classes, system checks, the oauth_check command and the redirect URIs for Google and GitHub sign-in.
 ---
 
 import { Callout } from 'nextra/components'
 
+# OAuth Configuration Reference
+
+A provider needs a client id and a secret and nothing else. How the flow works and what the endpoints return: [OAuth sign-in](/features/built-in-apps/user-management/accounts/oauth).
+
+## Environment variables
+
+| Variable | Provider |
+|----------|----------|
+| `GOOGLE_OAUTH__CLIENT_ID`, `GOOGLE_OAUTH__CLIENT_SECRET` | Google |
+| `GITHUB_OAUTH__CLIENT_ID`, `GITHUB_OAUTH__CLIENT_SECRET` | GitHub |
+
+When `DjangoConfig.google_oauth` / `github_oauth` is `None`, the settings generator reads these from `os.environ` and builds the config. Both set: the provider is on. One set: the provider stays off and a [system check](#diagnostics) says so. Values are stripped of whitespace.
+
+A project whose dotenv loader fills only its own settings object (not `os.environ`) passes an explicit config instead; it wins over the environment:
+
+```python
+from django_cfg import DjangoConfig, GoogleOAuthConfig, GitHubOAuthConfig
+
+class MyConfig(DjangoConfig):
+    google_oauth = GoogleOAuthConfig(client_id="...apps.googleusercontent.com", client_secret="...")
+    github_oauth = GitHubOAuthConfig(client_id="...", client_secret="...")
+```
+
+To turn a provider off, remove the config object and the variables.
+
+## Config classes
+
+| Class | Fields |
+|-------|--------|
+| `GitHubOAuthConfig` | `client_id`, `client_secret` |
+| `GoogleOAuthConfig` | `client_id`, `client_secret`, `allowed_hosted_domains: list[str] = []` |
+| `OAuthConfig` | container with `github` and `google`; `get_enabled_providers()` |
+
+`allowed_hosted_domains` restricts Google sign-in to Workspace domains (lower-cased; checked against the signed `hd` claim). Empty means any Google account.
+
+The settings generator emits `GITHUB_OAUTH_CONFIG` and `GOOGLE_OAUTH_CONFIG`; the provider registry reads them on each call.
+
+### Removed options
+
+`scope`, `callback_path`, `state_timeout_seconds`, `allow_account_linking`, `auto_create_user`, `enabled` and the endpoint URLs are constants of the provider code now. `GitHubOAuthConfig` still accepts these arguments for one minor release, ignores them and raises a `DeprecationWarning`; delete them. `GitHubOAuthConfig.get_redirect_uri()` is gone: redirect URIs come from the [`Site`](/configuration/sites).
+
+## Redirect URIs
+
+The registered redirect URI of a site origin is always:
+
+```
+<origin>/auth?provider=google
+<origin>/auth?provider=github
+```
+
+One per origin of every site: `site_url` plus the web origins the site lists in `security_domains` (no `api.` / `mcp.` hosts; no `localhost` outside development). A multi-site project registers one URI per origin at the provider. A mismatch shows up at Google as `redirect_uri_mismatch` with no in-app error, so register exactly what `oauth_check` prints.
+
+At request time the browser `Origin` must be accepted by the resolved site, else `origin_not_allowed`. With no `Origin` header the site's `site_url` is used.
+
 <Callout type="info">
-This page has moved. See [OAuth (GitHub)](../../built-in-apps/user-management/accounts/oauth) for the full documentation.
+One Django backend uses one Google client for all its sites: one redirect URI per site origin, one consent-screen name. Identity stays correct across sites because the Google `sub` is the same everywhere and users share one table.
 </Callout>
+
+## Diagnostics
+
+```bash
+python manage.py oauth_check            # enabled/off per provider, URIs to register, console links, findings
+python manage.py oauth_check --probe    # one token-endpoint call per enabled provider
+```
+
+For each provider: on or off (and which variables turn it on), the redirect URIs per site, the console link, and for Google the note that Authorized JavaScript origins are not needed. Exit code 1 when there is any finding or a probe fails.
+
+`--probe` sends a dummy code with your client id and secret: `invalid_grant` means they are accepted, `invalid_client` means one is wrong. It spends and changes nothing.
+
+The same findings run as Django system checks (`manage.py check`, `runserver`, `migrate`), tag `django_cfg`:
+
+| ID | Warns when |
+|----|------------|
+| `django_cfg.W030` | a provider has a client id without a secret, or the reverse |
+| `django_cfg.W031` | in production, a site's `site_url` is not https |
+| `django_cfg.W032` | the single-site `site_url` host is missing from `security_domains` (declared sites are allowed automatically) |
+| `django_cfg.W033` | the Google client id does not end with `.apps.googleusercontent.com` |
+| `django_cfg.W034` | in production, the default cache is not Redis: sign-in rate limits are not shared between workers |
+| `django_cfg.W035` | in production, `RealIPMiddleware` is not installed: behind a proxy every client shares one IP and the rate limit trips for all |
+
+W031 to W035 only apply when at least one provider is enabled.
+
+## Rate limits and cleanup
+
+`authorize` is limited to 20 requests per minute per IP, `callback` to 10. Expired `OAuthState` rows are purged on every new flow and by an RQ job every 10 minutes (`cleanup_expired_oauth_states`, registered beside the OTP cleanup).
+
+## Duplicate accounts
+
+```bash
+python manage.py email_key_report
+```
+
+Lists emails that map to more than one live user (accounts that predate `email_key`). It never merges; exit code 1 when there are duplicates.
+
+TAGS: oauth, configuration, GoogleOAuthConfig, GitHubOAuthConfig, oauth_check, env vars, system checks
+DEPENDS_ON: [index, google, github]

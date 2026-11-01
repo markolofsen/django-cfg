@@ -4,10 +4,9 @@ Test Email Command
 Sends all email template variants with realistic context.
 
 Usage:
-    python manage.py test_email
     python manage.py test_email --email user@example.com
-    python manage.py test_email --type otp
-    python manage.py test_email --type all
+    python manage.py test_email --email user@example.com --type otp
+    python manage.py test_email --email user@example.com --type all
 """
 
 import time
@@ -55,8 +54,8 @@ class Command(SafeCommand):
         parser.add_argument(
             "--email",
             type=str,
-            default="markolofsen@gmail.com",
-            help="Recipient email address",
+            required=True,
+            help="Recipient email address (required)",
         )
         parser.add_argument(
             "--type",

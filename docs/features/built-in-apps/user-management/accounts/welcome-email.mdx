@@ -71,13 +71,20 @@ re-raising, so a retry can still deliver the letter.
 
 ## Locale resolution
 
-`resolve_locale(user, accept_language)` picks the language to render in, in
+`resolve_locale(user, accept_language, site)` picks the language to render in, in
 this order:
 
 1. **`user.language`** — the stored preference, if set.
 2. **`Accept-Language`** header — parsed and matched against
    `SUPPORTED_LOCALES`.
-3. **`en`** (`DEFAULT_LOCALE`) — fallback.
+3. **`SiteConfig.locale`** — the locale of the user's [site](/configuration/sites), if it is supported.
+4. **`en`** (`DEFAULT_LOCALE`) — fallback.
+
+`services.welcome.send_welcome_email(user, accept_language, site=None)` takes a
+`Site`, a site key or `None`; with `None` it uses the site the user registered
+on, then the default site. The template reads `site_name`, `site_url`,
+`support_email` and `logo_url` from that site, and the button points at its
+`site_url`.
 
 `settings.LANGUAGE_CODE` is deliberately **not** in that chain — it's the
 project's own default, not a statement about the recipient. A project

@@ -51,9 +51,9 @@ When `ssl_verify=False`, a custom backend is used that skips certificate verific
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `default_from` | `str` | `"noreply@example.com"` | Default sender address (must contain `@`) |
+| `default_from` | `str \| None` | `None` | Default sender address (must contain `@`). Required in production with `smtp`/`gateway`. |
 
-If `DjangoConfig.project_name` is set, the from address is automatically formatted as `"Project Name <email@example.com>"`. You can override this by passing a pre-formatted string with `<` and `>`.
+The address is formatted as `"Site Name <email@example.com>"` using the display name of the site the mail is for (`SiteConfig.from_name`, default `SiteConfig.name`). A pre-formatted string with `<` and `>` is kept as is. `SiteConfig.from_email` overrides the address for one site. `Reply-To` is `SiteConfig.support_email`, else `EmailConfig.reply_to`. See [Sites](/configuration/sites).
 
 ### File Backend
 
@@ -113,7 +113,7 @@ Behavior details:
 | --- | --- | --- | --- |
 | `subscribe_url` | `Optional[str]` | `None` | Newsletter subscribe URL for the system-email P.S. footer |
 
-Works with any backend. When set, the shared system-email template (`templates/emails/base_email.html`) renders a footer line — `P.S. Want {project_name} product updates? One click — subscribe` — linking to this URL. `DjangoEmailService` injects `subscribe_url` into the template context automatically; unset means no footer.
+Works with any backend. When set, the shared system-email template (`templates/emails/base_email.html`) renders a footer line — `P.S. Want {site_name} product updates? One click — subscribe` — linking to this URL. `DjangoEmailService` injects `subscribe_url` into the template context automatically; unset means no footer.
 
 ## DjangoConfig Fields
 

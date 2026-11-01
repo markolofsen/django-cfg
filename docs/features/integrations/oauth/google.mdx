@@ -1,0 +1,65 @@
+---
+title: Google Cloud Setup
+description: Create the Google OAuth client for Sign in with Google — the one-time human checklist, the redirect URIs to paste and how to verify it.
+---
+
+import { Callout } from 'nextra/components'
+
+# Google Cloud Setup
+
+django-cfg switches Google sign-in on when `GOOGLE_OAUTH__CLIENT_ID` and `GOOGLE_OAUTH__CLIENT_SECRET` are set. Creating that client is the one thing it cannot do for you. Once per brand project, about ten minutes. The Google console calls this area **Google Auth platform** (Overview, Branding, Audience, Data Access, Clients).
+
+Before you start, run this in the project and keep the output open; it prints the exact redirect URIs for step 5:
+
+```bash
+python manage.py oauth_check
+```
+
+## Checklist
+
+1. **Project.** Create or select a Google Cloud project, one per product, owned by an account your team keeps ([console](https://console.cloud.google.com/auth/overview)).
+2. **Branding** ([`/auth/branding`](https://console.cloud.google.com/auth/branding)). App name, user support email, optional logo, app domain links (home page, privacy policy, terms), authorized domains (the brand's registrable domain), developer contact email. The app name is what users see on the consent screen.
+3. **Audience** ([`/auth/audience`](https://console.cloud.google.com/auth/audience)). User type **External** (Internal only when every user is in one Workspace organisation). Press **Publish app** so the status is unambiguous. An app that asks only for sign-in scopes lets any user in even while in Testing, but any extra scope added later would silently limit sign-in to 100 listed test users.
+4. **Data Access** ([`/auth/scopes`](https://console.cloud.google.com/auth/scopes)). Add `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`. These baseline scopes need no verification review and no "unverified app" screen. Brand verification is optional and only decides whether your logo and name show as verified.
+5. **Clients** ([`/auth/clients`](https://console.cloud.google.com/auth/clients)). Create client, type **Web application**, then:
+   - **Authorized redirect URIs**: one per site origin, exactly as printed by `oauth_check` — `https://<site>/auth?provider=google`, plus `http://localhost:3000/auth?provider=google` for local development. Matching is exact (scheme, case, trailing slash, query). https only except localhost; no wildcards, no raw IP addresses, no fragments.
+   - **Authorized JavaScript origins**: leave empty. The server-side code flow does not use them.
+6. **Copy the client id and secret** into the project's environment:
+
+   ```bash
+   GOOGLE_OAUTH__CLIENT_ID=1234-abc.apps.googleusercontent.com
+   GOOGLE_OAUTH__CLIENT_SECRET=GOCSPX-...
+   ```
+
+7. **Deploy, then verify.**
+
+   ```bash
+   python manage.py oauth_check --probe
+   ```
+
+   Redirect URIs must match step 5, and the probe must say `invalid_grant: client id and secret are accepted` (`invalid_client` means a wrong id or secret).
+
+## Several sites on one Django
+
+One Django backend uses one Google client. Register one redirect URI per site origin in that client. The consent screen shows one app name for all of them. If a site needs its own name or logo, that is a separate client per origin, which django-cfg does not do today. Users stay one account per verified email across sites.
+
+## When it fails
+
+| Symptom | Cause |
+|---------|-------|
+| Google page: `redirect_uri_mismatch` | the URI sent is not registered exactly; compare with `oauth_check` |
+| Google page: `disallowed_useragent` | opened inside another app's embedded browser; open it in the system browser |
+| Back on `/auth` with `?error=access_denied` | the user pressed Cancel; no API call is made |
+| `400 invalid_state` | the state was already used, expired (10 minutes) or belongs to another provider; start again |
+| `400 email_not_verified` | the Google account's email is not verified; cannot sign in |
+| `403 hosted_domain_not_allowed` | `allowed_hosted_domains` is set and the account is outside it |
+| `502 provider_unavailable` | Google's token or key endpoint did not answer |
+
+Other codes: [error codes](/features/built-in-apps/user-management/accounts/oauth#error-codes).
+
+<Callout type="info">
+Console links were confirmed against Google's documentation; Google renames menus from time to time, so if a path moves, search the console for "Clients".
+</Callout>
+
+TAGS: google, oauth, google cloud, redirect uri, oauth client, setup
+DEPENDS_ON: [index, configuration]

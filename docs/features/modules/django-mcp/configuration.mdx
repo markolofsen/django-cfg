@@ -33,7 +33,7 @@ When `enabled=False` (the default), the MCP endpoint exists but returns errors o
 | `service_username` | `str \| None` | `None` | Bind `access_key` to a real Django account. See [Service accounts](#service-accounts) below. |
 | `rate_limit` | `str` | `"100/minute"` | Format: `"N/period"`. Period is `second`, `minute`, `hour`, or `day`. |
 | `protocol_version` | `str` | `"2025-03-26"` | MCP protocol version reported in the `initialize` handshake. |
-| `server_name` | `str` | `"django-cfg-mcp"` | Server name reported in `initialize`. |
+| `server_name` | `str \| None` | project slug | Server name reported in `initialize`. |
 | `server_version` | `str` | `"1.0.0"` | Server version reported in `initialize`. |
 | `enable_streaming` | `bool` | `False` | Reserved for future protocol-level streaming. Does not affect SSE admin chat. |
 | `enable_audit_log` | `bool` | `True` | Write every MCP operation to `MCPAuditLog`. |

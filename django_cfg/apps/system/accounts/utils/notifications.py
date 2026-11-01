@@ -5,8 +5,10 @@ Centralized email and telegram notifications for user account events
 import logging
 
 from django.utils import timezone
+from django.utils.translation import gettext, gettext_noop as _, override
 
-from django_cfg.core.state import get_current_config
+from django_cfg.apps.system.mailer.templatetags.email_content import fill_placeholders
+from django_cfg.core.site import Site, site_for
 from django_cfg.modules.django_email import DjangoEmailService
 from django_cfg.modules.django_email.service import text_direction
 from django_cfg.modules.django_telegram import DjangoTelegram
@@ -14,14 +16,24 @@ from django_cfg.modules.django_telegram import DjangoTelegram
 logger = logging.getLogger(__name__)
 
 
-def _config():
-    """The active config, read per call.
+def _site(site, user=None) -> Site:
+    """The site a letter speaks for.
 
-    Binding it at import time freezes whatever was registered first, so a
-    process that later calls `set_current_config` keeps mailing the old
-    project name and site URL.
+    ``site`` is a ``Site``, a site key (what a job captured), or None: then the
+    user's own site (their first registration source), then the default site.
+    Read per call, never bound at import: a process that later registers another
+    config must not keep mailing the first one's name.
     """
-    return get_current_config()
+    if isinstance(site, Site):
+        return site
+    return site_for(key=site, user=user)
+
+
+def _locale(user, site: Site) -> str:
+    """The user's language, else the site's locale."""
+    from ..services.welcome import resolve_locale
+
+    return resolve_locale(user, site=site)
 
 
 def _resolve_copy(template_name: str, locale: str = None) -> dict:
@@ -48,6 +60,25 @@ def _resolve_copy(template_name: str, locale: str = None) -> dict:
         return {}
 
 
+def _subject(msgid: str, copy: dict, locale: str, params: dict, ensure: str = "") -> str:
+    """A letter's subject, in the reader's language.
+
+    A stored ``EmailContent`` subject wins; otherwise ``msgid`` goes through
+    gettext (English when the project ships no catalog), with ``params`` filled
+    in. ``ensure`` is text the subject must carry (the OTP code): appended if the
+    stored copy left it out, because the recipient reads it from the preview.
+    """
+    stored = (copy or {}).get("subject")
+    if stored:
+        subject = fill_placeholders(stored, params)
+    else:
+        with override(locale):
+            subject = gettext(msgid) % params
+    if ensure and ensure not in subject:
+        subject = f"{subject}: {ensure}"
+    return subject
+
+
 class AccountNotifications:
     """Centralized account notification system"""
 
@@ -69,8 +100,16 @@ class AccountNotifications:
         extra_context: dict = None,
         text_only: bool = False,
         copy_key: str = None,
+        site=None,
+        subject_params: dict = None,
+        subject_ensure: str = "",
     ):
         """Private method for sending templated emails.
+
+        ``subject`` is the English message id, with ``%(project_name)s`` and any
+        ``subject_params`` placeholders; it is translated and filled in here, or
+        replaced by the stored per-locale subject (see ``_subject``).
+        ``site`` is a ``Site``, a site key or None (the user's own site).
 
         ``copy_key`` names the *letter*; ``template_name`` names the *layout*.
         Keying copy off the template alone makes every letter sharing a layout
@@ -78,6 +117,12 @@ class AccountNotifications:
         A caller passing no ``copy_key`` still resolves off the template name.
         """
         email_service = DjangoEmailService()
+        site = _site(site, user)
+        locale = locale or _locale(user, site)
+        copy = _resolve_copy(copy_key or template_name, locale)
+        subject = _subject(
+            subject, copy, locale, {**site.as_context(), **(subject_params or {})}, subject_ensure,
+        )
 
         # Prepare context for template
         context = {
@@ -96,7 +141,7 @@ class AccountNotifications:
             # fallback, so a fresh install still sends a correct letter.
             # Keyed off the letter, falling back to the template for callers that
             # name no letter of their own.
-            "copy": _resolve_copy(copy_key or template_name, locale),
+            "copy": copy,
         }
         if extra_context:
             context.update(extra_context)
@@ -108,13 +153,14 @@ class AccountNotifications:
             recipient_list=[user.email],
             locale=locale,
             text_only=text_only,
+            site=site,
         )
 
     # === EMAIL NOTIFICATIONS ===
 
     @staticmethod
     def send_welcome_email(
-        user, locale=None, send_email=True, send_telegram=True, text_only=True
+        user, locale=None, send_email=True, send_telegram=True, text_only=True, site=None
     ):
         """Send welcome email and telegram notification for new user.
 
@@ -129,14 +175,16 @@ class AccountNotifications:
         unconditionally.
         """
         if send_email:
+            site = _site(site, user)
             AccountNotifications._send_email(
                 user=user,
-                subject=f"Welcome to {_config().project_name}",
+                site=site,
+                subject=_("Welcome to %(project_name)s"),
                 main_text=f"Welcome {user.username}! Your account has been successfully created.",
                 main_html_content=f'<p style="font-size: 1.5em; font-weight: bold; color: #28a745;">Welcome {user.username}!</p>',
                 secondary_text="You can now access all our services and start exploring our API.",
-                button_text=f"Go to {_config().project_name}",
-                button_url=_config().site_url,
+                button_text=f"Go to {site.name}",
+                button_url=site.site_url,
                 template_name="emails/welcome",
                 locale=locale,
                 # Plain text by default: this letter is written in the first
@@ -160,7 +208,7 @@ class AccountNotifications:
             logger.info(f"Welcome telegram notification sent for {user.email}")
 
     @staticmethod
-    def send_profile_update_notification(user, changes, send_email=True, send_telegram=True):
+    def send_profile_update_notification(user, changes, send_email=True, send_telegram=True, site=None):
         """Send profile update notification"""
         if not changes:
             return
@@ -170,7 +218,8 @@ class AccountNotifications:
         if send_email:
             AccountNotifications._send_email(
                 user=user,
-                subject="Security Alert: Profile Updated ⚠️",
+                site=site,
+                subject=_("Security Alert: Profile Updated ⚠️"),
                 copy_key="profile_updated",
                 main_text="A security alert has been triggered for your account.",
                 main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">Profile Updated</p>',
@@ -192,27 +241,30 @@ class AccountNotifications:
             logger.info(f"Profile update telegram notification sent for {user.email}")
 
     @staticmethod
-    def send_account_status_change(user, status_type, reason=None, send_email=True, send_telegram=True):
+    def send_account_status_change(user, status_type, reason=None, send_email=True, send_telegram=True, site=None):
         """Send account status change notification (activated/deactivated)"""
         if send_email:
             if status_type == "activated":
+                site = _site(site, user)
                 AccountNotifications._send_email(
                     user=user,
-                    subject=f"Account Activated - {_config().project_name} ✅",
-                copy_key="account_activated",
+                    site=site,
+                    subject=_("Account Activated - %(project_name)s ✅"),
+                    copy_key="account_activated",
                     main_text="Your account has been activated and is now ready to use!",
                     main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #28a745;">Account Activated!</p>',
                     secondary_text="You now have full access to all our services and features.",
                     button_text="Access Private",
-                    button_url=f"{_config().site_url}/private",
+                    button_url=site.url("/private"),
                 )
                 logger.info(f"Account activation email sent to {user.email}")
 
             elif status_type == "deactivated":
                 AccountNotifications._send_email(
                     user=user,
-                    subject=f"Account Status Update - {_config().project_name} ⚠️",
-                copy_key="account_deactivated",
+                    site=site,
+                    subject=_("Account Status Update - %(project_name)s ⚠️"),
+                    copy_key="account_deactivated",
                     main_text="Your account status has been updated.",
                     main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">Account Deactivated</p>',
                     secondary_text=f"Reason: {reason or 'Account deactivated by administrator'}\nIf you believe this is an error, please contact our support team.",
@@ -242,14 +294,15 @@ class AccountNotifications:
             logger.info(f"Account status change telegram notification sent for {user.email}")
 
     @staticmethod
-    def send_login_notification(user, ip_address=None, send_email=False, send_telegram=True):
+    def send_login_notification(user, ip_address=None, send_email=False, send_telegram=True, site=None):
         """Send login notification (usually only telegram for security monitoring)"""
         if send_email:
             login_time = timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")
             ip_text = f" from IP address {ip_address}" if ip_address else ""
             AccountNotifications._send_email(
                 user=user,
-                subject=f"Login Notification - {_config().project_name} 🔐",
+                site=site,
+                subject=_("Login Notification - %(project_name)s 🔐"),
                 copy_key="login_notification",
                 main_text=f"We detected a login to your account at {login_time}{ip_text}.",
                 main_html_content=f'<p style="font-size: 1.2em; color: #007bff;">Login at {login_time}</p>',
@@ -272,17 +325,23 @@ class AccountNotifications:
             logger.info(f"Login telegram notification sent for {user.email}")
 
     @staticmethod
-    def send_otp_notification(user, otp_code, is_new_user=False, source_url=None, send_email=True, send_telegram=True):
+    def send_otp_notification(
+        user, otp_code, is_new_user=False, source_url=None, send_email=True, send_telegram=True, site=None
+    ):
         """Send OTP notification via email"""
         if send_email:
             from ..models.auth import OTPSecret
 
             AccountNotifications._send_email(
                 user=user,
+                site=site,
                 # The code MUST stay in the subject: the recipient reads it
                 # from the preview pane without opening the letter. The
                 # preview exposure is accepted; removing it is an owner call.
-                subject=f"Your OTP code: {otp_code}",
+                # A stored per-locale subject that forgets it gets it appended.
+                subject=_("Your OTP code: %(otp_code)s"),
+                subject_params={"otp_code": otp_code},
+                subject_ensure=otp_code,
                 copy_key="otp_code",
                 main_text="Use the code below to sign in:",
                 main_html_content="",
@@ -336,12 +395,14 @@ class AccountNotifications:
     # === SECURITY NOTIFICATIONS ===
 
     @staticmethod
-    def send_security_alert(user, alert_type, details, send_email=True, send_telegram=True):
+    def send_security_alert(user, alert_type, details, send_email=True, send_telegram=True, site=None):
         """Send security alert notification"""
         if send_email:
             AccountNotifications._send_email(
                 user=user,
-                subject=f"Security Alert: {alert_type} ⚠️",
+                site=site,
+                subject=_("Security Alert: %(alert_type)s ⚠️"),
+                subject_params={"alert_type": alert_type},
                 copy_key="security_alert",
                 main_text="A security alert has been triggered for your account.",
                 main_html_content=f'<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">{alert_type}</p>',
@@ -377,12 +438,14 @@ class AccountNotifications:
             logger.info(f"Failed OTP attempt telegram notification sent for {identifier}")
 
     @staticmethod
-    def send_suspicious_activity(user, activity_type, details, send_email=True, send_telegram=True):
+    def send_suspicious_activity(user, activity_type, details, send_email=True, send_telegram=True, site=None):
         """Send suspicious activity notification"""
         if send_email:
             AccountNotifications._send_email(
                 user=user,
-                subject=f"Security Alert: Suspicious Activity: {activity_type} ⚠️",
+                site=site,
+                subject=_("Security Alert: Suspicious Activity: %(activity_type)s ⚠️"),
+                subject_params={"activity_type": activity_type},
                 copy_key="suspicious_activity",
                 main_text="A security alert has been triggered for your account.",
                 main_html_content=f'<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">Suspicious Activity: {activity_type}</p>',

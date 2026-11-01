@@ -100,7 +100,10 @@ class DjangoConfig(BaseModel):
     )
     security_domains: List[str] = Field(
         default_factory=lambda: ["localhost", "127.0.0.1"],
-        description="Domains for ALLOWED_HOSTS, CORS, CSRF (auto-configured)",
+        description=(
+            "Extra hosts for ALLOWED_HOSTS, CORS, CSRF: mcp.*, internal names, wildcards. "
+            "Single-site: the project's own hosts too. Declared sites add theirs automatically."
+        ),
     )
     ssl_redirect: Optional[bool] = Field(
         default=None,
@@ -126,11 +129,31 @@ class DjangoConfig(BaseModel):
 
     site_url: str = Field(
         default="http://localhost:3000",
-        description="Frontend site URL",
+        description="Frontend site URL (single-site; with `sites`, set it per SiteConfig).",
     )
     api_url: str = Field(
         default="http://localhost:8000",
-        description="Backend API URL",
+        description="Backend API URL: where this Django answers. A site without its own api_url inherits it.",
+    )
+    sites: List[SiteConfig] = Field(
+        default_factory=list,
+        description=(
+            "Sites this Django serves, first is the default. Empty = one site built from "
+            "project_name, site_url and api_url. With sites, site_url, support_email, logo_url and "
+            "default_locale must stay unset: each site owns them."
+        ),
+    )
+    support_email: Optional[str] = Field(
+        default=None,
+        description="Support address shown to users (single-site; per site: SiteConfig).",
+    )
+    logo_url: Optional[str] = Field(
+        default=None,
+        description="Absolute URL of the logo for mail (single-site; per site: SiteConfig).",
+    )
+    default_locale: Optional[str] = Field(
+        default=None,
+        description="Default locale for mail and copy, e.g. 'en'. Default 'en'.",
     )
     media_url: str = Field(
         default="/media/",
@@ -216,7 +239,11 @@ class DjangoConfig(BaseModel):
 
     github_oauth: Optional[GitHubOAuthConfig] = Field(
         default=None,
-        description="GitHub OAuth for social authentication",
+        description="GitHub sign-in: client_id + client_secret. None = built from GITHUB_OAUTH__CLIENT_ID/SECRET if both are set",
+    )
+    google_oauth: Optional[GoogleOAuthConfig] = Field(
+        default=None,
+        description="Google sign-in: client_id + client_secret (+ allowed_hosted_domains). None = built from GOOGLE_OAUTH__CLIENT_ID/SECRET if both are set",
     )
     two_factor: Optional[TwoFactorConfig] = Field(
         default=None,
@@ -368,6 +395,20 @@ class DjangoConfig(BaseModel):
 ## Validators
 
 DjangoConfig includes comprehensive validators to ensure configuration correctness:
+
+### Deployment and sites: which field owns what
+
+`DjangoConfig` describes the **deployment** (this Django process); `sites` describes what visitors see. A fact is typed once.
+
+| Field | Owner | Meaning |
+|---|---|---|
+| `api_url`, `project_name`, `media_url` | deployment | Where Django answers; technical name (also the synthesised site's name); media prefix |
+| `security_domains` | deployment | Extra hosts only (`mcp.*`, internal names, wildcards); single-site projects list their own hosts here |
+| `site_url`, `support_email`, `logo_url`, `default_locale` | single-site shortcut | Build the one `default` site. With `sites` declared, setting any of them is a startup error |
+| `sites[*]`: `name`, `site_url`, `extra_origins`, `support_email`, `from_name`, `from_email`, `logo_url`, `locale` | site | Brand and mail |
+| `sites[*].api_url` | site, optional | Only for a site with its own API host; otherwise the deployment `api_url` |
+
+ALLOWED_HOSTS, CORS and CSRF are derived from the sites, the API hosts and `security_domains`. See [Sites](/configuration/sites#which-field-owns-what) and [Security settings](/configuration/security#where-the-hosts-come-from).
 
 ### Project name and slug
 
@@ -609,7 +650,7 @@ def get_allowed_hosts(self) -> List[str]:
     return self.service.get_allowed_hosts()
 ```
 
-Auto-generated from `security_domains`, including localhost variants for development.
+Derived from the [sites](/configuration/sites), `api_url` and `security_domains` (see [Security settings](/configuration/security#where-the-hosts-come-from)). In development it is `['*']`.
 
 ### build_media_url
 

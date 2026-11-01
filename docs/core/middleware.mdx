@@ -14,6 +14,7 @@ Django-CFG ships a suite of middleware classes covering authentication enhanceme
 | `JWTAuthenticationWithLastLogin` | `authentication` | Always (JWT auth enabled) |
 | `RealIPMiddleware` | `real_ip` | Always (must be first) |
 | `TimezoneMiddleware` | `timezone` | Always |
+| `SiteMiddleware` | `site` | More than one entry in `DjangoConfig.sites` |
 | `UserActivityMiddleware` | `user_activity` | Always (accounts app active) |
 | `PublicEndpointsMiddleware` | `public_endpoints` | Always |
 | `ConnectionPoolCleanupMiddleware` | `pool_cleanup` | Always (must be last, WSGI) |
@@ -129,6 +130,19 @@ Request headers used:
 |--------|---------|
 | `X-Timezone` | IANA timezone name (e.g. `America/New_York`) |
 | `X-Client-Time` | Client's current time in ISO-8601 format |
+
+---
+
+## SiteMiddleware
+
+**Purpose:** sets `request.site` to the resolved [`Site`](/configuration/sites).
+
+Added only when `DjangoConfig.sites` declares more than one site. The value is lazy: `site_for(request)` runs the first time `request.site` is read, so a request that never asks pays nothing. A single-site project has no `request.site`; use `site_for(request)`, which gives the same answer.
+
+```python
+def my_view(request):
+    return JsonResponse({"site": request.site.key})
+```
 
 ---
 

@@ -99,7 +99,7 @@ class TOTPService:
     def get_provisioning_uri(
         cls,
         device: TOTPDevice,
-        issuer: str = "Django CFG",
+        issuer: str,
     ) -> str:
         """
         Generate otpauth:// URI for QR code.

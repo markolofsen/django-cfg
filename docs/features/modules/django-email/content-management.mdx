@@ -45,7 +45,7 @@ Inactive rows are skipped at every step. If nothing matches, it returns `None` �
 
 ### Substitution in stored copy
 
-Stored copy can reference exactly two placeholders — `{{ project_name }}` and `{{ site_url }}` — interpolated by the `render_copy` template tag. Nothing else is substituted: stored text can never reach the rest of the template context (no `{{ user.email }}`, no tags), which is a deliberate injection guard since this text is editable from the admin.
+Stored copy can reference exactly six placeholders — `{{ project_name }}`, `{{ site_name }}`, `{{ site_url }}`, `{{ support_email }}`, `{{ logo_url }}` and `{{ otp_code }}` — interpolated by the `render_copy` template tag. Nothing else is substituted: stored text can never reach the rest of the template context (no `{{ user.email }}`, no tags), which is a deliberate injection guard since this text is editable from the admin.
 
 ### Admin
 

@@ -70,12 +70,33 @@ The following context variables are injected automatically if not present in `co
 
 | Variable | Source |
 | --- | --- |
-| `project_name` | `config.project_name` |
-| `site_name` | `project_name` — the name the templates read |
-| `site_url` | `config.site_url` |
+| `project_name` | `config.project_name` (deployment name) |
+| `site_name` | `Site.name` — the name the templates read |
+| `site_url` | `Site.site_url` |
+| `support_email` | `Site.support_email` — templates print it only when set |
+| `logo_url` | `Site.logo_url` — templates print it only when set |
+| `site` | the resolved `Site` object |
 | `subscribe_url` | `EmailConfig.subscribe_url` (or `EMAIL_SUBSCRIBE_URL`) — absent unless configured |
 
-When `subscribe_url` is present, the shared base template renders a "P.S. Want `{project_name}` product updates? One click — subscribe" footer in every system email. See [Configuration Reference](./configuration#subscribe-footer).
+Your own `context` keys win over these. The values come from the [site](/configuration/sites) the mail is for.
+
+### Sending for a site
+
+`send_html` and `send_template` take `site=`: a `Site`, a site key, or `None` for the default site.
+
+```python
+service.send_template(
+    subject="Welcome!",
+    template_name="emails/welcome",
+    context={"user_name": "Jane Doe"},
+    recipient_list=["jane@example.com"],
+    site="acme",
+)
+```
+
+The site decides the template context, the tracking base (`Site.api_url`), the `From` header and `Reply-To`. There is one sending address for all sites: `Site.from_email`, else `EmailConfig.default_from`, else Django `DEFAULT_FROM_EMAIL`. Each site brings its own display name (`from_name`, default `Site.name`), so `Acme <noreply@example.com>` and `Beta <noreply@example.com>` share one authenticated mailbox. `Reply-To` is `Site.support_email`, else `EmailConfig.reply_to`.
+
+When `subscribe_url` is present, the shared base template renders a "P.S. Want `{site_name}` product updates? One click — subscribe" footer in every system email. See [Configuration Reference](./configuration#subscribe-footer).
 
 ### Email with Attachments
 
@@ -202,15 +223,14 @@ email.send_simple(
 Send test emails for all built-in template types:
 
 ```bash
-python manage.py test_email
 python manage.py test_email --email user@example.com
-python manage.py test_email --type otp
-python manage.py test_email --type all
+python manage.py test_email --email user@example.com --type otp
+python manage.py test_email --email user@example.com --type all
 ```
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--email` | `markolofsen@gmail.com` | Recipient address |
+| `--email` | *required* | Recipient address (no default) |
 | `--type` | `all` | Template to send: `all`, `base`, `otp`, `welcome`, `login_alert` |
 
 Built-in templates tested:

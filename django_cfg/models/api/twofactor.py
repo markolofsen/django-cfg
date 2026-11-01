@@ -82,11 +82,6 @@ class TwoFactorConfig(BaseModel):
         description="Number of backup codes to generate",
     )
 
-    issuer_name: str = Field(
-        default="Django CFG",
-        description="Issuer name shown in authenticator apps",
-    )
-
     def get_settings_dict(self) -> dict:
         """
         Convert to Django settings dictionary.
@@ -103,7 +98,6 @@ class TwoFactorConfig(BaseModel):
             "TOTP__ALLOW_TOTP": self.allow_totp,
             "TOTP__ALLOW_BACKUP_CODES": self.allow_backup_codes,
             "TOTP__BACKUP_CODES_COUNT": self.backup_codes_count,
-            "TOTP__ISSUER_NAME": self.issuer_name,
         }
 
 

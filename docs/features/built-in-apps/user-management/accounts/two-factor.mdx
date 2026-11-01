@@ -25,7 +25,6 @@ class MyConfig(DjangoConfig):
         allow_totp=True,
         allow_backup_codes=True,
         backup_codes_count=10,
-        issuer_name="My App",          # Shown in authenticator app
     )
 ```
 
@@ -116,7 +115,7 @@ from django_cfg.apps.system.totp.services import TOTPService, BackupCodeService
 device = TOTPService.create_device(user=user, name="My Phone", make_primary=True)
 
 # Get QR code for authenticator app
-uri = TOTPService.get_provisioning_uri(device, issuer="MyApp")
+uri = TOTPService.get_provisioning_uri(device, issuer="MyApp")  # issuer is required
 qr_base64 = TOTPService.generate_qr_code(uri, format="base64")
 
 # Verify and activate
@@ -132,6 +131,8 @@ codes = BackupCodeService.generate_codes(user, count=10)
 is_valid = BackupCodeService.verify_code(user, code="XXXX-XXXX")
 # Single-use — marks code as consumed
 ```
+
+The built-in setup view passes `DjangoConfig.project_name` as the issuer, which is the name an authenticator app lists the account under. `TwoFactorConfig.issuer_name` no longer exists.
 
 ## Device Lifecycle
 
@@ -173,7 +174,7 @@ Admin can change: enable/disable globally, enforcement policy, session timeout, 
 ```tsx
 import { AuthLayout } from '@djangocfg/layouts'
 
-<AuthLayout enableGithubAuth redirectUrl="/dashboard" />
+<AuthLayout redirectUrl="/dashboard" />
 ```
 
 The form steps are `identifier → otp → success`. When the account has 2FA, `TwoFactorChallengeDialog` opens over the page (authenticator code, backup-code fallback) and the form moves to `success` once it is verified. Enrolling a device is separate: render `TwoFactorSetup` on a settings page. Details and the hooks behind both: [Frontend Integration](./frontend#two-factor-challenge).

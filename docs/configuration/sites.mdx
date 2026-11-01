@@ -1,0 +1,195 @@
+---
+title: Sites
+description: One site by default, several with DjangoConfig.sites; how a request, job or user is mapped to a site
+---
+
+# Sites
+
+A **site** is the identity users see: its name, web origin, API origin, support address, sender and logo. `Site` is one frozen object, and `site_for()` is the one function that answers "which site is this?" for a request, a background job or a user.
+
+`project_name` stays the name of the *deployment* (Telegram prefix, cache and queue keys, logs, the `X-Title` sent to OpenRouter, the 2FA issuer). `Site.name` is what a user reads in mail and on the pages that resolve a site. MCP registration names use `project_slug`.
+
+Modules that show something to a user (mail, OTP and OAuth redirects, MCP consent, IndexNow hosts, analytics hosts) ask `site_for()` and do not read `site_url`, `api_url` or `project_name` themselves.
+
+## Which field owns what
+
+DjangoConfig has two layers. The **deployment** is this Django process; a **site** is what visitors see. Each fact is typed in one place.
+
+| Field | Owner | Meaning |
+|---|---|---|
+| `api_url` | deployment | Where this Django answers. Feeds `media_url`, `build_api_url`, webhooks and the host check. A site without its own `api_url` inherits it |
+| `project_name` | deployment | Technical name: logs, cache and queue keys, `project_slug`. Also the name of the synthesised site when there is no `sites` |
+| `media_url` | deployment | Media prefix; `'__auto__'` derives it from `api_url` |
+| `security_domains` | deployment | **Extra** hosts only: `mcp.*`, internal names, wildcards |
+| `name` | site (`SiteConfig`) | What users read: mail subjects, footers, sender name |
+| `site_url`, `extra_origins` | site | Web origin and other web origins of the same site |
+| `api_url` (optional) | site | Only for a site with its own API host; unset means the deployment `api_url` |
+| `support_email`, `from_email`, `from_name`, `logo_url`, `locale` | site | Mail and copy |
+
+Without `sites`, the deployment fields `site_url`, `support_email`, `logo_url` and `default_locale` describe the single synthesised site (below). Once `sites` is declared they move onto the `SiteConfig` entries and must not stay on `DjangoConfig`.
+
+## One site: nothing to configure
+
+Without `sites`, django-cfg builds a single site called `default` from fields you already set.
+
+```python filename="config.py"
+class MyConfig(DjangoConfig):
+    project_name: str = "Acme"
+    site_url: str = "https://acme.com"
+    api_url: str = "https://api.acme.com"
+    security_domains: list = ["acme.com", "my.acme.com", "api.acme.com"]
+
+    # optional, all three feed the default site
+    support_email: str = "help@acme.com"
+    logo_url: str = "https://acme.com/logo.png"
+    default_locale: str = "en"
+```
+
+| `Site` field | Comes from |
+|---|---|
+| `name` | `project_name` |
+| `site_url`, `api_url` | `site_url`, `api_url` (trailing slash removed) |
+| `origins` | `site_url` plus the web hosts in `security_domains` as `https://` origins. `api.*` and `mcp.*` hosts, the `api_url` host, wildcards, and (outside development) `localhost`, IPs and single-label names are left out |
+| `from_email`, `from_name` | `email.default_from`, `email.default_from_name` or `project_name` |
+| `support_email`, `logo_url`, `locale` | `support_email`, `logo_url`, `default_locale`; locale defaults to `en` |
+
+A project that sets none of `sites`, `support_email` or `logo_url` behaves as before this contract existed. In this case `security_domains` stays the list of the project's own hosts.
+
+## Several sites
+
+List them in `DjangoConfig.sites`. The first is the default. The deployment keeps `project_name` and `api_url`; every brand field lives on a site. Example with three sites that all post to one API host:
+
+```python filename="config.py"
+from django_cfg import DjangoConfig, SiteConfig
+
+class MlsConfig(DjangoConfig):
+    project_name: str = "MLS"
+    api_url: str = "https://api.caribbeanrealestatemls.com"   # one API host for all sites
+    sites: list[SiteConfig] = [
+        SiteConfig(
+            key="caribbean",
+            name="Caribbean Real Estate MLS",
+            site_url="https://caribbeanrealestatemls.com",
+            extra_origins=[
+                "https://portal.caribbeanrealestatemls.com",
+                "https://studio.caribbeanrealestatemls.com",
+            ],
+            support_email="hello@caribbeanrealestatemls.com",
+            logo_url="https://caribbeanrealestatemls.com/logo.png",
+        ),
+        SiteConfig(key="bali", name="MLS Bali", site_url="https://mlsbali.com"),
+        SiteConfig(key="danmerriam", name="Dan Merriam", site_url="https://danmerriam.com"),
+    ]
+    security_domains: list[str] = ["mcp.caribbeanrealestatemls.com"]   # extras only
+```
+
+Required: `key`, `name`, `site_url`. Optional: `api_url`, `extra_origins` (other web origins of the same site), `support_email`, `from_email`, `from_name`, `logo_url`, `locale`.
+
+- `api_url` is optional and inherited: unset means the deployment `api_url`. Set it only for a site with its own API host. Sites may share one API host; the visitor's `Origin` tells them apart.
+- `from_email` defaults to `email.default_from`, so all sites send from one address until you set it. `from_name` defaults to the site `name`. `locale` defaults to `en` (`default_locale` is for the single-site case).
+- `support_email` and `logo_url` are not inherited.
+- ALLOWED_HOSTS, CORS and CSRF are derived from the sites, so no host is typed twice (see [Security settings](/configuration/security#derived-from-the-sites)). `security_domains` adds only hosts that are not a site, such as the `mcp.` host above.
+- A site that inherits the API host must not share a host with its `site_url`.
+
+<Callout type="warning">
+With `sites` declared, `site_url`, `support_email`, `logo_url` and `default_locale` must not be set on `DjangoConfig`. This includes a subclass that redefines the field, such as `site_url: str = env.app.site_url`. Give the value to the `SiteConfig` instead.
+</Callout>
+
+### The resolved `Site`
+
+`site_for` returns a frozen `Site`, never a `SiteConfig`. Do not build one by hand.
+
+| Attribute | Meaning |
+|---|---|
+| `key`, `name` | stable id, display name |
+| `site_url`, `api_url` | web and API origins, no trailing slash; `api_url` is always resolved (the deployment's when the site sets none) |
+| `origins` | `frozenset` of the web origins this site accepts (`site_url` plus `extra_origins`) |
+| `support_email`, `logo_url` | `None` when unset |
+| `from_email` | the site's own, else `email.default_from`; may be `None` |
+| `from_name`, `locale` | resolved, never empty |
+| `inherited` | `frozenset` naming what came from the deployment: `api_url`, `from_email` |
+
+| Method | Returns |
+|---|---|
+| `site.url("/auth")` | `site_url` + path; the only place a link to the site is built |
+| `site.accepts(origin)` | `True` when `origin` is one of `origins` (default ports are ignored: `https://a.com:443` equals `https://a.com`) |
+| `site.as_context()` | the template vocabulary: `project_name` and `site_name` (both the site name), `site_url`, `support_email`, `logo_url`, `site` |
+
+## What rejects
+
+The config fails to load (`ConfigurationError`) when:
+
+- `sites` is declared and `site_url`, `support_email`, `logo_url` or `default_locale` is set on `DjangoConfig`. The message names each field and where it goes:
+
+  ```text
+  DjangoConfig.site_url, DjangoConfig.support_email set while `sites` is declared; the sites own these fields. Move: site_url -> SiteConfig(site_url=...); support_email -> SiteConfig(support_email=...).
+  ```
+
+  `default_locale` moves to `SiteConfig(locale=...)`. `None` counts as unset.
+- two sites have the same `key`, or an origin is listed under two sites
+- `site_url` and `api_url` of one site share a host, or a site without its own `api_url` has the same host as the deployment `api_url`
+- a URL is not an origin (no path, query or fragment), or `support_email`, `logo_url`, `locale` are malformed
+- a site URL, the inherited API URL or `logo_url` is not `https` and `env_mode` is neither development nor test
+
+`manage.py check` warns (`django_cfg.W020`) when `security_domains` repeats a host that a declared site or the deployment `api_url` already declares. The entry is redundant, not wrong: remove it and keep `security_domains` for extra hosts. W020 never fails the check and does not run without `sites`, where `security_domains` lists the project's own hosts on purpose.
+
+## Resolving a site
+
+```python
+from django_cfg import site_for, site_key, sites
+
+site = site_for(request)               # request
+site = site_for(key="bali")            # background job: pass the key, not the request
+site = site_for(user=user)             # mail without a request
+site.name, site.url("/auth"), site.as_context()
+```
+
+`site_for` checks, in order:
+
+1. `key=`, captured when the job was queued. An unknown key is logged and skipped.
+2. `user=`: the site of the user's first registration source.
+3. The request's `Origin`, then the `Referer` origin, when it is one of a site's `origins`. This separates sites that share an API host.
+4. The request's `Host` against each site's `api_url` and `site_url` host.
+5. The first declared site.
+
+`Origin` only **selects among registered sites**; it never supplies a value, so a forged header can at most pick another registered site.
+
+Flows that must not guess (OAuth redirects, consent pages, return URLs) do not take step 5. They ask the site and reject on `False`:
+
+```python
+site = site_for(request)
+if not site.accepts(request.headers.get("Origin")):
+    raise PermissionDenied
+```
+
+`site_key(request)` returns just the key. `site_for` raises `ConfigurationError` when django-cfg is not configured.
+
+With more than one site, `SiteMiddleware` is added and `request.site` is available (resolved on first use, cached on the request). A single-site project has no `request.site`; call `site_for(request)`.
+
+A client-supplied `source_url` (OTP and OAuth requests) goes through `resolve_source_url`: if its origin belongs to a site it becomes that site's `site_url`, anything else becomes the default site's. Registration sources are created from this value, so a client cannot create unbounded rows.
+
+If a proxy rewrites `Host` while the public host arrives in `X-Forwarded-Host`, django-cfg logs one warning: keep the public `Host` in the proxy, or set `USE_X_FORWARDED_HOST` behind a trusted proxy.
+
+## Inspecting
+
+`python manage.py show_config` (table, and the `sites` array of `--format json`) and `django-cfg info` print the resolved sites. A value a site took from the deployment is marked `(inherited)`; the JSON lists the names in `inherited`.
+
+```text
+caribbean: Caribbean Real Estate MLS  https://caribbeanrealestatemls.com  api https://api.caribbeanrealestatemls.com (inherited)
+    origins  https://caribbeanrealestatemls.com, https://portal.caribbeanrealestatemls.com, https://studio.caribbeanrealestatemls.com
+    mail     from Caribbean Real Estate MLS <noreply@caribbeanrealestatemls.com> (inherited)  reply-to hello@caribbeanrealestatemls.com  locale en
+```
+
+The first line carries `(inherited)` for `api_url`, the mail line for `from_email` (taken from `email.default_from`; the sample assumes it is set). The mail line shows the sender address when `from_email` or `email.default_from` is set, and the word `DEFAULT_FROM_EMAIL` (Django's setting) when neither is. `django-cfg info` prints the block only when `DJANGO_SETTINGS_MODULE` points at a project that loads.
+
+The backend root (`api.<domain>/`) redirects to the `site_url` of the site whose `api_url` host it is. It never strips an `api.` prefix by guessing and never redirects loopback hosts (`localhost`, `127.0.0.1`); any other host gets a plain `OK`.
+
+## Who uses it
+
+| Area | What a site decides |
+|---|---|
+| [Email](/configuration/email) | `From` display name, `Reply-To` (`support_email`), template vocabulary, tracking links, fallback locale |
+| [OTP and OAuth](/features/built-in-apps/user-management/accounts/oauth) | which origin may start a sign-in, redirect URIs, registration source |
+| [MCP OAuth](/features/modules/django-mcp/connect-assistants) | consent page, accepted issuer hosts |
+| [IndexNow](/features/modules/django-sitemap/indexnow) | the public host to submit |
+| [Analytics](/features/tools/analytics/configuration) | trusted domains |

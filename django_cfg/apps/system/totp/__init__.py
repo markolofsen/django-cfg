@@ -17,7 +17,7 @@ Usage:
 
     # Setup 2FA for user
     device = TOTPService.create_device(user)
-    qr_uri = TOTPService.get_provisioning_uri(device)
+    qr_uri = TOTPService.get_provisioning_uri(device, issuer="My App")
 
     # Verify code
     is_valid = TOTPService.verify_code(device, "123456")
@@ -26,7 +26,6 @@ Usage:
     class MyConfig(DjangoConfig):
         two_factor: TwoFactorConfig = TwoFactorConfig(
             enabled=True,
-            issuer_name="My App",
             enforce_for_staff=True,
         )
 """

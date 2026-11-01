@@ -626,9 +626,9 @@ class DjangoMCPModuleConfig(BaseModel):
         default="2025-03-26",
         description="MCP protocol version to support",
     )
-    server_name: str = Field(
-        default="django-cfg-mcp",
-        description="Server name reported in initialize handshake",
+    server_name: Optional[str] = Field(
+        default=None,
+        description="Server name reported in initialize handshake (default: project slug)",
     )
     server_version: str = Field(
         default="1.0.0",

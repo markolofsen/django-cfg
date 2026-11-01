@@ -8,7 +8,7 @@
       This title becomes the Subject: header — send_template overrides the
       caller's subject with it, so a localized letter states its own here.
     {% endcomment %}
-    <title>Welcome to {{ project_name }}</title>
+    <title>Welcome to {{ site_name }}</title>
     <style type="text/css">
       * { box-sizing: border-box; }
       body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
@@ -91,12 +91,12 @@
     <div class="email-card">
 
       <div class="email-header">
-        <a href="{{ site_url|default:'#' }}" class="brand-name">{{ project_name }}</a>
+        {% if logo_url %}<a href="{{ site_url|default:'#' }}"><img src="{{ logo_url }}" alt="{{ site_name }}" height="32" style="border:0;max-height:32px;" /></a>{% else %}<a href="{{ site_url|default:'#' }}" class="brand-name">{{ site_name }}</a>{% endif %}
       </div>
 
       <div class="email-body">
 
-        <h1 class="email-title">Welcome to {{ project_name }}</h1>
+        <h1 class="email-title">Welcome to {{ site_name }}</h1>
         <p class="email-text">
           Hi {{ user.get_full_name|default:user.username }}, your account
           (<strong>{{ user.email }}</strong>) is ready to use.
@@ -126,14 +126,14 @@
         <hr class="divider" />
 
         <p class="email-signature">
-          Questions? We're happy to help.<br />
-          <strong>The {{ project_name }} Team</strong>
+          {% if support_email %}Questions? Write to <a href="mailto:{{ support_email }}">{{ support_email }}</a>.{% else %}Questions? We're happy to help.{% endif %}<br />
+          <strong>The {{ site_name }} Team</strong>
         </p>
 
       </div>
 
       <div class="email-footer">
-        <p>&copy; {% now "Y" %} {{ project_name }}. All rights reserved.</p>
+        <p>&copy; {% now "Y" %} {{ site_name }}. All rights reserved.</p>
         <p>This is an automated message — please do not reply.</p>
         {% if site_url %}<p><a href="{{ site_url }}">{{ site_url }}</a></p>{% endif %}
       </div>

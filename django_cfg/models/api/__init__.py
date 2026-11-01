@@ -13,7 +13,7 @@ from .drf.swagger import SwaggerUISettings
 from .jwt import JWTConfig
 from .keys import ApiKeys
 from .limits import LimitsConfig
-from .oauth import GitHubOAuthConfig, OAuthConfig
+from .oauth import GitHubOAuthConfig, GoogleOAuthConfig, OAuthConfig
 from .rate_limiting import RateLimitConfig, RateLimitRule
 from .twofactor import TwoFactorConfig
 
@@ -30,6 +30,7 @@ __all__ = [
     "SwaggerUISettings",
     "RedocUISettings",
     "GitHubOAuthConfig",
+    "GoogleOAuthConfig",
     "OAuthConfig",
     "TwoFactorConfig",
 ]

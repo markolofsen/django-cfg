@@ -20,6 +20,17 @@ class CustomUser(AbstractUser):
 
     email = models.EmailField()
 
+    # Canonical form of ``email`` (see ``UserManager.canonical_email``): lower
+    # case; for Gmail also dots and ``+tag`` removed. Every login path looks the
+    # account up by this key, so one mailbox is one user. Set by ``save()``.
+    email_key = models.CharField(
+        max_length=254,
+        db_index=True,
+        editable=False,
+        default='',
+        help_text="Canonical email used to match accounts across sign-in methods.",
+    )
+
     # Profile fields
     first_name = models.CharField(max_length=50, blank=True)
     last_name = models.CharField(max_length=50, blank=True)
@@ -89,9 +100,13 @@ class CustomUser(AbstractUser):
         return self.email
 
     def save(self, *args, **kwargs):
-        """Ensure username is generated if empty."""
+        """Ensure username is generated if empty and ``email_key`` follows ``email``."""
         if not self.username:
             self.username = self.__class__.objects._generate_unique_username()
+        self.email_key = self.__class__.objects.canonical_email(self.email)
+        update_fields = kwargs.get('update_fields')
+        if update_fields is not None and 'email' in update_fields and 'email_key' not in update_fields:
+            kwargs['update_fields'] = [*update_fields, 'email_key']
         super().save(*args, **kwargs)
 
     @property

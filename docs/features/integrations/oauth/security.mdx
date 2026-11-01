@@ -1,10 +1,29 @@
 ---
-title: OAuth Security Best Practices
-description: Production OAuth security recommendations.
+title: OAuth Security
+description: What the sign-in flow verifies, stores and refuses, and what to watch in production.
 ---
 
-import { Callout } from 'nextra/components'
+# OAuth Security
 
-<Callout type="info">
-This page has moved. See [OAuth (GitHub)](../../built-in-apps/user-management/accounts/oauth) for the full documentation.
-</Callout>
+How the flow is protected, so you know what you do not have to build and what is still on you.
+
+## What the flow does
+
+- **Single-use state.** A random state row (600 s Google, 300 s GitHub) is deleted before anything else happens in the callback; of two parallel callbacks one wins. A replayed or foreign state is `invalid_state`, and any later failure has already spent it.
+- **PKCE (S256) and nonce for Google.** The verifier never leaves the server. The ID token must echo the nonce.
+- **ID token validation.** RS256 only, key found by `kid` in Google's keys, audience, issuer, expiry, `azp`, `sub` shape. Failure is `invalid_id_token`; an unreachable key endpoint is `provider_unavailable`. There is no unverified fallback.
+- **Redirect origins are derived, not configured.** The request `Origin` must be accepted by the resolved site, else `origin_not_allowed`. A client-sent `redirect_uri` must be the exact callback of an accepted origin, and the callback ignores it anyway.
+- **Verified email only.** No email, or one the provider does not vouch for, is no sign-in and no registration.
+- **Staff are not linked by email.** A staff or superuser mailbox answers `link_not_allowed`.
+- **Pre-account-hijack closed.** Linking to an account that was never verified makes its password unusable.
+- **No Google tokens kept.** Scopes are `openid email profile`, no refresh token; Google's access token is not stored. GitHub's is. The stored `raw_data` holds profile claims only, never tokens.
+- **Rate limits.** 20 per minute (authorize) and 10 per minute (callback) per IP.
+
+## What stays with you
+
+- `code` and `state` sit in the `/auth` URL for a moment; the frontend removes them from the address bar before the exchange. Never log them.
+- Rate limits need a shared cache (Redis) and the real client IP (`RealIPMiddleware` behind a proxy); `manage.py check` warns with W034 and W035.
+- Keep the client secret in the environment, not in the repository.
+- A custom-domain address whose domain changed hands can inherit the account of the previous owner; Gmail addresses are not recycled. Staff are excluded by design.
+
+Reference and codes: [OAuth sign-in](/features/built-in-apps/user-management/accounts/oauth), [configuration](/features/integrations/oauth/configuration).

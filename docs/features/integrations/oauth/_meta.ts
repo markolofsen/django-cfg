@@ -1,7 +1,8 @@
 export default {
   'index': 'Overview',
-  'github': 'GitHub OAuth',
+  'google': 'Google Cloud Setup',
+  'github': 'GitHub Setup',
   'configuration': 'Configuration',
   'frontend': 'Frontend Integration',
-  'security': 'Security Best Practices'
+  'security': 'Security'
 }

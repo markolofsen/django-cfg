@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
 from django_cfg.modules.django_mcp.auth import authenticate, challenge, presented_credential
+from django_cfg.modules.django_mcp.handlers.initialize import resolve_server_name
 from django_cfg.modules.django_mcp.handlers.tools import tool_registry
 from django_cfg.modules.django_mcp.throttling import MCPRateThrottle
 
@@ -30,7 +31,7 @@ class MCPInfoView(APIView):
     Response:
     {
         "server": {
-            "name": "django-cfg-mcp",
+            "name": "my_project",
             "version": "1.0.0",
             "protocol": "2025-03-26",
             "description": "..."
@@ -100,12 +101,12 @@ class MCPInfoView(APIView):
             return response
 
         server_info = {
-            "name": "django-cfg-mcp",
+            "name": resolve_server_name(getattr(mcp_config, "server_name", None)),
             "version": "1.0.0",
             "protocol": "2025-03-26",
             "description": (
-                "Django-CFG MCP server — AI agents can query models, "
-                "execute commands, and introspect the application."
+                f"MCP server for {config.project_name if config else 'this project'} — "
+                "AI agents can query models, execute commands, and introspect the application."
             ),
         }
 

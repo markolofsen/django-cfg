@@ -30,6 +30,7 @@ def request_otp(
     source_url: Optional[str] = None,
     accept_language: Optional[str] = None,
     consent: Optional[ConsentCapture] = None,
+    site_key: Optional[str] = None,
 ) -> OTPRequestResult:
     """Create the OTP and schedule its delivery. Returns OTPRequestResult."""
     cleaned_email = CustomUser.objects.clean_email(email)
@@ -114,7 +115,7 @@ def request_otp(
         logger.info(f"Generated new OTP for {cleaned_email}")
 
     # Delivery runs after commit, off the request path.
-    dispatch_otp_delivery(user.pk, otp_code, created, source_url)
+    dispatch_otp_delivery(user.pk, otp_code, created, source_url, site_key)
     OTPRequestThrottle.record_sent(cleaned_email)
 
     return OTPRequestResult(

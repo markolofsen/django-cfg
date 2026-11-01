@@ -30,7 +30,7 @@ Type-safe email service configuration.
 | `use_tls` | `bool` | `True` | Use TLS encryption |
 | `use_ssl` | `bool` | `False` | Use SSL encryption |
 | `ssl_verify` | `bool` | `True` | Verify SSL certificates (set False for self-signed certs in dev) |
-| `default_from` | `str` | `"noreply@example.com"` | Default FROM email address |
+| `default_from` | `str \| None` | `None` | The one sending address for every site. Required in production with `smtp`/`gateway` (startup error otherwise). |
 | `file_path` | `str` | `"emails/"` | Path for file-based email backend |
 | `timeout` | `int` | `30` | Email send timeout in seconds (≥1) |
 | `gateway_url` | `str \| None` | `None` | Email gateway send endpoint (required for `backend="gateway"`) |
@@ -418,7 +418,7 @@ class EmailConfig(BaseSettings):
     username: str | None = Field(default=None)
     password: str | None = Field(default=None)
     use_tls: bool = Field(default=True)
-    default_from: str = Field(default="noreply@example.com")
+    default_from: Optional[str] = Field(default=None)
 
     model_config = SettingsConfigDict(
         env_prefix="EMAIL__",
@@ -442,6 +442,10 @@ class MyConfig(DjangoConfig):
         timeout=60  # 60 seconds timeout for slow connections
     )
 ```
+
+### Per-site sender
+
+With several [sites](/configuration/sites) the sending address stays one (`default_from`, or `SiteConfig.from_email` for a site that needs its own). What changes per site is the display name (`SiteConfig.from_name`, default `name`) and `Reply-To` (`SiteConfig.support_email`). Templates read `site_name`, `site_url`, `support_email` and `logo_url` from the site. Locale falls back to `SiteConfig.locale` before `en`. `django-cfg info` and `show_config` mark `from_email` as `(inherited)` for a site that uses `default_from`.
 
 ### Multiple FROM Addresses
 

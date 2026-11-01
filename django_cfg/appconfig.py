@@ -55,6 +55,10 @@ class DjangoCfgConfig(AppConfig):
             from django_cfg.startup import admin_access  # noqa: F401  (registers the check)
         except Exception as exc:  # noqa: BLE001
             logger.warning("django_cfg admin_access check not registered: %s", exc)
+        try:
+            from django_cfg.startup import sites  # noqa: F401  (registers the check)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("django_cfg sites check not registered: %s", exc)
         from django_cfg.startup.constance import register_constance_admin
         from django_cfg.startup.drf_patch import patch_drf_authentication
         from django_cfg.startup.mime_types import register_media_types

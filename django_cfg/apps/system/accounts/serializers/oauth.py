@@ -6,7 +6,10 @@ Request/Response serializers for OAuth authentication endpoints.
 
 from rest_framework import serializers
 
+from django_cfg.core.site import resolve_source_url
+
 from ..models.oauth import OAuthConnection, OAuthProvider
+from ..services.oauth.base import oauth_error_choices
 
 
 class OAuthAuthorizeRequestSerializer(serializers.Serializer):
@@ -15,7 +18,11 @@ class OAuthAuthorizeRequestSerializer(serializers.Serializer):
     redirect_uri = serializers.URLField(
         required=False,
         allow_blank=True,
-        help_text="URL to redirect after OAuth authorization. If not provided, uses config's site_url + callback_path"
+        help_text=(
+            "Optional. Must be `<origin>/auth?provider=<id>` for an origin of the resolved site; "
+            "anything else is rejected with `origin_not_allowed`. Omit it: the server derives it "
+            "from the request Origin."
+        )
     )
 
     source_url = serializers.URLField(
@@ -23,6 +30,10 @@ class OAuthAuthorizeRequestSerializer(serializers.Serializer):
         allow_blank=True,
         help_text="Optional source URL for registration tracking"
     )
+
+    def validate_source_url(self, value):
+        # A site's `site_url`, never the raw value: see `resolve_source_url`.
+        return resolve_source_url(value) or ""
 
 
 class OAuthAuthorizeResponseSerializer(serializers.Serializer):
@@ -41,21 +52,19 @@ class OAuthCallbackRequestSerializer(serializers.Serializer):
     """Request to complete OAuth flow (callback handler)."""
 
     code = serializers.CharField(
-        min_length=10,
-        max_length=500,
+        max_length=2048,
         help_text="Authorization code from OAuth provider callback"
     )
 
     state = serializers.CharField(
-        min_length=20,
-        max_length=100,
-        help_text="State token for CSRF verification (from authorize response)"
+        max_length=64,
+        help_text="State token from the authorize response; single use"
     )
 
     redirect_uri = serializers.URLField(
         required=False,
         allow_blank=True,
-        help_text="Same redirect_uri used in authorize request. If not provided, uses config's site_url + callback_path"
+        help_text="Ignored. The server reuses the redirect URI stored with the state."
     )
 
 class OAuthTokenResponseSerializer(serializers.Serializer):
@@ -143,12 +152,20 @@ class OAuthConnectionSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class OAuthProviderInfoSerializer(serializers.Serializer):
+    """One enabled sign-in provider."""
+
+    id = serializers.ChoiceField(choices=OAuthProvider.choices, help_text="Provider id")
+    name = serializers.CharField(help_text="Display name")
+    icon = serializers.CharField(help_text="Icon key")
+
+
 class OAuthProvidersResponseSerializer(serializers.Serializer):
     """Response with available OAuth providers."""
 
-    providers = serializers.ListField(
-        child=serializers.DictField(),
-        help_text="List of available OAuth providers"
+    providers = OAuthProviderInfoSerializer(
+        many=True,
+        help_text="Providers that are configured, in display order. The login screen shows exactly these."
     )
 
 
@@ -164,8 +181,9 @@ class OAuthDisconnectRequestSerializer(serializers.Serializer):
 class OAuthErrorSerializer(serializers.Serializer):
     """Error response for OAuth endpoints."""
 
-    error = serializers.CharField(
-        help_text="Error code"
+    error = serializers.ChoiceField(
+        choices=oauth_error_choices(),
+        help_text="Error code (closed set)"
     )
 
     error_description = serializers.CharField(

@@ -3,7 +3,7 @@ WebmailService — resolve a recipient email into a webmail deep-link.
 
 Given the address the user is logging in with, we:
   1. detect their webmail provider from the domain,
-  2. resolve the sender to search for (the project's DEFAULT_FROM_EMAIL),
+  2. resolve the sender to search for (the site's ``from_email``, else DEFAULT_FROM_EMAIL),
   3. build a URL that opens a sender-filtered search (or the inbox, as fallback).
 
 Unknown domains (corporate mailboxes, self-hosted, etc.) resolve to ``None`` —
@@ -28,14 +28,16 @@ class WebmailService:
     """Pure, stateless resolver. Use the classmethods directly."""
 
     @classmethod
-    def resolve(cls, email: str, sender: Optional[str] = None) -> Optional[WebmailLink]:
+    def resolve(cls, email: str, sender: Optional[str] = None, site=None) -> Optional[WebmailLink]:
         """
         Resolve *email* into a :class:`WebmailLink`, or ``None`` if unknown.
 
         Args:
             email: The recipient address the user is logging in with.
             sender: The address our login email is *from*. When omitted, we read
-                ``settings.DEFAULT_FROM_EMAIL``. Used to build the ``from:`` search.
+                the site's ``from_email``, else ``settings.DEFAULT_FROM_EMAIL``.
+                Used to build the ``from:`` search.
+            site: The ``Site`` the login email came from; None is the default site.
 
         Returns:
             A :class:`WebmailLink` for known providers, else ``None``.
@@ -48,7 +50,7 @@ class WebmailService:
         if spec is None:
             return None
 
-        clean_sender = cls._clean_sender(sender if sender is not None else cls._config_sender())
+        clean_sender = cls._clean_sender(sender if sender is not None else cls._config_sender(site))
 
         return cls._build_link(spec, clean_sender)
 
@@ -78,12 +80,15 @@ class WebmailService:
         return addr or None
 
     @staticmethod
-    def _config_sender() -> Optional[str]:
-        """Read DEFAULT_FROM_EMAIL from Django settings (safe if unset)."""
+    def _config_sender(site=None) -> Optional[str]:
+        """The address the login email is sent from: the site's, else Django's setting."""
         try:
             from django.conf import settings
 
-            return getattr(settings, "DEFAULT_FROM_EMAIL", None)
+            from django_cfg.core.site import site_for
+
+            site = site or site_for()
+            return site.from_email or getattr(settings, "DEFAULT_FROM_EMAIL", None)
         except Exception:  # pragma: no cover - settings always available in-app
             return None
 

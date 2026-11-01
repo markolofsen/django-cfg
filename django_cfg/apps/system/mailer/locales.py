@@ -100,18 +100,21 @@ def parse_accept_language(header: str) -> list[str]:
     return [tag for _, _, tag in sorted(tags)]
 
 
-def best_supported(header: str) -> Optional[str]:
+def best_supported(header: str, fallback: Optional[str] = None) -> Optional[str]:
     """The best supported locale an ``Accept-Language`` header asks for, or None.
 
     Returns None rather than the default when nothing matches, so a caller can
     tell "the browser wants a language we do not ship" from "the browser wants
     English" — the first must not be stored as a preference.
+
+    ``fallback`` is a site's locale: tried when the header yields nothing, before
+    the caller's own English default. Leave it unset when the answer is stored.
     """
     for tag in parse_accept_language(header or ""):
         matched = match_supported(tag)
         if matched:
             return matched
-    return None
+    return match_supported(fallback) if fallback else None
 
 
 def text_direction(locale: Optional[str]) -> str:

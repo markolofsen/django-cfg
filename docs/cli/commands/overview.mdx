@@ -55,7 +55,7 @@ python manage.py check_settings
 python manage.py check_endpoints --json
 
 # Test email
-cli test-email --to admin@test.com
+python manage.py test_email --email admin@test.com
 
 # Test Telegram
 cli test-telegram --message "Hello!"
@@ -349,7 +349,7 @@ python manage.py check_settings --verbose
 python manage.py check_endpoints
 
 # 3. Test integrations
-cli test-email --to admin@example.com
+python manage.py test_email --email admin@example.com
 
 # 4. Run migrations
 python manage.py migrate_all
@@ -414,7 +414,7 @@ python manage.py migrate_all --dry-run
 
 ```bash
 # Test email
-cli test-email --to admin@test.com
+python manage.py test_email --email admin@test.com
 
 # Test messaging
 cli test-telegram --message "Deploy successful"

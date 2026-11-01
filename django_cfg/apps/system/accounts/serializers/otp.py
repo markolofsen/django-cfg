@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from django_cfg.core.site import resolve_source_url
+
 from ..models import CustomUser, OTPSecret
 from ..services.email_validator import validate_email_address, EmailValidationError
 from ..services.webmail import WebmailProvider
@@ -48,9 +50,8 @@ class OTPRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(str(exc)) from exc
 
     def validate_source_url(self, value):
-        if not value or not value.strip():
-            return None
-        return value
+        # A site's `site_url`, never the raw value: see `resolve_source_url`.
+        return resolve_source_url(value)
 
 
 class OTPVerifySerializer(serializers.Serializer):
@@ -80,9 +81,8 @@ class OTPVerifySerializer(serializers.Serializer):
         return value
 
     def validate_source_url(self, value):
-        if not value or not value.strip():
-            return None
-        return value
+        # A site's `site_url`, never the raw value: see `resolve_source_url`.
+        return resolve_source_url(value)
 
 
 class OTPVerifyResponseSerializer(serializers.Serializer):

@@ -40,9 +40,9 @@ Django-CFG adds `unfold` to `INSTALLED_APPS` before `django.contrib.admin` autom
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `site_title` | `str` | `"Django-CFG Admin"` | Title shown in browser tab |
-| `site_header` | `str` | `"Django Config Toolkit"` | Header text at the top of admin |
-| `site_subheader` | `str` | `"Type-safe Django Configuration"` | Subheader text |
+| `site_title` | `str \| None` | `"<project_name> Admin"` | Title shown in browser tab |
+| `site_header` | `str \| None` | `project_name` | Header text at the top of admin |
+| `site_subheader` | `str \| None` | none | Subheader text |
 | `site_symbol` | `str` | `"settings"` | Material Symbols icon name |
 | `site_url` | `str` | `"/"` | URL for the "View site" link |
 

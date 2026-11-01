@@ -105,6 +105,10 @@ class MiddlewareBuilder:
         # Must run early so all downstream code sees the correct timezone.
         middleware.append("django_cfg.middleware.TimezoneMiddleware")
 
+        # request.site, only where there is a choice to make
+        if len(self.config.sites) > 1:
+            middleware.append("django_cfg.middleware.site.SiteMiddleware")
+
         # Accounts middleware (user activity tracking)
         # accounts is always enabled - core django-cfg functionality
         middleware.append("django_cfg.middleware.UserActivityMiddleware")

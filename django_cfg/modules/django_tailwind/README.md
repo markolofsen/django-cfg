@@ -43,7 +43,7 @@ Layout for full-featured applications with header, footer and dark mode.
 ```
 
 **Blocks:**
-- `header_title` - title in header (default: "Django CFG")
+- `header_title` - title in header (default: empty)
 - `header_icon` - icon in header (default: 💎)
 - `header_actions` - buttons in header (default: dark mode toggle)
 - `header_nav` - navigation under header
@@ -159,7 +159,7 @@ django_tailwind/components/navbar.html
 ```
 
 **Parameters:**
-- `title` - Navbar title (default: "Django CFG")
+- `title` - Navbar title (default: empty)
 - `icon` - Icon (emoji or HTML)
 - `nav_items` - List of navigation items
 - `show_theme_toggle` - Show dark mode toggle (default: True)

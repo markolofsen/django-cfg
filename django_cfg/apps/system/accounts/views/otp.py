@@ -8,6 +8,7 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from django_cfg.core.site import site_for
 from django_cfg.apps.system.totp.services import TOTPService, TwoFactorSessionService
 from django_cfg.modules.base import BaseCfgModule
 
@@ -101,11 +102,13 @@ class OTPViewSet(viewsets.GenericViewSet):
         )
 
         accept_language = request.META.get('HTTP_ACCEPT_LANGUAGE', '') or ''
-        logger.debug(f"Starting OTP request for: {identifier}, source: {source_url}")
+        site = site_for(request)
+        logger.debug(f"Starting OTP request for: {identifier}, source: {source_url}, site: {site.key}")
 
         try:
             result: OTPRequestResult = OTPService.request_otp(  # type: ignore[assignment]
-                identifier, source_url, accept_language=accept_language, consent=consent
+                identifier, source_url, accept_language=accept_language, consent=consent,
+                site_key=site.key,
             )
         except Exception as e:
             logger.error(f"OTP request failed with exception: {str(e)}")
@@ -128,7 +131,7 @@ class OTPViewSet(viewsets.GenericViewSet):
             try:
                 from ..services import WebmailService
 
-                link = WebmailService.resolve(identifier)
+                link = WebmailService.resolve(identifier, site=site)
                 if link is not None:
                     payload["webmail"] = link.model_dump(mode="json")
             except Exception as e:  # pragma: no cover - defensive

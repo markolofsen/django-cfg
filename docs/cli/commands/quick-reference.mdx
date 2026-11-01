@@ -24,7 +24,7 @@ Fast reference guide for all Django-CFG management commands. Perfect for quick l
 | Check settings | `python manage.py check_settings` | Comprehensive diagnostics |
 | Check endpoints | `python manage.py check_endpoints` | Test all API endpoints |
 | Show URLs | `cli show-urls` | List all registered URLs |
-| Test email | `cli test-email --to admin@test.com` | Send test email |
+| Test email | `python manage.py test_email --email admin@test.com` | Send test email |
 | Start worker | `rearq main:rearq worker` | Start background task worker |
 | Streamlit admin | `python manage.py run_streamlit` | Start Streamlit admin server |
 | RQ stats | `python manage.py rqstats` | Show queue statistics |
@@ -43,7 +43,7 @@ django-cfg info --verbose
 python manage.py check_settings --verbose
 
 # Show current configuration
-python manage.py show_config --format yaml
+python manage.py show_config --format json
 ```
 
 ## 🗄️ Database Operations
@@ -105,7 +105,7 @@ python manage.py check_endpoints --url endpoints_status
 curl http://localhost:8000/cfg/endpoints/
 
 # Test email
-cli test-email --to admin@test.com
+python manage.py test_email --email admin@test.com
 
 # Test Telegram
 cli test-telegram --message "Hello!"
@@ -334,7 +334,7 @@ python manage.py migrate_all --dry-run
 ### Test Integrations After Configuration
 
 ```bash
-poetry run cli test-email --to admin@test.com
+poetry run python manage.py test_email --email admin@test.com
 poetry run cli test-telegram --message "Deploy successful"
 ```
 

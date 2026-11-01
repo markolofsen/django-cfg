@@ -91,6 +91,14 @@ class SpectacularConfig(BaseModel):
             'SystemHealthStatusEnum': (
                 'django_cfg.apps.api.dashboard.serializers.system.SystemHealthStatus'
             ),
+            # OAuthError.error is a ChoiceField over a plain Enum, which the
+            # auto-discovery of TextChoices does not see; without this the
+            # generated type is the generic `ErrorEnum`. A callable returning
+            # the same (value, value) pairs as the field: spectacular hashes
+            # labels too, so the Enum class itself would not match.
+            'OAuthErrorCodeEnum': (
+                'django_cfg.apps.system.accounts.services.oauth.base.oauth_error_choices'
+            ),
         },
         description="Enum name overrides"
     )

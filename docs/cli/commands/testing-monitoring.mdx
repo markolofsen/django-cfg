@@ -380,26 +380,22 @@ See [Test Database Management](/database/testing) for comprehensive testing docu
 Test email configuration and delivery.
 
 ```bash
-cli test-email --to admin@example.com [OPTIONS]
+python manage.py test_email --email admin@example.com [--type TYPE]
 ```
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `--to` | `TEXT` | *required* | Recipient email |
-| `--subject` | `TEXT` | `"Django-CFG Test Email"` | Email subject |
-| `--backend` | `TEXT` | - | Specific backend to test |
+| `--email` | `TEXT` | *required* | Recipient email (no default) |
+| `--type` | `TEXT` | `all` | Template to send: `all`, `base`, `otp`, `welcome`, `login_alert` |
 
 **Examples:**
 
 ```bash
-# Basic test
-cli test-email --to admin@example.com
+# All templates
+python manage.py test_email --email admin@example.com
 
-# Custom subject
-cli test-email --to test@test.com --subject "Configuration Test"
-
-# Test specific backend
-cli test-email --to admin@test.com --backend smtp
+# One template
+python manage.py test_email --email admin@example.com --type otp
 ```
 
 ## Telegram Testing

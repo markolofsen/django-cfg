@@ -7,51 +7,87 @@ description: Security, CORS, and SSL configuration in Django-CFG
 # Security Settings
 
 
-**Production requirements:** Strong SECRET_KEY (50+ chars), reverse proxy with SSL, specific `security_domains`, environment variables for secrets.
+**Production requirements:** Strong SECRET_KEY (50+ chars), reverse proxy with SSL, your real `api_url` and `site_url` (or `sites`), no stray `localhost` in `security_domains`, environment variables for secrets.
 
 ## Environment Modes
 
 | Setting | Development | Production |
 |---------|-------------|------------|
-| `CORS` | Any `localhost` port, via regex | Strict whitelist from `security_domains` |
-| `ALLOWED_HOSTS` | `['*']` | Generated from `security_domains` |
-| `CSRF` | Loopback ports from your config + common defaults | Trusted origins from domains |
+| `CORS` | Any `localhost` port, via regex | Strict whitelist of your hosts (below) |
+| `ALLOWED_HOSTS` | `['*']` | Derived from your hosts (below) |
+| `CSRF` | Loopback ports from your config + common defaults | Trusted origins from your hosts |
 | `DEBUG` | Enabled | **Forced disabled** |
 | `SSL` | Disabled | Reverse proxy assumed |
 
-## security_domains Field
+## Where the hosts come from
 
-The `security_domains` field is the foundation of security configuration:
+ALLOWED_HOSTS, `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` are derived once, from the [site registry](/configuration/sites) plus `security_domains`. Nothing is typed twice:
+
+| Source | Contributes |
+|---|---|
+| each site | `site_url`, `extra_origins`, and the site's API host |
+| the deployment `api_url` | its host (the API host every site without its own `api_url` uses) |
+| `security_domains` | **extra** hosts: `mcp.*`, internal names, wildcard patterns |
+
+A bare entry in `security_domains` (`"mcp.myapp.com"`) takes `https` in production and `http` otherwise; write the scheme or a port (`"https://admin.myapp.com:8443"`) when you need it. Repeats are dropped by host and port.
+
+### Single site
+
+Without `sites`, nothing changes. The synthesised site contributes `site_url` and the deployment contributes `api_url`; `security_domains` is where you list the project's other hosts:
 
 ```python
 from django_cfg import DjangoConfig
 
 class MyConfig(DjangoConfig):
     secret_key: str = "your-secret-key"
-    debug: bool = False
-
-    # Production domains (flexible format - Django-CFG normalizes automatically)
-    security_domains: list = [
-        "myapp.com",              # ✅ No protocol
-        "https://api.myapp.com",  # ✅ With protocol
-        "admin.myapp.com:8443",   # ✅ With port
-    ]
-
-# Development: security_domains optional (localhost allowed on any port)
-class DevConfig(DjangoConfig):
-    debug: bool = True
-    # security_domains not needed - auto-configured for development
+    site_url: str = "https://myapp.com"
+    api_url: str = "https://api.myapp.com"
+    security_domains: list[str] = ["myapp.com", "api.myapp.com", "admin.myapp.com:8443"]
 ```
 
-### Auto-Generated Settings
+```python
+ALLOWED_HOSTS = ['myapp.com', 'api.myapp.com', 'admin.myapp.com']  # + Docker patterns if detected
+CORS_ALLOWED_ORIGINS = ['https://myapp.com', 'https://api.myapp.com', 'https://admin.myapp.com:8443']
+CSRF_TRUSTED_ORIGINS = ['https://myapp.com', 'https://api.myapp.com', 'https://admin.myapp.com:8443']
+CORS_ALLOW_CREDENTIALS = True
+```
 
-From `security_domains = ["myapp.com", "api.myapp.com"]`:
+The lists are order-stable: duplicates are removed in the order the hosts are first seen.
+
+<Callout type="warning">
+  The default of `security_domains` is `["localhost", "127.0.0.1"]`. In production an explicit list replaces it; if `localhost` stays in, it is allowed (and the localhost CORS regexes are added). Set the list explicitly in production.
+</Callout>
+
+### Derived from the sites
+
+With `sites` declared, list only what is not a site. Every `site_url`, every `extra_origins` entry, every site's API host and the deployment `api_url` are added for you:
 
 ```python
-ALLOWED_HOSTS = ['myapp.com', 'api.myapp.com']  # + Docker IPs if detected
-CORS_ALLOWED_ORIGINS = ['https://myapp.com', 'https://api.myapp.com']
-CSRF_TRUSTED_ORIGINS = ['https://myapp.com', 'https://api.myapp.com']
-CORS_ALLOW_CREDENTIALS = True
+class MlsConfig(DjangoConfig):
+    api_url: str = "https://api.caribbeanrealestatemls.com"
+    sites: list[SiteConfig] = [
+        SiteConfig(key="caribbean", name="Caribbean MLS",
+                   site_url="https://caribbeanrealestatemls.com",
+                   extra_origins=["https://portal.caribbeanrealestatemls.com"]),
+        SiteConfig(key="bali", name="Bali MLS", site_url="https://mlsbali.com"),
+        SiteConfig(key="danmerriam", name="Dan Merriam", site_url="https://danmerriam.com"),
+    ]
+    security_domains: list[str] = ["mcp.caribbeanrealestatemls.com"]   # extras only
+```
+
+Production ALLOWED_HOSTS here: the four web hosts, `api.caribbeanrealestatemls.com` once, and `mcp.caribbeanrealestatemls.com`; CORS and CSRF get the matching `https://` origins. The same origins are what `Site.accepts(origin)` checks for OTP, OAuth redirect URIs and MCP consent.
+
+`django_cfg.W020` (`manage.py check`) warns when a `security_domains` entry repeats a host that a site or the deployment `api_url` already declares. It is a clean-up hint, never an error, and only runs with `sites`.
+
+A `mcp.` host needs more than a host entry: set the MCP `oauth_issuer` (see [Connect assistants](/features/modules/django-mcp/connect-assistants)).
+
+### Development
+
+`ALLOWED_HOSTS` is `['*']` and localhost on any port is allowed through CORS regexes. `security_domains` is optional.
+
+```python
+class DevConfig(DjangoConfig):
+    debug: bool = True
 ```
 
 ## SSL/TLS Configuration
@@ -69,11 +105,13 @@ Set `ssl_redirect: bool = True` only for bare metal Django without reverse proxy
 
 ## CORS Configuration
 
-In production, CORS origins are auto-generated from `security_domains`. Add custom headers:
+In production, CORS origins are derived from the sites, `api_url` and `security_domains` (see above). Add custom headers:
 
 ```python
 class MyConfig(DjangoConfig):
-    security_domains: list = ["myapp.com", "api.myapp.com"]
+    site_url: str = "https://myapp.com"
+    api_url: str = "https://api.myapp.com"
+    security_domains: list = []
     cors_allow_headers: list = ['x-api-key', 'x-custom-header']  # Merged with defaults
 ```
 
@@ -102,7 +140,7 @@ No port list to maintain: a dev server on any port works without configuration.
 
 `CSRF_TRUSTED_ORIGINS` stays an explicit list — Django compares it literally and
 supports no regex. Django-CFG builds it from the loopback ports your config
-already names (`site_url`, `api_url`, `security_domains`) plus the common
+already names (the URLs of every site, `api_url`, `security_domains`) plus the common
 defaults (3000, 5173, 8000, 8080), expanded across `localhost`, `127.0.0.1` and
 `[::1]`, http and https.
 
@@ -133,7 +171,9 @@ governed by `ALLOWED_HOSTS`, which is `['*']` in development.
 class ProductionConfig(DjangoConfig):
     secret_key: str = os.environ["SECRET_KEY"]
     debug: bool = False
-    security_domains: list = ["myapp.com", "api.myapp.com"]
+    site_url: str = "https://myapp.com"
+    api_url: str = "https://api.myapp.com"
+    security_domains: list = []   # nothing extra; also drops the localhost default
 ```
 
 ### Development
@@ -142,7 +182,7 @@ class ProductionConfig(DjangoConfig):
 class DevelopmentConfig(DjangoConfig):
     secret_key: str = "dev-secret-key-minimum-50-characters-long-string"
     debug: bool = True
-    # security_domains not needed - auto-configured
+    # nothing to list in development
 ```
 
 ## Environment-Specific Security
@@ -151,7 +191,9 @@ class DevelopmentConfig(DjangoConfig):
 # config.production.yaml
 secret_key: "${SECRET_KEY}"
 debug: false
-security_domains: [myapp.com, api.myapp.com]
+site_url: https://myapp.com
+api_url: https://api.myapp.com
+security_domains: []
 
 # config.development.yaml
 secret_key: "dev-secret-key-minimum-50-chars"
@@ -165,8 +207,8 @@ debug: true
 | SECRET_KEY | 50+ chars, from `os.environ["SECRET_KEY"]` |
 | Secrets | Never hardcode, use environment variables |
 | SSL | Handle at reverse proxy (nginx/Cloudflare) |
-| ALLOWED_HOSTS | Use `security_domains`, never `['*']` in production |
-| CORS | Auto-configured from `security_domains` |
+| ALLOWED_HOSTS | Derived from `api_url`, `site_url` or `sites`, plus `security_domains` extras; never `['*']` in production |
+| CORS | Derived from the same hosts; no wildcard |
 
 **Generate SECRET_KEY:**
 ```bash

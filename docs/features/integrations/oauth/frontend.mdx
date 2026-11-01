@@ -1,10 +1,14 @@
 ---
 title: OAuth Frontend Integration
-description: React/Next.js OAuth integration.
+description: Where the login screen gets its provider buttons and what the callback page does.
 ---
 
-import { Callout } from 'nextra/components'
+# OAuth Frontend Integration
 
-<Callout type="info">
-This page has moved. See [OAuth (GitHub)](../../built-in-apps/user-management/accounts/oauth) for the full documentation.
-</Callout>
+The login screen asks `GET /cfg/accounts/oauth/providers/` and shows exactly the enabled providers. Each button calls `POST oauth/<provider>/authorize/`, stores the returned `state` in `sessionStorage` and redirects the page. The site's `/auth?provider=<id>&code&state` page posts the code to `oauth/<provider>/callback/` and finishes like an email-code login (2FA hand-off, saved return URL).
+
+The package APIs (`useAuthForm`, `AuthLayout`, the callback component) are described in [Accounts frontend](/features/built-in-apps/user-management/accounts/frontend). Backend contract and error codes: [OAuth sign-in](/features/built-in-apps/user-management/accounts/oauth).
+
+## Buttons and branding
+
+`AuthLayout` renders the buttons itself, providers first, then "or", then the email field. No prop is needed: the list comes from the server. The optional `oauthProviders` prop only narrows it. The Google button follows Google's branding rules (white or dark fill, standard "G", 14px/500 text); button text and error messages are translated in all 17 shipped locales. `enableGithubAuth` is deprecated and does nothing. Hook API: [useOAuthLogin](/features/built-in-apps/user-management/accounts/frontend#useoauthlogin--oauth).

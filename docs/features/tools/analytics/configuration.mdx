@@ -107,7 +107,9 @@ Successful OTP, OAuth, and TOTP-completion logins are also recorded automaticall
 
 `security_domains` already declares which domains belong to this project (it drives `ALLOWED_HOSTS`, CORS, and CSRF), so analytics derives from it rather than asking you to restate the same fact somewhere it can drift.
 
-A domain **not** in that list is rejected. That is the tenant boundary: auto-registering anything that POSTs at you would let a stranger's traffic into your database.
+Hosts of the [sites](/configuration/sites) in `DjangoConfig.sites` (`site_url`, `api_url` and `extra_origins`) are trusted too, so a declared site does not have to be repeated in `security_domains`.
+
+A domain that is in neither is rejected. That is the tenant boundary: auto-registering anything that POSTs at you would let a stranger's traffic into your database.
 
 ### How the domain is determined
 
