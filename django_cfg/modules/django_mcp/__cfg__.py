@@ -349,6 +349,14 @@ class MCPProfile(BaseModel):
         default=None,
         description="OAuth sign-in for this profile; None keeps it key-only.",
     )
+    max_block_bytes: int = Field(
+        default=1_000_000,
+        ge=0,
+        description=(
+            "Cap on the base64 payload of all extra content blocks (images, audio) "
+            "one tool result may carry. Above it the call returns a tool error."
+        ),
+    )
     @property
     def serves_all_tools(self) -> bool:
         return ALL_TOOLS in self.tools

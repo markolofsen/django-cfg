@@ -1,10 +1,11 @@
 """Base MCP Tool Class."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from django_cfg.modules.django_mcp.services.context import MCPContext
 from django_cfg.modules.django_mcp.services.redactor import redactor, RedactionMode
+from django_cfg.modules.django_mcp.tools.results import ToolResult
 
 
 class MCPTool(ABC):
@@ -100,15 +101,17 @@ class MCPTool(ABC):
         return True
 
     @abstractmethod
-    def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> str:
-        """Execute the tool and return result as string."""
+    def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> Union[str, ToolResult]:
+        """Execute the tool: a string (one text block) or a ``ToolResult`` (text plus image/link blocks)."""
         pass
 
-    def execute_with_redaction(self, context: MCPContext, arguments: Dict[str, Any]) -> str:
+    def execute_with_redaction(self, context: MCPContext, arguments: Dict[str, Any]) -> Union[str, ToolResult]:
         """Execute tool and apply redaction to result."""
         result = self.execute(context, arguments)
-        # Apply redaction based on context config
         mode = RedactionMode(context.config.redaction.mode.lower())
+        if isinstance(result, ToolResult):
+            result.text = redactor.redact_string(result.text, mode)
+            return result
         return redactor.redact_string(result, mode)
 
 

@@ -18,7 +18,7 @@ signed ``request``. That page signs the visitor in its usual way (django-cfg
 is bound to that user; the access token acts as them.
 
 Redirects are limited to the clients' own callbacks (claude.ai, chatgpt.com,
-OpenAI platform, Cursor, vscode.dev) and loopback (Claude Code, Codex, VS
+OpenAI platform, Cursor, vscode.dev, Notion, Perplexity) and loopback (Claude Code, Codex, VS
 Code), so a stolen client id cannot send a code anywhere else.
 """
 
@@ -103,6 +103,14 @@ def challenge_for(verifier: str) -> str:
 
 _LOOPBACK = {"localhost", "127.0.0.1", "[::1]", "::1"}
 
+_EXACT_CALLBACKS = frozenset(
+    {
+        ("app.notion.com", "/workflows/mcp/oauth/callback"),
+        ("www.perplexity.ai", "/rest/connections/oauth_callback"),
+        ("enterprise.perplexity.ai", "/rest/connections/oauth_callback"),
+    }
+)
+
 
 def allowed_redirect(uri: str) -> bool:
     """Only the known clients' callbacks, or the user's own machine."""
@@ -124,7 +132,10 @@ def allowed_redirect(uri: str) -> bool:
             return url.path == "/apps-manage/oauth"
         if host in ("vscode.dev", "insiders.vscode.dev"):
             return url.path == "/redirect"
-        return False
+        # Exact host and path, no wildcard: Notion's custom MCP connection
+        # (its Advanced settings print this URL) and Perplexity's custom
+        # remote connector (standard and Enterprise subdomain).
+        return (host, url.path) in _EXACT_CALLBACKS
     if url.scheme == "http":
         return host in _LOOPBACK
     if url.scheme == "cursor":

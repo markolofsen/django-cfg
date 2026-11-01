@@ -1,0 +1,41 @@
+---
+title: "Release v2.3.369"
+description: "MCP: tools can return images and links (ToolResult, max_block_bytes); Notion and Perplexity can sign in by OAuth (their exact callbacks are allowed); the connect widget adds Gemini CLI, LM Studio, Goose and a field-by-field Manual setup."
+---
+
+# Release v2.3.369
+
+**Prepared:** November 1, 2026 (draft: not published; the version number is the next one after 2.3.368 and may change)
+
+## MCP: tools can return images and links
+
+`MCPTool.execute()` may return a `ToolResult` instead of a string: the text block comes first, the extra blocks follow (MCP 2025-06-18: `image`, `audio`, `resource_link`, `resource`).
+
+```python
+from django_cfg.modules.django_mcp import ToolResult, image_block
+
+def execute(self, **params):
+    png = render_drawing(params["id"])
+    return ToolResult("Drawing 42", [image_block(png, "image/png")])
+```
+
+The total base64 payload of the blocks is capped per profile by `MCPProfile.max_block_bytes` (default 1,000,000). Above it the call returns a tool error that names the limit, so the model can retry with a smaller image or a link. Reforms can drop its `handle_tools_call` wrapper. See [Tools](/features/modules/django-mcp/tools).
+
+## MCP: Notion and Perplexity by OAuth
+
+Notion's custom MCP connection registers itself with a redirect to `https://app.notion.com/workflows/mcp/oauth/callback`, and Perplexity's custom remote connector uses `https://www.perplexity.ai/rest/connections/oauth_callback` (`https://enterprise.perplexity.ai/...` on Enterprise). Registration refused them until now, because only claude.ai, chatgpt.com, platform.openai.com, Cursor, vscode.dev and loopback were allowed. The three URLs are now allowed. Matching is exact on scheme, host and path, with no wildcard; look-alike hosts (`app.notion.com.evil.example`, `notion.com`, `evil.perplexity.ai`) are still refused.
+
+Notion's "Bearer token" and "API Key" options need no change: `Authorization: Bearer <key>` and `X-MCP-Access-Key` both reach the user-key check (now covered by tests). Use `X-MCP-Access-Key` as the API Key's Key and the user's API key as its Value. Basic authentication is not supported.
+
+Notion needs a Business or Enterprise plan, and an admin who enables custom MCP servers. An app whose callback is not published (Mistral Le Chat, Make) is not allowed by OAuth; use a key.
+
+## `@djangocfg/widget-mcp` (next version after 0.4.15)
+
+- New rows: Notion and Perplexity (OAuth by URL), Gemini CLI (`gemini mcp add --scope user --transport http --header ...`), LM Studio (`lmstudio://add_mcp`), Goose (`goose://extension`, OAuth).
+- "Other client" moved into a collapsed **Manual setup** block: ordered steps and one Copy button per field (MCP server URL, Name, Authentication, header name `X-MCP-Access-Key`, key) for apps that ask field by field (Notion, Mistral, Copilot Studio, n8n, Zapier, Make), plus the whole `mcpServers` JSON.
+
+See [Connect assistants](/features/modules/django-mcp/connect-assistants).
+
+## Upgrading
+
+Update django-cfg and rebuild the image of every project that serves MCP with `oauth=True`; nothing is configured, the allowlist is code. Update `@djangocfg/widget-mcp` for the new rows.

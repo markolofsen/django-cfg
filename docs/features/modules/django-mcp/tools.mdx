@@ -98,17 +98,37 @@ class MCPTool(ABC):
     description: str = ""   # shown to the LLM — affects when the tool is chosen
     input_schema: Dict      # JSON Schema for the arguments object
 
-    def execute(self, context: MCPContext, arguments: Dict) -> str:
-        ...  # must return a string
+    def execute(self, context: MCPContext, arguments: Dict) -> str | ToolResult:
+        ...  # a string, or a ToolResult with image/link blocks
 ```
 
 - `name` is what the LLM uses in a tool call. Must be unique across the registry.
 - `description` is the most important field — it determines when the LLM decides to use the tool. Write it precisely.
 - `input_schema` is sent verbatim to the LLM as the function parameter schema in OpenAI tool format.
-- `execute()` must always return a `str`. For structured data, return a JSON-encoded string. For errors, return a plain error message string — do not raise exceptions (the runner catches them and returns the message).
+- `execute()` returns a `str` (one text block) or a `ToolResult` (text plus image or link blocks, see below). For structured data return a JSON-encoded string. For errors return a plain error message string — do not raise exceptions (the runner catches them and returns the message).
 - `is_available(context)` may be called with `context=None` — the `/info/` listing checks availability without a request context. If you override `is_available`, it must tolerate a missing context rather than assume one is always present.
 - `public` (`bool`, default `False`) declares whether the public [profile](/features/modules/django-mcp/configuration#profiles) may serve this tool. The default is the design: the tool, declared beside its own code, is the only place that knows whether it is safe to expose. Set it `True` only for a tool that reads data that is already public, returns no personal data, and cannot mutate anything.
 - `schema_for(profile)` returns the input schema a given profile should be shown. See [Profile-aware schemas](#profile-aware-schemas) below.
+
+
+### Images and links in a result
+
+Return a `ToolResult` to attach an image. The text block always comes first, the extra blocks follow in order (MCP 2025-06-18 types: `text`, `image`, `audio`, `resource_link`, `resource`).
+
+```python
+from django_cfg.modules.django_mcp import ToolResult, image_block, resource_link_block
+
+def execute(self, context, arguments):
+    png = render_drawing(arguments["id"])          # bytes
+    return ToolResult(
+        "Drawing 42, 800x600.",
+        [image_block(png, "image/png"), resource_link_block("https://example.com/d/42", "Open in editor")],
+    )
+```
+
+`image_block` and `audio_block` take raw bytes and base64-encode them; `resource_link_block` carries no payload. `ToolResult(text, blocks=[], is_error=False)`; `is_error=True` marks a tool error. A block with an unknown `type` raises `ValueError` when the result is built.
+
+The total base64 payload of the blocks is capped per profile by `MCPProfile.max_block_bytes` (default 1,000,000). Above it the call returns a tool error that names the limit, so the model can retry with a smaller image or a link. The access log's `bytes=` counts the text only.
 
 ## Profile-aware schemas
 

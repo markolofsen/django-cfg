@@ -18,6 +18,7 @@ from .__cfg__ import (
     MCPTargetConfig,
     RedactionConfig,
 )
+from .tools.results import ToolResult, audio_block, image_block, resource_link_block
 from .auto_loader import load_project_mcp_config, mcp_config_exists
 from .config_builder import MCPConfigBuilder
 
@@ -65,6 +66,10 @@ __all__ = [
     "MCPTargetConfig",
     "RedactionConfig",
     "MCPConfigBuilder",
+    "ToolResult",
+    "image_block",
+    "audio_block",
+    "resource_link_block",
     "is_enabled",
     "get_mcp_config",
     "discover_and_load_project_mcp",

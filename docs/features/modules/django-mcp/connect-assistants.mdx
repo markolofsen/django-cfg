@@ -38,7 +38,7 @@ What the server then serves:
 | `<path>oauth/approve/` | Your page posts the user's decision here |
 | `<path>oauth/token/` | Code for tokens, and refresh |
 
-Redirects are accepted only for the clients' own callbacks (claude.ai, chatgpt.com, platform.openai.com, `cursor://anysphere.cursor-mcp`, vscode.dev) and for loopback addresses (Claude Code, Codex, VS Code desktop). Anything else is refused at registration.
+Redirects are accepted only for the clients' own callbacks (claude.ai, chatgpt.com, platform.openai.com, `cursor://anysphere.cursor-mcp`, vscode.dev, and the exact Notion and Perplexity callbacks listed below) and for loopback addresses (Claude Code, Codex, Gemini CLI, Goose, VS Code desktop). Anything else is refused at registration.
 
 `X-MCP-Access-Key` keeps working beside it. The `operator` profile never accepts OAuth tokens: the profile name is inside the token.
 
@@ -85,7 +85,7 @@ The browser briefly shows the `authorize` address. It is public anyway (it is in
 
 ## 3. Frontend: install buttons
 
-`<McpConnect server={{ url, alias, name }} loadKey={...} />` from `@djangocfg/widget-mcp` renders all of these. Claude and ChatGPT go through OAuth as below; Claude Code, Codex, Cursor and VS Code get the signed-in user's own key in the command or deeplink, which works in bearer-only clients too. A hand-built page can use either path.
+`<McpConnect server={{ url, alias, name }} loadKey={...} />` from `@djangocfg/widget-mcp` renders all of these. Claude and ChatGPT go through OAuth as below; Claude Code, Codex, Gemini CLI, Cursor, VS Code and LM Studio get the signed-in user's own key in the command or deeplink, which works in bearer-only clients too. A hand-built page can use either path.
 
 Each assistant gets one action, built from the endpoint URL (`E`) and a short alias (`A`):
 
@@ -97,6 +97,20 @@ Each assistant gets one action, built from the endpoint URL (`E`) and a short al
 | Codex | Copy `codex mcp add <A> --url <E> && codex mcp login <A>` |
 | Cursor | `cursor://anysphere.cursor-deeplink/mcp/install?name=<A>&config=<base64 of {"url":E}>` |
 | VS Code | `https://vscode.dev/redirect/mcp/install?name=<A>&config=<url-encoded {"type":"http","url":E}>` |
+| Gemini CLI | `gemini mcp add --scope user --transport http --header "X-MCP-Access-Key: <key>" <A> <E>` ([docs](https://geminicli.com/docs/tools/mcp-server/)) |
+| LM Studio | `lmstudio://add_mcp?name=<A>&config=<base64 of {"url":E,"headers":{...}}>` ([docs](https://lmstudio.ai/docs/app/mcp/deeplink)) |
+| Goose | `goose://extension?url=<E>&type=streamable_http&id=<A>&name=<N>`; signs in with OAuth ([docs](https://goose-docs.ai/docs/getting-started/using-extensions)) |
+| Notion | Copy `E`; in an agent: Tools & Access, Add connection, Custom MCP server; auth OAuth (Business and Enterprise plans) |
+| Perplexity | Copy `E`, open `https://www.perplexity.ai/computer/plugins`: Add custom, MCP connector, Remote; auth OAuth |
+
+## Clients that add a server in a form (Notion, Perplexity, Mistral, Copilot Studio, n8n, Zapier, Make)
+
+Some apps have no config file and no link: the person fills a form. Two ways in, both already served:
+
+- **OAuth by URL.** The app registers itself (RFC 7591) and signs in. It works only if its callback is on the allowlist above. Added after checking each vendor's page: Notion `https://app.notion.com/workflows/mcp/oauth/callback` (printed in the form's Advanced settings), Perplexity `https://www.perplexity.ai/rest/connections/oauth_callback` and the Enterprise form `https://enterprise.perplexity.ai/rest/connections/oauth_callback`. Matching is exact on scheme, host and path: no wildcard, so `app.notion.com.evil.example` and `notion.com` are refused. A client whose callback is not published (Mistral Le Chat, Make) is not on the list; use the key options below.
+- **A header with the user's key.** Notion's "Bearer token" option sends `Authorization: Bearer <key>` and "API Key" sends the header you name; use `X-MCP-Access-Key` as the Key and the user's API key as the Value. Both reach the same check. "Basic" is not supported.
+
+`<McpConnect>` shows these values field by field under "Manual setup", each with its own Copy button.
 
 ## Checked against real clients
 

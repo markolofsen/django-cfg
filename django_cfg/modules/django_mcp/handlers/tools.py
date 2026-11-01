@@ -25,6 +25,7 @@ from django_cfg.modules.django_mcp.agent.orm_tools import (
 )
 # Use the GLOBAL registry — do NOT create a new one
 from django_cfg.modules.django_mcp.tools.base import tool_registry
+from django_cfg.modules.django_mcp.tools.results import ToolResult, blocks_size
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +70,13 @@ tool_registry.register(distribution_tool)
 
 class ToolsHandler:
     """Handle MCP tools/list and tools/call methods."""
+
+    @staticmethod
+    def _unpack(result):
+        """``str`` or ``ToolResult`` to (text, extra blocks, is_error)."""
+        if isinstance(result, ToolResult):
+            return result.text, list(result.blocks), result.is_error
+        return result, [], False
 
     @staticmethod
     def handle_tools_list(params: Dict[str, Any], context: MCPContext) -> Dict[str, Any]:
@@ -128,6 +136,32 @@ class ToolsHandler:
             )
             raise
 
+        text, blocks, is_error = ToolsHandler._unpack(result)
+        cap = getattr(profile, "max_block_bytes", None)
+        if cap is not None and blocks_size(blocks) > cap:
+            # A tool error, not a protocol error: the client shows it to the model,
+            # which can retry with something smaller.
+            logger.warning(
+                "mcp.call profile=%s tool=%s ip=%s outcome=blocks_too_large size=%d cap=%d",
+                getattr(profile, "name", "-"),
+                tool_name,
+                _caller_ip(context),
+                blocks_size(blocks),
+                cap,
+            )
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            f"The result carries {blocks_size(blocks)} bytes of attachments, "
+                            f"over this endpoint's limit of {cap}. Return a smaller image or a link instead."
+                        ),
+                    }
+                ],
+                "isError": True,
+            }
+
         logger.info(
             "mcp.call profile=%s tool=%s ip=%s args=%s ms=%d bytes=%d outcome=ok",
             getattr(profile, "name", "-"),
@@ -139,15 +173,8 @@ class ToolsHandler:
             # shape of call was made.
             ",".join(sorted(arguments)) or "-",
             (time.monotonic() - started) * 1000,
-            len(result or ""),
+            len(text or ""),
         )
 
-        return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": result,
-                }
-            ],
-            "isError": False,
-        }
+        content = [{"type": "text", "text": text}, *blocks]
+        return {"content": content, "isError": is_error}
