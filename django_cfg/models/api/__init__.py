@@ -16,6 +16,7 @@ from .limits import LimitsConfig
 from .oauth import GitHubOAuthConfig, GoogleOAuthConfig, OAuthConfig
 from .rate_limiting import RateLimitConfig, RateLimitRule
 from .twofactor import TwoFactorConfig
+from .account_emails import AccountEmailsConfig
 
 __all__ = [
     "APIConfig",
@@ -33,4 +34,5 @@ __all__ = [
     "GoogleOAuthConfig",
     "OAuthConfig",
     "TwoFactorConfig",
+    "AccountEmailsConfig",
 ]

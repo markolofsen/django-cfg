@@ -96,6 +96,7 @@ class AccountNotifications:
         button_text: str = None,
         button_url: str = None,
         template_name: str = "emails/base_email",
+        to_email: str = None,
         locale: str = None,
         extra_context: dict = None,
         text_only: bool = False,
@@ -150,7 +151,7 @@ class AccountNotifications:
             subject=subject,
             template_name=template_name,
             context=context,
-            recipient_list=[user.email],
+            recipient_list=[to_email or user.email],
             locale=locale,
             text_only=text_only,
             site=site,
@@ -208,12 +209,20 @@ class AccountNotifications:
             logger.info(f"Welcome telegram notification sent for {user.email}")
 
     @staticmethod
-    def send_profile_update_notification(user, changes, send_email=True, send_telegram=True, site=None):
-        """Send profile update notification"""
+    def send_profile_update_notification(
+        user, changes, send_email=True, send_telegram=True, site=None, email_changes=None, email_to=None
+    ):
+        """Send profile update notification.
+
+        ``changes`` is what Telegram reports. The letter names ``email_changes``
+        (default: ``changes``) and goes to ``email_to`` (default: the user's
+        address), so a changed address can warn the one it replaced.
+        """
         if not changes:
             return
 
         change_text = ", ".join(changes)
+        email_text = ", ".join(email_changes or changes)
 
         if send_email:
             AccountNotifications._send_email(
@@ -223,8 +232,9 @@ class AccountNotifications:
                 copy_key="profile_updated",
                 main_text="A security alert has been triggered for your account.",
                 main_html_content='<p style="font-size: 1.5em; font-weight: bold; color: #dc3545;">Profile Updated</p>',
-                secondary_text=f"Details: Your {change_text} has been updated. If this wasn't you, please contact support immediately.",
+                secondary_text=f"Details: Your {email_text} has been updated. If this wasn't you, please contact support immediately.",
                 button_text="Review Account",
+                to_email=email_to,
             )
             logger.info(f"Profile update notification sent to {user.email}")
 

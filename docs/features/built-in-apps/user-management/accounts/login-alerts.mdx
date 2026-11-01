@@ -3,7 +3,20 @@ title: Login Alerts
 description: Apple-style login notification emails with device detection, IP tracking, and intelligent suppression rules.
 ---
 
+import { Callout } from 'nextra/components'
+
 # Login Alerts
+
+<Callout type="warning">
+  Off by default since v2.3.370. Turn it on with `account_emails=AccountEmailsConfig(new_sign_in_email=True)`. A user who has just signed in does not need a letter about it; enable it for projects where a second-device warning is worth the email.
+</Callout>
+
+```python
+from django_cfg import AccountEmailsConfig, DjangoConfig
+
+class MyConfig(DjangoConfig):
+    account_emails = AccountEmailsConfig(new_sign_in_email=True)  # default False
+```
 
 Apple-style login notification emails sent when users log in from new devices or IPs. Detects potentially unauthorized access while suppressing false alarms with intelligent deduplication.
 
@@ -39,8 +52,9 @@ Alerts are suppressed in these cases (applied in order):
 
 | Rule | Description |
 |------|-------------|
+| **Switch off** | `account_emails.new_sign_in_email` is `False` (the default); the sign-in is still logged |
 | **Test accounts** | `user.is_test_account=True` — never alerted |
-| **Registration grace** | First 24h after signup — no alerts |
+| **Registration grace** | First 24h after signup (OTP or OAuth) — a brand-new account never gets one |
 | **Recent same-device** | Same IP + browser fingerprint seen in past 24h — no repeat |
 
 ## Configuration
@@ -67,6 +81,10 @@ Context variables:
 | `button_url` | The site's `site_url`, for the "review activity" button |
 
 The subject is the gettext string `"New sign-in to your %(project_name)s account"`, unless a stored `EmailContent` subject replaces it. The recipient's language is `user.language`, then the site's `locale`. The site key is captured from the request on the request thread, so the background job speaks for the site the sign-in happened on.
+
+## Profile change email
+
+The sibling letter "Security Alert: Profile Updated" is also opt-in: `AccountEmailsConfig(profile_change_email=True)`. When on, it is sent to the previous address only when the account's **email address** changes. A name or username change, a first fill of an empty email, and anything written during sign-in or registration never send it. Telegram and admin notifications about profile changes are unchanged.
 
 ## How It Works
 

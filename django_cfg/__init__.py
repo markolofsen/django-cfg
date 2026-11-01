@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.3.369"
+__version__ = "2.3.371"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -84,6 +84,7 @@ from .models.api.oauth import GitHubOAuthConfig, GoogleOAuthConfig, OAuthConfig
 from .models.api.limits import LimitsConfig
 from .models.api.keys import ApiKeys
 from .models.api.twofactor import TwoFactorConfig
+from .models.api.account_emails import AccountEmailsConfig
 
 # ---------------------------------------------------------------------------
 # [GROUP 4] Django models
@@ -272,7 +273,7 @@ __all__ = [
     # API
     "DRFConfig", "SpectacularConfig", "SwaggerUISettings", "RedocUISettings",
     "JWTConfig", "GitHubOAuthConfig", "GoogleOAuthConfig", "OAuthConfig", "LimitsConfig",
-    "ApiKeys", "TwoFactorConfig",
+    "ApiKeys", "TwoFactorConfig", "AccountEmailsConfig",
     # Django models
     "EnvironmentConfig", "AxesConfig",
     "DjangoRQConfig", "RQQueueConfig", "RQScheduleConfig",

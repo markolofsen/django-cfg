@@ -31,6 +31,7 @@ from .api.keys import ApiKeys
 from .api.limits import LimitsConfig
 from .api.oauth import GitHubOAuthConfig, GoogleOAuthConfig, OAuthConfig
 from .api.twofactor import TwoFactorConfig
+from .api.account_emails import AccountEmailsConfig
 from .base.config import BaseConfig, BaseSettings
 from .base.module import BaseCfgAutoModule
 
@@ -111,4 +112,5 @@ __all__ = [
     "OAuthConfig",
     # 2FA
     "TwoFactorConfig",
+    "AccountEmailsConfig",
 ]

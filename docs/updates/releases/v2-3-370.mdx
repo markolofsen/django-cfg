@@ -1,0 +1,55 @@
+---
+title: "Release v2.3.370"
+description: "Behavior change: the 'Profile Updated' and 'New sign-in' security emails are off by default and opt-in through account_emails; a new Google user receives only the welcome letter."
+---
+
+# Release v2.3.370
+
+**Prepared:** November 1, 2026 (draft, django-cfg backend and `@djangocfg/ui-core`)
+
+## Behavior change: security emails are opt-in
+
+A visitor who signed in with Google was emailed "Security Alert: Profile Updated" within seconds, because the sign-in filled in the name from Google. The "New sign-in" email also mails a user right after they signed in themselves. Both are now **off by default**:
+
+```python
+from django_cfg import AccountEmailsConfig, DjangoConfig
+
+class MyConfig(DjangoConfig):
+    account_emails = AccountEmailsConfig(
+        profile_change_email=True,   # default False
+        new_sign_in_email=True,      # default False
+    )
+```
+
+| Letter | Before | Now |
+|--------|--------|-----|
+| Profile Updated, name or username changed | sent | never sent (Telegram still reports it) |
+| Profile Updated, email address changed | sent to the new address | only with `profile_change_email`, sent to the **previous** address |
+| Profile Updated, written by sign-in or registration | sent | never sent |
+| New sign-in | sent for a new device after the first 24h | only with `new_sign_in_email`, same rules (test accounts, 24h grace, same-device dedup) |
+| Account deactivated, user deleted their own account | sent ("by administrator") | not sent (Telegram still reports it) |
+
+Both switches gate only the email to the user. Telegram and admin notifications are unchanged. The welcome letter, the OTP code and administrator activation or deactivation letters are unchanged. See [Login Alerts](/features/built-in-apps/user-management/accounts/login-alerts).
+
+## Visual change: one height ladder for buttons and fields
+
+`@djangocfg/ui-core` had two unrelated size ladders: `Button` defaulted to 36px and `Input` to 40px, so `<Input/> <Button/>` in one row never lined up. Both now read one map, `CONTROL_SIZE`, and every field-like control has the same height as a `Button` of the same size. The chosen default is the `Button` one:
+
+| Size | Height | Before (Input / Select trigger) |
+|------|--------|---------------------------------|
+| `xs` | 28px | not available (new) |
+| `sm` | 32px | 36px |
+| `default` | 36px | **40px** |
+| `lg` | 44px | not available (new) |
+
+- **Inputs, select triggers, `InputGroup`, `InputAffix`, `DateField`, `TimeField`, `DateTimeField`, `MaskInput` and `PhoneInput` are 4px shorter at the default size.** `Input` with `inputSize="sm"` is 32px (was 36px). `Toggle` with `size="lg"` is 44px (was 40px).
+- `Input`, `InputGroup`, `InputAffix` and the date fields gain `inputSize="xs" | "lg"`; `SelectTrigger` gains `size`. `Button` is unchanged.
+- An uncontrolled `Input` now honours `inputSize` and `bare` (it used to ignore both).
+- Multi-select triggers keep growing with their content; their minimum height is now 36px (was 40px).
+- `CONTROL_SIZE` and the `ControlSize` / `FieldControlSize` types are exported from `@djangocfg/ui-core/components`.
+
+If your app worked around the mismatch with `className="h-9"` on an `Input` or `size="sm"` on a `Button`, remove it. A call site that wants the old 40px passes `className="h-10"` on that control.
+
+## Upgrading
+
+Projects that want the old behavior set both switches to `True`. Everyone else changes nothing on the backend. Frontends on `@djangocfg/ui-core` get the shorter inputs described above; check forms with fixed-height rows.

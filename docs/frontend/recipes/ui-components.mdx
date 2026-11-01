@@ -39,6 +39,28 @@ In Next.js apps always import from `@djangocfg/ui-nextjs`, not `@djangocfg/ui-co
 | Hooks | 15 | useDebounce, useHotkey, useLocalStorage, useMediaQuery, useIsMobile |
 | Layouts | — | BaseApp (providers) + PrivateLayout / PublicLayout / AuthLayout (shells) |
 
+## Control Sizes
+
+`Button` and every field-like control read one height ladder, `CONTROL_SIZE`, so a row of them lines up at every size.
+
+| Size | Height | Button `size` | `Input`, `InputGroup`, `InputAffix`, `DateField`, `TimeField`, `DateTimeField` `inputSize` | `SelectTrigger` `size` |
+|------|--------|---------------|-----------------|-----------------|
+| `xs` | 28px | yes | yes | yes |
+| `sm` | 32px | yes | yes | yes |
+| `default` | 36px | yes | yes | yes |
+| `lg` | 44px | yes | yes | yes |
+| `huge` | 56px | yes | no | no |
+
+```tsx
+<div className="flex gap-2">
+  <Input inputSize="lg" placeholder="Search" />
+  <Input inputSize="lg" type="date" />
+  <Button size="lg">Add</Button>
+</div>
+```
+
+Never put `h-9` or `h-10` on a control to make it fit a row: pass the same size name to each. `Combobox`, `LanguageSelect` and `DatePicker` are built on `Button` and take its height. The native `size` attribute of an `<input>` is why the field prop is `inputSize`.
+
 ## Import Patterns
 
 ```typescript

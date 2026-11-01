@@ -5,7 +5,7 @@ description: "MCP: tools can return images and links (ToolResult, max_block_byte
 
 # Release v2.3.369
 
-**Prepared:** November 1, 2026 (draft: not published; the version number is the next one after 2.3.368 and may change)
+**Prepared:** November 1, 2026 (django-cfg backend; the widget changes below ship in the next `@djangocfg/widget-mcp`)
 
 ## MCP: tools can return images and links
 
@@ -31,8 +31,10 @@ Notion needs a Business or Enterprise plan, and an admin who enables custom MCP 
 
 ## `@djangocfg/widget-mcp` (next version after 0.4.15)
 
-- New rows: Notion and Perplexity (OAuth by URL), Gemini CLI (`gemini mcp add --scope user --transport http --header ...`), LM Studio (`lmstudio://add_mcp`), Goose (`goose://extension`, OAuth).
-- "Other client" moved into a collapsed **Manual setup** block: ordered steps and one Copy button per field (MCP server URL, Name, Authentication, header name `X-MCP-Access-Key`, key) for apps that ask field by field (Notion, Mistral, Copilot Studio, n8n, Zapier, Make), plus the whole `mcpServers` JSON.
+- The panel is now four screens with one decision each: home is six tiles (Claude, ChatGPT, Notion, Perplexity, "Code editor or terminal", "Other app") with no key and no list; each client has its own screen with one primary action and at most three steps; OAuth clients never show a key.
+- New clients: Notion and Perplexity (OAuth by URL), Gemini CLI (command), LM Studio (deeplink), Goose (deeplink, OAuth).
+- "Other app" is a stepper with a Copy button per field (MCP server URL, Name, Authentication, header `X-MCP-Access-Key`, key) for apps that ask field by field (Notion, Mistral, Copilot Studio, n8n, Zapier, Make), plus "Copy setup instructions for your AI" and the whole `mcpServers` JSON.
+- New optional props `locale` and `initialView`; all 17 locales, English fills any missing key.
 
 See [Connect assistants](/features/modules/django-mcp/connect-assistants).
 

@@ -249,6 +249,10 @@ class DjangoConfig(BaseModel):
         default=None,
         description="Two-Factor Authentication (TOTP) configuration",
     )
+    account_emails: AccountEmailsConfig = Field(
+        default_factory=AccountEmailsConfig,
+        description="Opt-in security emails: profile_change_email, new_sign_in_email (both default off)",
+    )
 
     # ══════════════════════════════════════════════════════════════
     #                      ADMIN INTERFACE

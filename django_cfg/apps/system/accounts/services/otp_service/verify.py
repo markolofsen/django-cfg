@@ -21,6 +21,7 @@ from django_cfg.utils import get_logger
 from ...models import CustomUser, OTPSecret
 from ...signals import notify_failed_otp_attempt
 from ..brute_force_service import OTPVerifyThrottle
+from ...utils.notification_policy import sign_in_flow
 from ..verification import mark_user_verified as _mark_user_verified
 
 logger = get_logger(__name__)
@@ -68,6 +69,18 @@ def _link_source(user: CustomUser, source_url: Optional[str]) -> None:
 
 
 def verify_otp(
+    email: str,
+    otp_code: str,
+    source_url: Optional[str] = None,
+    ip_address: Optional[str] = None,
+    accept_language: Optional[str] = None,
+) -> Optional[CustomUser]:
+    """Verify OTP and return the user, or ``None``; see ``_verify_otp``."""
+    with sign_in_flow():
+        return _verify_otp(email, otp_code, source_url, ip_address, accept_language)
+
+
+def _verify_otp(
     email: str,
     otp_code: str,
     source_url: Optional[str] = None,

@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from django_cfg.modules.django_telegram import DjangoTelegram, MessagePriority
 
+from .utils.notification_policy import in_sign_in_flow, profile_change_email_enabled
 from .utils.notifications import AccountNotifications
 
 User = get_user_model()
@@ -64,9 +65,13 @@ def send_user_status_change_emails(sender, instance, **kwargs):
                 AccountNotifications.send_account_status_change(instance, "activated", send_email=should_send_email)
                 logger.info(f"Account activation {'email' if should_send_email else 'notification'} sent to {instance.email}")
 
-            # Check if user was deactivated
+            # Check if user was deactivated. A soft delete is the user's own
+            # request, not an administrator's decision: Telegram only, no letter.
             elif old_instance.is_active and not instance.is_active:
-                AccountNotifications.send_account_status_change(instance, "deactivated", reason="Account deactivated by administrator", send_email=should_send_email)
+                AccountNotifications.send_account_status_change(
+                    instance, "deactivated", reason="Account deactivated by administrator",
+                    send_email=should_send_email and not instance.deleted_at,
+                )
                 logger.info(f"Account deactivation {'email' if should_send_email else 'notification'} sent to {instance.email}")
 
     except User.DoesNotExist:
@@ -78,31 +83,48 @@ def send_user_status_change_emails(sender, instance, **kwargs):
 
 @receiver(pre_save, sender=User)
 def send_user_profile_update_email(sender, instance, **kwargs):
-    """Send email when user profile is updated (for important changes)."""
+    """Notify about profile changes: Telegram always, the user's email only on request.
+
+    Telegram keeps reporting email, username and name changes. The email to the
+    user is opt-in (``account_emails.profile_change_email``) and only for a
+    change of the email address itself, sent to the previous address: that is
+    the one letter that carries news the user did not cause on their own screen.
+    A name or username change, the first fill of an empty email, and anything
+    written by a sign-in or registration flow never produce it.
+    """
     try:
-        # Get the old instance from database
-        if instance.pk:
-            old_instance = User.objects.get(pk=instance.pk)
+        if not instance.pk:
+            return
+        old_instance = User.objects.get(pk=instance.pk)
 
-            # Skip email for test accounts
-            should_send_email = not getattr(instance, 'is_test_account', False)
+        changes = []
+        if old_instance.email != instance.email:
+            changes.append("email address")
+        if old_instance.username != instance.username:
+            changes.append("username")
+        if old_instance.first_name != instance.first_name or old_instance.last_name != instance.last_name:
+            changes.append("name")
+        if not changes:
+            return
 
-            # Check for important changes
-            changes = []
-
-            if old_instance.email != instance.email:
-                changes.append("email address")
-
-            if old_instance.username != instance.username:
-                changes.append("username")
-
-            if old_instance.first_name != instance.first_name or old_instance.last_name != instance.last_name:
-                changes.append("name")
-
-            # Send notification if there were important changes
-            if changes:
-                AccountNotifications.send_profile_update_notification(instance, changes, send_email=should_send_email, send_telegram=True)
-                logger.info(f"Profile update notification sent to {instance.email}")
+        is_test = getattr(instance, 'is_test_account', False)
+        email_changed = bool(old_instance.email) and old_instance.email != instance.email
+        send_email = (
+            not is_test
+            and email_changed
+            and not instance.deleted_at
+            and not in_sign_in_flow()
+            and profile_change_email_enabled()
+        )
+        AccountNotifications.send_profile_update_notification(
+            instance,
+            changes,
+            send_email=send_email,
+            send_telegram=True,
+            email_changes=["email address"],
+            email_to=old_instance.email,
+        )
+        logger.info(f"Profile update notification sent for {instance.email}")
 
     except User.DoesNotExist:
         pass

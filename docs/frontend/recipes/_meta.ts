@@ -6,6 +6,7 @@ export default {
   'dnd': 'Drag & Drop',
   'animations': 'Animations',
   'ui-components': 'UI Components',
+  'settings-launchers': 'Settings launchers',
   'tailwind-v4': 'Tailwind v4',
   'extensions': 'Extensions',
   'sitemap-and-indexnow': 'Sitemap & IndexNow',

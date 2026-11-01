@@ -1,8 +1,10 @@
 """
 Login Alert Service — Apple-style login notification emails.
 
-Sends an email when a user logs in from a new device/IP, so they can
-detect unauthorized access. Suppresses noise with smart rules:
+Opt-in (``DjangoConfig.account_emails.new_sign_in_email``, default off): sends
+an email when a user logs in from a new device/IP, so they can detect
+unauthorized access. The sign-in is always logged for dedup and audit.
+Suppresses noise with smart rules:
 
 - No alert on first login after registration (grace period)
 - No alert if same IP + same browser within 24h
@@ -23,6 +25,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_noop
 
 from django_cfg.core.site import site_key
+
+from ..utils.notification_policy import new_sign_in_email_enabled
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -177,8 +181,12 @@ def _do_login_alert(user: CustomUser, ctx: LoginContext, site_key: Optional[str]
 
         should_send = True
 
+        # 0. Opt-in: a project that did not ask for the email never sends it
+        if not new_sign_in_email_enabled():
+            should_send = False
+
         # 1. Test accounts — never email
-        if getattr(user, "is_test_account", False):
+        elif getattr(user, "is_test_account", False):
             should_send = False
 
         # 2. Grace period after registration

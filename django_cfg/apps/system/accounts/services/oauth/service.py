@@ -33,6 +33,7 @@ from django_cfg.modules.django_telegram import DjangoTelegram
 
 from ...models import CustomUser
 from ...models.oauth import OAuthConnection, OAuthState
+from ...utils.notification_policy import sign_in_flow
 from .base import OAuthError, OAuthErrorCode, OAuthIdentity, OAuthProvider, TokenSet
 
 logger = logging.getLogger(__name__)
@@ -140,7 +141,8 @@ class OAuthService:
             raise OAuthError(OAuthErrorCode.EMAIL_MISSING)
         provider.check_policy(identity)
 
-        result = cls.link_or_create(provider, identity, tokens, source_url=row.source_url)
+        with sign_in_flow():
+            result = cls.link_or_create(provider, identity, tokens, source_url=row.source_url)
         cls._notify(provider, result, identity)
         return result
 

@@ -33,6 +33,7 @@ from ...models import (
     EmailConfig,
     GeoConfig,
     IndexNowConfig,
+    AccountEmailsConfig,
     AdminAccessConfig,
     PaymentsConfig,
     SimpleHistoryConfig,
@@ -362,6 +363,14 @@ class DjangoConfig(BaseModel):
     two_factor: Optional[TwoFactorConfig] = Field(
         default=None,
         description="Two-Factor Authentication (TOTP) configuration",
+    )
+
+    account_emails: AccountEmailsConfig = Field(
+        default_factory=AccountEmailsConfig,
+        description=(
+            "Opt-in security emails: profile_change_email, new_sign_in_email. Both default to off; "
+            "Telegram and admin notifications are not affected."
+        ),
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

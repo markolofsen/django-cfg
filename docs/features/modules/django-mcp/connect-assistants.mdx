@@ -53,6 +53,14 @@ import { mcpSettingsSection } from '@djangocfg/widget-mcp';
 <SettingsDialog sections={[mcpSettingsSection()]} />
 ```
 
+To give the person a way in from the sidebar, add the ready group (it shows only while the section is registered; see [Settings launchers](/frontend/recipes/settings-launchers)):
+
+```tsx
+import { mcpSidebarGroup } from '@djangocfg/layouts';
+
+const sidebar = { groups: [...mainGroups, mcpSidebarGroup({ label: 'Connect' })] };
+```
+
 What happens:
 
 1. `authorize` redirects the browser to `<site_url>/#settings/mcp?request=<signed>&client=<name>`. The fragment never reaches a server, so the signed request stays out of server and CDN logs.

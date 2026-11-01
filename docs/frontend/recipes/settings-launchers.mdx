@@ -1,0 +1,66 @@
+---
+title: Settings launchers
+description: "Open the Settings dialog on a section from code, a sidebar row or a link: typed section ids, settingsSection sidebar items, settingsHref, and the ready MCP row and group."
+---
+
+import { Callout } from 'nextra/components';
+
+# Settings launchers
+
+`@djangocfg/layouts` mounts one Settings dialog (`PrivateLayout` does it). Three things open it on a section, and
+all three take a section id that the compiler checks and that the layout only shows when the section exists.
+
+```tsx
+import { PrivateLayout, defineSettingsSections, mcpSidebarGroup, settingsHref, useSettingsDialog } from '@djangocfg/layouts';
+import type { SettingsSectionId, SidebarItem } from '@djangocfg/layouts';
+import { mcpSettingsSection } from '@djangocfg/widget-mcp';
+
+const sections = defineSettingsSections([mcpSettingsSection(), { id: 'billing', label: 'Billing', content: <Billing /> }]);
+type AppSection = SettingsSectionId<typeof sections>;   // 'mcp' | 'billing' | 'account' | 'general' | 'api-keys'
+
+const billing: SidebarItem<AppSection> = { label: 'Billing', icon: 'CreditCard', settingsSection: 'billing' };
+const sidebar = { groups: [{ label: 'Workspace', items: [billing] }, mcpSidebarGroup({ label: 'Connect' })] };
+
+export const Shell = ({ children }) => <PrivateLayout settings={{ sections }} sidebar={sidebar}>{children}</PrivateLayout>;
+
+const { open } = useSettingsDialog<AppSection>();       // open('biling') is a compile error
+const href = settingsHref<AppSection>('billing');       // "#settings/billing", for a link or a route table
+```
+
+## Typed section ids
+
+`useSettingsDialog()` takes any string unless you give it the union. `defineSettingsSections` keeps each `id` as a
+literal; `SettingsSectionId<typeof sections>` is those ids plus the built-ins (`account`, `general`, `api-keys`).
+`setSection` is typed the same way. A section whose `id` is a plain `string` widens the union to `string`, which is
+the old, untyped behaviour, so existing callers need no change.
+
+## A sidebar row that opens a section
+
+`SidebarItem` takes `settingsSection` instead of `href`. The row is a button that opens the dialog on that section
+and shows as active while the dialog is on it. It renders nothing while the mounted dialog does not list the section,
+so a section the app switched off (or has not registered yet) leaves no dead door. A group whose rows are all such
+launchers disappears with its label and divider.
+
+## A secondary group
+
+`SidebarGroupConfig.separated: true` puts a full divider with air above the group, then its label (`''` for a bare
+divider). Ordinary groups are only a hairline apart. The divider is the same in the docked sidebar, the hover peek and
+the mobile drawer. There is no icon rail: a collapsed sidebar is hidden, not shrunk.
+
+## MCP
+
+`mcpSidebarItem({ label, icon = 'Cable' })` and `mcpSidebarGroup({ label, itemLabel = 'MCP' })` are ready entries for
+the section `mcpSettingsSection()` registers. They name it by its id only (`MCP_SECTION_ID`, `'mcp'`), so
+`@djangocfg/layouts` does not depend on the widget. Add them unconditionally: they appear when the host registers the
+section. See [Connect assistants](/features/modules/django-mcp/connect-assistants).
+
+<Callout type="info">
+The labels are the host's text, like the rest of the sidebar: pass them already translated. The layout adds no visible string of its own.
+</Callout>
+
+## From a plain link
+
+`settingsHref(id, urlKey = 'settings')` returns `#settings/<id>`. Use it wherever a route or an `<a href>` needs the
+address, so no app spells the fragment. The dialog opens when the page lands on it, and it works for a deep link
+from an email. A sidebar `href: settingsHref('mcp')` still works but is a dead door when the section is absent;
+prefer `settingsSection`.
