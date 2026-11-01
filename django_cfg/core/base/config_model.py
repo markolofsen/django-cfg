@@ -163,6 +163,15 @@ class DjangoConfig(BaseModel):
         ),
     )
 
+    accept_subdomains: bool = Field(
+        default=True,
+        description=(
+            "Accept every subdomain of each declared site/API domain in ALLOWED_HOSTS, CORS and CSRF "
+            "(my.example.com, studio.example.com for example.com). Set False when a subdomain "
+            "belongs to someone else."
+        ),
+    )
+
     ssl_redirect: Optional[bool] = Field(
         default=None,
         description="Force SSL redirect. None = disabled (proxy handles SSL)",

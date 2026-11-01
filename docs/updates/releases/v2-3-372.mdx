@@ -1,0 +1,29 @@
+---
+title: "Release v2.3.372"
+description: "Every subdomain of a declared site is accepted in ALLOWED_HOSTS, CORS and CSRF; one sign-in across subdomains through shared session cookies."
+---
+
+# Release v2.3.372
+
+**Prepared:** November 2, 2026 (draft, django-cfg backend and `@djangocfg/api` / `@djangocfg/nextjs`)
+
+## Subdomains are accepted automatically
+
+For the registrable domain of each declared URL (`site_url`, `extra_origins`, API hosts, `api_url`) the package now adds `.root` to `ALLOWED_HOSTS`, a scheme-pinned CORS regex and `https://*.root` to `CSRF_TRUSTED_ORIGINS`. `my.`, `studio.`, preview hosts need no entry. IPs, `localhost`, single labels and shared-host suffixes (`vercel.app`) are never opened wide. Opt out with `accept_subdomains = False`. See [Security](/configuration/security#subdomains-are-accepted-automatically).
+
+**Who acts:** nobody. A project that listed subdomains in `security_domains` may delete them (`W020` does not flag this yet). A project that hosts an untrusted subdomain on its own registrable domain sets `accept_subdomains = False`.
+
+## Single sign-on across subdomains
+
+The generated `@djangocfg/api` client now stores the token pair in cookies on the registrable domain instead of `localStorage`. Signed in on `my.example.com` means signed in on `example.com`. Next.js server code reads the same session through `@djangocfg/nextjs/auth`. Details: [Single sign-on across subdomains](/frontend/single-sign-on).
+
+| Before | Now |
+|---|---|
+| tokens in `localStorage` (per origin) | tokens in cookies, `Domain=` registrable domain |
+| `auth.setStorageMode('cookie')` wrote host-only cookies | `cookie` is the default and shared; `setStorageMode('localStorage')` opts out |
+| SSR could not see the session | `serverAuthHeaders()`, `getServerAccessToken()` |
+| API key shared with the token backend | API key always `localStorage` |
+
+An existing session is moved from `localStorage` to the cookies on first load, so nobody is signed out.
+
+**Who acts:** every consumer regenerates the client (`make generate` / `make gen-api`) and bumps `@djangocfg/api`. Check one site on two subdomains (sign in on one, open the other). Apps that read `cfg.auth.access_token` from `localStorage` directly must switch to `auth.getToken()`.

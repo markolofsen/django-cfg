@@ -185,6 +185,11 @@ const [recentlyViewed, setRecentlyViewed] = useLocalStorage<ViewedItem[]>('recen
 const [currentWorkspaceId, setCurrentWorkspaceId] = useLocalStorage<string | null>('workspace_id', null);
 ```
 
+Keys follow `<owner>.<area>.<name>`. A bare name such as `'favorites'` is stored as
+`cfg.ui.favorites`; wrap the app in `<StorageNamespaceProvider owner="myapp">` to get
+`myapp.ui.favorites`, or pass a full key (`'myapp.catalog.favorites'`) to name the area yourself.
+`createStorageNamespace('myapp')` provides `key()`, `keys()` and `clear()` for a settings reset.
+
 ## Event Bus
 
 For decoupled dialog communication between unrelated components:

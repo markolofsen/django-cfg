@@ -2,7 +2,7 @@
 
 django_cfg.W020  `security_domains` repeats a host a declared site (or the
                  deployment `api_url`) already declares. Harmless, redundant:
-                 site hosts are allowed automatically, so `security_domains`
+                 site hosts and their subdomains are allowed automatically, so `security_domains`
                  is for extra hosts only. Never an error.
 
 Duplicate keys, shared origins, a shared host for `site_url` and `api_url`,
@@ -26,8 +26,8 @@ def check_redundant_security_domains(app_configs, **kwargs):
     return [
         Warning(
             f"security_domains repeats {entry!r}, which {owner} already declares.",
-            hint="Remove it: hosts of declared sites and the deployment api_url are allowed "
-                 "automatically. Keep security_domains for extra hosts (mcp.*, internal names, wildcards).",
+            hint="Remove it: hosts of declared sites, the deployment api_url and all their subdomains are allowed "
+                 "automatically. Keep security_domains for extra hosts (hosts on other domains, internal names).",
             id="django_cfg.W020",
         )
         for entry, owner in redundant_security_domains(config)

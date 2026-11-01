@@ -308,6 +308,86 @@ class SiteAccess:
     allowed_hosts: Tuple[str, ...]
     cors_origins: Tuple[str, ...]
     csrf_origins: Tuple[str, ...]
+    # Subdomains of each declared registrable domain (``DjangoConfig.accept_subdomains``).
+    cors_regexes: Tuple[str, ...] = ()
+
+
+# Shared hosting domains: ``foo.vercel.app`` belongs to ``foo``, so ``vercel.app`` itself is a public
+# suffix and is never opened for all its subdomains.
+_SHARED_SUFFIXES = frozenset({
+    "vercel.app", "netlify.app", "github.io", "gitlab.io", "pages.dev", "workers.dev", "herokuapp.com",
+    "onrender.com", "fly.dev", "ngrok.io", "ngrok-free.app", "trycloudflare.com", "web.app",
+    "firebaseapp.com", "azurewebsites.net", "cloudfront.net", "amazonaws.com", "appspot.com",
+    "repl.co", "glitch.me", "surge.sh", "railway.app", "up.railway.app", "nip.io", "sslip.io",
+})
+# ``example.co.uk``: a second-level label under a two-letter country code is part of the suffix.
+_SECOND_LEVEL = frozenset({"co", "com", "org", "net", "gov", "edu", "ac", "or", "ne", "go", "gob", "mil"})
+_IPV4 = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
+
+
+def registrable_domain(host: str) -> Optional[str]:
+    """The domain a person registers for ``host``: ``my.carapis.com`` -> ``carapis.com``,
+    ``a.example.co.uk`` -> ``example.co.uk``, ``foo.vercel.app`` -> ``foo.vercel.app``.
+
+    ``None`` for an IP address, a single label (``localhost``, a Docker service name) and a bare
+    public suffix. Errs on the long side, so a subdomain rule never spreads wider than intended."""
+    host = (host or "").strip().strip(".").lower()
+    if not host or ":" in host or _IPV4.match(host):
+        return None
+    labels = host.split(".")
+    if len(labels) < 2 or not all(labels):
+        return None
+    last_two = ".".join(labels[-2:])
+    if last_two in _SHARED_SUFFIXES or ".".join(labels[-3:]) in _SHARED_SUFFIXES:
+        shared = next(n for n in (3, 2) if ".".join(labels[-n:]) in _SHARED_SUFFIXES)
+        return ".".join(labels[-(shared + 1):]) if len(labels) > shared else None
+    if len(labels[-1]) == 2 and labels[-2] in _SECOND_LEVEL:
+        return ".".join(labels[-3:]) if len(labels) >= 3 else None
+    return last_two
+
+
+def _subdomain_rules(config: "DjangoConfig", urls: list[str]) -> Tuple[list[str], list[str], list[str]]:
+    """``(host patterns, CORS regexes, CSRF wildcard origins)`` opening every subdomain of the
+    registrable domain of each URL. Empty when ``accept_subdomains`` is off."""
+    if not getattr(config, "accept_subdomains", True):
+        return [], [], []
+    patterns: list[str] = []
+    regexes: list[str] = []
+    csrf: list[str] = []
+    seen: set[str] = set()
+    for url in urls:
+        try:
+            parsed = urlparse(url if "://" in url else f"https://{url}")
+            host = parsed.hostname or ""
+            port = parsed.port
+        except ValueError:
+            continue
+        root = registrable_domain(host)
+        if not root or parsed.scheme not in ("http", "https"):
+            continue
+        key = f"{parsed.scheme}://{root}:{port or ''}"
+        if key in seen:
+            continue
+        seen.add(key)
+        patterns.append(f".{root}")
+        port_re = f":{port}" if port else ""
+        regexes.append(rf"^{parsed.scheme}://([a-z0-9-]+\.)*{re.escape(root)}{port_re}$")
+        csrf.append(f"{parsed.scheme}://*.{root}{port_re}")
+    return list(dict.fromkeys(patterns)), regexes, csrf
+
+
+def _declared_roots(config: "DjangoConfig") -> set[str]:
+    """Registrable domains of every declared URL (the ones whose subdomains are accepted)."""
+    roots: set[str] = set()
+    for url in declared_urls(config):
+        try:
+            host = urlparse(url if "://" in url else f"https://{url}").hostname or ""
+        except ValueError:
+            continue
+        root = registrable_domain(host)
+        if root:
+            roots.add(root)
+    return roots
 
 
 def declared_urls(config: "DjangoConfig") -> list[str]:
@@ -393,11 +473,13 @@ def derive_access(config: "DjangoConfig") -> SiteAccess:
             hosts.append(host)
         if parsed.hostname:
             origins.append(origin)
+    patterns, regexes, wildcards = _subdomain_rules(config, declared_urls(config))
     return SiteAccess(
         domains=tuple(domains),
-        allowed_hosts=tuple(dict.fromkeys(hosts)),
+        allowed_hosts=tuple(dict.fromkeys([*hosts, *patterns])),
         cors_origins=tuple(dict.fromkeys(origins)),
-        csrf_origins=tuple(dict.fromkeys(origins)),
+        csrf_origins=tuple(dict.fromkeys([*origins, *wildcards])),
+        cors_regexes=tuple(regexes),
     )
 
 
@@ -413,10 +495,16 @@ def redundant_security_domains(config: "DjangoConfig") -> list[Tuple[str, str]]:
         for url in urls:
             owners.setdefault(_hostport(url), f"site {site.key!r}")
     owners.setdefault(_hostport(config.api_url), "the deployment api_url")
+    roots = _declared_roots(config) if getattr(config, "accept_subdomains", True) else set()
     found = []
     for entry in config.security_domains:
         try:
             owner = owners.get(_hostport(entry.strip())) if entry.strip() else None
+            if not owner and entry.strip() and not entry.strip().startswith((".", "*")):
+                host = urlparse(entry if "://" in entry else f"https://{entry.strip()}").hostname or ""
+                root = registrable_domain(host)
+                if root in roots and host != root:
+                    owner = f"the subdomain rule for {root}"
         except ValueError:
             continue
         if owner:

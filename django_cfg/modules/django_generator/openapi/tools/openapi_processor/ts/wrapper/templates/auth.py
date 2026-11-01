@@ -285,6 +285,12 @@ interface KVStore {{
   set(key: string, value: string | null): void;
 }}
 
+/** Seconds until a JWT's `exp`, for the cookie lifetime; undefined when it has none. */
+function secondsUntilExp(token: string): number | undefined {{
+  const exp = jwtExpMs(token);
+  return exp === null ? undefined : Math.max(1, Math.floor((exp - Date.now()) / 1000));
+}}
+
 // Every read and write goes through the registry's guarded storage: SSR-safe,
 // private-mode and quota safe, and a key written under an older spelling is
 // moved to its `cfg.auth.*` name on first read.
@@ -300,17 +306,22 @@ function backendFor(mode: StorageMode): KVStore {{
     get: (key) => storage.read(key, store),
     set(key, value) {{
       if (value === null) storage.remove(key, store);
-      else storage.write(key, value, store);
+      // The refresh cookie lives as long as the refresh token; everything else takes the default.
+      else storage.write(key, value, store, store === 'cookie' && key === REFRESH_KEY ? {{ maxAgeSeconds: secondsUntilExp(value) }} : undefined);
     }},
   }};
 }}
 
 /**
- * The session backend. `localStorage` by default and for every login path.
+ * The session backend: a cookie shared by every subdomain of the registrable
+ * domain (`Domain=example.com`, found by asking the browser), so signing in on
+ * `my.example.com` signs in `example.com` and `studio.example.com`, and so
+ * Next.js `cookies()` can read the token during SSR. Django never reads this
+ * cookie (the API authenticates the `Authorization` header), so it is no CSRF
+ * surface.
  *
- * `setStorageMode` exists for a host that must relocate the whole session once
- * at bootstrap — e.g. 'cookie' so Next.js `cookies()` can read the token during
- * SSR. It is NOT a per-login switch: this value lives in module memory and
+ * `setStorageMode('localStorage')` opts a host out, once at bootstrap. It is NOT
+ * a per-login switch: this value lives in module memory and
  * resets to the default on every page load, so tokens written to a non-default
  * backend after startup would be stranded — present in the browser, invisible
  * to the client, and every request would go out unauthenticated.
@@ -319,8 +330,27 @@ function backendFor(mode: StorageMode): KVStore {{
  * minting the refresh token; the client just stores whatever it
  * was given, in one place.
  */
-let _storageMode: StorageMode = 'localStorage';
+let _storageMode: StorageMode = 'cookie';
 let _storage: KVStore = backendFor(_storageMode);
+// The API key is per browser, not per domain family: always localStorage.
+const _apiKeyStore: KVStore = backendFor('localStorage');
+
+/** One-time move of a session an older build kept in localStorage into the shared cookie. */
+function adoptLegacySession(): void {{
+  if (!isBrowser || _storageMode !== 'cookie') return;
+  try {{
+    if (_storage.get(ACCESS_KEY) !== null || _storage.get(REFRESH_KEY) !== null) return;
+    const legacy = backendFor('localStorage');
+    const access = legacy.get(ACCESS_KEY);
+    const refresh = legacy.get(REFRESH_KEY);
+    if (access === null && refresh === null) return;
+    if (access !== null) _storage.set(ACCESS_KEY, access);
+    if (refresh !== null) _storage.set(REFRESH_KEY, refresh);
+    legacy.set(ACCESS_KEY, null);
+    legacy.set(REFRESH_KEY, null);
+  }} catch {{}}
+}}
+adoptLegacySession();
 
 {_ENV_HELPERS_TS}
 // ── In-memory overrides (win over storage / env) ───────────────────────────
@@ -453,6 +483,15 @@ function ensureStorageSync(): void {{
     }}
   }});
   window.addEventListener(SESSION_SYNC_EVENT, () => notifySessionChanged());
+  // Cookies fire no `storage` event: a sign-in or sign-out on another subdomain is
+  // picked up when this page is looked at again (or at once where `cookieStore` exists).
+  window.addEventListener('focus', () => notifySessionChanged());
+  document.addEventListener('visibilitychange', () => {{
+    if (document.visibilityState === 'visible') notifySessionChanged();
+  }});
+  try {{
+    (window as unknown as {{ cookieStore?: EventTarget }}).cookieStore?.addEventListener('change', () => notifySessionChanged());
+  }} catch {{}}
 }}
 
 /**
@@ -517,6 +556,16 @@ export const auth = {{
     _storage = backendFor(mode);
     notifySessionChanged();
   }},
+
+  // ── Shared cookie domain ──────────────────────────────────────────
+  /** `'auto'` (default): the registrable domain of the page. A domain forces it; `null` keeps
+   *  cookies host-only (no sign-in sharing between subdomains). Call before sign-in. */
+  setCookieDomain(domain: 'auto' | string | null): void {{
+    storage.setCookieDomain(domain === null ? false : domain);
+    notifySessionChanged();
+  }},
+  /** The `Domain` the session cookie is written with; `null` = host-only. */
+  getCookieDomain(): string | null {{ return storage.cookieDomain(); }},
 
   // ── Bearer token ──────────────────────────────────────────────────
   getToken(): string | null {{ return _storage.get(ACCESS_KEY); }},
@@ -599,14 +648,14 @@ export const auth = {{
 
   // ── API key ───────────────────────────────────────────────────────
   getApiKey(): string | null {{
-    return _apiKeyOverride ?? _storage.get(API_KEY_KEY) ?? defaultApiKey();
+    return _apiKeyOverride ?? _apiKeyStore.get(API_KEY_KEY) ?? defaultApiKey();
   }},
   setApiKey(key: string | null): void {{ _apiKeyOverride = key; }},
   setApiKeyPersist(key: string | null): void {{
     _apiKeyOverride = key;
-    _storage.set(API_KEY_KEY, key);
+    _apiKeyStore.set(API_KEY_KEY, key);
   }},
-  clearApiKey(): void {{ _apiKeyOverride = null; _storage.set(API_KEY_KEY, null); }},
+  clearApiKey(): void {{ _apiKeyOverride = null; _apiKeyStore.set(API_KEY_KEY, null); }},
 
   // ── Locale ────────────────────────────────────────────────────────
   getLocale(): string | null {{ return _localeOverride ?? detectLocale(); }},

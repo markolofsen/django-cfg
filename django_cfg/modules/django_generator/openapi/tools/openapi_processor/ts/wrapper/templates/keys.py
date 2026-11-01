@@ -50,8 +50,8 @@ const f = (
 
 /** Every key the framework writes. No legacy spellings are read: old keys are simply ignored. */
 export const CFG_KEYS = {
-  accessToken: k('cfg.auth.access_token', 'local', true),
-  refreshToken: k('cfg.auth.refresh_token', 'local', true),
+  accessToken: k('cfg.auth.access_token', 'cookie', true),
+  refreshToken: k('cfg.auth.refresh_token', 'cookie', true),
   apiKey: k('cfg.auth.api_key', 'local', true),
   email: k('cfg.auth.email', 'local', false),
   emailTs: k('cfg.auth.email_ts', 'local', false),
@@ -100,6 +100,17 @@ export interface StorageOptions {
   readonly families?: Readonly<Record<string, FamilySpec>>;
   /** Cookie lifetime for the `cookie` store. Default 30 days. */
   readonly cookieMaxAgeSeconds?: number;
+  /**
+   * Cookie `Domain`. `'auto'` (default): the registrable domain of the page, so every subdomain
+   * shares the cookie (`example.com` for `my.example.com`). A string forces a domain; `false`
+   * keeps cookies host-only.
+   */
+  readonly cookieDomain?: 'auto' | string | false;
+}
+
+export interface WriteOptions {
+  /** Cookie store: lifetime of this write. Default: the owner's `cookieMaxAgeSeconds`. */
+  readonly maxAgeSeconds?: number;
 }
 
 export interface GuardedStorage {
@@ -112,7 +123,7 @@ export interface GuardedStorage {
   isValid(key: string): boolean;
   read(key: string, store?: KeyStore): string | null;
   /** True when the value reached the browser's storage; false means it is held in memory for this page only. */
-  write(key: string, value: string, store?: KeyStore): boolean;
+  write(key: string, value: string, store?: KeyStore, options?: WriteOptions): boolean;
   /** Removes the key. */
   remove(key: string, store?: KeyStore): void;
   readJSON<T>(key: string, store?: KeyStore): T | null;
@@ -121,11 +132,47 @@ export interface GuardedStorage {
   keys(store?: Exclude<KeyStore, 'cookie'>): string[];
   /** Sign-out: removes the `personal` keys. `{ all: true }` removes everything under this owner. */
   clearAll(options?: { all?: boolean }): void;
+  /** Cookie store: change the `Domain` policy (`'auto'`, a domain, or `false` for host-only cookies). */
+  setCookieDomain(domain: 'auto' | string | false): void;
+  /** The `Domain` cookies are written with right now; `null` means host-only. */
+  cookieDomain(): string | null;
   /** Cross-tab: calls `listener` with the new value when ANOTHER tab changes `key`. Cookies fire no events. */
   onChange(key: string, listener: (value: string | null) => void, store?: Exclude<KeyStore, 'cookie'>): () => void;
 }
 
 const hasWindow = () => typeof window !== 'undefined';
+
+const domainByHost = new Map<string, string | null>();
+
+/**
+ * The broadest domain this page may set cookies on (`example.com` for `my.example.com`,
+ * `example.co.uk` for `a.example.co.uk`), found by asking the browser: it refuses a cookie for a
+ * public suffix, so no suffix list lives in our code. `null` for an IP, `localhost`, a single label
+ * or when cookies are blocked (the cookie is then host-only).
+ */
+function detectCookieDomain(): string | null {
+  if (!hasWindow() || typeof document === 'undefined') return null;
+  const host = window.location.hostname.toLowerCase();
+  if (!host || !host.includes('.') || host.includes(':') || /^[0-9.]+$/.test(host)) return null;
+  const cached = domainByHost.get(host);
+  if (cached !== undefined) return cached;
+  const labels = host.split('.');
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  let found: string | null = null;
+  try {
+    for (let i = labels.length - 2; i >= 0 && found === null; i -= 1) {
+      const candidate = labels.slice(i).join('.');
+      const probe = 'cfg_probe_' + Math.random().toString(36).slice(2);
+      document.cookie = probe + '=1; Domain=' + candidate + '; Path=/; Max-Age=30; SameSite=Lax' + secure;
+      if (document.cookie.includes(probe + '=1')) found = candidate;
+      document.cookie = probe + '=; Domain=' + candidate + '; Path=/; Max-Age=0; SameSite=Lax' + secure;
+    }
+  } catch {
+    found = null;
+  }
+  domainByHost.set(host, found);
+  return found;
+}
 
 function nativeStorage(store: 'local' | 'session'): Storage | null {
   if (!hasWindow()) return null;
@@ -155,6 +202,15 @@ export function createStorage(owner: string, options: StorageOptions = {}): Guar
   const prefix = `${owner}.`;
   const pattern = owner === 'cfg' ? /^cfg(\\.[a-z0-9_]+)+$/ : new RegExp(`^(cfg|${owner})(\\\\.[a-z0-9_]+)+$`);
   const cookieMaxAge = options.cookieMaxAgeSeconds ?? 60 * 60 * 24 * 30;
+  let cookiePolicy: 'auto' | string | false = options.cookieDomain ?? 'auto';
+  const resolveCookieDomain = (): string | null =>
+    cookiePolicy === false ? null : cookiePolicy === 'auto' ? detectCookieDomain() : cookiePolicy;
+  // A cookie is identified by name AND Domain: expire the twin without a domain and the one with it.
+  const expireCookie = (key: string, domain: string | null) => {
+    const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie =
+      encodeURIComponent(key) + '=; Path=/; Max-Age=0; SameSite=Lax' + (domain ? '; Domain=' + domain : '') + secure;
+  };
   const specs = Object.values(options.keys ?? {});
   const families = Object.values(options.families ?? {});
   const specByKey = new Map<string, KeySpec[]>();
@@ -196,12 +252,16 @@ export function createStorage(owner: string, options: StorageOptions = {}): Guar
     return memory[store].get(key) ?? null;
   }
 
-  function rawSet(store: KeyStore, key: string, value: string): boolean {
+  function rawSet(store: KeyStore, key: string, value: string, maxAgeSeconds?: number): boolean {
     if (!hasWindow()) return false;
     try {
       if (store === 'cookie') {
         const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-        document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; Path=/; Max-Age=${cookieMaxAge}; SameSite=Lax${secure}`;
+        const domain = resolveCookieDomain();
+        const domainPart = domain ? `; Domain=${domain}` : '';
+        document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; Path=/; Max-Age=${Math.max(1, Math.floor(maxAgeSeconds ?? cookieMaxAge))}; SameSite=Lax${domainPart}${secure}`;
+        // A host-only cookie written earlier would shadow the shared one: drop that twin.
+        if (domain) expireCookie(key, null);
         if (rawGet('cookie', key) === value && !memory.cookie.has(key)) return true;
         memory.cookie.set(key, value);
         return false;
@@ -222,8 +282,9 @@ export function createStorage(owner: string, options: StorageOptions = {}): Guar
     if (!hasWindow()) return;
     try {
       if (store === 'cookie') {
-        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-        document.cookie = `${encodeURIComponent(key)}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+        expireCookie(key, null);
+        const domain = resolveCookieDomain();
+        if (domain) expireCookie(key, domain);
       } else {
         nativeStorage(store)?.removeItem(key);
       }
@@ -275,10 +336,10 @@ export function createStorage(owner: string, options: StorageOptions = {}): Guar
       const target = resolveStore(key, store);
       return rawGet(target, key);
     },
-    write(key, value, store) {
+    write(key, value, store, writeOptions) {
       assertOwned(key);
       const target = resolveStore(key, store);
-      return rawSet(target, key, value);
+      return rawSet(target, key, value, writeOptions?.maxAgeSeconds);
     },
     remove(key, store) {
       assertOwned(key);
@@ -316,6 +377,10 @@ export function createStorage(owner: string, options: StorageOptions = {}): Guar
         for (const name of cookieNames()) if (name.startsWith(prefix)) rawRemove('cookie', name);
       }
     },
+    setCookieDomain(domain) {
+      cookiePolicy = domain;
+    },
+    cookieDomain: resolveCookieDomain,
     onChange(key, listener, store = 'local') {
       assertValid(key);
       if (!hasWindow()) return () => {};

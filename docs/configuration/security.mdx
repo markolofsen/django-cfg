@@ -75,11 +75,30 @@ class MlsConfig(DjangoConfig):
     security_domains: list[str] = ["mcp.caribbeanrealestatemls.com"]   # extras only
 ```
 
-Production ALLOWED_HOSTS here: the four web hosts, `api.caribbeanrealestatemls.com` once, and `mcp.caribbeanrealestatemls.com`; CORS and CSRF get the matching `https://` origins. The same origins are what `Site.accepts(origin)` checks for OTP, OAuth redirect URIs and MCP consent.
+Production ALLOWED_HOSTS here: the four web hosts, `api.caribbeanrealestatemls.com` once, `mcp.caribbeanrealestatemls.com`, and the subdomain patterns below; CORS and CSRF get the matching `https://` origins. The same origins are what `Site.accepts(origin)` checks for OTP, OAuth redirect URIs and MCP consent.
 
 `django_cfg.W020` (`manage.py check`) warns when a `security_domains` entry repeats a host that a site or the deployment `api_url` already declares. It is a clean-up hint, never an error, and only runs with `sites`.
 
 A `mcp.` host needs more than a host entry: set the MCP `oauth_issuer` (see [Connect assistants](/features/modules/django-mcp/connect-assistants)).
+
+### Subdomains are accepted automatically
+
+For the registrable domain of every declared URL (`site_url`, `extra_origins`, API hosts, `api_url`), every subdomain is accepted, whether or not you listed it:
+
+| Declared | `ALLOWED_HOSTS` | `CORS_ALLOWED_ORIGIN_REGEXES` | `CSRF_TRUSTED_ORIGINS` |
+|---|---|---|---|
+| `https://my.carapis.com` | `.carapis.com` | `^https://([a-z0-9-]+\.)*carapis\.com$` | `https://*.carapis.com` |
+| `https://app.example.co.uk` | `.example.co.uk` | same shape for `example.co.uk` | `https://*.example.co.uk` |
+| `https://foo.vercel.app` | `.foo.vercel.app` | `foo.vercel.app` only | `https://*.foo.vercel.app` |
+
+- The CORS regex keeps the **scheme (and port) of the declared origin**: `http://my.carapis.com` is not accepted when the site is `https`.
+- Nothing is opened for an IP, `localhost`, a single-label Docker name, or a shared host's public suffix (`vercel.app`, `github.io`, `pages.dev`, ...).
+- Only declared URLs open subdomains; an entry in `security_domains` stays exactly what it says.
+- Turn it off with `accept_subdomains = False` when a subdomain belongs to someone else.
+
+<Callout type="warning">
+Every subdomain can now call this API with credentials. Do not host untrusted tenants on a registrable domain that signs in with you.
+</Callout>
 
 ### Development
 

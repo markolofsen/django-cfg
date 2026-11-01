@@ -120,6 +120,7 @@ class SecurityBuilder:
             'CORS_ALLOWED_ORIGIN_REGEXES': (
                 self._get_desktop_app_cors_regexes()
                 + self._get_localhost_cors_regexes()
+                + list(access.cors_regexes)
             ),
             'CORS_ALLOW_HEADERS': self.config.cors_allow_headers,
 
@@ -199,6 +200,7 @@ class SecurityBuilder:
             'CORS_ALLOWED_ORIGIN_REGEXES': (
                 self._get_desktop_app_cors_regexes()
                 + (self._get_localhost_cors_regexes() if has_localhost else [])
+                + list(access.cors_regexes)
             ),
             'CORS_ALLOW_HEADERS': self.config.cors_allow_headers,
 

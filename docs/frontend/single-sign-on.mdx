@@ -1,0 +1,63 @@
+---
+title: "Single sign-on across subdomains"
+description: "Sign in once on my.example.com and be signed in on example.com and studio.example.com, in the browser and in Next.js server rendering, with no setup."
+---
+
+# Single sign-on across subdomains
+
+Sign in on `my.example.com` and you are signed in on `example.com`, `studio.example.com` and every other subdomain of `example.com`, in the browser and in server rendering. Nothing to configure.
+
+## How it works
+
+`@djangocfg/api` keeps the JWT pair in two cookies instead of `localStorage`:
+
+| Cookie | Holds | Lifetime |
+|---|---|---|
+| `cfg.auth.access_token` | access token | 30 days (the token itself expires sooner, the API decides) |
+| `cfg.auth.refresh_token` | refresh token | until the refresh token's own `exp` |
+
+Both are written with `Path=/`, `SameSite=Lax`, `Secure` on https, and `Domain=` the **registrable domain** of the page. The client finds that domain by asking the browser (it tries `example.com`, then longer names, and keeps the first one the browser accepts), so `co.uk`, `vercel.app` and other public suffixes need no list on our side. On `localhost`, an IP or a single-label host the cookie stays host-only.
+
+The API key, OAuth state, redirect URL and drafts are **not** shared; they stay in `localStorage` / `sessionStorage` of each origin.
+
+Users signed in before the upgrade keep their session: on first load the client copies a pair found in `localStorage` into the cookies and removes it.
+
+## Sign-out
+
+`auth.clearTokens()` expires the cookie on the shared domain **and** its host-only twin, and clears `localStorage` too. Other subdomains notice on their next focus (`focus`, `visibilitychange`, and `cookieStore` change events where the browser has them); a tab already looking at the page updates at once where `cookieStore` exists.
+
+## Server rendering
+
+The cookie is visible to the server, so Server Components and route handlers on any subdomain can call the API as the user:
+
+```ts
+import { serverAuthHeaders } from '@djangocfg/nextjs/auth';
+
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/cfg/accounts/profile/`, {
+  headers: await serverAuthHeaders(),   // { Authorization: 'Bearer …' } or {}
+  cache: 'no-store',
+});
+```
+
+`getServerAccessToken()`, `getServerRefreshToken()` and `hasServerSession()` are also exported. Without Next.js, parse the header yourself with `readCookie(cookieHeader, CFG_KEYS.accessToken.key)` from `@djangocfg/api/storage`.
+
+## Backend
+
+Nothing new beyond [subdomain acceptance](/configuration/security#subdomains-are-accepted-automatically): the API authenticates the `Authorization` header only and never reads these cookies, so they open no CSRF surface. CORS lets every subdomain of a declared site send the header.
+
+## Options (optional, the defaults need none)
+
+```ts
+import { auth } from '@djangocfg/api';
+
+auth.setCookieDomain(null);            // host-only cookies: no sharing between subdomains
+auth.setCookieDomain('example.com');   // force a domain
+auth.getCookieDomain();                // what is used now ('example.com' | null)
+auth.setStorageMode('localStorage');   // opt out of cookies entirely (once, at bootstrap)
+```
+
+## Limits and security
+
+- Different registrable domains are different sessions (`caribbeanrealestatemls.com` and `mlsbali.com` do not share). Cross-domain sign-in would need a redirect handshake and is not part of this.
+- The cookie is readable by page scripts and by every subdomain, like `localStorage` is by the page. A subdomain you do not control (takeover, an untrusted tenant) can read it. Keep untrusted tenants off the domain.
+- Two tokens add about 1.5 KB to every request to the domain family, static hosts included.
