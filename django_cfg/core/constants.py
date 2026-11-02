@@ -69,6 +69,9 @@ DEFAULT_MIDDLEWARE: List[str] = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     # Public API CORS - handles /cfg/leads/ and other public endpoints BEFORE corsheaders
     "django_cfg.core.middleware.PublicAPICORSMiddleware",
+    # Preflight header reflection for trusted origins. Must sit AFTER PublicAPICORSMiddleware
+    # (which answers any origin on its own paths) and BEFORE corsheaders (it edits its response).
+    "django_cfg.core.middleware.CorsRequestHeadersMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

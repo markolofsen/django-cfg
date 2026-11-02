@@ -13,6 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   access tokens set `access_token_lifetime_minutes=30`.
 
 ### Added
+- **CORS: custom request headers need no setup.** A preflight from an origin that is already trusted (the response
+  carries `Access-Control-Allow-Origin`) now gets the headers it asks for in `Access-Control-Allow-Headers`, next to
+  the static list, plus `Vary: Access-Control-Request-Headers`. Before, a frontend sending `X-Holder`,
+  `X-Content-SHA256` or `Idempotency-Key` was blocked with an opaque "CORS error" and the server saw only
+  `OPTIONS 200`. New `CorsRequestHeadersMiddleware` sits between `PublicAPICORSMiddleware` and `CorsMiddleware`;
+  untrusted origins are never touched, `*` is never sent, names are sanitized (token syntax, 64 names, 100 chars).
+  New `cors_extra_headers: List[str]` extends the default list; `cors_reflect_request_headers=False` is strict mode
+  (static list only). Each reflected `(origin, header)` logs once at INFO, strict mode logs a WARNING once.
+  `idempotency-key` joins the default list.
+  **Behavioural note:** projects that set `cors_allow_headers` get the reflection too. It is strictly more
+  permissive only for origins that were already trusted; set `cors_reflect_request_headers=False` to keep the old
+  fixed behaviour. Projects that replaced `cors_allow_headers` just to add a header can drop that workaround.
+  No migration needed.
 - **`manage.py logout_all [--email X] [--dry-run]`** ends sessions everywhere: blacklists live refresh tokens, sets
   the new `CustomUser.tokens_valid_after` (migration `0028`) and clears Django sessions. `JWTAuthenticationWithLastLogin`
   rejects access tokens issued at or before that cutoff (`token_revoked`), which the refresh-token blacklist alone

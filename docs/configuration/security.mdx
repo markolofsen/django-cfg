@@ -124,15 +124,36 @@ Set `ssl_redirect: bool = True` only for bare metal Django without reverse proxy
 
 ## CORS Configuration
 
-In production, CORS origins are derived from the sites, `api_url` and `security_domains` (see above). Add custom headers:
+In production, CORS origins are derived from the sites, `api_url` and `security_domains` (see above).
+
+### Custom request headers
+
+A frontend that sends a header outside the default list (`X-Holder`, `X-Content-SHA256`, ...) needs no setup. When a preflight comes from an origin that is **already trusted**, django-cfg adds the headers it asks for (`Access-Control-Request-Headers`) to `Access-Control-Allow-Headers`, next to the static list, and sets `Vary: Access-Control-Request-Headers`.
+
+Why this is safe:
+
+- The origin allowlist is still mandatory. An untrusted origin gets no `Access-Control-Allow-Origin` and no reflection.
+- A preflight authorizes nothing. Authentication, CSRF and permissions run on the real request; reflection only lets a page from a trusted origin send the header.
+- Names are sanitized (HTTP token syntax, at most 64 names of 100 characters) and `*` is never sent, so credentialed requests keep working.
+
+Starlette (`allow_headers=["*"]`), Envoy and Spring reflect request headers the same way.
+
+Two knobs:
 
 ```python
 class MyConfig(DjangoConfig):
-    site_url: str = "https://myapp.com"
-    api_url: str = "https://api.myapp.com"
-    security_domains: list = []
-    cors_allow_headers: list = ['x-api-key', 'x-custom-header']  # Merged with defaults
+    cors_extra_headers: list = ['x-holder']          # extends the default list (one line)
+    cors_reflect_request_headers: bool = True        # False = strict: static list + cors_extra_headers only
+    # cors_allow_headers: list = [...]               # replaces the default list entirely (still works)
 ```
+
+Each new `(origin, header)` pair that is reflected is logged once at INFO ("set `cors_extra_headers` to list it explicitly"). In strict mode a preflight that asks for a header outside the list logs a WARNING once, with the same hint.
+
+<Callout type="info">
+Projects that replaced `cors_allow_headers` only to add a header can delete that workaround. Projects that still set `cors_allow_headers` get the reflection too; it only affects origins that were already trusted. Set `cors_reflect_request_headers = False` to keep the old, fixed behaviour.
+</Callout>
+
+`cors_allow_headers` replaces the default list (it is not merged); use `cors_extra_headers` to add.
 
 ### localhost in development
 

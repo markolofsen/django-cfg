@@ -209,8 +209,27 @@ class DjangoConfig(BaseModel):
             "x-is-last",
             "x-total-chunks",
 
+            "idempotency-key",  # retry-safe writes (Stripe-style)
         ],
-        description="CORS allowed headers",
+        description=(
+            "Static CORS allowed headers. Replaces the default list entirely; to add one header "
+            "keep this and use cors_extra_headers. Preflights from trusted origins also get the "
+            "headers they ask for (see cors_reflect_request_headers)."
+        ),
+    )
+
+    cors_extra_headers: List[str] = Field(
+        default_factory=list,
+        description="Headers added to the CORS allowed list (extends cors_allow_headers, e.g. ['x-holder'])",
+    )
+
+    cors_reflect_request_headers: bool = Field(
+        default=True,
+        description=(
+            "Answer a preflight from an already-trusted origin with the headers it asks for "
+            "(Access-Control-Request-Headers), so custom headers need no setup. Never applies to "
+            "untrusted origins, never sends '*'. False = strict: only cors_allow_headers + cors_extra_headers."
+        ),
     )
 
     axes: Optional[AxesConfig] = Field(

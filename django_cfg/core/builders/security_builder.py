@@ -122,7 +122,8 @@ class SecurityBuilder:
                 + self._get_localhost_cors_regexes()
                 + list(access.cors_regexes)
             ),
-            'CORS_ALLOW_HEADERS': self.config.cors_allow_headers,
+            'CORS_ALLOW_HEADERS': self._cors_allow_headers(),
+            'CORS_REFLECT_REQUEST_HEADERS': self.config.cors_reflect_request_headers,
 
             # === ALLOWED_HOSTS: Accept everything ===
             # Docker health checks, internal IPs, localhost, all!
@@ -202,7 +203,8 @@ class SecurityBuilder:
                 + (self._get_localhost_cors_regexes() if has_localhost else [])
                 + list(access.cors_regexes)
             ),
-            'CORS_ALLOW_HEADERS': self.config.cors_allow_headers,
+            'CORS_ALLOW_HEADERS': self._cors_allow_headers(),
+            'CORS_REFLECT_REQUEST_HEADERS': self.config.cors_reflect_request_headers,
 
             # === ALLOWED_HOSTS: registry hosts + Docker patterns ===
             # Need to allow internal health checks, but safely
@@ -598,6 +600,16 @@ class SecurityBuilder:
                 origins.append(f"https://{host}:{port}")
 
         return origins
+
+    def _cors_allow_headers(self) -> List[str]:
+        """cors_allow_headers followed by cors_extra_headers, without repeats (case-insensitive)."""
+        seen: set = set()
+        merged: List[str] = []
+        for name in [*self.config.cors_allow_headers, *self.config.cors_extra_headers]:
+            if name.lower() not in seen:
+                seen.add(name.lower())
+                merged.append(name)
+        return merged
 
     def _get_localhost_cors_regexes(self) -> List[str]:
         """
