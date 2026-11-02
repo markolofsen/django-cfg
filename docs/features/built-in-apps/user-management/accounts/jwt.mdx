@@ -15,7 +15,7 @@ default**, so most projects write nothing at all.
 from django_cfg import DjangoConfig, JWTConfig
 
 class MyConfig(DjangoConfig):
-    jwt = JWTConfig()  # 30-min access · 90-day refresh · rotation + blacklist on
+    jwt = JWTConfig()  # long sessions: 1-year access and refresh · rotation + blacklist on
 ```
 
 That bare `JWTConfig()` already gives the recommended posture. Override only if
@@ -29,8 +29,8 @@ you have a specific reason.
 
 ```python
 jwt = JWTConfig(
-    access_token_lifetime_minutes=30,    # MINUTES. Default 30. None = max (1 year).
-    refresh_token_lifetime_days=90,      # Default 90. None = max (1 year).
+    access_token_lifetime_minutes=30,    # MINUTES. Default None = max (1 year). Set 30 for short access tokens.
+    refresh_token_lifetime_days=90,      # Default None = max (1 year).
     rotate_refresh_tokens=True,          # Rotate on every refresh (default)
     blacklist_after_rotation=True,       # Blacklist old refresh token (default)
 )
@@ -136,8 +136,22 @@ Reusing a blacklisted token signals theft — rejected immediately.
 `POST /cfg/accounts/token/blacklist/` with `{refresh}` blacklists the refresh
 token immediately. The `@djangocfg/api` `logout()` calls it best-effort (local
 logout never blocks on the network) — without it, "logout" would only clear
-browser storage and a stolen refresh token would survive until its 90-day
+browser storage and a stolen refresh token would survive until its 365-day
 expiry.
+
+### Log everyone out
+
+Access tokens are not covered by the refresh-token blacklist, and with long lifetimes they live long. Use:
+
+```bash
+python manage.py logout_all [--email user@example.com] [--dry-run]
+```
+
+It blacklists every live refresh token, sets `CustomUser.tokens_valid_after` to now and clears Django sessions.
+`JWTAuthenticationWithLastLogin` rejects any access token issued at or before that cutoff with code `token_revoked`,
+whatever its `exp`. API keys are untouched. With `--email` only that user is affected (sessions are cleared only for
+the whole-site run).
+
 
 ---
 
@@ -247,7 +261,7 @@ jwt = JWTConfig()   # secure defaults; everything configured automatically
 ```python
 # Effective access-token lifetime (timedelta)
 config.jwt.get_effective_access_token_lifetime()
-# → datetime.timedelta(seconds=1800)   # 30 min
+# → datetime.timedelta(days=365)       # default; JWTConfig.short_lived() gives 30 min
 
 # Raw Django settings (incl. the DPoP flag)
 settings = config.jwt.to_django_settings(config.secret_key)

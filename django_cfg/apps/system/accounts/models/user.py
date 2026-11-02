@@ -46,6 +46,16 @@ class CustomUser(AbstractUser):
     )
     avatar = models.ImageField(upload_to=user_avatar_path, blank=True, null=True)
 
+    # Sign-out cutoff: access tokens issued before this moment are rejected (see
+    # ``JWTAuthenticationWithLastLogin.get_user``). The blacklist cannot revoke access tokens, so with long
+    # lifetimes this is what makes "log out everywhere" real. Set by ``manage.py logout_all``.
+    tokens_valid_after = models.DateTimeField(
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="Access tokens issued before this time are rejected.",
+    )
+
     # Test account for App Store review, API testing, etc.
     # When enabled, OTP verification uses static code from settings.TEST_ACCOUNT_OTP
     is_test_account = models.BooleanField(

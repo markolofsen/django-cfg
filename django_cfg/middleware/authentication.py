@@ -216,6 +216,16 @@ class JWTAuthenticationWithLastLogin(JWTAuthentication):
                 code='user_inactive'
             )
 
+        # Sign-out cutoff (``manage.py logout_all``): a token minted before it is dead, whatever its `exp`.
+        cutoff = getattr(user, 'tokens_valid_after', None)
+        if cutoff is not None:
+            issued_at = validated_token.get('iat')
+            if issued_at is None or issued_at <= int(cutoff.timestamp()):
+                raise exceptions.AuthenticationFailed(
+                    'Session was ended, sign in again.',
+                    code='token_revoked',
+                )
+
         return user
 
     def authenticate(self, request):

@@ -61,3 +61,7 @@ auth.setStorageMode('localStorage');   // opt out of cookies entirely (once, at 
 - Different registrable domains are different sessions (`caribbeanrealestatemls.com` and `mlsbali.com` do not share). Cross-domain sign-in would need a redirect handshake and is not part of this.
 - The cookie is readable by page scripts and by every subdomain, like `localStorage` is by the page. A subdomain you do not control (takeover, an untrusted tenant) can read it. Keep untrusted tenants off the domain.
 - Two tokens add about 1.5 KB to every request to the domain family, static hosts included.
+
+## Upgrading from localStorage tokens
+
+Before `@djangocfg/api` 2.1.604 the tokens lived in `localStorage`. After the upgrade the provider drops those entries and the cached profile on the first load without a cookie session, so a user who was signed in the old way lands on the sign-in page instead of an empty private area. Nothing to configure.

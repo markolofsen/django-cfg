@@ -137,7 +137,7 @@ from django_cfg import DjangoConfig, JWTConfig
 
 class MyConfig(DjangoConfig):
     enable_accounts = True
-    jwt = JWTConfig()  # secure defaults: 30-min access, 90-day refresh, rotation on
+    jwt = JWTConfig()  # long sessions: 1-year access and refresh, rotation on
 ```
 
 ---

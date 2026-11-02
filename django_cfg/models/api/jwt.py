@@ -29,16 +29,17 @@ class JWTConfig(BaseModel):
     )
 
     # === Token Lifetimes ===
-    # Secure-by-default: short access + long refresh. Consumers can just write
-    # `JWTConfig()` and inherit the recommended posture — no need to restate it.
+    # Long sessions by default (owner decision, 2 Nov 2026): access and refresh at the 1-year maximum. Revocation is
+    # covered by `manage.py logout_all` and the per-user `tokens_valid_after` cutoff, which end access tokens too.
+    # For a short access token set `access_token_lifetime_minutes=30` (or use `JWTConfig.short_lived()`).
     access_token_lifetime_minutes: Optional[int] = Field(
-        default=30,
+        default=None,
         ge=1,
         le=525600,  # 1 year max
         description=(
-            "Access token lifetime in MINUTES (default 30; None = maximum 1 year). "
-            "Keep this short and pair it with a long refresh token: a stolen access "
-            "token expires fast while the user stays logged in via refresh."
+            "Access token lifetime in MINUTES (default None = maximum 1 year). "
+            "Set a small value (e.g. 30) for short-lived access tokens refreshed by the refresh token; "
+            "`manage.py logout_all` ends sessions whatever the lifetime."
         )
     )
 
@@ -160,6 +161,16 @@ class JWTConfig(BaseModel):
         if not v:
             raise ValueError("At least one auth header type must be specified")
         return v
+
+    @classmethod
+    def long_lived(cls, **overrides: Any) -> "JWTConfig":
+        """Access and refresh tokens at the 1-year maximum (this is also the default)."""
+        return cls(access_token_lifetime_minutes=None, refresh_token_lifetime_days=None, **overrides)
+
+    @classmethod
+    def short_lived(cls, access_minutes: int = 30, **overrides: Any) -> "JWTConfig":
+        """Short access token (default 30 min), refresh token still 1 year."""
+        return cls(access_token_lifetime_minutes=access_minutes, **overrides)
 
     def get_effective_access_token_lifetime(self) -> timedelta:
         """

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **JWT: long sessions are the default.** `JWTConfig()` now gives 1-year access and refresh tokens (was 30 minutes
+  access). `JWTConfig.long_lived()` and `JWTConfig.short_lived(access_minutes=30)` name the two postures. To keep short
+  access tokens set `access_token_lifetime_minutes=30`.
+
+### Added
+- **`manage.py logout_all [--email X] [--dry-run]`** ends sessions everywhere: blacklists live refresh tokens, sets
+  the new `CustomUser.tokens_valid_after` (migration `0028`) and clears Django sessions. `JWTAuthenticationWithLastLogin`
+  rejects access tokens issued at or before that cutoff (`token_revoked`), which the refresh-token blacklist alone
+  could not do. API keys are untouched.
+
 ### Security
 - **MCP OAuth: the consent page shows where the grant goes, and codes are single use.** The signed consent
   request (now uncompressed) carries `dest`, the validated redirect host (`claude.ai`, `127.0.0.1:3118`,

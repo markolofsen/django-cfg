@@ -59,6 +59,16 @@ def _host_listed(host: str, listed: List[str]) -> bool:
     return any(host == h or (h.startswith(".") and (host == h[1:] or host.endswith(h))) for h in listed)
 
 
+def _host_declared(config, host: str) -> bool:
+    """True when the registry already allows ``host``: it is a declared URL's host, or a
+    subdomain of a declared URL's registrable domain (``accept_subdomains``)."""
+    from django_cfg.core.site import _declared_roots, declared_urls, registrable_domain
+
+    if any(urlsplit(u if "://" in u else f"//{u}").hostname == host for u in declared_urls(config)):
+        return True
+    return getattr(config, "accept_subdomains", True) and registrable_domain(host) in _declared_roots(config)
+
+
 def collect_findings() -> List[Finding]:
     from django_cfg.core.site import sites
     from django_cfg.core.state.registry import get_current_config
@@ -119,7 +129,7 @@ def collect_findings() -> List[Finding]:
     listed = _security_domain_hosts(config)
     for site in () if config.sites else registry:
         host = urlsplit(site.site_url).hostname or ""
-        if host and not _host_listed(host, listed):
+        if host and not _host_listed(host, listed) and not _host_declared(config, host):
             findings.append(Finding(
                 "django_cfg.W032",
                 f"Site {site.key!r}: the host {host} is not in security_domains, so browsers on it may be refused (CORS/CSRF).",

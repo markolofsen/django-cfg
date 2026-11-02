@@ -244,12 +244,12 @@ from django_cfg import DjangoConfig
 from django_cfg.models.api.jwt import JWTConfig
 
 class MyConfig(DjangoConfig):
-    jwt = JWTConfig()  # 30-min access, 90-day refresh, rotation + blacklist on
+    jwt = JWTConfig()  # long sessions: 1-year access and refresh, rotation + blacklist on
 ```
 
 | Setting | Default | Why |
 |---------|---------|-----|
-| `access_token_lifetime_minutes` | `30` | Short — a leaked access token expires fast. |
+| `access_token_lifetime_minutes` | `None` (1 year) | Long by default. `JWTConfig.short_lived()` gives 30 minutes. |
 | `refresh_token_lifetime_days` | `90` | Long — users "log in once", stay logged in. |
 | `rotate_refresh_tokens` | `True` | Each refresh issues a new refresh token. |
 | `blacklist_after_rotation` | `True` | A reused (stolen) refresh token is revoked. |
