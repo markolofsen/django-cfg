@@ -26,6 +26,12 @@ Users signed in before the upgrade keep their session: on first load the client 
 
 `auth.clearTokens()` expires the cookie on the shared domain **and** its host-only twin, and clears `localStorage` too. Other subdomains notice on their next focus (`focus`, `visibilitychange`, and `cookieStore` change events where the browser has them); a tab already looking at the page updates at once where `cookieStore` exists.
 
+## Starting OAuth from any subdomain
+
+Declare one origin (`site_url="https://carapis.com"`) and the OAuth / MCP-consent gate accepts `my.carapis.com`, `studio.carapis.com` and the apex too, the same rule as hosts, CORS and CSRF. Declaring `my.carapis.com` accepts `carapis.com` as well. Scheme and port must match; `api.*`/`mcp.*` hosts, lookalikes (`carapis.com.evil.io`) and other sites are refused. `accept_subdomains=False` makes it exact.
+
+This opens django-cfg's gate only. Google and GitHub still accept exact redirect URIs: register `https://<origin>/auth?provider=<id>` for each origin people sign in from (`manage.py oauth_check` prints the ones accepted by the rule but not registered by default). A project that listed the apex in `security_domains` only for sign-in can drop it.
+
 ## Server rendering
 
 The cookie is visible to the server, so Server Components and route handlers on any subdomain can call the API as the user:

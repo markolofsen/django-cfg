@@ -102,7 +102,7 @@ Every subdomain can now call this API with credentials. Do not host untrusted te
 
 ### Development
 
-`ALLOWED_HOSTS` is `['*']` and localhost on any port is allowed through CORS regexes. `security_domains` is optional.
+`ALLOWED_HOSTS` is `['*']` and localhost on any port is allowed through CORS regexes (see [CORS](#cors-configuration)). `security_domains` is optional.
 
 ```python
 class DevConfig(DjangoConfig):
@@ -124,7 +124,18 @@ Set `ssl_redirect: bool = True` only for bare metal Django without reverse proxy
 
 ## CORS Configuration
 
-In production, CORS origins are derived from the sites, `api_url` and `security_domains` (see above).
+This section is the one place that explains CORS in django-cfg; other pages link here.
+
+A browser request is accepted when its `Origin` is **trusted**. Trusted origins come from:
+
+| Source | Mode | Setting it fills |
+|---|---|---|
+| sites, `api_url`, `security_domains` | production and development | `CORS_ALLOWED_ORIGINS` |
+| every subdomain of a declared URL ([subdomains](#subdomains-are-accepted-automatically), `accept_subdomains`) | production and development | `CORS_ALLOWED_ORIGIN_REGEXES` |
+| `localhost`, `127.0.0.1`, `[::1]` on any port ([below](#localhost-in-development)) | development; production only when `localhost` or `127.0.0.1` is a bare `security_domains` entry | `CORS_ALLOWED_ORIGIN_REGEXES` |
+| desktop and mobile webview schemes ([below](#desktop-and-mobile-webview-origins)) | always | `CORS_ALLOWED_ORIGIN_REGEXES` |
+
+`CORS_ALLOW_ALL_ORIGINS` is always `False` and `CORS_ALLOW_CREDENTIALS` is `True`. Which **headers** a trusted origin may send is the next subsection.
 
 ### Custom request headers
 
@@ -138,22 +149,74 @@ Why this is safe:
 
 Starlette (`allow_headers=["*"]`), Envoy and Spring reflect request headers the same way.
 
-Two knobs:
+Three settings:
+
+| Setting | Effect |
+|---|---|
+| `cors_extra_headers` | **Adds** names to the default list. The normal way to list a header explicitly. |
+| `cors_reflect_request_headers` | `True` (default): reflect, as above. `False`: strict, only the static list (`cors_allow_headers` + `cors_extra_headers`). |
+| `cors_allow_headers` | **Replaces** the default list entirely. Rarely needed. |
 
 ```python
 class MyConfig(DjangoConfig):
-    cors_extra_headers: list = ['x-holder']          # extends the default list (one line)
-    cors_reflect_request_headers: bool = True        # False = strict: static list + cors_extra_headers only
-    # cors_allow_headers: list = [...]               # replaces the default list entirely (still works)
+    cors_extra_headers: list = ['x-holder']          # adds to the default list
+    cors_reflect_request_headers: bool = True        # False = strict mode
+    # cors_allow_headers: list = [...]               # REPLACES the default list
 ```
 
-Each new `(origin, header)` pair that is reflected is logged once at INFO ("set `cors_extra_headers` to list it explicitly"). In strict mode a preflight that asks for a header outside the list logs a WARNING once, with the same hint.
+The default list covers what django-cfg and its generated TypeScript client send: `authorization`, `content-type`, `x-csrftoken`, `x-api-key`, `dpop`, `x-timezone`, `x-client-time`, `x-auth-retry`, the chunked-upload headers (`x-chunk-*`, `x-is-last`, `x-total-chunks`) and `idempotency-key`. Any other header a frontend adds (a custom `fetch` wrapper, an extra interceptor) is covered by reflection; see [generated clients](/features/api-generation/generated-clients#custom-request-headers-and-cors).
+
+### Log lines
+
+Each `(origin, header)` pair is logged once per process, by the `django_cfg.core.middleware.cors_request_headers` logger:
+
+| Level | When | Message |
+|---|---|---|
+| INFO | reflected | `CORS preflight from <origin>: header '<name>' not in cors_allow_headers; reflected because the origin is trusted (set cors_extra_headers to list it explicitly)` |
+| WARNING | strict mode, header outside the list | `CORS preflight from <origin>: header '<name>' is not allowed; add it to cors_extra_headers` |
+
+An INFO line means the request works and you may pin the header with `cors_extra_headers`. A WARNING means the browser will block the real request.
+
+### Middleware order
+
+```python
+MIDDLEWARE = [
+    # ...
+    'django_cfg.core.middleware.PublicAPICORSMiddleware',      # open CORS on PUBLIC_API_CORS_PATHS only
+    'django_cfg.core.middleware.CorsRequestHeadersMiddleware', # header reflection for trusted origins
+    'corsheaders.middleware.CorsMiddleware',                   # origin allowlist, static header list
+    # ...
+]
+```
+
+django-cfg inserts all three; the order matters. `CorsRequestHeadersMiddleware` edits the answer `corsheaders` produced, so it sits before it, and after `PublicAPICORSMiddleware`, which answers its own paths with any origin and never reaches it. Public paths keep their fixed header list; see [CORS decorators and public paths](/core/cors).
+
+### Reading an opaque CORS error
+
+The browser shows only `blocked by CORS policy` or `Failed to fetch`, never which header was rejected. The tell-tale on the server:
+
+- the access log shows `OPTIONS ... 200` and the real request (`PUT`, `POST` with JSON, ...) **never arrives**;
+- `curl` with the same headers works, because only browsers send a preflight.
+
+Check, in order:
+
+1. In the browser's Network tab open the failed `OPTIONS` and compare `Access-Control-Request-Headers` with the response's `Access-Control-Allow-Headers`. A missing name is the cause.
+2. No `Access-Control-Allow-Origin` in the response means the origin is not trusted: declare it in `sites`, `api_url` or `security_domains` (reflection never applies to it).
+3. Look for the WARNING above (strict mode) in the server log; add the header to `cors_extra_headers` or turn reflection back on.
+4. Reproduce the preflight without a browser:
+
+```bash
+curl -si -X OPTIONS https://api.myapp.com/api/items/1/ \
+  -H 'Origin: https://myapp.com' \
+  -H 'Access-Control-Request-Method: PUT' \
+  -H 'Access-Control-Request-Headers: x-holder'
+```
+
+The answer must contain `Access-Control-Allow-Origin: https://myapp.com` and `x-holder` in `Access-Control-Allow-Headers`.
 
 <Callout type="info">
 Projects that replaced `cors_allow_headers` only to add a header can delete that workaround. Projects that still set `cors_allow_headers` get the reflection too; it only affects origins that were already trusted. Set `cors_reflect_request_headers = False` to keep the old, fixed behaviour.
 </Callout>
-
-`cors_allow_headers` replaces the default list (it is not merged); use `cors_extra_headers` to add.
 
 ### localhost in development
 
@@ -175,6 +238,14 @@ No port list to maintain: a dev server on any port works without configuration.
   for credentialed requests (`credentials: 'include'`), so cookie-based auth
   breaks. A regex echoes back the concrete origin, which browsers accept.
 </Callout>
+
+### Desktop and mobile webview origins
+
+Desktop and mobile shells load the frontend under a custom scheme, not `http`. These origins are always trusted, in both modes, because the shell is your own build:
+
+`wails://localhost[:port]`, `http(s)://wails.localhost[:port]`, `app://*` (Electron), `tauri://localhost`, `https://tauri.localhost`, `capacitor://localhost`, `ionic://localhost`.
+
+Header reflection applies to them like to any trusted origin.
 
 ### CSRF and dev ports
 
@@ -361,7 +432,7 @@ Access to fetch at 'https://api.myapp.com' from origin 'https://myapp.com'
 has been blocked by CORS policy
 ```
 
-**Solution:**
+**Solution:** the origin is not trusted; declare it:
 ```python
 class MyConfig(DjangoConfig):
     security_domains: list = [
@@ -369,6 +440,8 @@ class MyConfig(DjangoConfig):
         "api.myapp.com",  # Add API domain
     ]
 ```
+
+If the origin is declared and the server log shows only `OPTIONS 200`, the preflight asked for a header that was refused: see [Reading an opaque CORS error](#reading-an-opaque-cors-error).
 
 ### SSL Redirect Loop
 

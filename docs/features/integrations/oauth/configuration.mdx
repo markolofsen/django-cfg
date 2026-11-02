@@ -57,7 +57,7 @@ The registered redirect URI of a site origin is always:
 
 One per origin of every site: `site_url` plus the web origins the site lists in `security_domains` (no `api.` / `mcp.` hosts; no `localhost` outside development). A multi-site project registers one URI per origin at the provider. A mismatch shows up at Google as `redirect_uri_mismatch` with no in-app error, so register exactly what `oauth_check` prints.
 
-At request time the browser `Origin` must be accepted by the resolved site, else `origin_not_allowed`. With no `Origin` header the site's `site_url` is used.
+At request time the browser `Origin` must be accepted by the resolved site, else `origin_not_allowed`. Declaring one origin (`https://carapis.com`) accepts its subdomains (`my.carapis.com`, `studio.carapis.com`) and the other way round, as for hosts, CORS and CSRF; `accept_subdomains=False` restores exact matching. This is the django-cfg gate only: Google and GitHub still need every redirect URI registered exactly, and `manage.py oauth_check` prints the ones accepted by the subdomain rule but not registered by default. With no `Origin` header the site's `site_url` is used.
 
 <Callout type="info">
 One Django backend uses one Google client for all its sites: one redirect URI per site origin, one consent-screen name. Identity stays correct across sites because the Google `sub` is the same everywhere and users share one table.

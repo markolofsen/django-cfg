@@ -299,7 +299,7 @@ config = MyDjangoConfig()
 ### Development
 
 **Automatic configuration:**
-- `security_domains: ["localhost", "127.0.0.1"]` → CORS open for local dev
+- `security_domains: ["localhost", "127.0.0.1"]` → CORS trusts localhost on any port
 - `email.backend: "console"` → Emails printed to console
 - `debug: true` → Verbose logging, detailed errors
 - Relaxed security settings

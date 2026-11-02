@@ -15,7 +15,7 @@ Django-CFG provides automatic security configuration that adapts to your environ
 Django-CFG automatically configures security based on environment mode (`IS_PROD`, `IS_DEV`, `IS_TEST`):
 
 **Development Mode (`IS_DEV=true`):**
-- CORS: Whitelist mode with common dev ports
+- CORS: declared origins plus any `localhost` port via regex
 - CSRF: common local dev ports; CORS allows any localhost port via regex
 - SSL: Disabled (local development)
 - Credentials: Allowed for frontend testing
@@ -105,22 +105,13 @@ CSRF_TRUSTED_ORIGINS = ["http://staging.com:8080"]
 
 ### How CORS Works in Django-CFG
 
-**Development Mode:**
-```python
-# Whitelist mode with common dev ports
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",   # React
-    "http://localhost:5173",   # Vite
-    "http://localhost:8080",   # Vue
-    # ... + your security_domains
-]
-```
+The full explanation (trusted origins, subdomains, localhost, desktop schemes, header reflection, middleware order, reading an opaque error) lives in [Security settings: CORS](/configuration/security#cors-configuration). In short:
+
+**Development Mode:** declared origins plus regexes for `localhost`, `127.0.0.1` and `[::1]` on any port.
 
 **Production Mode:**
 ```python
-# Only security_domains allowed
+# Only the hosts you declared (sites, api_url, security_domains) and their subdomains
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
@@ -144,21 +135,18 @@ fetch('https://api.example.com/user/', {
 })
 ```
 
-> **Note:** `CORS_ALLOW_ALL_ORIGINS = True` doesn't support credentials, so Django-CFG never sets it. Production uses a whitelist; development adds regexes covering any `localhost` port.
+> **Note:** `CORS_ALLOW_ALL_ORIGINS = True` doesn't support credentials, so Django-CFG never sets it.
 
 ### Custom CORS Headers
 
-Default headers cover most use cases:
+The default list covers `authorization`, `content-type`, `x-csrftoken`, `x-api-key`, `dpop`, `idempotency-key` and the other headers django-cfg's own client sends. Any other header from a trusted origin is allowed automatically (the preflight is answered with the requested names). To list one explicitly:
 
-```yaml
-# Automatic defaults
-cors_allow_headers:
-  - accept
-  - authorization
-  - content-type
-  - x-csrftoken
-  - x-requested-with
+```python
+class MyConfig(DjangoConfig):
+    cors_extra_headers: list = ["x-holder"]   # adds to the default list
 ```
+
+`cors_allow_headers` **replaces** the default list; `cors_reflect_request_headers = False` turns reflection off. See [Custom request headers](/configuration/security#custom-request-headers).
 
 ---
 
@@ -392,6 +380,8 @@ security_domains:
   - example.com
   - app.example.com  # ← Add frontend domain
 ```
+
+If the origin is already declared and the server log shows only `OPTIONS 200`, see [Reading an opaque CORS error](/configuration/security#reading-an-opaque-cors-error).
 
 **Verify configuration:**
 ```bash

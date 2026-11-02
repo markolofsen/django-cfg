@@ -87,6 +87,17 @@ def check_locale(value: Optional[str]) -> Optional[str]:
     return value
 
 
+def _origin_key(origin: str) -> Tuple[str, str, Optional[int]]:
+    """``(scheme, host, port)`` of a normalized origin; the default port is None."""
+    parts = urlsplit(origin)
+    return parts.scheme, (parts.hostname or "").lower(), parts.port
+
+
+def _is_service_host(host: str, api_url: str) -> bool:
+    """``api.*``, ``mcp.*`` and the site's API host: services, not pages a person signs in from."""
+    return host.startswith(("api.", "mcp.")) or host == (urlsplit(api_url).hostname or "").lower()
+
+
 def _netloc(origin: str) -> str:
     return urlsplit(origin).netloc.lower()
 
@@ -184,6 +195,8 @@ class Site:
     # Fields taken from the deployment, not declared on the site: api_url, from_email.
     # show_config marks them.
     inherited: frozenset[str] = field(default=frozenset(), compare=False)
+    # ``DjangoConfig.accept_subdomains``: the same switch as for ALLOWED_HOSTS, CORS and CSRF.
+    accept_subdomains: bool = field(default=True, compare=False)
 
     def url(self, path: str = "") -> str:
         """``site_url`` + path: the only place a link to the site is built."""
@@ -192,9 +205,36 @@ class Site:
         return self.site_url + path
 
     def accepts(self, origin: Optional[str]) -> bool:
-        """True when ``origin`` is one of this site's web origins. Security paths reject on False."""
+        """True when ``origin`` is one of this site's web origins, or (``accept_subdomains``) a host
+        of the registrable domain of one of them with the same scheme and port: the rule that opens
+        ALLOWED_HOSTS, CORS and CSRF. ``api.``/``mcp.`` hosts and this site's API host are not web
+        origins. Only this site's own origins count, never another site's. Security paths reject on
+        False. Accepting an origin here does not register its redirect URI at the provider."""
         normalized = normalize_origin(origin) if origin else None
-        return normalized in self.origins
+        if normalized is None:
+            return False
+        if normalized in self.origins:
+            return True
+        if not self.accept_subdomains:
+            return False
+        scheme, host, port = _origin_key(normalized)
+        if _is_service_host(host, self.api_url):
+            return False
+        root = registrable_domain(host)
+        return root is not None and (scheme, root, port) in self.subdomain_roots()
+
+    def subdomain_roots(self) -> frozenset[Tuple[str, str, Optional[int]]]:
+        """``(scheme, registrable domain, port)`` of each web origin: what the subdomain rule opens.
+        Declaring ``carapis.com`` or ``my.carapis.com`` gives the same root, so both directions work."""
+        if not self.accept_subdomains:
+            return frozenset()
+        roots = set()
+        for origin in self.origins:
+            scheme, host, port = _origin_key(origin)
+            root = registrable_domain(host)
+            if root and not _is_service_host(host, self.api_url):
+                roots.add((scheme, root, port))
+        return frozenset(roots)
 
     def as_context(self) -> dict[str, Any]:
         """Template vocabulary: ``project_name`` and ``site_name`` are both ``name``."""
@@ -254,6 +294,7 @@ def _synthesize(config: "DjangoConfig") -> Site:
         from_name=(email.default_from_name if email else None) or config.project_name,
         logo_url=config.logo_url,
         locale=config.default_locale or DEFAULT_LOCALE,
+        accept_subdomains=getattr(config, "accept_subdomains", True),
     )
 
 
@@ -280,6 +321,7 @@ def _resolve(config: "DjangoConfig", declared: SiteConfig) -> Site:
         logo_url=declared.logo_url,
         locale=declared.locale or DEFAULT_LOCALE,
         inherited=frozenset(inherited),
+        accept_subdomains=getattr(config, "accept_subdomains", True),
     )
 
 

@@ -11,7 +11,7 @@ The package APIs (`useAuthForm`, `AuthLayout`, the callback component) are descr
 
 ## Buttons and branding
 
-`AuthLayout` renders the buttons itself, providers first, then "or", then the email field. No prop is needed: the list comes from the server. The optional `oauthProviders` prop only narrows it. The Google button follows Google's branding rules (white or dark fill, standard "G", 14px/500 text); button text and error messages are translated in all 17 shipped locales. `enableGithubAuth` is deprecated and does nothing. Hook API: [useOAuthLogin](/features/built-in-apps/user-management/accounts/frontend#useoauthlogin--oauth).
+`AuthLayout` renders the buttons itself, providers first, then "or", then the email field. No prop is needed: the list comes from the server. The optional `oauthProviders` prop only narrows it. Every provider button looks the same (one component, theme tokens, light and dark; only the mark and the name differ, and the Google "G" keeps its own colours); button text and error messages are translated in all 17 shipped locales. `enableGithubAuth` is deprecated and does nothing. Hook API: [useOAuthLogin](/features/built-in-apps/user-management/accounts/frontend#useoauthlogin--oauth).
 
 ## When a sign-in fails
 
@@ -24,5 +24,8 @@ The visitor is never stuck on a blocking card. The page returns to the normal si
 | Expired link, exchange failed, provider down, unknown | one short sentence | Try Google again |
 | `email_missing`, `email_not_verified`, `hosted_domain_not_allowed` | one sentence | Continue with email |
 | `account_inactive`, `rate_limited` | one sentence | none |
+| `origin_not_allowed`, `missing_redirect_uri`, `oauth_disabled` (site not set up for the provider) | "not available on this site" | Continue with email |
+
+For `origin_not_allowed` the notice adds a small line for developers: which origin the backend refused, and the redirect URI to register at the provider (`<origin>/auth?provider=<id>`). Add the origin to the Django site's origins; see [Sites](/configuration/sites).
 
 GitHub uses the same flow. The `?provider=&code=&state=` parameters are removed from the address bar first, and a repeated render (React strict mode) never repeats the exchange.

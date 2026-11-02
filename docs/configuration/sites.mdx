@@ -112,7 +112,7 @@ With `sites` declared, `site_url`, `support_email`, `logo_url` and `default_loca
 | Method | Returns |
 |---|---|
 | `site.url("/auth")` | `site_url` + path; the only place a link to the site is built |
-| `site.accepts(origin)` | `True` when `origin` is one of `origins` (default ports are ignored: `https://a.com:443` equals `https://a.com`) |
+| `site.accepts(origin)` | `True` when `origin` is one of `origins` (default ports are ignored: `https://a.com:443` equals `https://a.com`) **or** a subdomain rule match: a host of the registrable domain of one of `origins`, same scheme and port (`carapis.com` accepts `my.carapis.com`; `my.carapis.com` accepts `carapis.com` and `studio.carapis.com`). Not accepted: `api.*` and `mcp.*` hosts and the site's API host, lookalikes (`carapis.com.evil.io`, `evilcarapis.com`), another scheme, another site's origins, public suffixes. `accept_subdomains=False` makes it exact. Accepting does not register a redirect URI at Google or GitHub |
 | `site.as_context()` | the template vocabulary: `project_name` and `site_name` (both the site name), `site_url`, `support_email`, `logo_url`, `site` |
 
 ## What rejects

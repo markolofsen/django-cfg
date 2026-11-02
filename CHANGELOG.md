@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **OAuth / MCP-consent origin gate follows the subdomain rule.** `Site.accepts()` matched the request origin exactly
+  against `site.origins`, so a site declaring only `https://my.carapis.com` answered `{"error":"origin_not_allowed"}`
+  to sign-in started from `https://carapis.com`, although hosts, CORS and CSRF already accepted every subdomain
+  (2.3.372). `accepts()` now reuses `registrable_domain`: an origin is accepted when it is declared, or (with
+  `accept_subdomains`, default True) its host shares the registrable domain of one of the site's own web origins and the
+  scheme and port are equal. Decisions: (1) both directions, because the existing rule keys on the registrable domain
+  (`.carapis.com` plus `*.carapis.com`), so declaring `my.carapis.com` accepts `carapis.com` as hosts/CORS/CSRF already
+  did; (2) `api.*`, `mcp.*` and the site's API host are not web origins, as in site derivation; (3) only the site's own
+  origins count, so sites of a multi-site Django do not accept each other; (4) public suffixes are never opened;
+  (5) `accept_subdomains=False` restores exact matching. Covers `resolve_redirect_uri` and every `site.accepts` caller.
+  **Security note:** this is django-cfg's gate only; Google and GitHub still require each redirect URI registered
+  exactly. `manage.py oauth_check` now prints, per provider, the origins accepted by the subdomain rule and the URI
+  pattern to register before users sign in from them. A project that added its apex to `security_domains` only for
+  sign-in can remove that entry.
+
 ### Changed
 - **JWT: long sessions are the default.** `JWTConfig()` now gives 1-year access and refresh tokens (was 30 minutes
   access). `JWTConfig.long_lived()` and `JWTConfig.short_lived(access_minutes=30)` name the two postures. To keep short

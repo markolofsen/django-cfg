@@ -31,7 +31,7 @@ class Command(SafeCommand):
 
     def handle(self, *args, **options):
         from django_cfg.apps.system.accounts.services.oauth.diagnostics import CONFIG_CLASSES, collect_findings
-        from django_cfg.apps.system.accounts.services.oauth.redirect import registered_redirect_uris
+        from django_cfg.apps.system.accounts.services.oauth.redirect import registered_redirect_uris, subdomain_accepted
         from django_cfg.apps.system.accounts.services.oauth.registry import all_providers
         from django_cfg.core.exceptions import ConfigurationError
 
@@ -58,6 +58,9 @@ class Command(SafeCommand):
                 console.plain("  Authorized redirect URIs (register all of them):")
                 for key, uri in uris:
                     console.plain(f"    {uri}   [{key}]")
+                for key, origins, pattern in subdomain_accepted(provider.id):
+                    console.plain(f"  Also accepted by the subdomain rule [{key}]: {origins}")
+                    console.plain(f"    Register {pattern} at the provider before users sign in from it.")
             if provider.id == "google":
                 console.plain("  Authorized JavaScript origins: not needed (server-side flow).")
             console.plain(f"  Console: {provider.console_url}")

@@ -113,10 +113,20 @@ class DjangoConfig(BaseModel):
         default_factory=lambda: [
             "accept", "accept-encoding", "authorization", "content-type",
             "dnt", "origin", "user-agent", "x-csrftoken", "x-requested-with",
-            "x-api-key", "x-api-token", "x-chunk-index", "x-chunk-checksum",
-            "x-is-last", "x-total-chunks",
+            "x-api-key", "x-api-token", "x-auth-retry", "x-mcp-access-key", "dpop",
+            "x-timezone", "x-client-time",
+            "x-chunk-index", "x-chunk-checksum", "x-is-last", "x-total-chunks",
+            "idempotency-key",
         ],
-        description="CORS allowed headers",
+        description="Static CORS allowed headers. REPLACES the default list; use cors_extra_headers to add",
+    )
+    cors_extra_headers: List[str] = Field(
+        default_factory=list,
+        description="Added to the CORS allowed list (e.g. ['x-holder'])",
+    )
+    cors_reflect_request_headers: bool = Field(
+        default=True,
+        description="Preflights from already-trusted origins get the headers they ask for. False = strict",
     )
     axes: Optional[AxesConfig] = Field(
         default=None,
@@ -412,7 +422,7 @@ DjangoConfig includes comprehensive validators to ensure configuration correctne
 | `sites[*]`: `name`, `site_url`, `extra_origins`, `support_email`, `from_name`, `from_email`, `logo_url`, `locale` | site | Brand and mail |
 | `sites[*].api_url` | site, optional | Only for a site with its own API host; otherwise the deployment `api_url` |
 
-ALLOWED_HOSTS, CORS and CSRF are derived from the sites, the API hosts and `security_domains`. See [Sites](/configuration/sites#which-field-owns-what) and [Security settings](/configuration/security#where-the-hosts-come-from).
+ALLOWED_HOSTS, CORS and CSRF are derived from the sites, the API hosts and `security_domains`. See [Sites](/configuration/sites#which-field-owns-what) and [Security settings](/configuration/security#where-the-hosts-come-from). CORS request headers (`cors_extra_headers`, `cors_reflect_request_headers`, `cors_allow_headers`): [Custom request headers](/configuration/security#custom-request-headers).
 
 ### Project name and slug
 

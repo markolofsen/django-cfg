@@ -373,7 +373,7 @@ Production requires `security_domains` configuration.
 
 **Solution:**
 ```python
-# Production: Configure security_domains
+# Production: declare the hosts (sites / api_url / security_domains)
 security_domains = [
     "frontend.example.com",         # ✅ Any format works
     "https://api.example.com",      # ✅ With protocol
@@ -381,8 +381,11 @@ security_domains = [
 ]
 
 # Development: No configuration needed!
-# debug=True automatically enables CORS_ALLOW_ALL_ORIGINS
+# localhost on any port is trusted through CORS_ALLOWED_ORIGIN_REGEXES
+# (CORS_ALLOW_ALL_ORIGINS is never set: it breaks credentialed requests)
 ```
+
+Full picture: [CORS in Security settings](/configuration/security#cors-configuration).
 
 
 <Callout type="info">
@@ -404,6 +407,19 @@ Django-CFG automatically configures CORS based on environment:
 - ✅ CORS middleware auto-inserted
 
 </Callout>
+</details>
+
+<details>
+<summary>**CORS error, but the server sees only OPTIONS**</summary>
+
+**Problem:**
+The browser reports `blocked by CORS policy` or `Failed to fetch`. The server log shows `OPTIONS ... 200` and the real `PUT`/`POST` never arrives. `curl` with the same headers works.
+
+**Cause:**
+Only browsers send a preflight. It asked for a request header the response did not allow, so the browser dropped the real request. For an already-trusted origin django-cfg answers with the requested headers, so the usual causes are an untrusted origin (no `Access-Control-Allow-Origin` in the response) or strict mode (`cors_reflect_request_headers = False`).
+
+**Solution:**
+Compare `Access-Control-Request-Headers` with `Access-Control-Allow-Headers` on the failed `OPTIONS` in the Network tab, then declare the origin or add the header with `cors_extra_headers = ["x-holder"]`. Details, log lines and a `curl` preflight: [Reading an opaque CORS error](/configuration/security#reading-an-opaque-cors-error).
 </details>
 
 <details>

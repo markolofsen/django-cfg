@@ -74,10 +74,12 @@ middleware = builder.build()
 
 **Key Features:**
 
-1. **Smart CORS Insertion:** Places CORS middleware after WhiteNoise but before Session
+1. **Smart CORS Insertion:** Places the CORS middleware after WhiteNoise but before Session, in a fixed order (see [CORS](/configuration/security#middleware-order))
    ```python
    [
        "whitenoise.middleware.WhiteNoiseMiddleware",
+       "django_cfg.core.middleware.PublicAPICORSMiddleware",
+       "django_cfg.core.middleware.CorsRequestHeadersMiddleware",
        "corsheaders.middleware.CorsMiddleware",  # ← Inserted here
        "django.contrib.sessions.middleware.SessionMiddleware",
        ...

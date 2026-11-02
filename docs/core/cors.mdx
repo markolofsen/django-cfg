@@ -12,7 +12,8 @@ Django-CFG provides **automatic CORS handling** for public API endpoints via mid
 ```mermaid
 graph LR
     Request[Request] --> Public[PublicAPICORSMiddleware]
-    Public --> Cors[CorsMiddleware]
+    Public --> Reflect[CorsRequestHeadersMiddleware]
+    Reflect --> Cors[CorsMiddleware]
     Cors --> View[View]
 
     Public -.-> P1["/cfg/leads/*<br/>(open CORS)"]
@@ -24,7 +25,8 @@ graph LR
 
 **Key components:**
 - `PublicAPICORSMiddleware` - Handles CORS for public API paths (e.g., `/cfg/leads/`)
-- `CorsMiddleware` (django-cors-headers) - Handles CORS for other paths based on `security_domains`
+- `CorsRequestHeadersMiddleware` - On a preflight from an already-trusted origin, adds the requested headers to `Access-Control-Allow-Headers` (see [Custom request headers](/configuration/security#custom-request-headers)). Public paths never reach it: they keep the fixed header list below
+- `CorsMiddleware` (django-cors-headers) - Handles CORS for other paths: origins derived from sites, `api_url` and `security_domains` ([details](/configuration/security#cors-configuration))
 - `PublicAPIMixin` - Removes authentication for public endpoints
 - Decorators - For custom CORS on function-based views
 
@@ -324,13 +326,14 @@ config = DjangoConfig(
 
 ## Middleware Order
 
-`PublicAPICORSMiddleware` must be before `CorsMiddleware`:
+`PublicAPICORSMiddleware` must be first, then `CorsRequestHeadersMiddleware`, then `CorsMiddleware`:
 
 ```python
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django_cfg.core.middleware.PublicAPICORSMiddleware',  # Before CorsMiddleware
+    'django_cfg.core.middleware.PublicAPICORSMiddleware',       # answers public paths, any origin
+    'django_cfg.core.middleware.CorsRequestHeadersMiddleware',  # reflects requested headers (trusted origins)
     'corsheaders.middleware.CorsMiddleware',
     # ...
 ]

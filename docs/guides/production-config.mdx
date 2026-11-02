@@ -636,12 +636,12 @@ class SecureConfig(DjangoConfig):
         "www.myapp.com:8443",     # ✅ With port
     ]
     # ssl_redirect: Optional - not needed (reverse proxy handles SSL)
-    cors_allow_headers: list[str] = [
-        "accept",
-        "content-type",
-        "authorization",
-    ]
+    # Custom request headers need no setup (preflights from trusted origins are
+    # answered with the requested headers). To list one explicitly:
+    cors_extra_headers: list[str] = ["x-holder"]
 ```
+
+Do not set `cors_allow_headers` just to add a header: it **replaces** the default list. See [CORS](/configuration/security#cors-configuration).
 
 <details>
   <summary>Auto-configured Security Headers</summary>

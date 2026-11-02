@@ -400,6 +400,8 @@ MIDDLEWARE = [
     # 2. Standard Django security
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django_cfg.core.middleware.PublicAPICORSMiddleware',      # open CORS on public paths (before the two below)
+    'django_cfg.core.middleware.CorsRequestHeadersMiddleware', # preflight header reflection for trusted origins
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',

@@ -228,13 +228,13 @@ const { start, complete, isLoading, loadingProvider, error, errorCode } = useOAu
 
 `useOAuthProviders` keeps the last answer in `sessionStorage` (`cfg.auth.oauth_providers`), so the buttons are there on a reload or after a failed attempt while the server answer revalidates; a failed request shows that list, else none. Error `code` values are the generated `OAuthErrorCodeEnum`.
 
-`complete` requires the `state` saved by `start`, single use. A missing or different state fails with `invalid_state`. The saved return URL is honoured, then `redirectUrl`, then `/private`. `AuthLayout` handles the `/auth?provider=<id>` callback itself, strips `code`/`state` from the URL and shows a translated message for each error code.
+`complete` requires the `state` saved by `start`, single use. A missing or different state fails with `invalid_state`. The saved return URL is honoured, then `redirectUrl`, then `/private`. `AuthLayout` handles the `/auth?provider=<id>` callback itself, strips `code`/`state` from the URL and shows a translated message for each error code (`origin_not_allowed` also gets a hint for developers).
 
 `useGithubAuth` is a deprecated alias of `useOAuthLogin('github')`, kept for one minor.
 
 #### Provider icons
 
-The buttons draw their icons from `GoogleIcon` and `GithubIcon` in `packages/layouts/src/layouts/AuthLayout/components/oauth/`, picked through `OAUTH_PROVIDER_UI`. They are internal, not package exports. `GoogleIcon` is the four-colour "G" and keeps its own colours in light and dark; `GithubIcon` uses `currentColor`. Both are `aria-hidden`; the button text carries the name.
+Everything lives in `packages/layouts/src/layouts/AuthLayout/components/oauth/`; only `OAuthCallback` is a package export. A provider is one line in `providers/registry.ts` (`OAUTH_PROVIDERS`: brand name and icon); the buttons, the "Continue with {provider}" label, the notices and the error copy all read that table. `GoogleIcon` is the four-colour "G" and keeps its own colours in light and dark; `GithubIcon` uses `currentColor`. Both are `aria-hidden`; the button text carries the name. A provider the backend adds is a type error in the registry until it has a name and an icon.
 
 ### Testing sign-in in Storybook
 

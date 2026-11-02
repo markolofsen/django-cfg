@@ -124,6 +124,14 @@ Or add to your project dependencies:
 openapi-python-client = "^0.15.0"
 ```
 
+## Browser Request Issues
+
+### CORS error, but the server sees only OPTIONS
+
+A generated client sends a custom header that the preflight did not allow; the browser blocks the real request, so the server log shows `OPTIONS 200` and no `PUT`/`POST`. `curl` works because it sends no preflight.
+
+Preflights from an already-trusted origin are answered with the headers they ask for, so this normally means the origin is not trusted or `cors_reflect_request_headers = False` is set. See [Reading an opaque CORS error](/configuration/security#reading-an-opaque-cors-error).
+
 ## General Tips
 
 ### Enable debug logging

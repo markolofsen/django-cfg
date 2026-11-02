@@ -3,7 +3,8 @@
 The registered redirect URI of a site origin is ``<origin>/auth?provider=<id>``.
 The origin is the browser's ``Origin`` header when it is one of the resolved
 site's origins (``Site.accepts``); with no header it is the site's own
-``site_url``. An origin no site accepts is rejected, never replaced: a security
+``site_url``. ``Site.accepts`` also takes subdomains of the registrable domain of a declared
+origin (``accept_subdomains``); the provider still needs each such URI registered. An origin no site accepts is rejected, never replaced: a security
 path does not guess. The callback ignores any client value and reuses the URI
 stored with the state.
 """
@@ -32,6 +33,22 @@ def registered_redirect_uris(provider_id: str) -> List[Tuple[str, str]]:
         for site in sites()
         for origin in sorted(site.origins)
     ]
+
+
+def subdomain_accepted(provider_id: str) -> List[Tuple[str, str, str]]:
+    """``(site key, accepted origins, URI pattern)`` per registrable domain a site accepts by the
+    subdomain rule (``accept_subdomains``) beyond its declared origins. The provider still needs
+    each URI registered exactly: acceptance here registers nothing there."""
+    found = []
+    for site in sites():
+        for scheme, root, port in sorted(site.subdomain_roots(), key=str):
+            suffix = f":{port}" if port else ""
+            found.append((
+                site.key,
+                f"{scheme}://{root}{suffix} and {scheme}://*.{root}{suffix}",
+                f"{scheme}://<origin>{suffix}{CALLBACK_PATH}?provider={provider_id}",
+            ))
+    return found
 
 
 def resolve_redirect_uri(request, provider_id: str, requested: str = "") -> str:
