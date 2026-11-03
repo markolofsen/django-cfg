@@ -93,7 +93,7 @@ The browser briefly shows the `authorize` address. It is public anyway (it is in
 
 ## 3. Frontend: install buttons
 
-`<McpConnect server={{ url, alias, name }} loadKey={...} />` from `@djangocfg/widget-mcp` renders all of these. Claude and ChatGPT go through OAuth as below; Claude Code, Codex, Gemini CLI, Cursor, VS Code and LM Studio get the signed-in user's own key in the command or deeplink, which works in bearer-only clients too. A hand-built page can use either path.
+`<McpConnect server={{ url, alias, name }} loadKey={...} />` from `@djangocfg/widget-mcp` renders all of these, grouped by app: the first screen is one tile per app (Claude, ChatGPT, Codex, Gemini, Notion, Perplexity, Cursor, VS Code, LM Studio, Goose, and "Other app"), and opening an app lists each documented way to connect it (Claude: the web and desktop connector, and Claude Code in a terminal). Claude, ChatGPT, Notion, Perplexity and Goose go through OAuth as below; Claude Code, Codex, Gemini CLI, Cursor, VS Code and LM Studio get the signed-in user's own key in the command or deeplink, which works in bearer-only clients too. A hand-built page can use either path.
 
 Each assistant gets one action, built from the endpoint URL (`E`) and a short alias (`A`):
 

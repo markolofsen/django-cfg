@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **`PrivateLayout` on a phone: top bar and drawer metrics.** (1) Pages with `contentPadding="none"` (full-height panes)
+  had no room reserved for the sidebar trigger, which floated over their first row and left their top controls under
+  the status bar; the trigger now sits in an in-flow 48px top bar (safe-area aware) whenever the sidebar is not docked,
+  padded page or not. (2) Sidebar rows used `text-base` (desktop) and `text-lg` (drawer) because the geometry
+  classes overrode the row default; rows are now `text-sm` with 16px (desktop) / 18px (drawer) icons, group labels
+  `text-xs`, side padding 8px (was 10-12px), larger vertical padding, drawer header/footer at least 1rem from the
+  safe-area edges, no-icon rows aligned to the label column. Docked and collapsed desktop keep their behaviour.
+  Docs: `PrivateLayout/README.md` (Sidebar states). Hosts need `viewportFit: "cover"` for the safe-area insets.
+- **Sign-in buttons no longer vanish after one failed request.** `useOAuthProviders` (`@djangocfg/api/auth`) asked
+  `GET /cfg/accounts/oauth/providers/` once, with no retry; one dropped mobile connection or a gateway 502 left the list
+  empty for the whole visit, so `AuthLayout` rendered only the email form (no provider buttons, no "or" divider) while
+  the same site showed them on desktop. The request is now retried twice (after 1s and 2s); `isReady` stays false
+  meanwhile, so the form keeps the room of the buttons, and the hook gives up as empty only after the retries fail.
+  No config or prop change.
 - **OAuth / MCP-consent origin gate follows the subdomain rule.** `Site.accepts()` matched the request origin exactly
   against `site.origins`, so a site declaring only `https://my.carapis.com` answered `{"error":"origin_not_allowed"}`
   to sign-in started from `https://carapis.com`, although hosts, CORS and CSRF already accepted every subdomain
@@ -27,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **JWT: long sessions are the default.** `JWTConfig()` now gives 1-year access and refresh tokens (was 30 minutes
   access). `JWTConfig.long_lived()` and `JWTConfig.short_lived(access_minutes=30)` name the two postures. To keep short
   access tokens set `access_token_lifetime_minutes=30`.
+- **MCP connect widget is grouped by app** (`@djangocfg/widget-mcp`, next release). The first screen is one tile per app
+  (Claude, ChatGPT, Codex, Gemini, Notion, Perplexity, Cursor, VS Code, LM Studio, Goose, Other app); opening an app lists each
+  way to connect it (Claude: web/desktop connector and Claude Code). Replaces the separate "Code editor or terminal" tile.
+  Docs: `connect-assistants`. `initialView` values changed (see the widget CHANGELOG).
 
 ### Added
 - **CORS: custom request headers need no setup.** A preflight from an origin that is already trusted (the response
