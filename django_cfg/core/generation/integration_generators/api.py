@@ -204,7 +204,9 @@ class APIFrameworksGenerator:
                     # TextChoices classes BEFORE postprocess_schema_enums
                     # reads them. Must be first in the chain.
                     "django_cfg.modules.django_generator.openapi.spectacular.enum_auto_overrides.auto_populate_enum_overrides",
-                    "drf_spectacular.hooks.postprocess_schema_enums",
+                    # The stock enum hook, plus the null it drops on
+                    # `allow_null` choices when the flag above is off.
+                    "django_cfg.modules.django_generator.openapi.spectacular.nullable_enums.postprocess_schema_enums_keep_null",
                     "django_cfg.modules.django_generator.openapi.spectacular.auto_fix_enum_names",
                     "django_cfg.modules.django_generator.openapi.spectacular.mark_async_operations",
                     # Promote DefaultPagination wrappers from inline
