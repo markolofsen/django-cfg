@@ -4,6 +4,7 @@ export default {
   'image-generation': 'Image Generation',
   'text-client': 'Text Client',
   'media-transport': 'Media Transport',
+  'transcription': 'Transcription',
   'translation': 'Translation',
   'cost-tracking': 'Cost Tracking',
   'caching': 'Caching',
