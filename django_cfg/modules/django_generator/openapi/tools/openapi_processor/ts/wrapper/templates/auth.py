@@ -276,6 +276,25 @@ const storage = '{owner}' === 'cfg' ? cfgStorage : createStorage('{owner}');
 
 const isBrowser = typeof window !== 'undefined';
 
+/**
+ * Auth trace hook. The reader lives in `@djangocfg/api` (`auth/trace.ts`) and installs `globalThis.__cfgAuthTrace`;
+ * until it does, events queue on `globalThis` so none are lost. Never pass a token, a code or an address.
+ */
+type TraceFields = Record<string, string | number | boolean | null>;
+function trace(ev: string, fields?: TraceFields): void {{
+  try {{
+    const g = globalThis as Record<string, unknown>;
+    const sink = g.__cfgAuthTrace as ((e: string, f?: TraceFields) => void) | undefined;
+    if (sink) {{ sink(ev, fields); return; }}
+    const queue = (g.__cfgAuthTraceQ as unknown[] | undefined) ?? [];
+    g.__cfgAuthTraceQ = queue;
+    if (queue.length < 100) queue.push([Date.now(), ev, fields]);
+  }} catch {{ /* tracing never breaks auth */ }}
+}}
+function pathOf(url: string): string {{
+  try {{ return new URL(url, 'http://x').pathname; }} catch {{ return ''; }}
+}}
+
 export type StorageMode = 'localStorage' | 'sessionStorage' | 'cookie';
 
 // ── Storage backends (browser-only; server-side reads return null) ─────────
@@ -457,7 +476,7 @@ function notifySessionChanged(): void {{
   const changed =
     next.status !== _snapshot.status ||
     next.accessExpiresAt !== _snapshot.accessExpiresAt;
-  if (changed) _snapshot = next;
+  if (changed) {{ _snapshot = next; trace('store.snapshot', {{ status: next.status }}); }}
   scheduleExpiryFlip();
   if (!changed) return;
   for (const listener of Array.from(_sessionListeners)) {{
@@ -570,15 +589,18 @@ export const auth = {{
   // ── Bearer token ──────────────────────────────────────────────────
   getToken(): string | null {{ return _storage.get(ACCESS_KEY); }},
   setToken(token: string | null): void {{
+    trace('store.setToken', {{ present: token !== null }});
     _storage.set(ACCESS_KEY, token);
     notifySessionChanged();
   }},
   getRefreshToken(): string | null {{ return _storage.get(REFRESH_KEY); }},
   setRefreshToken(token: string | null): void {{
+    trace('store.setRefreshToken', {{ present: token !== null }});
     _storage.set(REFRESH_KEY, token);
     notifySessionChanged();
   }},
   clearTokens(): void {{
+    trace('store.clearTokens');
     // Clear every backend, not just the active one. Sign-out must leave nothing
     // behind anywhere — including tokens an older build stranded in
     // sessionStorage — or the next page load could resurrect a dead session.
@@ -604,6 +626,7 @@ export const auth = {{
    * rotation); `refresh: null` explicitly drops it.
    */
   setSession(tokens: {{ access: string; refresh?: string | null }}): void {{
+    trace('store.setSession', {{ refresh: tokens.refresh === undefined ? 'kept' : tokens.refresh === null ? 'dropped' : 'set' }});
     _storage.set(ACCESS_KEY, tokens.access);
     if (tokens.refresh !== undefined) _storage.set(REFRESH_KEY, tokens.refresh);
     notifySessionChanged();
@@ -755,7 +778,8 @@ async function tryRefresh(): Promise<string | null> {{
     const refresh = auth.getRefreshToken();
     if (!refresh) return null;
     const result = await _refreshHandler!(refresh);
-    if (!result?.access) return null;
+    if (!result?.access) {{ trace('refresh', {{ ok: false, why: 'no-access' }}); return null; }}
+    trace('refresh', {{ ok: true, rotated: Boolean(result.refresh) }});
     auth.setToken(result.access);
     if (result.refresh) auth.setRefreshToken(result.refresh);
     return result.access;
@@ -773,6 +797,7 @@ async function tryRefresh(): Promise<string | null> {{
       }}
       return await runRefresh();
     }} catch {{
+      trace('refresh', {{ ok: false, why: 'threw' }});
       return null;
     }} finally {{
       _refreshInflight = null;
@@ -789,7 +814,8 @@ async function tryRefresh(): Promise<string | null> {{
  * `onUnauthorized` slot. Apps only route to login; they never own the
  * clear-before-redirect ordering.
  */
-function expireSession(response: Response): void {{
+function expireSession(response: Response, why: string): void {{
+  trace('store.expire', {{ why, status: response.status, path: pathOf(response.url), handlers: _sessionExpiredHandlers.size }});
   auth.clearTokens();
   for (const cb of Array.from(_sessionExpiredHandlers)) {{
     try {{ cb(response); }} catch {{}}
@@ -983,15 +1009,22 @@ export function installAuthOnClient(client: HeyClient): void {{
   client.interceptors.response.use(async (response, request) => {{
     if (response.status !== 401) return response;
 
+    // A refusal from the sign-in endpoints themselves (wrong OTP / password, bad OAuth code) is a credential error, not
+    // a dead session: expiring here reloads the sign-in page and wipes the error the user is reading.
+    if (/\\/accounts\\/(otp|oauth|login|register|token)\\b/.test(request.url)) {{
+      trace('401.passthrough', {{ path: pathOf(request.url) }});
+      return response;
+    }}
+
     // Already retried once — give up to avoid loops.
     if (request.headers.get(RETRY_MARKER)) {{
-      expireSession(response);
+      expireSession(response, 'retry-marker');
       return response;
     }}
 
     const newToken = await tryRefresh();
     if (!newToken) {{
-      expireSession(response);
+      expireSession(response, 'refresh-failed');
       return response;
     }}
 
@@ -1009,7 +1042,7 @@ export function installAuthOnClient(client: HeyClient): void {{
     }}
     try {{
       const retried = await fetch(retry);
-      if (retried.status === 401) expireSession(retried);
+      if (retried.status === 401) expireSession(retried, 'retry-401');
       return retried;
     }} catch {{
       // Network error on the retry. The refresh SUCCEEDED (we hold a fresh
