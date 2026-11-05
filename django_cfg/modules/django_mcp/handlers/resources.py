@@ -7,6 +7,8 @@ from django_cfg.modules.django_mcp.services.context import MCPContext
 from django_cfg.modules.django_mcp.protocols.types import MCPResourceDefinition
 import json
 
+from django_cfg.modules.django_mcp.registries import resource_registry
+
 
 class ResourcesHandler:
     """Handle MCP resources/list and resources/read methods."""
@@ -14,7 +16,8 @@ class ResourcesHandler:
     @staticmethod
     def handle_resources_list(params: Dict[str, Any], context: MCPContext) -> Dict[str, Any]:
         """Return list of available resources."""
-        resources = []
+        profile = getattr(context, "profile", None)
+        resources = [r.definition() for r in resource_registry.visible(profile)]
 
         if not context.config.introspection.enabled:
             return {"resources": resources}
@@ -44,6 +47,10 @@ class ResourcesHandler:
         uri = params.get("uri")
         if not uri:
             raise ValueError("Resource URI is required")
+
+        registered = resource_registry.get(uri, getattr(context, "profile", None))
+        if registered is not None:
+            return {"contents": [{"uri": uri, "mimeType": registered.mime_type, "text": registered.read(context)}]}
 
         # Parse URI: django://{app_label}/{model_name}/schema
         if not uri.startswith("django://"):

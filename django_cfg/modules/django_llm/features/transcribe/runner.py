@@ -70,7 +70,7 @@ def transcribe(
         ctx.piece(start, end, 0)
         _progress(on_progress, end, duration_s)
     result.segments.sort(key=lambda s: s.start_s)
-    result.gaps.sort(key=lambda g: g.start_s)
+    result.gaps = _merge_gaps(result.gaps)
     if not result.segments:
         raise NothingTranscribed(
             "; ".join(dict.fromkeys(g.detail for g in result.gaps if g.detail))[:300] or "no text produced"
@@ -102,8 +102,21 @@ def transcribe_range(
     result = Result()
     _Ctx(cut, ask, tuple(chain), policy, sleep, rng, result, context).piece(start_s, end_s, 0)
     result.segments.sort(key=lambda s: s.start_s)
-    result.gaps.sort(key=lambda g: g.start_s)
+    result.gaps = _merge_gaps(result.gaps)
     return result
+
+
+def _merge_gaps(gaps: list[Gap]) -> list[Gap]:
+    """One gap for a run of touching halves that failed the same way: a reader wants one range, not three."""
+    out: list[Gap] = []
+    for g in sorted(gaps, key=lambda g: g.start_s):
+        prev = out[-1] if out else None
+        if prev and prev.end_s == g.start_s and (prev.reason, prev.retryable) == (g.reason, g.retryable):
+            detail = "; ".join(dict.fromkeys(d for d in (prev.detail, g.detail) if d))[:300]
+            out[-1] = Gap(prev.start_s, g.end_s, g.reason, detail, g.retryable, prev.cost_usd + g.cost_usd)
+        else:
+            out.append(g)
+    return out
 
 
 def _progress(cb: Optional[Progress], covered: float, total: float) -> None:

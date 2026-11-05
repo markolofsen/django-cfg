@@ -13,7 +13,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 
 from django_cfg.modules.django_mcp.auth import authenticate, challenge, presented_credential
-from django_cfg.modules.django_mcp.handlers.initialize import resolve_server_name
+from django_cfg.modules.django_mcp.handlers.initialize import resolve_instructions, resolve_server_name
+from django_cfg.modules.django_mcp.registries import prompt_registry, resource_registry
 from django_cfg.modules.django_mcp.handlers.tools import tool_registry
 from django_cfg.modules.django_mcp.throttling import MCPRateThrottle
 
@@ -36,6 +37,9 @@ class MCPInfoView(APIView):
             "protocol": "2025-03-26",
             "description": "..."
         },
+        "instructions": "...",
+        "resources": [{"uri": "...", "name": "...", "description": "..."}],
+        "prompts": [{"name": "...", "description": "..."}],
         "tools": [
             {
                 "name": "get_billing_plans",
@@ -135,6 +139,15 @@ class MCPInfoView(APIView):
 
         return JsonResponse({
             "server": server_info,
+            "instructions": resolve_instructions(mcp_config, profile) or "",
             "tools": tools,
+            "resources": [
+                {"uri": r.uri, "name": r.name, "description": r.description}
+                for r in resource_registry.visible(profile)
+            ],
+            "prompts": [
+                {"name": p.name, "description": p.description}
+                for p in prompt_registry.visible(profile)
+            ],
             "total_tools": len(tools),
         })

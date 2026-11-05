@@ -23,6 +23,7 @@ class MCPInitializeResult(BaseModel):
     protocolVersion: str = "2025-03-26"
     capabilities: MCPCapabilities
     serverInfo: MCPServerInfo
+    instructions: Optional[str] = None
 
 
 class MCPToolDefinition(BaseModel):

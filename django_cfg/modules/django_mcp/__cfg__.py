@@ -357,6 +357,10 @@ class MCPProfile(BaseModel):
             "one tool result may carry. Above it the call returns a tool error."
         ),
     )
+    instructions: Optional[str] = Field(
+        default=None,
+        description="Text sent as `instructions` in initialize; overrides the config-level one.",
+    )
     @property
     def serves_all_tools(self) -> bool:
         return ALL_TOOLS in self.tools
@@ -641,6 +645,10 @@ class DjangoMCPModuleConfig(BaseModel):
     server_version: str = Field(
         default="1.0.0",
         description="Server version reported in initialize handshake",
+    )
+    instructions: Optional[str] = Field(
+        default=None,
+        description="Text sent as `instructions` in initialize (how to use this server's tools).",
     )
     enable_streaming: bool = Field(
         default=False,

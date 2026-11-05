@@ -27,6 +27,7 @@ from django_cfg.modules.django_mcp.protocols.jsonrpc import (
 from django_cfg.modules.django_mcp.handlers.initialize import InitializeHandler
 from django_cfg.modules.django_mcp.handlers.tools import ToolsHandler
 from django_cfg.modules.django_mcp.handlers.resources import ResourcesHandler
+from django_cfg.modules.django_mcp.handlers.prompts import PromptsHandler
 from django_cfg.modules.django_mcp.services.context import MCPContext
 
 logger = logging.getLogger(__name__)
@@ -275,6 +276,13 @@ class MCPView(APIView):
 
         elif method == "resources/read":
             return ResourcesHandler.handle_resources_read(params, context)
+
+        # Prompts methods
+        elif method == "prompts/list":
+            return PromptsHandler.handle_prompts_list(params, context)
+
+        elif method == "prompts/get":
+            return PromptsHandler.handle_prompts_get(params, context)
 
         else:
             raise MCPError(f"Method '{method}' is not supported")

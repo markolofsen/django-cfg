@@ -1,12 +1,13 @@
 """MCP Initialize Handler."""
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from django_cfg.modules.django_mcp.protocols.types import (
     MCPServerInfo,
     MCPCapabilities,
     MCPInitializeResult,
 )
+from django_cfg.modules.django_mcp.registries import prompt_registry, resource_registry
 from django_cfg.modules.django_mcp.services.context import MCPContext
 
 
@@ -18,6 +19,20 @@ def resolve_server_name(explicit: Any = None) -> str:
 
     config = get_current_config()
     return getattr(config, "project_slug", None) or "mcp"
+
+
+def _field(config: Any, name: str) -> Any:
+    return config.get(name) if isinstance(config, dict) else getattr(config, name, None)
+
+
+def resolve_instructions(config: Any, profile: Any = None) -> Optional[str]:
+    """Profile text, else config text, then every remote manifest's, joined by a blank line."""
+    from django_cfg.modules.django_mcp.remote import remote_instructions
+
+    own = getattr(profile, "instructions", None) or _field(config, "instructions")
+    parts = [own] if own else []
+    parts += remote_instructions(profile)
+    return "\n\n".join(parts) or None
 
 
 class InitializeHandler:
@@ -53,13 +68,15 @@ class InitializeHandler:
                 introspection_enabled = introspection.enabled
 
         # Build capabilities based on configuration
-        capabilities = MCPCapabilities(
-            tools={"listChanged": False},
-            resources={"listChanged": False},
-        )
+        profile = getattr(context, "profile", None)
+        capabilities = MCPCapabilities(tools={"listChanged": False})
 
-        if introspection_enabled:
-            capabilities.prompts = {}
+        exposed = _field(config, "exposed_apps")
+        if resource_registry.visible(profile) or (introspection_enabled and exposed):
+            capabilities.resources = {"listChanged": False}
+
+        if prompt_registry.visible(profile):
+            capabilities.prompts = {"listChanged": False}
 
         # Build server info
         server_info = MCPServerInfo(
@@ -72,6 +89,7 @@ class InitializeHandler:
             protocolVersion=protocol_version,
             capabilities=capabilities,
             serverInfo=server_info,
+            instructions=resolve_instructions(config, profile),
         )
 
         # exclude_none is required, not cosmetic. Every capability is Optional,

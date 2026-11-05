@@ -120,6 +120,25 @@ class MCPToolRegistry:
 
     def __init__(self):
         self._tools: Dict[str, MCPTool] = {}
+        # Callables returning tools that are not known at import time (a remote
+        # manifest). Static tools win on a name clash.
+        self._providers: list = []
+
+    def add_provider(self, provider) -> None:
+        """Add a ``() -> list[MCPTool]`` source consulted on every lookup."""
+        if provider not in self._providers:
+            self._providers.append(provider)
+
+    def remove_provider(self, provider) -> None:
+        if provider in self._providers:
+            self._providers.remove(provider)
+
+    def _provided(self) -> Dict[str, MCPTool]:
+        out: Dict[str, MCPTool] = {}
+        for provider in self._providers:
+            for tool in provider():
+                out.setdefault(tool.name, tool)
+        return out
 
     def register(self, tool: MCPTool):
         """Register a tool."""
@@ -131,7 +150,10 @@ class MCPToolRegistry:
 
     def get_tool(self, name: str) -> MCPTool:
         """Get tool by name."""
-        return self._tools.get(name)
+        tool = self._tools.get(name)
+        if tool is None and self._providers:
+            tool = self._provided().get(name)
+        return tool
 
     def get_all_tools(self, context: Optional[MCPContext], *, profile=None) -> list:
         """Tools this context may see.
@@ -156,7 +178,11 @@ class MCPToolRegistry:
         cannot be folded into one argument.
         """
         profile = profile if profile is not None else getattr(context, "profile", None)
-        tools = [tool for tool in self._tools.values() if tool.is_available(context)]
+        every = dict(self._tools)
+        if self._providers:
+            for name, tool in self._provided().items():
+                every.setdefault(name, tool)
+        tools = [tool for tool in every.values() if tool.is_available(context)]
         if profile is not None and not profile.serves_all_tools:
             # The tool object, not its name: `PUBLIC_TOOLS` resolves by reading
             # the tool's own `public` flag.

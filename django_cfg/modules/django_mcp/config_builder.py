@@ -58,6 +58,7 @@ class ProfileBuilder:
         self._introspection: Optional[IntrospectionConfig] = None
         self._rate_limit: str = "100/minute"
         self._oauth: Optional[MCPOAuthConfig] = None
+        self._instructions: Optional[str] = None
 
     def enable_oauth(self, consent_url: Optional[str] = None, issuer: Optional[str] = None, **ttl: int) -> "ProfileBuilder":
         """Let clients sign in (OAuth 2.1, PKCE) instead of sending a key.
@@ -147,6 +148,11 @@ class ProfileBuilder:
         self._key_validator = dotted_path
         return self
 
+    def set_instructions(self, text: str) -> "ProfileBuilder":
+        """`instructions` for this profile's initialize result."""
+        self._instructions = text
+        return self
+
     def build(self) -> MCPProfile:
         """Validated here, so a bad profile fails where it was written."""
         return MCPProfile(
@@ -171,6 +177,7 @@ class ProfileBuilder:
             rate_limit=self._rate_limit,
             key_validator=self._key_validator,
             oauth=self._oauth,
+            instructions=self._instructions,
         )
 
     def __enter__(self) -> "ProfileBuilder":
@@ -241,6 +248,7 @@ class MCPConfigBuilder:
         self._profiles: Dict[str, ProfileBuilder] = {}
         self._public_profile: Optional[Dict[str, Any]] = None
         self._synthesised_profiles: bool = False
+        self._instructions: Optional[str] = None
 
     def enable_public_profile(
         self,
@@ -432,6 +440,33 @@ class MCPConfigBuilder:
             return wrapper
 
         return decorator
+
+    def set_instructions(self, text: str) -> "MCPConfigBuilder":
+        """`instructions` sent in the initialize result (profiles may override)."""
+        self._instructions = text
+        return self
+
+    def add_remote_manifest(
+        self,
+        url: str,
+        secret: str,
+        prefix: str = "",
+        public: bool = False,
+        *,
+        ttl: float = 300,
+        timeout: float = 60,
+    ) -> "MCPConfigBuilder":
+        """Publish another app's tools, resources and prompts through this server.
+
+        ``url`` is the app's base URL; its manifest is fetched lazily from
+        ``<url>/mcp-manifest.json`` and calls go to ``<url>/mcp-call``, both
+        with a short-lived HS256 bearer signed with ``secret``. Contract:
+        ``@docs/remote-frontend.md``. Nothing is fetched here.
+        """
+        from django_cfg.modules.django_mcp.remote import RemoteSource
+
+        RemoteSource(url, secret, prefix=prefix, public=public, ttl=ttl, timeout=timeout).register()
+        return self
 
     def set_access_key(
         self, key: str, *, service_username: Optional[str] = None
@@ -662,6 +697,7 @@ class MCPConfigBuilder:
             rate_limit=self._rate_limit,
             llm_model=self._llm_model,
             introspection=self._introspection,
+            instructions=self._instructions,
             install_targets=self._targets,
             profiles={name: b.build() for name, b in self._profiles.items()},
             exposed_apps=exposed_apps,
