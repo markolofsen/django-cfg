@@ -6,8 +6,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     {% comment %}
       This title becomes the Subject: header — send_template overrides the
-      caller's subject with it. Hard-coding a title here drops the one-time
-      code from the inbox, where the recipient is meant to read it.
+      caller's subject with it. The subject is constant on purpose (a code in it
+      starts a new mail thread per letter); the code is in the preheader below.
     {% endcomment %}
     <title>{{ subject }}</title>
     <style type="text/css">
@@ -104,6 +104,8 @@
   </head>
 
   <body>
+    {# Preheader: the first text of the letter, so the inbox preview and the notification banner show the code. The trailing filler keeps the next text out of the preview. #}
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:#ffffff;">{{ otp_code }} is your {{ site_name }} login code. Expires in {{ expires_minutes }} minutes.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;</div>
     <div class="email-card">
 
       <div class="email-header">

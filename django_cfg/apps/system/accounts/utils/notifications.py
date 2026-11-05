@@ -60,15 +60,20 @@ def _resolve_copy(template_name: str, locale: str = None) -> dict:
         return {}
 
 
-def _subject(msgid: str, copy: dict, locale: str, params: dict, ensure: str = "") -> str:
+def _subject(
+    msgid: str, copy: dict, locale: str, params: dict, ensure: str = "", use_stored: bool = True,
+) -> str:
     """A letter's subject, in the reader's language.
 
     A stored ``EmailContent`` subject wins; otherwise ``msgid`` goes through
     gettext (English when the project ships no catalog), with ``params`` filled
     in. ``ensure`` is text the subject must carry (the OTP code): appended if the
     stored copy left it out, because the recipient reads it from the preview.
+    ``use_stored=False`` ignores a stored subject: for a letter whose subject must
+    stay constant (the OTP code), so a stale stored row cannot bring back a
+    changing one.
     """
-    stored = (copy or {}).get("subject")
+    stored = (copy or {}).get("subject") if use_stored else None
     if stored:
         subject = fill_placeholders(stored, params)
     else:
@@ -104,6 +109,7 @@ class AccountNotifications:
         site=None,
         subject_params: dict = None,
         subject_ensure: str = "",
+        use_stored_subject: bool = True,
     ):
         """Private method for sending templated emails.
 
@@ -123,6 +129,7 @@ class AccountNotifications:
         copy = _resolve_copy(copy_key or template_name, locale)
         subject = _subject(
             subject, copy, locale, {**site.as_context(), **(subject_params or {})}, subject_ensure,
+            use_stored_subject,
         )
 
         # Prepare context for template
@@ -345,13 +352,12 @@ class AccountNotifications:
             AccountNotifications._send_email(
                 user=user,
                 site=site,
-                # The code MUST stay in the subject: the recipient reads it
-                # from the preview pane without opening the letter. The
-                # preview exposure is accepted; removing it is an owner call.
-                # A stored per-locale subject that forgets it gets it appended.
-                subject=_("Your OTP code: %(otp_code)s"),
-                subject_params={"otp_code": otp_code},
-                subject_ensure=otp_code,
+                # The subject is constant: a code in it made every letter a new
+                # Gmail thread. The code leads the body instead (the hidden
+                # preheader in otp_email.html), which is what the inbox preview
+                # shows. A stored per-locale subject is ignored for the same reason.
+                subject=_("🔐 Your login code"),
+                use_stored_subject=False,
                 copy_key="otp_code",
                 main_text="Use the code below to sign in:",
                 main_html_content="",

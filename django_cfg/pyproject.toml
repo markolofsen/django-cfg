@@ -10,7 +10,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.3.380"
+version = "2.3.381"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nand 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -226,14 +226,13 @@ ai = [
     # runtime (the plane falls back to JSON if absent), declared here so the token
     # savings are actually available. Matches cmdop's pin.
     #
-    # The `0.9.0b1` floor is a prerelease ON PURPOSE, and must stay one. Upstream
-    # published 0.1.0 (2025-11-01) as a NAME-CLAIMING STUB — both `encode` and
-    # `decode` are bodies of `raise NotImplementedError`, the wheel is 4.8 kB —
-    # and the first working release is the beta, 0.9.0b1 (2025-11-08, 36 kB).
-    # By PEP 440 `0.1.0 < 0.9.0b1`, so a "tidier" `>=0.1.0` floor resolves to the
-    # stub and every TOON encode raises at runtime. Verified by installing both.
-    # Raise this floor only to a stable release that is actually implemented.
-    "toon_format>=0.9.0b1,<1.0",
+    # Stable floor on purpose. 0.1.0 (2025-11-01) is a name-claiming stub whose
+    # `encode`/`decode` raise NotImplementedError, and the 0.9.x betas were the
+    # first working code; 1.0.0 is the first stable release. A pre-release floor
+    # made `uv` refuse to lock django-cfg for a project that did not itself name
+    # `toon-format` (uv considers pre-releases only for first-party requirements),
+    # silently resolving an old django-cfg instead. Verified `encode`/`decode` on 1.2.0.
+    "toon_format>=1.0.0,<2.0",
 ]
 
 # Payments engine (django_cfg.apps.payments) — Stripe-first provider.
@@ -370,10 +369,9 @@ full = [
     "pydantic-monty>=0.0.16,<0.0.19",
     # TOON serializer the agent plane's tool output uses (falls back to JSON if absent,
     # but `full` is batteries-included — ship the token savings). Import name is
-    # `toon_format`, distinct from the `json-toon` core dep. The prerelease floor is
-    # deliberate — 0.1.0 is a not-implemented stub; see the note on the same pin
-    # under [ai] before touching it.
-    "toon_format>=0.9.0b1,<1.0",
+    # `toon_format`, distinct from the `json-toon` core dep. See the note on the
+    # same pin under [ai] for why the floor is 1.0.0.
+    "toon_format>=1.0.0,<2.0",
     # payments (django_cfg.apps.payments)
     "stripe>=15.3.0,<16.0",
     # s3 (StorageConfig.backend — S3/R2/MinIO media storage)
