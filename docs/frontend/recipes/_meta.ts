@@ -11,4 +11,7 @@ export default {
   'extensions': 'Extensions',
   'sitemap-and-indexnow': 'Sitemap & IndexNow',
   'human-check': 'Human check gate',
+  'error-screens': 'Error screens and stale tabs',
+  'pwa-and-mobile-layout': 'Installed app (PWA) and mobile layout',
+  'pwa-behaviour-checklist': 'PWA behaviour checklist',
 }

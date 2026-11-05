@@ -1,0 +1,18 @@
+---
+title: PWA behaviour checklist
+description: "What to verify on a real iPhone for an installed app: double-tap zoom, pinch zoom, pull-to-refresh, input focus zoom and text selection."
+---
+
+# PWA behaviour checklist
+
+None of this is visible in Storybook or a desktop browser (Storybook can only emulate display mode and safe areas). Add the app to the home screen on a real iPhone and check:
+
+1. Double-tap on text or a card does not zoom.
+2. Pinch still zooms (unless the project opted in to `appLike` or `useBlockGestureZoom`, then it must not).
+3. Dragging down at the top of a page does not rubber-band or pull-to-refresh the whole app; an inner list still scrolls with momentum.
+4. Tapping an input, textarea or select does not zoom the page (fields are 16px or larger).
+5. Long-press on a sidebar item, button or header does not select text or show the callout; long-press on article text, code, a table or an input still selects.
+6. The status bar matches the app (`statusBarStyle`), and nothing sits under the Dynamic Island or the home indicator (drawer, bottom sheets, toasts).
+7. Rotate the phone: text size does not jump.
+
+Host requirements and the tokens behind this are in [Installed app (PWA) and mobile layout](/frontend/recipes/pwa-and-mobile-layout).

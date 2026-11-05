@@ -1,0 +1,63 @@
+---
+title: Installed app (PWA) and mobile layout
+description: "Detect an installed PWA with useIsPwa and data-display-mode, safe-area tokens, the PrivateLayout phone drawer and the mobile top bar, and the host viewport and manifest settings."
+---
+
+# Installed app (PWA) and mobile layout
+
+## Detect the display mode
+
+```tsx
+import { useDisplayMode, useIsPwa } from '@djangocfg/ui-core/hooks';
+
+const isPwa = useIsPwa();        // standalone, fullscreen, minimal-ui, window-controls-overlay
+const mode = useDisplayMode();   // 'browser' | 'standalone' | ...
+```
+
+Detection reads the `display-mode` media query, iOS `navigator.standalone` and the Android TWA referrer. The server and the hydration render report `browser`, then the real value arrives (same contract as `useMediaQuery`). All components share one set of listeners.
+
+`UiProviders` (so `BaseApp`) also sets `<html data-display-mode="...">`, so CSS can react without JS: `:root[data-display-mode='standalone'] .x { ... }`. Use the attribute and tokens for layout, the hook for behaviour (hide an "install app" prompt, show a back button).
+
+## Tokens
+
+`--safe-top/right/bottom/left` (equal to `--app-safe-*` when set, otherwise `env(safe-area-inset-*)`) and `--app-height: 100dvh` live in ui-core `base.css`. Safe-area insets are non-zero only when the host sets `viewport-fit=cover`.
+
+## Host requirements
+
+```ts
+// layout.tsx
+export const viewport = createViewport({ themeColor: '#000', viewportFit: 'cover' });
+export const metadata = createManifestMetadata({ name, statusBarStyle: 'black-translucent' });
+```
+
+`black-translucent` draws the page under the status bar and relies on the insets; `default` keeps the page below it. The manifest needs `display: 'standalone'`.
+
+## Native-app touch behaviour (automatic)
+
+ui-core base styles apply these with no per-project code:
+
+- `touch-action: manipulation` on `html`: no double-tap zoom and no 300ms tap delay, pinch-zoom still works (WCAG 1.4.4). `text-size-adjust: 100%` and no tap highlight flash on controls.
+- On touch devices (`pointer: coarse`) text fields are at least 16px, so iOS Safari does not zoom into a focused field. Desktop density is unchanged; add `.input-compact` to opt a field out.
+- In an installed app (`data-display-mode` standalone, fullscreen, minimal-ui or window-controls-overlay): `overscroll-behavior: none` on `html` and `body` (no rubber band or pull-to-refresh at the shell; inner scrollers keep theirs), and buttons, nav, headers, `[data-sidebar]` and `.app-chrome` are not selectable and have no long-press callout. Inputs, `contenteditable`, `pre`, `code`, tables and `.selectable` stay selectable.
+- Viewport: `createViewport()` no longer sets `maximumScale`. `createViewport({ appLike: true })` adds `maximumScale: 1` and `userScalable: false`; this blocks pinch-zoom for people who need it and iOS ignores it anyway, so prefer the CSS above. An opt-in `useBlockGestureZoom()` (`@djangocfg/ui-core/hooks`) blocks iOS gesture zoom in an installed app only; off by default, same accessibility trade-off.
+
+See [PWA behaviour checklist](/frontend/recipes/pwa-behaviour-checklist) for what to verify on a real iPhone.
+
+## The shell never scrolls the document
+
+`PrivateLayout` is one dynamic viewport tall and clips: the top bar is `shrink-0`, the content below it is `flex-1 min-h-0` and scrolls on its own. While it is mounted `<html data-private-shell>` is set, and in an installed app the document itself is locked (`overflow: hidden`, no overscroll), so dragging the top bar does not move the page. Public pages are unaffected. Do not wrap the layout in `min-h-screen` or `h-screen`; `window.scrollTo` and sticky headers inside pages now refer to the content region. On iOS before 16 `overscroll-behavior` is ignored; check the edge bounce on a real device.
+
+## Build a PWA-safe overlay
+
+Tokens are the source of truth; drawers, sheets, dialogs and toasts are consumers. In a new overlay:
+
+- Height: `h-[var(--app-height,100dvh)]` for a full-height surface, or pin a fixed panel with `inset-y-0 h-auto`. Never `100vh`, and avoid `h-full` on `fixed` panels (it can disagree with the visible area in standalone iOS).
+- Insets: `pt-[max(1rem,var(--safe-top,0px))]`, `pb-[max(1rem,var(--safe-bottom,0px))]` (same for left/right). Do not write bare `env(safe-area-inset-*)`; the token reads `--app-safe-*` first, so Storybook can emulate it.
+- Behaviour that differs by mode: `useIsPwa()`, or CSS `:root[data-display-mode='standalone'] ...`.
+- Shared primitives already do this: `Sheet`, `Drawer` (heights, bottom padding, bottom sheet cap), `Dialog` (card cap, fullscreen variant), `Toaster` (offsets), `Boundary` (min height). A test (`overlay/pwa-safe-overlays.test.ts`) fails on a raw `100vh` or bare `env()` there.
+- An app-shell drawer that lays out its own header, scroller and footer passes `bare` to `DrawerContent` (no handle, no padded scroll wrapper) and makes the panel `overflow-hidden`; only the middle zone scrolls.
+
+## PrivateLayout on a phone
+
+- The drawer is 88vw wide (max 22rem); its height is pinned with `inset-y-0`, not `100dvh`, so it matches the visible area in a browser tab and in a standalone PWA. Header and footer respect the safe areas; the list in between scrolls.
+- On a phone (below md) the layout draws a plain top bar: `safe-top + 3rem` tall (`--layout-bar-height`, `0px` only when no bar is shown: desktop with the sidebar docked, or no sidebar), `bg-background` with a 1px bottom border, holding the sidebar toggle (the same ghost button as in the sidebar header) and `header.title`. It overlays the content column and slides away (`transform`, 200ms) on scroll-down and back on scroll-up or at the top, using the same `useNavbarScroll` policy as `PublicLayout` driven by the content scroller; it stays while the drawer is open, a field has focus, or the page is not scrollable. Content starts below the bar for every page, so pages do nothing; apps may use `--layout-bar-height` to offset their own sticky elements. `PrivateLayout` takes `topBar={{ title, actions }}` (types: `PrivateTopBarConfig`): `title` replaces `header.title` in the bar, `actions` is a ReactNode on the right (vertically centred, never shrinks the toggle; the title takes the rest and truncates). The same bar shows on desktop while the sidebar is collapsed (static, no auto-hide) and carries the account avatar for a signed-in user (`topBar.account={false}` to opt out); on a phone the drawer then has no footer account. Recommended actions are compact ghost icon `Button`s (36px); several are fine, keep them few. The toggle stays left and is not configurable. Auto-hide is phone-only. The phone drawer header is the brand only (a link home, no toggle button); it closes by backdrop tap, swipe, Escape or navigating. The sidebar toggle has no tooltip and no hover behaviour; on desktop only the left screen edge peeks a collapsed sidebar open.

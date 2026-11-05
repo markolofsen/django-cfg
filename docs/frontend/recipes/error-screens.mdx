@@ -1,0 +1,41 @@
+---
+title: Error screens and stale tabs
+description: "One crash screen with a single Refresh Page button, and automatic one-time reload when an old tab hits a missing _next/static chunk after a deploy."
+---
+
+# Error screens and stale tabs
+
+`BaseApp` mounts one error boundary. Its fallback (`AppErrorFallback` from `@djangocfg/layouts/components`) shows the localized title, description, an optional support email and **exactly one** button, "Refresh Page", which hard-reloads. A soft reset would re-mount the same broken tree, so it is not offered as a second button.
+
+## Stale chunks after a deploy
+
+A tab opened before a deploy still references old hashed `/_next/static/...` files. The next lazy import or navigation fails with a `ChunkLoadError`, a cancelled fetch of a static asset, or "Failed to fetch dynamically imported module". That is not an app bug, so the crash screen is not shown. Instead the page reloads once.
+
+| Where | What happens |
+|-------|--------------|
+| `Boundary` (ui-core, used by `BaseApp`, `MonitorBoundary`) | Render-time chunk error: one guarded reload, fallback hidden meanwhile. |
+| `UiProviders` | Installs `window` `error` (failed `<script>` / `<link>` under `/_next/static/`) and `unhandledrejection` listeners. |
+| `ErrorLayout` with `error` | For `global-error.tsx` / `error.tsx`: pass the caught `error`; same behaviour. |
+
+Loop guard: a timestamp in `sessionStorage` (`djangocfg:chunk-reload-at`). A second chunk failure within 30 s shows the normal error screen. If `sessionStorage` is unavailable no automatic reload happens (it could not be bounded).
+
+```tsx
+// app/global-error.tsx
+'use client';
+import { ErrorLayout } from '@djangocfg/layouts/components';
+
+export default function GlobalError({ error }: { error: Error }) {
+  return (
+    <html lang="en"><body>
+      <ErrorLayout code={500} error={error} />
+    </body></html>
+  );
+}
+```
+
+Helpers (`isChunkLoadError`, `reloadForChunkError`, `canAutoReloadForChunk`, `installChunkReloadListeners`) are exported from `@djangocfg/ui-core/lib`. Apps with their own copy of this logic can delete it.
+
+## Troubleshooting
+
+- **Two Refresh Page buttons** (one filled, one outlined): fixed in `@djangocfg/layouts` after 2.1.607; older `BaseApp` rendered a reset button and a reload button with the same label. Upgrade.
+- **Error screen right after a deploy**: the reload already happened within 30 s and the chunk is still missing, so the new build itself is broken or a CDN is serving stale HTML. Check cache headers for HTML.
