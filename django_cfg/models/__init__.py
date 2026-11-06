@@ -48,6 +48,7 @@ from .django.environment import EnvironmentConfig
 from .django.geo import GeoConfig
 from .django.indexnow import IndexNowConfig, IndexNowSite
 from .django.analytics import AnalyticsConfig
+from .django.chat import ChatConfig
 from .django.openapi import OpenAPIClientConfig
 from .django.simple_history import SimpleHistoryConfig
 from .infrastructure.cache import CacheConfig
@@ -95,6 +96,7 @@ __all__ = [
     "GeoConfig",
     "IndexNowConfig", "IndexNowSite",
     "AnalyticsConfig",
+    "ChatConfig",
     "SimpleHistoryConfig",
     "StorageConfig",
     "FileCleanupConfig",

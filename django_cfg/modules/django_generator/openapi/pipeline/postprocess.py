@@ -203,7 +203,63 @@ def _flatten_anyof_null(schema: dict[str, Any]) -> None:
     schema["nullable"] = True
 
 
+def discriminator_literals(spec: dict[str, Any]) -> int:
+    """Make a ``oneOf`` + ``discriminator`` union narrow in TypeScript. Returns the number of properties rewritten.
+
+    drf-spectacular types each member's discriminator property as a one-value
+    enum component (``type: {allOf: [{$ref: ChatRunFrameTypeEnum}]}``). Hey API
+    (``enums.mode: 'typescript'``) turns that into a real ``enum`` and the union
+    member into ``{ type: 'run' } & { type: ChatRunFrameTypeEnum }``, and
+    ``'run' & ChatRunFrameTypeEnum`` is ``never``: the whole union collapses and
+    ``switch (frame.type)`` finds no property. Rewriting the property to
+    ``{type: string, const: <mapped value>}`` leaves the union's own literal as
+    the only narrowing, which works.
+
+    Only a member that is referenced by the discriminator ``mapping`` and whose
+    property is a single-value enum equal to the mapped value is touched; anything
+    else is left alone. Meant for the hey-api input only (the other generators keep
+    the enum). Idempotent.
+    """
+    schemas = (spec.get("components") or {}).get("schemas") or {}
+    changed = 0
+    for union in list(schemas.values()):
+        disc = union.get("discriminator") if isinstance(union, dict) else None
+        if not isinstance(disc, dict) or not isinstance(union.get("oneOf"), list):
+            continue
+        prop, mapping = disc.get("propertyName"), disc.get("mapping")
+        if not isinstance(prop, str) or not isinstance(mapping, dict):
+            continue
+        for value, ref in mapping.items():
+            member = schemas.get(str(ref).rsplit("/", 1)[-1])
+            props = member.get("properties") if isinstance(member, dict) else None
+            current = props.get(prop) if isinstance(props, dict) else None
+            if not isinstance(current, dict) or "const" in current:
+                continue
+            enum_values = _single_enum_values(current, schemas)
+            if enum_values != [value]:
+                continue
+            literal: dict[str, Any] = {"type": "string", "const": value}
+            if current.get("description"):
+                literal["description"] = current["description"]
+            props[prop] = literal
+            changed += 1
+    return changed
+
+
+def _single_enum_values(prop: dict[str, Any], schemas: dict[str, Any]) -> list[Any] | None:
+    node = prop
+    parts = prop.get("allOf")
+    if isinstance(parts, list) and len(parts) == 1 and isinstance(parts[0], dict):
+        node = parts[0]
+    ref = node.get("$ref")
+    if isinstance(ref, str):
+        node = schemas.get(ref.rsplit("/", 1)[-1]) or {}
+    values = node.get("enum") if isinstance(node, dict) else None
+    return list(values) if isinstance(values, list) else None
+
+
 __all__ = [
+    "discriminator_literals",
     "enforce_tags",
     "enforce_unique_schemas",
     "normalize_tags",

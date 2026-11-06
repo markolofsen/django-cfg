@@ -194,17 +194,16 @@ class SmartDefaults:
                     },
                 },
                 'handlers': {
-                    'file': {
+                    # stdout: Docker/systemd collect it, no log files to manage
+                    'console': {
                         'level': 'INFO',
-                        'class': 'logging.handlers.RotatingFileHandler',
-                        'filename': 'logs/django.log',
-                        'maxBytes': 1024*1024*10,  # 10MB
-                        'backupCount': 5,
+                        'class': 'logging.StreamHandler',
+                        'stream': 'ext://sys.stdout',
                         'formatter': 'json',
                     },
                 },
                 'root': {
-                    'handlers': ['file'],
+                    'handlers': ['console'],
                     'level': 'INFO',
                 },
             }

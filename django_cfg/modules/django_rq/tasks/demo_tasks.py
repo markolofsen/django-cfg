@@ -8,7 +8,7 @@ import datetime
 from django_cfg.utils import get_logger
 
 # Logger for RQ tasks - auto-prefixed to django_cfg.integrations
-# Will write to logs/djangocfg/integrations.log
+# Logs through django_cfg.integrations (stdout; file if DJANGO_CFG_LOG_DIR is set)
 logger = get_logger("integrations")
 
 

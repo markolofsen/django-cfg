@@ -87,6 +87,10 @@ class OpenAPIConfig(BaseModel):
     # `cmdop:network-error` CustomEvents — audited across all consumers
     # (2026-07): nothing imports it. Off by default; opt back in per project.
     generate_events_bridge: bool = False
+    # `_<group>/streams.ts`: a typed `stream<OperationId>()` per `text/event-stream`
+    # operation (frame union, no retry, typed StreamHttpError). Emits nothing for a
+    # group without such an operation, so it is on by default.
+    generate_sse_streams: bool = True
 
     client_structure: Literal["flat", "namespaced"] = "namespaced"
 

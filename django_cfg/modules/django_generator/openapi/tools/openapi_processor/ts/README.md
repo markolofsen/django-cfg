@@ -66,6 +66,7 @@ ts_extras/
   schemas/          — OpenAPI → Zod source generator
   hooks/            — IR → SWR query + mutation hook generator
   events/           — emits events.ts (client error-event bridge)
+  streams/          — emits streams.ts: typed stream<OperationId>() for text/event-stream operations
   wrapper/          — reads sdk.gen.ts → emits class API + helpers
 ```
 
@@ -163,13 +164,54 @@ different spec, get identical output structure.
 
 ### Standalone invocation
 
+### streams/
+
+Emits `_<group>/streams.ts` (flat layout: `streams.ts`) **only when the group has a
+`text/event-stream` operation**; a group without one gets nothing (a stale file is
+removed). Hey API already emits an SDK method for such an operation returning
+`{ stream: AsyncGenerator<Frame> }`, where `Frame` is the 200 schema (a `oneOf`
+discriminated by `type` is a TypeScript union). Used raw it retries forever by default,
+throws a bare `Error("SSE failed: 409 Conflict")` that drops the problem body and
+`Retry-After`, and ends silently on a network failure. `streams.ts` wraps it:
+
+```ts
+import { streamHostchatMessagesCreate, StreamHttpError } from "@/generated/_hostchat/streams";
+
+try {
+  for await (const frame of streamHostchatMessagesCreate({
+    path: { thread_id }, body: { text, client_id }, signal, auth: token,
+  })) {
+    switch (frame.type) { case "text_delta": append(frame.delta); break; case "done": ... }
+  }
+} catch (e) {
+  if (e instanceof StreamHttpError) e.status, e.retryAfter /* seconds */, e.problem /* typed per operation */;
+}
+```
+
+One function per such operation (`stream` + the PascalCase operation id), the same options as
+the SDK method (`path`, `body`, `signal`, `auth`, `headers`, `baseUrl`, `fetch`, `onSseError`),
+`AsyncGenerator<…Frame>` back. Never retried (`sseMaxRetryAttempts: 1`): whether a stream may
+be resumed is the server's contract, not the client's default. A refusal before the stream
+and a lost connection throw **after** the frames already received; an aborted `signal` ends
+the loop without an error. Toggle: `OpenAPIConfig.generate_sse_streams` (default on).
+
+**Union narrowing needs the input rewrite.** drf-spectacular types each member's `type` as a
+one-value enum component; Hey API (`enums.mode: 'typescript'`) renders the union member as
+`{ type: 'run' } & { type: ChatRunFrameTypeEnum }` and `'run' & ChatRunFrameTypeEnum` is
+`never`: the union collapses and `switch (frame.type)` reports no property. So the Hey API
+step reads a copy of the spec in which `postprocess.discriminator_literals` turned those
+properties into `{ type: string, const: "run" }` (only members named in a `discriminator.mapping`
+whose property is a single-value enum equal to the mapped value). Specs without a
+discriminated union are passed through untouched; the zod/python/go generators still see the
+enum. Verified on `@hey-api/openapi-ts` 0.99.0 (`HEY_API_VERSION` stays `latest` by owner decision).
+
 ```python
 from devtools.generator.tools.openapi_processor.ts.tool import generate
 
 generate(
     spec_path=Path("openapi.json"),
     out_dir=Path("generated/_fleets"),
-    extras=["zod", "hooks", "events"],
+    extras=["zod", "hooks", "events", "streams"],
 )
 ```
 
@@ -183,7 +225,7 @@ generate_wrapper(target_dir=Path("generated"))
 
 ### Selecting sub-generators
 
-`extras` is a list — any subset of `["zod", "hooks", "events"]`. Omit any
+`extras` is a list — any subset of `["zod", "hooks", "events", "streams"]`. Omit any
 you don't need. The wrapper pass runs separately and always operates on the
 full target dir.
 

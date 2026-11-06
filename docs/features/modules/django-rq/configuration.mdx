@@ -1064,8 +1064,8 @@ Cleanup is designed to be safe for production use:
 Check cleanup task execution in logs:
 
 ```bash
-# View cleanup logs
-tail -f logs/djangocfg/integrations.log | grep cleanup
+# View cleanup logs (container stdout; or the file under DJANGO_CFG_LOG_DIR)
+docker compose logs -f worker | grep cleanup
 
 # Check scheduled jobs
 python manage.py shell -c "

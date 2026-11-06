@@ -7,6 +7,7 @@ from .cache_manager import RequestCacheManager
 from .dirs import (
     CacheDirectoryBuilder,
     get_default_llm_cache_dir,
+    get_images_cache_dir,
     get_models_cache_dir,
     get_translator_cache_dir,
 )
@@ -16,6 +17,7 @@ __all__ = [
     'RequestCacheManager',
     'CacheDirectoryBuilder',
     'get_default_llm_cache_dir',
+    'get_images_cache_dir',
     'get_models_cache_dir',
     'get_translator_cache_dir',
 ]

@@ -1,18 +1,19 @@
 ---
 title: Django Logging
-description: Auto-configuring structured logging with modular per-module log files, daily rotation, debug-aware levels, and sanitized extra context.
+description: Logging for django_cfg that follows 12-factor. Records go to stdout/stderr by default, a log file is opt-in, importing creates no files, text or JSON format, sanitized extra context.
 ---
 
 # Django Logging
 
-Django-CFG's **Logging Module** provides auto-configuring structured logging for the `django_cfg` namespace. It sets up modular per-module log files with daily rotation and configurable retention.
+Django-CFG logs the Django / 12-factor way: **records go to stdout/stderr and the platform routes them** (Docker, systemd, your terminal). The app does not manage log files unless you ask for one. Importing `django_cfg` creates no directories, writes no files and does not touch your root handlers.
 
 ## Features
 
-- **Modular log files** — separate rotating file per `django_cfg.*` logger under `logs/djangocfg/`
-- **Daily rotation** — `TimedRotatingFileHandler` with midnight rotation and configurable retention
-- **Debug-aware levels** — `DEBUG` to files in dev mode, `WARNING` to console in production
-- **Sanitized extra context** — reserved `LogRecord` attributes in `extra={}` are automatically prefixed with `ctx_`
+- **stdout by default** — no `logs/` folder in the project tree
+- **File is opt-in** — `DJANGO_CFG_LOG_DIR` or `DjangoConfig(logging=...)`; `WatchedFileHandler`, so `logrotate` owns rotation
+- **Text or JSON** — `DJANGO_CFG_LOG_FORMAT=json` writes one object per line, for containers
+- **Your `LOGGING` wins** — django-cfg only generates the `LOGGING` dict; override it in the project as usual
+- **Sanitized extra context** — reserved `LogRecord` attributes in `extra={}` are prefixed with `ctx_`
 
 ## Quick Start
 
@@ -40,65 +41,71 @@ logger = get_logger("django_cfg.payments.stripe")
 
 <Callout type="info">
 `get_logger()` rewrites a name that doesn't start with `django_cfg` based on the
-**caller's** file path, and the per-module log file is chosen from the resolved
-name. To be certain which file an event lands in, pass a fully-qualified name
-(`get_logger("django_cfg.payments.stripe")`).
+**caller's** file path. To be certain which logger an event lands on, pass a
+fully-qualified name (`get_logger("django_cfg.payments.stripe")`).
 </Callout>
+
+## Where logs go
+
+| You set | Result |
+| --- | --- |
+| nothing | stdout/stderr only; `django_cfg` at `WARNING` (`DEBUG` when `debug=True`) |
+| `DJANGO_CFG_LOG_DIR=/var/log/myapp` | also `django.log` and `djangocfg/monitor.log` in that directory |
+| `DJANGO_CFG_LOG_FILE=1` | file in the per-user log dir (`platformdirs.user_log_dir(project)`) |
+
+The directory is created when the first record is written, not at import. If it cannot be written, django-cfg logs one warning and keeps logging to stdout.
+
+Precedence for the log directory: config `logging.log_dir`, then `DJANGO_CFG_LOG_DIR`, then the default (none). `project` in the per-user paths is the top package of `DJANGO_SETTINGS_MODULE`, else the working directory name, so projects on one machine do not share state.
 
 ## Configuration
 
-Configure on the `DjangoConfig` (logging is on by default — you only set this to
-tune retention):
-
 ```python
-from django_cfg.modules.django_logging import DjangoLoggingConfig
+from django_cfg import DjangoConfig, DjangoLoggingConfig
 
-class MyExtensionSettings:
-    logging = DjangoLoggingConfig(
-        enabled=True,
-        file_enabled=True,
-        file_rotation_days=30,
+class Config(DjangoConfig):
+    logging: DjangoLoggingConfig = DjangoLoggingConfig(
+        level="INFO",          # django_cfg loggers; default WARNING, DEBUG with debug=True
+        format="json",         # "text" (default) or "json"
+        log_dir="/var/log/myapp",  # None = stdout only
     )
 ```
 
-### DjangoLoggingConfig Fields
-
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `enabled` | `bool` | `True` | Enable or disable the module |
-| `file_enabled` | `bool` | `True` | Enable file logging |
-| `file_rotation_days` | `int` | `30` | Days of log files to retain (1–365) |
+| `level` | `str \| None` | `None` | Level of the `django_cfg` loggers |
+| `format` | `"text" \| "json"` | `"text"` | `json` is one object per line |
+| `log_dir` | `str \| None` | `None` | Write log files here. `None` = stdout only |
 
-## Log File Layout
+### Environment variables
 
-On startup, `DjangoLogger` creates the following directory structure in the project root:
+| Variable | Meaning |
+| --- | --- |
+| `DJANGO_CFG_LOG_DIR` | Directory for log files (turns file logging on) |
+| `DJANGO_CFG_LOG_FILE` | `1` = log to a file in the per-user log dir |
+| `DJANGO_CFG_LOG_FORMAT` | `text` (default) or `json` |
+| `DJANGO_CFG_LOG_LEVEL` | Level of the `django_cfg` loggers |
+| `DJANGO_CFG_LOG_ROTATE` | `1` = rotate daily inside the process (`TimedRotatingFileHandler`, 30 days) |
+| `DJANGO_LOG_TO_TMP` | Deprecated and ignored. Logs one warning. The `/tmp/djangocfg/debug.log` mirror is gone |
 
-```
-logs/
-├── django.log              # All Django logs (rotation: daily, keep 30 days)
-└── djangocfg/
-    ├── core.log            # django_cfg.core.*
-    ├── email.log           # django_cfg.email.*
-    ├── telegram.log        # django_cfg.telegram.*
-    └── <module>.log        # One file per django_cfg.* sub-namespace
-/tmp/djangocfg/
-└── debug.log               # Always-on debug mirror (set DJANGO_LOG_TO_TMP=false to disable)
-```
+<Callout type="warning">
+`DJANGO_CFG_LOG_ROTATE=1` is for a single process only. With several workers the
+processes race on rollover and lose lines. Prefer the default `WatchedFileHandler`
+plus `logrotate`, or no file at all.
+</Callout>
 
-Log level per handler:
+### Removed fields
 
-| Handler | Dev (`DEBUG=True`) | Production |
-| --- | --- | --- |
-| Console | `DEBUG` | `WARNING` |
-| `logs/django.log` | `DEBUG` | `INFO` |
-| `logs/djangocfg/<module>.log` | `DEBUG` | `INFO` |
-| `/tmp/djangocfg/debug.log` | `DEBUG` | `DEBUG` |
+`enabled`, `file_enabled` and `file_rotation_days` were never read. `DjangoLoggingConfig` still accepts them (and ignores them with one warning) for one release. `django_cfg.LoggingConfig` is a deprecated no-op shim, removed in the next release.
+
+## Upgrading from the `logs/` folder
+
+For one release, if no override is set and `./logs` already exists in the working directory, django-cfg keeps writing there and logs **one warning** that names `DJANGO_CFG_LOG_DIR`. To keep the old location, set it explicitly. The next release drops the fallback. See the [CHANGELOG](https://github.com/markolofsen/django-cfg/blob/main/CHANGELOG.md) for the full note.
 
 ## Public API
 
 ### `get_logger(name="")`
 
-Returns a configured `logging.Logger` instance. Auto-detects caller path when called without arguments from within `django_cfg` code.
+Returns a standard `logging.Logger`. It adds no handlers.
 
 ```python
 from django_cfg.modules.django_logging import get_logger
@@ -121,7 +128,7 @@ logger.info("Event", extra=safe)
 
 ### `clean_old_logs(days=30, logs_dir=None)`
 
-Deletes log files older than `days` from the `logs/` directory. Returns a stats dict:
+Deletes log files older than `days` from the log directory (default: the resolved one). Returns `{"deleted": 0, "bytes": 0, "error": ...}` when there is no log directory. Not needed with `logrotate`.
 
 ```python
 from django_cfg.modules.django_logging import clean_old_logs
@@ -130,15 +137,8 @@ stats = clean_old_logs(days=7)
 # {"deleted": 12, "bytes": 45678, "human_readable": "0.04 MB"}
 ```
 
-## Environment Variable
-
-Set `DJANGO_LOG_TO_TMP=false` to disable the `/tmp/djangocfg/debug.log` mirror:
-
-```bash
-DJANGO_LOG_TO_TMP=false python manage.py runserver
-```
-
 ## See Also
 
+- [Logging in production](/deployment/logging) — containers, aggregation, troubleshooting
 - [Monitor Module](/features/modules/django-monitor) — Error tracking and Telegram alerts built on this logging pipeline
 - [Telegram Module](/features/modules/django-telegram) — Telegram alert notifications

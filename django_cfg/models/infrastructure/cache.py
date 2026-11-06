@@ -289,8 +289,8 @@ class CacheConfig(BaseModel):
                 }
 
             elif backend == "django.core.cache.backends.filebased.FileBasedCache":
-                from pathlib import Path
-                cache_dir = Path("tmp") / "django_cache" / f"{self.key_prefix or 'default'}_{cache_alias}"
+                from ...core.utils.runtime_paths import resolve_cache_dir
+                cache_dir = resolve_cache_dir("django", f"{self.key_prefix or 'default'}_{cache_alias}")
                 config['LOCATION'] = str(cache_dir)
                 config['OPTIONS'] = {
                     'MAX_ENTRIES': 1000,

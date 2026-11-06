@@ -68,6 +68,11 @@ def _get_openapi_group_urls() -> List[URLPattern]:
                 if app_name in added_apps:
                     continue
 
+                # django-cfg's own apps are mounted at cfg/<app>/ by django_cfg.apps.urls; a second mount
+                # under the api prefix would duplicate the namespace.
+                if app_name.startswith("django_cfg."):
+                    continue
+
                 # Discover urls.py and urls_*.py modules for this app
                 url_modules = discover_app_url_modules(app_name)
 

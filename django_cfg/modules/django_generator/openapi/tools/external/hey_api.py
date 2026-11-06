@@ -10,11 +10,13 @@ plugin options.
 
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
+from ...pipeline.postprocess import discriminator_literals
 from ...pipeline.errors import ToolExecutionError, ToolNotInstalledError
 
 INSTALL_HINT = "ensure node + npx are on PATH (Node 18+)"
@@ -68,7 +70,8 @@ def generate(
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True)
 
-    config_path = _write_config(spec_path, out_dir, client, plugins, sdk_strategy)
+    input_path = _narrowable_copy(spec_path)
+    config_path = _write_config(input_path, out_dir, client, plugins, sdk_strategy)
 
     cmd = ["npx", "-y", f"@hey-api/openapi-ts@{HEY_API_VERSION}", "-f", str(config_path)]
     try:
@@ -79,10 +82,29 @@ def generate(
         # Always wipe the temp config — even on failure — so neither the next
         # run nor the user's source tree carries stale build artefacts.
         config_path.unlink(missing_ok=True)
+        if input_path != spec_path:
+            input_path.unlink(missing_ok=True)
 
     _normalize_whitespace_only_lines(out_dir)
     files = sorted(p for p in out_dir.rglob("*") if p.is_file())
     return HeyApiResult(output_dir=out_dir, files=files)
+
+
+def _narrowable_copy(spec_path: Path) -> Path:
+    """Hey API input: the spec, with ``oneOf`` discriminator properties as literals.
+
+    Returns ``spec_path`` itself when nothing needs rewriting, so a spec without
+    a discriminated union generates exactly as before.
+    """
+    try:
+        spec = json.loads(spec_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return spec_path
+    if not isinstance(spec, dict) or not discriminator_literals(spec):
+        return spec_path
+    copy = spec_path.with_name("heyapi.input.json")
+    copy.write_text(json.dumps(spec, ensure_ascii=False, indent=2), encoding="utf-8")
+    return copy
 
 
 def _normalize_whitespace_only_lines(output: Path) -> None:

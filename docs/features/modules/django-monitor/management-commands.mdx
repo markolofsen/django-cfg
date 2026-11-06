@@ -16,12 +16,13 @@ Reports:
 - Whether monitoring is enabled (it always is — zero-config).
 - Whether **Telegram alerts** are on, i.e. whether a `TelegramConfig` is present
   on your `DjangoConfig`.
-- The event log location (`logs/djangocfg/monitor.log`) and a summary of today's
-  captured events.
+- Where events go: `<log dir>/djangocfg/monitor.log` with a summary of today's
+  captured events when `DJANGO_CFG_LOG_DIR` is set, otherwise `stdout`.
 
 <Callout type="info">
-Retention is handled by the standard logging pipeline — `monitor.log` rotates
-daily and keeps 30 days. There is no separate cleanup command to run.
+Retention is handled outside the app: `monitor.log` is a plain file that
+`logrotate` rotates (django-cfg reopens it). There is no separate cleanup command
+to run. Without `DJANGO_CFG_LOG_DIR`, events are JSON lines on stdout.
 </Callout>
 
 ---

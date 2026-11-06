@@ -1,10 +1,11 @@
 """
 Django Logging Modules for django_cfg.
 
-Auto-configuring logging utilities: `get_logger()` with per-module file
-logging and rotation. Django log files live under ./logs (django.log +
-logs/djangocfg/<module>.log, 30-day rotation). Error-level records are
-additionally captured by django_monitor (JSONL + Telegram alerts).
+`get_logger()` plus the generated `LOGGING` dict (`config.build_logging_config`).
+Records go to stdout/stderr; a file is opt-in via DJANGO_CFG_LOG_DIR
+(WatchedFileHandler, external logrotate). Importing creates no files or
+directories. Error-level records are additionally captured by django_monitor
+(JSONL + Telegram alerts).
 """
 
 from .django_logger import (

@@ -1,0 +1,64 @@
+---
+title: Chat Harness
+description: A streamed, persisted, multi-session assistant chat for the widget wire - chat kinds, abstract thread and message tables, a turn service and an offline testing kit.
+sidebar_label: Chat Harness
+keywords:
+  - assistant chat
+  - SSE
+  - pydantic-ai
+  - chat kind
+  - widget-assistant
+---
+
+# Chat Harness
+
+`django_llm.agent.chat` is everything a host needs behind `@djangocfg/widget-assistant` except its own tables, routes and auth: one streaming loop, the widget SSE frames (`run`, `status`, `text_delta`, `reasoning_delta`, `reasoning_end`, `ui_payload`, `done`, `error`), a persisted-turn contract and a testing kit.
+
+## A chat kind
+
+```python
+from django_cfg.modules.django_llm.agent.chat.kind import ChatKind, KindLimits, register
+
+register(ChatKind(
+    name="support",
+    prompt_version="support-1",
+    models=("openai/gpt-5-mini", "@cf-json"),      # first, then fall-over on API errors
+    build_instructions=lambda deps: "Answer briefly.",
+    build_tools=lambda deps: [lookup],
+    make_deps=lambda scope: Deps(user_id=scope.user.pk, thread_id=scope.thread_id),
+    payload_kinds=frozenset({"note"}),             # ui_payload kinds the tools may send
+    limits=KindLimits(request_limit=8, timeout_s=60),
+))
+```
+
+A tool returns `ToolReturn(return_value=..., metadata=UiPayload("note", {"text": "..."}))`. Any `kind` string and JSON data; kinds not declared in `payload_kinds` are dropped. Tools never get a scope from the model: `make_deps` builds it on the server.
+
+## Tables and service
+
+```python
+class Thread(AbstractThread):
+    class Meta(AbstractThread.Meta):
+        db_table = "assistant_thread"
+
+class Message(AbstractMessage):
+    thread = models.ForeignKey(Thread, on_delete=models.CASCADE, related_name="messages")
+    class Meta(AbstractMessage.Meta):
+        db_table = "assistant_message"
+
+service = ChatService(Thread, ChatPolicy(messages_per_day=200))
+opened = service.begin(user, thread, text, client_id, turn_context)
+return StreamingHttpResponse(service.frames(opened), content_type="text/event-stream", headers=SSE_HEADERS)
+```
+
+The schema enforces: seq unique per thread (taken under a row lock), a resend of a `client_id` is idempotent (replayed, retried or reported busy), one running assistant message per thread. The answer is flushed while streaming and finalized in a shielded task, so a dropped connection keeps what was said as `cancelled`. Stale `running` rows are closed by `begin` and by `service.reap_stale()`. Sessions are many threads per user (`list_for` adds `message_count`, `last_message_at`); the only tenancy filter is `for_owner`; nothing deletes.
+
+## Testing
+
+```python
+from django_cfg.modules.django_llm.agent.chat.testing import Conversation, Say, Call, scripted
+
+talk = Conversation(kind, scripted([Call("lookup", {"q": "x"})], Say("Done")))
+answer = talk.ask(deps, "hello")      # text, payloads, tool_calls, tokens, cost
+```
+
+`@pytest.mark.live` tests call a real model: enable them with the `chat.pytest_plugin` plugin; they are deselected by default and skipped without `ASSISTANT_LIVE=1` and a key. `price_run(..., offline=True, fallback_prices=...)` prices without a network.

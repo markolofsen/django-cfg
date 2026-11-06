@@ -131,6 +131,10 @@ if base_module.is_geo_enabled():
 if base_module.is_analytics_enabled():
     urlpatterns.append(path('cfg/analytics/', include('django_cfg.apps.tools.analytics.urls')))
 
+# Ready assistant chat: threads, messages, streamed answers (ChatConfig). The generated-client group is `chat`.
+if base_module.is_chat_enabled():
+    urlpatterns.append(path('cfg/chat/', include('django_cfg.apps.tools.chat.urls')))
+
 # Payments engine (checkout, webhooks, refunds) — the app's own urls.py keeps
 # the webhook route (specific patterns) before the generic viewset routes.
 if base_module.is_payments_enabled():

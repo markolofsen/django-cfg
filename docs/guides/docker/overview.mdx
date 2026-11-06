@@ -224,7 +224,7 @@ docker/
 │   ├── postgres/                  # Database files
 │   ├── django/
 │   │   ├── media/                # User uploads
-│   │   └── logs/                 # Application logs
+│   │   └── logs/                 # Only if DJANGO_CFG_LOG_DIR=/app/logs (default: stdout)
 │   └── .gitkeep
 └── @docs/                          # Docker documentation
     ├── README.md                   # Complete guide
@@ -250,7 +250,7 @@ projects/django/api/environment/
 ### Common Tasks
 
 ```bash
-# View logs
+# View logs (django-cfg logs to stdout; no log files unless DJANGO_CFG_LOG_DIR is set)
 docker compose logs -f django
 
 # Run migrations

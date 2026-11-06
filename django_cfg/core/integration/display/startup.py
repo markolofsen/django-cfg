@@ -847,17 +847,17 @@ class StartupDisplayManager(BaseDisplayManager):
             return None
 
     def _display_logging_info(self):
-        """Display logging paths info."""
+        """Display where logs go."""
         try:
-            import os
-            tmp_disabled = os.getenv('DJANGO_LOG_TO_TMP', 'true').lower() in ('false', '0', 'no')
+            from ...utils.runtime_paths import resolve_log_dir
 
+            log_dir = resolve_log_dir()
             log_info = Text("📝 Logs → ", style="dim")
-            log_info.append("./logs/", style="cyan")
-            if not tmp_disabled:
-                log_info.append(" | ", style="dim")
-                log_info.append("/tmp/djangocfg/", style="green")
-                log_info.append(" (tail -f /tmp/djangocfg/debug.log)", style="bright_blue dim")
+            if log_dir is None:
+                log_info.append("stdout", style="cyan")
+                log_info.append(" (DJANGO_CFG_LOG_DIR for a file)", style="dim")
+            else:
+                log_info.append(f"{log_dir}/", style="cyan")
             log_info.append(" • ", style="dim")
             log_info.append("from django_cfg.utils import get_logger", style="yellow dim")
 

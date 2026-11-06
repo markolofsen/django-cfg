@@ -5,6 +5,7 @@ export default {
   'text-client': 'Text Client',
   'media-transport': 'Media Transport',
   'transcription': 'Transcription',
+  'chat-harness': 'Chat Harness',
   'translation': 'Translation',
   'cost-tracking': 'Cost Tracking',
   'caching': 'Caching',

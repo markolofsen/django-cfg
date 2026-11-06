@@ -22,11 +22,14 @@ Implementation note — why ``run_stream_events`` instead of ``run_stream``:
 
 from __future__ import annotations
 
+import dataclasses
+import inspect
 import json
 import logging
+import os
 import time
-from collections.abc import Iterable, Iterator
-from typing import Any, AsyncIterator
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping
+from typing import Any, AsyncIterator, Literal
 
 from pydantic_ai import Agent, DeferredToolRequests, DeferredToolResults
 from pydantic_ai.messages import (
@@ -37,6 +40,8 @@ from pydantic_ai.messages import (
     PartStartEvent,
     TextPart,
     TextPartDelta,
+    ThinkingPart,
+    ThinkingPartDelta,
     ToolReturnPart as _ToolReturnPart,
 )
 from pydantic_ai.run import AgentRunResultEvent
@@ -54,18 +59,34 @@ from django_cfg.modules.django_llm.agent.bus.events import (
     DirectiveEvent,
     DoneEvent,
     ErrorEvent,
+    ReasoningDeltaEvent,
+    ReasoningEndEvent,
+    RunEvent,
     SSEEvent,
+    StatusEvent,
     TextDeltaEvent,
     ToolCallEvent,
     ToolResultEvent,
     UIPayloadEvent,
 )
+from django_cfg.modules.django_llm.agent.runtime.cost import Pricer, aprice_run
+from django_cfg.modules.django_llm.agent.runtime.errors import DEFAULT_ERROR_MESSAGES, error_code_for
+from django_cfg.modules.django_llm.agent.runtime.limits import RunLimits, resolve_run_limits
 from django_cfg.modules.django_llm.agent.runtime.ui_payloads import (
     UI_PAYLOAD_TYPES,
     DirectivePayload,
+    UiPayload,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _args_for_log(args: object) -> str:
+    """Tool arguments are user or document text: the log gets their size, not their content. `DJANGO_CFG_LOG_TOOL_ARGS=1` opts in."""
+    text = args if isinstance(args, str) else repr(args)
+    if os.environ.get("DJANGO_CFG_LOG_TOOL_ARGS") == "1":
+        return text[:300]
+    return f"<{len(text)} chars>"
 
 
 def _format_user_error(exc: Exception) -> str:
@@ -88,8 +109,14 @@ def _format_user_error(exc: Exception) -> str:
     return "Something went wrong while generating the reply. Please try again."
 
 
-def _iter_ui_payloads(part: Any) -> Iterator[Any]:
+def _iter_ui_payloads(
+    part: Any, types: tuple[type, ...] = UI_PAYLOAD_TYPES,
+) -> Iterator[Any]:
     """Yield typed UI payload models from a ``ToolReturnPart.metadata``.
+
+    ``types`` is the set of payload classes this run recognises (default: the closed
+    ``UI_PAYLOAD_TYPES``; a host injects its own through ``stream_agent_run(payload_types=)``
+    or ``deps.ui_payload_types``).
 
     Supports three shapes (matching the pattern in pydantic-ai's
     Vercel adapter ``iter_metadata_chunks``):
@@ -103,15 +130,68 @@ def _iter_ui_payloads(part: Any) -> Iterator[Any]:
     meta = getattr(part, "metadata", None)
     if meta is None:
         return
-    if isinstance(meta, UI_PAYLOAD_TYPES):
+    if isinstance(meta, types):
         yield meta
         return
     if isinstance(meta, (str, bytes)):
         return
     if isinstance(meta, Iterable):
         for item in meta:
-            if isinstance(item, UI_PAYLOAD_TYPES):
+            if isinstance(item, types):
                 yield item
+
+
+def _payload_data(payload: Any) -> dict:
+    """The ``ui_payload`` ``data`` of a payload object: every field but ``kind``.
+
+    A pydantic model (``model_dump``) or a dataclass; anything else must be a model or
+    a dataclass, because the wire needs named fields.
+    """
+    if isinstance(payload, UiPayload):
+        return payload.data  # open payload: any JSON, passed through as is
+    if hasattr(payload, "model_dump"):
+        return payload.model_dump(exclude={"kind"})
+    if dataclasses.is_dataclass(payload) and not isinstance(payload, type):
+        data = dataclasses.asdict(payload)
+        data.pop("kind", None)
+        return data
+    raise TypeError(
+        f"ui payload {type(payload).__name__} must be a pydantic model or a dataclass with a `kind`"
+    )
+
+
+def _resolve_payload_types(
+    explicit: tuple[type, ...] | None, deps: Any, kinds: frozenset[str] | None
+) -> tuple[type, ...]:
+    """Payload classes for a run: argument, then ``deps.ui_payload_types``, then the default set.
+
+    With ``kinds`` (the open mode) the generic ``UiPayload`` is recognised too, and the closed
+    default set is not added: a host that registers kinds opted out of the vehicle/tax shapes.
+    """
+    chosen = explicit if explicit is not None else getattr(deps, "ui_payload_types", None)
+    if kinds is not None:
+        return (UiPayload, *(chosen or ()))
+    if chosen is None:
+        return UI_PAYLOAD_TYPES
+    return tuple(chosen)
+
+
+def _resolve_payload_kinds(explicit: Collection[str] | None, deps: Any) -> frozenset[str] | None:
+    """The allowed ``ui_payload`` kinds: argument, then ``deps.ui_payload_kinds``; ``None`` = not restricted."""
+    chosen = explicit if explicit is not None else getattr(deps, "ui_payload_kinds", None)
+    return None if chosen is None else frozenset(chosen)
+
+
+Phase = Literal["thinking", "searching", "answering"]
+
+
+def _phase_of(tool_name: str, phase_for_tool: Callable[[str], str] | Mapping[str, str] | None) -> str:
+    """The status phase a tool call maps to. Default ``searching``; a mapping or callable overrides it."""
+    if phase_for_tool is None:
+        return "searching"
+    if callable(phase_for_tool):
+        return phase_for_tool(tool_name)
+    return phase_for_tool.get(tool_name, "searching")
 
 
 def _iter_directive_payloads(part: Any) -> Iterator[DirectivePayload]:
@@ -141,6 +221,23 @@ def _iter_directive_payloads(part: Any) -> Iterator[DirectivePayload]:
                 yield item
 
 
+def coerce_payloads(items: Any) -> list[tuple[str, dict]]:
+    """`[(kind, data)]` from what a host hook returned: payload objects (`UiPayload`, pydantic, dataclass with `kind`) or `{kind, data}` dicts."""
+    out: list[tuple[str, dict]] = []
+    for item in items or ():
+        if isinstance(item, Mapping):
+            out.append((str(item["kind"]), dict(item.get("data") or {})))
+        else:
+            out.append((str(item.kind), _payload_data(item)))
+    return out
+
+
+def _clamp(content: Any, limit: int) -> str:
+    """A tool output as stored text, cut to ``limit`` characters."""
+    text = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, default=str)
+    return text if len(text) <= limit else text[:limit] + "..."
+
+
 def _make_tool_result_event(tool_name: str, result_repr: str) -> ToolResultEvent:
     """Build a ToolResultEvent, extracting structured frontend data from result_repr.
 
@@ -166,6 +263,10 @@ class StreamRunResult:
     def __init__(self) -> None:
         self.last_deferred: DeferredToolRequests | None = None
         self.last_messages_json: str = ""
+        # Every tool call of the run: ``[{id, name, input, output}]``, outputs cut to
+        # ``tool_output_chars``. ``output`` is None until the result lands. A host stores it
+        # and replays it into the next turn (``convert_history`` reads this shape).
+        self.tool_calls: list[dict] = []
 
 
 async def stream_agent_run(
@@ -178,6 +279,18 @@ async def stream_agent_run(
     is_admin_chat: bool,
     out: StreamRunResult,
     log_prefix: str = "Agent",
+    limits: RunLimits | Mapping[str, Any] | None = None,
+    payload_types: tuple[type, ...] | None = None,
+    wire: Literal["admin", "widget"] = "admin",
+    run_info: RunEvent | None = None,
+    phase_for_tool: Callable[[str], str] | Mapping[str, str] | None = None,
+    payload_kinds: Collection[str] | None = None,
+    emit_reasoning: bool = False,
+    require_answer: bool = False,
+    tool_output_chars: int = 4000,
+    pricer: Pricer | None = None,
+    price_timeout_s: float = 3.0,
+    after_tool: Callable[[str, str], Any] | None = None,
 ) -> AsyncIterator[SSEEvent]:
     """Drive a pydantic-ai Agent via run_stream_events and yield SSE events.
 
@@ -192,10 +305,43 @@ async def stream_agent_run(
     pending tool_call_id, then closes the stream cleanly without
     ``DoneEvent``. The chat-store hook in views.py persists the run's
     ``all_messages_json()`` for the resume endpoint via ``out``.
+
+    Keyword options beyond the original ones (all defaults keep the admin-chat behaviour):
+
+    * ``limits``: ``RunLimits`` or a dict of its fields; else ``deps.run_limits``, else the
+      process default (``request_limit=15``). See ``runtime/limits.py``.
+    * ``payload_types``: the payload classes a tool may attach as ``ToolReturn(metadata=...)``;
+      else ``deps.ui_payload_types``, else the closed ``UI_PAYLOAD_TYPES``.
+    * ``wire="widget"``: drive a public widget stream. Yields ``RunEvent`` first when
+      ``run_info`` is given, then ``StatusEvent`` phases (``thinking`` at the start,
+      ``searching`` per tool call (``phase_for_tool`` maps a tool name to a phase),
+      ``answering`` before the answer text), separates text parts after tool calls with a
+      blank line, never yields tool events unless ``deps.expose_tool_events`` is set (the
+      host may want to store them; ``encode_sse(..., wire="widget")`` drops them from the
+      wire), gives ``ErrorEvent`` a ``code``, and answers an approval request with a
+      non-retryable ``ErrorEvent`` (the widget wire has no approvals). Serialise with
+      ``encode_sse(event, wire="widget")``, or hand the stream to ``RunDriver``.
+    * ``payload_kinds``: the open mode. A tool returns ``ToolReturn(metadata=UiPayload(kind, data))``
+      and only a payload whose ``kind`` is in this set is sent (others are dropped and logged);
+      else ``deps.ui_payload_kinds``. Typed payload classes passed in ``payload_types`` are held to
+      the same set.
+    * ``emit_reasoning``: send the model's thinking as ``reasoning_delta`` / ``reasoning_end``
+      (widget wire, optional frames; off by default: a public chat must opt in).
+    * ``require_answer``: a run that produced no text and no payload ends as ``error{failed}``
+      instead of an empty ``done``.
+    * ``tool_output_chars``: stored tool outputs in ``out.tool_calls`` are cut to this length.
+    * ``after_tool``: ``(tool_name, result_text) -> payloads | None`` (sync or async), called after each tool result; the
+      payloads it returns are sent (and stored) like a tool's own, held to ``payload_kinds``. A failure is logged, never fatal.
+    * ``pricer``: ``(usage, model) -> RunCost`` replacing ``price_run`` (a host's fallback table,
+      a test double). It runs off the event loop, bounded by ``price_timeout_s``.
     """
+    widget = wire == "widget"
+    if wire not in ("admin", "widget"):
+        raise ValueError(f"unknown wire dialect: {wire!r} (use 'admin' or 'widget')")
 
     total_tokens: int | None = None
     run_cost = None  # RunCost for the turn, set when the run completes
+    finish_reason = "stop"  # the model's own reason once the run completes; `length` = cut at the token budget
     text_buf: list[str] = []
     tool_call_count = 0
     model_turn = 0
@@ -235,11 +381,19 @@ async def stream_agent_run(
     # see them is HOST policy (CRM exposes an env escape hatch for reproducing a bug
     # against the public-chat transport) — so the harness asks deps rather than
     # reading a CRM config module from inside its own loop.
-    expose_tool_events = bool(getattr(deps, "expose_tool_events", is_admin_chat))
+    _expose = getattr(deps, "expose_tool_events", None)
+    expose_tool_events = bool(False if widget else is_admin_chat) if _expose is None else bool(_expose)
+    last_phase: str | None = None
+    kinds_allowed = _resolve_payload_kinds(payload_kinds, deps)
+    payload_classes = _resolve_payload_types(payload_types, deps, kinds_allowed)
+    payloads_sent = 0
+    thinking_since: float | None = None  # monotonic start of the open reasoning block
+    served_model = ""
 
     try:
-        from pydantic_ai import UsageLimits
-        _limits = UsageLimits(request_limit=15)
+        _limits = resolve_run_limits(limits, deps).to_usage_limits()
+    except TypeError:
+        raise  # a mistyped limit must fail loudly, not run unlimited
     except Exception:
         _limits = None
 
@@ -253,6 +407,22 @@ async def stream_agent_run(
         run_kwargs["usage_limits"] = _limits
 
     run_args: tuple = () if user_message is None else (user_message,)
+    reasoning = bool(emit_reasoning and widget)
+
+    def _end_reasoning() -> ReasoningEndEvent | None:
+        """Seal the open thought (once), with the time it took."""
+        nonlocal thinking_since
+        if thinking_since is None:
+            return None
+        elapsed = round((time.monotonic() - thinking_since) * 1000)
+        thinking_since = None
+        return ReasoningEndEvent(elapsed_ms=elapsed)
+
+    if widget:
+        if run_info is not None:
+            yield run_info
+        last_phase = "thinking"
+        yield StatusEvent(phase="thinking")
 
     try:
         # pydantic-ai 2.x returns an async context manager rather than a bare
@@ -261,6 +431,20 @@ async def stream_agent_run(
         # response does every time the browser disconnects mid-answer.
         async with agent.run_stream_events(*run_args, **run_kwargs) as event_stream:
             async for event in event_stream:
+
+                # ── The model's thinking (optional frames, widget wire only) ─────
+                if isinstance(event, PartStartEvent) and isinstance(event.part, ThinkingPart):
+                    if reasoning and event.part.content:
+                        if thinking_since is None:
+                            thinking_since = time.monotonic()
+                        yield ReasoningDeltaEvent(delta=event.part.content)
+                    continue
+                if isinstance(event, PartDeltaEvent) and isinstance(event.delta, ThinkingPartDelta):
+                    if reasoning and event.delta.content_delta:
+                        if thinking_since is None:
+                            thinking_since = time.monotonic()
+                        yield ReasoningDeltaEvent(delta=event.delta.content_delta)
+                    continue
 
                 # ── First text chunk of a part ──────────────────────────────────
                 # pydantic-ai emits PartStartEvent(TextPart(content=...)) for the
@@ -271,12 +455,21 @@ async def stream_agent_run(
                 if isinstance(event, PartStartEvent) and isinstance(event.part, TextPart):
                     delta = event.part.content
                     if delta:
+                        if (sealed := _end_reasoning()) is not None:
+                            yield sealed
                         if not text_buf:
                             model_turn += 1
                             logger.info(
                                 "[%s] model_turn=%d  tool_calls_so_far=%d",
                                 log_prefix, model_turn, tool_call_count,
                             )
+                        elif widget:
+                            # A text part after tool calls is a new paragraph, not a
+                            # continuation of the previous word.
+                            delta = "\n\n" + delta
+                        if widget and last_phase != "answering":
+                            last_phase = "answering"
+                            yield StatusEvent(phase="answering")
                         text_buf.append(delta)
                         yield TextDeltaEvent(delta=delta)
 
@@ -284,12 +477,17 @@ async def stream_agent_run(
                 elif isinstance(event, PartDeltaEvent) and isinstance(event.delta, TextPartDelta):
                     delta = event.delta.content_delta
                     if delta:
+                        if (sealed := _end_reasoning()) is not None:
+                            yield sealed
                         if not text_buf:
                             model_turn += 1
                             logger.info(
                                 "[%s] model_turn=%d  tool_calls_so_far=%d",
                                 log_prefix, model_turn, tool_call_count,
                             )
+                        if widget and last_phase != "answering":
+                            last_phase = "answering"
+                            yield StatusEvent(phase="answering")
                         text_buf.append(delta)
                         yield TextDeltaEvent(delta=delta)
 
@@ -308,14 +506,28 @@ async def stream_agent_run(
                         args_repr = ""
                     tool_call_count += 1
                     called_tools.append(event.part.tool_name)
+                    if (sealed := _end_reasoning()) is not None:
+                        yield sealed
+                    try:
+                        captured_args = event.part.args_as_dict()
+                    except Exception:  # noqa: BLE001 - a malformed argument string is still a call
+                        captured_args = {}
+                    out.tool_calls.append(
+                        {"id": cid, "name": event.part.tool_name, "input": captured_args, "output": None}
+                    )
                     logger.info(
                         "[%s] tool_call #%d  name=%s  args=%s",
                         log_prefix, tool_call_count,
-                        event.part.tool_name, args_repr[:300],
+                        event.part.tool_name, _args_for_log(args_repr),
                     )
+                    if widget:
+                        phase = _phase_of(event.part.tool_name, phase_for_tool)
+                        if phase != last_phase:
+                            last_phase = phase
+                            yield StatusEvent(phase=phase)
                     # Tool name + args leak agent internals — gated to admin/dev.
                     if expose_tool_events:
-                        yield ToolCallEvent(tool=event.part.tool_name, args=args_repr)
+                        yield ToolCallEvent(tool=event.part.tool_name, args=args_repr, tool_call_id=cid)
 
                 # ── Tool result received ────────────────────────────────────────
                 elif isinstance(event, FunctionToolResultEvent):
@@ -330,6 +542,14 @@ async def stream_agent_run(
                         seen_tool_return_ids.add(cid)
 
                     result_part = event.part
+                    entry = next((c for c in out.tool_calls if c["id"] == cid), None) if cid else None
+                    if entry is not None:
+                        body = (
+                            result_part.content
+                            if isinstance(result_part, _ToolReturnPart)
+                            else f"error: {result_part.content}"
+                        )
+                        entry["output"] = _clamp(body, tool_output_chars)
                     if not isinstance(result_part, _ToolReturnPart):
                         # RetryPromptPart — skip, not a successful result
                         continue
@@ -363,7 +583,7 @@ async def stream_agent_run(
                         called_tools.append(inner_name)
                         logger.info(
                             "[%s] tool_call #%d  name=%s  args=%s  (sandboxed)",
-                            log_prefix, tool_call_count, inner_name, inner_args[:300],
+                            log_prefix, tool_call_count, inner_name, _args_for_log(inner_args),
                         )
                         if expose_tool_events:
                             yield ToolCallEvent(tool=inner_name, args=inner_args)
@@ -387,15 +607,38 @@ async def stream_agent_run(
                     # a product feature carrying only what the widget
                     # needs. Mirrors pydantic-ai's own UI adapter pattern
                     # (see ui/vercel_ai/_utils.py:iter_metadata_chunks).
-                    for ui_payload in _iter_ui_payloads(result_part):
+                    for ui_payload in _iter_ui_payloads(result_part, payload_classes):
+                        if kinds_allowed is not None and ui_payload.kind not in kinds_allowed:
+                            logger.warning(
+                                "[%s] tool sent undeclared ui_payload kind %r; dropped",
+                                log_prefix, ui_payload.kind,
+                            )
+                            continue
                         logger.info(
                             "[%s] ui_payload  kind=%s",
                             log_prefix, ui_payload.kind,
                         )
+                        payloads_sent += 1
                         yield UIPayloadEvent(
                             kind=ui_payload.kind,
-                            data=ui_payload.model_dump(exclude={"kind"}),
+                            data=_payload_data(ui_payload),
                         )
+
+                    if after_tool is not None:
+                        extra_payloads: list[tuple[str, dict]] = []
+                        try:
+                            returned = after_tool(tool_name, result_repr)
+                            if inspect.isawaitable(returned):
+                                returned = await returned
+                            extra_payloads = coerce_payloads(returned)
+                        except Exception:  # noqa: BLE001 - a hook must not end the answer
+                            logger.exception("[%s] after_tool hook failed", log_prefix)
+                        for extra_kind, extra_data in extra_payloads:
+                            if kinds_allowed is not None and extra_kind not in kinds_allowed:
+                                logger.warning("[%s] after_tool sent undeclared ui_payload kind %r; dropped", log_prefix, extra_kind)
+                                continue
+                            payloads_sent += 1
+                            yield UIPayloadEvent(kind=extra_kind, data=extra_data)
 
                     # Directive side channel — drain `point` directives the
                     # point_at_elements tool attached to its return metadata
@@ -415,11 +658,18 @@ async def stream_agent_run(
 
                     # Tool returns often carry auth / profile data — gated.
                     if expose_tool_events:
-                        yield _make_tool_result_event(tool_name, result_repr)
+                        result_event = _make_tool_result_event(tool_name, result_repr)
+                        result_event.tool_call_id = cid
+                        yield result_event
 
                 # ── Run complete ────────────────────────────────────────────────
                 elif isinstance(event, AgentRunResultEvent):
                     run_result = event.result
+                    # Why the model stopped, not a literal: a reasoning model that spends its
+                    # budget on thinking ends with `length` and a stub of an answer.
+                    finish_reason = (
+                        getattr(getattr(run_result, "response", None), "finish_reason", None) or "stop"
+                    )
 
                     # Collect usage + price the run. `AgentRunResult.usage` is a
                     # property (a `RunUsage` with the input/output split); the model
@@ -428,16 +678,16 @@ async def stream_agent_run(
                     # necessarily the primary). Pricing never raises — cost is
                     # telemetry, not the answer; see runtime/cost.py.
                     try:
-                        from django_cfg.modules.django_llm.agent.runtime.cost import price_run
-
                         usage_obj = run_result.usage
-                        model_slug = str(
+                        served_model = str(
                             getattr(getattr(run_result, "response", None), "model_name", "") or ""
                         )
-                        run_cost = price_run(usage_obj, model_slug)
+                        run_cost = await aprice_run(usage_obj, served_model, pricer, timeout_s=price_timeout_s)
                         total_tokens = run_cost.total_tokens or None
                     except Exception:
                         logger.exception("[stream] usage/cost collection failed")
+                    if (sealed := _end_reasoning()) is not None:
+                        yield sealed
 
                     # Handle deferred / HITL approval
                     output = run_result.output
@@ -447,6 +697,19 @@ async def stream_agent_run(
                             out.last_messages_json = run_result.all_messages_json().decode()
                         except Exception:
                             out.last_messages_json = ""
+
+                        if widget:
+                            # The widget wire has no approval frame: end the stream with a
+                            # terminal error rather than leave the client waiting.
+                            logger.warning(
+                                "[%s] approval requested on the widget wire; ending with error", log_prefix,
+                            )
+                            yield ErrorEvent(
+                                error="This action needs an approval that this channel cannot ask for.",
+                                code="failed",
+                                retryable=False,
+                            )
+                            return
 
                         for call in output.approvals:
                             cid = str(getattr(call, "tool_call_id", "") or "")
@@ -486,7 +749,8 @@ async def stream_agent_run(
 
     except Exception as exc:
         logger.exception("[%s] stream error: %s", log_prefix, exc)
-        yield ErrorEvent(error=_format_user_error(exc))
+        code = error_code_for(exc)
+        yield ErrorEvent(error=DEFAULT_ERROR_MESSAGES[code] if widget else _format_user_error(exc), code=code)
         return
 
     elapsed = round((time.monotonic() - t0) * 1000)
@@ -526,12 +790,19 @@ async def stream_agent_run(
             )
             yield ErrorEvent(error=policy.no_evidence_reply())
 
+    if require_answer and not any(c.strip() for c in text_buf) and not payloads_sent:
+        logger.warning("[%s] the run said nothing; ending it as failed", log_prefix)
+        yield ErrorEvent(error=DEFAULT_ERROR_MESSAGES["failed"], code="failed")
+        return
+
     if run_cost is not None:
         yield DoneEvent(
             total_tokens=total_tokens,
             tokens_input=run_cost.tokens_input,
             tokens_output=run_cost.tokens_output,
             cost_usd=run_cost.cost_usd,
+            finish_reason=finish_reason,
+            model=served_model or None,
         )
     else:
-        yield DoneEvent(total_tokens=total_tokens)
+        yield DoneEvent(total_tokens=total_tokens, finish_reason=finish_reason, model=served_model or None)

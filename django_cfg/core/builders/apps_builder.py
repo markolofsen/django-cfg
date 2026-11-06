@@ -139,6 +139,10 @@ class InstalledAppsBuilder:
         if self.config.analytics and self.config.analytics.enabled:
             apps.append("django_cfg.apps.tools.analytics")
 
+        # Ready assistant chat (Thread/Message tables for a project with no chat)
+        if self.config.chat and self.config.chat.enabled:
+            apps.append("django_cfg.apps.tools.chat")
+
         # Payments engine (checkout, webhooks, refunds — Stripe-first)
         if self.config.payments and self.config.payments.enabled:
             apps.append("django_cfg.apps.payments")

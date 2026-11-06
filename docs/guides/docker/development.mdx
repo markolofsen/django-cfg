@@ -53,7 +53,7 @@ docker/
 ├── volumes/                         # Persistent data (git-ignored)
 │   ├── postgres/                  # Database files
 │   ├── django/media/              # User uploads
-│   └── django/logs/               # Application logs
+│   └── django/logs/               # Only if DJANGO_CFG_LOG_DIR=/app/logs (default: stdout)
 │
 └── @docs/                           # Documentation
     ├── README.md                   # Complete reference

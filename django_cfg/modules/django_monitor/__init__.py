@@ -5,8 +5,8 @@ Zero-config. Captures unhandled exceptions, ERROR logs, slow queries,
 RQ failures and browser events (via /cfg/monitor/ingest/):
 
 - every event is written as a JSON line through the standard logging
-  pipeline (logs/djangocfg/monitor.log, daily rotation, 30 days — the
-  same infrastructure as all django-cfg file logs);
+  pipeline (stdout by default; <log dir>/djangocfg/monitor.log when
+  DJANGO_CFG_LOG_DIR is set);
 - when TelegramConfig is set on DjangoConfig, error events are batched
   into Telegram alerts automatically. No Telegram — no alerts, nothing
   to configure either way.
@@ -44,7 +44,7 @@ def _event_to_dict(event) -> dict:
 
 
 def _log_event(stream: str, record: dict) -> None:
-    """One JSON line into logs/djangocfg/monitor.log via the standard pipeline."""
+    """One JSON line through the standard logging pipeline (logger django_cfg.monitor.*)."""
     from django_cfg.modules.django_logging import get_logger
 
     # Fully-qualified name — get_logger uses it as-is (its caller-path

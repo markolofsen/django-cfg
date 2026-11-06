@@ -48,6 +48,7 @@ from pathlib import Path
 from .events.generator import generate_events
 from .hooks.generator import generate_hooks
 from .ir import build_ir, promote_inline_schemas
+from .streams.generator import generate_streams
 from .schemas.generator import generate_schemas
 
 
@@ -90,9 +91,10 @@ def generate(
 ) -> TsExtrasResult:
     """Generate the requested extras into `out_dir`.
 
-    `extras` selects which sub-generators run: {"zod", "hooks", "events"}.
-    Order is fixed: zod → hooks → events (events is purely additive, no
-    cross-deps).
+    `extras` selects which sub-generators run: {"zod", "hooks", "events", "streams"}.
+    Order is fixed: zod → hooks → events → streams (the last two are purely
+    additive, no cross-deps). ``streams`` writes ``streams.ts`` only for a spec
+    with a ``text/event-stream`` operation.
 
     `enum_prefix` — when provided (typically the group/tag name, e.g.
     ``"crm"``), all hash-suffixed enum names produced by drf-spectacular
@@ -126,6 +128,8 @@ def generate(
         files.extend(generate_hooks(ir, out_dir / "hooks", sdk_import_prefix=sdk_import_prefix))
     if "events" in extras:
         files.extend(generate_events(out_dir))
+    if "streams" in extras:
+        files.extend(generate_streams(ir, out_dir, sdk_import_prefix="." if flat else ".."))
     # FLAT layout: the real hey-api SDK already sits at out_dir/sdk.gen.ts —
     # writing the up-pointing shim would clobber it AND dangle (nothing one
     # dir above target_root). Only the per-group layout needs the shim.

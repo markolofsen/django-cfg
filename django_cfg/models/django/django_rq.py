@@ -560,6 +560,13 @@ class DjangoRQConfig(BaseModel):
             except Exception:
                 pass
 
+        # Ready assistant chat: reaper and pruner
+        if getattr(config, 'chat', None):
+            try:
+                schedules.extend(config.chat.get_rq_schedules())
+            except Exception:
+                pass
+
         # IndexNow submissions, when configured
         if getattr(config, 'indexnow', None):
             try:

@@ -47,13 +47,20 @@ class ImageCache:
         self.ttl_seconds = ttl_hours * 3600
         self.max_size_bytes = max_size_mb * 1024 * 1024
 
-        if cache_dir:
-            self.cache_dir = Path(cache_dir)
-        else:
-            self.cache_dir = Path.home() / ".cache" / "django_cfg.modules.django_llm" / "images"
+        from ...storage.dirs import get_images_cache_dir
 
         if self.enabled:
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            # Resolves (and creates) through the shared runtime-paths resolver.
+            self.cache_dir = get_images_cache_dir(cache_dir)
+        elif cache_dir:
+            self.cache_dir = Path(cache_dir)
+        else:
+            from ...storage.dirs import DJANGO_LLM_DIR
+            from django_cfg.core.utils.runtime_paths import resolve_cache_dir
+
+            self.cache_dir = resolve_cache_dir(DJANGO_LLM_DIR, "images")
+
+        if self.enabled:
             self._metadata_file = self.cache_dir / "metadata.json"
             self._load_metadata()
 

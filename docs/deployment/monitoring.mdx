@@ -180,9 +180,9 @@ Logging is automatically configured based on environment:
 - Rich tracebacks for errors
 
 **Production:**
-- File logging with rotation
+- stdout/stderr (a log file is opt-in via `DJANGO_CFG_LOG_DIR`)
 - WARNING level and above
-- Structured log format
+- Text or JSON (`DJANGO_CFG_LOG_FORMAT=json`)
 
 ### Basic Usage
 
@@ -376,24 +376,28 @@ python manage.py shell -c "from django.core.cache import cache; print(cache.get(
 - Reduce worker memory limit
 
 **Disk usage > 90%:**
-- Clean up old log files
+- Clean up old log files (if you set `DJANGO_CFG_LOG_DIR`)
 - Remove unused media files
-- Set up log rotation
+- Set up `logrotate`, or log to stdout only
 - Archive old backups
 
 ### Logs Not Writing
 
-**Check permissions:**
+Files are opt-in: without `DJANGO_CFG_LOG_DIR` records go to stdout only (`docker compose logs`).
+
+**Check permissions** (only when `DJANGO_CFG_LOG_DIR` is set):
 ```bash
-# Ensure log directory is writable
-chmod 755 logs/
-chown -R django-user:django-user logs/
+# Ensure the log directory is writable by the app user
+chmod 755 "$DJANGO_CFG_LOG_DIR"
+chown -R django-user:django-user "$DJANGO_CFG_LOG_DIR"
 ```
+
+If the directory is not writable, django-cfg logs one warning and keeps logging to stdout.
 
 **Check disk space:**
 ```bash
 # Verify available disk space
-df -h /path/to/logs
+df -h "$DJANGO_CFG_LOG_DIR"
 ```
 
 **Check configuration:**

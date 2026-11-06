@@ -37,7 +37,7 @@ flowchart TD
     end
 
     subgraph SINK["Sinks"]
-        LOG["JSON line →\nlogs/djangocfg/monitor.log"]
+        LOG["JSON line →\nlogger django_cfg.monitor"]
         TG["Telegram alert\n(batched, error-level only)"]
     end
 
@@ -47,8 +47,9 @@ flowchart TD
     API   --> TG
 ```
 
-Every event lands in `logs/djangocfg/monitor.log` (daily rotation, 30-day
-retention — the same file infrastructure as all other Django-CFG logs).
+Every event is one JSON line on the `django_cfg.monitor` logger: stdout/stderr by
+default, and also `<log dir>/djangocfg/monitor.log` when `DJANGO_CFG_LOG_DIR` is set
+(rotation is `logrotate`'s job; see [Django Logging](/features/modules/django-logging)).
 Error-level events additionally join a Telegram batch when Telegram is set up.
 
 ---

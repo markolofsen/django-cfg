@@ -1,0 +1,29 @@
+---
+title: "Release v2.3.388"
+description: "App icons from one definition: @djangocfg/nextjs/app-icon draws the tab, apple-touch and PWA icons from a lucide glyph and a hue; dcfg icons generates and checks them."
+---
+
+# Release v2.3.388
+
+**Prepared:** November 6, 2026 (draft, `@djangocfg/nextjs` and `scripts/dcfg`)
+
+## App icons are drawn from one definition
+
+`@djangocfg/nextjs/app-icon` (pure: `appIconElement`, `appIconGradient`, `appIconPaths`) and `@djangocfg/nextjs/app-icon/next` (`createAppIcon`) replace per-app copies of an `ImageResponse` icon. House style: a full-bleed gradient tile in the product's hue, a white lucide glyph in the inner 46-58%, no border near the edge (the OS cuts its own corner).
+
+```tsx
+// app/icon.tsx
+import * as workflow from "lucide-react/icons/workflow";
+import { createAppIcon } from "@djangocfg/nextjs/app-icon/next";
+const icon = createAppIcon({ glyph: workflow, hue: 55 });
+export const generateImageMetadata = icon.generateImageMetadata;
+export default icon.icon;
+```
+
+`app/apple-icon.tsx` exports `size`, `contentType` and `icon.appleIcon`; the manifest takes `icons: appIconPaths`. Served at `/icon/tab`, `/icon/192`, `/icon/384`, `/icon/512` and `/apple-icon`.
+
+## dcfg scripts
+
+`~/djangocfg/scripts/dcfg icons generate --glyph Workflow --hue 55 [appDir]` writes the two files; `dcfg icons check [appDir]` verifies the files, manifest paths, the proxy matcher exclusions and that no hand-made icon PNGs remain in `public/`.
+
+**Who acts:** an app with copied icon PNGs or its own `ImageResponse` icon runs `dcfg icons generate`, points the manifest at `appIconPaths`, adds `icon$`, `icon/`, `apple-icon$` to the `proxy.ts` matcher exclusions and deletes the PNGs. Nothing breaks if it does not.

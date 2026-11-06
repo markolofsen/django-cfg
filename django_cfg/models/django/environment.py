@@ -6,7 +6,7 @@ Core Django environment settings with Pydantic 2.
 
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from pydantic import Field, computed_field, field_validator
 
@@ -153,9 +153,11 @@ class EnvironmentConfig(BaseConfig):
 
     @computed_field
     @property
-    def logs_dir(self) -> Path:
-        """Logs directory."""
-        return self.base_dir / "logs"
+    def logs_dir(self) -> Optional[Path]:
+        """Log directory, or None when logs go to stdout (see core.utils.runtime_paths)."""
+        from ...core.utils.runtime_paths import resolve_log_dir
+
+        return resolve_log_dir()
 
     def _validate_production(self) -> bool:
         """Validate production-specific requirements."""

@@ -26,6 +26,7 @@ from ...models import (
     AxesConfig,
     CacheConfig,
     AnalyticsConfig,
+    ChatConfig,
     CurrencyConfig,
     DatabaseConfig,
     DjangoRQConfig,
@@ -47,6 +48,7 @@ from ...models import (
     UnfoldConfig,
 )
 from ...modules.django_dashboard.models import DashboardConfig
+from ...modules.django_logging.__cfg__ import DjangoLoggingConfig
 from ..utils.display_name import normalize_display_name, slugify_name
 from ..exceptions import ConfigurationError
 from ..site import SiteConfig, _netloc, check_email, check_locale, check_logo_url, normalize_origin
@@ -335,6 +337,22 @@ class DjangoConfig(BaseModel):
         description="Sessions cache backend",
     )
 
+    cache_dir: Optional[str] = Field(
+        default=None,
+        description=(
+            "Root for django-cfg file caches (LLM, translations, FileBasedCache). "
+            "Env DJANGO_CFG_CACHE_DIR; default is the per-user cache dir of the project."
+        ),
+    )
+
+    logging: Optional[DjangoLoggingConfig] = Field(
+        default=None,
+        description=(
+            "django-cfg logging: level, format (text|json), log_dir. Default is stdout/stderr only; "
+            "a log file is opt-in (log_dir or env DJANGO_CFG_LOG_DIR)."
+        ),
+    )
+
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                            APPLICATIONS                                   ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
@@ -501,6 +519,11 @@ class DjangoConfig(BaseModel):
     analytics: AnalyticsConfig = Field(
         default_factory=AnalyticsConfig,
         description="First-party analytics: pageviews, sessions, user attribution",
+    )
+
+    chat: Optional[ChatConfig] = Field(
+        default=None,
+        description="Ready assistant chat: Thread/Message tables, API at /cfg/chat/, admin, schedules, client group (one line: ChatConfig())",
     )
 
     simple_history: Optional[SimpleHistoryConfig] = Field(
@@ -832,6 +855,16 @@ class DjangoConfig(BaseModel):
                         break
 
         self._require_https_sites()
+        self._add_chat_client_group()
+
+    def _add_chat_client_group(self) -> None:
+        """With the ready chat on, the generated client gets its `chat` group without a second line in the host."""
+        chat = self.chat
+        client = getattr(self, "openapi_client", None)
+        groups = getattr(client, "groups", None)
+        if not (chat and chat.enabled) or groups is None or any(g.name == "chat" for g in groups):
+            return
+        groups.append(chat.openapi_group())
 
     def _require_https_sites(self) -> None:
         """Declared sites and the logo are https outside development and tests."""

@@ -11,7 +11,7 @@ These are the canonical runtime paths for all djangocfg-based projects:
         staticfiles/    ← collected static files (STATIC_ROOT)
         media/          ← user uploads (MEDIA_ROOT)
         templates/      ← Django templates
-        logs/           ← application logs
+        (logs: stdout by default, see runtime_paths)
 
 Usage::
 
@@ -34,6 +34,7 @@ Usage::
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 
 def get_base_path(*parts: str) -> Path:
@@ -75,10 +76,15 @@ def get_media_url(*parts: str) -> str:
     return base + "/" + "/".join(parts)
 
 
-def get_logs_path(*parts: str) -> Path:
-    """Return ``BASE_DIR/logs / parts`` — application logs directory."""
-    from django.conf import settings
-    root = Path(settings.BASE_DIR) / "logs"
+def get_logs_path(*parts: str) -> Optional[Path]:
+    """
+    Return the log directory (``DJANGO_CFG_LOG_DIR`` / ``logging.log_dir``) joined with
+    ``parts``, or ``None`` when logs go to stdout only. Never inside BASE_DIR by default.
+    """
+    from .runtime_paths import resolve_log_dir
+    root = resolve_log_dir()
+    if root is None:
+        return None
     return root.joinpath(*parts) if parts else root
 
 

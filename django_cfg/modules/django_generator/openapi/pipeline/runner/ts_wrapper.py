@@ -104,6 +104,8 @@ def ts_extras_list(config: OpenAPIConfig) -> list[str]:
         extras.append("hooks")
     if config.generate_events_bridge:
         extras.append("events")
+    if config.generate_sse_streams:
+        extras.append("streams")
     return extras
 
 

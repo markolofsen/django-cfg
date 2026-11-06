@@ -3,15 +3,11 @@ Simple auto-configuring Django Logger for django_cfg.
 
 KISS principle: simple, unified logging configuration.
 
-Features:
-- Modular logging with separate files per module
-- Automatic log rotation (daily, keeps 30 days)
-- INFO+ to files, WARNING+ to console
-- Auto-cleanup of old logs
+Logging is configured by the generated ``LOGGING`` dict (``config.py``), not at
+import time. Default is stdout/stderr; a file is opt-in (``DJANGO_CFG_LOG_DIR``).
 """
 
 import logging
-from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -61,24 +57,21 @@ def sanitize_extra(extra: Optional[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 class DjangoLogger(BaseCfgModule):
-    """Simple auto-configuring logger."""
+    """
+    Logger factory.
+
+    Importing django-cfg never configures logging: no handlers are added, root
+    handlers are not touched, no directories or files are created. Handlers come
+    from the ``LOGGING`` dict django-cfg generates (see ``config.py``), which the
+    project's own ``LOGGING`` overrides.
+    """
 
     _loggers: Dict[str, logging.Logger] = {}
-    _configured = False
-    _debug_mode: Optional[bool] = None  # Cached debug mode to avoid repeated config loads
+    _configured = True  # kept for compatibility: there is no lazy setup any more
 
     @classmethod
     def _get_debug_mode(cls) -> bool:
-        """
-        Get debug mode from config dynamically (no caching).
-
-        Loads config each time to ensure we get the correct debug state.
-        This is necessary because config may not be ready when logger is first initialized.
-
-        Returns:
-            True if debug mode is enabled (config.debug or config.is_development), False otherwise
-        """
-        # Try Django settings first (most reliable)
+        """Debug mode from Django settings, then django-cfg config, then env."""
         try:
             from django.conf import settings
             if hasattr(settings, 'DEBUG'):
@@ -86,194 +79,25 @@ class DjangoLogger(BaseCfgModule):
         except Exception:
             pass
 
-        # Try config second
         try:
             from django_cfg.core.state import get_current_config
             config = get_current_config()
-
-            # Return debug if available, fallback to is_development
             if config:
                 return config.debug if hasattr(config, 'debug') else config.is_development
         except Exception:
             pass
 
-        # Fallback to environment variables if nothing else works
         import os
-        debug_env = os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes')
-        if debug_env:
+        if os.getenv('DEBUG', 'false').lower() in ('true', '1', 'yes'):
             return True
-        env_mode = os.getenv('ENV_MODE', '').lower()
-        return env_mode == 'development'
+        return os.getenv('ENV_MODE', '').lower() == 'development'
 
     @classmethod
     def get_logger(cls, name: str = "django_cfg") -> logging.Logger:
-        """Get a configured logger instance."""
-        if not cls._configured:
-            cls._setup_logging()
-
+        """Return the standard-library logger for ``name``."""
         if name not in cls._loggers:
-            cls._loggers[name] = cls._create_logger(name)
+            cls._loggers[name] = logging.getLogger(name)
         return cls._loggers[name]
-
-    @classmethod
-    def _setup_logging(cls):
-        """Setup modular logging configuration with separate files per module."""
-        import os
-        current_dir = Path(os.getcwd())
-        logs_dir = current_dir / 'logs'
-        djangocfg_logs_dir = logs_dir / 'djangocfg'
-
-        # Create directories
-        logs_dir.mkdir(parents=True, exist_ok=True)
-        djangocfg_logs_dir.mkdir(parents=True, exist_ok=True)
-
-        # print(f"[django-cfg] Setting up modular logging:")
-        # print(f"  Django logs: {logs_dir / 'django.log'}")
-        # print(f"  Django-CFG logs: {djangocfg_logs_dir}/")
-
-        # Get debug mode (cached - loaded once)
-        debug = cls._get_debug_mode()
-
-        # Create handlers
-        try:
-            # Handler for general Django logs with rotation
-            django_log_path = logs_dir / 'django.log'
-            django_handler = TimedRotatingFileHandler(
-                django_log_path,
-                when='midnight',  # Rotate at midnight
-                interval=1,  # Every 1 day
-                backupCount=30,  # Keep 30 days of logs
-                encoding='utf-8',
-            )
-            # File handlers ALWAYS capture DEBUG in dev mode (for complete debugging history)
-            # In production, still use INFO+ to save disk space
-            django_handler.setLevel(logging.DEBUG if debug else logging.INFO)
-
-            # /tmp handler - always enabled for easy `tail -f /tmp/djangocfg/debug.log`
-            # Set DJANGO_LOG_TO_TMP=false to disable
-            import os
-            tmp_handler = None
-            if os.getenv('DJANGO_LOG_TO_TMP', 'true').lower() not in ('false', '0', 'no'):
-                try:
-                    # Use /tmp/djangocfg/ directory
-                    tmp_log_dir = Path('/tmp') / 'djangocfg'
-                    tmp_log_dir.mkdir(parents=True, exist_ok=True)
-                    tmp_log_path = tmp_log_dir / 'debug.log'
-                    tmp_handler = logging.FileHandler(tmp_log_path, mode='a', encoding='utf-8')
-                    tmp_handler.setLevel(logging.DEBUG)  # Always capture everything
-                except Exception as e:
-                    print(f"[django-cfg] Failed to create /tmp/djangocfg/debug.log: {e}")
-
-            # Console handler
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(logging.DEBUG if debug else logging.WARNING)
-
-            # Set format for all handlers
-            formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(name)s [%(filename)s:%(lineno)d]: %(message)s')
-            django_handler.setFormatter(formatter)
-            console_handler.setFormatter(formatter)
-            if tmp_handler:
-                tmp_handler.setFormatter(formatter)
-
-            # Configure root logger - ALWAYS DEBUG to let handlers filter
-            root_logger = logging.getLogger()
-            root_logger.setLevel(logging.DEBUG)  # CRITICAL: Always DEBUG, handlers filter
-
-            # Clear existing handlers
-            root_logger.handlers.clear()
-
-            # Add handlers to root logger
-            root_logger.addHandler(console_handler)
-            root_logger.addHandler(django_handler)
-            if tmp_handler:
-                root_logger.addHandler(tmp_handler)
-                # Test log to verify handler works
-                root_logger.info("[django-cfg] Logging initialized")
-
-            # print(f"[django-cfg] Modular logging configured successfully! Debug: {debug}")
-            cls._configured = True
-
-        except Exception as e:
-            print(f"[django-cfg] ERROR setting up modular logging: {e}")
-            # Fallback to console only
-            logging.basicConfig(
-                level=logging.DEBUG if debug else logging.WARNING,
-                format='[%(asctime)s] %(levelname)s in %(name)s [%(filename)s:%(lineno)d]: %(message)s',
-                handlers=[logging.StreamHandler()],
-                force=True
-            )
-            cls._configured = True
-
-    @classmethod
-    def _create_logger(cls, name: str) -> logging.Logger:
-        """
-        Create logger with modular file handling for django-cfg loggers.
-
-        In dev/debug mode, loggers are set to DEBUG level to ensure all log messages
-        reach file handlers. Handlers still filter console output (WARNING+), but files
-        get everything (DEBUG+).
-        """
-        logger = logging.getLogger(name)
-
-        # Get debug mode (cached - loaded once)
-        debug = cls._get_debug_mode()
-
-        # CRITICAL: ALWAYS set DEBUG level on django_cfg loggers
-        # This ensures all messages (DEBUG/INFO/WARNING/ERROR) can reach handlers
-        # Handlers will do the filtering, not the logger itself
-        if name.startswith('django_cfg'):
-            logger.setLevel(logging.DEBUG)
-
-        # If this is a django-cfg logger, add a specific file handler
-        if name.startswith('django_cfg'):
-            try:
-                import os
-                current_dir = Path(os.getcwd())
-                djangocfg_logs_dir = current_dir / 'logs' / 'djangocfg'
-                djangocfg_logs_dir.mkdir(parents=True, exist_ok=True)
-
-                # Extract module name from logger name
-                # e.g., 'django_cfg.payments.provider' -> 'payments'
-                # e.g., 'django_cfg.core' -> 'core'
-                # e.g., 'django_cfg' -> 'core'
-                parts = name.split('.')
-                if len(parts) > 1:
-                    module_name = parts[1]  # django_cfg.payments -> payments
-                else:
-                    module_name = 'core'  # django_cfg -> core
-
-                log_file_path = djangocfg_logs_dir / f'{module_name}.log'
-
-                # Create rotating file handler for this specific module
-                file_handler = TimedRotatingFileHandler(
-                    log_file_path,
-                    when='midnight',  # Rotate at midnight
-                    interval=1,  # Every 1 day
-                    backupCount=30,  # Keep 30 days of logs
-                    encoding='utf-8',
-                )
-
-                # Get debug mode (cached - loaded once)
-                debug = cls._get_debug_mode()
-
-                # Module file handlers ALWAYS capture DEBUG in dev mode
-                # This ensures complete log history for debugging, independent of logger level
-                file_handler.setLevel(logging.DEBUG if debug else logging.INFO)
-
-                # Set format
-                formatter = logging.Formatter('[%(asctime)s] %(levelname)s in %(name)s [%(filename)s:%(lineno)d]: %(message)s')
-                file_handler.setFormatter(formatter)
-
-                # Add handler to logger
-                logger.addHandler(file_handler)
-                logger.propagate = True  # Also send to parent (django.log)
-
-                # print(f"[django-cfg] Created modular logger: {name} -> {log_file_path}")
-
-            except Exception as e:
-                print(f"[django-cfg] ERROR creating modular logger for {name}: {e}")
-
-        return logger
 
 
 def clean_old_logs(days: int = 30, logs_dir: Optional[Path] = None) -> Dict[str, int]:
@@ -282,7 +106,7 @@ def clean_old_logs(days: int = 30, logs_dir: Optional[Path] = None) -> Dict[str,
 
     Args:
         days: Number of days to keep (default: 30)
-        logs_dir: Optional custom logs directory (default: ./logs)
+        logs_dir: Optional custom logs directory (default: the resolved log dir)
 
     Returns:
         Dictionary with cleanup statistics
@@ -296,10 +120,10 @@ def clean_old_logs(days: int = 30, logs_dir: Optional[Path] = None) -> Dict[str,
     from datetime import datetime, timedelta
 
     if logs_dir is None:
-        current_dir = Path(os.getcwd())
-        logs_dir = current_dir / 'logs'
+        from django_cfg.core.utils.runtime_paths import resolve_log_dir
+        logs_dir = resolve_log_dir()
 
-    if not logs_dir.exists():
+    if logs_dir is None or not logs_dir.exists():
         return {'deleted': 0, 'bytes': 0, 'error': 'Logs directory not found'}
 
     cutoff_date = datetime.now() - timedelta(days=days)

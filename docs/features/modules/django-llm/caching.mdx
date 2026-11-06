@@ -23,6 +23,33 @@ Django LLM provides multiple caching layers:
 | Image Cache | Images & vision responses | 168 hours (7 days) |
 | Models Cache | Model pricing | 24 hours |
 
+## Where the cache lives
+
+Every cache resolves through one setting, so nothing is written into the project folder.
+
+| Precedence | Source |
+|------------|--------|
+| 1 | `cache_dir=` argument of the cache you build |
+| 2 | `DjangoConfig(cache_dir=...)` |
+| 3 | `DJANGO_CFG_CACHE_DIR` environment variable |
+| 4 | `platformdirs.user_cache_dir(project)` (for example `~/.cache/<project>` on Linux) |
+
+`project` is the top package of `DJANGO_SETTINGS_MODULE`, else the working directory name, so two projects on one machine do not share a cache. A directory is created when the first file is written; if it is not writable, django-cfg falls back to the system temp dir and logs one warning.
+
+```bash
+# Containers: keep the models catalogue (563 KB) across restarts
+DJANGO_CFG_CACHE_DIR=/app/.cache      # mount a volume here
+```
+
+<Callout type="warning">
+`CMDOP_LLM_CACHE_DIR` is deprecated (one warning). It named the LLM cache folder
+itself; `DJANGO_CFG_CACHE_DIR` names the **root** that holds all caches. Without a
+volume the default dir resets on container restart and the models catalogue is
+fetched again.
+</Callout>
+
+**Upgrading:** for one release, if no override is set and `./.cache` exists in the working directory, it is still used, with one warning. Set `DJANGO_CFG_CACHE_DIR` to keep it explicit; the fallback is removed in the next release.
+
 ## LLM Response Cache
 
 ### Configuration
@@ -31,8 +58,9 @@ Django LLM provides multiple caching layers:
 from django_cfg.modules.django_llm.client import LLMClient
 from pathlib import Path
 
+# cache_dir is optional: omit it to use the shared cache root above
 client = LLMClient(
-    cache_dir=Path("cache/llm"),
+    cache_dir=Path("/var/cache/myapp/llm"),
     cache_ttl=3600,        # 1 hour
     max_cache_size=1000    # Max entries
 )
@@ -44,7 +72,7 @@ client = LLMClient(
 from django_cfg.modules.django_llm.storage import LLMCache
 
 cache = LLMCache(
-    cache_dir=Path("cache/llm"),
+    cache_dir=Path("/var/cache/myapp/llm"),
     ttl=3600,
     max_size=1000
 )
@@ -109,8 +137,9 @@ def smart_cache(prompt, model):
 from django_cfg.modules.django_llm.features.vision import ImageCache, get_image_cache
 from pathlib import Path
 
+# default: <cache root>/django_cfg.modules.django_llm/images
 cache = get_image_cache(
-    cache_dir=Path("cache/images"),
+    cache_dir=Path("/var/cache/myapp/images"),
     ttl_hours=168  # 7 days
 )
 ```
@@ -165,7 +194,7 @@ from django_cfg.modules.django_llm.features.vision import VisionModelsRegistry
 
 registry = VisionModelsRegistry(
     api_key=api_key,
-    cache_dir=Path("cache/models")
+    cache_dir=Path("/var/cache/myapp/models")
 )
 
 # Fetch (uses cache if valid)
@@ -274,20 +303,16 @@ client = LLMClient(cache_dir=None)
 
 ## File Structure
 
+Under the cache root (see [Where the cache lives](#where-the-cache-lives)):
+
 ```
-cache/
-├── llm/
-│   ├── gpt-4o-mini/
-│   │   └── {hash}.json
-│   └── gpt-4o/
-│       └── {hash}.json
-├── images/
-│   ├── images/
-│   │   └── {url_hash}.{ext}
-│   └── responses/
-│       └── {key_hash}.json
-└── models/
-    └── vision_models.json
+<cache root>/
+├── django_cfg.modules.django_llm/
+│   ├── openrouter_models_v3.json   # models catalogue
+│   ├── llm/llm_responses.sqlite3   # response cache
+│   └── images/                     # vision image cache
+├── translations/                   # translator cache, one JSON per language pair
+└── django/<prefix>_<alias>/        # Django FileBasedCache (CacheConfig, no Redis)
 ```
 
 ## Related

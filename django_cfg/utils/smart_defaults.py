@@ -334,30 +334,19 @@ class SmartDefaults:
         """
         Simple logging configuration.
         
-        NOTE: Real logging setup is handled by django_cfg.modules.django_logger
-        This provides minimal fallback configuration only.
-        
+        The single source of django-cfg logging: stdout/stderr by default, a file
+        only when a log dir is configured (see modules/django_logging/config.py).
+
         Args:
             environment: Environment name (ignored - for compatibility)
-            debug: Debug mode (ignored - for compatibility)
-            
+            debug: Debug mode (lowers the django_cfg logger level to DEBUG)
+
         Returns:
-            Minimal Django logging configuration
+            Django ``LOGGING`` dict
         """
-        # Minimal fallback - actual logging is configured by django_logger module
-        return {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'handlers': {
-                'console': {
-                    'class': 'logging.StreamHandler',
-                },
-            },
-            'root': {
-                    'handlers': ['console'],
-                    'level': 'INFO',
-            },
-        }
+        from django_cfg.modules.django_logging.config import build_logging_config
+
+        return build_logging_config(debug=debug)
 
     @staticmethod
     def get_middleware_defaults() -> List[str]:

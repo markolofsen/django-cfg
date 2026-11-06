@@ -51,6 +51,22 @@ class AgentDeps:
     max_tool_calls: int = 10
     max_rag_searches: int = 3
 
+    # Per-run model/tool limits for `stream_agent_run` (a `runtime.limits.RunLimits` or a
+    # dict of its fields). None = the process default (`request_limit=15`).
+    run_limits: Any = None
+
+    # Payload classes `stream_agent_run` recognises on `ToolReturn(metadata=...)`; None =
+    # the closed default set (`runtime.ui_payloads.UI_PAYLOAD_TYPES`).
+    ui_payload_types: Optional[tuple] = None
+
+    # The open mode: `ui_payload` kinds a tool may send as `UiPayload(kind, data)`; any other
+    # kind is dropped. None = not restricted by kind (the closed `ui_payload_types` rule).
+    ui_payload_kinds: Optional[frozenset] = None
+
+    # Whether `stream_agent_run` yields `tool_call` / `tool_result` events. None = the
+    # caller's default (admin chat yes, widget wire no). Never reaches a public wire.
+    expose_tool_events: Optional[bool] = None
+
     # Lazily-built per-run search/dedup context. `get_search_ctx()` populates it.
     search_ctx: Optional[Any] = None
 

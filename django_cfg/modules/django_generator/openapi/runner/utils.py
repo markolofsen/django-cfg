@@ -218,10 +218,13 @@ def fix_go_imports(
         def replace_import_block(match: re.Match) -> str:
             imports = match.group(1)
             fixed = []
-            for line in imports.strip().split("\n"):
-                line = line.strip()
+            # Keep each line (and its indent) as written: only a path that
+            # needs the module prefix is rewritten, so a file with nothing to
+            # fix is byte-identical and the diff stays empty.
+            for raw in imports.split("\n"):
+                line = raw.strip()
                 if not line or line.startswith("//"):
-                    fixed.append(line)
+                    fixed.append(raw)
                     continue
 
                 import_match = re.match(r'^"([^"]+)"', line)
@@ -243,10 +246,11 @@ def fix_go_imports(
                         "sigs.k8s.io",
                     )
                     if not import_path.startswith((".", "/", *_QUALIFIED_HOSTS)) and not _is_go_stdlib(import_path):
-                        line = f'"{module_path}/{import_path}"'
-                fixed.append(line)
+                        indent = raw[: len(raw) - len(raw.lstrip())]
+                        raw = f'{indent}"{module_path}/{import_path}"'
+                fixed.append(raw)
 
-            return f"import (\n{chr(10).join(fixed)}\n)"
+            return f"import ({chr(10).join(fixed)})"
 
         content = re.sub(r"import\s*\((.*?)\)", replace_import_block, content, flags=re.DOTALL)
 

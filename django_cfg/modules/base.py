@@ -213,6 +213,15 @@ class BaseCfgModule(ABC):
 
         return False
 
+    def is_chat_enabled(self) -> bool:
+        """Check if the ready assistant chat (`ChatConfig`) is enabled."""
+        chat_config = self._get_config_key('chat', None)
+
+        if chat_config and hasattr(chat_config, 'enabled'):
+            return chat_config.enabled
+
+        return False
+
     def is_payments_enabled(self) -> bool:
         """
         Check if the django-cfg Payments app is enabled.

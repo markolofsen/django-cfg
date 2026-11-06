@@ -26,7 +26,8 @@ To add a new widget:
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Union
+from dataclasses import dataclass, field
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, Field
 
@@ -89,6 +90,29 @@ UI_PAYLOAD_TYPES: tuple[type[BaseModel], ...] = (
 
 
 # ---------------------------------------------------------------------------
+# Open payload
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class UiPayload:
+    """An open ``ui_payload``: any ``kind`` string and any JSON ``data``.
+
+    The closed union above is for the one product it was written for. A host with its own
+    cards registers the *kinds* it allows (``stream_agent_run(payload_kinds=...)``,
+    ``ChatKind.payload_kinds``) and has its tools return::
+
+        ToolReturn(return_value="...", metadata=UiPayload("json_patch", {"ops": [...]}))
+
+    Only a registered kind reaches the wire; any other is dropped and logged. The widget draws
+    a payload by ``kind``, so the host owns both ends of the shape.
+    """
+
+    kind: str
+    data: Any = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
 # Directive side channel
 # ---------------------------------------------------------------------------
 #
@@ -121,6 +145,7 @@ class DirectivePayload(BaseModel):
 __all__ = [
     "UIPayload",
     "UI_PAYLOAD_TYPES",
+    "UiPayload",
     "VehicleCardsPayload",
     "TaxBreakdownPayload",
     "DirectivePayload",

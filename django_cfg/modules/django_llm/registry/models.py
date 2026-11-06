@@ -604,9 +604,14 @@ class ModelsCache:
             uptime_1d=_f(best.get("uptime_last_1d")),
         )
 
-    def get_model(self, model_id: str) -> Optional[OpenRouterModel]:
-        """Get model information by ID — lazily populates the catalogue."""
-        self._ensure_models()
+    def get_model(self, model_id: str, *, fetch: bool = True) -> Optional[OpenRouterModel]:
+        """Get model information by ID — lazily populates the catalogue.
+
+        ``fetch=False`` never touches the network: only what the on-disk cache already
+        holds is searched (an offline-safe lookup for code that must not block).
+        """
+        if fetch:
+            self._ensure_models()
         return self.models.get(model_id)
 
     def get_models_by_provider(self, provider: str) -> List[OpenRouterModel]:
@@ -754,18 +759,21 @@ class ModelsCache:
 
         return model.pricing.cost(input_tokens, output_tokens)
 
-    def calculate_cost_from_usage(self, model_id: str, usage: Dict[str, int]) -> Optional[float]:
+    def calculate_cost_from_usage(
+        self, model_id: str, usage: Dict[str, int], *, fetch: bool = True
+    ) -> Optional[float]:
         """
         Calculate cost from OpenAI usage object
         
         Args:
             model_id: Model ID
             usage: Usage dict with prompt_tokens, completion_tokens, total_tokens
+            fetch: ``False`` = use the on-disk cache only, never the network
             
         Returns:
             Calculated cost in USD
         """
-        model = self.get_model(model_id)
+        model = self.get_model(model_id, fetch=fetch)
         if not model:
             return None
 

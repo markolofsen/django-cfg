@@ -95,71 +95,82 @@ logger.config_details("database", {
 
 ---
 
-## Environment-Aware Configuration
+## Where Logs Go
 
-Logging automatically adapts to your environment.
+Logging follows 12-factor: **stdout/stderr by default, a file only when you ask**. Importing `django_cfg` never creates `logs/` and never touches your root handlers; the `LOGGING` dict is generated from `DjangoConfig` and your own `LOGGING` overrides it.
 
-### Development Mode (`debug=True`)
+| Mode | Console | File |
+| --- | --- | --- |
+| Default | `django_cfg` at `WARNING` | none |
+| `debug=True` | `django_cfg` at `DEBUG` | none |
+| `DJANGO_CFG_LOG_DIR=/var/log/app` | as above | `django.log`, `djangocfg/monitor.log` there |
 
-**Automatic settings:**
-- Console output with **Rich** formatting
-- Colored log levels
-- DEBUG level messages shown
-- Beautiful tracebacks for errors
-- No file logging (keeps dev environment clean)
-
-**Example output:**
-```
-✅ Built security configuration
-  ✅ Added corsheaders to middleware
-🚀 Django-CFG initialized in 245.50ms
-🌍 Environment: development
-```
-
-### Production Mode (`debug=False`)
-
-**Automatic settings:**
-- File logging with rotation (10MB max, 5 backups)
-- WARNING level and above
-- Structured log format
-- Error logs separated to dedicated file
-- Console output minimal
-
-**Log files created:**
 ```bash
-logs/
-├── django.log              # All messages (INFO+)
-├── django_rotating.log     # Rotating logs (10MB max)
-├── django_errors.log       # Errors only (ERROR+)
-└── django_rotating.log.1   # Backup files
+DJANGO_CFG_LOG_FORMAT=json      # one JSON object per line (default: text)
+DJANGO_CFG_LOG_LEVEL=INFO       # level of the django_cfg loggers
+DJANGO_CFG_LOG_DIR=/var/log/app # opt in to files (WatchedFileHandler, use logrotate)
 ```
 
-**Log format:**
+**Text format:**
 ```
-WARNING 2025-10-14 12:34:56 views 1234 MainProcess User login failed
+[2026-11-05 12:34:56,789] WARNING in django_cfg.accounts [views.py:42]: User login failed
 ```
+
+**JSON format:**
+```json
+{"ts": "2026-11-05T12:34:56+0000", "level": "WARNING", "logger": "django_cfg.accounts", "message": "User login failed", "module": "views", "line": 42}
+```
+
+See [Django Logging](/features/modules/django-logging) for every setting and the config model.
+
+### stdout in containers
+
+The recommended setup: log to stdout and let Docker (or Kubernetes) collect it. No volume, no `logs/` mount, nothing to rotate.
+
+```yaml
+# docker-compose.yml
+services:
+  api:
+    image: myapp
+    environment:
+      DJANGO_CFG_LOG_FORMAT: json
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+```
+
+```bash
+docker compose logs -f api
+```
+
+<Callout type="info">
+Do not set `DJANGO_CFG_LOG_DIR` in a container unless something reads the files.
+If you do (an agent tailing a mounted folder), mount a volume at that path and let
+`logrotate` on the host rotate it; django-cfg reopens the file after rotation.
+</Callout>
+
+### Upgrading from the `logs/` folder
+
+Earlier versions wrote `logs/django.log`, `logs/djangocfg/*.log` and a `/tmp/djangocfg/debug.log` mirror. For one release, if no override is set and `./logs` exists in the working directory, django-cfg keeps writing there and logs one warning. A project that mounts `../files/logs:/app/logs` adds `DJANGO_CFG_LOG_DIR=/app/logs` to its env and changes nothing else. `DJANGO_LOG_TO_TMP` is ignored (one warning); the mirror is gone.
 
 ---
 
 ## Logger Configuration
 
-The logger is configured automatically on first use:
+`get_logger()` returns a plain `logging.Logger` and adds no handlers:
 
 ```python
-from django_cfg.modules.django_logging import DjangoCfgLogger
+from django_cfg.modules.django_logging import get_logger
 
-# Singleton instance - same logger everywhere
-logger = DjangoCfgLogger()
-
-# Auto-detects debug mode from django_cfg config
-# Falls back to DEBUG environment variable
-# Configures Rich handler in dev, file handlers in prod
+logger = get_logger("django_cfg.myapp")
 ```
 
-**Configuration sources (priority order):**
-1. Django-CFG config (`config.debug`)
-2. Environment variable (`DEBUG=true`)
-3. Default (production mode)
+**Level sources (priority order):**
+1. `DjangoConfig(logging=DjangoLoggingConfig(level=...))`
+2. `DJANGO_CFG_LOG_LEVEL`
+3. `DEBUG` when `config.debug`, else `WARNING`
 
 ---
 
@@ -281,16 +292,15 @@ logger.error("Payment failed", exc_info=True)  # → Sent to Sentry
 
 ### Log Aggregation (ELK, Datadog, CloudWatch)
 
-File logs work with standard log aggregation:
+Ship the container stream; use `DJANGO_CFG_LOG_FORMAT=json` so the aggregator gets structured fields:
 
 ```bash
-# Logs are in standard format
-logs/django_rotating.log
+# Docker / Kubernetes: the platform already collects stdout
+docker compose logs -f api
 
-# Ship to aggregation service
+# Or, with a file (DJANGO_CFG_LOG_DIR=/var/log/app), tail it
 filebeat -c filebeat.yml  # ELK Stack
 datadog-agent             # Datadog
-aws cloudwatch            # AWS CloudWatch
 ```
 
 ---
@@ -348,18 +358,19 @@ print(f"Logger level: {logger.level}")  # 10=DEBUG, 30=WARNING
 
 ### File Logs Not Created
 
-**Check directory permissions:**
+Files are opt-in. Check that a directory is configured:
+
 ```bash
-# Ensure logs/ directory exists and is writable
-mkdir -p logs
-chmod 755 logs
+echo $DJANGO_CFG_LOG_DIR   # empty = stdout only
 ```
 
-**Production mode check:**
 ```python
-# File logging only enabled in production (debug=False)
-config.debug  # Should be False
+from django_cfg.core.utils.runtime_paths import resolve_log_dir
+
+print(resolve_log_dir())   # None = no file
 ```
+
+The directory is created when the first record is written. If it is not writable, django-cfg logs one warning (`cannot write ...`) and continues on stdout; fix the permissions of the mounted volume or the user the container runs as.
 
 ### Colors Not Showing
 

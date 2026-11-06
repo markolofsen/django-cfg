@@ -52,6 +52,7 @@ class IROperation:
     is_paginated: bool = False        # True when response_schema_ref starts with "Paginated"
     has_2xx_response: bool = True
     response_media_types: list[str] = field(default_factory=list)
+    has_error_responses: bool = False  # any non-2xx response (hey-api then emits ``<Op>Errors``)
 
 
 @dataclass(slots=True)
@@ -174,6 +175,7 @@ def build_ir(spec: dict[str, Any]) -> IR:
                     is_paginated=isinstance(response_ref, str) and response_ref.startswith("Paginated"),
                     has_2xx_response=has_2xx,
                     response_media_types=media_types,
+                    has_error_responses=_has_error_responses(op.get("responses")),
                 )
             )
 
@@ -190,6 +192,12 @@ def build_ir(spec: dict[str, Any]) -> IR:
                 )
 
     return ir
+
+
+def _has_error_responses(responses: Any) -> bool:
+    if not isinstance(responses, dict):
+        return False
+    return any(not str(code).startswith("2") for code in responses)
 
 
 def _response_facts(responses: Any) -> tuple[bool, list[str]]:

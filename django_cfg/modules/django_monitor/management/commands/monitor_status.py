@@ -21,7 +21,13 @@ class Command(SafeCommand):
         alerts = "on (TelegramConfig set)" if _is_alerts_enabled() else "off (no TelegramConfig)"
         self.stdout.write(f"  Telegram alerts : {alerts}")
 
-        log_path = Path.cwd() / "logs" / "djangocfg" / "monitor.log"
+        from django_cfg.core.utils.runtime_paths import resolve_log_dir
+
+        log_dir = resolve_log_dir()
+        if log_dir is None:
+            self.stdout.write("  Event log       : stdout (set DJANGO_CFG_LOG_DIR for a file)")
+            return
+        log_path = Path(log_dir) / "djangocfg" / "monitor.log"
         self.stdout.write(f"  Event log       : {log_path}")
         if log_path.exists():
             with log_path.open("rb") as f:
