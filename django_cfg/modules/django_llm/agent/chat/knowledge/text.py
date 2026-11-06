@@ -52,9 +52,16 @@ def estimate_tokens(text: str) -> int:
     return max(1, math.ceil(sum(0.25 if ord(c) < 128 else 0.5 for c in text)))
 
 
+_COMPOUND = re.compile(r"\w+(?:-\w+)+")
+
+
 def terms(query: str) -> list[str]:
-    """Distinct lower-case query words without stop words, in order of appearance."""
-    seen = dict.fromkeys(w for w in WORD.findall(query.lower()) if len(w) > 1 and w not in STOP)
+    """Distinct lower-case query words without stop words, in order of appearance. A hyphenated compound also adds its joined
+    form (`non-profit` -> `nonprofit`, `e-mail` -> `email`): the files spell it either way and the index splits only on the hyphen."""
+    low = query.lower()
+    seen = dict.fromkeys(w for w in WORD.findall(low) if len(w) > 1 and w not in STOP)
+    for m in _COMPOUND.finditer(low):
+        seen.setdefault(m.group(0).replace("-", ""), None)
     return list(seen)
 
 

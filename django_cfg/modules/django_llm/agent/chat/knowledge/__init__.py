@@ -124,10 +124,9 @@ def runtime(spec: Spec, deps: Any) -> KnowledgeRuntime | None:
             return None
         base, knowledge = found
         prefix = knowledge.tool_prefix
-        session = KbSession(base, knowledge.caps, prefix=prefix)
-        return KnowledgeRuntime(
-            session, prompt_block(base, knowledge.language or knowledge_language(), knowledge.caps, prefix), make_tools(session), knowledge.guard, prefix,
-        )
+        language = knowledge.language or knowledge_language()
+        session = KbSession(base, knowledge.caps, language=language, prefix=prefix)
+        return KnowledgeRuntime(session, prompt_block(base, language, knowledge.caps, prefix), make_tools(session), knowledge.guard, prefix)
     except Exception:  # noqa: BLE001 - a broken knowledge base must not stop the chat
         log.exception("chat: knowledge base unavailable, answering without it")
         return None

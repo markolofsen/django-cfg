@@ -78,6 +78,7 @@ class KbSession:
     ranges: dict[str, list[tuple[int, int]]] = field(default_factory=dict)
     read_chars: int = 0
     calls: int = 0
+    language: str = "English"  # what the files are written in: the no-hit message tells the model to retry in it
     prefix: str = "kb_"  # `Knowledge(tool_prefix=...)`: the tool names are `<prefix>tree|search|outline|read`
 
     @_named
@@ -99,8 +100,10 @@ class KbSession:
             return f"Error: {exc}"
         if not hits:
             return (
-                f"No matches for {query!r}. Try the knowledge base's own terms (2-3 other phrasings), fewer words, "
-                "or kb_tree to browse."
+                f"No matches for {query!r}. The files are written in {self.language}: translate the query into {self.language} "
+                "(the product's own terms, not a word-for-word copy) and retry with 2-3 synonyms or fewer words; "
+                "or browse with kb_tree. Do not answer \"not found\" before you have searched in "
+                f"{self.language}."
             )
         rows = [f"{h.path}:{h.start}-{h.end} | {h.crumb or h.title} | L{h.snippet_line}: {h.snippet}" for h in hits]
         return wrap(_cut(rows, self.caps.search_chars, "hits cut"))
@@ -179,7 +182,7 @@ def make_tools(session: KbSession) -> list[Tool]:
 
     docs = {
         "tree": "List the knowledge base's folders and files (path | ~tokens | what it answers). `path` opens one directory; `depth` is 1-4.",
-        "search": "Search the knowledge base. Use the knowledge base's own language and terms. Returns `path:first-last | heading | L<n>: snippet`; open the best with kb_read. `path_prefix` limits it to a directory; `limit` is at most 15.",
+        "search": "Search the knowledge base. The query must be in the language of the files (translate the user's question first; the user's own language finds nothing), a few key terms, no full sentence. If nothing is found, retry with synonyms. Returns `path:first-last | heading | L<n>: snippet`; open the best with kb_read. `path_prefix` limits it to a directory; `limit` is at most 15.",
         "outline": "Headings of one file with line ranges and sizes. Use it on a long file before reading.",
         "read": "Read lines of one file (at most 200 lines or 12000 characters per call, with a footer saying where to continue), or the `section` whose heading matches. Cite what you used as `path:line`.",
     }
@@ -194,7 +197,9 @@ def prompt_block(base: KnowledgeBase, language: str, caps: Caps, prefix: str = "
     tree = render_tree(base.entries(), "", 2, caps.prefix_tree_chars)
     text = f"""## Knowledge base (version {base.version()})
 You have a read-only knowledge base: markdown files, written in {language}. Users may write in any language.
-- Look things up with kb_search, kb_outline and kb_read; kb_tree shows more of the folders. Search with {language} terms: try 2-3 phrasings, and add the user's own words for names and codes.
+- Look things up with kb_search, kb_outline and kb_read; kb_tree shows more of the folders.
+- Answer questions about the product only from the knowledge base: call kb_search first, every time, even when the question looks easy or the tree seems to answer it.
+- The search index holds {language} text only. Before every kb_search, translate the user's question into {language}: a query in another language finds nothing. Search with a few {language} key terms (not a sentence), try 2-3 phrasings or synonyms, and add the user's own words only for names and codes. A search with no matches means the wording is wrong, not that the answer is missing: retry in {language} before you say the knowledge base is silent.
 - Read a ranged slice, not a whole file: kb_search, then kb_outline for a long file, then kb_read with start_line/end_line or section.
 - Answer in the language the user wrote in. Cite what you used as `path:line` (for example `guides/setup.md:42`). Cite only files you opened with kb_read.
 - If the knowledge base does not say, say so; do not guess.

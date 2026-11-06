@@ -64,7 +64,7 @@ class Report:
     def ok(self) -> bool:
         return not self.missing
 
-    def add(self, case: dict, ranked: list[str]) -> None:
+    def add(self, case: dict, ranked: list[str], queries: list[str] | None = None) -> None:
         gold = gold_of(case)
         top = ranked[: self.k]
         hit = bool(gold & set(top))
@@ -74,7 +74,7 @@ class Report:
             t.hits += hit
             t.rr += rr
         if not hit:
-            self.misses.append({"q": case["q"], "lang": case.get("lang", "?"), "gold": sorted(gold), "got": ranked[:3]})
+            self.misses.append({"q": case["q"], "lang": case.get("lang", "?"), "gold": sorted(gold), "got": ranked[:3], **({"queries": queries} if queries else {})})
 
     def lines(self) -> list[str]:
         out = [f"[{self.mode}] cases {self.total.cases}  recall@{self.k} {self.total.hits}/{self.total.cases} = {self.total.recall:.0%}  MRR {self.total.mrr:.2f}"]
@@ -82,7 +82,7 @@ class Report:
             t = self.by_lang[lang]
             out.append(f"  {lang}: recall@{self.k} {t.hits}/{t.cases} = {t.recall:.0%}  MRR {t.mrr:.2f}")
         out += [f"gold not in the base: {g}" for g in self.missing]
-        out += [f"miss [{m['lang']}] {m['q']!r}: wanted {m['gold']}, got {m['got']}" for m in self.misses]
+        out += [f"miss [{m['lang']}] {m['q']!r}: wanted {m['gold']}, got {m['got']}" + (f", searched {m['queries']}" if m.get("queries") else "") for m in self.misses]
         out += [f"error: {e}" for e in self.errors]
         return out
 
@@ -142,7 +142,8 @@ async def run_agent(kind: Any, cases: list[dict], model: Any, *, deps: Any = Non
                 err = str(getattr(ev, "message", "") or getattr(ev, "code", "error"))
         if err:
             rep.errors.append(f"{c['q']!r}: {err}")
-        rep.add(c, ranked_paths(out.tool_calls))
+        queries = [str((call.get("input") or {}).get("query", "")) for call in out.tool_calls if call["name"] == "kb_search"]
+        rep.add(c, ranked_paths(out.tool_calls), queries)
     return rep
 
 
