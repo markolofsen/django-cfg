@@ -21,7 +21,7 @@ It is an explicit switch on purpose: an app with a `SITE_URL` and no `sso` keeps
 
 **2. The sign-in host is a small app** (`auth.reforms.ai`) with the `AuthLayout` at `/auth` and the same `NEXT_PUBLIC_AUTH_HOST`: that value equal to its own host switches it to "I am the sign-in", so it never redirects (no loop) and needs no session for its pages. The other apps, the public `reforms.ai` site included, keep a `/auth` route only so an old link lands somewhere; it never shows the form and redirects at once. Public pages need no session and work without one: only the guard, an expired session or the middleware's `protect` list send anyone to the host.
 
-**3. Google / GitHub**: register one redirect URI, `https://auth.reforms.ai/auth?provider=google`. Followers never start OAuth, so they need no URI. Remove the old per-subdomain URIs when every app has updated. `manage.py oauth_check` lists what the backend expects.
+**3. Google / GitHub**: register one redirect URI (reforms.ai: done), `https://auth.reforms.ai/auth?provider=google`. Followers never start OAuth, so they need no URI. Remove the old per-subdomain URIs when every app has updated. `manage.py oauth_check` lists what the backend expects.
 
 **4. Next.js middleware** (optional, removes the flash of a protected page):
 

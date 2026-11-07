@@ -43,8 +43,20 @@ export default function RootLayout({ children }) {
 }
 ```
 
-Nothing else is required — capture starts on mount and ingest points at
-`/cfg/monitor/ingest/` on the same origin.
+Capture starts on mount, and ingest posts to `/cfg/monitor/ingest/` on the
+API origin. **The origin must be known**: `devtools={{ baseUrl }}`, or in
+`BaseApp` the `auth.apiUrl` (derived automatically), or `apiUrl` for an
+`auth={false}` public app, or `NEXT_PUBLIC_API_URL` at build time (in turbo it
+must be listed in `env`, an undeclared variable is `undefined` in the client
+bundle). With none of them, ingest is on but nothing can be sent: devtools
+logs one console warning naming the fix, and `window.devtools.status()` shows
+`baseUrl: ''`.
+
+```tsx
+<BaseApp project="site" auth={false} apiUrl={process.env.NEXT_PUBLIC_API_URL}>
+```
+
+Precedence: `devtools.baseUrl`, then `apiUrl`, then `auth.apiUrl`, then `NEXT_PUBLIC_API_URL`.
 
 ---
 
@@ -63,6 +75,18 @@ log.info('step changed', { step })
 
 In the browser console the same API is available as `window.devtools`
 (`window.devtools.status()`, `window.devtools.error('test')`).
+
+### Check that it reaches Django
+
+- `window.devtools.status()` returns `{ ingest, baseUrl, queued, sent, failed, lastError, lastSentAt, circuitOpen }`
+  (and prints it): `failed > 0` with `lastError` says why, `circuitOpen` means ingest is paused for
+  60 s after three failed sends.
+- `await window.devtools.ping()` sends one `info` event, `devtools ping`, now, and resolves with
+  `status()`. django_monitor logs it and never alerts on it.
+- On the server: `python manage.py monitor_tail --frontend` shows it
+  ([management commands](/features/modules/django-monitor/management-commands)). Browser events are
+  logged at every level (`monitor.log`, logger `django_cfg.monitor.frontend`), not only errors;
+  `grep FRONTEND` finds nothing because the event types are `JS_ERROR`, `WARNING`, ...
 
 ---
 

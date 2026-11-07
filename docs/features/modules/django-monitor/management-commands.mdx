@@ -32,4 +32,15 @@ to run. Without `DJANGO_CFG_LOG_DIR`, events are JSON lines on stdout.
 - **[Overview](/features/modules/django-monitor)** — Architecture and quick start
 - **[Frontend devtools](/features/modules/django-monitor/devtools)** — Browser capture
 
-TAGS: django_monitor, management-commands, monitor_status
+## `monitor_tail`
+
+Print the last events from `monitor.log`, no docker and no grep.
+
+```bash
+python manage.py monitor_tail                   # last 20 events
+python manage.py monitor_tail -n 50 --frontend  # last 50 browser events
+```
+
+One line per event: time, `frontend` or `server`, level, event type, message, page URL. `--frontend` keeps only what arrived through `POST /cfg/monitor/ingest/` (all levels, including the `devtools ping` from `window.devtools.ping()`). Without a log directory it says so and you read the container log. Nothing is stored by the command.
+
+TAGS: django_monitor, management-commands, monitor_status, monitor_tail
