@@ -1,0 +1,82 @@
+---
+title: "One sign-in host for subdomains"
+description: "A dedicated sign-in host (auth.reforms.ai) holds the only sign-in page and the only Google redirect URI; every other host, the public site included, sends visitors there and gets them back."
+---
+
+# One sign-in host for subdomains
+
+[Single sign-on](/frontend/single-sign-on) already shares the session between `reforms.ai` and `my.reforms.ai` through cookies. This page adds the other half: **one place to sign in**. A signed-out visitor on any host of the family (`reforms.ai`, `my.`, `hub.`, ...) who needs a session is sent to `https://auth.reforms.ai/auth?next=<where they were>`, signs in there (Google, e-mail code, password, 2FA) and comes back. Sign-out on any host ends the session on all of them.
+
+Off by default. An app that does not set the host behaves as before.
+
+## Set up
+
+**1. Every app of the family** (the sign-in app included): one block, no variable. The host is `auth.` + the registrable domain of `NEXT_PUBLIC_SITE_URL` (`https://my.reforms.ai` → `auth.reforms.ai`), which every app already has.
+
+```tsx
+<BaseApp auth={{ sso: true }}>{children}</BaseApp>
+```
+
+It is an explicit switch on purpose: an app with a `SITE_URL` and no `sso` keeps its own sign-in. To use another label or host: `sso: { authLabel: 'id' }` or `sso: { authHost: 'login.reforms.ai' }`; the variable `NEXT_PUBLIC_AUTH_HOST` overrides both (list it in turbo's `env`: that list is an allow-list and an undeclared variable arrives `undefined`). On `localhost` there is no apex, so nothing is derived and SSO stays off.
+
+**2. The sign-in host is a small app** (`auth.reforms.ai`) with the `AuthLayout` at `/auth` and the same `NEXT_PUBLIC_AUTH_HOST`: that value equal to its own host switches it to "I am the sign-in", so it never redirects (no loop) and needs no session for its pages. The other apps, the public `reforms.ai` site included, keep a `/auth` route only so an old link lands somewhere; it never shows the form and redirects at once. Public pages need no session and work without one: only the guard, an expired session or the middleware's `protect` list send anyone to the host.
+
+**3. Google / GitHub**: register one redirect URI, `https://auth.reforms.ai/auth?provider=google`. Followers never start OAuth, so they need no URI. Remove the old per-subdomain URIs when every app has updated. `manage.py oauth_check` lists what the backend expects.
+
+**4. Next.js middleware** (optional, removes the flash of a protected page):
+
+```ts
+// middleware.ts
+import { createSsoMiddleware } from '@djangocfg/nextjs/auth/middleware';
+
+export const middleware = createSsoMiddleware({
+  protect: ['/private'],          // prefixes that need a session
+  allow: ['/private/shared'],     // open exceptions inside them
+});
+export const config = { matcher: ['/((?!_next|api|.*\\..*).*)'] };
+```
+
+A request for a protected path without the cookie pair gets a 307 to the host with `next`; on the sign-in host a visitor who is already signed in and opens `/auth?next=…` is sent straight back. The check is presence only: the API decides whether the token is valid.
+
+**5. Backend**: nothing to set. Declare the sites (`SiteConfig`) as before: `reforms.ai` covers every subdomain for hosts, CORS, CSRF and the OAuth gate. The server twin of the `next` check is `django_cfg.core.site.safe_next_url(raw)` for any host endpoint that redirects.
+
+## What the package does
+
+| Moment | Behaviour |
+|---|---|
+| Signed out, protected page on `my.` (guard, `RedirectPage`, expired session) | `window.location` to `https://auth.reforms.ai/auth?next=<page>` |
+| Opens `my.reforms.ai/auth` | Preloader, then the same redirect (`next` kept if it is valid) |
+| Sign-in on the auth host | form as usual; on success the saved `next` (with `sso_ret=1`) is the target |
+| Already signed in on the host and opens `/auth?next=…` | straight to `next` (with `sso_ret=1`) |
+| Back on `my.` with `sso_ret=1` and a session | the marker is removed from the address bar |
+| Back on `my.` with `sso_ret=1` and **no** session | `auth.…/auth?next=…&sso_error=cookie`: the form with a message, no more bouncing |
+| Sign-out anywhere | cookies on `.reforms.ai` removed; goes to the host's `/auth` **without** `next` |
+
+`useAuth().sso` tells a component where it is: `{ enabled, isAuthHost, authOrigin, authPath, apex, reason }`.
+
+## Why it cannot loop
+
+The host sends a signed-in visitor back to `next`; a follower with no session sends them to the host. If the shared cookie never reaches the follower (cookies for the whole domain blocked, a browser that refuses `Domain=.reforms.ai`, a host outside the apex), those two rules alone would bounce forever. Two things stop it:
+
+- The host adds `sso_ret=1` to the `next` it sends people back to. A follower that sees `sso_ret` and **still** has no session knows the cookie did not arrive, and goes to the host with `sso_error=cookie` instead of the plain URL.
+- On the host, `sso_error` switches off both the middleware's "already signed in, go back" shortcut and the client's "leave `/auth` when signed in" effect, so the form is shown with a message ("the sign-in did not carry over to the site you came from").
+
+A **stale** cookie (the refresh token is dead but the cookie is still there) costs one extra hop and no more: the host sends the visitor on, the follower's client fails the refresh and clears the cookie on `.reforms.ai` (the same Domain it was written with), then goes back to the host, which now finds no cookie and shows the form. The middleware only checks that the cookie exists, so the client is what notices it is dead.
+
+## Which `next` is accepted
+
+`next` comes from a URL anyone can craft, so it is checked on the host before it is saved and again in the middleware (Python: `safe_next_url`). It must be a plain path (`/private/x`) or `https://` + the apex or one of its subdomains. Refused: another host, encoded slashes (`/%2f%2fevil.com`, `host%2f@evil.com`), lookalikes (`evilreforms.ai`, `reforms.ai.evil.com`), `//evil.com`, `/\evil.com`, `user@host`, a port, `http:`, `javascript:`, `data:`, spaces and control characters (also percent-encoded), values over 2048 characters, and the sign-in page itself (so `…/auth?next=https://evil.com` cannot chain). The target page's own redirect parameters are its business; keep them checked the same way.
+
+## Local development
+
+`localhost` has no common apex with `reforms.ai`, so with `sso: true` no host can be derived from `http://localhost:3000` and SSO stays off: the app uses its own `/auth` as before. With an explicit `authHost` or the variable set, the page logs one console line, `[django-cfg] single sign-in is off: "localhost" is not under reforms.ai…`. Nothing to unset. To try the full round trip locally, use names under one domain (`*.reforms.test` in `/etc/hosts` with `NEXT_PUBLIC_AUTH_HOST=auth.reforms.test` needs https, since the check refuses `http:`).
+
+## Cookies, CSRF and CORS
+
+The cookies are the ones described in [Single sign-on](/frontend/single-sign-on): `Domain=.reforms.ai` (the apex, forced by the package on every host, so a Google sign-in that ends on `auth.reforms.ai` still leaves the cookie on `.reforms.ai`), `Path=/`, `SameSite=Lax`, `Secure`, written by the browser client. They are **not** `HttpOnly` and the API does not issue them: Django authenticates the `Authorization` header only and never reads them, which is why they open no CSRF surface. Requests to `api.reforms.ai` are cross-origin from every subdomain, so CORS must allow them (automatic for declared sites); no `credentials: include` is needed because the token travels in the header. An `HttpOnly` session issued by the API would need a server-side cookie reader, CSRF protection and a different refresh flow; it is not part of this.
+
+## Limits
+
+- One registrable domain. `reforms.ai` and another brand's domain stay separate sessions.
+- A subdomain you do not control can read the cookie. Keep untrusted tenants off the domain.
+- Preview URLs (`*.vercel.app`) are outside the apex: they use their own sign-in.

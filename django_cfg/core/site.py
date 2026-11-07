@@ -631,6 +631,69 @@ def resolve_source_url(raw: Optional[str]) -> Optional[str]:
     return (_by_origin(raw, registry) or registry[0]).site_url
 
 
+_NEXT_FORBIDDEN = re.compile(r"[\x00-\x20\x7f-\x9f\\]")
+_NEXT_ENCODED_CONTROL = re.compile(r"%(?:0[0-9a-f]|1[0-9a-f]|5c|7f)", re.IGNORECASE)
+_HOST_LABEL = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
+
+
+def safe_next_url(
+    raw: Optional[str],
+    site: Optional[Site] = None,
+    *,
+    auth_path: str = "/auth",
+    allow_http: bool = False,
+) -> Optional[str]:
+    """``raw`` (a ``next`` / return-to URL, attacker-controlled) when it is safe to redirect to, else None.
+
+    Safe is: a plain path (``/private/x?y=1``, not ``//host`` and not ``/\\host``), or an absolute
+    ``https`` URL whose origin one of the declared sites ``accepts`` (a declared origin or a subdomain
+    of its registrable domain; ``site`` narrows it to one). Refused: userinfo (``a@b``), a port the
+    site does not declare, any other scheme (``javascript:``, ``data:``, ``http:`` unless ``allow_http``),
+    backslashes, whitespace and control characters (also percent-encoded), values over 2048
+    characters, and the sign-in page itself (a nested ``?next=`` would chain to a second target).
+
+    Same rules as ``safeNext`` in ``@djangocfg/api`` (``auth/utils/sso.ts``); the cases in
+    ``tests/core/test_safe_next_url.py`` and ``sso.test.ts`` are the same list.
+    """
+    if not isinstance(raw, str) or not raw or len(raw) > 2048:
+        return None
+    if _NEXT_FORBIDDEN.search(raw) or _NEXT_ENCODED_CONTROL.search(raw):
+        return None
+
+    def is_auth(path: str) -> bool:
+        norm = re.sub(r"^/[a-z]{2}(?=/|$)", "", path).rstrip("/") or "/"
+        return norm == auth_path or norm.startswith(auth_path + "/")
+
+    if raw.startswith("/"):
+        if raw.startswith("//") or re.match(r"^/(?:%2f|%2e%2f)", raw, re.IGNORECASE):
+            return None
+        parts = urlsplit(raw)
+        return None if is_auth(parts.path) else raw
+
+    try:
+        parts = urlsplit(raw)
+        host = (parts.hostname or "").lower()
+        port = parts.port
+    except ValueError:
+        return None
+    if parts.scheme != "https" and not (allow_http and parts.scheme == "http"):
+        return None
+    if parts.username is not None or parts.password is not None or not host:
+        return None
+    if not all(_HOST_LABEL.match(label) for label in host.split(".")):
+        return None
+    if is_auth(parts.path):
+        return None
+    origin = normalize_origin(f"{parts.scheme}://{host}" + (f":{port}" if port else ""))
+    if origin is None:
+        return None
+    candidates = (site,) if site is not None else sites()
+    if not any(c.accepts(origin) for c in candidates):
+        return None
+    rest = parts.path + (f"?{parts.query}" if parts.query else "") + (f"#{parts.fragment}" if parts.fragment else "")
+    return origin + (rest or "/")
+
+
 def site_key(request: Any) -> str:
     """The key of ``request``'s site. Jobs take the key, not the request."""
     return site_for(request).key

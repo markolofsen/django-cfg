@@ -22,6 +22,8 @@ The API key, OAuth state, redirect URL and drafts are **not** shared; they stay 
 
 Users signed in before the upgrade keep their session: on first load the client copies a pair found in `localStorage` into the cookies and removes it.
 
+Want one place to sign in as well (a dedicated `auth.` host, one Google redirect URI)? See [One sign-in host](/frontend/single-sign-in-host).
+
 ## Sign-out
 
 `auth.clearTokens()` expires the cookie on the shared domain **and** its host-only twin, and clears `localStorage` too. Other subdomains notice on their next focus (`focus`, `visibilitychange`, and `cookieStore` change events where the browser has them); a tab already looking at the page updates at once where `cookieStore` exists.
