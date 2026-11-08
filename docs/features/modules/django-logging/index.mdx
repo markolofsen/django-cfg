@@ -145,6 +145,12 @@ stats = clean_old_logs(days=7)
 
 1. Without `logging.dir` / `DJANGO_CFG_LOG_DIR` there is **no `django.log` by design**; general logs are on stdout (`docker compose logs`). Only the monitor file `djangocfg/monitor.log` is written by default.
 2. If even `monitor.log` is missing, django-cfg found no writable directory (`logging.dir`/env, `/var/log/<app>`, the per-user state dir) and logged **one warning**: `django-cfg found no writable directory for the monitor event log ...`. Monitor events are then on stdout only. A configured `dir` that cannot be written logs `cannot write to the configured log directory` and falls back to the defaults.
+
+In a container the monitor events live in stdout only (the file is usually not written and `docker logs` holds them). Read them with the pipe form of `monitor_tail`, which skips banners, tracebacks and other loggers:
+
+```bash
+docker logs <container> 2>&1 | python manage.py monitor_tail --stdin [-n N] [--frontend] [--user ID] [--fingerprint HEX] [--session ID]
+```
 3. Fix: give the app user a writable directory and point to it, e.g. `DJANGO_CFG_LOG_DIR=/var/log/myapp` with `chown` to the container user, or mount a volume there. A default inside the project tree is never used.
 
 ```python

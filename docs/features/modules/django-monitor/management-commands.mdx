@@ -44,8 +44,17 @@ python manage.py monitor_tail --fingerprint 9f3a1c0b22d4e7aa   # one error
 python manage.py monitor_tail --session <session_id>           # one browser tab
 ```
 
+**In a container there is no file: the events live in stdout, so read them from the pipe.** `--stdin` (or `-`) reads the events from standard input instead of `monitor.log`:
+
+```bash
+docker logs reforms-django 2>&1 | python manage.py monitor_tail --stdin
+docker logs reforms-django 2>&1 | python manage.py monitor_tail --stdin -n 50 --frontend --user 42
+```
+
+On stdin only JSON lines whose logger starts with `django_cfg.monitor` count; startup banners, tracebacks and other loggers are skipped silently. Filters, `-n` (filters first) and the output (`user=<id>`) are the same as for the file. The command reads stdin only when `--stdin` is given, so it never hangs waiting for input. With no log file and no `--stdin` it prints where it looked and the `docker logs <container> 2>&1 | ...` line to use.
+
 The three filters combine (all must match) and apply before the `-n` cut. A line shows `user=<id>` when the event had one.
 
-One line per event: time, `frontend` or `server`, level, event type, message, page URL, `user=<id>`. `--frontend` keeps only what arrived through `POST /cfg/monitor/ingest/` (all levels, including the `devtools ping` from `window.devtools.ping()`). Without a log directory it says so and you read the container log. Nothing is stored by the command.
+One line per event: time, `frontend` or `server`, level, event type, message, page URL, `user=<id>`. `--frontend` keeps only what arrived through `POST /cfg/monitor/ingest/` (all levels, including the `devtools ping` from `window.devtools.ping()`). Without a log file it says where it looked and shows the docker one-liner. Nothing is stored by the command.
 
 TAGS: django_monitor, management-commands, monitor_status, monitor_tail
