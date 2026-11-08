@@ -7,9 +7,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 
 # Use django_cfg's JWT auth (NOT stock simplejwt JWTAuthentication): it adds
-# last-login tracking, is_active checks, AND DPoP (RFC 9449) proof enforcement.
-# Hardcoding stock JWTAuthentication here silently bypassed DPoP for every
-# ClientAPIMixin endpoint.
+# last-login tracking, is_active checks and the sign-out cutoff.
 from django_cfg.middleware.authentication import JWTAuthenticationWithLastLogin
 
 
@@ -38,7 +36,7 @@ class ClientAPIMixin:
     """
 
     authentication_classes = [
-        JWTAuthenticationWithLastLogin,  # JWT (Bearer) + DPoP enforcement
+        JWTAuthenticationWithLastLogin,  # JWT (Bearer)
         SessionAuthentication,           # Django session
     ]
     permission_classes = [IsAuthenticated]

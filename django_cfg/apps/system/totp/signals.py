@@ -1,8 +1,8 @@
 """Django signals for TOTP 2FA events."""
+import logging
 
 from django.dispatch import Signal, receiver
 
-from django_cfg.utils import get_logger
 
 # Define signals
 two_factor_enabled = Signal()  # providing_args=["user", "device"]
@@ -11,7 +11,7 @@ two_factor_verified = Signal()  # providing_args=["user", "device", "session"]
 two_factor_failed = Signal()  # providing_args=["user", "attempts", "ip_address"]
 backup_code_used = Signal()  # providing_args=["user", "remaining_count"]
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @receiver(two_factor_enabled)

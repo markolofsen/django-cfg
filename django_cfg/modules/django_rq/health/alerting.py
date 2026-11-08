@@ -11,16 +11,15 @@ Maps a :class:`QueueStatus` severity to the module-level shortcuts of
 When ``RQHealthConfig.alert_chat_id`` is set, messages are routed to that chat
 via a :class:`DjangoTelegram` instance instead of the project default.
 """
-
 from __future__ import annotations
+import logging
 
 from typing import Optional
 
-from django_cfg.utils import get_logger
 
 from .evaluator import QueueStatus, Severity
 
-logger = get_logger("rq.health")
+logger = logging.getLogger(__name__)
 
 # Relative path to the django-rq admin UI; prefixed onto context links.
 RQ_ADMIN_PATH = "/django-rq/"

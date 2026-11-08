@@ -1,15 +1,15 @@
 """Backup recovery code service."""
+import logging
 
 from typing import List, Optional
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
-from django_cfg.utils import get_logger
 
 from ..models import BackupCode
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 

@@ -2,7 +2,7 @@
 
 Error capture and Telegram alerting for django-cfg. Captures unhandled exceptions, ERROR-level log records, slow queries, RQ job failures, and browser events.
 
-**No persistence.** There are no models, no migrations, no external database. Every captured event becomes a JSON log line (`logs/djangocfg/monitor.log`) and — when Telegram is configured — joins a batched Telegram alert. That is the whole storage story: events are **not stored and not queryable**.
+**No persistence.** There are no models, no migrations, no external database. Every captured event becomes a flat JSON log line (stdout; `<log dir>/djangocfg/monitor.log` when `DJANGO_CFG_LOG_DIR` is set) and — when Telegram is configured — joins a batched Telegram alert. That is the whole storage story: events are **not stored and not queryable**.
 
 ## Module Structure
 
@@ -48,9 +48,9 @@ All capture paths are fire-and-forget — they never raise, never break the call
 
 **Always on, zero-config.** `is_enabled()` returns `True` unconditionally. There is no config model and no enable flag. The app is always added to `INSTALLED_APPS` (`core/builders/apps_builder.py`) and the ingest URL is always mounted.
 
-**Two sinks per event.** `capture_server_event()` writes one JSON line via `_log_event()` (the standard django-cfg logging pipeline → `logs/djangocfg/monitor.log`, midnight rotation, 30 days) and then calls `notify_server_event()` to queue a Telegram alert. `capture_frontend_events()` does the same per event, but only `level == "error"` events join the Telegram batch (as `FRONTEND_ERROR`).
+**Two sinks per event.** `capture_server_event()` writes one JSON line via `_log_event()` (the standard django-cfg logging pipeline → stdout and, with a log directory, `monitor.log`: size-rotated, bounded backups; repeats of one fingerprint within a minute are folded into one `monitor.repeat` line) and then calls `notify_server_event()` to queue a Telegram alert. `capture_frontend_events()` does the same per event, but only `level == "error"` events join the Telegram batch (as `FRONTEND_ERROR`).
 
-**Nothing is persisted.** No `models.py`, no `migrations/`, no rows written anywhere. `PAGE_VIEW` / `PERFORMANCE` / `CONSOLE` events are logged and dropped — there is no dashboard, no query API, no analytics.
+**Nothing is persisted.** No `models.py`, no `migrations/`, no rows written anywhere. `PAGE_VIEW` / `PERFORMANCE` / `CONSOLE` (and info/debug) browser events are not logged by default (`MONITOR_LOG_VERBOSE` turns it on) and are never stored — there is no dashboard, no query API, no analytics.
 
 **Fingerprints group alerts, not rows.** A fingerprint (`sha256[:16]` of `qualname::module::func`, or of the normalized SQL for slow queries) is used by the alert batcher to collapse repeats into a single alert line with a count. It does not key any table.
 
@@ -102,7 +102,7 @@ Frontend (ingest): `JS_ERROR`, `NETWORK_ERROR`, `ERROR`, `WARNING`, `PAGE_VIEW`,
 python manage.py monitor_status
 ```
 
-Prints whether Telegram alerts are on, the path of `logs/djangocfg/monitor.log`, and its current line count / size.
+Prints whether Telegram alerts are on, where the events go (stdout or the `monitor.log` path), its line count / size, and how many browser events the ingest ceiling dropped.
 
 ## Errors
 

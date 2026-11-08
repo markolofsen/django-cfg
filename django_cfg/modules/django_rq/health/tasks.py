@@ -5,16 +5,15 @@ RQ task entry point for the queue-health monitor.
 registers as a periodic scheduled job. It is a thin wrapper around
 :class:`QueueHealthMonitor` and returns a JSON-friendly summary dict.
 """
-
 from __future__ import annotations
+import logging
 
 from typing import Dict
 
-from django_cfg.utils import get_logger
 
 from .monitor import QueueHealthMonitor
 
-logger = get_logger("rq.health")
+logger = logging.getLogger(__name__)
 
 
 def run_queue_health_check(dry_run: bool = False) -> Dict[str, object]:

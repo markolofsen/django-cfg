@@ -47,9 +47,11 @@ flowchart TD
     API   --> TG
 ```
 
-Every event is one JSON line on the `django_cfg.monitor` logger: stdout/stderr by
-default, and also `<log dir>/djangocfg/monitor.log` when `DJANGO_CFG_LOG_DIR` is set
-(rotation is `logrotate`'s job; see [Django Logging](/features/modules/django-logging)).
+Every event is one flat JSON line (the fields at the top level) on the `django_cfg.monitor`
+logger: stdout/stderr, and also `djangocfg/monitor.log` in `logging.dir`, else `/var/log/<app>`,
+else the per-user state dir (10 MB x 5, size-rotated and pruned; see
+[Django Logging](/features/modules/django-logging)). An error that repeats is logged once a
+minute, and one `django_cfg.monitor.repeat` line carries the count.
 Error-level events additionally join a Telegram batch when Telegram is set up.
 
 ---
@@ -132,8 +134,29 @@ summarizes today's events from `monitor.log`.
 The frontend counterpart is the [`@djangocfg/devtools`](/features/modules/django-monitor/devtools)
 package. It captures JS errors, console errors and failed requests in the
 browser and posts them in batches to `POST /cfg/monitor/ingest/`, where they are
-enriched and written to `monitor.log` like any server event (error-level ones
-also alert). It ships an in-app debug panel for inspecting the same feed live.
+enriched and written to the log like any server event (error-level ones
+also alert). The endpoint is bounded: 64 KB per request, 60 requests and 300 events a minute
+per client, 3000 events a minute per project. Behind a proxy set
+`MONITOR_CLIENT_IP_HEADER` (`CF-Connecting-IP`, or `X-Forwarded-For`, read from the right) so a
+client is not the proxy. It ships an in-app debug panel for inspecting the same feed live.
+
+### Which user hit the error
+
+When the visitor is signed in, the browser sends its access token (`Authorization: Bearer ...`) and the event line gets
+`"user_id": "<primary key>"` next to `session_id`. Signed out, or with a bad or expired token, the field is absent and the
+event is still accepted (202): the endpoint never answers 401 or 403 and never looks at a session cookie. Only the
+primary key is logged (an integer or a uuid, whatever your user model uses), never an e-mail or a name; a `user_id` in the
+request body is ignored. A fingerprint identifies the error, `session_id` one browser tab, `user_id` the person.
+
+- A repeat of the same fingerprint inside the 60 s window is counted, not logged, so the line carries the user of the
+  *first* occurrence; the `django_cfg.monitor.repeat` line has no user.
+- Rate limits stay per client address, and a signed-in user is counted too (60 requests and 300 events a minute), so one
+  account cannot hide behind many addresses.
+- **Privacy:** a primary key is a personal identifier. If your site publishes a privacy page, say that browser errors are
+  reported with the user's id when signed in. Pick the log retention (`logging.retain_days`) with that in mind.
+- For ids you need: the token must reach the browser the way `@djangocfg/api` stores it (it does, after sign-in),
+  `Authorization` must be in the CORS allowed headers for the API origin (it is in the default `cors_allow_headers`;
+  if you replaced that list, add it back).
 
 Browser events are the one path where an alert may show no fingerprint token —
 server-side capture always stamps one, but frontend ingest doesn't compute one

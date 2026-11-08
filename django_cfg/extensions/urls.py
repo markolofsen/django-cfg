@@ -10,6 +10,7 @@ Convention:
 - urls_system.py -> /cfg/{prefix}/system/ (system API)
 - urls_<name>.py -> /cfg/{prefix}/<name>/ (custom suffix)
 """
+import logging
 
 import glob
 import importlib
@@ -18,12 +19,11 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
-from django_cfg.utils import get_logger
 
 if TYPE_CHECKING:
     from django.urls import URLPattern, URLResolver
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def discover_url_modules(

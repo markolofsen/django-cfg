@@ -84,9 +84,30 @@ In the browser console the same API is available as `window.devtools`
 - `await window.devtools.ping()` sends one `info` event, `devtools ping`, now, and resolves with
   `status()`. django_monitor logs it and never alerts on it.
 - On the server: `python manage.py monitor_tail --frontend` shows it
-  ([management commands](/features/modules/django-monitor/management-commands)). Browser events are
-  logged at every level (`monitor.log`, logger `django_cfg.monitor.frontend`), not only errors;
+  ([management commands](/features/modules/django-monitor/management-commands)). Browser `error` and
+  `warning` events and the ping are logged (stdout, and `monitor.log` in the log directory; logger
+  `django_cfg.monitor.frontend`), as one flat JSON line. Plain `info`/`debug`, `PAGE_VIEW`, `PERFORMANCE`
+  and `CONSOLE` events are not logged unless `MONITOR_LOG_VERBOSE` is on. The endpoint takes 64 KB per
+  request, 60 requests and 300 events a minute per client (set `MONITOR_CLIENT_IP_HEADER` behind a
+  proxy), and logs a repeating fingerprint once a minute;
   `grep FRONTEND` finds nothing because the event types are `JS_ERROR`, `WARNING`, ...
+
+### Who was signed in
+
+A regular flush (the 5 s timer, a full buffer, `ping()`) adds `Authorization: Bearer <access token>` when the visitor is
+signed in. The token is read from the key `@djangocfg/api` writes (`cfg.auth.access_token`: the shared cookie, else
+local or session storage); with none, nothing is added. The request body is unchanged. django_monitor then logs
+`user_id` (the primary key) on the event line; a missing, expired or invalid token only makes the event anonymous.
+Details, privacy note and server side: [django_monitor, "Which user hit the error"](/features/modules/django-monitor).
+
+Two things to know:
+
+- The flush on page unload (`keepalive`, `text/plain`) is sent **without** the header. `Authorization` is not
+  CORS-safelisted, and adding it would bring back the preflight that the unload flush must avoid, so a crash that closes
+  the tab is reported anonymously. Everything sent while the page lives carries the user.
+- The API origin must allow the `Authorization` request header in CORS. It is in django-cfg's default
+  `cors_allow_headers`; a project that overrode the list adds `authorization` (or sets `cors_extra_headers`). Without it
+  the browser blocks the request on the preflight, and devtools reports `failed` in `status()`.
 
 ---
 

@@ -35,6 +35,8 @@ so a config that never enabled them needs no change.
   **DPoP is unaffected.** Sender-constrained tokens (RFC 9449) are a separate
   subsystem that never depended on response encryption, and the `cryptography`
   dependency stays for it. See [JWT & DPoP](/features/built-in-apps/user-management/accounts/jwt).
+
+  *Later note: DPoP itself was removed on 8 Nov 2026; see [Security → DPoP was removed](/configuration/security#dpop-was-removed).*
 </Callout>
 
 **`settings.DJANGO_STORAGE`** is also gone. It was documented as a fallback for

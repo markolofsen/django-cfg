@@ -4,9 +4,10 @@ django_monitor — error capture + Telegram alerting for django-cfg.
 Zero-config. Captures unhandled exceptions, ERROR logs, slow queries,
 RQ failures and browser events (via /cfg/monitor/ingest/):
 
-- every event is written as a JSON line through the standard logging
+- every event is written as one flat JSON line through the standard logging
   pipeline (stdout by default; <log dir>/djangocfg/monitor.log when
-  DJANGO_CFG_LOG_DIR is set);
+  DJANGO_CFG_LOG_DIR is set); a repeating fingerprint is logged once per
+  minute and the rest are counted in a `django_cfg.monitor.repeat` line;
 - when TelegramConfig is set on DjangoConfig, error events are batched
   into Telegram alerts automatically. No Telegram — no alerts, nothing
   to configure either way.
@@ -44,14 +45,35 @@ def _event_to_dict(event) -> dict:
 
 
 def _log_event(stream: str, record: dict) -> None:
-    """One JSON line through the standard logging pipeline (logger django_cfg.monitor.*)."""
-    from django_cfg.modules.django_logging import get_logger
+    """One flat JSON line through the standard logging pipeline (logger django_cfg.monitor.*).
 
-    # Fully-qualified name — get_logger uses it as-is (its caller-path
-    # auto-detection would otherwise rewrite the name and misroute the file).
-    get_logger(f"django_cfg.monitor.{stream}").info(
-        json.dumps(record, ensure_ascii=False, default=str)
+    The event's fields are top-level keys of the line (JSON format); the text format
+    keeps the event as JSON after the prefix. Lines are capped at 16 KB.
+    """
+    import logging
+
+    from django_cfg.modules.django_logging.config import MONITOR_EVENT_ATTR
+
+    from .limits import fit_line
+
+    record = fit_line(record)
+    # Fully-qualified name: the monitor handlers are routed by it.
+    logging.getLogger(f"django_cfg.monitor.{stream}").info(
+        json.dumps(record, ensure_ascii=False, default=str),
+        extra={MONITOR_EVENT_ATTR: record},
     )
+
+
+def _write(stream: str, record: dict) -> None:
+    """Log ``record`` unless the same fingerprint was logged in the last minute (then it is counted)."""
+    from .dedupe import derive_fingerprint, should_log
+
+    fingerprint = record.get("fingerprint") or derive_fingerprint(
+        record.get("event_type", ""), record.get("message", ""), record.get("stack_trace", "")
+    )
+    record["fingerprint"] = fingerprint
+    if should_log(stream, fingerprint, record, _log_event):
+        _log_event(stream, record)
 
 
 def capture_server_event(event) -> None:
@@ -60,7 +82,7 @@ def capture_server_event(event) -> None:
         from .capture.notify import notify_server_event
 
         record = _event_to_dict(event)
-        _log_event("server", record)
+        _write("server", record)
         notify_server_event(
             record.get("event_type", ""),
             record.get("message", ""),
@@ -72,13 +94,19 @@ def capture_server_event(event) -> None:
 
 
 def capture_frontend_events(events: list[dict]) -> None:
-    """Capture a batch of normalized frontend events. Never raises."""
+    """Capture a batch of normalized frontend events. Never raises.
+
+    Events below ``warning`` (info/debug, PAGE_VIEW, PERFORMANCE, CONSOLE) are not
+    logged unless ``MONITOR_LOG_VERBOSE`` is on; a ``devtools.ping()`` always is.
+    """
     try:
         from .capture.notify import notify_server_event
+        from .limits import worth_logging
 
         for ev in events:
             record = _event_to_dict(ev)
-            _log_event("frontend", record)
+            if worth_logging(record):
+                _write("frontend", record)
             # Error-level browser events join the same Telegram batch.
             if record.get("level") == "error":
                 notify_server_event(

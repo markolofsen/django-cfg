@@ -3,12 +3,12 @@ Currency list sync service.
 
 Sync currencies from predefined list or external API.
 """
+import logging
 
 from typing import Any
 
-from django_cfg.modules.django_logging import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 # Complete currency list with metadata

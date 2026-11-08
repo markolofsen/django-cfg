@@ -3,6 +3,7 @@ RQ tasks for currency management.
 
 Thin wrappers around services for RQ scheduler.
 """
+import logging
 
 from typing import Any, List, Optional
 
@@ -90,10 +91,9 @@ def mark_stale_rates(max_age_hours: int = 24) -> dict[str, Any]:
     from django.utils import timezone
     from datetime import timedelta
 
-    from django_cfg.modules.django_logging import get_logger
     from .models import CurrencyRate
 
-    logger = get_logger(__name__)
+    logger = logging.getLogger(__name__)
 
     cutoff = timezone.now() - timedelta(hours=max_age_hours)
     count = CurrencyRate.objects.filter(

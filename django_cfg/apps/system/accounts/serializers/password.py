@@ -28,8 +28,8 @@ class PasswordLoginSerializer(TokenObtainPairSerializer):
 
     Subclasses SimpleJWT so the field/validation contract stays theirs, but
     replaces ``validate()`` — the token pair itself is minted by the view via
-    ``mint_tokens_for_request`` so the DPoP binding and token
-    lifetime match OTP, OAuth and TOTP exactly.
+    ``RefreshToken.for_user`` so the token
+    lifetime matches OTP, OAuth and TOTP exactly.
     """
 
     username_field = CustomUser.USERNAME_FIELD  # "email"

@@ -30,45 +30,9 @@ router.register(r'otp', OTPViewSet, basename='otp')
 class CustomTokenRefreshView(TokenRefreshView):
     """Refresh JWT token.
 
-    DPoP-aware: when the incoming refresh token is key-bound (`cnf.jkt`), the
-    rotated access/refresh in the response are re-stamped with the same `cnf`
-    (stock SimpleJWT drops it from the derived access), and a matching DPoP
-    proof is required on the refresh request — so a stolen refresh token can't
-    be used to mint fresh tokens.
+    Stock SimpleJWT refresh. A ``cnf`` claim left in a token issued by an
+    older release is ignored: the token refreshes like any other.
     """
-
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        try:
-            from rest_framework import status as drf_status
-            from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
-            from django_cfg.middleware.dpop import (
-                DPoPError,
-                is_dpop_enabled,
-                rebind_refresh_response,
-            )
-
-            if response.status_code == 200 and isinstance(response.data, dict):
-                incoming = request.data.get("refresh")
-                incoming_token = RefreshToken(incoming) if incoming else None
-                if is_dpop_enabled() and incoming_token:
-                    cnf = incoming_token.get("cnf")
-                    if cnf:
-                        rebind_refresh_response(response.data, cnf, request)
-                response._is_rendered = False
-                response.render()
-        except DPoPError:
-            from rest_framework.response import Response
-            from rest_framework import status as drf_status
-            return Response(
-                {"detail": "Invalid DPoP proof for token refresh."},
-                status=drf_status.HTTP_401_UNAUTHORIZED,
-            )
-        except Exception:
-            # Never break refresh on an unexpected rebind error — fall back to
-            # the stock (unbound) response rather than 500.
-            pass
-        return response
 
 
 @extend_schema(tags=["cfg_accounts_auth"])
@@ -82,8 +46,7 @@ class CustomTokenBlacklistView(TokenBlacklistView):
 
 
 token_patterns = [
-    # Password grant. Mints through the same helper as OTP/OAuth/TOTP, so the
-    # pair carries the same DPoP `cnf` binding.
+    # Password grant.
     path('', PasswordLoginView.as_view(), name='token_obtain_pair'),
     path('refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('blacklist/', CustomTokenBlacklistView.as_view(), name='token_blacklist'),

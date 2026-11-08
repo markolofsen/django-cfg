@@ -4,12 +4,12 @@ Cleanup tasks for the accounts app.
 Registered as RQ scheduled jobs via DjangoRQConfig._collect_module_schedules().
 All tasks are safe to run multiple times (idempotent).
 """
+import logging
 
 from django.utils import timezone
 
-from django_cfg.utils import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def cleanup_expired_otps() -> dict:

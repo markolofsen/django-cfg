@@ -10,17 +10,19 @@ Django-CFG logs the Django / 12-factor way: **records go to stdout/stderr and th
 ## Features
 
 - **stdout by default** — no `logs/` folder in the project tree
-- **File is opt-in** — `DJANGO_CFG_LOG_DIR` or `DjangoConfig(logging=...)`; `WatchedFileHandler`, so `logrotate` owns rotation
-- **Text or JSON** — `DJANGO_CFG_LOG_FORMAT=json` writes one object per line, for containers
+- **File is opt-in** — `DJANGO_CFG_LOG_DIR` or `DjangoConfig(logging=...)`; size-rotated with a bounded backup count, safe with several workers, and pruned at boot
+- **JSON off a terminal** — one object per line when stderr is not a terminal (a container, systemd, a pipe), text at your terminal; `DJANGO_CFG_LOG_FORMAT` overrides
 - **Your `LOGGING` wins** — django-cfg only generates the `LOGGING` dict; override it in the project as usual
 - **Sanitized extra context** — reserved `LogRecord` attributes in `extra={}` are prefixed with `ctx_`
 
 ## Quick Start
 
-```python
-from django_cfg.modules.django_logging import get_logger
+django-cfg has no logger wrapper. Use the standard library:
 
-logger = get_logger("django_cfg.myapp")
+```python
+import logging
+
+logger = logging.getLogger(__name__)
 
 logger.debug("Processing started")
 logger.info("User created", extra={"user_id": 42})
@@ -28,34 +30,24 @@ logger.warning("Rate limit approaching", extra={"endpoint": "/api/users"})
 logger.error("Payment failed", extra={"order_id": "ORD-123"})
 ```
 
-`get_logger()` automatically detects the caller's file path to build the logger name when called without arguments from within `django_cfg` code:
+Loggers named under `django_cfg` (every django-cfg module uses `__name__`) get the handlers and level from the generated `LOGGING` dict; your own loggers follow your project's `LOGGING`.
 
-```python
-# In a file at django_cfg/modules/my_module/service.py
-logger = get_logger()
-# auto-resolves to: django_cfg.my_module (or similar based on path)
-
-# Explicit name
-logger = get_logger("django_cfg.payments.stripe")
-```
-
-<Callout type="info">
-`get_logger()` rewrites a name that doesn't start with `django_cfg` based on the
-**caller's** file path. To be certain which logger an event lands on, pass a
-fully-qualified name (`get_logger("django_cfg.payments.stripe")`).
+<Callout type="warning">
+**Migration:** `get_logger` (from `django_cfg`, `django_cfg.utils` and `django_cfg.modules.django_logging`) and `DjangoLogger` were removed with no alias. Replace `get_logger(name)` with `logging.getLogger(name)` (or `logging.getLogger(__name__)`) and drop the import. The old helper rewrote short names to `django_cfg.<path>`; a plain name is now used as given.
 </Callout>
 
 ## Where logs go
 
+django-cfg decides this itself; a project that sets nothing gets a sane result.
+
 | You set | Result |
 | --- | --- |
-| nothing | stdout/stderr only; `django_cfg` at `WARNING` (`DEBUG` when `debug=True`) |
-| `DJANGO_CFG_LOG_DIR=/var/log/myapp` | also `django.log` and `djangocfg/monitor.log` in that directory |
-| `DJANGO_CFG_LOG_FILE=1` | file in the per-user log dir (`platformdirs.user_log_dir(project)`) |
+| nothing | General logs: stdout/stderr (JSON off a terminal), `django_cfg` at `WARNING` (`DEBUG` when `debug=True`). Monitor events also go to a small rotating file `djangocfg/monitor.log` (10 MB x 5) in `/var/log/<app>` if writable, else the per-user state dir (`~/.local/state/<app>/log` on Linux, `~/Library/Logs/<app>` on macOS). If neither is writable: no file, events on stdout only, one warning |
+| `logging.dir` or `DJANGO_CFG_LOG_DIR=/var/log/myapp` | also `django.log` there, and `djangocfg/monitor.log` in that directory (monitor events only in `monitor.log`, not twice) |
 
-The directory is created when the first record is written, not at import. If it cannot be written, django-cfg logs one warning and keeps logging to stdout.
+The directory is created when the first record is written, not at import. If it cannot be written, django-cfg logs one warning and keeps logging to stdout. Nothing is ever written inside the project tree, and `<cwd>/logs` is not used.
 
-Precedence for the log directory: config `logging.log_dir`, then `DJANGO_CFG_LOG_DIR`, then the default (none). `project` in the per-user paths is the top package of `DJANGO_SETTINGS_MODULE`, else the working directory name, so projects on one machine do not share state.
+Precedence for every setting: explicit config (`logging.*`), then the env var, then the built-in default. `<app>` is the top package of `DJANGO_SETTINGS_MODULE`, else the working directory name, so projects on one machine do not share state.
 
 ## Configuration
 
@@ -64,34 +56,52 @@ from django_cfg import DjangoConfig, DjangoLoggingConfig
 
 class Config(DjangoConfig):
     logging: DjangoLoggingConfig = DjangoLoggingConfig(
+        dir="/var/log/myapp",  # None = no general file; the monitor file uses the default chain
         level="INFO",          # django_cfg loggers; default WARNING, DEBUG with debug=True
-        format="json",         # "text" (default) or "json"
-        log_dir="/var/log/myapp",  # None = stdout only
+        rotate_mb=10,          # rotate a file at this size; 0 = never (leave it to logrotate)
+        backups=5,             # rotated files kept per log
+        retain_days=14,        # boot prune: age of rotated files
     )
 ```
 
-| Field | Type | Default | Description |
-| --- | --- | --- | --- |
-| `level` | `str \| None` | `None` | Level of the `django_cfg` loggers |
-| `format` | `"text" \| "json"` | `"text"` | `json` is one object per line |
-| `log_dir` | `str \| None` | `None` | Write log files here. `None` = stdout only |
+| Field | Type | Default | Env | Description |
+| --- | --- | --- | --- | --- |
+| `dir` | `str \| None` | `None` | `DJANGO_CFG_LOG_DIR` | Log directory (adds `django.log`, hosts the monitor file) |
+| `level` | `str \| None` | `None` | `DJANGO_CFG_LOG_LEVEL` | Level of the `django_cfg` loggers |
+| `format` | `"text" \| "json"` | json off a terminal | `DJANGO_CFG_LOG_FORMAT` | `json` is one object per line |
+| `rotate_mb` | `int` | `10` | `DJANGO_CFG_LOG_ROTATE_MB` | Size at which a django-cfg log file rotates; `0` = never |
+| `backups` | `int` | `5` | `DJANGO_CFG_LOG_BACKUPS` | Rotated files kept per log (`.1` ... `.N`) |
+| `retain_days` | `int` | `14` | `DJANGO_CFG_LOG_RETAIN_DAYS` | Boot prune: rotated files older than this are deleted |
 
-### Environment variables
+### Other environment variables
 
 | Variable | Meaning |
 | --- | --- |
-| `DJANGO_CFG_LOG_DIR` | Directory for log files (turns file logging on) |
-| `DJANGO_CFG_LOG_FILE` | `1` = log to a file in the per-user log dir |
-| `DJANGO_CFG_LOG_FORMAT` | `text` (default) or `json` |
-| `DJANGO_CFG_LOG_LEVEL` | Level of the `django_cfg` loggers |
-| `DJANGO_CFG_LOG_ROTATE` | `1` = rotate daily inside the process (`TimedRotatingFileHandler`, 30 days) |
+| `DJANGO_CFG_LOG_DIR_MAX_BYTES` | Boot prune: the oldest rotated files go until the directory is under this. Default 500 MB; one warning if it is still over |
+| `DJANGO_CFG_LOG_PRUNE` | `0` = no boot prune |
 | `DJANGO_LOG_TO_TMP` | Deprecated and ignored. Logs one warning. The `/tmp/djangocfg/debug.log` mirror is gone |
 
-<Callout type="warning">
-`DJANGO_CFG_LOG_ROTATE=1` is for a single process only. With several workers the
-processes race on rollover and lose lines. Prefer the default `WatchedFileHandler`
-plus `logrotate`, or no file at all.
+`DJANGO_CFG_LOG_FILE`, `DJANGO_CFG_LOG_ROTATE`, `DJANGO_CFG_LOG_MAX_BYTES` and `DJANGO_CFG_LOG_KEEP_DAYS` no longer exist (use `DJANGO_CFG_LOG_DIR`, `..._ROTATE_MB`, `..._RETAIN_DAYS`). The config field `log_dir` is now `dir`.
+
+<Callout type="info">
+Rotation is by size and is safe with several workers: the rename happens under a
+file lock and only if the file is still over the limit, so one worker rotates and the
+others reopen. If `logrotate` already owns the file, set `rotate_mb=0`.
 </Callout>
+
+### Pruning
+
+At boot, in a background thread and at most once a day per directory, django-cfg deletes
+rotated files it wrote (`django.log.*`, `djangocfg/*`, and leftovers such as `apps.log`)
+that are older than 14 days or beyond the backup count, then the oldest until the
+directory is under 500 MB. A live file is never deleted. It never delays boot. If the
+directory is still over the cap you get one warning naming the directory. By hand:
+
+```bash
+python manage.py log_prune                       # dry run: lists files and sizes
+python manage.py log_prune --apply               # deletes
+python manage.py log_prune --dir /var/log/myapp --days 7 --keep 3 --max-mb 200 --apply
+```
 
 ### Removed fields
 
@@ -99,19 +109,11 @@ plus `logrotate`, or no file at all.
 
 ## Upgrading from the `logs/` folder
 
-For one release, if no override is set and `./logs` already exists in the working directory, django-cfg keeps writing there and logs **one warning** that names `DJANGO_CFG_LOG_DIR`. To keep the old location, set it explicitly. The next release drops the fallback. See the [CHANGELOG](https://github.com/markolofsen/django-cfg/blob/main/CHANGELOG.md) for the full note.
+django-cfg no longer writes to `./logs` and has no fallback or warning for it. A host that bind-mounts `/app/logs` can drop the mount: general logs are on stdout, and monitor events are in the per-user or `/var/log/<app>` file. To keep files in a known place, set `logging.dir` or `DJANGO_CFG_LOG_DIR` (outside the project tree). `python manage.py log_prune --dir /app/logs --apply` clears old dated files. See the [CHANGELOG](https://github.com/markolofsen/django-cfg/blob/main/CHANGELOG.md) for the full note.
 
 ## Public API
 
-### `get_logger(name="")`
-
-Returns a standard `logging.Logger`. It adds no handlers.
-
-```python
-from django_cfg.modules.django_logging import get_logger
-
-logger = get_logger("django_cfg.payments")
-```
+There is no logger factory; the module exports two plain functions and a constant.
 
 ### `sanitize_extra(extra)`
 
@@ -128,13 +130,28 @@ logger.info("Event", extra=safe)
 
 ### `clean_old_logs(days=30, logs_dir=None)`
 
-Deletes log files older than `days` from the log directory (default: the resolved one). Returns `{"deleted": 0, "bytes": 0, "error": ...}` when there is no log directory. Not needed with `logrotate`.
+Deletes log files older than `days` from the log directory (default: the resolved one). Returns `{"deleted": 0, "bytes": 0, "error": ...}` when there is no log directory. Rotation and the boot prune already do this for django-cfg's own files; prefer `manage.py log_prune`.
 
 ```python
 from django_cfg.modules.django_logging import clean_old_logs
 
 stats = clean_old_logs(days=7)
 # {"deleted": 12, "bytes": 45678, "human_readable": "0.04 MB"}
+```
+
+## Troubleshooting
+
+### No log file is created
+
+1. Without `logging.dir` / `DJANGO_CFG_LOG_DIR` there is **no `django.log` by design**; general logs are on stdout (`docker compose logs`). Only the monitor file `djangocfg/monitor.log` is written by default.
+2. If even `monitor.log` is missing, django-cfg found no writable directory (`logging.dir`/env, `/var/log/<app>`, the per-user state dir) and logged **one warning**: `django-cfg found no writable directory for the monitor event log ...`. Monitor events are then on stdout only. A configured `dir` that cannot be written logs `cannot write to the configured log directory` and falls back to the defaults.
+3. Fix: give the app user a writable directory and point to it, e.g. `DJANGO_CFG_LOG_DIR=/var/log/myapp` with `chown` to the container user, or mount a volume there. A default inside the project tree is never used.
+
+```python
+from django_cfg.core.utils.runtime_paths import resolve_log_dir, resolve_monitor_log_dir
+
+print(resolve_log_dir())          # None = no django.log
+print(resolve_monitor_log_dir())  # None = nothing writable, stdout only
 ```
 
 ## See Also

@@ -3,12 +3,12 @@ NavigationManager — orchestrates all navigation sections.
 
 Conditional logic lives here; section content lives in sections/.
 """
+import logging
 
 import importlib
 import traceback
 from typing import Any, Dict, List
 
-from django_cfg.utils import get_logger
 from django_cfg.modules.base import BaseCfgModule
 
 from django_cfg.modules.django_unfold.models.navigation import NavigationSection
@@ -23,7 +23,7 @@ from django_cfg.modules.django_unfold.navigation.sections import (
     build_totp_section,
 )
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class NavigationManager(BaseCfgModule):

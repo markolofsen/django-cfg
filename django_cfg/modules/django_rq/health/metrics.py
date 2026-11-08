@@ -6,19 +6,18 @@ returns a plain :class:`QueueMetrics` dataclass. It never raises — on failure
 it returns a ``QueueMetrics`` with ``collection_error`` set so the caller can
 still log/alert sensibly.
 """
-
 from __future__ import annotations
+import logging
 
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from django_cfg.utils import get_logger
 
 from .scheduler import collect_scheduler_lag
 
-logger = get_logger("rq.health")
+logger = logging.getLogger(__name__)
 
 
 @dataclass

@@ -6,8 +6,8 @@ scheduled with ``transaction.on_commit`` so a worker can never run before the
 row it announces is visible, and it runs on a daemon thread so it works with no
 queue configured.
 """
-
 from __future__ import annotations
+import logging
 
 import threading
 from typing import Optional
@@ -15,9 +15,8 @@ from typing import Optional
 from django.db import transaction
 from django.utils import timezone
 
-from django_cfg.utils import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _run_inline() -> bool:

@@ -17,16 +17,15 @@ Tab sources, in precedence order (first wins on a slug collision):
   2. Built-in django-cfg app tabs (e.g. analytics), for apps that are enabled.
   3. Auto-discovered extension tabs.
 """
-
 from __future__ import annotations
+import logging
 
 from typing import List, Optional
 
-from django_cfg.utils import get_logger
 
 from .models import DashboardConfig, DashboardTab
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _builtin_tabs() -> List[DashboardTab]:

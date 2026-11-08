@@ -1,4 +1,5 @@
 """Views for TOTP device management."""
+import logging
 
 from django.db import transaction
 from drf_spectacular.utils import extend_schema
@@ -6,7 +7,6 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from django_cfg.utils import get_logger
 
 from ..models import DeviceStatus, TOTPDevice
 from ..serializers.device import (
@@ -17,7 +17,7 @@ from ..serializers.device import (
 )
 from ..services import BackupCodeService, TOTPService
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class DeviceViewSet(viewsets.GenericViewSet):

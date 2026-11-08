@@ -21,12 +21,14 @@ def ingest_frontend_events(
     *,
     ip_address: str = "",
     user_id: Optional[str] = None,
+    origin: str = "",
 ) -> int:
     """Enrich and store a batch of validated frontend events.
 
     Returns the number of events accepted (0 when monitoring is disabled).
     """
     from django_cfg.modules.django_monitor import capture_frontend_events, is_enabled
+    from django_cfg.modules.django_monitor.limits import shrink_event
     from django_cfg.modules.django_monitor.utils import parse_user_agent
 
     if not is_enabled():
@@ -35,7 +37,7 @@ def ingest_frontend_events(
     batch: list[dict] = []
     for ev in events:
         try:
-            normalized = dict(ev)
+            normalized = shrink_event(dict(ev))
             ua = (ev.get("user_agent") or "")[:500]
             browser, os_name, device_type = parse_user_agent(ua)
             normalized.update(
@@ -45,6 +47,8 @@ def ingest_frontend_events(
                 os=os_name,
                 device_type=device_type,
             )
+            if origin:
+                normalized["origin"] = origin[:200]
             batch.append(normalized)
         except Exception:
             logger.exception("django_monitor: failed to normalize ingest event")

@@ -4,8 +4,8 @@ Split out of the original monolithic ``otp_service.py`` so the request
 and verify paths can be tested and iterated on independently. Public
 entry point: ``OTPService.request_otp`` (see service.py).
 """
-
 from __future__ import annotations
+import logging
 
 import traceback
 from typing import Optional
@@ -13,7 +13,6 @@ from typing import Optional
 from django.db import transaction
 from django.utils import timezone
 
-from django_cfg.utils import get_logger
 
 from ...models import CustomUser, OTPSecret
 from ..brute_force_service import OTPRequestThrottle
@@ -21,7 +20,7 @@ from ..email_validator import EmailValidationError, validate_email_address
 from .delivery import dispatch_otp_delivery
 from .types import ConsentCapture, OTPRequestResult
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @transaction.atomic

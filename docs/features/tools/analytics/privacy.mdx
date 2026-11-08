@@ -111,7 +111,8 @@ Analytics does not store IPs. **Your other infrastructure probably does.**
 
 - nginx / Cloudflare access logs
 - Sentry and error trackers
-- `django_monitor` (it captures the request IP with the error)
+- `django_monitor` (it captures the request IP with the error, and the user's id when the visitor is signed in; the id is a
+  primary key, a personal identifier, so a privacy page should say that browser errors are reported with it)
 
 Audit the whole path, not just this app. A privacy posture is only as strong as its weakest log file.
 

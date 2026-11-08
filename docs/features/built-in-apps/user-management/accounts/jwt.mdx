@@ -1,6 +1,6 @@
 ---
 title: JWT Configuration
-description: Type-safe JWT token configuration via JWTConfig — secure defaults, lifetimes, rotation, and DPoP sender-constrained tokens.
+description: Type-safe JWT token configuration via JWTConfig — secure defaults, lifetimes, rotation and revocation.
 ---
 
 # JWT Configuration
@@ -65,18 +65,11 @@ jwt = JWTConfig(
 )
 ```
 
-### DPoP — sender-constrained tokens (RFC 9449)
+### DPoP was removed
 
-```python
-jwt = JWTConfig(dpop_enabled=True)    # default: False
-```
-
-Binds each issued token to a **non-extractable** browser key, so a stolen token
-(XSS, logs, a copied cURL) **can't be replayed** — the attacker lacks the key
-and any proof they forge is rejected. No BFF/proxy needed. Pair with the frontend
-flag `createBaseNextConfig({ dpop: true })`. See the dedicated
-[DPoP & token security](#dpop--make-a-stolen-token-useless) section below and the
-`@djangocfg/nextjs` `@docs/DPOP.md` guide.
+`JWTConfig` has no `dpop_enabled` field any more, and a leftover `dpop_enabled=...` fails
+validation. Tokens issued earlier with a `cnf` claim keep working: the claim is ignored.
+Why and what to change in a project: [Security → DPoP was removed](/configuration/security#dpop-was-removed).
 
 ---
 
@@ -91,7 +84,6 @@ it for free:
 | Long refresh | "log in once, stay logged in" | `refresh_token_lifetime_days=90` |
 | Rotation | every refresh issues a fresh refresh token | `rotate_refresh_tokens=True` |
 | Blacklist | a reused (stolen) refresh token is revoked | `blacklist_after_rotation=True` |
-| DPoP (opt-in) | a stolen token is unusable elsewhere | `dpop_enabled=True` |
 
 Per-environment overrides are just plain config — e.g. tighten in production:
 
@@ -101,7 +93,7 @@ class MyConfig(DjangoConfig):
 
     def model_post_init(self, __context):
         if not self.debug:  # production
-            self.jwt = JWTConfig(access_token_lifetime_minutes=15, dpop_enabled=True)
+            self.jwt = JWTConfig(access_token_lifetime_minutes=15)
 ```
 
 ---
@@ -155,67 +147,6 @@ the whole-site run).
 
 ---
 
-## DPoP — make a stolen token useless
-
-> **Intuition — the stamp that can't be copied.** Think of the token as a *club
-> pass*. Normally "whoever holds the pass gets in" — so a stolen pass works.
-> DPoP gives you a magic *stamp* (a private key) that is glued to your desk: you
-> can stamp papers with it, but you can never take it out or copy it. The pass is
-> printed with "belongs to the owner of THIS stamp", and at the door you must
-> stamp a fresh paper on the spot. A thief who steals the pass can't stamp with
-> your stamp → the pass is a worthless piece of paper. That "glued stamp" is a
-> Web Crypto key with `extractable: false`.
-
-With `dpop_enabled=True`, the access token carries `cnf: { jkt }` binding it to a
-P-256 key the browser generates with `extractable: false` (Web Crypto, kept in
-IndexedDB — **JS, including XSS, can sign with it but never read it**). Every
-request sends a fresh `DPoP` proof signed by that key; the backend verifies the
-signature and that its thumbprint matches the token's `cnf.jkt`.
-
-### Full flow
-
-```mermaid
-sequenceDiagram
-    participant B as Browser (holds the key)
-    participant API as Django API
-
-    Note over B: generate P-256 key, extractable:false → IndexedDB
-
-    B->>API: login (OTP/2FA) + DPoP proof (public key inside)
-    API-->>B: token with cnf.jkt = thumbprint(public key)
-    Note over API: token is now BOUND to that key
-
-    loop every request
-        B->>API: Authorization: Bearer {token}<br/>DPoP: fresh proof signed by the key
-        API->>API: verify proof signature<br/>thumbprint(proof key) == token.cnf.jkt ?
-        API-->>B: 200 (match) / 401 (mismatch)
-    end
-```
-
-### Why a stolen token is useless
-
-```mermaid
-sequenceDiagram
-    participant A as Attacker (stole the token)
-    participant API as Django API
-    A->>API: Bearer {stolen} + forged DPoP proof (attacker's key)
-    API-->>A: 401 — proof key != token cnf.jkt
-    Note over A: token alone is worthless without the in-browser key
-```
-
-- **No BFF/proxy** — the frontend still calls Django directly, even cross-origin.
-- **Mixed clients OK** — tokens without `cnf` (CLI / server / `X-API-Key`) take
-  the plain Bearer path unchanged.
-- **For scripts**, use an API key (`X-API-Key`), not a browser token. A copied
-  Bearer under DPoP just returns 401 (the proof can't leave the browser).
-
-Backend mechanics live in `django_cfg/middleware/dpop.py` and the auth class
-`JWTAuthenticationWithLastLogin`. ⚠️ A view that hardcodes stock
-`rest_framework_simplejwt` `JWTAuthentication` bypasses DPoP — use the django-cfg
-auth class / built-in mixins.
-
----
-
 ## Supported Algorithms
 
 | Type | Algorithms |
@@ -224,9 +155,8 @@ auth class / built-in mixins.
 | RSA (asymmetric) | `RS256`, `RS384`, `RS512` |
 | ECDSA (asymmetric) | `ES256`, `ES384`, `ES512` |
 
-The token's own signing algorithm is independent of DPoP (DPoP proofs always use
-the client's ES256 key), so keeping `HS256` for tokens is fine. For multi-service
-verification without sharing a secret, `RS256` is convenient:
+Keeping `HS256` for tokens is fine. For multi-service verification without
+sharing a secret, `RS256` is convenient:
 
 ```python
 jwt = JWTConfig(algorithm="RS256")
@@ -263,11 +193,10 @@ jwt = JWTConfig()   # secure defaults; everything configured automatically
 config.jwt.get_effective_access_token_lifetime()
 # → datetime.timedelta(days=365)       # default; JWTConfig.short_lived() gives 30 min
 
-# Raw Django settings (incl. the DPoP flag)
+# Raw Django settings
 settings = config.jwt.to_django_settings(config.secret_key)
 settings['SIMPLE_JWT']['ACCESS_TOKEN_LIFETIME']   # → timedelta(minutes=30)
-settings['DJANGO_CFG_DPOP_ENABLED']               # → False (or True)
 ```
 
-TAGS: jwt, JWTConfig, DPoP, token rotation, simplejwt, token lifetime, sender-constrained
+TAGS: jwt, JWTConfig, token rotation, simplejwt, token lifetime
 DEPENDS_ON: [index, otp]

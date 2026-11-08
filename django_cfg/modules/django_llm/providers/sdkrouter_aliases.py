@@ -17,7 +17,7 @@ in production is a STALL, not an error — 161,931 requests over 7 days with zer
 errors but a P99 of 27.7s. A per-attempt deadline moves off a stalled model,
 and it needs somewhere to move to.
 
-Chain heads as of 2026-10-12, read from `llm-proxy/src/resolve.mjs` — recorded
+Chain heads as of 2026-11-08, read from `llm-proxy/src/resolve.mjs` — recorded
 so drift is visible, not so anyone depends on it:
 
     @cf            -> cf/zai-org/glm-4.7-flash
@@ -27,6 +27,7 @@ so drift is visible, not so anyone depends on it:
     @cf-coder      -> cf/zai-org/glm-4.7-flash
     @cf-reasoning  -> cf/zai-org/glm-5.3-flash
     @cf-json       -> cf/ibm-granite/granite-4.0-h-micro
+    @cf-json-oss   -> cf/openai/gpt-oss-20b
     @cf-long       -> cf/zai-org/glm-5.3-flash
     @cf-vision     -> cf/zai-org/glm-5.3-flash
     @cf-translate  -> cf/nvidia/nemotron-3-120b-a12b
@@ -37,8 +38,8 @@ for one chain let a retune move one and not the other. The proxy now enforces
 `every alias names a distinct chain` in its own tests, so they cannot come back
 as duplicates.
 
-All TEN aliases the proxy publishes are mirrored here (verified against
-`llm-proxy/src/resolve.mjs` on 2026-10-12). The proxy additionally accepts
+All ELEVEN aliases the proxy publishes are mirrored here (verified against
+`llm-proxy/src/resolve.mjs` on 2026-11-08). The proxy additionally accepts
 `@auto`, which is deliberately NOT an alias on either side: it is a per-request
 decision rather than a lane — image part -> `@cf-vision`, tools -> `@cf-coder`,
 very long -> `@cf-long`, 6+ messages -> `@cf-coder`, else `@cf-cheap`. Mirroring
@@ -133,6 +134,13 @@ class CF:
     #: usually honours — and usually is not a constraint.
     JSON: Final = "@cf-json"
 
+    #: Structured output with `gpt-oss-20b` at the head and `granite` as the
+    #: fall-through (the proxy's `cf-json-oss`). For callers that measured it
+    #: better on their own schema; everyone else wants :attr:`JSON`, because
+    #: `gpt-oss-20b` is the weakest of the three on schema work (8/10 in the
+    #: proxy's bench).
+    JSON_OSS: Final = "@cf-json-oss"
+
     #: The 1.31M-context pair. Reach for it when the conversation cannot fit
     #: anywhere else, not because more context is free — it is not.
     LONG: Final = "@cf-long"
@@ -159,6 +167,7 @@ CF_ALIASES: Final[frozenset[str]] = frozenset(
         CF.CODER,
         CF.REASONING,
         CF.JSON,
+        CF.JSON_OSS,
         CF.LONG,
         CF.VISION,
         CF.TRANSLATE,

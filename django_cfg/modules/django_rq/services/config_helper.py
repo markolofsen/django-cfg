@@ -3,12 +3,12 @@ Helper functions for accessing Django-RQ configuration from django-cfg.
 
 Provides utilities to get RQ config and check if RQ is enabled.
 """
+import logging
 
 from typing import Optional
 
-from django_cfg.utils import get_logger
 
-logger = get_logger("rq.config")
+logger = logging.getLogger(__name__)
 
 
 def get_rq_config() -> Optional["DjangoRQConfig"]:

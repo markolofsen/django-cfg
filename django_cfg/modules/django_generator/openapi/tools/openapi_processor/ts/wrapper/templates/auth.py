@@ -9,9 +9,9 @@ Two render modes (selected per target via `auth_mode`):
   • `render_auth_ts` (jwt, default) — full store: token storage, reactive
     session snapshot (`getSnapshot`/`subscribe` for useSyncExternalStore),
     single write path (`setSession`), cross-store Web-Locks refresh,
-    auto-registered refresh handler, terminal-401 `onSessionExpired`, DPoP.
+    auto-registered refresh handler, terminal-401 `onSessionExpired`.
   • `render_auth_public_ts` (public) — token-free minimal store for clients
-    that only call public endpoints (no Authorization, no refresh, no DPoP).
+    that only call public endpoints (no Authorization, no refresh).
 
 Storage modes (jwt store only):
   • 'localStorage' (default) — JS-readable, simple, survives reload.
@@ -235,11 +235,6 @@ auth.setRefreshHandler(async (refresh) => {{
   try {{
     const url = `${{auth.getBaseUrl()}}${{REFRESH_ENDPOINT}}`;
     const headers: Record<string, string> = {{ 'Content-Type': 'application/json' }};
-    // Bound tokens (`cnf.jkt`) require a DPoP proof on the refresh call too.
-    if (dpopEnabled() && typeof window !== 'undefined') {{
-      const proof = await _makeDpopProof('POST', url);
-      if (proof) headers['DPoP'] = proof;
-    }}
     const res = await fetch(url, {{
       method: 'POST',
       headers,
@@ -866,120 +861,6 @@ function expireSession(response: Response, why: string): void {{
  *     headers: {{ 'X-API-Key': userKey }},
  *   }})
  */
-// ── DPoP (RFC 9449) — sender-constrained tokens ────────────────────────────
-//
-// When NEXT_PUBLIC_DPOP_ENABLED === 'true', the client holds a P-256 keypair
-// whose PRIVATE key is non-extractable (Web Crypto `extractable:false`) and
-// stored in IndexedDB. JS — including XSS — can sign with it but can NEVER read
-// it. Each request carries a fresh `DPoP` proof signed by that key; the backend
-// binds the token to the key (`cnf.jkt`) and rejects any request whose proof key
-// doesn't match. A stolen token is therefore useless to an attacker.
-//
-// Dormant unless the env flag is on — bearer-mode apps are unaffected.
-
-function dpopEnabled(): boolean {{
-  try {{
-    return typeof process !== 'undefined'
-      && process.env?.NEXT_PUBLIC_DPOP_ENABLED === 'true';
-  }} catch {{ return false; }}
-}}
-
-const _DPOP_DB = 'cfg.auth.dpop';
-const _DPOP_STORE = 'keys';
-const _DPOP_KEY_ID = 'dpop-ec-p256';
-
-function _idbOpen(): Promise<IDBDatabase> {{
-  return new Promise((resolve, reject) => {{
-    const req = indexedDB.open(_DPOP_DB, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(_DPOP_STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  }});
-}}
-
-function _idbGet(key: string): Promise<CryptoKeyPair | undefined> {{
-  return _idbOpen().then((db) => new Promise((resolve, reject) => {{
-    const tx = db.transaction(_DPOP_STORE, 'readonly');
-    const req = tx.objectStore(_DPOP_STORE).get(key);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  }}));
-}}
-
-function _idbPut(key: string, value: CryptoKeyPair): Promise<void> {{
-  return _idbOpen().then((db) => new Promise((resolve, reject) => {{
-    const tx = db.transaction(_DPOP_STORE, 'readwrite');
-    tx.objectStore(_DPOP_STORE).put(value, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  }}));
-}}
-
-/** Single-flight keypair init — the private key is created non-extractable. */
-let _dpopKeyPromise: Promise<CryptoKeyPair> | null = null;
-
-function _getDpopKeyPair(): Promise<CryptoKeyPair> {{
-  if (_dpopKeyPromise) return _dpopKeyPromise;
-  _dpopKeyPromise = (async () => {{
-    const existing = await _idbGet(_DPOP_KEY_ID).catch(() => undefined);
-    if (existing) return existing;
-    const pair = await crypto.subtle.generateKey(
-      {{ name: 'ECDSA', namedCurve: 'P-256' }},
-      false, // extractable:false — JS can sign but never export the private key
-      ['sign'],
-    );
-    // CryptoKey is structured-cloneable; IndexedDB persists it across reloads
-    // WITHOUT ever exposing raw key bytes to JS.
-    await _idbPut(_DPOP_KEY_ID, pair).catch(() => {{}});
-    return pair;
-  }})();
-  return _dpopKeyPromise;
-}}
-
-function _b64urlFromBytes(bytes: ArrayBuffer | Uint8Array): string {{
-  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-  let s = '';
-  for (let i = 0; i < arr.length; i++) s += String.fromCharCode(arr[i] ?? 0);
-  return btoa(s).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
-}}
-
-function _b64urlFromString(str: string): string {{
-  return _b64urlFromBytes(new TextEncoder().encode(str));
-}}
-
-/** ECDSA raw signature (r||s) → JOSE base64url (Web Crypto already returns raw). */
-async function _publicJwk(pub: CryptoKey): Promise<Record<string, string>> {{
-  const jwk = await crypto.subtle.exportKey('jwk', pub);
-  // Public components only — required RFC 7638 members for EC.
-  return {{ kty: 'EC', crv: 'P-256', x: jwk.x as string, y: jwk.y as string }};
-}}
-
-/** Build a DPoP proof JWT for this request (htm/htu/iat/jti), signed in-key. */
-async function _makeDpopProof(method: string, url: string): Promise<string | null> {{
-  try {{
-    const pair = await _getDpopKeyPair();
-    const jwk = await _publicJwk(pair.publicKey);
-    const header = {{ typ: 'dpop+jwt', alg: 'ES256', jwk }};
-    // htu = scheme://authority/path without query/fragment.
-    const withoutFragment = url.split('#')[0] ?? url;
-    const htu = withoutFragment.split('?')[0] ?? withoutFragment;
-    const jti =
-      (crypto.randomUUID && crypto.randomUUID()) ||
-      _b64urlFromBytes(crypto.getRandomValues(new Uint8Array(16)));
-    const payload = {{ htm: method.toUpperCase(), htu, iat: Math.floor(Date.now() / 1000), jti }};
-    const signingInput =
-      `${{_b64urlFromString(JSON.stringify(header))}}.${{_b64urlFromString(JSON.stringify(payload))}}`;
-    const sig = await crypto.subtle.sign(
-      {{ name: 'ECDSA', hash: 'SHA-256' }},
-      pair.privateKey,
-      new TextEncoder().encode(signingInput),
-    );
-    return `${{signingInput}}.${{_b64urlFromBytes(sig)}}`;
-  }} catch {{
-    return null; // never break a request because proof generation failed
-  }}
-}}
-
 export function installAuthOnClient(client: HeyClient): void {{
   if (_client) return; // idempotent
   _client = client;
@@ -994,13 +875,6 @@ export function installAuthOnClient(client: HeyClient): void {{
     if (token) request.headers.set('Authorization', `Bearer ${{token}}`);
 
 {_COMMON_REQUEST_HEADERS_TS}
-    // DPoP proof — sign a fresh per-request proof with the non-extractable key.
-    // Only in a browser, only when enabled. Failure is non-fatal (proof null).
-    if (dpopEnabled() && typeof window !== 'undefined') {{
-      const proof = await _makeDpopProof(request.method, request.url);
-      if (proof) request.headers.set('DPoP', proof);
-    }}
-
     return request;
   }});
 
@@ -1034,12 +908,6 @@ export function installAuthOnClient(client: HeyClient): void {{
     const retry = request.clone();
     retry.headers.set('Authorization', `Bearer ${{newToken}}`);
     retry.headers.set(RETRY_MARKER, '1');
-    // This retry uses raw fetch() and bypasses the request interceptor, so the
-    // DPoP proof must be re-attached here or a bound token would 401 on retry.
-    if (dpopEnabled() && typeof window !== 'undefined') {{
-      const proof = await _makeDpopProof(retry.method, retry.url);
-      if (proof) retry.headers.set('DPoP', proof);
-    }}
     try {{
       const retried = await fetch(retry);
       if (retried.status === 401) expireSession(retried, 'retry-401');
@@ -1063,7 +931,7 @@ def render_auth_public_ts() -> str:
     For generated clients that only call public endpoints (e.g. a frontend
     monitor's ingest API). Emits baseUrl / locale / timezone / API-key wiring
     and the APIError interceptor, but NO token storage, NO Authorization
-    header, NO refresh machinery, NO DPoP (~450 lines less than JWT mode).
+    header, NO refresh machinery (~450 lines less than JWT mode).
 
     The `auth` surface keeps the same method NAMES as JWT mode (token methods
     are inert no-ops) so the per-group `class API` facade compiles unchanged.
@@ -1075,7 +943,7 @@ def render_auth_public_ts() -> str:
     return f'''\
 // AUTO-GENERATED by django_generator / ts_extras.wrapper (authMode: public)
 // Token-free store for public-endpoint clients: no Authorization header, no
-// token storage, no refresh, no DPoP. Wired into the shared `client` from
+// token storage, no refresh. Wired into the shared `client` from
 // `client.gen.ts` via `installAuthOnClient(client)`.
 // DO NOT EDIT — re-run `make gen`.
 

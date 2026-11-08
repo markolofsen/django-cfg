@@ -164,7 +164,7 @@ class MyConfig(DjangoConfig):
     # cors_allow_headers: list = [...]               # REPLACES the default list
 ```
 
-The default list covers what django-cfg and its generated TypeScript client send: `authorization`, `content-type`, `x-csrftoken`, `x-api-key`, `dpop`, `x-timezone`, `x-client-time`, `x-auth-retry`, the chunked-upload headers (`x-chunk-*`, `x-is-last`, `x-total-chunks`) and `idempotency-key`. Any other header a frontend adds (a custom `fetch` wrapper, an extra interceptor) is covered by reflection; see [generated clients](/features/api-generation/generated-clients#custom-request-headers-and-cors).
+The default list covers what django-cfg and its generated TypeScript client send: `authorization`, `content-type`, `x-csrftoken`, `x-api-key`, `x-timezone`, `x-client-time`, `x-auth-retry`, the chunked-upload headers (`x-chunk-*`, `x-is-last`, `x-total-chunks`) and `idempotency-key`. Any other header a frontend adds (a custom `fetch` wrapper, an extra interceptor) is covered by reflection; see [generated clients](/features/api-generation/generated-clients#custom-request-headers-and-cors).
 
 ### Log lines
 
@@ -345,7 +345,6 @@ class MyConfig(DjangoConfig):
 | `refresh_token_lifetime_days` | `90` | Long — users "log in once", stay logged in. |
 | `rotate_refresh_tokens` | `True` | Each refresh issues a new refresh token. |
 | `blacklist_after_rotation` | `True` | A reused (stolen) refresh token is revoked. |
-| `dpop_enabled` | `False` | Opt-in sender-constrained tokens (see below). |
 
 > There is a single lifetime knob for access — **minutes** (the old `_hours`
 > field was removed). `None` means "max" (1 year). Override only if you must:
@@ -366,36 +365,39 @@ layer reduces a different risk, so no single failure is catastrophic:
    are far less likely to run in the first place. Apps declare the third parties
    they use by name instead of hand-editing origins — see
    [Frontend CSP vendors](#frontend-csp-vendors) below.
-3. **Bind the token to the client (DPoP).** When enabled, even an XSS-stolen
-   token can't be used elsewhere — see below.
-4. **Clean console for users, full logs for admins.** Verbose logs are gated by
+3. **Clean console for users, full logs for admins.** Verbose logs are gated by
    role at runtime; errors always reach the monitoring backend regardless.
 
-### DPoP — make a stolen token useless (RFC 9449)
+### DPoP was removed
 
-`dpop_enabled=True` turns on **sender-constrained tokens**. The browser holds a
-**non-extractable** key (Web Crypto, cannot be read even by your own JS) and signs
-a fresh proof per request; the backend binds the issued token to that key
-(`cnf.jkt`) and rejects any request whose proof doesn't match.
+DPoP (RFC 9449, sender-constrained tokens) was removed from django-cfg and from
+the `@djangocfg/*` packages on 8 Nov 2026. It was opt-in, off by default, and no
+project we run had switched it on. It also added a lot of moving parts for one
+protection: a key kept in IndexedDB, a signed proof on every request and on
+every refresh, a proof URL that had to match what the server saw behind a proxy,
+and a second code path in every mint point and every generated client. It did
+not stop XSS acting inside the page, so it was never a substitute for the CSP
+and the token lifetimes below.
 
-> Mental model: the token is a club pass stamped "belongs to the owner of THIS
-> stamp"; the stamp (private key) is glued to your browser and can't be copied,
-> so a stolen pass is worthless. Full flow + diagrams: **JWT Configuration →
-> DPoP**.
+What replaces it is what was always underneath: short or revocable tokens,
+rotation with blacklist, `manage.py logout_all`, and the CSP headers. The access
+token is a plain Bearer JWT, and nothing checks a `DPoP` header any more.
 
-```python
-jwt = JWTConfig(dpop_enabled=True)
-```
-
-Pair it with the frontend flag `createBaseNextConfig({ dpop: true })`. Result: an
-attacker who steals the token (via XSS, logs, a copied cURL) **cannot use it** —
-they lack the private key, and any proof they forge is rejected. **No BFF/proxy
-is required**, so the frontend keeps calling Django directly even across origins.
-
-CLI / server-to-server clients (tokens without `cnf`, or `X-API-Key`) are
-unaffected — they take the plain Bearer path. For scripting the API, use an
-**API key** (`X-API-Key`), not a browser token. Full guide:
-`@djangocfg/nextjs` → `@docs/DPOP.md`.
+- **`JWTConfig(dpop_enabled=...)` and `DJANGO_CFG_DPOP_ENABLED` are gone.**
+  `JWTConfig` rejects unknown fields, so a config that still sets `dpop_enabled`
+  fails at startup with a validation error; delete the line. A config that never
+  set it loads unchanged.
+- **`createBaseNextConfig({ dpop: true })` and `NEXT_PUBLIC_DPOP_ENABLED` are
+  gone**, as is `dpopEnabled` from `@djangocfg/api`. Remove them from
+  `next.config` and `.env` files.
+- **Tokens already issued with a `cnf` claim keep working.** The claim is
+  ignored: such a token authenticates and refreshes like any other, with or
+  without a `DPoP` header. Nothing rejects a token because of `cnf`.
+- **After upgrading, regenerate the client** (`make gen`, which runs `manage.py gen`,
+  in the project) so `helpers/auth.ts` loses the dormant proof code.
+- The `dpop` entry is no longer in the default CORS allowed headers.
+- The code is kept in `middleware/@archive/dpop/` (Python) and
+  `packages/nextjs/@docs/@archive/DPOP.md` (frontend guide) in the django-cfg repo.
 
 ## Security Headers
 

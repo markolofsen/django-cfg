@@ -4,8 +4,8 @@ Django Telegram Service for django_cfg.
 Auto-configuring Telegram notification service that integrates with DjangoConfig.
 Supports custom bot_token and chat_id per-call with fallback to config defaults.
 """
-
 from __future__ import annotations
+import logging
 
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, Optional, Union
 
@@ -15,14 +15,27 @@ if TYPE_CHECKING:
 import telebot
 
 from ..base import BaseCfgModule
-from ..django_logging import get_logger
 
 from .exceptions import TelegramConfigError, TelegramSendError
 from .formatters import EMOJI_MAP, escape_for_parse_mode
 from .queue import MessagePriority, telegram_queue
 from .types import TelegramParseMode
 
-logger = get_logger("django_cfg.telegram")
+logger = logging.getLogger("django_cfg.telegram")
+
+_not_configured_warned = False
+
+
+def _warn_not_configured() -> None:
+    """Say once per process, at WARNING, that Telegram is not configured.
+
+    Every send attempt used to log an ERROR, which flooded the log (and the monitor)
+    on projects that deliberately run without a bot.
+    """
+    global _not_configured_warned
+    if not _not_configured_warned:
+        _not_configured_warned = True
+        logger.warning("Telegram is not configured; messages are not sent (logged once)")
 
 
 class DjangoTelegram(BaseCfgModule):
@@ -250,7 +263,7 @@ class DjangoTelegram(BaseCfgModule):
 
             if not effective_token and not self.is_configured:
                 error_msg = "Telegram is not configured"
-                logger.error(error_msg)
+                _warn_not_configured()
                 if not fail_silently:
                     raise TelegramConfigError(error_msg)
                 return False
@@ -303,7 +316,7 @@ class DjangoTelegram(BaseCfgModule):
 
             if not effective_token and not self.is_configured:
                 error_msg = "Telegram is not configured"
-                logger.error(error_msg)
+                _warn_not_configured()
                 if not fail_silently:
                     raise TelegramConfigError(error_msg)
                 return False
@@ -358,7 +371,7 @@ class DjangoTelegram(BaseCfgModule):
 
             if not effective_token and not self.is_configured:
                 error_msg = "Telegram is not configured"
-                logger.error(error_msg)
+                _warn_not_configured()
                 if not fail_silently:
                     raise TelegramConfigError(error_msg)
                 return False

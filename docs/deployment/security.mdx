@@ -139,7 +139,7 @@ fetch('https://api.example.com/user/', {
 
 ### Custom CORS Headers
 
-The default list covers `authorization`, `content-type`, `x-csrftoken`, `x-api-key`, `dpop`, `idempotency-key` and the other headers django-cfg's own client sends. Any other header from a trusted origin is allowed automatically (the preflight is answered with the requested names). To list one explicitly:
+The default list covers `authorization`, `content-type`, `x-csrftoken`, `x-api-key`, `idempotency-key` and the other headers django-cfg's own client sends. Any other header from a trusted origin is allowed automatically (the preflight is answered with the requested names). To list one explicitly:
 
 ```python
 class MyConfig(DjangoConfig):

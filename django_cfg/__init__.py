@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.3.391"
+__version__ = "2.3.392"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -123,7 +123,6 @@ from .testing.runners import SmartTestRunner, FastTestRunner
 # ---------------------------------------------------------------------------
 # [GROUP 7] Services
 # ---------------------------------------------------------------------------
-from .modules.django_logging import DjangoLogger, get_logger
 from .modules.django_email import (
     DjangoEmailService,
     send_email,
@@ -288,7 +287,6 @@ __all__ = [
     # utils & testing
     "check_python_version", "SmartTestRunner", "FastTestRunner",
     # services
-    "DjangoLogger", "get_logger",
     "DjangoEmailService", "send_email", "get_admin_emails",
     "send_admin_email", "send_admin_notification",
     "DjangoTelegram", "send_telegram_message", "send_telegram_photo",

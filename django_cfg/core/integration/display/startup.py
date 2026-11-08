@@ -851,15 +851,19 @@ class StartupDisplayManager(BaseDisplayManager):
         try:
             from ...utils.runtime_paths import resolve_log_dir
 
+            from ...utils.runtime_paths import resolve_monitor_log_dir
+
             log_dir = resolve_log_dir()
             log_info = Text("📝 Logs → ", style="dim")
             if log_dir is None:
                 log_info.append("stdout", style="cyan")
-                log_info.append(" (DJANGO_CFG_LOG_DIR for a file)", style="dim")
+                monitor_dir = resolve_monitor_log_dir()
+                if monitor_dir is not None:
+                    log_info.append(f" + monitor events in {monitor_dir}/", style="dim")
             else:
                 log_info.append(f"{log_dir}/", style="cyan")
             log_info.append(" • ", style="dim")
-            log_info.append("from django_cfg.utils import get_logger", style="yellow dim")
+            log_info.append("logging.getLogger(__name__)", style="yellow dim")
 
             self.console.print(log_info)
         except Exception:

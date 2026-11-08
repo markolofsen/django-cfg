@@ -168,34 +168,22 @@ urlpatterns = [
 
 ---
 
-### Logger Module (`DjangoLogger`)
+### Logging Module (`django_logging`)
 
-Enhanced logging with structured output:
+django-cfg does not wrap the logger: use `logging.getLogger(__name__)`. The module generates the Django `LOGGING` dict (stdout by default, opt-in file, text or JSON) and prunes old log files. See [Django Logging](/features/modules/django-logging).
 
 ```python
-from django_cfg import DjangoLogger, get_logger
+import logging
 
-logger = get_logger("my_app")
-
-# Structured logging
-logger.info("User login", extra={
-    "user_id": 123,
-    "ip_address": "192.168.1.1",
-    "user_agent": "Chrome/91.0"
-})
-
-# Performance monitoring
-with logger.timer("database_query"):
-    results = MyModel.objects.filter(active=True)
+logger = logging.getLogger(__name__)
+logger.info("User login", extra={"user_id": 123})
 ```
 
 **Features:**
-- ✅ Structured JSON logging
-- ✅ Automatic request correlation
-- ✅ Performance timing
-- ✅ Error aggregation
-- ✅ Multiple output formats
-- ✅ Log rotation and archival
+- ✅ stdout/stderr by default, opt-in log file
+- ✅ JSON off a terminal
+- ✅ Size rotation and boot-time pruning
+- ✅ Monitor events through the same pipeline
 
 ---
 

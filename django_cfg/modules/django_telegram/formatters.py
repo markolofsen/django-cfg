@@ -3,6 +3,7 @@ Telegram Message Formatters.
 
 Emoji mappings and message formatting utilities.
 """
+import logging
 
 import html as _html_module
 import re
@@ -10,9 +11,8 @@ from typing import Any, Dict
 
 import yaml
 
-from ..django_logging import get_logger
 
-logger = get_logger("django_cfg.telegram.formatters")
+logger = logging.getLogger("django_cfg.telegram.formatters")
 
 
 # Emoji mappings for different message types

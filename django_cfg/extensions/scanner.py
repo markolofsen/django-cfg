@@ -3,6 +3,7 @@ Extension Scanner
 
 Scans the extensions/ folder in user's project and discovers extensions.
 """
+import logging
 
 import importlib.util
 import sys
@@ -11,11 +12,10 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-from django_cfg.utils import get_logger
 
 from .manifest import ExtensionManifest
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class DiscoveredExtension(BaseModel):

@@ -1,4 +1,5 @@
 """TOTP service for code generation and verification."""
+import logging
 
 import io
 from typing import Optional
@@ -9,11 +10,10 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
-from django_cfg.utils import get_logger
 
 from ..models import DeviceStatus, TOTPDevice
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 

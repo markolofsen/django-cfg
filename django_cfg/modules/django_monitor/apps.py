@@ -25,3 +25,18 @@ class DjangoMonitorConfig(AppConfig):
             connect_capture()
         except Exception as exc:
             logger.warning("django_monitor: failed to connect capture hooks — %s", exc)
+        self._look_after_log_dir()
+
+    @staticmethod
+    def _look_after_log_dir() -> None:
+        """Prune old django-cfg log files in the background; never blocks or breaks boot."""
+        try:
+            from .capture import _is_running_tests
+
+            if _is_running_tests():
+                return
+            from django_cfg.modules.django_logging.maintenance import startup_self_check
+
+            startup_self_check()
+        except Exception:
+            pass

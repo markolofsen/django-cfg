@@ -266,9 +266,10 @@ class OTPViewSet(viewsets.GenericViewSet):
                     status=status.HTTP_200_OK,
                 )
 
-            # No 2FA — mint tokens (DPoP-bound when a login proof is present).
-            from django_cfg.middleware.dpop import mint_tokens_for_request
-            refresh, access = mint_tokens_for_request(user, request)
+            from rest_framework_simplejwt.tokens import RefreshToken
+
+            refresh = RefreshToken.for_user(user)
+            access = refresh.access_token
 
             # Fire auth signal (login alert, activity logging, etc.)
             from ..signals import user_authenticated

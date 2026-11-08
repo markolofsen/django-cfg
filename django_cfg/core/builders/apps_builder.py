@@ -6,6 +6,7 @@ Extracted from original config.py (903 lines) for better maintainability.
 
 Size: ~220 lines (focused on one task)
 """
+import logging
 
 from typing import TYPE_CHECKING, List
 
@@ -179,8 +180,7 @@ class InstalledAppsBuilder:
             return loader.get_installed_apps()
         except Exception as e:
             # Don't fail if extensions module has issues
-            from django_cfg.utils import get_logger
-            logger = get_logger(__name__)
+            logger = logging.getLogger(__name__)
             logger.debug(f"Extension discovery skipped: {e}")
             return []
 

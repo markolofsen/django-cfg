@@ -16,13 +16,13 @@ Reports:
 - Whether monitoring is enabled (it always is — zero-config).
 - Whether **Telegram alerts** are on, i.e. whether a `TelegramConfig` is present
   on your `DjangoConfig`.
-- Where events go: `<log dir>/djangocfg/monitor.log` with a summary of today's
-  captured events when `DJANGO_CFG_LOG_DIR` is set, otherwise `stdout`.
+- Where events go: `<log dir>/djangocfg/monitor.log` (`logging.dir`, else `/var/log/<app>`, else the per-user state dir; see [Django Logging](/features/modules/django-logging))
+  with a summary of today's captured events; `stdout` when no directory is writable.
 
 <Callout type="info">
-Retention is handled outside the app: `monitor.log` is a plain file that
-`logrotate` rotates (django-cfg reopens it). There is no separate cleanup command
-to run. Without `DJANGO_CFG_LOG_DIR`, events are JSON lines on stdout.
+`monitor.log` is size-rotated (10 MB x 5 by default) and old files are pruned at boot;
+`python manage.py log_prune` does it by hand (dry run unless `--apply`). Events are also flat JSON lines on stdout (`docker logs ... | jq`).
+`monitor_status` also shows how many browser events the ingest ceiling dropped.
 </Callout>
 
 ---
@@ -39,8 +39,13 @@ Print the last events from `monitor.log`, no docker and no grep.
 ```bash
 python manage.py monitor_tail                   # last 20 events
 python manage.py monitor_tail -n 50 --frontend  # last 50 browser events
+python manage.py monitor_tail --user 42         # one signed-in user (the primary key; a uuid works too)
+python manage.py monitor_tail --fingerprint 9f3a1c0b22d4e7aa   # one error
+python manage.py monitor_tail --session <session_id>           # one browser tab
 ```
 
-One line per event: time, `frontend` or `server`, level, event type, message, page URL. `--frontend` keeps only what arrived through `POST /cfg/monitor/ingest/` (all levels, including the `devtools ping` from `window.devtools.ping()`). Without a log directory it says so and you read the container log. Nothing is stored by the command.
+The three filters combine (all must match) and apply before the `-n` cut. A line shows `user=<id>` when the event had one.
+
+One line per event: time, `frontend` or `server`, level, event type, message, page URL, `user=<id>`. `--frontend` keeps only what arrived through `POST /cfg/monitor/ingest/` (all levels, including the `devtools ping` from `window.devtools.ping()`). Without a log directory it says so and you read the container log. Nothing is stored by the command.
 
 TAGS: django_monitor, management-commands, monitor_status, monitor_tail

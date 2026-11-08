@@ -7,8 +7,8 @@ path is independently testable. Public entry point: ``OTPService.verify_otp``
 The ``is_email_verified`` hook (sticky flag flipped on the first
 successful OTP) lives here — see ``_mark_user_verified``.
 """
-
 from __future__ import annotations
+import logging
 
 from typing import Optional
 
@@ -16,7 +16,6 @@ from django.utils import timezone
 
 from django_cfg.core.config import get_current_config
 from django_cfg.modules.django_telegram import DjangoTelegram
-from django_cfg.utils import get_logger
 
 from ...models import CustomUser, OTPSecret
 from ...signals import notify_failed_otp_attempt
@@ -24,7 +23,7 @@ from ..brute_force_service import OTPVerifyThrottle
 from ...utils.notification_policy import sign_in_flow
 from ..verification import mark_user_verified as _mark_user_verified
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _persist_language(user: CustomUser, accept_language: Optional[str]) -> None:

@@ -21,11 +21,18 @@ class Command(SafeCommand):
         alerts = "on (TelegramConfig set)" if _is_alerts_enabled() else "off (no TelegramConfig)"
         self.stdout.write(f"  Telegram alerts : {alerts}")
 
-        from django_cfg.core.utils.runtime_paths import resolve_log_dir
+        from django_cfg.core.utils.runtime_paths import resolve_monitor_log_dir
 
-        log_dir = resolve_log_dir()
+        from django_cfg.modules.django_monitor.limits import dropped_counts
+
+        dropped = dropped_counts()
+        self.stdout.write(
+            f"  Dropped (ceiling): {dropped['last_minute']} in the last minute, {dropped['total']} in 7 days"
+        )
+
+        log_dir = resolve_monitor_log_dir()
         if log_dir is None:
-            self.stdout.write("  Event log       : stdout (set DJANGO_CFG_LOG_DIR for a file)")
+            self.stdout.write("  Event log       : stdout only (no writable directory; set logging.dir or DJANGO_CFG_LOG_DIR)")
             return
         log_path = Path(log_dir) / "djangocfg" / "monitor.log"
         self.stdout.write(f"  Event log       : {log_path}")

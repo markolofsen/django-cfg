@@ -2,12 +2,21 @@
 monitor_tail — print the last events from the monitor log.
 
 django_monitor stores nothing: events are JSON lines in
-<log dir>/djangocfg/monitor.log. This reads that file so an operator can check
-that browser errors arrive without docker and grep.
+<log dir>/djangocfg/monitor.log (when a log directory is configured; otherwise they
+are on stdout, `docker logs`). This reads that file so an operator can check that
+browser errors arrive without docker and grep. It reads both line shapes: the flat
+record (event fields at the top level of the JSON line) and the older one with the
+event as JSON inside "message".
 
 Usage:
     python manage.py monitor_tail                  # last 20 events
     python manage.py monitor_tail -n 50 --frontend # last 50 browser events
+    python manage.py monitor_tail --user 42        # what one signed-in user hit
+    python manage.py monitor_tail --fingerprint 9f3a1c0b22d4e7aa
+    python manage.py monitor_tail --session <session_id>   # one browser tab
+
+Filters combine (all must match) and apply before the -n cut. ``--user`` matches
+the primary key as text, so it works for integer and uuid user models alike.
 """
 
 from __future__ import annotations
@@ -22,9 +31,10 @@ FRONTEND_LOGGER = "django_cfg.monitor.frontend"
 
 
 def parse_event(line: str) -> dict | None:
-    """The event dict inside one monitor.log line, for either log format.
+    """The event dict inside one monitor.log line, for every log shape.
 
-    JSON format wraps it: {"ts": .., "logger": .., "message": "<event json>"}.
+    Flat JSON (current): {"ts": .., "logger": "django_cfg.monitor.*", "event_type": .., "message": ..}.
+    Nested JSON (older): {"ts": .., "logger": .., "message": "<event json>"}.
     Text format prefixes it: "[ts] INFO in <logger> [file:n]: <event json>".
     """
     line = line.strip()
@@ -32,6 +42,15 @@ def parse_event(line: str) -> dict | None:
         return None
     try:
         outer = json.loads(line)
+        if (
+            isinstance(outer, dict)
+            and "event_type" in outer
+            and str(outer.get("logger", "")).startswith("django_cfg.monitor")
+        ):
+            flat = {k: v for k, v in outer.items() if k not in ("ts", "logger", "line")}
+            flat["_logger"] = outer.get("logger", "")
+            flat["_ts"] = outer.get("ts", "")
+            return flat
         if isinstance(outer, dict) and isinstance(outer.get("message"), str):
             inner = json.loads(outer["message"])
             if isinstance(inner, dict):
@@ -54,8 +73,27 @@ def parse_event(line: str) -> dict | None:
     return event
 
 
-def read_events(path: Path, count: int, frontend_only: bool = False) -> list[dict]:
-    """The last `count` events of the file (oldest first)."""
+def matches(event: dict, *, user: str = "", fingerprint: str = "", session: str = "") -> bool:
+    """True when the event passes every filter that is set (exact match, pk compared as text)."""
+    if user and str(event.get("user_id") or "") != user:
+        return False
+    if fingerprint and str(event.get("fingerprint") or "") != fingerprint:
+        return False
+    if session and str(event.get("session_id") or "") != session:
+        return False
+    return True
+
+
+def read_events(
+    path: Path,
+    count: int,
+    frontend_only: bool = False,
+    *,
+    user: str = "",
+    fingerprint: str = "",
+    session: str = "",
+) -> list[dict]:
+    """The last `count` events of the file that pass the filters (oldest first)."""
     keep: deque[dict] = deque(maxlen=max(count, 1))
     with path.open("r", encoding="utf-8", errors="replace") as handle:
         for line in handle:
@@ -64,12 +102,15 @@ def read_events(path: Path, count: int, frontend_only: bool = False) -> list[dic
                 continue
             if frontend_only and event.get("_logger") != FRONTEND_LOGGER:
                 continue
+            if not matches(event, user=user, fingerprint=fingerprint, session=session):
+                continue
             keep.append(event)
     return list(keep)
 
 
 def format_event(event: dict) -> str:
-    source = "frontend" if event.get("_logger") == FRONTEND_LOGGER else "server  "
+    logger = event.get("_logger")
+    source = "frontend" if logger == FRONTEND_LOGGER else "repeat  " if logger == "django_cfg.monitor.repeat" else "server  "
     parts = [
         str(event.get("_ts", "")),
         source,
@@ -79,6 +120,8 @@ def format_event(event: dict) -> str:
     ]
     if event.get("url"):
         parts.append(f"({event['url']})")
+    if event.get("user_id"):
+        parts.append(f"user={event['user_id']}")
     return " ".join(p for p in parts if p)
 
 
@@ -90,14 +133,19 @@ class Command(SafeCommand):
         parser.add_argument("-n", type=int, default=20, help="How many events to show (default 20)")
         parser.add_argument("--frontend", action="store_true", help="Only browser events (POST /cfg/monitor/ingest/)")
 
-    def handle(self, *args, **options):
-        from django_cfg.core.utils.runtime_paths import resolve_log_dir
+        parser.add_argument("--user", default="", help="Only events of this user id (the primary key)")
+        parser.add_argument("--fingerprint", default="", help="Only events with this fingerprint (hex)")
+        parser.add_argument("--session", default="", help="Only events of this browser session id")
 
-        log_dir = resolve_log_dir()
+    def handle(self, *args, **options):
+        from django_cfg.core.utils.runtime_paths import resolve_monitor_log_dir
+
+        log_dir = resolve_monitor_log_dir()
         if log_dir is None:
             self.stdout.write(
-                "No event log file: logs go to stdout. Set DJANGO_CFG_LOG_DIR to write "
-                "<dir>/djangocfg/monitor.log, or read the container log."
+                "No writable event log directory: events go to stdout. Set logging.dir / DJANGO_CFG_LOG_DIR, "
+                "or read the container log: "
+                "docker logs --since 1h <container> | jq 'select(.logger | startswith(\"django_cfg.monitor\"))'"
             )
             return
         path = Path(log_dir) / "djangocfg" / "monitor.log"
@@ -105,7 +153,14 @@ class Command(SafeCommand):
             self.stdout.write(f"No events yet: {path} does not exist.")
             return
 
-        events = read_events(path, options["n"], options["frontend"])
+        events = read_events(
+            path,
+            options["n"],
+            options["frontend"],
+            user=str(options["user"]).strip(),
+            fingerprint=str(options["fingerprint"]).strip(),
+            session=str(options["session"]).strip(),
+        )
         if not events:
             kind = "browser events" if options["frontend"] else "events"
             self.stdout.write(f"No {kind} in {path}.")

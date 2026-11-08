@@ -79,7 +79,7 @@ def _discover_security_field(out_dir: Path, type_name: str) -> str:
     scheme yields ``Token``, an API-key scheme yields ``APIKey``. Parse
     ``oas_schemas_gen.go`` for ``type <type_name> struct { <Field> ... }``
     and return that first field rather than hard-coding ``Token`` (which
-    breaks when the spec defines an api-key scheme — see the DPoP refactor).
+    breaks when the spec defines an api-key scheme).
 
     Falls back to ``"Token"`` when the schema file or struct is missing.
     """

@@ -14,13 +14,12 @@ A single :meth:`QueueHealthMonitor.run` call:
 
 :meth:`run` never raises — it is designed to be the body of a scheduled RQ job.
 """
-
 from __future__ import annotations
+import logging
 
 from typing import Dict, List, Optional
 
 from django_cfg.models.django.rq_health import RQHealthConfig
-from django_cfg.utils import get_logger
 
 from .alerting import send_queue_alert, send_queue_recovery
 from .cooldown import (
@@ -34,7 +33,7 @@ from .cooldown import (
 from .evaluator import QueueStatus, Severity, evaluate
 from .metrics import collect_queue_metrics
 
-logger = get_logger("rq.health")
+logger = logging.getLogger(__name__)
 
 
 class QueueHealthMonitor:

@@ -3,17 +3,17 @@ Extension RQ Schedules Discovery
 
 Auto-discovers and collects RQ scheduled tasks from all enabled extensions.
 """
+import logging
 
 import importlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from django_cfg.utils import get_logger
 
 if TYPE_CHECKING:
     from django_cfg.models.django.django_rq import RQScheduleConfig
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_extension_schedules() -> list["RQScheduleConfig"]:

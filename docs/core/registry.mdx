@@ -128,10 +128,6 @@ SERVICES_REGISTRY = {
     "send_telegram_message": ("django_cfg.modules.django_telegram", "send_telegram_message"),
     "send_telegram_photo": ("django_cfg.modules.django_telegram", "send_telegram_photo"),
 
-    # Logging services
-    "DjangoLogger": ("django_cfg.modules.django_logging", "DjangoLogger"),
-    "get_logger": ("django_cfg.modules.django_logging", "get_logger"),
-
     # Database Backup
 }
 ```
@@ -228,7 +224,7 @@ from django_cfg import DjangoEmailService, send_email, send_telegram_message
 from django_cfg import ConfigurationError, ValidationError
 
 # Import utilities
-from django_cfg import DynamicRouter, HealthService, get_logger
+from django_cfg import DynamicRouter, HealthService
 ```
 
 ### Lazy Loading Benefit

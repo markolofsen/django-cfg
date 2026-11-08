@@ -103,12 +103,14 @@ Logging follows 12-factor: **stdout/stderr by default, a file only when you ask*
 | --- | --- | --- |
 | Default | `django_cfg` at `WARNING` | none |
 | `debug=True` | `django_cfg` at `DEBUG` | none |
-| `DJANGO_CFG_LOG_DIR=/var/log/app` | as above | `django.log`, `djangocfg/monitor.log` there |
+| `logging.dir` / `DJANGO_CFG_LOG_DIR=/var/log/app` | as above | `django.log`, `djangocfg/monitor.log` there |
+
+In every mode monitor events also go to `djangocfg/monitor.log` (10 MB x 5) in `/var/log/<app>` if writable, else `~/.local/state/<app>/log` (`~/Library/Logs/<app>` on macOS); if neither is writable, stdout only and one warning.
 
 ```bash
-DJANGO_CFG_LOG_FORMAT=json      # one JSON object per line (default: text)
+DJANGO_CFG_LOG_FORMAT=json      # one JSON object per line (default: json off a terminal, text at one)
 DJANGO_CFG_LOG_LEVEL=INFO       # level of the django_cfg loggers
-DJANGO_CFG_LOG_DIR=/var/log/app # opt in to files (WatchedFileHandler, use logrotate)
+DJANGO_CFG_LOG_DIR=/var/log/app # also django.log there (size-rotated: 10 MB x 5, pruned at boot); same as logging.dir
 ```
 
 **Text format:**
@@ -121,7 +123,7 @@ DJANGO_CFG_LOG_DIR=/var/log/app # opt in to files (WatchedFileHandler, use logro
 {"ts": "2026-11-05T12:34:56+0000", "level": "WARNING", "logger": "django_cfg.accounts", "message": "User login failed", "module": "views", "line": 42}
 ```
 
-See [Django Logging](/features/modules/django-logging) for every setting and the config model.
+See [Django Logging](/features/modules/django-logging), the canonical page for the `logging` config block, precedence and defaults.
 
 ### stdout in containers
 
@@ -147,24 +149,27 @@ docker compose logs -f api
 
 <Callout type="info">
 Do not set `DJANGO_CFG_LOG_DIR` in a container unless something reads the files.
-If you do (an agent tailing a mounted folder), mount a volume at that path and let
-`logrotate` on the host rotate it; django-cfg reopens the file after rotation.
+If you do (an agent tailing a mounted folder), mount a volume at that path. django-cfg
+rotates by size (`logging.rotate_mb`, `logging.backups`) and prunes old
+files at boot; with `logrotate` on the host set `rotate_mb=0`. The monitor file
+needs no mount: without one it lands in the container's own `/var/log/<app>` or state dir
+and `monitor_tail` reads it there.
 </Callout>
 
 ### Upgrading from the `logs/` folder
 
-Earlier versions wrote `logs/django.log`, `logs/djangocfg/*.log` and a `/tmp/djangocfg/debug.log` mirror. For one release, if no override is set and `./logs` exists in the working directory, django-cfg keeps writing there and logs one warning. A project that mounts `../files/logs:/app/logs` adds `DJANGO_CFG_LOG_DIR=/app/logs` to its env and changes nothing else. `DJANGO_LOG_TO_TMP` is ignored (one warning); the mirror is gone.
+Earlier versions wrote `logs/django.log`, `logs/djangocfg/*.log` and a `/tmp/djangocfg/debug.log` mirror, and a `./logs` folder kept being written *in addition to* stdout. That fallback is gone, with no warning and no alias: with no override general logs go to stdout only. A project that mounts `../files/logs:/app/logs` can drop the mount, or keeps it and adds `DJANGO_CFG_LOG_DIR=/app/logs` to its env; `python manage.py log_prune --dir /app/logs --apply` clears the old dated files (dry run without `--apply`). `DJANGO_LOG_TO_TMP` is ignored (one warning); the mirror is gone.
 
 ---
 
 ## Logger Configuration
 
-`get_logger()` returns a plain `logging.Logger` and adds no handlers:
+There is no django-cfg logger factory: use `logging.getLogger(__name__)`. It adds no handlers; handlers come from the generated `LOGGING` dict (see [Django Logging](/features/modules/django-logging) for the API and the migration note from `get_logger`):
 
 ```python
-from django_cfg.modules.django_logging import get_logger
+import logging
 
-logger = get_logger("django_cfg.myapp")
+logger = logging.getLogger(__name__)
 ```
 
 **Level sources (priority order):**
@@ -310,10 +315,10 @@ datadog-agent             # Datadog
 ### Custom Logger Instance
 
 ```python
-from django_cfg import get_logger
+import logging
 
 # Get named logger
-my_logger = get_logger("myapp.payments")
+my_logger = logging.getLogger("myapp.payments")
 
 # Use with module-specific settings
 my_logger.info("Payment processed")
@@ -358,7 +363,7 @@ print(f"Logger level: {logger.level}")  # 10=DEBUG, 30=WARNING
 
 ### File Logs Not Created
 
-Files are opt-in. Check that a directory is configured:
+Full explanation: [No log file is created](/features/modules/django-logging#no-log-file-is-created). Short version: `django.log` exists only when a directory is configured:
 
 ```bash
 echo $DJANGO_CFG_LOG_DIR   # empty = stdout only
@@ -367,10 +372,13 @@ echo $DJANGO_CFG_LOG_DIR   # empty = stdout only
 ```python
 from django_cfg.core.utils.runtime_paths import resolve_log_dir
 
-print(resolve_log_dir())   # None = no file
+print(resolve_log_dir())   # None = no django.log
+
+from django_cfg.core.utils.runtime_paths import resolve_monitor_log_dir
+print(resolve_monitor_log_dir())   # None = nothing writable: monitor events on stdout only
 ```
 
-The directory is created when the first record is written. If it is not writable, django-cfg logs one warning (`cannot write ...`) and continues on stdout; fix the permissions of the mounted volume or the user the container runs as.
+The directory is created when the first record is written. If it is not writable, django-cfg logs one warning (`cannot write ...`, or `no writable directory for the monitor event log`) and continues on stdout; fix the permissions of the mounted volume or the user the container runs as.
 
 ### Colors Not Showing
 

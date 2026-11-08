@@ -1,4 +1,5 @@
 """Views for 2FA verification during login flow."""
+import logging
 
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -6,7 +7,6 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from django_cfg.utils import get_logger
 
 from ..models import SessionStatus, TwoFactorSession
 from ..serializers.verify import (
@@ -16,7 +16,7 @@ from ..serializers.verify import (
 )
 from ..services import BackupCodeService, TwoFactorSessionService
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -113,9 +113,10 @@ class VerifyViewSet(viewsets.GenericViewSet):
 
         # Issue tokens
         user = session.user
-        # Mint tokens (DPoP-bound when a login proof is present).
-        from django_cfg.middleware.dpop import mint_tokens_for_request
-        refresh, access = mint_tokens_for_request(user, request)
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        refresh = RefreshToken.for_user(user)
+        access = refresh.access_token
 
         # Import UserSerializer from accounts app
         try:
@@ -197,9 +198,10 @@ class VerifyViewSet(viewsets.GenericViewSet):
 
         # Issue tokens
         user = session.user
-        # Mint tokens (DPoP-bound when a login proof is present).
-        from django_cfg.middleware.dpop import mint_tokens_for_request
-        refresh, access = mint_tokens_for_request(user, request)
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        refresh = RefreshToken.for_user(user)
+        access = refresh.access_token
 
         # Get remaining backup codes
         remaining_codes = BackupCodeService.get_remaining_count(user)

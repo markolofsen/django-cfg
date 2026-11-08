@@ -1,4 +1,5 @@
 """Views for backup recovery codes management."""
+import logging
 
 from django.db import transaction
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -6,7 +7,6 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from django_cfg.utils import get_logger
 
 from ..serializers.backup import (
     BackupCodesRegenerateResponseSerializer,
@@ -15,7 +15,7 @@ from ..serializers.backup import (
 )
 from ..services import BackupCodeService, TOTPService
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @extend_schema_view(

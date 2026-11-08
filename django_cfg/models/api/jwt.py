@@ -3,10 +3,10 @@ JWT Configuration for Django CFG
 Type-safe JWT authentication configuration with Pydantic v2
 
 This model is the START of the auth chain (config → Django settings → token
-mint → request verification → frontend client). For the full end-to-end map,
-DPoP (RFC 9449) flow, and the auth-class-bypass gotcha, see:
+mint → request verification → frontend client). For the full end-to-end map
+and the auth-class-bypass gotcha, see:
     @docs/architecture/security/auth-logic-chain.md
-Related code: middleware/dpop.py, middleware/authentication.py.
+Related code: middleware/authentication.py.
 """
 
 from datetime import timedelta
@@ -107,20 +107,6 @@ class JWTConfig(BaseModel):
     auth_header_name: str = Field(
         default="HTTP_AUTHORIZATION",
         description="HTTP header name for authentication"
-    )
-
-    # === DPoP (RFC 9449) — sender-constrained tokens ===
-    dpop_enabled: bool = Field(
-        default=False,
-        description=(
-            "Enable DPoP-lite (RFC 9449): bind access tokens to a client-held "
-            "non-extractable key so a stolen token is useless without the key. "
-            "Default OFF — opt-in per project. When ON, the mint endpoints embed "
-            "`cnf.jkt` from the login proof and the auth class requires a valid "
-            "DPoP proof on every request whose token carries `cnf.jkt`. "
-            "Tokens without `cnf` (CLI / server-to-server) keep working as plain "
-            "Bearer, so mixed clients are fine."
-        )
     )
 
     # === Advanced Settings ===
@@ -243,9 +229,6 @@ class JWTConfig(BaseModel):
                 # only accepts AccessToken and no sliding views are wired —
                 # emitting SLIDING_* keys here was dead config.
             },
-            # Top-level flag the DPoP auth layer reads (SIMPLE_JWT is owned by
-            # simplejwt and ignores unknown keys, so DPoP config lives outside it).
-            "DJANGO_CFG_DPOP_ENABLED": self.dpop_enabled,
         }
 
 # Export the main class

@@ -24,6 +24,9 @@ class RealIPMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # Keep the socket peer: the headers below are client-supplied, and code that must
+        # not trust them (the monitor ingest limits) needs the address that really connected.
+        request.META.setdefault('DJANGO_CFG_PEER_ADDR', request.META.get('REMOTE_ADDR', ''))
         for header in self.HEADERS:
             value = request.META.get(header)
             if value:

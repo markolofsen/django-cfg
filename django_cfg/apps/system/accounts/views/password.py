@@ -8,11 +8,8 @@ credentials).
 It deliberately reuses the OTP path's machinery rather than SimpleJWT's
 ``TokenObtainPairView``:
 
-* tokens come from ``mint_tokens_for_request`` — the ONE mint helper — so the
-  pair carries the same ``cnf.jkt`` DPoP binding and the same
-  token lifetime as OTP/OAuth/TOTP. Stock ``TokenObtainPairSerializer.get_token``
-  calls ``RefreshToken.for_user`` directly and would silently issue unbound
-  tokens.
+* tokens come from ``RefreshToken.for_user`` — the same call as
+  OTP/OAuth/TOTP — so the lifetime matches theirs.
 * the 2FA branch is identical, so enabling TOTP does not leave a password
   bypass open.
 * the user lookup excludes soft-deleted rows (see serializers/password.py).
@@ -139,10 +136,10 @@ class PasswordLoginView(TokenObtainPairView):
                 status=status.HTTP_200_OK,
             )
 
-        # Mint via the shared helper — DPoP-bound when a login proof is present.
-        from django_cfg.middleware.dpop import mint_tokens_for_request
+        from rest_framework_simplejwt.tokens import RefreshToken
 
-        refresh, access = mint_tokens_for_request(user, request)
+        refresh = RefreshToken.for_user(user)
+        access = refresh.access_token
 
         from ..signals import user_authenticated
 

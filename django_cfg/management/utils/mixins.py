@@ -17,9 +17,9 @@ Available Classes:
     - AdminCommand: Administrative commands (safe for web execution)
 """
 
-from django.core.management.base import BaseCommand
+import logging
 
-from django_cfg.utils import get_logger
+from django.core.management.base import BaseCommand
 
 
 class _BaseCommandWithMetadata(BaseCommand):
@@ -44,7 +44,7 @@ class _BaseCommandWithMetadata(BaseCommand):
 
         # Initialize logger
         command_name = f"command.{self.command_name}"
-        self.logger = get_logger(command_name)
+        self.logger = logging.getLogger(f"django_cfg.{command_name}")
 
         # Log initialization in debug mode
         # self.logger.debug(

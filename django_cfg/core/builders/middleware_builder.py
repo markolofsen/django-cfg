@@ -6,6 +6,7 @@ Extracted from original config.py for better maintainability.
 
 Size: ~120 lines (focused on middleware logic)
 """
+import logging
 
 from typing import TYPE_CHECKING, List
 
@@ -156,8 +157,7 @@ class MiddlewareBuilder:
             return loader.get_middleware()
         except Exception as e:
             # Don't fail if extensions module has issues
-            from django_cfg.utils import get_logger
-            logger = get_logger(__name__)
+            logger = logging.getLogger(__name__)
             logger.debug(f"Extension middleware discovery skipped: {e}")
             return []
 

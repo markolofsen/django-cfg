@@ -3,19 +3,19 @@ Extension Loader
 
 Loads discovered extensions and integrates them with Django.
 """
+import logging
 
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Optional
 
-from django_cfg.utils import get_logger
 
 from .scanner import DiscoveredExtension, ExtensionScanner
 
 if TYPE_CHECKING:
     from django.urls import URLPattern, URLResolver
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # Global loader instance
 _loader: Optional["ExtensionLoader"] = None

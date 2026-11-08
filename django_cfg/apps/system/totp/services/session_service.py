@@ -1,4 +1,5 @@
 """Two-factor authentication session service."""
+import logging
 
 from datetime import timedelta
 from typing import Optional
@@ -8,13 +9,12 @@ from django.db import transaction
 from django.http import HttpRequest
 from django.utils import timezone
 
-from django_cfg.utils import get_logger
 
 from ..models import SessionStatus, TwoFactorSession
 from .backup_service import BackupCodeService
 from .totp_service import TOTPService
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 

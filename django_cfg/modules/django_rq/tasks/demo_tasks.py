@@ -3,13 +3,13 @@ Demo tasks for RQ testing and simulation.
 
 This module provides a simple heartbeat task for verifying RQ scheduler functionality.
 """
+import logging
 
 import datetime
-from django_cfg.utils import get_logger
 
 # Logger for RQ tasks - auto-prefixed to django_cfg.integrations
 # Logs through django_cfg.integrations (stdout; file if DJANGO_CFG_LOG_DIR is set)
-logger = get_logger("integrations")
+logger = logging.getLogger(__name__)
 
 
 def demo_scheduler_heartbeat():

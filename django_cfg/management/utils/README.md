@@ -110,12 +110,12 @@ class Command(AdminCommand):
 
 ```python
 from django.core.management.base import BaseCommand
-from django_cfg.modules.django_logging import get_logger
+import logging
 
-logger = get_logger('show_config')
+logger = logging.getLogger('show_config')
 
 class Command(BaseCommand):
-    logger = get_logger('show_config')  # Duplicate!
+    logger = logging.getLogger('show_config')  # Duplicate!
 
     # Web execution metadata
     web_executable = True
@@ -153,10 +153,10 @@ class Command(SafeCommand):
 **Before:**
 ```python
 from django.core.management.base import BaseCommand
-from django_cfg.modules.django_logging import get_logger
+import logging
 
 class Command(BaseCommand):
-    logger = get_logger('clear_constance')
+    logger = logging.getLogger('clear_constance')
 
     web_executable = False
     requires_input = True
@@ -187,10 +187,10 @@ class Command(DestructiveCommand):
 **Before:**
 ```python
 from django.core.management.base import BaseCommand
-from django_cfg.modules.django_logging import get_logger
+import logging
 import questionary
 
-logger = get_logger('superuser')
+logger = logging.getLogger('superuser')
 
 class Command(BaseCommand):
     web_executable = False
@@ -224,10 +224,10 @@ class Command(InteractiveCommand):
 **Before:**
 ```python
 from django.core.management.base import BaseCommand
-from django_cfg.modules.django_logging import get_logger
+import logging
 
 class Command(BaseCommand):
-    logger = get_logger('migrate_all')
+    logger = logging.getLogger('migrate_all')
 
     web_executable = True
     requires_input = False
@@ -295,8 +295,8 @@ When you use these base classes, your commands are automatically categorized and
 
 When refactoring existing commands:
 
-- [ ] Remove `from django_cfg.modules.django_logging import get_logger`
-- [ ] Remove `logger = get_logger('...')` (both global and in class)
+- [ ] Remove `import logging`
+- [ ] Remove `logger = logging.getLogger('...')` (both global and in class)
 - [ ] Choose appropriate base class (SafeCommand, InteractiveCommand, etc)
 - [ ] Import base class: `from django_cfg.management.utils import SafeCommand`
 - [ ] Change inheritance: `class Command(SafeCommand):`

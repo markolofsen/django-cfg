@@ -3,11 +3,11 @@ RQ Maintenance Tasks
 
 Tasks for cleaning up old jobs, managing Redis keys, and maintaining RQ health.
 """
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict
 
 import django_rq
-from django_cfg.utils import get_logger
 from rq.job import Job, JobStatus
 from rq.queue import Queue
 from rq.registry import (
@@ -16,7 +16,7 @@ from rq.registry import (
     StartedJobRegistry,
 )
 
-logger = get_logger("rq.maintenance")
+logger = logging.getLogger(__name__)
 
 
 def _make_aware(dt: datetime) -> datetime:

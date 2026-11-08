@@ -78,7 +78,7 @@ def get_media_url(*parts: str) -> str:
 
 def get_logs_path(*parts: str) -> Optional[Path]:
     """
-    Return the log directory (``DJANGO_CFG_LOG_DIR`` / ``logging.log_dir``) joined with
+    Return the log directory (``logging.dir`` / ``DJANGO_CFG_LOG_DIR``) joined with
     ``parts``, or ``None`` when logs go to stdout only. Never inside BASE_DIR by default.
     """
     from .runtime_paths import resolve_log_dir

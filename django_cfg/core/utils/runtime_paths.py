@@ -4,41 +4,59 @@ Runtime paths: where django-cfg writes logs and caches.
 One resolver for every writer. Nothing here touches the disk except the
 explicit ``ensure_dir`` helper, and nothing runs at import time.
 
-Precedence per directory: explicit argument, then config, then env var,
-then default.
+Precedence per setting: explicit argument, then ``DjangoConfig`` (the typed
+``logging`` block: ``dir``, ``level``, ``rotate_mb``, ``backups``, ``retain_days``),
+then the ``DJANGO_CFG_LOG_*`` env var, then the built-in default.
 
 =========  =======================  ====================  =======================
 Dir        Env                      Config                Default
 =========  =======================  ====================  =======================
-logs       ``DJANGO_CFG_LOG_DIR``   ``logging.log_dir``   none (stdout/stderr);
-                                                          file asked via
-                                                          ``DJANGO_CFG_LOG_FILE=1``:
-                                                          ``user_log_dir(project)``
+logs       ``DJANGO_CFG_LOG_DIR``   ``logging.dir``       general logs: stdout
+                                                          only; the monitor-event
+                                                          file: ``/var/log/<app>``
+                                                          if writable, else the
+                                                          per-user state dir, else
+                                                          no file (one warning)
 cache      ``DJANGO_CFG_CACHE_DIR`` ``cache_dir``         ``user_cache_dir(project)``
 =========  =======================  ====================  =======================
 
-Migration (one release): with no override set, an existing ``./logs`` or
-``./.cache`` in the working directory is still used, with one warning that
-names the env var. The next release removes that fallback.
+No default is ever inside the project tree, and there is no ``./logs`` or ``./.cache``
+fallback and no alias.
+
+Every file django-cfg opens is bounded: size-based rotation (``rotate_mb`` x ``backups``)
+and a startup prune (``retain_days``, ``DJANGO_CFG_LOG_DIR_MAX_BYTES``), see
+``modules/django_logging/maintenance.py``.
 """
 from __future__ import annotations
 
 import logging
 import os
+import sys
 import tempfile
 from pathlib import Path
 from typing import Optional
 
 ENV_LOG_DIR = "DJANGO_CFG_LOG_DIR"
-ENV_LOG_FILE = "DJANGO_CFG_LOG_FILE"
 ENV_LOG_FORMAT = "DJANGO_CFG_LOG_FORMAT"
 ENV_LOG_LEVEL = "DJANGO_CFG_LOG_LEVEL"
-ENV_LOG_ROTATE = "DJANGO_CFG_LOG_ROTATE"
 ENV_CACHE_DIR = "DJANGO_CFG_CACHE_DIR"
+ENV_LOG_ROTATE_MB = "DJANGO_CFG_LOG_ROTATE_MB"
+ENV_LOG_BACKUPS = "DJANGO_CFG_LOG_BACKUPS"
+ENV_LOG_RETAIN_DAYS = "DJANGO_CFG_LOG_RETAIN_DAYS"
+ENV_LOG_DIR_MAX_BYTES = "DJANGO_CFG_LOG_DIR_MAX_BYTES"
+ENV_LOG_PRUNE = "DJANGO_CFG_LOG_PRUNE"
+
+DEFAULT_LOG_ROTATE_MB = 10
+DEFAULT_LOG_BACKUPS = 5
+DEFAULT_LOG_RETAIN_DAYS = 14
+DEFAULT_LOG_DIR_MAX_BYTES = 500 * 1024 * 1024
 
 #: Deprecated aliases (recognised, warn once).
 LEGACY_ENV_LOG_TO_TMP = "DJANGO_LOG_TO_TMP"
 LEGACY_ENV_LLM_CACHE_DIR = "CMDOP_LLM_CACHE_DIR"
+
+#: Where a daemon-style app logs on Linux; a module attribute so tests can point it elsewhere.
+SYSTEM_LOG_ROOT = Path("/var/log")
 
 _TRUTHY = ("1", "true", "yes", "on")
 
@@ -81,10 +99,15 @@ def _current_config():
         return None
 
 
-def _config_log_dir() -> Optional[str]:
+def _config_logging(name: str):
+    """A field of ``DjangoConfig.logging``, or None when unset / no config yet."""
     cfg = _current_config()
     logging_cfg = getattr(cfg, "logging", None) if cfg is not None else None
-    value = getattr(logging_cfg, "log_dir", None) if logging_cfg is not None else None
+    return getattr(logging_cfg, name, None) if logging_cfg is not None else None
+
+
+def _config_log_dir() -> Optional[str]:
+    value = _config_logging("dir")
     return str(value) if value else None
 
 
@@ -94,11 +117,14 @@ def _config_cache_dir() -> Optional[str]:
     return str(value) if value else None
 
 
-def default_log_dir() -> Path:
-    """Per-user log directory for this project (only used when a file was asked for)."""
+def user_state_log_dir() -> Path:
+    """Per-user log directory: ``~/.local/state/<app>/log`` (Linux), ``~/Library/Logs/<app>`` (macOS)."""
     from platformdirs import user_log_dir
 
     return Path(user_log_dir(project_name()))
+
+
+default_log_dir = user_state_log_dir
 
 
 def default_cache_root() -> Path:
@@ -120,17 +146,104 @@ def resolve_log_dir(explicit: Optional[str | os.PathLike] = None) -> Optional[Pa
         return Path(value)
     if value := os.environ.get(ENV_LOG_DIR, "").strip():
         return Path(value)
-    if env_flag(ENV_LOG_FILE):
-        return default_log_dir()
-    legacy = Path.cwd() / "logs"
-    if legacy.is_dir():
-        warn_once(
-            "legacy-logs",
-            f"django-cfg is still writing logs to {legacy}. This fallback goes away in the next "
-            f"release: set {ENV_LOG_DIR}={legacy} to keep it, or remove the logs/ folder to log to stdout.",
-        )
-        return legacy
     return None
+
+
+def env_int(name: str, default: int) -> int:
+    """Non-negative integer from the environment; ``default`` when unset or invalid."""
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    return value if value >= 0 else default
+
+
+def _setting_int(config_name: str, env_name: str, default: int) -> int:
+    """config (``logging.<config_name>``), then env, then default."""
+    value = _config_logging(config_name)
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return value
+    return env_int(env_name, default)
+
+
+def log_rotate_bytes() -> int:
+    """Size at which a django-cfg log file rotates (``rotate_mb``; 0 = never, for logrotate)."""
+    return _setting_int("rotate_mb", ENV_LOG_ROTATE_MB, DEFAULT_LOG_ROTATE_MB) * 1024 * 1024
+
+
+def log_backups() -> int:
+    return _setting_int("backups", ENV_LOG_BACKUPS, DEFAULT_LOG_BACKUPS)
+
+
+def log_retain_days() -> int:
+    return _setting_int("retain_days", ENV_LOG_RETAIN_DAYS, DEFAULT_LOG_RETAIN_DAYS)
+
+
+def usable_dir(path: Path) -> bool:
+    """Could files be written under ``path``? Looks, creates nothing."""
+    try:
+        probe = path
+        while not probe.exists():
+            if probe.parent == probe:
+                return False
+            probe = probe.parent
+        return probe.is_dir() and os.access(probe, os.W_OK | os.X_OK)
+    except OSError:
+        return False
+
+
+def _inside_project(path: Path) -> bool:
+    try:
+        path.resolve().relative_to(Path.cwd().resolve())
+        return True
+    except (ValueError, OSError):
+        return False
+
+
+def resolve_monitor_log_dir() -> Optional[Path]:
+    """
+    Directory of the monitor-event file (``djangocfg/monitor.log``), or ``None`` when no
+    file can be written and events go to stdout only (one warning).
+
+    Order: ``logging.dir`` / ``DJANGO_CFG_LOG_DIR``, then ``/var/log/<app>``, then the
+    per-user state dir. The two defaults are skipped when they sit inside the project
+    tree. Creates nothing.
+    """
+    configured = resolve_log_dir()
+    if configured is not None:
+        if usable_dir(configured):
+            return configured
+        warn_once(
+            f"monitor-dir:{configured}",
+            f"django-cfg cannot write to the configured log directory {configured}; trying the defaults.",
+        )
+    app = project_name()
+    for candidate in (SYSTEM_LOG_ROOT / app, user_state_log_dir()):
+        if not _inside_project(candidate) and usable_dir(candidate):
+            return candidate
+    warn_once(
+        "monitor-dir-none",
+        f"django-cfg found no writable directory for the monitor event log (tried {SYSTEM_LOG_ROOT / app} and "
+        f"{user_state_log_dir()}); monitor events go to stdout only. Set {ENV_LOG_DIR} or logging.dir.",
+    )
+    return None
+
+
+def _dir_size(path: Path) -> int:
+    total = 0
+    try:
+        for entry in path.rglob("*"):
+            try:
+                if entry.is_file():
+                    total += entry.stat().st_size
+            except OSError:
+                continue
+    except OSError:
+        pass
+    return total
 
 
 def resolve_cache_dir(*parts: str, explicit: Optional[str | os.PathLike] = None) -> Path:
@@ -138,7 +251,7 @@ def resolve_cache_dir(*parts: str, explicit: Optional[str | os.PathLike] = None)
     ``<cache root>/<parts>``. Does not create anything.
 
     Root precedence: explicit argument, config ``cache_dir``, ``DJANGO_CFG_CACHE_DIR``,
-    legacy ``./.cache`` (warns once), ``user_cache_dir(project)``.
+    ``user_cache_dir(project)``.
     """
     root: Optional[Path] = None
     if explicit:
@@ -148,16 +261,7 @@ def resolve_cache_dir(*parts: str, explicit: Optional[str | os.PathLike] = None)
     elif value := os.environ.get(ENV_CACHE_DIR, "").strip():
         root = Path(value)
     else:
-        legacy = Path.cwd() / ".cache"
-        if legacy.is_dir():
-            warn_once(
-                "legacy-cache",
-                f"django-cfg is still caching in {legacy}. This fallback goes away in the next "
-                f"release: set {ENV_CACHE_DIR}={legacy} to keep it.",
-            )
-            root = legacy
-        else:
-            root = default_cache_root()
+        root = default_cache_root()
     return root.joinpath(*parts) if parts else root
 
 
@@ -183,12 +287,21 @@ def ensure_dir(path: Path) -> Path:
 
 
 def log_format() -> str:
-    """``text`` (default) or ``json``."""
-    value = os.environ.get(ENV_LOG_FORMAT, "").strip().lower()
-    if not value:
-        cfg = _current_config()
-        value = str(getattr(getattr(cfg, "logging", None), "format", "") or "").lower()
-    return "json" if value == "json" else "text"
+    """``json`` or ``text``.
+
+    Config ``logging.format``, then the env var; with neither, ``json`` when
+    stderr is not a terminal (a container, systemd, a pipe) and ``text`` at a
+    developer's terminal.
+    """
+    value = str(_config_logging("format") or "").lower()
+    if value not in ("json", "text"):
+        value = os.environ.get(ENV_LOG_FORMAT, "").strip().lower()
+    if value in ("json", "text"):
+        return value
+    try:
+        return "text" if sys.stderr.isatty() else "json"
+    except Exception:
+        return "json"
 
 
 def warn_deprecated_env() -> None:
@@ -209,16 +322,30 @@ def warn_deprecated_env() -> None:
 __all__ = [
     "ENV_CACHE_DIR",
     "ENV_LOG_DIR",
-    "ENV_LOG_FILE",
     "ENV_LOG_FORMAT",
     "ENV_LOG_LEVEL",
-    "ENV_LOG_ROTATE",
+    "DEFAULT_LOG_BACKUPS",
+    "DEFAULT_LOG_DIR_MAX_BYTES",
+    "DEFAULT_LOG_RETAIN_DAYS",
+    "DEFAULT_LOG_ROTATE_MB",
+    "ENV_LOG_BACKUPS",
+    "ENV_LOG_DIR_MAX_BYTES",
+    "ENV_LOG_RETAIN_DAYS",
+    "ENV_LOG_ROTATE_MB",
+    "ENV_LOG_PRUNE",
     "LEGACY_ENV_LLM_CACHE_DIR",
     "LEGACY_ENV_LOG_TO_TMP",
     "default_cache_root",
     "default_log_dir",
     "ensure_dir",
     "env_flag",
+    "env_int",
+    "log_backups",
+    "log_retain_days",
+    "log_rotate_bytes",
+    "resolve_monitor_log_dir",
+    "usable_dir",
+    "user_state_log_dir",
     "log_format",
     "project_name",
     "resolve_cache_dir",

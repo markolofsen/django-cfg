@@ -187,13 +187,13 @@ Logging is automatically configured based on environment:
 ### Basic Usage
 
 ```python
-from django_cfg.modules.django_logging import logger
+import logging
 
-# Standard logging methods
+logger = logging.getLogger(__name__)
+
 logger.info("User logged in")
 logger.warning("Cache miss")
 logger.error("Connection failed")
-logger.success("Deployment complete")
 ```
 
 **That's it!** No configuration needed—the module handles everything automatically.
@@ -383,7 +383,7 @@ python manage.py shell -c "from django.core.cache import cache; print(cache.get(
 
 ### Logs Not Writing
 
-Files are opt-in: without `DJANGO_CFG_LOG_DIR` records go to stdout only (`docker compose logs`).
+General logs go to stdout (`docker compose logs`); `django.log` needs `logging.dir` / `DJANGO_CFG_LOG_DIR`, and only the monitor file is written by default. See [Django Logging](/features/modules/django-logging#no-log-file-is-created).
 
 **Check permissions** (only when `DJANGO_CFG_LOG_DIR` is set):
 ```bash
@@ -392,7 +392,7 @@ chmod 755 "$DJANGO_CFG_LOG_DIR"
 chown -R django-user:django-user "$DJANGO_CFG_LOG_DIR"
 ```
 
-If the directory is not writable, django-cfg logs one warning and keeps logging to stdout.
+If the directory is not writable, django-cfg logs one warning and keeps logging to stdout (monitor events fall back to `/var/log/<app>`, then the per-user state dir).
 
 **Check disk space:**
 ```bash

@@ -5,7 +5,7 @@ Common configuration for admin-only API endpoints.
 """
 from rest_framework.authentication import BasicAuthentication, SessionAuthentication
 from rest_framework.permissions import IsAdminUser
-from django_cfg.middleware.authentication import JWTAuthenticationWithLastLogin as JWTAuthentication  # DPoP-aware JWT auth
+from django_cfg.middleware.authentication import JWTAuthenticationWithLastLogin as JWTAuthentication
 
 
 class AdminAPIMixin:

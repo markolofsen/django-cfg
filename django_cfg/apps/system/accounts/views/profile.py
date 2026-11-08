@@ -1,3 +1,4 @@
+import logging
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
@@ -10,7 +11,6 @@ from rest_framework.views import APIView
 
 from django_cfg.mixins import ClientAPIMixin
 from django_cfg.modules.django_telegram import DjangoTelegram
-from django_cfg.utils import get_logger
 from ..signals import user_soft_deleted
 from ..serializers.profile import (
     AccountDeleteResponseSerializer,
@@ -19,7 +19,7 @@ from ..serializers.profile import (
     UserSerializer,
 )
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 

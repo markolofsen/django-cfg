@@ -3,6 +3,7 @@ Telegram Message Queue with Rate Limiting.
 
 Singleton priority queue for rate-limited Telegram message delivery.
 """
+import logging
 
 import itertools
 import os
@@ -10,9 +11,8 @@ import queue
 import threading
 import time
 
-from ..django_logging import get_logger
 
-logger = get_logger("django_cfg.telegram.queue")
+logger = logging.getLogger("django_cfg.telegram.queue")
 
 
 # When a parent process (an RQ worker, gunicorn pre-fork master, …) forks a

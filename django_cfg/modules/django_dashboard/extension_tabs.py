@@ -7,17 +7,17 @@ discovered ``type == "app"`` extension may declare ``dashboard_tabs`` in its
 project's ``DashboardConfig.tabs`` at render time. This keeps the consumer
 project's ``api/config.py`` free of extension-specific dashboard wiring.
 """
+import logging
 
 import importlib
 import traceback
 from typing import Any, List
 
-from django_cfg.utils import get_logger
 from django_cfg.modules.base import BaseCfgModule
 
 from .models import DashboardTab
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _coerce_tab(item: Any) -> DashboardTab | None:

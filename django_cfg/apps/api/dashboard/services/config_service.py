@@ -3,12 +3,12 @@ Config Service
 
 Service for extracting user's DjangoConfig settings for dashboard display.
 """
+import logging
 
 from typing import Dict, Any
 from django.conf import settings
-from django_cfg.utils import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class ConfigService:

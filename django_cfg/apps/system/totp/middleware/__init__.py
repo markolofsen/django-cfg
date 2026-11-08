@@ -1,15 +1,15 @@
 """Middleware for enforcing 2FA on protected paths."""
+import logging
 
 from typing import Callable, List, Optional
 
 from django.conf import settings
 from django.http import HttpRequest, JsonResponse
 
-from django_cfg.utils import get_logger
 
 from ..services import TwoFactorSessionService, TOTPService
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class TwoFactorMiddleware:

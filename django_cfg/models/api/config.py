@@ -102,7 +102,7 @@ class APIConfig(BaseConfig):
 
                 # Single canonical list — see core/constants.py. This copy
                 # used to ship stock SimpleJWT JWTAuthentication, silently
-                # bypassing the DPoP binding check.
+                # skipping the is_active gate and the sign-out cutoff.
                 'DEFAULT_AUTHENTICATION_CLASSES': list(DEFAULT_DRF_AUTHENTICATION_CLASSES),
 
                 'DEFAULT_PERMISSION_CLASSES': [

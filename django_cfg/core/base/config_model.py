@@ -194,7 +194,6 @@ class DjangoConfig(BaseModel):
             "x-api-token",
             "x-auth-retry",  # generated TS SDK marks refresh-and-retry requests
             "x-mcp-access-key",  # MCP agent access key
-            "dpop",  # RFC 9449 DPoP proof — sent per-request when dpop_enabled
 
             # Client locale/timezone headers
             # Sent by the generated TS SDK auth interceptor on every request so
@@ -348,8 +347,9 @@ class DjangoConfig(BaseModel):
     logging: Optional[DjangoLoggingConfig] = Field(
         default=None,
         description=(
-            "django-cfg logging: level, format (text|json), log_dir. Default is stdout/stderr only; "
-            "a log file is opt-in (log_dir or env DJANGO_CFG_LOG_DIR)."
+            "django-cfg logging: dir, level, format, rotate_mb, backups, retain_days (each also an env var "
+            "DJANGO_CFG_LOG_*; config wins). Default: stdout JSON, plus a small rotating monitor-event file "
+            "outside the project tree."
         ),
     )
 

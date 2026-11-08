@@ -4,15 +4,15 @@ Currency rate update service.
 Centralized logic for updating CurrencyRate from config.
 Used by both apps.py (startup) and tasks.py (scheduled).
 """
+import logging
 
 from datetime import timedelta
 from typing import Any, List, Optional
 
 from django.utils import timezone
 
-from django_cfg.modules.django_logging import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_currency_config():

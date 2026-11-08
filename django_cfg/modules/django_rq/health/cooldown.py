@@ -21,14 +21,13 @@ A ``critical`` alert fires even inside a ``warning`` cooldown — :func:`should_
 checks the ``critical`` cooldown key for critical severities and ignores any
 warning cooldown.
 """
-
 from __future__ import annotations
+import logging
 
-from django_cfg.utils import get_logger
 
 from .evaluator import Severity
 
-logger = get_logger("rq.health")
+logger = logging.getLogger(__name__)
 
 _KEY_PREFIX = "dcfg:rq_health"
 

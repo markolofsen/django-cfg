@@ -4,6 +4,7 @@ Auto-configuring Email Service for django_cfg.
 This email service automatically configures itself based on the DjangoConfig instance
 without requiring manual parameter passing.
 """
+import logging
 
 import re
 import socket
@@ -20,9 +21,8 @@ from django.utils.html import strip_tags
 
 from ...core.site import Site, site_for
 from ..base import BaseCfgModule
-from ..django_logging import get_logger
 
-logger = get_logger("django_cfg.email")
+logger = logging.getLogger("django_cfg.email")
 
 # A site as callers hand it over: the resolved object, or its key (what a job
 # captured at enqueue time). None is the default site.

@@ -1,15 +1,15 @@
 """Decorators for enforcing 2FA on specific views."""
+import logging
 
 from functools import wraps
 from typing import Callable, Optional
 
 from django.http import HttpRequest, JsonResponse
 
-from django_cfg.utils import get_logger
 
 from ..services import TwoFactorSessionService, TOTPService
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def require_2fa(

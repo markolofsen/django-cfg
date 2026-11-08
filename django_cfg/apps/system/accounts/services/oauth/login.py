@@ -38,9 +38,10 @@ def finalize_login(request, result: LoginResult, *, sender: type) -> Dict[str, A
         }
 
     # Remembered sessions are capped at 30 days.
-    from django_cfg.middleware.dpop import mint_tokens_for_request
+    from rest_framework_simplejwt.tokens import RefreshToken
 
-    refresh, access = mint_tokens_for_request(user, request)
+    refresh = RefreshToken.for_user(user)
+    access = refresh.access_token
 
     from ...signals import user_authenticated
 
