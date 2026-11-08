@@ -51,6 +51,8 @@ In Next.js apps always import from `@djangocfg/ui-nextjs`, not `@djangocfg/ui-co
 | `lg` | 44px | yes | yes | yes |
 | `huge` | 56px | yes | no | no |
 
+Heights are for a mouse. On a coarse pointer (a phone or tablet) every rung except `huge` is at least 44px, still the same for all controls in a row.
+
 ```tsx
 <div className="flex gap-2">
   <Input inputSize="lg" placeholder="Search" />

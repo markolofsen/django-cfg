@@ -13,6 +13,16 @@ from django_cfg.modules.django_llm.agent.chat.models import choices
 from django_cfg.modules.django_llm.agent.chat.turn import ErrorCode, Role, Status
 
 
+class AckSerializer(serializers.Serializer):
+    """What the browser told the server about a part: it was applied, or refused and why."""
+
+    class Meta:
+        ref_name = "ChatPartAck"
+
+    applied = serializers.BooleanField()
+    reason = serializers.CharField(allow_blank=True, required=False, max_length=200, default="", help_text="Why it was refused (a short code of the client's); empty when applied.")
+
+
 class PartSerializer(serializers.Serializer):
     """A structured part of an answer, by the same `kind` a live `ui_payload` carries."""
 
@@ -21,6 +31,7 @@ class PartSerializer(serializers.Serializer):
 
     kind = serializers.CharField()
     data = serializers.JSONField()
+    ack = AckSerializer(required=False, help_text="Present once the browser reported the part (`POST .../parts/<n>/ack`).")
 
 
 class ToolCallSerializer(serializers.Serializer):
@@ -111,7 +122,7 @@ class SendSerializer(serializers.Serializer):
     class Meta:
         ref_name = "ChatSend"
 
-    text = serializers.CharField(trim_whitespace=False, max_length=100_000, help_text="The user's message (the policy's `max_text_chars` applies).")
+    text = serializers.CharField(trim_whitespace=False, allow_blank=True, max_length=100_000, help_text="The user's message (the policy's `max_text_chars` applies). May be empty only when the context carries a key the kind lists in `empty_text_with` (a hidden feedback turn); any other empty text is refused as `invalid` / `empty`.")
     client_id = serializers.UUIDField(required=False, allow_null=True, help_text="Client-made id: a resend is answered from storage, not asked twice.")
     context = serializers.DictField(required=False, help_text="What the host says about this turn only; the kind validates it.")
 

@@ -58,7 +58,7 @@ class MessageConstraints:
     """Per-kind rules for the incoming message, checked before anything is stored or counted against a quota.
 
     A failure is `InvalidTurn(field, code)` (400 `invalid` with `field` on the API): `text` / `too_long`, `text` / `too_short`,
-    `context` keys / `not_allowed`, or whatever `check` raises.
+    `context` keys / `not_allowed`, or whatever `check` raises (`InvalidTurn(field, code, status=409)` answers 409; `make_deps` and `merge_context` may raise it too).
     """
 
     max_text_chars: int | None = None  # replaces `ChatPolicy.max_text_chars` for this kind (longer or shorter)
@@ -115,6 +115,7 @@ class ChatKind:
     summarize_call: Callable[[str, dict, "str | None"], str] | None = None  # (tool, input, output) -> one line for the trace a client may see
     phase_for_tool: Mapping[str, str] | Callable[[str], str] | None = None  # status phase per tool; default "searching"
     stream_reasoning: bool = False  # send the model's thinking as reasoning_* frames (a public chat opts in)
+    empty_text_with: frozenset[str] = frozenset()  # a turn may carry empty text when its context holds one of these keys with a value (a hidden "system feedback" turn, e.g. `{"feedback"}`); declare them in `transient_context` too
     transient_context: frozenset[str] = frozenset()  # context keys valid for this turn only: validated, given to make_deps, never stored on the thread
     capabilities: Callable[[Any], Sequence[Any]] | None = None  # (deps) -> pydantic-ai capabilities added to the agent
     retries: int | None = None  # tool retries of the agent; None = pydantic-ai default
@@ -123,6 +124,10 @@ class ChatKind:
     closing_payloads: Callable[[Any, str], Sequence[Any] | None] | None = None  # (deps, final text) -> ui payloads sent after the text, before `done`; stored in `parts`
     after_tool: Callable[[Any, str, str], Any] | None = None  # (deps, tool name, result text) -> payloads or None (sync or async); runs after each tool result
     knowledge: Any = None  # opt-in knowledge base (default off): True, a subfolder name, a Path, a KnowledgeBase, `Knowledge(...)`, or a callable of the deps; see chat.knowledge
+
+    def allows_empty_text(self, turn_context: Mapping[str, Any] | None) -> bool:
+        """True when `turn_context` holds a value under one of `empty_text_with`: the turn then needs no words of its own."""
+        return any((turn_context or {}).get(key) for key in self.empty_text_with)
 
     def __post_init__(self) -> None:
         if not _NAME.match(self.name):

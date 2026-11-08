@@ -9,6 +9,7 @@
 Routes (trailing slash on by default; `trailing_slash=False` for hosts whose client calls them bare):
 
     GET  threads            POST threads            GET threads/<uuid>            POST threads/<uuid>/messages
+    POST threads/<uuid>/messages/<uuid>/parts/<n>/ack      (the browser's verdict on a ui payload)
     GET  search?q=          (only when `search=` is passed)
 """
 
@@ -66,6 +67,7 @@ def urls(
         path(f"threads{end}", views.ThreadsView.as_view(**reading), name="threads"),
         path(f"threads/<uuid:thread_id>{end}", views.ThreadView.as_view(**reading), name="thread"),
         path(f"threads/<uuid:thread_id>/messages{end}", views.MessagesView.as_view(**sending), name="messages"),
+        path(f"threads/<uuid:thread_id>/messages/<uuid:message_id>/parts/<int:index>/ack{end}", views.PartAckView.as_view(**reading), name="part-ack"),
     ]
     if search is not None:
         routes.append(path(f"search{end}", views.SearchView.as_view(**reading, search=search), name="search"))

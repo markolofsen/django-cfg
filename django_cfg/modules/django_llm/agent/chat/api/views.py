@@ -123,6 +123,25 @@ class MessagesView(ChatView):
         return StreamingHttpResponse(self.service.frames(opened), content_type=STREAM_MEDIA_TYPE, headers=SSE_HEADERS)
 
 
+class PartAckView(ChatView):
+    """The browser's verdict on a `ui_payload` part of an answer: applied, or refused and why."""
+
+    docs = {
+        "POST": Doc(
+            "parts_ack", "Report what became of a ui payload",
+            {200: s.PartSerializer, **problems(400, 401, 404)},
+            request=s.AckSerializer,
+        )
+    }
+
+    def post(self, request, thread_id, message_id, index):
+        thread = self.thread_of(request, thread_id)
+        body = s.AckSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        part = self.service.ack_part(thread, message_id, index, applied=body.validated_data["applied"], reason=body.validated_data.get("reason", ""))
+        return Response(s.PartSerializer(part).data)
+
+
 class SearchView(ChatView):
     """Search across your chats by meaning (optional: mounted when the host passes `search=` to `urls()`)."""
 

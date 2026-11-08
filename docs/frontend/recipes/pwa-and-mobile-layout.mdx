@@ -37,7 +37,8 @@ export const metadata = createManifestMetadata({ name, statusBarStyle: 'black-tr
 ui-core base styles apply these with no per-project code:
 
 - `touch-action: manipulation` on `html`: no double-tap zoom and no 300ms tap delay, pinch-zoom still works (WCAG 1.4.4). `text-size-adjust: 100%` and no tap highlight flash on controls.
-- On touch devices (`pointer: coarse`) text fields are at least 16px, so iOS Safari does not zoom into a focused field. Desktop density is unchanged; add `.input-compact` to opt a field out.
+- On touch devices (`pointer: coarse`) text fields are at least 16px, so iOS Safari does not zoom into a focused field. Desktop density is unchanged; add `.input-compact` to opt a field out. `Input`, `Textarea` and `SelectTrigger` also type at `text-base md:text-sm`, so a phone-width window without a coarse pointer (a narrow desktop window, an emulator) gets 16px too.
+- Touch targets: on a coarse pointer `Button` (every size), `Input`, `SelectTrigger`, the date fields and `TabsTrigger` are at least 44px tall, the icon `Button` 44px wide, and the `@djangocfg/layouts` nav links (brand, sidebar rows on a docked sidebar, navbar items, footer links, drawer rows) are 44px targets. A mouse keeps the compact heights. Inline links inside prose are exempt.
 - In an installed app (`data-display-mode` standalone, fullscreen, minimal-ui or window-controls-overlay): `overscroll-behavior: none` on `html` and `body` (no rubber band or pull-to-refresh at the shell; inner scrollers keep theirs), and buttons, nav, headers, `[data-sidebar]` and `.app-chrome` are not selectable and have no long-press callout. Inputs, `contenteditable`, `pre`, `code`, tables and `.selectable` stay selectable.
 - Viewport: `createViewport()` no longer sets `maximumScale`. `createViewport({ appLike: true })` adds `maximumScale: 1` and `userScalable: false`; this blocks pinch-zoom for people who need it and iOS ignores it anyway, so prefer the CSS above. An opt-in `useBlockGestureZoom()` (`@djangocfg/ui-core/hooks`) blocks iOS gesture zoom in an installed app only; off by default, same accessibility trade-off.
 
@@ -46,6 +47,8 @@ See [PWA behaviour checklist](/frontend/recipes/pwa-behaviour-checklist) for wha
 ## The shell never scrolls the document
 
 `PrivateLayout` is one dynamic viewport tall and clips: the top bar is `shrink-0`, the content below it is `flex-1 min-h-0` and scrolls on its own. While it is mounted `<html data-private-shell>` is set, and in an installed app the document itself is locked (`overflow: hidden`, no overscroll), so dragging the top bar does not move the page. Public pages are unaffected. Do not wrap the layout in `min-h-screen` or `h-screen`; `window.scrollTo` and sticky headers inside pages now refer to the content region. On iOS before 16 `overscroll-behavior` is ignored; check the edge bounce on a real device.
+
+Locked is not unscrollable: `--app-height` in an installed iOS app is taller than `window.innerHeight` by design, and iOS scrolls the layout viewport (and any clipped ancestor) to lift a focused field above the keyboard, then leaves it there. `UiProviders` runs `syncScrollReset()`: once the keyboard is down (focus left a field, or the visual viewport is whole again) it puts `window` and the `[data-app-shell]` element (set by `PrivateLayout`) back at 0. It does nothing while the keyboard is up, in a browser tab, or on a pinch-zoomed page.
 
 ## Build a PWA-safe overlay
 

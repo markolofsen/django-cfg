@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime, time, timedelta, timezone as dt_timezone
 from typing import Any
 
+from django.db import transaction
 from django.utils import timezone
 from pydantic import BaseModel, ValidationError
 from pydantic_ai.models import Model
@@ -44,6 +45,8 @@ QuotaCheck = Callable[[Any, Any, datetime], None]
 ResolveThread = Callable[["ChatService", Any, uuid.UUID], Any]
 #: `(stored answer row, RunOutcome) -> None`, after the answer is stored; an exception is logged and swallowed.
 OnAnswer = Callable[[Any, RunOutcome], None]
+#: `(answer row, part index, part dict incl. its `ack`) -> None`, after a browser reported a `ui_payload`; an exception is logged and swallowed.
+OnUiPayloadAccepted = Callable[[Any, int, dict], None]
 
 
 def parse_chain(raw: str | tuple[str, ...] | list[str] | None) -> tuple[str, ...] | None:
@@ -117,11 +120,13 @@ class ChatService:
         resolve_thread: ResolveThread | None = None,
         on_answer: OnAnswer | None = None,
         title_job: Callable[..., None] | None = None,
+        on_ui_payload_accepted: OnUiPayloadAccepted | None = None,
     ):
         """`policy` may be a `ChatPolicy` or a zero-argument callable returning one, read on every use (rates from settings,
         swapped in tests). `resolve_thread(service, actor, id)` is the tenancy rule (default: the owner's thread); `on_answer`
         runs after each stored answer; `title_job(thread_model, thread_id, models)` runs the LLM title off the request (default:
-        a daemon thread; a host may enqueue a job instead)."""
+        a daemon thread; a host may enqueue a job instead). `on_ui_payload_accepted(answer, index, part)` runs after `ack_part`
+        stored a browser's verdict on a part (`{"applied": bool, "reason": str}` under `part["ack"]`)."""
         self.thread_model = thread_model
         self.message_model = thread_model.messages.rel.related_model
         self._policy = policy or ChatPolicy()
@@ -131,6 +136,7 @@ class ChatService:
         self.resolve_thread = resolve_thread or owners_thread
         self.on_answer = on_answer
         self.title_job = title_job
+        self.on_ui_payload_accepted = on_ui_payload_accepted
 
     @property
     def policy(self) -> ChatPolicy:
@@ -193,6 +199,8 @@ class ChatService:
         replay = {m.pk for m in (answers[-keep:] if keep else [])}
         out: list[dict] = []
         for m in rows:
+            if m.role == rules.Role.USER and not m.text:
+                continue  # a hidden feedback turn has no words: nothing to replay (providers refuse an empty user message)
             item: dict = {"role": m.role, "content": m.text}
             if m.pk in replay:
                 calls = [c for c in (m.tool_calls or []) if isinstance(c, dict) and c.get("output") is not None]
@@ -207,6 +215,24 @@ class ChatService:
         if before_seq is not None:
             qs = qs.filter(seq__lt=before_seq)
         return list(qs.order_by("-seq")[:limit])[::-1]
+
+    def ack_part(self, thread, message_id: uuid.UUID, index: int, *, applied: bool, reason: str = "") -> dict:
+        """Store the browser's verdict on part `index` of an answer of `thread` as `part["ack"]` (the latest report wins), then run the
+        host's `on_ui_payload_accepted`. Raises `NotFound` for no such answer of this thread or no such part."""
+        with transaction.atomic():
+            row = self.message_model.objects.in_thread(thread).select_for_update().filter(pk=message_id, role=rules.Role.ASSISTANT).first()
+            parts = list(row.parts or []) if row is not None else []
+            if row is None or not 0 <= index < len(parts) or not isinstance(parts[index], dict):
+                raise NotFound(f"{message_id}/parts/{index}")
+            parts[index] = {**parts[index], "ack": {"applied": bool(applied), "reason": reason[:200]}}
+            self.message_model.objects.filter(pk=row.pk).update(parts=parts)
+            row.parts = parts
+        if self.on_ui_payload_accepted is not None:
+            try:
+                self.on_ui_payload_accepted(row, index, parts[index])
+            except Exception:  # noqa: BLE001 - a hook must not lose the stored verdict
+                log.exception("chat: on_ui_payload_accepted failed for message %s", message_id)
+        return parts[index]
 
     # ── cap and reaper ──────────────────────────────────────────────────────────
 
@@ -261,10 +287,10 @@ class ChatService:
             self.check_quota(owner, now, thread)  # a resend is served from storage and costs nothing
         deps = chat_kind.make_deps(KindScope(user=owner, thread_id=thread.pk, kind=chat_kind.name, context=context, thread_context=thread.context, thread=thread))
         store = DjangoTurnStore(thread)
-        started = rules.start(store, text, client_id, now=now, max_chars=(constraints.max_text_chars if constraints is not None and constraints.max_text_chars is not None else self.policy.max_text_chars), stale_after_s=self.policy.stale_run_seconds)
+        started = rules.start(store, text, client_id, now=now, max_chars=(constraints.max_text_chars if constraints is not None and constraints.max_text_chars is not None else self.policy.max_text_chars), stale_after_s=self.policy.stale_run_seconds, allow_empty=chat_kind.allows_empty_text(turn_context))
         if started.runs_model:
             self.remember(thread, context)  # the next turn may omit what this one said (e.g. a document sent once per hash)
-        if started.kind is not rules.TurnKind.BUSY and not thread.title:
+        if started.kind is not rules.TurnKind.BUSY and not thread.title and started.user.text:
             self.thread_model.objects.filter(pk=thread.pk, title="").update(title=chat_kind.title_of(started.user.text)[:200])
         prior = self.history_for_model(thread, chat_kind, before_seq=started.user.seq) if started.runs_model else []
         return Opened(thread, chat_kind, started, deps, prior, store)

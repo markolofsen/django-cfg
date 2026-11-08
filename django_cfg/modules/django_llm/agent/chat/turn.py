@@ -53,10 +53,11 @@ class Busy(TurnError):
 
 
 class InvalidTurn(TurnError):
-    def __init__(self, field: str, code: str):
+    def __init__(self, field: str, code: str, status: int = 400):
         super().__init__(f"{field}: {code}")
         self.field = field
         self.code = code  # empty | too_long | too_short | not_allowed | moved_on, or a code a kind's check raises
+        self.status = status  # the HTTP status of the refusal: 400, or 409 for `already_given` (a state the turn conflicts with)
 
 
 @dataclass(frozen=True)
@@ -102,9 +103,10 @@ class TurnStore(Protocol):
     def close(self, message_id: uuid.UUID, **fields: Any) -> bool: ...
 
 
-def clean_text(text: str, max_chars: int) -> str:
+def clean_text(text: str, max_chars: int, *, allow_empty: bool = False) -> str:
+    """Strip and bound the text. `allow_empty` is the caller's verdict that the turn says something else (a kind's `feedback` context)."""
     text = (text or "").strip()
-    if not text:
+    if not text and not allow_empty:
         raise InvalidTurn("text", "empty")
     if len(text) > max_chars:
         raise InvalidTurn("text", "too_long")
@@ -117,10 +119,10 @@ def reap(store: TurnStore, now: datetime, stale_after_s: float) -> int:
 
 
 def start(
-    store: TurnStore, text: str, client_id: uuid.UUID | None, *, now: datetime, max_chars: int, stale_after_s: float
+    store: TurnStore, text: str, client_id: uuid.UUID | None, *, now: datetime, max_chars: int, stale_after_s: float, allow_empty: bool = False
 ) -> Turn:
     """Store the user message and begin the answer for it, or settle a resend of `client_id`. Raises `Busy`, `InvalidTurn`."""
-    text = clean_text(text, max_chars)
+    text = clean_text(text, max_chars, allow_empty=allow_empty)
     with store.atomic():
         reap(store, now, stale_after_s)
         if client_id is not None:
