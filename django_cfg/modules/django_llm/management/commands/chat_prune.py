@@ -31,4 +31,4 @@ class Command(BaseCommand):
         except (ops.ThreadModelError, ValueError) as err:
             raise CommandError(str(err)) from err
         verb = "would delete" if options["dry_run"] else "deleted"
-        self.stdout.write(f"{model._meta.label}: {verb} {result.threads} thread(s), {result.messages} message(s) idle for over {options['days']} days")
+        self.stdout.write(f"{model._meta.label}: {verb} {result.threads} thread(s), {result.messages} message(s), {result.files} file(s) idle for over {options['days']} days")

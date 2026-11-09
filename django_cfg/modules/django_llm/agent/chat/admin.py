@@ -119,3 +119,28 @@ class MessageAdminMixin(_ReadOnly):
         if cl is not None:
             self.message_user(request, self.totals_line(cl.queryset), level=messages.INFO)
         return response
+
+
+class AttachmentAdminMixin(_ReadOnly):
+    """Files on messages: who, kind, type, size, status, when. Text-free: no file name and no derived (OCR, transcript) text, unless `show_text = True`."""
+
+    list_display = ("id", "owner", "chat_kind", "media_kind", "mime", "size", "status", "created_at")
+    list_filter = ("chat_kind", "media_kind", "status", "created_at")
+    search_fields = ("id", "owner__email", "owner__username")
+    date_hierarchy = "created_at"
+    ordering = ("-created_at",)
+    show_text = False  # True shows the file name and the text read from the file
+
+    def get_fields(self, request, obj=None):
+        fields = ["owner", "message", "chat_kind", "media_kind", "mime", "size", "sha256", "storage", "status", "created_at"]
+        return [*fields, "name", "derived_json"] if self.show_text else fields
+
+    def get_readonly_fields(self, request, obj=None):
+        return self.get_fields(request, obj)
+
+    @admin.display(description="derived")
+    def derived_json(self, obj):
+        return pretty(obj.derived)
+
+    def has_delete_permission(self, request, obj=None) -> bool:
+        return False  # a row deleted here would strand its file: files go with their thread (`chat_prune`) or their TTL (`chat_reap`)

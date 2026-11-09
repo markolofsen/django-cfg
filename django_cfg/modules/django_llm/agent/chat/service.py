@@ -28,7 +28,7 @@ from pydantic_ai.models import Model
 from django_cfg.modules.django_llm.agent.bus.events import RunEvent, encode_sse
 from django_cfg.modules.django_llm.agent.chat import kind as kinds
 from django_cfg.modules.django_llm.agent.chat import turn as rules
-from django_cfg.modules.django_llm.agent.chat.errors import InvalidContext, InvalidKind, NotFound, RateLimited, ServiceUnavailable
+from django_cfg.modules.django_llm.agent.chat.errors import InvalidContext, InvalidKind, InvalidTurn, NotFound, RateLimited, ServiceUnavailable
 from django_cfg.modules.django_llm.agent.chat.kind import ChatKind, KindScope
 from django_cfg.modules.django_llm.agent.chat.runner import build_model, kind_source, replay_events
 from django_cfg.modules.django_llm.agent.chat.store import DjangoTurnStore
@@ -83,6 +83,7 @@ class Opened:
     deps: Any
     history: list[dict]
     store: DjangoTurnStore
+    attachments: tuple = ()  # the rows bound to this turn's user message (empty without files)
 
 
 def day_start(now: datetime) -> datetime:
@@ -137,6 +138,26 @@ class ChatService:
         self.on_answer = on_answer
         self.title_job = title_job
         self.on_ui_payload_accepted = on_ui_payload_accepted
+        self._attachment_store: Any = False
+
+    @property
+    def attachment_model(self) -> Any:
+        """The host's concrete attachment table (`Message.attachments`), or None when the host declared none."""
+        descriptor = getattr(self.message_model, "attachments", None)
+        return descriptor.rel.related_model if descriptor is not None and hasattr(descriptor, "rel") else None
+
+    @property
+    def attachment_store(self) -> Any:
+        """`AttachmentStore` over `attachment_model`, or None."""
+        if self._attachment_store is False:
+            model = self.attachment_model
+            if model is None:
+                self._attachment_store = None
+            else:
+                from django_cfg.modules.django_llm.agent.chat.attachments.store import AttachmentStore
+
+                self._attachment_store = AttachmentStore(model)
+        return self._attachment_store
 
     @property
     def policy(self) -> ChatPolicy:
@@ -198,10 +219,13 @@ class ChatService:
         answers = [m for m in rows if m.role == rules.Role.ASSISTANT]
         replay = {m.pk for m in (answers[-keep:] if keep else [])}
         out: list[dict] = []
+        files = self._attachments_of([m.pk for m in rows if m.role == rules.Role.USER]) if chat_kind.attachments is not None else {}
         for m in rows:
-            if m.role == rules.Role.USER and not m.text:
+            if m.role == rules.Role.USER and not m.text and m.pk not in files:
                 continue  # a hidden feedback turn has no words: nothing to replay (providers refuse an empty user message)
             item: dict = {"role": m.role, "content": m.text}
+            if m.pk in files:
+                item["attachments"] = files[m.pk]
             if m.pk in replay:
                 calls = [c for c in (m.tool_calls or []) if isinstance(c, dict) and c.get("output") is not None]
                 if calls:
@@ -209,12 +233,27 @@ class ChatService:
             out.append(item)
         return out
 
+    def _attachments_of(self, message_ids: list) -> dict:
+        """`{message id: [attachment rows]}` for the given user messages: one query."""
+        model = self.attachment_model
+        if model is None or not message_ids:
+            return {}
+        grouped: dict = {}
+        for row in model.objects.filter(message_id__in=message_ids, status="attached").order_by("created_at"):
+            grouped.setdefault(row.message_id, []).append(row)
+        return grouped
+
     def page(self, thread, *, limit: int = 50, before_seq: int | None = None) -> list:
         """The transcript for a surface: the newest `limit` messages (older than `before_seq` when paging back), oldest first."""
         qs = self.message_model.objects.in_thread(thread)
         if before_seq is not None:
             qs = qs.filter(seq__lt=before_seq)
-        return list(qs.order_by("-seq")[:limit])[::-1]
+        found = list(qs.order_by("-seq")[:limit])[::-1]
+        if self.attachment_model is not None:
+            grouped = self._attachments_of([m.pk for m in found if m.role == rules.Role.USER])
+            for m in found:
+                m.attached = grouped.get(m.pk, [])  # read by `MessageSerializer.attachments`; no query per message
+        return found
 
     def ack_part(self, thread, message_id: uuid.UUID, index: int, *, applied: bool, reason: str = "") -> dict:
         """Store the browser's verdict on part `index` of an answer of `thread` as `part["ack"]` (the latest report wins), then run the
@@ -270,7 +309,10 @@ class ChatService:
             return self.model_factory(chat_kind)
         return build_model(parse_chain(self.policy.models) or chat_kind.models)
 
-    def begin(self, owner, thread, text: str, client_id: uuid.UUID | None, turn_context: dict | None = None, *, now: datetime | None = None) -> Opened:
+    def begin(
+        self, owner, thread, text: str, client_id: uuid.UUID | None, turn_context: dict | None = None, *, now: datetime | None = None,
+        attachments: list[uuid.UUID] | None = None,
+    ) -> Opened:
         """Store the message and begin the answer. Raises `ServiceUnavailable`, `RateLimited` (or the host's `QuotaExceeded`), `InvalidContext`, `InvalidTurn`, `Busy`, `NotFound`."""
         self.ensure_available()
         now = now or timezone.now()
@@ -283,17 +325,30 @@ class ChatService:
             constraints.validate(text, turn_context)  # before the quota and before anything is stored
         context = parse_context(chat_kind, chat_kind.merge_context(thread.context, turn_context or {}))
         resend = client_id is not None and self.message_model.objects.in_thread(thread).filter(role=rules.Role.USER, client_id=client_id).exists()
+        files: list = []
+        if attachments and not resend:  # a resend is served from storage: its files are already bound
+            if chat_kind.attachments is None or self.attachment_store is None:
+                raise InvalidTurn("attachments", "not_enabled")
+            files = self.attachment_store.lock_staged(owner, chat_kind.name, list(attachments), chat_kind.attachments)
+            from django_cfg.modules.django_llm.agent.chat.attachments.delivery import can_read_everything
+
+            if not can_read_everything(chat_kind.attachments, parse_chain(self.policy.models) or chat_kind.models, files):
+                raise InvalidTurn("attachments", "model_cannot_read")  # `on_unreadable="refuse"`: before anything is stored
         if not resend:
             self.check_quota(owner, now, thread)  # a resend is served from storage and costs nothing
         deps = chat_kind.make_deps(KindScope(user=owner, thread_id=thread.pk, kind=chat_kind.name, context=context, thread_context=thread.context, thread=thread))
         store = DjangoTurnStore(thread)
-        started = rules.start(store, text, client_id, now=now, max_chars=(constraints.max_text_chars if constraints is not None and constraints.max_text_chars is not None else self.policy.max_text_chars), stale_after_s=self.policy.stale_run_seconds, allow_empty=chat_kind.allows_empty_text(turn_context))
+        with transaction.atomic():  # the message and its files bind together or not at all
+            started = rules.start(store, text, client_id, now=now, max_chars=(constraints.max_text_chars if constraints is not None and constraints.max_text_chars is not None else self.policy.max_text_chars), stale_after_s=self.policy.stale_run_seconds, allow_empty=chat_kind.allows_empty_text(turn_context) or bool(files))
+            if files and started.kind is rules.TurnKind.STARTED and self.attachment_store.bind(owner, [f.pk for f in files], started.user.id, chat_kind.name) != len(files):
+                raise InvalidTurn("attachments", "unavailable")  # another request took one first: roll the message back
+        bound = tuple(self.attachment_model.objects.filter(message_id=started.user.id, status="attached").order_by("created_at")) if started.runs_model and chat_kind.attachments is not None and self.attachment_model is not None else ()
         if started.runs_model:
             self.remember(thread, context)  # the next turn may omit what this one said (e.g. a document sent once per hash)
         if started.kind is not rules.TurnKind.BUSY and not thread.title and started.user.text:
             self.thread_model.objects.filter(pk=thread.pk, title="").update(title=chat_kind.title_of(started.user.text)[:200])
         prior = self.history_for_model(thread, chat_kind, before_seq=started.user.seq) if started.runs_model else []
-        return Opened(thread, chat_kind, started, deps, prior, store)
+        return Opened(thread, chat_kind, started, deps, prior, store, bound)
 
     def fallback_pricer(self) -> Pricer | None:
         """The registry pricer with the policy's tables behind it, so an unknown slug is estimated, not free. None without tables."""
@@ -352,14 +407,19 @@ class ChatService:
                 tokens_in=state.tokens_in or 0, tokens_out=state.tokens_out or 0, cost_usd=state.cost_usd,
                 latency_ms=outcome.latency_ms, model=state.model or "", prompt_version=chat_kind.prompt_version,
             )
-            log_run(chat_kind, answer.id, opened.thread.pk, status, state, outcome, len(out.tool_calls))
+            log_run(chat_kind, answer.id, opened.thread.pk, status, state, outcome, len(out.tool_calls), len(opened.attachments))
             self.after_answer(opened, outcome, status)
 
         cfg = driver_config or DriverConfig(ping_s=self.policy.ping_s, max_run_s=chat_kind.limits.timeout_s)
         driver = RunDriver(cfg, lock=self.lock, hooks=RunHooks(on_flush=on_flush, on_finish=on_finish))
         model = self.model_for(chat_kind)
+        prompt, history = turn.user.text, opened.history
+        if chat_kind.attachments is not None and self.attachment_store is not None and (opened.attachments or any(h.get("attachments") for h in history)):
+            from django_cfg.modules.django_llm.agent.chat.attachments.delivery import resolve
+
+            prompt, history = await resolve(opened, self.attachment_store, parse_chain(self.policy.models) or chat_kind.models)
         source = kind_source(
-            chat_kind, opened.deps, opened.history, turn.user.text, model=model, out=out,
+            chat_kind, opened.deps, history, prompt, model=model, out=out,
             pricer=self.pricer or self.fallback_pricer(), price_timeout_s=self.policy.price_timeout_s,
         )
         try:
@@ -372,13 +432,13 @@ class ChatService:
             yield chunk
 
 
-def log_run(chat_kind: ChatKind, message_id: Any, thread_id: Any, status: rules.Status, state: RunState, outcome: RunOutcome, tools: int) -> None:
+def log_run(chat_kind: ChatKind, message_id: Any, thread_id: Any, status: rules.Status, state: RunState, outcome: RunOutcome, tools: int, files: int = 0) -> None:
     """One INFO line per run: ids, kind, model, tokens, cost, latency, tool count. Never the user's text, the answer or tool arguments."""
     try:
         log.info(
-            "chat run kind=%s status=%s model=%s tokens_in=%d tokens_out=%d cost_usd=%s latency_ms=%d tools=%d thread=%s message=%s",
+            "chat run kind=%s status=%s model=%s tokens_in=%d tokens_out=%d cost_usd=%s latency_ms=%d tools=%d files=%d thread=%s message=%s",
             chat_kind.name, status.value, state.model or "-", state.tokens_in or 0, state.tokens_out or 0,
-            "-" if state.cost_usd is None else f"{state.cost_usd:.6f}", outcome.latency_ms or 0, tools, thread_id, message_id,
+            "-" if state.cost_usd is None else f"{state.cost_usd:.6f}", outcome.latency_ms or 0, tools, files, thread_id, message_id,
         )
     except Exception:  # noqa: BLE001 - a log line must not lose a stored answer
         log.exception("chat: could not write the run log line")

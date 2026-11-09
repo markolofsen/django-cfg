@@ -1,5 +1,5 @@
 """
-Close chat answers stuck in `running` (a crash, a restart) as `error` / `failed`.
+Close chat answers stuck in `running` (a crash, a restart) as `error` / `failed`, and delete uploads nobody sent past their kind's TTL.
 
 Usage:
     python manage.py chat_reap                       # the only AbstractThread subclass installed
@@ -27,3 +27,5 @@ class Command(BaseCommand):
             raise CommandError(str(err)) from err
         closed = ops.reap(model, older_than_s=options["older_than"])
         self.stdout.write(f"{model._meta.label}: closed {closed} stale running answer(s)")
+        if ops.attachment_store(model) is not None:
+            self.stdout.write(f"{model._meta.label}: deleted {ops.reap_attachments(model)} unsent upload(s) past their time")

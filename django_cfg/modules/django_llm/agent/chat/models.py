@@ -11,6 +11,9 @@
             db_table = "assistant_message"
             indexes = [models.Index(fields=["thread", "-seq"], name="assistant_msg_thread_seq_idx")]
 
+Attachments (optional): `class Attachment(AbstractAttachment)` with `message = ForeignKey(Message, null=True, on_delete=CASCADE, related_name="attachments")`
+(the name is the contract). The message table is untouched; a host that sets no policy never needs the table.
+
 What the schema enforces, whatever a writer forgets: `seq` unique per thread; `client_id` unique per thread when set
 (a resend is idempotent); at most one `running` assistant row per thread. There is no delete path in the services.
 Constraint names are `<app>_<model>_...`; indexes are the host's (their names are the host's to choose).
@@ -26,7 +29,7 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from django_cfg.modules.django_llm.agent.chat.querysets import MessageQuerySet, ThreadQuerySet
+from django_cfg.modules.django_llm.agent.chat.querysets import AttachmentQuerySet, MessageQuerySet, ThreadQuerySet
 from django_cfg.modules.django_llm.agent.chat.turn import ErrorCode, Role, Status
 
 
@@ -98,3 +101,42 @@ class AbstractMessage(models.Model):
 
     def __str__(self) -> str:
         return f"{self.role}#{self.seq} ({self.status})"
+
+
+class AbstractAttachment(models.Model):
+    """A file a user attached to a chat message: its own row, so the message table stays as it is.
+
+    `staged` until the message that carries it is stored (then `attached`); a staged file nobody sent is reaped after the policy's TTL.
+    The subclass declares `message = ForeignKey(<its Message>, null=True, blank=True, on_delete=CASCADE, related_name="attachments")`.
+    `mime`, `size` and `sha256` come from the bytes the server read, never from the client's claims.
+    """
+
+    STAGED = "staged"
+    ATTACHED = "attached"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
+    chat_kind = models.CharField(max_length=40, help_text="The chat kind whose policy accepted the file.")
+    media_kind = models.CharField(max_length=12, help_text="image | audio | video | text | document, sniffed from the bytes.")
+    name = models.CharField(max_length=200, help_text="The file name the user gave; a label, never a path.")
+    mime = models.CharField(max_length=100)
+    size = models.PositiveBigIntegerField()
+    sha256 = models.CharField(max_length=64)
+    storage = models.CharField(max_length=40, default="default", help_text="Django STORAGES alias holding the bytes.")
+    file = models.FileField(max_length=255, help_text="The storage key, `chat/<kind>/<uuid>`: never a client name.")
+    derived = models.JSONField(default=dict, blank=True, help_text="What was read from the file once (OCR text, transcript); the model-facing cache.")
+    status = models.CharField(max_length=10, default="staged")
+    created_at = models.DateTimeField(default=timezone.now)
+
+    objects = AttachmentQuerySet.as_manager()
+
+    class Meta:
+        abstract = True
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["owner", "status", "created_at"], name="%(app_label)s_%(class)s_own_idx"),
+            models.Index(fields=["message"], name="%(app_label)s_%(class)s_msg_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.media_kind} {self.pk} ({self.status})"

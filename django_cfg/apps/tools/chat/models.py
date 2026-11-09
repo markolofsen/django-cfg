@@ -2,7 +2,7 @@
 
 from django.db import models
 
-from django_cfg.modules.django_llm.agent.chat.models import AbstractMessage, AbstractThread
+from django_cfg.modules.django_llm.agent.chat.models import AbstractAttachment, AbstractMessage, AbstractThread
 from django_cfg.modules.django_llm.agent.chat.vectors.models import AbstractChatChunk
 
 
@@ -18,6 +18,15 @@ class Message(AbstractMessage):
     class Meta(AbstractMessage.Meta):
         db_table = "cfg_chat_message"
         indexes = [models.Index(fields=["thread", "-seq"], name="cfg_chat_msg_thread_seq_idx")]
+
+
+class Attachment(AbstractAttachment):
+    """A file on a user message (`ChatConfig.attachments`). Unused and empty while the switch is off."""
+
+    message = models.ForeignKey(Message, null=True, blank=True, on_delete=models.CASCADE, related_name="attachments")  # the name is the contract
+
+    class Meta(AbstractAttachment.Meta):
+        db_table = "cfg_chat_attachment"
 
 
 class ThreadChunk(AbstractChatChunk):

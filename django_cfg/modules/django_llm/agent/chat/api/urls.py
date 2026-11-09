@@ -10,6 +10,8 @@ Routes (trailing slash on by default; `trailing_slash=False` for hosts whose cli
 
     GET  threads            POST threads            GET threads/<uuid>            POST threads/<uuid>/messages
     POST threads/<uuid>/messages/<uuid>/parts/<n>/ack      (the browser's verdict on a ui payload)
+    POST attachments (multipart)    DELETE attachments/<uuid>    GET attachments/<uuid>/content    GET attachments/limits
+        (404 for a host whose Message has no `attachments` table; a kind with no `ChatKind.attachments` policy takes no file)
     GET  search?q=          (only when `search=` is passed)
 """
 
@@ -19,7 +21,7 @@ from collections.abc import Callable, Sequence
 from typing import Any
 
 from django.urls import URLPattern, path
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from django_cfg.modules.django_llm.agent.chat.api import views
 from django_cfg.modules.django_llm.agent.chat.service import ChatService
@@ -69,6 +71,13 @@ def urls(
         path(f"threads/<uuid:thread_id>/messages{end}", views.MessagesView.as_view(**sending), name="messages"),
         path(f"threads/<uuid:thread_id>/messages/<uuid:message_id>/parts/<int:index>/ack{end}", views.PartAckView.as_view(**reading), name="part-ack"),
     ]
+    if service.attachment_model is not None:  # a host without the table keeps its routes byte for byte
+        routes += [
+            path(f"attachments{end}", views.AttachmentsView.as_view(**sending), name="attachments"),
+            path(f"attachments/limits{end}", views.AttachmentLimitsView.as_view(**reading), name="attachment-limits"),
+            path(f"attachments/<uuid:attachment_id>{end}", views.AttachmentView.as_view(**reading), name="attachment"),
+            path(f"attachments/<uuid:attachment_id>/content{end}", views.AttachmentContentView.as_view(**{**reading, "permission_classes": [AllowAny]}), name="attachment-content"),
+        ]
     if search is not None:
         routes.append(path(f"search{end}", views.SearchView.as_view(**reading, search=search), name="search"))
     return routes

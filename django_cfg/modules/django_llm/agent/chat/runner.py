@@ -51,7 +51,7 @@ async def kind_source(
     kind: ChatKind,
     deps: Any,
     history: list[dict],
-    prompt: str,
+    prompt: "str | list[Any]",  # the user's text, or the text and its file parts (`attachments.delivery`)
     *,
     model: Model,
     out: Any = None,

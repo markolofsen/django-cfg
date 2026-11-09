@@ -61,3 +61,20 @@ class MessageQuerySet(models.QuerySet):
         if before_seq is not None:
             qs = qs.filter(seq__lt=before_seq)
         return list(qs.order_by("-seq")[:n])[::-1]
+
+
+class AttachmentQuerySet(models.QuerySet):
+    """Reads of the attachment table. Tenancy is `for_owner`: someone else's file reads as missing."""
+
+    def for_owner(self, user) -> "AttachmentQuerySet":
+        return self.filter(owner_id=user.pk)
+
+    def staged(self) -> "AttachmentQuerySet":
+        return self.filter(status="staged")
+
+    def expired(self, cutoff: datetime) -> "AttachmentQuerySet":
+        """Staged uploads older than `cutoff`: never sent, safe to delete."""
+        return self.filter(status="staged", created_at__lt=cutoff)
+
+    def stored_since(self, user, since: datetime) -> "AttachmentQuerySet":
+        return self.filter(owner_id=user.pk, created_at__gte=since)

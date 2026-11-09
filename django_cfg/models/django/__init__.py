@@ -5,7 +5,7 @@ Django integrations and extensions.
 """
 
 from .analytics import AnalyticsConfig
-from .chat import ChatConfig
+from .chat import AttachmentsConfig, ChatConfig
 from .axes import AxesConfig
 from .constance import ConstanceConfig, ConstanceField
 from .currency import CurrencyConfig
@@ -32,5 +32,6 @@ __all__ = [
     "PaymentsConfig",
     "AxesConfig",
     "AnalyticsConfig",
+    "AttachmentsConfig",
     "ChatConfig",
 ]

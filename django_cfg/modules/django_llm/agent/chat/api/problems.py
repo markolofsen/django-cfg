@@ -40,7 +40,7 @@ PROBLEM_MEDIA_TYPE = "application/problem+json"
 PRIVATE = "private, no-store"
 
 #: The codes a client may read from a pre-stream refusal (`wire-contract.md`, "Errors before a stream").
-CODES = ("unauthorized", "busy", "invalid", "rate_limited", "unavailable", "not_found", "already_given")
+CODES = ("unauthorized", "busy", "invalid", "rate_limited", "unavailable", "not_found", "already_given", "too_large", "unsupported_type")
 
 
 @dataclass(frozen=True)
@@ -118,6 +118,8 @@ def problem_for(exc: BaseException) -> Problem | None:
     if isinstance(exc, InvalidTurn):
         if exc.status == 409:  # a conflict with state the kind holds (`already_given`): its own code, so a client can branch on it
             return Problem(409, exc.code, exc.code, field=exc.field)
+        if exc.status in (413, 415):  # an upload the policy refused: the status says why, and a client has its own words for each
+            return Problem(exc.status, "too_large" if exc.status == 413 else "unsupported_type", exc.code, field=exc.field)
         return Problem(exc.status, "invalid", exc.code, field=exc.field)
     if isinstance(exc, drf.ValidationError):
         return Problem(400, "invalid", "The request is not valid.", field=_first_field(exc.detail))

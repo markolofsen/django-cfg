@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.3.395"
+__version__ = "2.3.396"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -101,7 +101,7 @@ from .models.django.geo import GeoConfig
 from .models.django.indexnow import IndexNowConfig, IndexNowSite
 from .core.site import Site, SiteConfig, site_for, site_key, sites
 from .models.django.analytics import AnalyticsConfig
-from .models.django.chat import ChatConfig
+from .models.django.chat import AttachmentsConfig, ChatConfig
 from .models.django.simple_history import SimpleHistoryConfig
 from .models.django.constance import ConstanceConfig, ConstanceField
 from .models.django.storage import CDNPurgeConfig, FileCleanupConfig, StorageConfig
@@ -279,7 +279,7 @@ __all__ = [
     "DjangoRQConfig", "RQQueueConfig", "RQScheduleConfig",
     "RQHealthConfig", "QueueHealthThresholds",
     "DjangoLoggingConfig",
-    "CurrencyConfig", "PaymentsConfig", "AdminAccessConfig", "GeoConfig", "IndexNowConfig", "IndexNowSite", "Site", "SiteConfig", "site_for", "site_key", "sites", "AnalyticsConfig", "ChatConfig", "SimpleHistoryConfig",
+    "CurrencyConfig", "PaymentsConfig", "AdminAccessConfig", "GeoConfig", "IndexNowConfig", "IndexNowSite", "Site", "SiteConfig", "site_for", "site_key", "sites", "AnalyticsConfig", "AttachmentsConfig", "ChatConfig", "SimpleHistoryConfig",
     "ConstanceConfig", "ConstanceField", "StorageConfig", "FileCleanupConfig", "CDNPurgeConfig", "S3StorageConfig", "OpenAPIClientConfig",
     "EmailConfig", "TelegramConfig",
     # middleware (lazy — DRF reads settings at import time)

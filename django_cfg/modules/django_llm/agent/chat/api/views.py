@@ -9,11 +9,14 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from django.http import StreamingHttpResponse
+from django.http import FileResponse, StreamingHttpResponse
+from django.urls import reverse
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter
 from rest_framework import status
 from rest_framework.negotiation import DefaultContentNegotiation
-from rest_framework.parsers import JSONParser
+from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.permissions import AllowAny
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -24,7 +27,8 @@ from django_cfg.modules.django_llm.agent.chat.api import serializers as s
 from django_cfg.modules.django_llm.agent.chat.api.frames import FRAME
 from django_cfg.modules.django_llm.agent.chat.api.problems import Problem, ProblemMixin
 from django_cfg.modules.django_llm.agent.chat.api.schema import RETRY_AFTER, ChatSchema, Doc, problems
-from django_cfg.modules.django_llm.agent.chat.errors import InvalidKind
+from django_cfg.modules.django_llm.agent.chat.attachments.store import is_inline, policy_of
+from django_cfg.modules.django_llm.agent.chat.errors import InvalidKind, NotFound
 from django_cfg.modules.django_llm.agent.chat.service import ChatService
 
 STREAM_MEDIA_TYPE = "text/event-stream"
@@ -61,6 +65,33 @@ class ChatView(ProblemMixin, APIView):
     def thread_of(self, request, thread_id):
         return self.service.get(request.user, thread_id)
 
+    def attachment_store(self):
+        """The service's attachment store, or `NotFound`: a host without the table has no such routes to answer."""
+        store = self.service.attachment_store
+        if store is None:
+            raise NotFound("attachments")
+        return store
+
+    def signed_url(self, request, row, token: str) -> str:
+        namespace = request.resolver_match.namespace if request.resolver_match else ""
+        name = f"{namespace}:attachment-content" if namespace else "attachment-content"
+        return request.build_absolute_uri(f"{reverse(name, kwargs={'attachment_id': row.pk})}?t={token}")
+
+    def message_context(self, request, kind: str) -> dict:
+        """Context of `MessageSerializer`: the kind (for the trace) and the minting of fresh attachment links for this reader."""
+        context: dict[str, Any] = {"kind": kind}
+        store = self.service.attachment_store
+        if store is not None:
+            def make(row) -> str:
+                try:
+                    policy = policy_of(row.chat_kind)
+                except NotFound:
+                    return ""  # the kind lost its policy: the chip stays, the link does not
+                return store.url(row, request.user.pk, policy, lambda r, token: self.signed_url(request, r, token))
+
+            context["attachment_url"] = make
+        return context
+
 
 class ThreadsView(ChatView):
     """Your sessions: the list (only those with messages, newest activity first) and a new empty one."""
@@ -96,7 +127,7 @@ class ThreadView(ChatView):
 
     def get(self, request, thread_id):
         thread = self.thread_of(request, thread_id)
-        messages = s.MessageSerializer(self.service.page(thread), many=True, context={"kind": thread.kind})
+        messages = s.MessageSerializer(self.service.page(thread), many=True, context=self.message_context(request, thread.kind))
         return Response({**s.ThreadSerializer(thread).data, "messages": messages.data})
 
 
@@ -117,7 +148,10 @@ class MessagesView(ChatView):
         body = s.SendSerializer(data=request.data)
         body.is_valid(raise_exception=True)
         data = body.validated_data
-        opened = self.service.begin(request.user, thread, data["text"], data.get("client_id"), data.get("context"))
+        opened = self.service.begin(
+            request.user, thread, data["text"], data.get("client_id"), data.get("context"),
+            attachments=[a["id"] for a in data.get("attachments") or []],
+        )
         if opened.turn.kind is rules.TurnKind.BUSY:
             return Problem(409, "busy", "An answer is still being written.").response()
         return StreamingHttpResponse(self.service.frames(opened), content_type=STREAM_MEDIA_TYPE, headers=SSE_HEADERS)
@@ -168,3 +202,98 @@ class SearchView(ChatView):
             return Problem(400, "invalid", "limit must be a number.").response()
         hits = self.search(request.user, query[:500], kind=request.query_params.get("kind"), limit=limit)
         return Response(s.SearchHitSerializer([vars(h) if not isinstance(h, dict) else h for h in hits], many=True).data)
+
+
+class AttachmentsView(ChatView):
+    """Upload a file for a later message. It stays private to you and is deleted after a day unless a message carries it."""
+
+    parser_classes = [MultiPartParser]
+    docs = {
+        "POST": Doc(
+            "attachments_create", "Upload a file to attach to a message",
+            {201: s.AttachmentSerializer, **problems(400, 401, 404, 413, 415, 429, 503)},
+            request=s.AttachmentUploadSerializer, parameters=(RETRY_AFTER,),
+        )
+    }
+
+    def post(self, request):
+        self.service.ensure_available()
+        body = s.AttachmentUploadSerializer(data=request.data)
+        body.is_valid(raise_exception=True)
+        kind = body.validated_data.get("kind") or self.default_kind
+        if not kind:
+            raise InvalidKind("")
+        row = self.attachment_store().stage(request.user, kind, body.validated_data["file"])
+        return Response(s.AttachmentSerializer(row, context=self.message_context(request, kind)).data, status=status.HTTP_201_CREATED)
+
+
+class AttachmentView(ChatView):
+    """Take a file you have not sent yet off the tray."""
+
+    docs = {"DELETE": Doc("attachments_destroy", "Remove an unsent file", {204: None, **problems(401, 404)})}
+
+    def delete(self, request, attachment_id):
+        self.attachment_store().destroy(request.user, attachment_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AttachmentLimitsView(ChatView):
+    """What a chat kind accepts as files."""
+
+    docs = {
+        "GET": Doc(
+            "attachments_limits", "What files a chat accepts",
+            {200: s.AttachmentLimitsSerializer, **problems(401)},
+            parameters=(OpenApiParameter("kind", str, OpenApiParameter.QUERY, required=False, description="The chat kind; the host's default when left out."),),
+        )
+    }
+
+    def get(self, request):
+        kind = request.query_params.get("kind") or self.default_kind or ""
+        try:
+            policy = policy_of(kind) if self.service.attachment_store is not None else None
+        except NotFound:
+            policy = None
+        if policy is None:
+            return Response({"enabled": False, "kinds": [], "accept": [], "max_files": 0, "max_bytes": 0, "max_total_bytes": 0})
+        return Response({
+            "enabled": True, "kinds": sorted(policy.kinds), "accept": policy.accept_list(),
+            "max_files": policy.max_files, "max_bytes": policy.max_bytes, "max_total_bytes": policy.max_total_bytes,
+        })
+
+
+class AttachmentContentView(ChatView):
+    """The bytes of a file: its owner signed in, or anyone holding the short-lived link a thread read minted (an `<img>` cannot send a header)."""
+
+    permission_classes = [AllowAny]
+    docs = {
+        "GET": Doc(
+            "attachments_content", "Download an attached file",
+            {(200, "application/octet-stream"): OpenApiTypes.BINARY, **problems(404)},
+            parameters=(OpenApiParameter("t", str, OpenApiParameter.QUERY, required=False, description="The link token from the attachment's `url`."),),
+        )
+    }
+
+    def get(self, request, attachment_id):
+        store = self.attachment_store()
+        token = request.query_params.get("t")
+        row = None
+        if token:
+            found = store.model.objects.filter(pk=attachment_id).first()
+            if found is not None:
+                try:
+                    ttl = policy_of(found.chat_kind).url_ttl_s
+                except NotFound:
+                    ttl = 0
+                if ttl and store.check_token(token, found.pk, ttl) == str(found.owner_id):
+                    row = found
+        if row is None and request.user.is_authenticated:
+            row = store.model.objects.for_owner(request.user).filter(pk=attachment_id).first()
+        if row is None:
+            raise NotFound(str(attachment_id))  # a stranger's file, a bad or expired token and a missing file: one answer
+        inline = is_inline(row.mime, row.media_kind)
+        response = FileResponse(store.open(row), content_type=row.mime, as_attachment=not inline, filename=row.name)
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Content-Security-Policy"] = "sandbox; default-src 'none'"
+        response["Cache-Control"] = "private, max-age=300"
+        return response

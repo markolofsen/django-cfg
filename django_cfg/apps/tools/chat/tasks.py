@@ -10,7 +10,10 @@ MODEL = "cfg_chat.Thread"
 
 
 def reap(older_than_s: float = ops.REAP_AFTER_S) -> int:
-    return ops.reap(ops.thread_model(MODEL), older_than_s=older_than_s)
+    """Close stuck answers and delete uploads nobody sent past their TTL. Returns the answers closed; counts only."""
+    model = ops.thread_model(MODEL)
+    ops.reap_attachments(model)
+    return ops.reap(model, older_than_s=older_than_s)
 
 
 def prune(days: int = ops.PRUNE_AFTER_DAYS, kind: str | None = None) -> dict[str, Any]:

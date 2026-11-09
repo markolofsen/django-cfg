@@ -45,6 +45,7 @@ def build_default_kind(cfg: ChatConfig) -> kinds.ChatKind:
         limits=kinds.KindLimits(max_tokens=cfg.max_tokens),
         history_window=cfg.history_window,
         knowledge=_knowledge(cfg),
+        attachments=cfg.attachments.policy() if cfg.attachments is not None else None,
     )
 
 

@@ -273,7 +273,7 @@ async def stream_agent_run(
     *,
     agent: Agent,
     deps: Any,
-    user_message: str | None,
+    user_message: "str | list[Any] | None",
     message_history: list[ModelMessage],
     deferred_tool_results: DeferredToolResults | None,
     is_admin_chat: bool,

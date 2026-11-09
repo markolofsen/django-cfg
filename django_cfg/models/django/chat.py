@@ -5,12 +5,49 @@ One line turns it on (`chat = ChatConfig()`); everything else has a default. Exi
 chat tables never set it. See `modules/django_llm/agent/chat/@docs/chat-app.md`.
 """
 
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from django_cfg.models.django.django_rq import RQScheduleConfig
+
+
+class AttachmentsConfig(BaseModel):
+    """Files on a message of the ready chat's default kind (`ChatConfig(attachments=AttachmentsConfig())`). Off while `ChatConfig.attachments` is None.
+
+    Bytes go to the Django storage you already configured (`StorageConfig`, alias `default` unless you say otherwise) under `chat/<kind>/<uuid>`;
+    they are served only to their owner or by a short-lived signed link. A kind of your own sets `ChatKind.attachments=AttachmentPolicy(...)` instead.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    kinds: List[Literal["image", "text", "document", "audio"]] = Field(default_factory=lambda: ["image", "text", "document"], min_length=1, description="What a user may attach")
+    max_files: int = Field(default=4, ge=1, le=20, description="Files per message")
+    max_mb: int = Field(default=10, ge=1, le=50, description="Largest file in MB (50 is the ceiling until presigned uploads)")
+    max_total_mb: int = Field(default=25, ge=1, le=100, description="Files of one message together, in MB")
+    daily_mb: Optional[int] = Field(default=None, ge=1, description="Upload MB per user per UTC day; None = no cap")
+    staged_ttl_hours: int = Field(default=24, ge=1, description="An upload nobody sent is deleted after this many hours")
+    url_ttl_s: int = Field(default=3600, ge=60, description="Life of a file link; a thread read mints fresh ones")
+    storage: str = Field(default="default", description="Django STORAGES alias")
+    delivery: Literal["signed", "presigned", "public"] = Field(default="signed", description="signed: API route with a token (default); presigned: the store's expiring URL; public: the store's permanent URL (never for private chat)")
+    on_unreadable: Literal["describe", "refuse", "note"] = Field(default="describe", description="A file the model chain cannot read: read it through a cheap vision model (default), refuse the message, or pass a note")
+    vision: Optional[bool] = Field(default=None, description="True: the chain reads images and PDFs itself; False: always describe through `ocr_models`; None: ask the model catalogue")
+    ocr_models: List[str] = Field(default_factory=list, description="Cheap vision chain for the describe path; empty = the library default")
+    audio_models: List[str] = Field(default_factory=list, description="Audio-capable chain that transcribes audio; empty = the library default")
+    replay_of: int = Field(default=2, ge=1, description="The latest N file-carrying user turns (this one included) send their files; earlier ones keep a stub")
+
+    def policy(self):
+        """The `AttachmentPolicy` this block stands for."""
+        from django_cfg.modules.django_llm.agent.chat.attachments import AttachmentPolicy
+
+        mb = 1024 * 1024
+        return AttachmentPolicy(
+            kinds=frozenset(self.kinds), max_files=self.max_files, max_bytes=self.max_mb * mb, max_total_bytes=max(self.max_total_mb, self.max_mb) * mb,
+            daily_bytes=self.daily_mb * mb if self.daily_mb else None, staged_ttl_hours=self.staged_ttl_hours, url_ttl_s=self.url_ttl_s,
+            storage=self.storage, delivery=self.delivery, on_unreadable=self.on_unreadable, vision=self.vision,
+            ocr_models=tuple(self.ocr_models) or None, audio_models=tuple(self.audio_models) or None, replay_of=self.replay_of,
+        )
 
 
 class ChatConfig(BaseModel):
@@ -44,6 +81,9 @@ class ChatConfig(BaseModel):
     messages_per_day: Optional[int] = Field(default=200, ge=1, description="User messages per user per UTC day; None = no cap (429 over it)")
     max_text_chars: int = Field(default=4000, ge=1, description="Longest user message (400 over it)")
     daily_token_budget: Optional[int] = Field(default=None, ge=1, description="Site-wide tokens per UTC day; spent = 503 until midnight. None = no budget")
+
+    # Attachments (off by default; see agent/chat/@docs/chat-attachments.md)
+    attachments: Optional[AttachmentsConfig] = Field(default=None, description="Let users attach files to a message (images, text, PDF, audio). None = no files, the routes answer 404")
 
     # Knowledge folder (off by default)
     knowledge: Union[bool, str, None] = Field(default=None, description="True = the knowledge folder, a string = one subfolder of it")
@@ -112,4 +152,4 @@ class ChatConfig(BaseModel):
         )
 
 
-__all__ = ["ChatConfig"]
+__all__ = ["AttachmentsConfig", "ChatConfig"]
