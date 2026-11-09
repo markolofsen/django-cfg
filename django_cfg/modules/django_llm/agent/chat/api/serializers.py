@@ -57,9 +57,15 @@ class AttachmentSerializer(serializers.Serializer):
     size = serializers.IntegerField()
     kind = serializers.CharField(source="media_kind", help_text="image | audio | video | text | document.")
     url = serializers.SerializerMethodField(help_text="Where the browser may fetch the bytes; short-lived.")
+    expired = serializers.SerializerMethodField(help_text="True once the file was deleted by the kind's retention: `url` is empty, the chat remembers its name and what was read from it.")
     created_at = serializers.DateTimeField()
 
+    def get_expired(self, obj) -> bool:
+        return obj.status == "expired"
+
     def get_url(self, obj) -> str:
+        if obj.status == "expired":
+            return ""
         make = self.context.get("attachment_url")
         return make(obj) if make is not None else ""
 

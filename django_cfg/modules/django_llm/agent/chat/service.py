@@ -239,7 +239,7 @@ class ChatService:
         if model is None or not message_ids:
             return {}
         grouped: dict = {}
-        for row in model.objects.filter(message_id__in=message_ids, status="attached").order_by("created_at"):
+        for row in model.objects.filter(message_id__in=message_ids).exclude(status="staged").order_by("created_at"):
             grouped.setdefault(row.message_id, []).append(row)
         return grouped
 
@@ -408,6 +408,12 @@ class ChatService:
                 latency_ms=outcome.latency_ms, model=state.model or "", prompt_version=chat_kind.prompt_version,
             )
             log_run(chat_kind, answer.id, opened.thread.pk, status, state, outcome, len(out.tool_calls), len(opened.attachments))
+            policy = chat_kind.attachments
+            if status is rules.Status.DONE and opened.attachments and policy is not None and policy.keep_days == 0 and self.attachment_store is not None:
+                try:
+                    self.attachment_store.expire(list(opened.attachments))  # keep_days=0: the model has seen it, nothing is kept
+                except Exception:  # noqa: BLE001 - a deletion that fails is retried by `chat_reap`; the answer is already stored
+                    log.warning("chat attachments: could not delete the files of a finished turn", exc_info=True)
             self.after_answer(opened, outcome, status)
 
         cfg = driver_config or DriverConfig(ping_s=self.policy.ping_s, max_run_s=chat_kind.limits.timeout_s)

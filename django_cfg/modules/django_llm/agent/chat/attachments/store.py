@@ -140,6 +140,29 @@ class AttachmentStore:
             gone += 1
         return gone
 
+    def expire(self, rows: list) -> int:
+        """Delete the bytes of sent files and mark the rows `expired` (the row, the name and `derived` stay). A file that could not be deleted
+        keeps its row as it was and is tried again by the next pass. Returns rows expired."""
+        done = 0
+        for row in rows:
+            if not _drop(storages[row.storage], row.file.name):
+                continue
+            self.model.objects.filter(pk=row.pk).update(status="expired", file="")
+            done += 1
+        return done
+
+    def reap_lapsed(self, now: datetime | None = None, *, batch: int = 200) -> int:
+        """Expire every sent file past its kind's `keep_days` (0 and None are not a calendar: 0 is done when the turn ends, None never). Returns rows."""
+        now = now or timezone.now()
+        total = 0
+        for kind_name in list(kinds.names()):
+            policy = kinds.get(kind_name).attachments
+            if policy is None or not policy.keep_days:
+                continue
+            cutoff = now - timedelta(days=policy.keep_days)
+            total += self.expire(list(self.model.objects.lapsed(cutoff).filter(chat_kind=kind_name)[:batch]))
+        return total
+
     def open(self, row):
         return storages[row.storage].open(row.file.name, "rb")
 
@@ -196,6 +219,8 @@ class AttachmentStore:
 
     def url(self, row, actor_id: Any, policy: AttachmentPolicy, make_signed_url) -> str:
         """A fresh link for a reader. `signed`: the API route with a token (`make_signed_url(row, token)`); `presigned` / `public`: the storage's own."""
+        if row.status == "expired" or not row.file:
+            return ""
         if policy.delivery == "signed":
             return make_signed_url(row, self.token(row, actor_id))
         storage = storages[row.storage]

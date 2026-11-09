@@ -23,7 +23,7 @@ from asgiref.sync import sync_to_async
 from pydantic_ai.messages import BinaryContent
 
 from django_cfg.modules.django_llm.agent.chat import kind as kinds
-from django_cfg.modules.django_llm.agent.chat.attachments.policy import DEFAULT_AUDIO_MODELS, DEFAULT_OCR_MODELS, AttachmentPolicy
+from django_cfg.modules.django_llm.agent.chat.attachments.policy import DEFAULT_AUDIO_MODELS, AttachmentPolicy
 from django_cfg.modules.django_llm.agent.chat.attachments.store import AttachmentStore
 
 log = logging.getLogger(__name__)
@@ -102,6 +102,16 @@ async def read_with(models: tuple[str, ...], content: list, instruction: str, *,
     return (result.output or "").strip()
 
 
+async def read_image(models: tuple[str, ...] | None, data: bytes, mime: str) -> str:
+    """The text and a short description of an image, read from its bytes (a base64 data URL, never a public link). `models` is the policy's own
+    chain; without one the reader is django_llm's OCR model. Tests replace this function."""
+    if models:
+        return await read_with(models, [BinaryContent(data=data, media_type=mime)], OCR_INSTRUCTION)
+    from django_cfg.modules.django_llm.features.vision import aread_image_text
+
+    return await aread_image_text(data, mime, query=OCR_INSTRUCTION)
+
+
 class Resolver:
     """Resolves the files of one turn. One instance per turn: it holds the storage reads and the derived-text writes."""
 
@@ -122,6 +132,8 @@ class Resolver:
 
     async def parts(self, row: Any) -> list[Any]:
         """The model-facing parts of one file: strings and `BinaryContent`. Never raises: an unreadable file is a one-line note."""
+        if getattr(row, "status", "") == "expired" or not row.file:
+            return [self.older(row, gone=True)]
         try:
             return await self._parts(row)
         except Exception:  # noqa: BLE001 - one bad file must not fail the turn
@@ -155,7 +167,7 @@ class Resolver:
             return f"{stub(row)} (an image this assistant cannot see)"
         if "ocr" not in derived:
             data, mime = prepare_image(await self._bytes(row), row.mime, self.policy.image_max_px)
-            text = await read_with(self.policy.ocr_models or DEFAULT_OCR_MODELS, [BinaryContent(data=data, media_type=mime)], OCR_INSTRUCTION)
+            text = await read_image(self.policy.ocr_models, data, mime)
             await self._remember(row, ocr=text[: self.policy.text_chars])
             derived = row.derived
         return _fenced(row, "(an image, read for you: its text, then a description)", derived["ocr"])
@@ -180,11 +192,12 @@ class Resolver:
             derived = row.derived
         return _fenced(row, "(text of a PDF)", derived["text"])
 
-    def older(self, row: Any) -> str:
-        """A file of an older turn: the stub and whatever was read from it before. No binary, no model call."""
+    def older(self, row: Any, *, gone: bool = False) -> str:
+        """A file of an older turn, or one whose bytes were deleted (`gone`): the stub and whatever was read from it before. No binary, no model call."""
         derived = row.derived or {}
         text = derived.get("ocr") or derived.get("text") or derived.get("transcript")
-        return _fenced(row, "(from an earlier message)", text) if text else stub(row)
+        label = "(from an earlier message; the file itself is no longer stored)" if gone else "(from an earlier message)"
+        return _fenced(row, label, text) if text else (f"{stub(row)} (no longer stored)" if gone else stub(row))
 
 
 def can_read_everything(policy: AttachmentPolicy, chain: tuple[str, ...], rows: list) -> bool:

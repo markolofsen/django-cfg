@@ -289,8 +289,8 @@ class AttachmentContentView(ChatView):
                     row = found
         if row is None and request.user.is_authenticated:
             row = store.model.objects.for_owner(request.user).filter(pk=attachment_id).first()
-        if row is None:
-            raise NotFound(str(attachment_id))  # a stranger's file, a bad or expired token and a missing file: one answer
+        if row is None or row.status == "expired" or not row.file:
+            raise NotFound(str(attachment_id))  # a stranger's file, a bad or expired token, a missing file and one whose bytes were deleted: one answer
         inline = is_inline(row.mime, row.media_kind)
         response = FileResponse(store.open(row), content_type=row.mime, as_attachment=not inline, filename=row.name)
         response["X-Content-Type-Options"] = "nosniff"

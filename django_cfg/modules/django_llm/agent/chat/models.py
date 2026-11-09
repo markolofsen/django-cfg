@@ -106,13 +106,14 @@ class AbstractMessage(models.Model):
 class AbstractAttachment(models.Model):
     """A file a user attached to a chat message: its own row, so the message table stays as it is.
 
-    `staged` until the message that carries it is stored (then `attached`); a staged file nobody sent is reaped after the policy's TTL.
+    `staged` until the message that carries it is stored (then `attached`, and `expired` once its bytes were deleted: `file` is then empty); a staged file nobody sent is reaped after the policy's TTL.
     The subclass declares `message = ForeignKey(<its Message>, null=True, blank=True, on_delete=CASCADE, related_name="attachments")`.
     `mime`, `size` and `sha256` come from the bytes the server read, never from the client's claims.
     """
 
     STAGED = "staged"
     ATTACHED = "attached"
+    EXPIRED = "expired"  # the bytes are deleted (`AttachmentPolicy.keep_days`); the row, the name and the text read from it stay
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")

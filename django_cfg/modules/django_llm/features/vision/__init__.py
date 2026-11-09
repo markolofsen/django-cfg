@@ -44,6 +44,7 @@ from .presets import (
     select_ocr_model,
     get_ocr_prompt,
 )
+from .read_text import aread_image_text
 from .tokens import (
     estimate_image_tokens,
     estimate_cost_from_tokens,
@@ -54,6 +55,7 @@ from .cache import ImageCache, get_image_cache
 from .vision_models import VisionModel, VisionModelPricing, VisionModelsRegistry
 
 __all__ = [
+    "aread_image_text",
     # Client
     "VisionClient",
     # Encoding & Resizing

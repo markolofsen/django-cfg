@@ -165,7 +165,7 @@ from .features.video_gen import (
     VideoUsage,
     compile_byteplus_seedance_request,
 )
-from .features.vision import VisionClient
+from .features.vision import VisionClient, aread_image_text
 
 # Embeddings — the single embedding entry point for apps. Two ready
 # methods (fast / quality), both 1536-dim, real OpenAI/OpenRouter path.
@@ -382,6 +382,7 @@ __all__ = [
     "PreparedMedia",
     # Vision feature
     "VisionClient",
+    "aread_image_text",
     # Video generation feature — the seedance / i2v chain
     "BYTEPLUS_MODELARK_BASE_URL",
     "BytePlusSeedanceClient",

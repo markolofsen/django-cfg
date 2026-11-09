@@ -58,9 +58,10 @@ def attachment_store(model):
 
 
 def reap_attachments(model, *, now: datetime | None = None) -> int:
-    """Delete staged uploads nobody sent, past their kind's TTL: the file first, then the row. Returns rows removed."""
+    """Delete staged uploads nobody sent, past their kind's TTL (file first, then row), and the bytes of sent files past `keep_days` (the row stays,
+    marked `expired`). Returns rows touched."""
     store = attachment_store(model)
-    return store.reap_staged(now) if store is not None else 0
+    return store.reap_staged(now) + store.reap_lapsed(now) if store is not None else 0
 
 
 @dataclass(frozen=True)
@@ -125,7 +126,7 @@ def check_attachments(model, *, fix: bool = False, grace_hours: float = 24.0, no
     now = now or timezone.now()
     rows = missing = orphans = removed = 0
     by_storage: dict[str, set[str]] = {}
-    for row in store.model.objects.all().only("storage", "file").iterator():
+    for row in store.model.objects.exclude(status="expired").only("storage", "file").iterator():
         rows += 1
         by_storage.setdefault(row.storage, set()).add(row.file.name)
         try:

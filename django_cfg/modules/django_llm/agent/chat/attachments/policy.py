@@ -16,7 +16,6 @@ MEDIA_KINDS = frozenset({"image", "audio", "video", "text", "document"})
 SUPPORTED_KINDS = frozenset({"image", "audio", "text", "document"})  # video is sniffed and refused in v1
 CEILING_BYTES = 50 * MB  # one request body; a larger file waits for a presigned upload
 
-DEFAULT_OCR_MODELS = ("google/gemini-3.1-flash-lite", "qwen/qwen-2-vl-7b-instruct")  # cheapest first, a different vendor behind it
 DEFAULT_AUDIO_MODELS = ("qwen/qwen3.8-omni-flash", "google/gemini-3.1-flash-lite")
 
 Delivery = Literal["signed", "presigned", "public"]
@@ -31,6 +30,7 @@ class AttachmentPolicy:
     max_total_bytes: int = 25 * MB  # per message
     accept: tuple[str, ...] = ()  # narrows the sniffed mime types further (`"image/png"`, `"image/*"`); empty = every type of `kinds`
     daily_bytes: int | None = None  # staged bytes per user per UTC day; None = no cap
+    keep_days: int | None = 30  # bytes of a sent file are deleted this many days after the upload; the row, name and read text stay. 0 = as soon as the turn that carried it is answered; None = keep
     staged_ttl_hours: int = 24  # an upload never sent is deleted after this
     url_ttl_s: int = 3600  # life of a signed or presigned link; every history read mints a fresh one
     storage: str = "default"  # Django `STORAGES` alias
@@ -40,7 +40,7 @@ class AttachmentPolicy:
     text_chars: int = 40_000  # decoded text is cut to this before the model reads it
     image_max_px: int = 1568  # longest side after downscaling for the model
     vision: bool | None = None  # True: the kind's chain reads images and PDFs itself; False: always read them through `ocr_models`; None: ask the model catalogue (unknown = False)
-    ocr_models: tuple[str, ...] | None = None  # cheap vision chain that reads an image for a text-only model; None = `DEFAULT_OCR_MODELS`
+    ocr_models: tuple[str, ...] | None = None  # cheap vision chain that reads an image for a text-only model; None = django_llm's own OCR model (`aread_image_text`)
     audio_models: tuple[str, ...] | None = None  # audio-capable chain that transcribes audio; None = `DEFAULT_AUDIO_MODELS`
     scan: Callable[[Any, str], None] | None = None  # (file-like at 0, mime) -> None; raise `InvalidTurn("file", "rejected")` to refuse
 
@@ -56,6 +56,8 @@ class AttachmentPolicy:
             raise ValueError("max_files must be at least 1")
         if self.delivery not in ("signed", "presigned", "public"):
             raise ValueError("delivery must be signed, presigned or public")
+        if self.keep_days is not None and self.keep_days < 0:
+            raise ValueError("keep_days must be 0, a number of days, or None")
         if self.on_unreadable not in ("describe", "refuse", "note"):
             raise ValueError("on_unreadable must be describe, refuse or note")
 

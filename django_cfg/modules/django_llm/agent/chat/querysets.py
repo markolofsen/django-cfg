@@ -76,5 +76,9 @@ class AttachmentQuerySet(models.QuerySet):
         """Staged uploads older than `cutoff`: never sent, safe to delete."""
         return self.filter(status="staged", created_at__lt=cutoff)
 
+    def lapsed(self, cutoff: datetime) -> "AttachmentQuerySet":
+        """Sent files whose bytes are still stored and were uploaded before `cutoff`: due for deletion by `keep_days`."""
+        return self.filter(status="attached", created_at__lt=cutoff).exclude(file="")
+
     def stored_since(self, user, since: datetime) -> "AttachmentQuerySet":
         return self.filter(owner_id=user.pk, created_at__gte=since)

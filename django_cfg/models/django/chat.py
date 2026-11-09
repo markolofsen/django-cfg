@@ -27,6 +27,7 @@ class AttachmentsConfig(BaseModel):
     max_mb: int = Field(default=10, ge=1, le=50, description="Largest file in MB (50 is the ceiling until presigned uploads)")
     max_total_mb: int = Field(default=25, ge=1, le=100, description="Files of one message together, in MB")
     daily_mb: Optional[int] = Field(default=None, ge=1, description="Upload MB per user per UTC day; None = no cap")
+    keep_days: Optional[int] = Field(default=30, ge=0, description="Days a sent file's bytes are kept; then they are deleted and the chat keeps the name and what was read from it. 0 = delete as soon as the answer is stored; None = keep")
     staged_ttl_hours: int = Field(default=24, ge=1, description="An upload nobody sent is deleted after this many hours")
     url_ttl_s: int = Field(default=3600, ge=60, description="Life of a file link; a thread read mints fresh ones")
     storage: str = Field(default="default", description="Django STORAGES alias")
@@ -44,7 +45,7 @@ class AttachmentsConfig(BaseModel):
         mb = 1024 * 1024
         return AttachmentPolicy(
             kinds=frozenset(self.kinds), max_files=self.max_files, max_bytes=self.max_mb * mb, max_total_bytes=max(self.max_total_mb, self.max_mb) * mb,
-            daily_bytes=self.daily_mb * mb if self.daily_mb else None, staged_ttl_hours=self.staged_ttl_hours, url_ttl_s=self.url_ttl_s,
+            daily_bytes=self.daily_mb * mb if self.daily_mb else None, staged_ttl_hours=self.staged_ttl_hours, keep_days=self.keep_days, url_ttl_s=self.url_ttl_s,
             storage=self.storage, delivery=self.delivery, on_unreadable=self.on_unreadable, vision=self.vision,
             ocr_models=tuple(self.ocr_models) or None, audio_models=tuple(self.audio_models) or None, replay_of=self.replay_of,
         )
