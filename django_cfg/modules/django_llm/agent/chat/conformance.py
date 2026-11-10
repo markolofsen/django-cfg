@@ -11,7 +11,8 @@
 Everything runs offline: the service's `model_factory` and `pricer` are replaced by a scripted model and a free pricer for the
 duration of each test (and put back), uploads go to a temporary storage, the routes are mounted from `urls(service)` under
 a private URL module. The host's own settings, auth classes and database are used as they are, so the service must be
-"available" in tests. A host passes `contexts={kind: {...}}` when a kind needs a context to answer.
+"available" in tests. A host passes `contexts={kind: {...}}` when a kind needs a context: it is sent when the thread is created
+and with every message.
 
 What is checked (one test method each): the signatures the kit's views call, a send through the routes, attachments, the
 trace, the `on_turn` hook, follow/resume/cancel/live, tenancy and refusals, the OpenAPI operations, and that the host's migrations cover the
@@ -113,7 +114,7 @@ class ServiceConformance:
 
     service: ClassVar[Any]  # the host's ChatService
     kinds: ClassVar[tuple[str, ...]]  # registered kind names to drive
-    contexts: ClassVar[dict[str, dict]] = {}  # per kind: the turn `context` a send needs to be valid
+    contexts: ClassVar[dict[str, dict]] = {}  # per kind: the context its threads need; sent when the thread is created and with every message
     user_factory: ClassVar[Callable[[str], Any] | None] = None  # `user_factory("name") -> user`; default: `create_user` with a name and an email
     models: ClassVar[Any] = None  # `conformance.scripted(...)` or `staticmethod(lambda chat_kind: model)`; default: a one-line scripted answer
     text: ClassVar[str] = "hello"
@@ -184,7 +185,9 @@ class ServiceConformance:
 
     def _new_thread(self, kind: str, client=None) -> str:
         body: dict[str, Any] = {"kind": kind}
-        r = (client or self.client).post(f"{BASE}threads/", body, format="json")
+        if self.contexts.get(kind):
+            body["context"] = self.contexts[kind]  # a kind that refuses a thread without its context (a document, a film) is created with it
+        r =(client or self.client).post(f"{BASE}threads/", body, format="json")
         assert r.status_code == 201, f"[{kind}] POST threads/ answered {r.status_code}: {r.content[:300]!r}"
         return r.json()["id"]
 

@@ -139,7 +139,7 @@ class TraceCapability(AbstractCapability[Any]):
         except Exception:
             self._end(step, StepStatus.ERROR, error_of(TraceErrorCode.TOOL_ERROR))
             raise
-        self._settle(step, name, raw, result)
+        self._settle(step, name, raw, result, getattr(ctx, "deps", None))
         return result
 
     # ── helpers ─────────────────────────────────────────────────────────────────
@@ -176,22 +176,27 @@ class TraceCapability(AbstractCapability[Any]):
         except Exception:  # noqa: BLE001
             log.exception("trace: could not settle a tool step")
 
-    def _settle(self, step: str | None, name: str, raw: dict, result: Any) -> None:
+    def _settle(self, step: str | None, name: str, raw: dict, result: Any, deps: Any = None) -> None:
         try:
             text = _text_of(result)
             declared = self.tools.get(name)
-            preview = refs = summary = None
+            preview = refs = summary = error = None
+            status = StepStatus.OK
             if declared is not None:
                 try:
                     preview = declared.view_result(text)
-                    summary = declared.summary(raw, text) if declared.summary else None
-                    refs = list(declared.refs(raw, text)) if declared.refs else None
+                    summary = declared.call(declared.summary, raw, text, deps) if declared.summary else None
+                    refs = list(declared.call(declared.refs, raw, text, deps)) if declared.refs else None
+                    verdict = declared.call(declared.verdict, raw, text, deps) if declared.verdict else None
+                    if verdict is not None:
+                        status, error = verdict.status, error_of(verdict.code) if verdict.code else None
                 except Exception:  # noqa: BLE001 - a bad declaration costs its detail, not the answer
                     log.exception("trace: the declared view of %s failed", name)
-                    preview = summary = refs = None
+                    preview = summary = refs = error = None
+                    status = StepStatus.OK
             elif self.recorder.level >= 3:
                 preview = text
-            self.recorder.end(step, StepStatus.OK, summary=summary, result_text=text, preview=preview, refs=refs)
+            self.recorder.end(step, status, error=error, summary=summary, result_text=text, preview=preview, refs=refs)
         except Exception:  # noqa: BLE001
             log.exception("trace: could not settle a tool step")
 

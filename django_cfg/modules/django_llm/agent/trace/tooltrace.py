@@ -11,7 +11,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from django_cfg.modules.django_llm.agent.trace.step import StepRef, ToolRole
+from django_cfg.modules.django_llm.agent.trace.step import StepRef, StepStatus, ToolRole, TraceErrorCode
 
 #: `ToolMeta.category` -> the role a step of that tool carries, unless the declaration names one.
 ROLE_BY_CATEGORY: dict[str, ToolRole] = {
@@ -29,15 +29,32 @@ ROLE_BY_CATEGORY: dict[str, ToolRole] = {
 
 
 @dataclass(frozen=True)
+class Verdict:
+    """What a tool's result text says about the call when it did not simply work: a refusal is `SKIPPED`, a failure `ERROR`.
+    `code` is from the closed vocabulary (`LIMIT` for a cap the tool hit); the text itself is never kept."""
+
+    status: StepStatus
+    code: TraceErrorCode | None = None
+
+
+@dataclass(frozen=True)
 class ToolTrace:
-    """The declared view of one tool. Every callable runs on the server, on the raw call, and may not raise (a raise drops the detail)."""
+    """The declared view of one tool. Every callable runs on the server, on the raw call, and may not raise (a raise drops the detail).
+
+    A step keeps ids, counts and the declared views, never the text a tool returned: `summary` is one line ("3 documents"), `refs` the
+    ids the call used, `verdict` a refusal read from the result ("search limit reached" is `SKIPPED`, not `OK`). A tool whose answer
+    depends on the run's own state (the hits it showed under numbers, the draft it opened) sets `with_deps`: `summary`, `refs` and
+    `verdict` then take `(args, result text, deps)`, the deps the run was built with.
+    """
 
     label: str  # "Searching the knowledge base"
     role: ToolRole | None = None  # default: from `ToolMeta.category`, else `read`
-    summary: Callable[[dict, str | None], str] | None = None  # (args, result text) -> "5 documents"
+    summary: Callable[..., str] | None = None  # (args, result text) -> "5 documents"
     args: Sequence[str] | Callable[[dict], dict] | None = None  # keys of the arguments that may be shown, or a function that returns the view
     result: bool | Callable[[str], str] = False  # True: the start of the result text may be shown; a function returns the view
-    refs: Callable[[dict, str | None], Sequence[StepRef]] | None = None  # what the call used (documents, records)
+    refs: Callable[..., Sequence[StepRef]] | None = None  # (args, result text) -> what the call used (documents, records)
+    verdict: Callable[..., Verdict | None] | None = None  # (args, result text) -> a refusal or failure the text reports; None: the call worked
+    with_deps: bool = False  # `summary`, `refs` and `verdict` also receive the run's deps as a third argument
     query_arg: str | None = None  # the argument that holds the search text (shown as `query` at level 2)
 
     def view_args(self, raw: dict) -> dict | None:
@@ -46,6 +63,9 @@ class ToolTrace:
         if callable(self.args):
             return dict(self.args(raw))
         return {k: raw[k] for k in self.args if k in raw}
+
+    def call(self, fn: Callable[..., Any], raw: dict, text: str, deps: Any) -> Any:
+        return fn(raw, text, deps) if self.with_deps else fn(raw, text)
 
     def view_result(self, text: str) -> str | None:
         if self.result is False:

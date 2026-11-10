@@ -18,11 +18,11 @@ from django_cfg.modules.django_llm.agent.trace.step import (
     TraceErrorCode,
     TraceStep,
 )
-from django_cfg.modules.django_llm.agent.trace.tooltrace import ToolTrace
+from django_cfg.modules.django_llm.agent.trace.tooltrace import ToolTrace, Verdict
 
 __all__ = [
     "MAX_BYTES", "MAX_REFS", "MAX_STEPS", "SCHEMA_VERSION",
     "DefaultRedactor", "DocStatus", "MessageJsonSink", "Recorder", "Redaction", "Redactor", "StepError", "StepKind", "StepRef", "StepResult",
-    "StepStatus", "StepTokens", "ToolRole", "ToolTrace", "TraceDoc", "TraceErrorCode", "TraceSink", "TraceStep",
+    "StepStatus", "StepTokens", "ToolRole", "ToolTrace", "TraceDoc", "TraceErrorCode", "TraceSink", "TraceStep", "Verdict",
     "error_of", "shape_doc", "shape_step", "step_wire",
 ]
