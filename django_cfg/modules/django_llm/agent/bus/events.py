@@ -19,7 +19,7 @@ Two dialects, one set of event objects
   never forward tool names, arguments or results**, so the widget dialect has no
   frame for them.
 
-The widget dialect is pinned by ``tests/fixtures/events.json`` (a copy of the
+The widget dialect is pinned by ``fixtures/events.json`` (a copy of the
 widget's own fixture; ``test_wire_contract.py`` fails on drift in either direction).
 A changed field is a ``WIRE_VERSION`` bump; a new frame type is forward compatible
 (old decoders ignore it).

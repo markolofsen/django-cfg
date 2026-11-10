@@ -9,13 +9,15 @@ iterator of SSE strings: `run` first, the answer stored (flushed while streaming
 `done`/`error` frame leaves. A resend of a `client_id` whose answer is still running (`TurnKind.LIVE`) is streamed from storage instead
 (`attach`), as is a second reader of any answer. `cancel` asks a running answer to stop, from any worker. A kind that sets `detach`
 keeps its run going when the reader leaves; otherwise a disconnect cancels it, and either way the tokens spent are booked.
-Tests replace `model_factory` (a scripted model) and `pricer`.
+Tests replace `model_factory` (a scripted model; test-only, a production set logs a warning) and `pricer`.
 """
 
 from __future__ import annotations
 
 import functools
 import logging
+import math
+import sys
 import uuid
 from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass
@@ -31,7 +33,7 @@ from django_cfg.modules.django_llm.agent.bus.events import RunEvent, encode_sse
 from django_cfg.modules.django_llm.agent.chat import contract, kind as kinds
 from django_cfg.modules.django_llm.agent.chat.cancel import CacheCancelSignal, CancelSignal
 from django_cfg.modules.django_llm.agent.chat import turn as rules
-from django_cfg.modules.django_llm.agent.chat.errors import InvalidContext, InvalidKind, InvalidTurn, NotFound, RateLimited, ServiceUnavailable
+from django_cfg.modules.django_llm.agent.chat.errors import InvalidContext, InvalidKind, InvalidTurn, NotFound, QuotaExceeded, RateLimited, ServiceUnavailable
 from django_cfg.modules.django_llm.agent.chat.kind import ChatKind, KindScope
 from django_cfg.modules.django_llm.agent.chat.runner import build_model, kind_source, replay_events
 from django_cfg.modules.django_llm.agent.chat.store import DjangoTurnStore
@@ -48,6 +50,9 @@ log = logging.getLogger(__name__)
 
 #: Appended to an answer that did not finish when it is replayed to the model, so a cut-off text is not read as a complete one.
 INTERRUPTED_NOTE = "[interrupted: this answer was cut off before it was finished]"
+
+#: The window of `ChatPolicy.send_rate`.
+SEND_RATE_WINDOW_S = 60
 
 #: `(actor, thread, now) -> None`; raises `RateLimited` / `QuotaExceeded` to refuse. `thread` is None only for a check made without one.
 QuotaCheck = Callable[[Any, Any, datetime], None]
@@ -80,7 +85,8 @@ class ChatPolicy:
     models: str | tuple[str, ...] | None = None  # overrides every kind's chain (ops switch; an env string "a/b, c/d" is parsed); None = each kind's own
     price_timeout_s: float = 3.0
     check_quota: QuotaCheck | None = None  # replaces the built-in daily message cap (`messages_per_day` is then ignored)
-    available: Callable[[], bool] | None = None  # False = a kill switch or a spent budget: a send is refused with `ServiceUnavailable` before anything is stored
+    available: Callable[[], bool] | None = None  # THE kill switch: False = a spent budget or an ops switch; a send is refused with `ServiceUnavailable` (503) before anything is read or stored. A host has no second gate beside it
+    send_rate: int | None = None  # THE burst cap: user messages per user per rolling minute over all threads; over it a send is refused 429 `rate_limited` with `Retry-After`; None = no cap. Checked after `available`, before the daily cap / `check_quota`; a host needs no DRF throttle beside it
     fallback_prices: Mapping[str, PriceRow] | None = None  # {slug: {input, output}} USD per Mtok for a run the registry cannot price
     default_price: PriceRow | None = None  # the row for a slug in no table: set it to the dearest you know so a run is never free
     title_models: str | tuple[str, ...] | None = None  # cheap model chain that writes the title after the first answer; None = no LLM titles
@@ -150,7 +156,8 @@ class ChatService:
         self.thread_model = thread_model
         self.message_model = thread_model.messages.rel.related_model
         self._policy = policy or ChatPolicy()
-        self.model_factory = model_factory
+        self._model_factory: Callable[[ChatKind], Model] | None = None
+        self.model_factory = model_factory  # through the setter: a warning outside tests
         self.pricer = pricer
         self.lock = lock
         self.resolve_thread = resolve_thread or owners_thread
@@ -160,6 +167,18 @@ class ChatService:
         self.trace_sink = trace_sink
         self.cancel_signal: CancelSignal = cancel_signal or CacheCancelSignal()
         self._attachment_store: Any = False
+
+    @property
+    def model_factory(self) -> Callable[[ChatKind], Model] | None:
+        """A TEST hook: it replaces the kind's model chain, so the fallbacks and the error classification never run. Production sets
+        `ChatKind.models` or `ChatPolicy.models`; a factory set outside a test run is logged as a warning."""
+        return self._model_factory
+
+    @model_factory.setter
+    def model_factory(self, value: Callable[[ChatKind], Model] | None) -> None:
+        if value is not None and "pytest" not in sys.modules:
+            log.warning("chat: ChatService.model_factory is a test hook and bypasses the kind's model chain (no fallback, no error classification); set ChatKind.models or ChatPolicy.models instead")
+        self._model_factory = value
 
     @property
     def attachment_model(self) -> Any:
@@ -302,7 +321,14 @@ class ChatService:
         return self.message_model.objects.sent_by(user, day_start(now)).count()
 
     def check_quota(self, user, now: datetime, thread=None) -> None:
+        """THE quota: the per-minute `send_rate`, then the daily cap or the host's `check_quota` (which replaces the daily cap only)."""
         policy = self.policy
+        if policy.send_rate is not None:
+            recent = self.message_model.objects.sent_by(user, now - timedelta(seconds=SEND_RATE_WINDOW_S))
+            if recent.count() >= policy.send_rate:
+                oldest = recent.order_by("created_at").values_list("created_at", flat=True).first()
+                wait = SEND_RATE_WINDOW_S - (now - oldest).total_seconds() if oldest is not None else SEND_RATE_WINDOW_S
+                raise QuotaExceeded("send_rate", retry_after=max(1, math.ceil(wait)))
         if policy.check_quota is not None:
             policy.check_quota(user, thread, now)
             return
@@ -371,6 +397,14 @@ class ChatService:
         if started.kind is not rules.TurnKind.LIVE and not thread.title and started.user.text:
             self.thread_model.objects.filter(pk=thread.pk, title="").update(title=chat_kind.title_of(started.user.text)[:200])
         prior = self.history_for_model(thread, chat_kind, before_seq=started.user.seq) if started.runs_model else []
+        if started.runs_model and chat_kind.on_turn is not None:
+            info = kinds.TurnInfo(text=started.user.text, history=tuple(prior), window=chat_kind.history_window, user_seq=started.user.seq, context=context)
+            try:
+                replaced = chat_kind.on_turn(deps, info)
+            except BaseException:
+                rules.finish(store, started.assistant.id, status=rules.Status.ERROR, text="", error_code=rules.ErrorCode.FAILED)  # the answer row was begun: close it, do not leave it `running` until the reaper
+                raise
+            deps = deps if replaced is None else replaced
         return Opened(thread, chat_kind, started, deps, prior, store, bound)
 
     def fallback_pricer(self) -> Pricer | None:

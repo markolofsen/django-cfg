@@ -31,6 +31,8 @@ register(ChatKind(
 ))
 ```
 
+`make_deps` builds the scope from the server's facts. When deps also need the message or the history (a search seeded with the text), add `on_turn=lambda deps, turn: replace(deps, hits=search(turn.text))`: it runs once per new turn, after the message is stored and the history window read, with `turn = TurnInfo(text, history, window, user_seq, context)`, and returns the deps to use (or `None` to keep them). A host never subclasses `ChatService` for this.
+
 Every tool call is wrapped: it has a time limit (`KindLimits.tool_timeout_s`, 30 s, or the tool's own `ToolMeta.timeout_seconds`), an exception or a timeout reaches the model as a readable failure instead of ending the answer, and a result longer than `KindLimits.tool_result_chars` (12000) is cut with a `[cut: kept N of M chars]` marker. A model may get the arguments wrong twice (`ChatKind.retries`, default 2).
 
 A tool returns `ToolReturn(return_value=..., metadata=UiPayload("note", {"text": "..."}))`. Any `kind` string and JSON data; kinds not declared in `payload_kinds` are dropped. Tools never get a scope from the model: `make_deps` builds it on the server.
@@ -51,6 +53,8 @@ service = ChatService(Thread, ChatPolicy(messages_per_day=200))
 opened = service.begin(user, thread, text, client_id, turn_context)
 return StreamingHttpResponse(service.frames(opened), content_type="text/event-stream", headers=SSE_HEADERS)
 ```
+
+`ChatPolicy` holds the numbers and the only refusal hooks: `available` (the kill switch, 503), `send_rate` (user messages per user per rolling minute, 429 `rate_limited` with `Retry-After`), `messages_per_day` and `check_quota` (the daily cap, or the host's own refusal). A host adds no second gate beside them. `ChatService(model_factory=)` is a test hook only: it bypasses the kind's model chain and logs a warning outside a test run; production sets `ChatKind.models` or `ChatPolicy.models`.
 
 The schema enforces: seq unique per thread (taken under a row lock), a resend of a `client_id` is idempotent (a finished answer is replayed, a running one is followed from storage), a different message while one runs is refused `busy`, one running assistant message per thread. A running answer can also be followed from another tab and cancelled. The answer is flushed while streaming and finalized in a shielded task, so a dropped connection keeps what was said as `cancelled`. Stale `running` rows are closed by `begin` and by `service.reap_stale()`. Sessions are many threads per user (`list_for` adds `message_count`, `last_message_at`); the only tenancy filter is `for_owner`; nothing deletes.
 
@@ -73,6 +77,6 @@ class TestChatConformance(conformance.ServiceConformance):
     kinds = ("film",)      # the registered kinds to drive
 ```
 
-It checks the signatures the kit's views call, a send through the routes, attachments, the trace frames, follow, cancel and resend, tenancy and problem+json refusals, the OpenAPI operation ids and that the host's migrations cover the abstract models' columns (a missing `trace` migration fails here, not in production). A subclass of `ChatService` that drops a parameter of `begin`, `frames`, `attach`, `cancel` or `after_answer` fails at import with `ChatServiceContractError`; prefer a `ChatKind` hook to a subclass.
+It checks the signatures the kit's views call, a send through the routes, attachments, the trace frames, the `on_turn` hook (once per new turn, never on a resend), follow, cancel and resend, tenancy and problem+json refusals, the OpenAPI operation ids and that the host's migrations cover the abstract models' columns (a missing `trace` migration fails here, not in production). A subclass of `ChatService` that drops a parameter of `begin`, `frames`, `attach`, `cancel` or `after_answer` fails at import with `ChatServiceContractError`; prefer a `ChatKind` hook to a subclass.
 
 `@pytest.mark.live` tests call a real model: enable them with the `chat.pytest_plugin` plugin; they are deselected by default and skipped without `ASSISTANT_LIVE=1` and a key. `price_run(..., offline=True, fallback_prices=...)` prices without a network.

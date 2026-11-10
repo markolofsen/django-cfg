@@ -58,6 +58,17 @@ class KindScope:
 
 
 @dataclass(frozen=True)
+class TurnInfo:
+    """What `ChatKind.on_turn` gets: the turn the service has just stored, after the history window was read."""
+
+    text: str  # the stored user text (stripped; empty for a hidden feedback turn)
+    history: tuple[dict, ...]  # the window the model will see, oldest first: `[{role, content, tool_calls?, attachments?}]`
+    window: int  # the kind's `history_window`: the most messages `history` can hold
+    user_seq: int  # `seq` of the stored user message
+    context: BaseModel  # this turn's validated context (what `make_deps` saw)
+
+
+@dataclass(frozen=True)
 class MessageConstraints:
     """Per-kind rules for the incoming message, checked before anything is stored or counted against a quota.
 
@@ -111,6 +122,7 @@ class ChatKind:
     build_instructions: Callable[[Any], str]  # (deps) -> system instructions
     build_tools: Callable[[Any], Sequence[Callable[..., Any]]]  # (deps) -> tools taking RunContext[type(deps)]
     make_deps: Callable[[KindScope], Any]  # (scope) -> deps
+    on_turn: Callable[[Any, TurnInfo], Any] | None = None  # (deps, turn) -> deps | None: for deps that need the message or the history (a search seeded with the text, a summary of the window). Sync, ORM allowed; runs once per new turn (not on a resend that is served from storage); None keeps `deps`
     payload_kinds: frozenset[str] = frozenset()  # ui_payload kinds the tools may emit; others are dropped
     context_schema: type[KindContext] = KindContext
     merge_context: Callable[[dict, dict], dict] = lay_over  # (thread's stored context, this turn's) -> dict to validate

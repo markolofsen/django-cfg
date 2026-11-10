@@ -14,7 +14,7 @@ a private URL module. The host's own settings, auth classes and database are use
 "available" in tests. A host passes `contexts={kind: {...}}` when a kind needs a context to answer.
 
 What is checked (one test method each): the signatures the kit's views call, a send through the routes, attachments, the
-trace, follow/resume/cancel/live, tenancy and refusals, the OpenAPI operations, and that the host's migrations cover the
+trace, the `on_turn` hook, follow/resume/cancel/live, tenancy and refusals, the OpenAPI operations, and that the host's migrations cover the
 abstract models' columns (`missing_migrations`). Docs: `@docs/extending.md`, "Conformance".
 """
 
@@ -233,6 +233,31 @@ class ServiceConformance:
             for frame in frames:
                 assert_on_wire(frame)
             assert frames[0]["type"] == "run" and frames[-1]["type"] == "done", f"[{kind}] frames: {[f['type'] for f in frames]}"
+
+    def test_on_turn_runs_once_per_new_turn_with_the_stored_message(self, monkeypatch):
+        import dataclasses
+
+        for name in self.kinds:
+            chat_kind = self._kind(name)
+            if chat_kind.on_turn is None:
+                continue
+            calls: list = []
+
+            def spy(deps, turn, _real=chat_kind.on_turn, _calls=calls):
+                _calls.append(turn)
+                return _real(deps, turn)
+
+            monkeypatch.setitem(kinds_registry._KINDS, name, dataclasses.replace(chat_kind, on_turn=spy))
+            thread = self.service.get(self.owner, uuid.UUID(self._new_thread(name)))
+            client_id = uuid.uuid4()
+            opened = self.service.begin(self.owner, thread, self.text, client_id, self.contexts.get(name, {}), attachments=[])
+            assert len(calls) == 1, f"[{name}] on_turn ran {len(calls)} times for one new turn"
+            turn = calls[0]
+            assert turn.text == self.text and turn.user_seq == opened.turn.user.seq and turn.window == chat_kind.history_window, f"[{name}] on_turn got {turn!r}"
+            assert isinstance(turn.history, tuple) and isinstance(turn.context, chat_kind.context_schema)
+            assert opened.deps is not None, f"[{name}] on_turn must return the deps to use, or None to keep them"
+            self.service.begin(self.owner, thread, self.text, client_id, self.contexts.get(name, {}), attachments=[])  # a resend of the running answer is served from storage
+            assert len(calls) == 1, f"[{name}] on_turn ran again for a resend"
 
     # -- 3. attachments ----------------------------------------------------------------------------------
 
