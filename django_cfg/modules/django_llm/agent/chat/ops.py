@@ -1,4 +1,5 @@
-"""Operator jobs over a host's chat tables: close dead answers, drop idle sessions. The commands `chat_reap` and `chat_prune` call these.
+"""Operator jobs over a host's chat tables: close dead answers, drop idle sessions. The commands `chat_reap` and `chat_prune` call these (the manual form);
+`schedules(...)` returns the same jobs as RQ schedule entries (the scheduled form).
 
 Counts only: nothing here reads, prints or logs a title or a message (they are the user's text).
 """
@@ -14,6 +15,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from django_cfg.modules.django_llm.agent.chat.models import AbstractThread
+from django_cfg.modules.django_llm.agent.chat.schedules import schedules  # noqa: F401 - re-exported: `ops.schedules`; settings import it from `schedules` (no model import)
 from django_cfg.modules.django_llm.agent.chat.service import ChatPolicy, ChatService
 
 REAP_AFTER_S = 120.0  # keep above every kind's `limits.timeout_s`

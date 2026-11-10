@@ -18,6 +18,7 @@ that never chats pays nothing):
 | `knowledge` | opt-in knowledge base for a kind: markdown folder, in-process FTS index, four read-only tools, `kb_check` (`ChatKind(knowledge=...)`) | no |
 | `titles` | LLM titles after the first answer (`title_thread`, `spawn`) | yes |
 | `ops` | `reap`, `prune`: what the commands `chat_reap` / `chat_prune` run | yes |
+| `schedules` | `schedules(thread_model, ...)`: the reaper, attachment reaper and prune as RQ schedule entries (no model import: usable in settings) | no |
 | `pytest_plugin` | the `live` marker: deselected by default, skipped without a key | no |
 | `trace` | the client-safe tool trace of a stored answer | no |
 | `contract` | the signature guard run by `ChatService.__init_subclass__` | no |
