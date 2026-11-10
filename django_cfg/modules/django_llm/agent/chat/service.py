@@ -28,7 +28,7 @@ from pydantic import BaseModel, ValidationError
 from pydantic_ai.models import Model
 
 from django_cfg.modules.django_llm.agent.bus.events import RunEvent, encode_sse
-from django_cfg.modules.django_llm.agent.chat import kind as kinds
+from django_cfg.modules.django_llm.agent.chat import contract, kind as kinds
 from django_cfg.modules.django_llm.agent.chat.cancel import CacheCancelSignal, CancelSignal
 from django_cfg.modules.django_llm.agent.chat import turn as rules
 from django_cfg.modules.django_llm.agent.chat.errors import InvalidContext, InvalidKind, InvalidTurn, NotFound, RateLimited, ServiceUnavailable
@@ -121,6 +121,10 @@ def owners_thread(service: "ChatService", actor, thread_id: uuid.UUID):
 
 
 class ChatService:
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        contract.check_subclass(cls, ChatService)  # an override that drops a parameter of the base fails here, not on the first send
+
     def __init__(
         self,
         thread_model: Any,

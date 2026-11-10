@@ -20,6 +20,8 @@ that never chats pays nothing):
 | `ops` | `reap`, `prune`: what the commands `chat_reap` / `chat_prune` run | yes |
 | `pytest_plugin` | the `live` marker: deselected by default, skipped without a key | no |
 | `trace` | the client-safe tool trace of a stored answer | no |
+| `contract` | the signature guard run by `ChatService.__init_subclass__` | no |
+| `conformance` | `ServiceConformance`: a pytest class a host imports to prove its service follows the contract | yes |
 | `testing` | scripted models, `Conversation`, wire assertions, the `live` marker helpers | no |
 
 It is a library, not an app: the host owns its tables (subclass the abstract models), its routes and

@@ -12,7 +12,7 @@ keywords:
 
 # Chat Harness
 
-`django_llm.agent.chat` is everything a host needs behind `@djangocfg/widget-chat/assistant` except its own tables, routes and auth: one streaming loop, the widget SSE frames (`run`, `status`, `text_delta`, `reasoning_delta`, `reasoning_end`, `ui_payload`, `done`, `error`), a persisted-turn contract and a testing kit.
+`django_llm.agent.chat` is everything a host needs behind `@djangocfg/widget-chat/assistant` except its own tables, routes and auth: one streaming loop, the widget SSE frames (`run`, `status`, `text_delta`, `reasoning_delta`, `reasoning_end`, `trace_step`, `ui_payload`, `done`, `error`), a persisted-turn contract and a testing kit.
 
 ## A chat kind
 
@@ -52,7 +52,7 @@ opened = service.begin(user, thread, text, client_id, turn_context)
 return StreamingHttpResponse(service.frames(opened), content_type="text/event-stream", headers=SSE_HEADERS)
 ```
 
-The schema enforces: seq unique per thread (taken under a row lock), a resend of a `client_id` is idempotent (replayed, retried or reported busy), one running assistant message per thread. The answer is flushed while streaming and finalized in a shielded task, so a dropped connection keeps what was said as `cancelled`. Stale `running` rows are closed by `begin` and by `service.reap_stale()`. Sessions are many threads per user (`list_for` adds `message_count`, `last_message_at`); the only tenancy filter is `for_owner`; nothing deletes.
+The schema enforces: seq unique per thread (taken under a row lock), a resend of a `client_id` is idempotent (a finished answer is replayed, a running one is followed from storage), a different message while one runs is refused `busy`, one running assistant message per thread. A running answer can also be followed from another tab and cancelled. The answer is flushed while streaming and finalized in a shielded task, so a dropped connection keeps what was said as `cancelled`. Stale `running` rows are closed by `begin` and by `service.reap_stale()`. Sessions are many threads per user (`list_for` adds `message_count`, `last_message_at`); the only tenancy filter is `for_owner`; nothing deletes.
 
 ## Testing
 
@@ -62,5 +62,17 @@ from django_cfg.modules.django_llm.agent.chat.testing import Conversation, Say, 
 talk = Conversation(kind, scripted([Call("lookup", {"q": "x"})], Say("Done")))
 answer = talk.ask(deps, "hello")      # text, payloads, tool_calls, tokens, cost
 ```
+
+A host's `ChatService` is checked by one class, offline:
+
+```python
+from django_cfg.modules.django_llm.agent.chat import conformance
+
+class TestChatConformance(conformance.ServiceConformance):
+    service = service      # the host's ChatService
+    kinds = ("film",)      # the registered kinds to drive
+```
+
+It checks the signatures the kit's views call, a send through the routes, attachments, the trace frames, follow, cancel and resend, tenancy and problem+json refusals, the OpenAPI operation ids and that the host's migrations cover the abstract models' columns (a missing `trace` migration fails here, not in production). A subclass of `ChatService` that drops a parameter of `begin`, `frames`, `attach`, `cancel` or `after_answer` fails at import with `ChatServiceContractError`; prefer a `ChatKind` hook to a subclass.
 
 `@pytest.mark.live` tests call a real model: enable them with the `chat.pytest_plugin` plugin; they are deselected by default and skipped without `ASSISTANT_LIVE=1` and a key. `price_run(..., offline=True, fallback_prices=...)` prices without a network.

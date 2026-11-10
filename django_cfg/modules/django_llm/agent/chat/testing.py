@@ -29,7 +29,7 @@ from django_cfg.modules.django_llm.agent.chat.runner import kind_source
 from django_cfg.modules.django_llm.agent.runtime.cost import Pricer, RunCost
 from django_cfg.modules.django_llm.agent.runtime.streaming import StreamRunResult
 
-FIXTURE = Path(__file__).resolve().parent.parent / "bus" / "tests" / "fixtures" / "events.json"
+FIXTURE = Path(__file__).resolve().parent.parent / "bus" / "fixtures" / "events.json"
 TRACE_FIXTURE = FIXTURE.with_name("events-trace.json")  # the optional trace frames: Python-first until the widget decodes them
 
 
