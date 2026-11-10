@@ -37,18 +37,42 @@ OCR_INSTRUCTION = (
 AUDIO_INSTRUCTION = "Transcribe this audio exactly as spoken, in the language spoken. Answer with the transcript only; if there is no speech, say so in one short line."
 
 
+#: Families that take images, for a slug the catalogue cannot answer for (a cold container has no cache, a new model is not in it yet).
+#: A prefix list is a dated fact like any model name: the catalogue wins whenever it knows the slug.
+_SEES = (
+    "openai/gpt-4o", "openai/gpt-4.1", "openai/gpt-5", "openai/o3", "openai/o4",
+    "google/gemini", "google/gemma-3", "google/gemma-4",
+    "anthropic/claude",
+    "x-ai/grok-4", "x-ai/grok-5",
+    "mistralai/mistral-small-3", "mistralai/pixtral", "mistralai/mistral-medium-3",
+    "meta-llama/llama-4",
+    "qwen/qwen3", "qwen/qwen2.5-vl",
+)
+
+
+def _slug_sees(cache: Any, slug: str) -> bool:
+    try:
+        found = cache.get_model(slug, fetch=False) if cache is not None else None
+    except Exception:  # noqa: BLE001 - a broken cache is an unknown slug
+        found = None
+    if found is not None:
+        return bool(found.supports_vision)
+    bare = slug.split(":")[0]
+    return any(bare.startswith(prefix) for prefix in _SEES)
+
+
 def chain_sees_images(slugs: tuple[str, ...]) -> bool:
-    """True when the model catalogue says every slug of the chain takes images. Unknown or no catalogue is False: the safe way is to describe."""
+    """True when every slug of the chain takes images: the model catalogue when it knows the slug, otherwise the family list above.
+    An empty chain, or a slug neither knows, is False: the safe way is to describe."""
     if not slugs:
         return False
     try:
         from django_cfg.modules.django_llm.registry.models import ModelsCache
 
-        cache = ModelsCache()
-        found = [cache.get_model(s, fetch=False) for s in slugs]
-    except Exception:  # noqa: BLE001 - no catalogue, no key, no disk: describe
-        return False
-    return all(m is not None and m.supports_vision for m in found)
+        cache: Any = ModelsCache()
+    except Exception:  # noqa: BLE001 - no catalogue, no key, no disk: the family list decides
+        cache = None
+    return all(_slug_sees(cache, s) for s in slugs)
 
 
 def sees_images(policy: AttachmentPolicy, chain: tuple[str, ...]) -> bool:

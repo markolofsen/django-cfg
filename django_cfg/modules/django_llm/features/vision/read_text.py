@@ -16,7 +16,7 @@ from typing import Optional
 
 from .client import VisionClient
 from .models import ModelQuality, OCRMode
-from .presets import get_ocr_prompt, select_ocr_model
+from .presets import OCR_FALLBACKS, get_ocr_prompt, select_ocr_model
 
 
 async def aread_image_text(
@@ -36,8 +36,17 @@ async def aread_image_text(
     vision = client or VisionClient()
     chosen = select_ocr_model(model=model, model_quality=model_quality, models_registry=vision.models_registry)
     source = f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"
-    response = await vision.aanalyze(image_source=source, query=query or get_ocr_prompt(mode), model=chosen, max_tokens=max_tokens)
-    return (response.content or "").strip()
+    # An explicit model is the caller's choice and fails loudly; the default one has fallbacks, because a catalogue changes under a library.
+    ladder = (chosen,) if model else (chosen, *(m for m in OCR_FALLBACKS if m != chosen))
+    failure: Exception | None = None
+    for slug in ladder:
+        try:
+            response = await vision.aanalyze(image_source=source, query=query or get_ocr_prompt(mode), model=slug, max_tokens=max_tokens)
+            return (response.content or "").strip()
+        except Exception as exc:  # noqa: BLE001 - any failure of one model moves to the next vendor
+            failure = exc
+    assert failure is not None
+    raise failure
 
 
 __all__ = ["aread_image_text"]

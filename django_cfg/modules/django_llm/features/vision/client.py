@@ -55,7 +55,7 @@ class VisionClient(BaseCfgModule):
 
     # Default model (fallback if registry not loaded)
     # Use cheap paid model - free models have rate limits
-    DEFAULT_MODEL = "qwen/qwen-2-vl-7b-instruct"
+    DEFAULT_MODEL = "google/gemini-2.5-flash-lite"
 
     def __init__(
         self,

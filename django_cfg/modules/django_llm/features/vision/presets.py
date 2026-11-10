@@ -17,20 +17,24 @@ if TYPE_CHECKING:
 # Vision model presets by quality level
 VISION_PRESETS: dict[ModelQuality, Optional[str]] = {
     "fast": None,  # Auto-select cheapest
-    "balanced": "meta-llama/llama-3.2-11b-vision-instruct",
+    "balanced": "google/gemini-2.5-flash",
     "best": "openai/gpt-4o",
 }
 
 # OCR model presets (same as vision for now)
 OCR_PRESETS: dict[ModelQuality, Optional[str]] = {
     "fast": None,  # Auto-select cheapest
-    "balanced": "meta-llama/llama-3.2-11b-vision-instruct",
+    "balanced": "google/gemini-2.5-flash",
     "best": "openai/gpt-4o",
 }
 
 # Fallback models when auto-selection fails
-DEFAULT_VISION_MODEL = "qwen/qwen-2-vl-7b-instruct"
-DEFAULT_OCR_MODEL = "qwen/qwen-2-vl-7b-instruct"
+# Checked against OpenRouter's catalogue 2026-11-10: `qwen/qwen-2-vl-7b-instruct` and `meta-llama/llama-3.2-11b-vision-instruct` were
+# withdrawn (404 "no provider serves this model anymore"); a default is a dated fact, so `OCR_FALLBACKS` is tried when it fails.
+DEFAULT_VISION_MODEL = "google/gemini-2.5-flash-lite"
+DEFAULT_OCR_MODEL = "google/gemini-2.5-flash-lite"
+#: Tried in order after the chosen model fails (gone, refused, down). Different vendors, so one outage does not take all of them.
+OCR_FALLBACKS: tuple[str, ...] = ("openai/gpt-5-nano", "google/gemma-3-12b-it")
 
 
 # OCR mode prompts with varying detail levels
@@ -161,6 +165,7 @@ __all__ = [
     "OCR_PRESETS",
     "DEFAULT_VISION_MODEL",
     "DEFAULT_OCR_MODEL",
+    "OCR_FALLBACKS",
     "OCR_MODE_PROMPTS",
     "select_vision_model",
     "select_ocr_model",
