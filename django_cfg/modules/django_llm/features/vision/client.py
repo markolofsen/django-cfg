@@ -325,7 +325,7 @@ class VisionClient(BaseCfgModule):
             tokens_output = usage.completion_tokens if usage else 0
 
             # Calculate cost from registry pricing
-            cost_usd = self._calculate_cost(model, tokens_input, tokens_output)
+            cost_usd = await self._acalculate_cost(model, tokens_input, tokens_output)
 
             return VisionResponse(
                 content=content,
@@ -583,6 +583,17 @@ No preamble. No markdown. Just JSON."""
         total_cost = model_info.pricing.cost(tokens_input, tokens_output)
         logger.debug(f"Vision cost for {model}: ${total_cost:.6f} ({tokens_input} in, {tokens_output} out)")
         return total_cost
+
+    async def _acalculate_cost(self, model: str, tokens_input: int, tokens_output: int) -> float:
+        """`_calculate_cost` for a running event loop: the registry is awaited, never run on a second loop. Pricing is bookkeeping, so a
+        registry that cannot load books 0 and warns; it must not throw away an answer the provider already charged for."""
+        try:
+            if not self.models_registry.get(model) and not self.models_registry.is_loaded:
+                await self.fetch_models()
+            return self._calculate_cost(model, tokens_input, tokens_output)
+        except Exception:  # noqa: BLE001 - see the docstring
+            logger.warning("Vision cost for %s could not be priced, booking 0", model, exc_info=True)
+            return 0.0
 
     def get_model(self, model_id: str):
         """Get model info from registry."""
