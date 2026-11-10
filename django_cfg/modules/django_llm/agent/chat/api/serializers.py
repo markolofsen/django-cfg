@@ -8,9 +8,9 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from django_cfg.modules.django_llm.agent.chat import kind as kinds
-from django_cfg.modules.django_llm.agent.chat import trace
 from django_cfg.modules.django_llm.agent.chat.models import choices
 from django_cfg.modules.django_llm.agent.chat.turn import ErrorCode, Role, Status
+from django_cfg.modules.django_llm.agent.trace import DocStatus, Redaction, StepKind, StepStatus, ToolRole, TraceErrorCode, shape_doc
 
 
 class AckSerializer(serializers.Serializer):
@@ -34,15 +34,89 @@ class PartSerializer(serializers.Serializer):
     ack = AckSerializer(required=False, help_text="Present once the browser reported the part (`POST .../parts/<n>/ack`).")
 
 
-class ToolCallSerializer(serializers.Serializer):
-    """One step of how an answer was reached: compact and safe (see `chat.trace`), never the raw output."""
+class StepErrorSerializer(serializers.Serializer):
+    class Meta:
+        ref_name = "ChatTraceStepError"
+
+    code = serializers.ChoiceField(choices=[c.value for c in TraceErrorCode], help_text="The closed vocabulary; see `trace/step.py`.")
+    retryable = serializers.BooleanField()
+
+
+class StepResultSerializer(serializers.Serializer):
+    class Meta:
+        ref_name = "ChatTraceStepResult"
+
+    preview = serializers.CharField(allow_blank=True, help_text="At most 500 characters, redacted; empty when the tool declares no result view.")
+    size = serializers.IntegerField(help_text="Characters of the whole result.")
+    truncated = serializers.BooleanField()
+
+
+class StepTokensSerializer(serializers.Serializer):
+    class Meta:
+        ref_name = "ChatTraceStepTokens"
+
+    input = serializers.IntegerField(required=False, allow_null=True)
+    output = serializers.IntegerField(required=False, allow_null=True)
+    reasoning = serializers.IntegerField(required=False, allow_null=True)
+    cached = serializers.IntegerField(required=False, allow_null=True)
+
+
+class StepRefSerializer(serializers.Serializer):
+    class Meta:
+        ref_name = "ChatTraceStepRef"
+
+    kind = serializers.CharField()
+    id = serializers.CharField()
+    title = serializers.CharField(required=False, allow_null=True)
+
+
+class TraceStepSerializer(serializers.Serializer):
+    """TraceStep v1 as sent: already redacted at the kind's `trace_level`. Optional keys are absent, never null."""
 
     class Meta:
-        ref_name = "ChatToolCall"
+        ref_name = "ChatTraceStep"
 
-    name = serializers.CharField()
-    input = serializers.JSONField(help_text="The tool's arguments, trimmed: long text and lists are cut.")
-    summary = serializers.CharField(allow_blank=True, help_text="One line about the outcome, in English.")
+    v = serializers.IntegerField(help_text="Schema version (`SCHEMA_VERSION`); a reader ignores keys it does not know.")
+    trace_id = serializers.CharField()
+    step_id = serializers.CharField(help_text="`s<n>`, unique in the trace; a later frame with the same id replaces the earlier.")
+    seq = serializers.IntegerField(help_text="Gap-free, in order of start.")
+    parent_id = serializers.CharField(required=False, help_text="A tool's model step; a reasoning step's model step.")
+    kind = serializers.ChoiceField(choices=[k.value for k in StepKind])
+    status = serializers.ChoiceField(choices=[k.value for k in StepStatus])
+    name = serializers.CharField(allow_blank=True, help_text="The tool name or the model slug.")
+    role = serializers.ChoiceField(choices=[k.value for k in ToolRole], required=False, help_text="Tool steps only.")
+    label = serializers.CharField(allow_blank=True)
+    summary = serializers.CharField(allow_blank=True)
+    started_ms = serializers.IntegerField(help_text="Milliseconds since the trace began.")
+    duration_ms = serializers.IntegerField(required=False)
+    args = serializers.JSONField(required=False, help_text="A redacted view of the arguments; present only when the tool declared one (level 2) or at level 3.")
+    args_size = serializers.IntegerField(required=False)
+    result = StepResultSerializer(required=False)
+    redaction = serializers.ChoiceField(choices=[k.value for k in Redaction], help_text="`omitted` when no detail leaves the server; an unknown value must be read as `omitted`.")
+    error = StepErrorSerializer(required=False)
+    purpose = serializers.CharField(required=False)
+    query = serializers.CharField(required=False)
+    tokens = StepTokensSerializer(required=False)
+    cost_usd = serializers.FloatField(required=False)
+    refs = StepRefSerializer(many=True)
+
+
+class TraceSerializer(serializers.Serializer):
+    """How an answer was reached: the header and its steps (TraceDoc v1)."""
+
+    class Meta:
+        ref_name = "ChatTrace"
+
+    v = serializers.IntegerField()
+    trace_id = serializers.CharField()
+    level = serializers.IntegerField(help_text="Detail the steps carry: 1 labels and codes, 2 plus views the tools declared, 3 admin.")
+    started_at = serializers.CharField()
+    status = serializers.ChoiceField(choices=[k.value for k in DocStatus])
+    model = serializers.CharField(allow_blank=True)
+    steps_count = serializers.IntegerField(help_text="Steps recorded, including any a cap dropped.")
+    truncated = serializers.BooleanField(help_text="A cap dropped steps, refs or bytes.")
+    guided_by = serializers.CharField(required=False)
+    steps = TraceStepSerializer(many=True)
 
 
 class AttachmentSerializer(serializers.Serializer):
@@ -104,7 +178,7 @@ class AttachmentLimitsSerializer(serializers.Serializer):
 
 
 class MessageSerializer(serializers.Serializer):
-    """Give the serializer `context={"kind": thread.kind}` so the kind's `summarize_call` writes the trace."""
+    """Give the serializer `context={"kind": thread.kind}` so the trace is read at the kind's `trace_level`."""
 
     class Meta:
         ref_name = "ChatMessage"
@@ -116,7 +190,7 @@ class MessageSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=choices(Status))
     error_code = serializers.ChoiceField(choices=choices(ErrorCode), allow_blank=True)
     parts = PartSerializer(many=True)
-    tool_calls = serializers.SerializerMethodField(help_text="How the answer was reached; empty for a user message.")
+    trace = serializers.SerializerMethodField(help_text="How the answer was reached (TraceDoc v1); null for a user message, a kind with `trace_level` 0, or an answer recorded without one.")
     attachments = serializers.SerializerMethodField(help_text="Files of a user message, with fresh short-lived urls; empty otherwise.")
     created_at = serializers.DateTimeField()
 
@@ -125,15 +199,15 @@ class MessageSerializer(serializers.Serializer):
         rows = getattr(obj, "attached", None)
         return AttachmentSerializer(rows or [], many=True, context=self.context).data
 
-    @extend_schema_field(ToolCallSerializer(many=True))
-    def get_tool_calls(self, obj) -> list[dict]:
+    @extend_schema_field(TraceSerializer(allow_null=True))
+    def get_trace(self, obj) -> dict | None:
         if obj.role != Role.ASSISTANT.value:
-            return []
+            return None
         try:
-            summarize = kinds.get(self.context.get("kind", "")).summarize_call
+            level = kinds.get(self.context.get("kind", "")).trace_level
         except kinds.UnknownKind:
-            summarize = None
-        return trace.compact(obj.tool_calls, summarize)
+            return None  # fail closed: a kind this process does not know shows no trace
+        return shape_doc(getattr(obj, "trace", None), level)
 
 
 class ThreadSerializer(serializers.Serializer):

@@ -37,16 +37,22 @@ ToolCategory = Literal[
 ]
 
 
+#: Seconds a tool of a category may run. In the chat kit this is a hard stop (`tool_guard`), so it is a ceiling for the
+#: slowest honest call (a DB aggregation, an HTTP lookup behind a read), not a performance target; a tool that needs
+#: more sets `ToolMeta.timeout_seconds`. Every value stays under the kind's 90 s answer limit.
 _DEFAULT_TIMEOUTS_BY_CATEGORY: dict[str, float] = {
-    "read": 5.0,
-    "kb_read": 15.0,
-    "profile": 3.0,
-    "outbound_query": 10.0,
-    "outbound_propose": 15.0,
-    "outbound_confirm": 30.0,
-    "outbound_cancel": 5.0,
-    "mutation": 10.0,
+    "read": 20.0,
+    "kb_read": 30.0,
+    "profile": 10.0,
+    "url_builder": 10.0,
+    "outbound_query": 30.0,
+    "outbound_propose": 30.0,
+    "outbound_confirm": 60.0,
+    "outbound_cancel": 15.0,
+    "mutation": 30.0,
+    "conversation": 15.0,
 }
+_FALLBACK_TIMEOUT_S = 30.0
 
 
 class ToolMeta(BaseModel):
@@ -77,9 +83,10 @@ class ToolMeta(BaseModel):
     timeout_seconds: float | None = None
     """Per-tool execution timeout. ``None`` falls back to the default
     for the tool's ``category`` (see ``_DEFAULT_TIMEOUTS_BY_CATEGORY``).
-    A tool that exceeds its timeout returns a ``ToolError`` to the LLM
-    instead of hanging the chat stream — the LLM then decides to retry
-    a smaller call or surface the error to the admin."""
+    In the chat kit the ``tool_guard`` capability enforces it: a tool that
+    exceeds its timeout is stopped (a sync tool's thread is abandoned) and the
+    model reads ``tool_timeout: ...`` as a failed result instead of the chat
+    hanging. Outside the kit the ``@llm_tool`` decorator only logs a slow call."""
 
     requires_approval: bool = False
     """True if this tool must run through pydantic-ai's deferred-tool
@@ -92,7 +99,7 @@ class ToolMeta(BaseModel):
     def resolved_timeout(self) -> float:
         if self.timeout_seconds is not None:
             return float(self.timeout_seconds)
-        return _DEFAULT_TIMEOUTS_BY_CATEGORY.get(self.category, 10.0)
+        return _DEFAULT_TIMEOUTS_BY_CATEGORY.get(self.category, _FALLBACK_TIMEOUT_S)
 
 
 _META_ATTR = "__llm_tool_meta__"

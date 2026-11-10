@@ -44,7 +44,7 @@ class VisionRequest:
 
     image_url: str  # URL or base64 data URL
     query: str  # Question about the image
-    model: str = "qwen/qwen2.5-vl-32b-instruct:free"
+    model: str = "google/gemini-2.5-flash-lite"
     max_tokens: int = 1024
     temperature: float = 0.2
 

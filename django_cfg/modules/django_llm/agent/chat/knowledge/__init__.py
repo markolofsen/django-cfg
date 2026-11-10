@@ -68,6 +68,23 @@ class KnowledgeRuntime:
     def tool_names(self) -> list[str]:
         return [t.name for t in self.tools]
 
+    def trace_tools(self) -> dict[str, Any]:
+        """The trace declarations of the four tools: retriever steps whose paths and search text may be shown at level 2, never the text read."""
+        from django_cfg.modules.django_llm.agent.trace import StepRef, ToolRole, ToolTrace
+
+        def opened(args: dict, _result: str | None) -> list[StepRef]:
+            path = args.get("path")
+            return [StepRef(kind="document", id=str(path))] if isinstance(path, str) and path else []
+
+        p = self.prefix
+        shared = {"role": ToolRole.RETRIEVER}
+        return {
+            f"{p}tree": ToolTrace("Browsing the library", args=("path", "depth"), **shared),
+            f"{p}search": ToolTrace("Searching the library", args=("query", "path_prefix"), query_arg="query", **shared),
+            f"{p}outline": ToolTrace("Reading an outline", args=("path",), refs=opened, **shared),
+            f"{p}read": ToolTrace("Reading a document", args=("path", "section"), refs=opened, **shared),
+        }
+
     def note_for(self, answer: str) -> str:
         if not self.guard:
             return ""

@@ -61,14 +61,22 @@ async def _coerce_json_strings(
     """Decode stringified JSON arrays/objects inside tool args.
 
     ``args`` arrives as either:
-      - ``str`` — full args blob, JSON-encoded by the model. We leave
-        it alone; pydantic's ``validate_json`` already handles native
-        nested types correctly when the *outer* envelope is a string.
+      - ``str`` — the model's raw JSON blob (what providers send). It is
+        parsed first: pydantic's ``validate_json`` is strict about a field the
+        model wrote as a JSON string inside the blob (``{"items": "[\\"a\\"]"}``),
+        so decoding only dicts missed the common case. An unparseable blob is
+        left alone for pydantic to reject (the model then retries).
       - ``dict`` — already-parsed kwargs. Per-field stringification
         is what bites us; rewrite each value via ``_maybe_decode``.
     """
+    original = args
+    if isinstance(args, str):
+        try:
+            args = json.loads(args)
+        except (json.JSONDecodeError, ValueError):
+            return original
     if not isinstance(args, dict):
-        return args
+        return original
 
     coerced: dict[str, Any] = {}
     rewrote = False
@@ -83,7 +91,8 @@ async def _coerce_json_strings(
             "[capability] coerced JSON-string args for tool=%s",
             call.tool_name,
         )
-    return coerced
+        return coerced
+    return original  # nothing to fix: a raw blob stays a blob, so pydantic validates it as JSON as before
 
 
 async def _coerce_output(ctx: RunContext[Any], *, output_context: Any, output: Any) -> Any:

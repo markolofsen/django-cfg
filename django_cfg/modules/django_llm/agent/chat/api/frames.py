@@ -12,6 +12,7 @@ from drf_spectacular.utils import PolymorphicProxySerializer
 from rest_framework import serializers
 
 from django_cfg.modules.django_llm.agent.bus.events import WIRE_ERROR_CODES, WIRE_PHASES
+from django_cfg.modules.django_llm.agent.chat.api.serializers import TraceStepSerializer
 
 
 def _frame(name: str, type_: str, doc: str, **fields: serializers.Field) -> type[serializers.Serializer]:
@@ -56,6 +57,13 @@ DoneFrame = _frame(
     cost_usd=serializers.FloatField(allow_null=True, help_text="Null: the run could not be priced."),
     replayed=serializers.BooleanField(required=False, help_text="Present (true) when the stored answer was replayed for a resent `client_id`."),
 )
+TraceStepFrame = _frame(
+    "TraceStep", "trace_step",
+    "Optional: one step of the answer's trace, sent at start (`status: running`) and again when it settles; upsert by `step.step_id`. "
+    "Only a kind with `trace_level` > 0 sends it. `event_seq` equals the frame's SSE `id:`.",
+    event_seq=serializers.IntegerField(required=False),
+    step=TraceStepSerializer(),
+)
 ErrorFrame = _frame(
     "Error", "error", "Terminal: the answer failed; partial text is kept.",
     code=serializers.ChoiceField(choices=list(WIRE_ERROR_CODES)),
@@ -71,6 +79,7 @@ FRAMES: dict[str, type[serializers.Serializer]] = {
     "reasoning_delta": ReasoningDeltaFrame,
     "reasoning_end": ReasoningEndFrame,
     "ui_payload": UiPayloadFrame,
+    "trace_step": TraceStepFrame,
     "done": DoneFrame,
     "error": ErrorFrame,
 }

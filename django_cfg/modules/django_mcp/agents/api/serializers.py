@@ -12,7 +12,7 @@ class AgentChatRequestSerializer(serializers.Serializer):
     model = serializers.CharField(
         required=False,
         allow_blank=True,
-        help_text="LLM model override (e.g., 'anthropic/claude-3.5-haiku')",
+        help_text="LLM model override (e.g., 'anthropic/claude-haiku-4.5')",
     )
     session_id = serializers.CharField(
         required=False,

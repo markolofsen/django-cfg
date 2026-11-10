@@ -62,12 +62,15 @@ from django_cfg.modules.django_llm.agent.bus.events import (
     RunEvent,
     StatusEvent,
     TextDeltaEvent,
+    TraceStepEvent,
     UIPayloadEvent,
     encode_sse,
 )
 from django_cfg.modules.django_llm.agent.runtime.errors import (
     DEFAULT_ERROR_MESSAGES,
+    describe,
     error_code_for,
+    is_provider_failure,
 )
 
 logger = logging.getLogger(__name__)
@@ -79,6 +82,7 @@ __all__ = [
     "InMemoryRunLock",
     "PING",
     "RunBusy",
+    "RunFeed",
     "RunDriver",
     "RunHooks",
     "RunLock",
@@ -89,6 +93,20 @@ __all__ = [
 ]
 
 Status = Literal["done", "error", "cancelled"]
+
+
+class RunFeed(Protocol):
+    """Frames that do not come from the source: a side channel the run fills while the source is busy (the answer's trace).
+
+    The driver wakes on ``wake``, sends what ``drain()`` returns, and calls ``finish`` once when the run ends (before the
+    last ``drain``), so a feed can add its closing frames. ``Recorder`` (``agent/trace``) is one.
+    """
+
+    wake: asyncio.Event
+
+    def drain(self) -> list[Any]: ...
+
+    def finish(self, status: str, error_code: str = "", *, tokens_in: int | None = None, tokens_out: int | None = None, cost_usd: float | None = None, model: str | None = None) -> None: ...
 
 
 class RunBusy(Exception):
@@ -278,29 +296,31 @@ class RunDriver:
         *,
         run: RunEvent,
         key: str | None = None,
+        feed: RunFeed | None = None,
     ) -> DrivenRun:
         """Take the run lock for ``key`` (if the driver has a lock and a key) and return the run.
 
         Raises ``RunBusy`` when the lock is held. ``source`` may be a factory, called only
-        once the lock is taken, so a refused run builds no agent.
+        once the lock is taken, so a refused run builds no agent. ``feed`` adds frames from a side channel (see ``RunFeed``).
         """
         token = uuid.uuid4().hex
         if self.lock is not None and key is not None:
             if not await self.lock.acquire(key, token, self.config.effective_lock_ttl_s):
                 raise RunBusy(key)
         iterator = source() if callable(source) and not hasattr(source, "__aiter__") else source
-        return DrivenRun(self, iterator, run, key if self.lock is not None else None, token)
+        return DrivenRun(self, iterator, run, key if self.lock is not None else None, token, feed)
 
 
 class DrivenRun:
     """One opened run. ``frames()`` is the response body; call it once."""
 
-    def __init__(self, driver: RunDriver, source: AsyncIterator[Any], run: RunEvent, key: str | None, token: str) -> None:
+    def __init__(self, driver: RunDriver, source: AsyncIterator[Any], run: RunEvent, key: str | None, token: str, feed: RunFeed | None = None) -> None:
         self._driver = driver
         self._source = source
         self._run = run
         self._key = key
         self._token = token
+        self._feed = feed
         self._started = False
         self._abort = asyncio.Event()
         self.finished = asyncio.Event()
@@ -348,8 +368,25 @@ class DrivenRun:
         last_sent = started
         last_flush = started
 
+        feed = self._feed
+        wake: asyncio.Future | None = None
+        position = 0  # the SSE `id:` of the next frame: the place a client resumes from
+
         def frame(event: Any) -> str | None:
-            return encode_sse(event, "widget")
+            nonlocal position
+            position += 1
+            if isinstance(event, TraceStepEvent):
+                event.event_seq = position
+            return encode_sse(event, "widget", seq=position)
+
+        def feed_frames() -> list[str]:
+            if feed is None:
+                return []
+            try:
+                return [frame(ev) or "" for ev in feed.drain()]
+            except Exception:  # noqa: BLE001 - a side channel must not kill the run
+                logger.exception("run driver: the feed failed")
+                return []
 
         try:
             yield frame(self._run) or ""
@@ -361,12 +398,20 @@ class DrivenRun:
                 now = time.monotonic()
                 if deadline is not None and now >= deadline:
                     raise TimeoutError("run exceeded its wall-clock cap")
+                for chunk in feed_frames():
+                    last_sent = time.monotonic()
+                    yield chunk
                 if pending is None:
                     pending = asyncio.ensure_future(iterator.__anext__())
+                if feed is not None and wake is None:
+                    wake = asyncio.ensure_future(feed.wake.wait())
                 wait_for = cfg.ping_s - (now - last_sent)
                 if deadline is not None:
                     wait_for = min(wait_for, deadline - now)
-                done, _ = await asyncio.wait({pending, abort_wait}, timeout=max(0.001, wait_for), return_when=asyncio.FIRST_COMPLETED)
+                waiting = {pending, abort_wait} | ({wake} if wake is not None else set())
+                done, _ = await asyncio.wait(waiting, timeout=max(0.001, wait_for), return_when=asyncio.FIRST_COMPLETED)
+                if wake is not None and wake in done:
+                    wake = None
                 if pending not in done:
                     if self._abort.is_set():
                         continue
@@ -425,6 +470,8 @@ class DrivenRun:
         except Exception as exc:  # noqa: BLE001 - the stream ends with one `error` frame, the cause goes to the log
             if isinstance(exc, TimeoutError):
                 logger.warning("run driver: %s", exc)
+            elif is_provider_failure(exc):
+                logger.warning("run driver: the run failed: %s", describe(exc))
             else:
                 logger.exception("run driver: the run failed")
             status = "error"
@@ -432,6 +479,13 @@ class DrivenRun:
             message = cfg.error_messages.get(code, "")
             retryable = True
         finally:
+            if wake is not None:
+                wake.cancel()
+            if feed is not None:
+                try:
+                    feed.finish(status or "cancelled", code, tokens_in=state.tokens_in, tokens_out=state.tokens_out, cost_usd=state.cost_usd, model=state.model)
+                except Exception:  # noqa: BLE001
+                    logger.exception("run driver: the feed could not close")
             outcome = RunOutcome(
                 status=status or "cancelled",
                 state=state,
@@ -446,6 +500,9 @@ class DrivenRun:
 
         outcome = self.outcome
         assert outcome is not None
+        if outcome.status != "cancelled":
+            for chunk in feed_frames():
+                yield chunk
         if outcome.status == "done":
             yield frame(
                 DoneEvent(

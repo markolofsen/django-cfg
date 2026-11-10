@@ -35,6 +35,7 @@ from django_cfg.modules.django_llm.agent.chat.store import DjangoTurnStore
 from django_cfg.modules.django_llm.agent.runtime.cost import Pricer, PriceRow, price_run
 from django_cfg.modules.django_llm.agent.runtime.driver import DriverConfig, RunDriver, RunHooks, RunLock, RunOutcome, RunState
 from django_cfg.modules.django_llm.agent.runtime.streaming import StreamRunResult
+from django_cfg.modules.django_llm.agent.trace import MessageJsonSink, Recorder, TraceSink
 
 
 log = logging.getLogger(__name__)
@@ -122,12 +123,14 @@ class ChatService:
         on_answer: OnAnswer | None = None,
         title_job: Callable[..., None] | None = None,
         on_ui_payload_accepted: OnUiPayloadAccepted | None = None,
+        trace_sink: Callable[[Any, Any], TraceSink] | None = None,
     ):
         """`policy` may be a `ChatPolicy` or a zero-argument callable returning one, read on every use (rates from settings,
         swapped in tests). `resolve_thread(service, actor, id)` is the tenancy rule (default: the owner's thread); `on_answer`
         runs after each stored answer; `title_job(thread_model, thread_id, models)` runs the LLM title off the request (default:
         a daemon thread; a host may enqueue a job instead). `on_ui_payload_accepted(answer, index, part)` runs after `ack_part`
-        stored a browser's verdict on a part (`{"applied": bool, "reason": str}` under `part["ack"]`)."""
+        stored a browser's verdict on a part (`{"applied": bool, "reason": str}` under `part["ack"]`). `trace_sink(store, message_id)`
+        returns where a kind's trace goes (default: `MessageJsonSink`, the message row's `trace` column)."""
         self.thread_model = thread_model
         self.message_model = thread_model.messages.rel.related_model
         self._policy = policy or ChatPolicy()
@@ -138,6 +141,7 @@ class ChatService:
         self.on_answer = on_answer
         self.title_job = title_job
         self.on_ui_payload_accepted = on_ui_payload_accepted
+        self.trace_sink = trace_sink
         self._attachment_store: Any = False
 
     @property
@@ -383,19 +387,23 @@ class ChatService:
         client_id = turn.user.client_id
         run = RunEvent(thread_id=str(opened.thread.pk), message_id=str(answer.id), client_id=str(client_id) if client_id else None, seq=answer.seq)
         if turn.kind is rules.TurnKind.REPLAY:
-            yield encode_sse(run, "widget")
-            for event in replay_events(answer):
-                yield encode_sse(event, "widget")
+            yield encode_sse(run, "widget", seq=1)
+            for position, event in enumerate(replay_events(answer), start=2):
+                yield encode_sse(event, "widget", seq=position)
             return
 
         store, chat_kind = opened.store, opened.kind
         out = StreamRunResult()
+        recorder = Recorder(chat_kind.trace_level, guided_by=chat_kind.prompt_version) if chat_kind.trace_level > 0 else None
+        sink = (self.trace_sink or MessageJsonSink)(store, answer.id) if recorder is not None else None
 
         def parts_of(state: RunState) -> list[dict]:
             return [{"kind": p.kind, "data": p.data} for p in state.payloads]
 
         def on_flush(state: RunState) -> None:
             rules.flush(store, answer.id, text=state.text, parts=parts_of(state), tool_calls=list(out.tool_calls))
+            if sink is not None and recorder is not None:
+                sink.write(recorder.doc())
 
         def on_finish(outcome: RunOutcome) -> None:
             state = outcome.state
@@ -407,6 +415,8 @@ class ChatService:
                 tokens_in=state.tokens_in or 0, tokens_out=state.tokens_out or 0, cost_usd=state.cost_usd,
                 latency_ms=outcome.latency_ms, model=state.model or "", prompt_version=chat_kind.prompt_version,
             )
+            if sink is not None and recorder is not None:
+                sink.flush(recorder.doc())
             log_run(chat_kind, answer.id, opened.thread.pk, status, state, outcome, len(out.tool_calls), len(opened.attachments))
             policy = chat_kind.attachments
             if status is rules.Status.DONE and opened.attachments and policy is not None and policy.keep_days == 0 and self.attachment_store is not None:
@@ -427,9 +437,10 @@ class ChatService:
         source = kind_source(
             chat_kind, opened.deps, history, prompt, model=model, out=out,
             pricer=self.pricer or self.fallback_pricer(), price_timeout_s=self.policy.price_timeout_s,
+            trace=recorder,
         )
         try:
-            driven = await driver.open(source, run=run, key=f"chat:{opened.thread.pk}" if self.lock else None)
+            driven = await driver.open(source, run=run, key=f"chat:{opened.thread.pk}" if self.lock else None, feed=recorder)
         except BaseException:
             await source.aclose()
             await _close_unrun(store, answer.id, chat_kind)

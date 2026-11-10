@@ -31,6 +31,8 @@ register(ChatKind(
 ))
 ```
 
+Every tool call is wrapped: it has a time limit (`KindLimits.tool_timeout_s`, 30 s, or the tool's own `ToolMeta.timeout_seconds`), an exception or a timeout reaches the model as a readable failure instead of ending the answer, and a result longer than `KindLimits.tool_result_chars` (12000) is cut with a `[cut: kept N of M chars]` marker. A model may get the arguments wrong twice (`ChatKind.retries`, default 2).
+
 A tool returns `ToolReturn(return_value=..., metadata=UiPayload("note", {"text": "..."}))`. Any `kind` string and JSON data; kinds not declared in `payload_kinds` are dropped. Tools never get a scope from the model: `make_deps` builds it on the server.
 
 ## Tables and service

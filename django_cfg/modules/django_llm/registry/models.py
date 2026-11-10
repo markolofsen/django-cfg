@@ -83,7 +83,7 @@ class OpenRouterModel:
     @property
     def vendor(self) -> str:
         """Real vendor from the slug prefix (OpenRouter rarely sends `provider`).
-        `anthropic/claude-3.5-haiku` → `anthropic`."""
+        `anthropic/claude-haiku-4.5` → `anthropic`."""
         return self.id.split("/", 1)[0] if "/" in self.id else (self.provider or "")
 
     @property
@@ -561,7 +561,7 @@ class ModelsCache:
         authenticated, which we are.
 
         `slug` is the OpenRouter id WITHOUT any local prefix, e.g.
-        "anthropic/claude-3.5-haiku" (strip a leading "openrouter/" first)."""
+        "anthropic/claude-haiku-4.5" (strip a leading "openrouter/" first)."""
         slug = slug.removeprefix("openrouter/")
         url = f"https://openrouter.ai/api/v1/models/{slug}/endpoints"
         try:

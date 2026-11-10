@@ -2,7 +2,7 @@
 S3-compatible storage backend configuration.
 
 One model covers every S3-compatible store; vendor differences live in the
-`r2()` / `minio()` / `s3()` presets rather than in user configs. Requires
+`r2()` / `hetzner()` / `minio()` / `s3()` presets rather than in user configs. Requires
 `pip install django-cfg[s3]` (django-storages + boto3).
 """
 
@@ -13,6 +13,9 @@ from pydantic import BaseModel, Field, SecretStr, field_validator, model_validat
 
 # Storage backend class provided by django-storages.
 S3_BACKEND = "storages.backends.s3.S3Storage"
+
+# Hetzner Object Storage locations; the location is also the region name.
+HETZNER_LOCATIONS = frozenset({"fsn1", "nbg1", "hel1"})
 
 
 def _env(*names: str) -> Optional[str]:
@@ -36,12 +39,13 @@ class S3StorageConfig(BaseModel):
     Use a preset unless the store is plain AWS S3:
 
         storage = StorageConfig(backend=S3StorageConfig.r2(account_id="…", bucket_name="media"))
+        storage = StorageConfig(backend=S3StorageConfig.hetzner(location="hel1", bucket_name="media"))
         storage = StorageConfig(backend=S3StorageConfig.minio(endpoint_url="…", bucket_name="media"))
         storage = StorageConfig(backend=S3StorageConfig(bucket_name="media", region_name="eu-west-1"))
 
     Credentials fall back to the environment, so they need not appear in code:
     `S3__ACCESS_KEY_ID` / `S3__SECRET_ACCESS_KEY`, and additionally `R2__*` for
-    the R2 preset.
+    the R2 preset and `HETZNER__*` for the Hetzner preset.
     """
 
     bucket_name: str = Field(
@@ -228,6 +232,53 @@ class S3StorageConfig(BaseModel):
         )
 
     @classmethod
+    def hetzner(
+        cls,
+        *,
+        location: str,
+        bucket_name: str,
+        endpoint_url: Optional[str] = None,
+        **kwargs: Any,
+    ) -> "S3StorageConfig":
+        """
+        Hetzner Object Storage.
+
+        The endpoint is `https://{location}.your-objectstorage.com` and the
+        region name is the location itself (`fsn1`, `nbg1`, `hel1`), not
+        `auto`. SigV4 with virtual-host addressing is the default; Hetzner's own
+        guides disagree on both, so override `addressing_style="path"` if a
+        bucket name with dots or a proxy needs it. Checksums are sent only when
+        required: botocore 1.36+ defaults to CRC32 trailers that
+        S3-compatible stores may reject.
+
+        Keys are valid for every bucket of the Hetzner project unless a bucket
+        policy narrows them; there is no per-bucket read-only key. Use a
+        separate project for read-only consumers.
+
+        `location` is validated against the known locations unless an explicit
+        `endpoint_url` is given (a new location needs no release).
+        """
+        if endpoint_url is None and location not in HETZNER_LOCATIONS:
+            raise ValueError(
+                f"Unknown Hetzner location {location!r}; expected one of "
+                f"{sorted(HETZNER_LOCATIONS)}, or pass endpoint_url explicitly."
+            )
+
+        kwargs.setdefault("access_key_id", _secret_from_env("HETZNER__ACCESS_KEY_ID", "S3__ACCESS_KEY_ID"))
+        kwargs.setdefault("secret_access_key", _secret_from_env("HETZNER__SECRET_ACCESS_KEY", "S3__SECRET_ACCESS_KEY"))
+        kwargs.setdefault("signature_version", "s3v4")
+        kwargs.setdefault("addressing_style", "virtual")
+
+        return cls(
+            bucket_name=bucket_name,
+            endpoint_url=endpoint_url or f"https://{location}.your-objectstorage.com",
+            region_name=location,
+            request_checksum_calculation="when_required",
+            response_checksum_validation="when_required",
+            **kwargs,
+        )
+
+    @classmethod
     def minio(
         cls,
         *,
@@ -342,4 +393,4 @@ class S3StorageConfig(BaseModel):
             ) from exc
 
 
-__all__ = ["S3StorageConfig", "S3_BACKEND"]
+__all__ = ["S3StorageConfig", "S3_BACKEND", "HETZNER_LOCATIONS"]

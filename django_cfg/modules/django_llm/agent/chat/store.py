@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -25,6 +26,16 @@ def snapshot(m: Any) -> StoredMessage:
 
 def _money(value: float | None) -> Decimal | None:
     return None if value is None else Decimal(str(round(value, 6)))
+
+
+_warned: set[str] = set()
+
+
+def _warn_no_trace_column(model: Any) -> None:
+    label = f"{model.__module__}.{model.__name__}"
+    if label not in _warned:
+        _warned.add(label)
+        logging.getLogger(__name__).warning("chat trace: %s has no `trace` column (add it with makemigrations); the trace of an answer is not stored", label)
 
 
 class DjangoTurnStore:
@@ -85,6 +96,14 @@ class DjangoTurnStore:
 
     def update_running(self, message_id: uuid.UUID, **fields: Any) -> bool:
         return self._message_model.objects.filter(pk=message_id, status=Status.RUNNING).update(**fields) > 0
+
+    def set_trace(self, message_id: uuid.UUID, doc: dict) -> bool:
+        """Save the answer's trace document on its row, whatever the row's status: the trace is not the answer. A message model
+        without a `trace` column (the host has not migrated yet) saves nothing, and says so once."""
+        if not hasattr(self._message_model, "trace"):
+            _warn_no_trace_column(self._message_model)
+            return False
+        return self._message_model.objects.filter(pk=message_id).update(trace=doc) > 0
 
     def close(self, message_id: uuid.UUID, **fields: Any) -> bool:
         """Close an answer unless it is `done`: a late truth may replace a reaper's guess, never a stored answer."""

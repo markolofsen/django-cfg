@@ -30,6 +30,7 @@ from django_cfg.modules.django_llm.agent.runtime.cost import Pricer, RunCost
 from django_cfg.modules.django_llm.agent.runtime.streaming import StreamRunResult
 
 FIXTURE = Path(__file__).resolve().parent.parent / "bus" / "tests" / "fixtures" / "events.json"
+TRACE_FIXTURE = FIXTURE.with_name("events-trace.json")  # the optional trace frames: Python-first until the widget decodes them
 
 
 @dataclass(frozen=True)
@@ -123,15 +124,35 @@ def collect(agen: AsyncIterator[Any]) -> list[Any]:
     return run_async(go)
 
 
+def _data_of(block: str) -> str | None:
+    for line in block.split("\n"):
+        if line.startswith("data: "):
+            return line[len("data: ") :]
+    return None
+
+
 def parse_sse(body: str | bytes) -> list[dict]:
-    """Decoded `data:` frames of an SSE body; comments (pings) are skipped."""
+    """Decoded `data:` frames of an SSE body; comments (pings) are skipped and an `id:` line is ignored."""
     text = body.decode() if isinstance(body, bytes) else body
-    return [json.loads(block[len("data: ") :]) for block in text.split("\n\n") if block.startswith("data: ")]
+    return [json.loads(data) for block in text.split("\n\n") if (data := _data_of(block)) is not None]
+
+
+def sse_ids(body: str | bytes) -> list[int | None]:
+    """The SSE `id:` of each data frame of a body, in order (None for a frame sent without one)."""
+    text = body.decode() if isinstance(body, bytes) else body
+    out: list[int | None] = []
+    for block in text.split("\n\n"):
+        if _data_of(block) is None:
+            continue
+        found = [line[4:].strip() for line in block.split("\n") if line.startswith("id: ")]
+        out.append(int(found[0]) if found else None)
+    return out
 
 
 def fixture_frames() -> list[dict]:
-    """The wire fixture shared with the widget (`events.json`): one of each frame the server speaks."""
-    return json.loads(FIXTURE.read_text())["frames"]
+    """The wire fixtures: the one shared with the widget (`events.json`) plus the trace frames (`events-trace.json`)."""
+    frames = json.loads(FIXTURE.read_text())["frames"]
+    return frames + json.loads(TRACE_FIXTURE.read_text())["frames"]
 
 
 def assert_on_wire(frame: dict) -> None:

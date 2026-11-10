@@ -70,7 +70,8 @@ from django_cfg.modules.django_llm.agent.bus.events import (
     UIPayloadEvent,
 )
 from django_cfg.modules.django_llm.agent.runtime.cost import Pricer, aprice_run
-from django_cfg.modules.django_llm.agent.runtime.errors import DEFAULT_ERROR_MESSAGES, error_code_for
+from django_cfg.modules.django_llm.agent.runtime.clamp import clamp_text
+from django_cfg.modules.django_llm.agent.runtime.errors import DEFAULT_ERROR_MESSAGES, describe, error_code_for, is_provider_failure
 from django_cfg.modules.django_llm.agent.runtime.limits import RunLimits, resolve_run_limits
 from django_cfg.modules.django_llm.agent.runtime.ui_payloads import (
     UI_PAYLOAD_TYPES,
@@ -87,6 +88,15 @@ def _args_for_log(args: object) -> str:
     if os.environ.get("DJANGO_CFG_LOG_TOOL_ARGS") == "1":
         return text[:300]
     return f"<{len(text)} chars>"
+
+
+def _log_failure(prefix: str, what: str, exc: BaseException) -> None:
+    """Log a failed run. A provider failure is one WARNING line (type, cause, status, slug): its message is the response
+    body, which can echo the prompt, and its traceback says nothing the line does not. Any other failure keeps its traceback."""
+    if is_provider_failure(exc):
+        logger.warning("[%s] %s: %s", prefix, what, describe(exc))
+    else:
+        logger.exception("[%s] %s: %s", prefix, what, type(exc).__name__)
 
 
 def _format_user_error(exc: Exception) -> str:
@@ -233,9 +243,9 @@ def coerce_payloads(items: Any) -> list[tuple[str, dict]]:
 
 
 def _clamp(content: Any, limit: int) -> str:
-    """A tool output as stored text, cut to ``limit`` characters."""
+    """A tool output as stored text, cut to ``limit`` characters with a `[cut: kept N of M chars]` marker."""
     text = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, default=str)
-    return text if len(text) <= limit else text[:limit] + "..."
+    return clamp_text(text, limit)
 
 
 def _make_tool_result_event(tool_name: str, result_repr: str) -> ToolResultEvent:
@@ -559,10 +569,8 @@ async def stream_agent_run(
                         continue
 
                     tool_name = result_part.tool_name
-                    logger.info(
-                        "[%s] tool_result  name=%s  len=%d  preview=%r",
-                        log_prefix, tool_name, len(result_repr), result_repr[:200],
-                    )
+                    # A result is user or document text: the log gets its size, never a preview.
+                    logger.info("[%s] tool_result  name=%s  len=%d", log_prefix, tool_name, len(result_repr))
 
                     # Layer 3 evidence: record tools whose return was a success
                     # (not a ToolError) so the end-of-stream gate can tell a real
@@ -748,7 +756,7 @@ async def stream_agent_run(
                         out.last_messages_json = ""
 
     except Exception as exc:
-        logger.exception("[%s] stream error: %s", log_prefix, exc)
+        _log_failure(log_prefix, "stream error", exc)
         code = error_code_for(exc)
         yield ErrorEvent(error=DEFAULT_ERROR_MESSAGES[code] if widget else _format_user_error(exc), code=code)
         return

@@ -135,13 +135,8 @@ def select_ocr_model(
         if preset_model:
             return preset_model
 
-    # 3. Auto-select from registry
-    if models_registry:
-        cheapest = models_registry.get_cheapest_paid(1)
-        if cheapest:
-            return cheapest[0].id
-
-    # 4. Fallback
+    # 3. The pinned default. Not "cheapest in the catalogue": that picked the `openrouter/auto` router (priced -$1M/token as a
+    #    sentinel) and, behind it, models too small to read a receipt. Reading text is a quality role; cost is a preset's job.
     return DEFAULT_OCR_MODEL
 
 

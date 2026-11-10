@@ -11,7 +11,7 @@ declares. The calls are captured in `out.tool_calls` for the host to store and r
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from contextlib import aclosing
 from typing import Any
 
@@ -25,6 +25,7 @@ from django_cfg.modules.django_llm.agent.bus.events import (
     TextDeltaEvent,
     UIPayloadEvent,
 )
+from django_cfg.modules.django_llm.agent.capabilities import lenient_json_args_capability, tool_guard_capability
 from django_cfg.modules.django_llm.agent.chat.compaction import compactor, soft_cap
 from django_cfg.modules.django_llm.agent.chat.kind import ChatKind
 from django_cfg.modules.django_llm.agent.chat.turn import StoredMessage
@@ -32,12 +33,38 @@ from django_cfg.modules.django_llm.agent.runtime.cost import Pricer
 from django_cfg.modules.django_llm.agent.runtime.errors import DEFAULT_ERROR_MESSAGES
 from django_cfg.modules.django_llm.agent.runtime.limits import RunLimits
 from django_cfg.modules.django_llm.agent.runtime.streaming import coerce_payloads
+from django_cfg.modules.django_llm.agent.trace.capability import TraceCapability
+from django_cfg.modules.django_llm.agent.trace.recorder import Recorder
 
 log = logging.getLogger(__name__)
 
 
 def _tool_name(tool: Any) -> str:
     return getattr(tool, "name", None) or getattr(tool, "__name__", "")
+
+
+def tool_timeouts(tools: Sequence[Any]) -> dict[str, float]:
+    """`{name: seconds}` for the tools that carry a `ToolMeta` (`@llm_tool`, `BaseTool`); the rest get `KindLimits.tool_timeout_s`."""
+    from django_cfg.modules.django_llm.agent.tools.core import get_tool_meta
+
+    found: dict[str, float] = {}
+    for tool in tools:
+        meta = get_tool_meta(getattr(tool, "function", tool))
+        if meta is not None:
+            found[_tool_name(tool)] = meta.resolved_timeout()
+    return found
+
+
+def tool_categories(tools: Sequence[Any]) -> dict[str, str]:
+    """`{name: ToolMeta.category}` for the tools that carry a `ToolMeta`: the default role of their trace step."""
+    from django_cfg.modules.django_llm.agent.tools.core import get_tool_meta
+
+    found: dict[str, str] = {}
+    for tool in tools:
+        meta = get_tool_meta(getattr(tool, "function", tool))
+        if meta is not None:
+            found[_tool_name(tool)] = str(meta.category)
+    return found
 
 
 def build_model(chain: tuple[str, ...]) -> Model:
@@ -57,11 +84,13 @@ async def kind_source(
     out: Any = None,
     pricer: Pricer | None = None,
     price_timeout_s: float = 3.0,
+    trace: "Recorder | None" = None,
 ) -> AsyncIterator[SSEEvent]:
     """Events of one answer, ending in exactly one `DoneEvent` or `ErrorEvent`.
 
     `history` is `[{role, content, tool_calls?}]` (what `ChatService.history_for_model` returns). `out` is a
-    `StreamRunResult` the caller keeps to read `out.tool_calls` afterwards.
+    `StreamRunResult` the caller keeps to read `out.tool_calls` afterwards. `trace` is the answer's `Recorder` (the service makes
+    one when `kind.trace_level > 0`): its capability sits outside the tool guard, so a timeout is a step too.
     """
     from django_cfg.modules.django_llm.agent.runtime.history import convert_history
     from django_cfg.modules.django_llm.agent.runtime.streaming import StreamRunResult, stream_agent_run
@@ -89,18 +118,23 @@ async def kind_source(
                 )
             instructions = f"{instructions}\n\n{kb.prompt}"  # the tree comes after the kind's own text: stable bytes, cache-friendly
             tools += kb.tools
-            if limits.keep_tool_results is None and limits.tool_result_chars is None:
-                caps.append(ProcessHistory(compactor(kb.session.caps.keep_tool_results, None)))
         if limits.tool_calls_soft is not None:
             caps.append(PrepareTools(soft_cap(limits.tool_calls_soft)))
-        if limits.keep_tool_results is not None or limits.tool_result_chars is not None:
-            caps.append(ProcessHistory(compactor(limits.keep_tool_results, limits.tool_result_chars)))
+        keep = limits.keep_tool_results
+        if keep is None and kb is not None:
+            keep = kb.session.caps.keep_tool_results  # a kind's own setting wins over the knowledge base's
+        if keep is not None or limits.tool_result_chars is not None:
+            caps.append(ProcessHistory(compactor(keep, limits.tool_result_chars)))
+        guard = tool_guard_capability(timeouts=tool_timeouts(tools), default_timeout_s=limits.tool_timeout_s)
+        if trace is not None and trace.level > 0:
+            declared = {**(kb.trace_tools() if kb is not None else {}), **(kind.trace_tools or {})}
+            caps[:0] = [lenient_json_args_capability(), TraceCapability(trace, declared, tool_categories(tools)), guard]
+        else:
+            caps[:0] = [lenient_json_args_capability(), guard]
         if kind.capabilities is not None:
             caps.extend(kind.capabilities(deps))
-        if caps:
-            extra["capabilities"] = caps
-        if kind.retries is not None:
-            extra["retries"] = kind.retries
+        extra["capabilities"] = caps
+        extra["retries"] = kind.retries
         agent = Agent(
             model,
             deps_type=type(deps),

@@ -72,6 +72,7 @@ class AbstractMessage(models.Model):
     text = models.TextField(blank=True, default="")
     parts = models.JSONField(default=list, blank=True, help_text="[{kind, data}] ui payloads the answer carried.")
     tool_calls = models.JSONField(default=list, blank=True, help_text="[{id, name, input, output}] compact; replayed into the model context.")
+    trace = models.JSONField(null=True, blank=True, default=None, help_text="TraceDoc v1: how the answer was reached, at the kind's `trace_level` (see `agent/trace`); null when the kind records none. At most 24 KB.")
     status = models.CharField(max_length=10, choices=choices(Status), default=Status.DONE.value)
     error_code = models.CharField(max_length=12, choices=choices(ErrorCode), blank=True, default="")
     model = models.CharField(max_length=80, blank=True, default="", help_text="The slug that served the answer.")

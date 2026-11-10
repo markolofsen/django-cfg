@@ -43,6 +43,8 @@ from pydantic_ai.models.fallback import FallbackModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
+from django_cfg.modules.django_llm.agent.runtime.errors import describe
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,11 +57,14 @@ def is_malformed_response(exc: Exception) -> bool:
     stays as loud as it was. See the module docstring for the full rationale.
     """
     if isinstance(exc, ModelAPIError):
-        return True  # upstream's default: 5xx, timeouts, connection resets
-    return (
-        type(exc) is UnexpectedModelBehavior  # exactly this — not its subclasses
-        and "Invalid response from" in str(exc)
-    )
+        # upstream's default: 5xx, timeouts, connection resets. One WARNING per fall-over, naming the failed slug and
+        # its status (never the body): a retired or unpaid primary is otherwise retried silently on every turn.
+        logger.warning("[model_chain] model failed: %s", describe(exc))
+        return True
+    if type(exc) is UnexpectedModelBehavior and "Invalid response from" in str(exc):  # exactly this — not its subclasses
+        logger.warning("[model_chain] model failed: malformed response")
+        return True
+    return False
 
 
 def resolve_provider() -> tuple[str, str, str | None]:

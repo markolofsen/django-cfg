@@ -12,7 +12,7 @@ Two dialects, one set of event objects
   ``src/wire/frames.ts``; the page is the widget's ``@docs/wire-contract.md``).
   ``event.to_wire()`` and ``encode_sse(event, wire="widget")`` produce it: ``run``
   (first, versioned), ``status`` (``thinking`` / ``searching`` / ``answering``),
-  ``text_delta``, optional ``reasoning_delta`` / ``reasoning_end``, ``ui_payload``, ``done`` with ``tokens_in`` / ``tokens_out`` /
+  ``text_delta``, optional ``reasoning_delta`` / ``reasoning_end`` / ``trace_step``, ``ui_payload``, ``done`` with ``tokens_in`` / ``tokens_out`` /
   ``cost_usd`` / ``finish_reason`` and ``error`` with ``code`` / ``message`` /
   ``retryable``. Events with no widget frame (``tool_call``, ``tool_result``,
   ``directive``, ``approval_required``) encode to ``None``: **a public chat must
@@ -261,6 +261,30 @@ class ReasoningEndEvent:
 
 
 @dataclass
+class TraceStepEvent:
+    """Widget dialect, optional: one step of the answer's trace (``agent/trace``), sent when it starts (``status: running``)
+    and again, with the same ``step_id``, when it settles: the client upserts by ``step_id``.
+
+    ``step`` is the already-redacted TraceStep v1 dict. ``event_seq`` is the stream position the driver stamps (it is also the
+    SSE ``id:`` of the frame); it is absent from a stored or replayed step.
+    """
+
+    step: dict[str, Any]
+    event_seq: Optional[int] = None
+    type: str = field(default="trace_step", init=False)
+
+    def to_sse(self) -> str:
+        return encode_sse(self, "widget") or ""
+
+    def to_wire(self) -> dict[str, Any]:
+        body: dict[str, Any] = {"type": self.type}
+        if self.event_seq is not None:
+            body["event_seq"] = self.event_seq
+        body["step"] = self.step
+        return body
+
+
+@dataclass
 class RunEvent:
     """Widget dialect: the first frame of a stream, naming the stored rows.
 
@@ -324,12 +348,13 @@ SSEEvent = (
 )
 
 
-def encode_sse(event: Any, wire: str = "admin") -> Optional[str]:
+def encode_sse(event: Any, wire: str = "admin", seq: Optional[int] = None) -> Optional[str]:
     """One event as an SSE data block, in the chosen dialect.
 
     ``wire="admin"`` (default) is ``event.to_sse()``, byte for byte what this module
     always produced. ``wire="widget"`` is the widget dialect; ``None`` means the event
-    has no frame there (tool and directive events) and must be dropped.
+    has no frame there (tool and directive events) and must be dropped. ``seq`` (widget only) adds
+    an SSE ``id: <seq>`` line before the data, the position a client resumes from.
     """
     if wire == "admin":
         return event.to_sse()
@@ -338,7 +363,8 @@ def encode_sse(event: Any, wire: str = "admin") -> Optional[str]:
     body = event.to_wire()
     if body is None:
         return None
-    return f"data: {json.dumps(body, ensure_ascii=False, default=str)}\n\n"
+    prefix = f"id: {seq}\n" if seq is not None else ""
+    return f"{prefix}data: {json.dumps(body, ensure_ascii=False, default=str)}\n\n"
 
 
 def event_from_wire(raw: Mapping[str, Any]) -> Any:
@@ -365,6 +391,8 @@ def event_from_wire(raw: Mapping[str, Any]) -> Any:
         return ReasoningEndEvent(elapsed_ms=raw.get("elapsed_ms"), tokens=raw.get("tokens"))
     if kind == "ui_payload":
         return UIPayloadEvent(kind=raw["kind"], data=raw["data"])
+    if kind == "trace_step":
+        return TraceStepEvent(step=raw["step"], event_seq=raw.get("event_seq"))
     if kind == "done":
         return DoneEvent(
             tokens_input=raw.get("tokens_in"),

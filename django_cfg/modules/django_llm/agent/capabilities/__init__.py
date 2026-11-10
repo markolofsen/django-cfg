@@ -24,6 +24,7 @@ Each concern lives in its own module:
 - ``lenient_json_args`` — JSON-string arg coercion.
 - ``intent_router`` — keyword → tool-bucket surface filtering.
 - ``per_turn_call_cap`` — per-turn call-count guard.
+- ``tool_guard`` — a time limit per tool call, and a failed tool becomes a readable failure instead of ending the answer.
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ from .assembler import CapabilitySpec, build_capabilities
 from .intent_router import intent_router_capability
 from .lenient_json_args import lenient_json_args_capability
 from .per_turn_call_cap import per_turn_call_cap_capability
+from .tool_guard import tool_guard_capability
 
 __all__ = [
     "build_capabilities",
@@ -39,4 +41,5 @@ __all__ = [
     "lenient_json_args_capability",
     "intent_router_capability",
     "per_turn_call_cap_capability",
+    "tool_guard_capability",
 ]

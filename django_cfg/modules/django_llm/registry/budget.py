@@ -7,7 +7,7 @@ where the cache lives or what the price field is called.
     from django_cfg.modules.django_llm import import_llm
     budget = import_llm("registry.budget")
 
-    budget.model_price("anthropic/claude-3.5-haiku")   # -> {"prompt": 0.8, "completion": 4.0} USD/1M
+    budget.model_price("anthropic/claude-haiku-4.5")   # -> {"prompt": 0.8, "completion": 4.0} USD/1M
     budget.within_budget(slugs, max_price=0.3)         # -> [slugs whose prompt price <= 0.3]
     budget.cheapest(slugs)                             # -> the slug with the lowest prompt price
     budget.annotate(slugs)                             # -> [(slug, prompt_price)] cheapest-first

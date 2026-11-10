@@ -23,7 +23,7 @@ caller — this module reads no host/project config of its own.
 
 Usage — structured output (Pydantic schema):
 
-    router = LLMRouter(model_chain=["openai/gpt-4o-mini", "google/gemini-2.0-flash-lite"])
+    router = LLMRouter(model_chain=["openai/gpt-4o-mini", "google/gemini-2.5-flash-lite"])
     result, model_used, usage = router.parse(
         schema=MySchema,
         messages=[{"role": "user", "content": "..."}],

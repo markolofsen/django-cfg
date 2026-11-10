@@ -565,7 +565,7 @@ class MCPConfigBuilder:
     def set_llm_model(self, model: str) -> "MCPConfigBuilder":
         """
         Set default LLM model for agents (OpenRouter format).
-        Example: 'openai/gpt-4.1-nano', 'anthropic/claude-3.5-haiku'
+        Example: 'openai/gpt-4.1-nano', 'anthropic/claude-haiku-4.5'
         """
         self._llm_model = model
         return self

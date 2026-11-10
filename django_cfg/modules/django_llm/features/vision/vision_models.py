@@ -55,9 +55,9 @@ class VisionModelPricing:
         Mirrors :meth:`registry.ModelPricing.cost` so the vision path and
         the registry share one unit convention.
         """
-        return (
-            (tokens_input / 1_000_000) * self.prompt
-            + (tokens_output / 1_000_000) * self.completion
+        return max(
+            0.0,
+            (tokens_input / 1_000_000) * self.prompt + (tokens_output / 1_000_000) * self.completion,
         )
 
 
@@ -271,7 +271,8 @@ class VisionModelsRegistry:
         Returns:
             List of cheapest paid VisionModel instances
         """
-        paid_models = [m for m in self._vision_models().values() if not m.is_free]
+        # A negative price is OpenRouter's sentinel for a router (`openrouter/auto`), not a model with a price.
+        paid_models = [m for m in self._vision_models().values() if not m.is_free and m.pricing.prompt > 0 and m.pricing.completion >= 0]
         sorted_models = sorted(paid_models, key=lambda m: m.pricing.prompt)
         return sorted_models[:limit]
 
