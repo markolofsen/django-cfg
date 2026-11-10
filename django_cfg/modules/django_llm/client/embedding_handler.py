@@ -23,15 +23,7 @@ logger = logging.getLogger(__name__)
 #: OpenRouter embedder can therefore drive unchanged — it speaks that wire
 #: format, not anything OpenRouter-specific.
 #:
-#: ``sdkrouter`` belongs here: it is one OpenAI-compatible endpoint fronting
-#: several upstreams, and it serves ``/embeddings`` (verified 2026-09-02:
-#: ``text-embedding-3-small`` returned 1536 dimensions). Without it the handler
-#: fell through to the MOCK embedder for every call — and for a project that
-#: routes every task through sdkrouter as its primary provider, that meant no
-#: real embedding was reachable at all. The failure was silent by design at the
-#: seam above (a mock is returned as ``[]`` rather than persisted), so it
-#: surfaced as "the provider returned no vector" rather than as an error.
-_OPENAI_COMPATIBLE = frozenset({"openrouter", "sdkrouter"})
+_OPENAI_COMPATIBLE = frozenset({"openrouter"})
 
 
 class EmbeddingRequestHandler:

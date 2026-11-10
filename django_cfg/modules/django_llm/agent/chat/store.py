@@ -13,7 +13,7 @@ from typing import Any
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from django_cfg.modules.django_llm.agent.chat.turn import Busy, ErrorCode, Role, Status, StoredMessage
+from django_cfg.modules.django_llm.agent.chat.turn import Busy, ErrorCode, Progress, Role, Status, StoredMessage
 
 
 def snapshot(m: Any) -> StoredMessage:
@@ -83,6 +83,17 @@ class DjangoTurnStore:
 
     def has_running(self) -> bool:
         return self._messages().running().exists()
+
+    def progress(self, message_id: uuid.UUID) -> Progress | None:
+        """The row as a follower reads it, or None when the thread has no such message."""
+        m = self._messages().filter(pk=message_id).first()
+        if m is None:
+            return None
+        return Progress(
+            id=m.pk, seq=m.seq, role=Role(m.role), status=Status(m.status), text=m.text, parts=tuple(m.parts or ()), trace=getattr(m, "trace", None) or None,
+            error_code=m.error_code, tokens_in=m.tokens_in, tokens_out=m.tokens_out, cost_usd=float(m.cost_usd) if m.cost_usd is not None else None,
+            created_at=m.created_at,
+        )
 
     def append(self, role: Role, now: datetime, *, text: str = "", status: Status = Status.DONE, client_id: uuid.UUID | None = None) -> StoredMessage:
         if self._locked is None:

@@ -68,11 +68,7 @@ def _router(role: ModelRole, models: list[str] | None, extra_models: list[str] |
     twice that night.
 
     Safe to share. Everything the chain depends on is fixed at construction and
-    only read afterwards. The one field written later is `_sdkrouter_rejected`,
-    and sharing it is an IMPROVEMENT rather than a hazard: it records that the
-    edge proxy refused our credential with a 401/403, which is a fact about the
-    secret, not about the request. A fresh router per call forgot it every time
-    and kept routing through a provider that had already rejected us.
+    only read afterwards.
 
     Sharing also makes the client's own response cache work at all — a per-call
     client meant a permanently empty cache.

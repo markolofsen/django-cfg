@@ -174,5 +174,8 @@ def shape_doc(doc: dict | None, level: int, redactor: Redactor | None = None) ->
         return None
     parsed.steps = [shape_step(s, effective, redactor) for s in parsed.steps]
     parsed.level = effective
-    return parsed.model_dump(mode="json", exclude_none=True)
+    parsed.frames = {}  # stream positions are the server's bookkeeping, not part of what a reader sees
+    out = parsed.model_dump(mode="json", exclude_none=True)
+    out.pop("frames", None)
+    return out
 

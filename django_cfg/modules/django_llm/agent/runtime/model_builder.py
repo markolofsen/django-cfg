@@ -71,8 +71,7 @@ def resolve_provider() -> tuple[str, str, str | None]:
     """Return ``(provider_name, api_key, base_url)`` from ``django_cfg.modules.django_llm``.
 
     Preference order matches ``ProviderManager._determine_primary_provider``:
-    the sdkrouter proxy first (a transport fronting the same upstreams, so a
-    stale vendor key cannot bypass it), then OpenRouter, then OpenAI.
+    OpenRouter first, then OpenAI.
 
     ``base_url`` is ``None`` only for stock OpenAI, where the SDK's own default is
     correct. It must NOT fall back to ``None`` when the OpenRouter key is missing

@@ -25,7 +25,7 @@ from django_cfg.modules.django_llm.agent.bus.events import (
     TextDeltaEvent,
     UIPayloadEvent,
 )
-from django_cfg.modules.django_llm.agent.capabilities import lenient_json_args_capability, tool_guard_capability
+from django_cfg.modules.django_llm.agent.capabilities import lenient_json_args_capability, tool_guard_capability, usage_tally_capability
 from django_cfg.modules.django_llm.agent.chat.compaction import compactor, soft_cap
 from django_cfg.modules.django_llm.agent.chat.kind import ChatKind
 from django_cfg.modules.django_llm.agent.chat.turn import StoredMessage
@@ -131,6 +131,7 @@ async def kind_source(
             caps[:0] = [lenient_json_args_capability(), TraceCapability(trace, declared, tool_categories(tools)), guard]
         else:
             caps[:0] = [lenient_json_args_capability(), guard]
+        caps.append(usage_tally_capability(out.usage))
         if kind.capabilities is not None:
             caps.extend(kind.capabilities(deps))
         extra["capabilities"] = caps

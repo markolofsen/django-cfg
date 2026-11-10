@@ -13,13 +13,6 @@ logger = logging.getLogger(__name__)
 PROVIDER_BASE_URLS: Dict[str, str] = {
     "openrouter": "https://openrouter.ai/api/v1",
     "openai": "https://api.openai.com/v1",
-    # The sdkrouter edge proxy. Speaks OpenAI-compatible `/v1`, holds every
-    # provider credential as a Cloudflare Worker secret, and accepts one token
-    # that is useless anywhere else — a leaked token buys an attacker the
-    # proxy, not the upstream balance.
-    #
-    # Replaced a prior proxy (hosted on Railway) on 2026-09-02.
-    "sdkrouter": "https://llm.sdkrouter.com/v1",
 }
 """Provider -> OpenAI-compatible base URL. The single source of truth.
 
@@ -131,14 +124,5 @@ class ConfigBuilder:
         default_models = {
             "openrouter": "openai/gpt-4o-mini",
             "openai": "gpt-4o-mini",
-            # A Cloudflare Workers AI alias the proxy resolves — `@cf-fast`
-            # currently lands on `cf/openai/gpt-oss-20b`. Verified live
-            # 2026-09-02, not guessed; the proxy 404s an alias it does not
-            # publish rather than falling through to something else.
-            #
-            # NOT a bare `gpt-4o-mini`: the proxy answers
-            # "holds no credential for 'gpt-4o-mini'" for the unprefixed name
-            # and routes `openai/gpt-4o-mini` fine. Prefixes matter here.
-            "sdkrouter": "@cf-fast",
         }
         return default_models.get(provider, "gpt-4o-mini")

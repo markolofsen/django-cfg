@@ -23,6 +23,18 @@ class AckSerializer(serializers.Serializer):
     reason = serializers.CharField(allow_blank=True, required=False, max_length=200, default="", help_text="Why it was refused (a short code of the client's); empty when applied.")
 
 
+class CancelSerializer(serializers.Serializer):
+    """The state of an answer after a cancel request."""
+
+    class Meta:
+        ref_name = "ChatCancel"
+
+    status = serializers.ChoiceField(
+        choices=["cancelling", *[v for v in Status._value2member_map_ if v != Status.RUNNING]],
+        help_text="`cancelling`: the request is made and the run ends within a moment (read the message for `cancelled`). Otherwise the answer had already ended and this is its status.",
+    )
+
+
 class PartSerializer(serializers.Serializer):
     """A structured part of an answer, by the same `kind` a live `ui_payload` carries."""
 

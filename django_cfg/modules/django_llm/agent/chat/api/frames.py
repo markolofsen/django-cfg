@@ -1,7 +1,7 @@
 """The frames of the answer stream, as schema: one serializer per `type`, joined by a `oneOf` discriminated on `type`.
 
 The runtime sends them from `agent/bus/events.py` (`encode_sse(event, "widget")`); these classes only describe them, so
-a generated client gets a typed union. The wire page is `widgets/assistant/@docs/wire-contract.md`. They are pinned two ways
+a generated client gets a typed union. The wire page is `widgets/chat/@docs/assistant-wire-contract.md`. They are pinned two ways
 by `tests/test_api_schema.py`: the set of `type` values equals the set in the shared fixture `events.json`, and every
 fixture frame validates against its serializer with no key the serializer does not declare.
 """
@@ -32,6 +32,7 @@ RunFrame = _frame(
     message_id=serializers.UUIDField(help_text="The assistant message being written."),
     client_id=serializers.UUIDField(allow_null=True, help_text="The user message's client-made id."),
     seq=serializers.IntegerField(allow_null=True, help_text="The assistant message's sequence number."),
+    resume=serializers.BooleanField(required=False, help_text="Present (true) on a stream that attaches to an answer already being written: what follows is a catch-up from storage, then the live end."),
 )
 StatusFrame = _frame(
     "Status", "status", "An ephemeral label; may repeat; never stored.",

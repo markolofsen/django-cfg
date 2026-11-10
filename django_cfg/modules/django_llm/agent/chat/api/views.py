@@ -22,7 +22,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from django_cfg.modules.django_llm.agent.bus.events import SSE_HEADERS
-from django_cfg.modules.django_llm.agent.chat import turn as rules
 from django_cfg.modules.django_llm.agent.chat.api import serializers as s
 from django_cfg.modules.django_llm.agent.chat.api.frames import FRAME
 from django_cfg.modules.django_llm.agent.chat.api.problems import Problem, ProblemMixin
@@ -30,6 +29,7 @@ from django_cfg.modules.django_llm.agent.chat.api.schema import RETRY_AFTER, Cha
 from django_cfg.modules.django_llm.agent.chat.attachments.store import is_inline, policy_of
 from django_cfg.modules.django_llm.agent.chat.errors import InvalidKind, NotFound
 from django_cfg.modules.django_llm.agent.chat.service import ChatService
+from django_cfg.modules.django_llm.agent.chat.tail import Cursor
 
 STREAM_MEDIA_TYPE = "text/event-stream"
 
@@ -152,9 +152,48 @@ class MessagesView(ChatView):
             request.user, thread, data["text"], data.get("client_id"), data.get("context"),
             attachments=[a["id"] for a in data.get("attachments") or []],
         )
-        if opened.turn.kind is rules.TurnKind.BUSY:
-            return Problem(409, "busy", "An answer is still being written.").response()
-        return StreamingHttpResponse(self.service.frames(opened), content_type=STREAM_MEDIA_TYPE, headers=SSE_HEADERS)
+        return StreamingHttpResponse(self.service.frames(opened), content_type=STREAM_MEDIA_TYPE, headers=SSE_HEADERS)  # a resend of a running answer streams it from storage
+
+
+class MessageStreamView(ChatView):
+    """Follow an answer from storage: a second tab, or a reconnect after the connection dropped."""
+
+    docs = {
+        "GET": Doc(
+            "messages_stream", "Follow an answer being written",
+            {(200, STREAM_MEDIA_TYPE): FRAME, **problems(400, 401, 404)},
+            parameters=(
+                OpenApiParameter("after", int, OpenApiParameter.QUERY, required=False, description="The last frame `id:` the client holds; only later steps and parts are sent. The `Last-Event-ID` header is read when this is left out. Default 0."),
+                OpenApiParameter("text_offset", int, OpenApiParameter.QUERY, required=False, description="How much of the answer's text the client holds, in UTF-16 code units (a JavaScript `string.length`). Default 0."),
+            ),
+        )
+    }
+
+    def get(self, request, thread_id, message_id):
+        thread = self.thread_of(request, thread_id)
+        raw_after = request.query_params.get("after")
+        if raw_after is None:
+            raw_after = request.headers.get("Last-Event-ID")
+        try:
+            after = int(raw_after) if raw_after not in (None, "") else 0
+            offset = int(request.query_params.get("text_offset") or 0)
+        except ValueError:
+            return Problem(400, "invalid", "after and text_offset must be whole numbers.").response()
+        if after < 0 or offset < 0:
+            return Problem(400, "invalid", "after and text_offset must not be negative.").response()
+        frames = self.service.attach(thread, message_id, Cursor(after=after, text_offset=offset))
+        return StreamingHttpResponse(frames, content_type=STREAM_MEDIA_TYPE, headers=SSE_HEADERS)
+
+
+class MessageCancelView(ChatView):
+    """Ask a running answer to stop. What it had said is kept and the message reads `cancelled`."""
+
+    docs = {"POST": Doc("messages_cancel", "Stop an answer being written", {200: s.CancelSerializer, 202: s.CancelSerializer, **problems(401, 404)})}
+
+    def post(self, request, thread_id, message_id):
+        thread = self.thread_of(request, thread_id)
+        state = self.service.cancel(thread, message_id)
+        return Response(s.CancelSerializer({"status": state}).data, status=status.HTTP_202_ACCEPTED if state == "cancelling" else status.HTTP_200_OK)
 
 
 class PartAckView(ChatView):

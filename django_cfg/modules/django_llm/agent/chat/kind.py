@@ -130,6 +130,7 @@ class ChatKind:
     closing_payloads: Callable[[Any, str], Sequence[Any] | None] | None = None  # (deps, final text) -> ui payloads sent after the text, before `done`; stored in `parts`
     after_tool: Callable[[Any, str, str], Any] | None = None  # (deps, tool name, result text) -> payloads or None (sync or async); runs after each tool result
     attachments: "AttachmentPolicy | None" = None  # opt-in files on a message (default off: the routes answer 404 and history carries none); see chat.attachments
+    detach: bool = False  # opt-in: the answer keeps running when the reader disconnects (a closed tab, a lost network) and is stored `done`; off, a disconnect cancels it (what was said is kept, `cancelled`). Needs an ASGI host and `timeout_s` bounds it; turn it on for tool-using kinds that mutate data
     knowledge: Any = None  # opt-in knowledge base (default off): True, a subfolder name, a Path, a KnowledgeBase, `Knowledge(...)`, or a callable of the deps; see chat.knowledge
 
     def allows_empty_text(self, turn_context: Mapping[str, Any] | None) -> bool:

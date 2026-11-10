@@ -54,6 +54,7 @@ from ..pipeline import ModelRouter, alert_wasted_call
 from ..core import AllProvidersFailedError
 from ..core.errors import LLMTruncationError, LLMValidationError
 from ..catalog import ModelRole, check, provider_for, recommend
+from ..catalog.tasks import task_chain_for_role
 from ..structured import parse_into_schema
 from .providers import ProviderPolicy
 
@@ -148,17 +149,18 @@ class LLMRouter:
         race_stagger_seconds: float = 0.2,
         provider_prefs: ProviderPolicy | dict | None = None,
         extra_body: dict | None = None,
+        role: ModelRole | None = None,
     ) -> None:
         if not model_chain:
             raise ValueError("LLMRouter requires a non-empty model_chain")
         self._chain = list(model_chain)
-        # Set once the proxy refuses our credential; see provider_for_model.
-        self._sdkrouter_rejected = False
+        # The job this chain serves; picks the advisory (`check`) role in parse().
+        self._role = role
         self._max_total_attempts = max_total_attempts
         self._retry_delay = retry_delay_seconds
 
         # The explicit override, normalized to a provider VALUE string
-        # ("openrouter" / "openai" / "sdkrouter"), or None = derive per model.
+        # ("openrouter" / "openai"), or None = derive per model.
         if isinstance(preferred_provider, LLMProvider):
             self._provider_override: str | None = preferred_provider.value
         elif preferred_provider:
@@ -195,69 +197,16 @@ class LLMRouter:
     # ── Per-model resolution — the catalog is the source of truth ───────────────
 
     def provider_for_model(self, model: str) -> str:
-        """Which TRANSPORT serves ``model``: explicit override, else edge, else catalog.
-
-        THE EDGE PROXY SHORT-CIRCUITS THE CATALOG, and it has to. Everywhere
-        else a provider is an intrinsic property of the model — the docstring at
-        the top of this module says so and it is still true of VENDORS. The edge
-        proxy is not a vendor: it fronts the same upstreams under the same
-        slugs, so asking "which vendor serves gpt-4o-mini" is the wrong
-        question when the answer is "we no longer talk to vendors directly".
-
-        Without this the migration would silently not happen. `_determine_
-        primary_provider` only picks the client used when a model's own provider
-        has no key, but the router names a provider PER CALL — so every call
-        would resolve to "openrouter" and go direct, while the edge client sat
-        initialised and unused.
-
-        A chain may still mix providers when the edge is not configured; that
-        path is unchanged.
-
-        **The proxy drops out if it rejects our credential.** "Configured"
-        used to mean "a token exists", which is not the same as "the token
-        works": on 2026-09-02 production held a token belonging to a different
-        service, so every model resolved to the proxy, every call came back
-        `401 invalid cmdop token`, and ingestion failed wholesale — with valid
-        OpenRouter and OpenAI keys sitting right there, unused. A transport
-        that cannot authenticate is not a transport.
-        """
+        """Which provider serves ``model``: explicit override, else the catalog."""
         if self._provider_override:
             return self._provider_override
-        if not self._sdkrouter_rejected and self._client.provider_manager.has_provider(
-            LLMProvider.SDKROUTER.value
-        ):
-            return LLMProvider.SDKROUTER.value
         return provider_for(model)
 
     def note_provider_failure(self, provider: str, exc: BaseException) -> None:
-        """Retire the proxy for this router once it refuses our credential.
-
-        Scoped to auth failures (401/403) on purpose. A 5xx or a timeout is the
-        proxy having a bad minute and the normal cascade handles it; a rejected
-        credential will be rejected identically on every subsequent call, so
-        continuing to route through it turns one bad secret into a total
-        outage rather than a degraded one.
-
-        The one 5xx that counts is the proxy reporting that the vendor refused
-        the proxy's OWN key (502 "upstream rejected the proxy's credentials"):
-        that is a dead secret too, just one hop further away.
-        """
-        if provider != LLMProvider.SDKROUTER.value or self._sdkrouter_rejected:
-            return
-        status = getattr(exc, "status_code", None)
-        if status is None:
-            # openai.APIStatusError carries it on .response; fall back to the
-            # message, which is what a wrapped error leaves us.
-            status = getattr(getattr(exc, "response", None), "status_code", None)
-        text = str(exc)
-        upstream_refused = "rejected the proxy's credentials" in text
-        if status in (401, 403) or "401" in text or "403" in text or upstream_refused:
-            self._sdkrouter_rejected = True
-            logger.warning(
-                "sdkrouter rejected our credential (%s) — falling back to the "
-                "vendors the catalogue names for each model",
-                status or "auth error",
-            )
+        """Hook called when a provider call fails. No-op: with the sdkrouter
+        proxy gone there is no provider whose credential rejection retires it
+        for the router. Kept because the cascade engine calls it."""
+        return None
 
     def race_size_for_model(self, model: str) -> int:
         """How many parallel legs to run for ``model``.
@@ -301,7 +250,7 @@ class LLMRouter:
         Raises ``ValueError`` if the role has no curated recommendation and no
         ``extra_models`` were supplied — never silently invents a model.
         """
-        chain = recommend(role)
+        chain = task_chain_for_role(role)
         if extra_models:
             seen = set(chain)
             chain = [*chain, *(m for m in extra_models if not (m in seen or seen.add(m)))]
@@ -315,6 +264,7 @@ class LLMRouter:
             max_total_attempts=max_total_attempts,
             retry_delay_seconds=retry_delay_seconds,
             preferred_provider=preferred_provider,
+            role=role,
         )
 
     # ── Execution: cascade, racing per model ────────────────────────────────────
@@ -415,7 +365,7 @@ class LLMRouter:
         # Advisory (best-effort, deduped, never blocks) — flag any chain
         # model the catalog grades a poor fit for structured extraction.
         for chain_model in self._chain[: self._max_total_attempts]:
-            check(chain_model, role=ModelRole.EXTRACTION, response_format=schema)
+            check(chain_model, role=self._role or ModelRole.EXTRACTION, response_format=schema)
 
         full_messages = self._build_messages(messages, system)
 
@@ -427,13 +377,10 @@ class LLMRouter:
             # Any remaining failure propagates so ModelRouter cascades to the
             # next model. Each attempt is billed → wasted spend is surfaced.
             attempt_messages = list(full_messages)
-            # A `@cf*` model spends part of its budget on a reasoning pass that
-            # never reaches `content`; under the floor it returns an empty
-            # `content` with finish_reason=length, which reads as a model that
-            # answered with nothing rather than one that was cut off. Applied
-            # here so no caller has to know — non-CF models pass through
-            # untouched, since inflating their ceiling only loosens a limit
-            # that is doing its job.
+            # A reasoning model (gpt-5, o-series...) spends part of its budget on
+            # a pass that never reaches `content`; under the floor it returns an
+            # empty `content` with finish_reason=length. Applied here so no
+            # caller has to know; other models pass through untouched.
             attempt_max_tokens = min_max_tokens_for(model, max_tokens)
             did_bump = False
             did_reask = False
@@ -578,9 +525,8 @@ class LLMRouter:
                 extra_body=self._extra_body,
                 messages=full_messages,
                 model=model,
-                # Same CF floor `parse` applies: a `@cf*` model under it returns
-                # empty content with finish_reason=length. `complete` has no
-                # repair ladder to notice that, so the floor matters MORE here.
+                # Same reasoning floor `parse` applies; `complete` has no repair
+                # ladder to notice an empty answer, so the floor matters MORE here.
                 max_tokens=min_max_tokens_for(model, max_tokens),
                 provider=self.provider_for_model(model),
             )

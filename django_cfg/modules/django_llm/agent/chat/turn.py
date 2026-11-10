@@ -2,8 +2,8 @@
 
 A turn is a user message plus the answer begun for it, taken under one lock on the thread (`store.atomic`).
 **seq**: the store hands out the next one under that lock. **Idempotent resend**: a user message is keyed by the client's
-`client_id`; sending it again never stores it twice: a stored answer is replayed, a running one reported busy, a failed or
-never-begun one begun again. **One running answer per thread**; a run that died is closed by the reaper.
+`client_id`; sending it again never stores it twice: a stored answer is replayed, a running one attached to (the caller
+streams what it has written and follows it), a failed or never-begun one begun again. **One running answer per thread**; a run that died is closed by the reaper.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ class TurnKind(StrEnum):
     STARTED = "started"  # new message, answer begun
     REPLAY = "replay"  # resent; the stored answer is served
     RETRY = "retry"  # resent; the earlier answer failed or never began, a new one begun
-    BUSY = "busy"  # resent; the answer is still running
+    LIVE = "live"  # resent; the answer is still running: attach to it, do not start another
 
 
 class TurnError(Exception):
@@ -78,6 +78,24 @@ class StoredMessage:
 
 
 @dataclass(frozen=True)
+class Progress:
+    """An answer row as a second reader needs it: the text so far, the parts and trace stored with it, how it stands."""
+
+    id: uuid.UUID
+    seq: int
+    role: Role
+    status: Status
+    text: str = ""
+    parts: tuple = ()
+    trace: dict | None = None
+    error_code: str = ""
+    tokens_in: int = 0
+    tokens_out: int = 0
+    cost_usd: float | None = None
+    created_at: datetime | None = None
+
+
+@dataclass(frozen=True)
 class Turn:
     kind: TurnKind
     user: StoredMessage
@@ -98,6 +116,7 @@ class TurnStore(Protocol):
     def answers_to(self, user: StoredMessage) -> list[StoredMessage]: ...
     def latest_user(self) -> StoredMessage | None: ...
     def has_running(self) -> bool: ...
+    def progress(self, message_id: uuid.UUID) -> Progress | None: ...
     def append(self, role: Role, now: datetime, *, text: str = "", status: Status = Status.DONE, client_id: uuid.UUID | None = None) -> StoredMessage: ...
     def update_running(self, message_id: uuid.UUID, **fields: Any) -> bool: ...
     def close(self, message_id: uuid.UUID, **fields: Any) -> bool: ...
@@ -141,7 +160,7 @@ def _resend(store: TurnStore, user: StoredMessage, now: datetime) -> Turn:
     if last is not None and last.status == Status.DONE:
         return Turn(TurnKind.REPLAY, user, last)
     if last is not None and last.status == Status.RUNNING:
-        return Turn(TurnKind.BUSY, user, last)
+        return Turn(TurnKind.LIVE, user, last)
     latest = store.latest_user()
     if latest is None or latest.id != user.id:
         raise InvalidTurn("client_id", "moved_on")

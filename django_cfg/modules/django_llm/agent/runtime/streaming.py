@@ -73,6 +73,7 @@ from django_cfg.modules.django_llm.agent.runtime.cost import Pricer, aprice_run
 from django_cfg.modules.django_llm.agent.runtime.clamp import clamp_text
 from django_cfg.modules.django_llm.agent.runtime.errors import DEFAULT_ERROR_MESSAGES, describe, error_code_for, is_provider_failure
 from django_cfg.modules.django_llm.agent.runtime.limits import RunLimits, resolve_run_limits
+from django_cfg.modules.django_llm.agent.runtime.tally import UsageTally
 from django_cfg.modules.django_llm.agent.runtime.ui_payloads import (
     UI_PAYLOAD_TYPES,
     DirectivePayload,
@@ -277,6 +278,8 @@ class StreamRunResult:
         # ``tool_output_chars``. ``output`` is None until the result lands. A host stores it
         # and replays it into the next turn (``convert_history`` reads this shape).
         self.tool_calls: list[dict] = []
+        # Tokens of the model requests that finished (`capabilities.usage_tally`): what a run cut short still paid for.
+        self.usage = UsageTally()
 
 
 async def stream_agent_run(

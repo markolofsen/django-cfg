@@ -36,21 +36,13 @@ from .roles import ModelRole, Verdict
 
 PROVIDER_OPENROUTER = "openrouter"
 PROVIDER_OPENAI = "openai"
-PROVIDER_SDKROUTER = "sdkrouter"
-
-# Imported late-ish on purpose: `providers/` drags in the OpenAI SDK, but this
-# helper is a pure string test with no such dependency, so the catalogue stays
-# cheap to import.
-from ..providers.sdkrouter_aliases import is_cf_model  # noqa: E402
 
 #: Provider for a slug the catalog does not know.
 #:
 #: OpenRouter, deliberately: it is the AGGREGATOR — it fronts OpenAI,
 #: Anthropic, Google, Meta, DeepSeek, Qwen and friends behind one
 #: `vendor/model` slug namespace, which is exactly the namespace every
-#: slug in this file is written in. The sdkrouter proxy, by contrast,
-#: resolves a curated set of ALIASES, so defaulting an unknown
-#: `vendor/model` slug onto it would send a name it does not publish.
+#: slug in this file is written in.
 DEFAULT_PROVIDER = PROVIDER_OPENROUTER
 
 
@@ -213,6 +205,14 @@ _CATALOG: dict[str, ModelTraits] = {
         },
         issues=("three times gpt-5-mini's cost for no measured gain on replies; never in a chain",),
     ),
+    "openai/gpt-5-nano": ModelTraits(
+        slug="openai/gpt-5-nano",
+        reasoning=True, reasoning_disablable=False,
+        roles={
+            ModelRole.JUDGE: Verdict.GOOD,       # MLS dedup adjudicator, production since 2026-09
+        },
+        issues=("reasoning pass: under ~2000 max_tokens it returns empty content (floor applied by the router)",),
+    ),
     "openai/gpt-6-luna": ModelTraits(
         slug="openai/gpt-6-luna",
         reasoning=True, reasoning_disablable=False,
@@ -244,8 +244,6 @@ _CATALOG: dict[str, ModelTraits] = {
     "moonshotai/kimi-k2.6": ModelTraits(
         slug="moonshotai/kimi-k2.6",
         reasoning=False, reasoning_disablable=True,
-        # Served by OpenRouter (it sat behind the sdkrouter proxy until that
-        # was retired 2026-11-10).
         provider=PROVIDER_OPENROUTER,
         roles={
             ModelRole.EXTRACTION: Verdict.OK,
@@ -304,6 +302,22 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
     ModelRole.ESCALATION: (
         "anthropic/claude-sonnet-4.6",
     ),
+    ModelRole.TRANSLATE: (
+        # ADDED 2026-11-10. gpt-4o-mini is what Carapis translated with in
+        # production (TRANSLATION_MODEL); the Gemini pair is the cross-vendor net.
+        # Plain-text role: no strict schema, so a thinking model buys nothing.
+        "openai/gpt-4o-mini",
+        "google/gemini-2.5-flash-lite",
+        "google/gemini-2.5-flash",
+    ),
+    ModelRole.JUDGE: (
+        # ADDED 2026-11-10 from the MLS dedup adjudicator (catalog/services/projects/
+        # judge.py): gpt-5-nano leads (reasoning model - the router's reasoning
+        # floor lifts max_tokens to 2000 for it), gemini-2.5-flash-lite is the
+        # non-reasoning net on another vendor.
+        "openai/gpt-5-nano",
+        "google/gemini-2.5-flash-lite",
+    ),
     ModelRole.REPLY: (
         # ADDED 2026-09-25 from a 40-reply evaluation (verdicts in openrouter.py).
         # Every entry must have a zero-retention endpoint on OpenRouter: the
@@ -337,23 +351,12 @@ def known_issues(slug: str) -> tuple[str, ...]:
 def provider_for(slug: str) -> str:
     """Which provider serves ``slug`` — the single source of provider truth.
 
-    Returns an ``LLMProvider`` *value* (``"openrouter"`` / ``"openai"`` /
-    ``"sdkrouter"``), never an enum, so importing the catalog stays free of the
+    Returns an ``LLMProvider`` *value* (``"openrouter"`` / ``"openai"``), never an enum, so importing the catalog stays free of the
     OpenAI SDK that ``providers/`` drags in. Callers that need the enum do
     ``LLMProvider(provider_for(slug))``.
 
-    An uncatalogued slug gets ``DEFAULT_PROVIDER`` (openrouter, the
-    aggregator) — we never guess a slug onto sdkrouter, which publishes a
-    curated alias set rather than the whole `vendor/model` namespace.
+    An uncatalogued slug gets ``DEFAULT_PROVIDER`` (openrouter, the aggregator).
     """
-    # A Cloudflare alias resolves before the catalogue is consulted. `@cf-fast`
-    # and friends are names the sdkrouter PROXY publishes, not `vendor/model`
-    # slugs, so they will never be catalogued — and falling through to
-    # DEFAULT_PROVIDER sent them to OpenRouter, which answers
-    # "@cf-fast is not a valid model ID". Measured 2026-09-02.
-    if is_cf_model(slug):
-        return PROVIDER_SDKROUTER
-
     entry = _CATALOG.get(slug)
     return entry.provider if entry else DEFAULT_PROVIDER
 
@@ -366,8 +369,7 @@ def races(slug: str) -> bool:
     **Nothing races today, and that is the correct answer, not an oversight.**
     Racing existed for a since-retired provider, which assigned each request to a random
     network host and so had an 11–57s latency spread with a long tail; two
-    staggered legs cut it. Every remaining provider — including the sdkrouter
-    proxy that replaced it — serves from one endpoint at predictable latency,
+    staggered legs cut it. Every remaining provider serves from one endpoint at predictable latency,
     where a second leg doubles the bill and buys nothing.
 
     Kept as a function rather than deleted: it is the one place that decides,

@@ -78,6 +78,7 @@ class Recorder:
         self._done: dict[str, TraceStep] = {}  # shaped
         self._order: list[str] = []
         self._outbox: list[TraceStepEvent] = []
+        self._latest: dict[str, TraceStepEvent] = {}  # the newest frame of each step: the driver stamps its stream position on it
         self._bytes = 0
         self._counter = 0
         self._closed = False
@@ -186,7 +187,9 @@ class Recorder:
             self._bytes += len(json.dumps(step_wire(shaped)))
         else:
             self._open[raw.step_id] = raw
-        self._outbox.append(TraceStepEvent(step=step_wire(shaped)))
+        event = TraceStepEvent(step=step_wire(shaped))
+        self._latest[shaped.step_id] = event
+        self._outbox.append(event)
         self.wake.set()
 
     def _within_budget(self, step: TraceStep) -> TraceStep:
@@ -248,7 +251,11 @@ class Recorder:
         """The document as stored: header plus the steps that have settled (a running one is shown as it stands)."""
         steps = [self._done.get(i) or self._shaped_open(i) for i in self._order]
         self._doc.steps = [s for s in steps if s is not None]
-        return self._doc.model_dump(mode="json", exclude_none=True)
+        self._doc.frames = {sid: ev.event_seq for sid, ev in self._latest.items() if ev.event_seq is not None}
+        out = self._doc.model_dump(mode="json", exclude_none=True)
+        if not out.get("frames"):
+            out.pop("frames", None)
+        return out
 
     def _shaped_open(self, step_id: str) -> TraceStep | None:
         raw = self._open.get(step_id)

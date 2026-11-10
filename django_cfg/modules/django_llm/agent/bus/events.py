@@ -8,8 +8,8 @@ Two dialects, one set of event objects
   ``total_tokens`` / ``tokens_input`` / ``tokens_output``, ``error`` carries one
   ``error`` string, ``tool_call`` / ``tool_result`` / ``directive`` /
   ``approval_required`` are frames.
-* ``widget``: the wire ``@djangocfg/widget-assistant`` decodes (its
-  ``src/wire/frames.ts``; the page is the widget's ``@docs/wire-contract.md``).
+* ``widget``: the wire ``@djangocfg/widget-chat/assistant`` decodes (its
+  ``src/assistant/wire/frames.ts``; the page is the widget's ``@docs/wire-contract.md``).
   ``event.to_wire()`` and ``encode_sse(event, wire="widget")`` produce it: ``run``
   (first, versioned), ``status`` (``thinking`` / ``searching`` / ``answering``),
   ``text_delta``, optional ``reasoning_delta`` / ``reasoning_end`` / ``trace_step``, ``ui_payload``, ``done`` with ``tokens_in`` / ``tokens_out`` /
@@ -164,6 +164,8 @@ class UIPayloadEvent:
 
     kind: str
     data: Any  # any JSON value; the host that registered the kind knows its shape
+    # Not on the wire body: the stream position (the SSE ``id:``) the driver stamps, stored with the part so a resume sends only the parts after it.
+    event_seq: Optional[int] = None
     type: str = field(default="ui_payload", init=False)
 
     def to_sse(self) -> str:
@@ -290,7 +292,9 @@ class RunEvent:
 
     ``thread_id`` and ``message_id`` are required by the client (without them the
     frame is dropped); ``client_id`` is the user message's client-made id (or None)
-    and ``seq`` the assistant message's sequence number (or None).
+    and ``seq`` the assistant message's sequence number (or None). ``resume`` is true
+    on a stream that attaches to an answer already being written (a second tab, a
+    reconnect): what follows is a catch-up from storage, not the run itself.
     """
 
     thread_id: str
@@ -298,13 +302,14 @@ class RunEvent:
     client_id: Optional[str] = None
     seq: Optional[int] = None
     version: int = WIRE_VERSION
+    resume: bool = False
     type: str = field(default="run", init=False)
 
     def to_sse(self) -> str:
         return encode_sse(self, "widget") or ""
 
     def to_wire(self) -> dict[str, Any]:
-        return {
+        body: dict[str, Any] = {
             "type": self.type,
             "version": self.version,
             "thread_id": str(self.thread_id),
@@ -312,6 +317,9 @@ class RunEvent:
             "client_id": None if self.client_id is None else str(self.client_id),
             "seq": self.seq,
         }
+        if self.resume:  # the wire carries the flag only when true
+            body["resume"] = True
+        return body
 
 
 @dataclass
@@ -380,6 +388,7 @@ def event_from_wire(raw: Mapping[str, Any]) -> Any:
             client_id=raw.get("client_id"),
             seq=raw.get("seq"),
             version=raw.get("version", WIRE_VERSION),
+            resume=bool(raw.get("resume", False)),
         )
     if kind == "status":
         return StatusEvent(phase=raw["phase"])

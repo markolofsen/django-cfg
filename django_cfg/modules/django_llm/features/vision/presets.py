@@ -8,6 +8,7 @@ from typing import Optional, TYPE_CHECKING
 
 # ModelQuality / OCRMode are defined once in models.py (the schema module) and
 # re-exported here for backward-compatible imports from this module.
+from ...catalog.tasks import OCR_MODELS
 from .models import ModelQuality, OCRMode
 
 if TYPE_CHECKING:
@@ -32,9 +33,9 @@ OCR_PRESETS: dict[ModelQuality, Optional[str]] = {
 # Checked against OpenRouter's catalogue 2026-11-10: `qwen/qwen-2-vl-7b-instruct` and `meta-llama/llama-3.2-11b-vision-instruct` were
 # withdrawn (404 "no provider serves this model anymore"); a default is a dated fact, so `OCR_FALLBACKS` is tried when it fails.
 DEFAULT_VISION_MODEL = "google/gemini-2.5-flash-lite"
-DEFAULT_OCR_MODEL = "google/gemini-2.5-flash-lite"
+DEFAULT_OCR_MODEL = OCR_MODELS[0]  # the table (catalog/tasks.py) owns the OCR chain
 #: Tried in order after the chosen model fails (gone, refused, down). Different vendors, so one outage does not take all of them.
-OCR_FALLBACKS: tuple[str, ...] = ("openai/gpt-5-nano", "google/gemma-3-12b-it")
+OCR_FALLBACKS: tuple[str, ...] = OCR_MODELS[1:]
 
 
 # OCR mode prompts with varying detail levels

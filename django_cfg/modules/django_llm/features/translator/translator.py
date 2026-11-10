@@ -69,13 +69,8 @@ class DjangoTranslator(BaseCfgModule):
                 # Otherwise: configured if the integration seam yields a key.
                 else:
                     keys = get_api_keys()
-                    # `sdkrouter` counts: a box holding only the edge token is
-                    # fully able to translate, and omitting it here reported
-                    # "not configured" while the transport was live.
                     self._is_configured = bool(
-                        keys.get("sdkrouter")
-                        or keys.get("openrouter")
-                        or keys.get("openai")
+                        keys.get("openrouter") or keys.get("openai")
                     )
             except Exception:
                 self._is_configured = False
@@ -168,6 +163,7 @@ class DjangoTranslator(BaseCfgModule):
         fail_silently: bool = False,
         model: Optional[str] = None,
         temperature: Optional[float] = None,
+        domain: Optional[str] = None,
     ) -> str:
         """
         Translate single text.
@@ -256,7 +252,8 @@ class DjangoTranslator(BaseCfgModule):
                 source_language=source_language,
                 fail_silently=fail_silently,
                 model=model,
-                temperature=temperature
+                temperature=temperature,
+                domain=domain,
             )
 
         except Exception as e:

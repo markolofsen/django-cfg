@@ -114,8 +114,8 @@ class ChatRequestHandler:
         # An `openai/`-prefixed bypass used to sit here for a provider that
         # could not serve those slugs. It was replaced on 2026-09-02 and is not
         # an `LLMProvider` member any more, so the branch could never be taken.
-        # Removed 2026-09-14. Every remaining provider — openai, openrouter,
-        # sdkrouter — handles `openai/` slugs itself.
+        # Removed 2026-09-14. Every remaining provider — openai, openrouter —
+        # handles `openai/` slugs itself.
 
         # Prepare API model (remove prefix for OpenAI)
         api_model = self._prepare_api_model(model, provider)

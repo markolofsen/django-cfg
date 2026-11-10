@@ -45,7 +45,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 #: `sync` compares this across trees; `promote` refuses to overwrite a HIGHER
 #: version than the one it carries. Left alone, everything still works — the
 #: gate only ever refuses a downgrade, never a match.
-ENGINE_VERSION: str = "1.6.0"
+ENGINE_VERSION: str = "1.7.0"
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -65,11 +65,8 @@ class _TelegramSettings(BaseModel):
 class APIKeys(BaseModel):
     openrouter: str | None = None
     openai: str | None = None
-    # The cmdop token for the edge proxy (`llm.sdkrouter.com`). Distinct from the
-    # two above in kind, not just in value: those are VENDOR credentials that
-    # work against a vendor directly, this one works nowhere else. That is the
-    # point of the proxy — a leaked cmdop token buys an attacker our proxy, not
-    # our OpenRouter balance.
+    # Retired 2026-11-10 (the sdkrouter proxy is gone). Tolerated and ignored so
+    # a host whose env/config still sets it does not fail validation.
     sdkrouter: str | None = None
 
     def get_openrouter_key(self) -> str | None:
@@ -79,7 +76,8 @@ class APIKeys(BaseModel):
         return self.openai
 
     def get_sdkrouter_key(self) -> str | None:
-        return self.sdkrouter
+        """Retired: always ``None``."""
+        return None
 
 
 class LLMConfig(BaseSettings):
@@ -125,12 +123,6 @@ def _load_from_env() -> LLMConfig:
             env("CMDOP_LLM_KEYS__OPENAI")
             or env("CMDOP_DEV_LLM_KEYS__OPENAI")
             or env("OPENAI_API_KEY")
-        )
-    if not cfg.api_keys.sdkrouter:
-        cfg.api_keys.sdkrouter = (
-            env("DJANGO_LLM_KEYS__SDKROUTER")
-            or env("CMDOP_DEV_LLM_KEYS__SDKROUTER")
-            or env("CMDOP_LLM_PROXY_TOKEN")
         )
     if not cfg.telegram.bot_token:
         cfg.telegram.bot_token = env("CMDOP_TELEGRAM_BOT_TOKEN")

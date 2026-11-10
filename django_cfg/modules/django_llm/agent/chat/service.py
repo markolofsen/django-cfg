@@ -2,12 +2,14 @@
 
     service = ChatService(Thread, ChatPolicy(messages_per_day=200))
     opened = service.begin(user, thread, text, client_id, turn_context)      # may refuse; nothing streamed yet
-    if opened.turn.kind is TurnKind.BUSY: ...                                # answer 409
     return StreamingHttpResponse(service.frames(opened), content_type="text/event-stream", headers=SSE_HEADERS)
 
 `begin` is sync (ORM) and raises `ServiceUnavailable`, `RateLimited`, `InvalidContext`, `InvalidTurn`, `Busy`, `NotFound`. `frames` is an async
 iterator of SSE strings: `run` first, the answer stored (flushed while streaming, closed once, shielded) before the
-`done`/`error` frame leaves. Tests replace `model_factory` (a scripted model) and `pricer`.
+`done`/`error` frame leaves. A resend of a `client_id` whose answer is still running (`TurnKind.LIVE`) is streamed from storage instead
+(`attach`), as is a second reader of any answer. `cancel` asks a running answer to stop, from any worker. A kind that sets `detach`
+keeps its run going when the reader leaves; otherwise a disconnect cancels it, and either way the tokens spent are booked.
+Tests replace `model_factory` (a scripted model) and `pricer`.
 """
 
 from __future__ import annotations
@@ -27,18 +29,25 @@ from pydantic_ai.models import Model
 
 from django_cfg.modules.django_llm.agent.bus.events import RunEvent, encode_sse
 from django_cfg.modules.django_llm.agent.chat import kind as kinds
+from django_cfg.modules.django_llm.agent.chat.cancel import CacheCancelSignal, CancelSignal
 from django_cfg.modules.django_llm.agent.chat import turn as rules
 from django_cfg.modules.django_llm.agent.chat.errors import InvalidContext, InvalidKind, InvalidTurn, NotFound, RateLimited, ServiceUnavailable
 from django_cfg.modules.django_llm.agent.chat.kind import ChatKind, KindScope
 from django_cfg.modules.django_llm.agent.chat.runner import build_model, kind_source, replay_events
 from django_cfg.modules.django_llm.agent.chat.store import DjangoTurnStore
+from django_cfg.modules.django_llm.agent.chat.tail import Cursor, Tailer, follow
 from django_cfg.modules.django_llm.agent.runtime.cost import Pricer, PriceRow, price_run
 from django_cfg.modules.django_llm.agent.runtime.driver import DriverConfig, RunDriver, RunHooks, RunLock, RunOutcome, RunState
+from django_cfg.modules.django_llm.agent.runtime.detach import detached
 from django_cfg.modules.django_llm.agent.runtime.streaming import StreamRunResult
+from django_cfg.modules.django_llm.agent.runtime.tally import UsageTally
 from django_cfg.modules.django_llm.agent.trace import MessageJsonSink, Recorder, TraceSink
 
 
 log = logging.getLogger(__name__)
+
+#: Appended to an answer that did not finish when it is replayed to the model, so a cut-off text is not read as a complete one.
+INTERRUPTED_NOTE = "[interrupted: this answer was cut off before it was finished]"
 
 #: `(actor, thread, now) -> None`; raises `RateLimited` / `QuotaExceeded` to refuse. `thread` is None only for a check made without one.
 QuotaCheck = Callable[[Any, Any, datetime], None]
@@ -67,6 +76,7 @@ class ChatPolicy:
     max_text_chars: int = 4000
     stale_run_seconds: float = 150.0  # a `running` row older than this is dead (keep above every kind's timeout_s)
     ping_s: float = 15.0
+    tail_poll_s: float = 0.5  # how often a stream that follows a running answer from storage (`attach`) looks at its row
     models: str | tuple[str, ...] | None = None  # overrides every kind's chain (ops switch; an env string "a/b, c/d" is parsed); None = each kind's own
     price_timeout_s: float = 3.0
     check_quota: QuotaCheck | None = None  # replaces the built-in daily message cap (`messages_per_day` is then ignored)
@@ -124,13 +134,15 @@ class ChatService:
         title_job: Callable[..., None] | None = None,
         on_ui_payload_accepted: OnUiPayloadAccepted | None = None,
         trace_sink: Callable[[Any, Any], TraceSink] | None = None,
+        cancel_signal: CancelSignal | None = None,
     ):
         """`policy` may be a `ChatPolicy` or a zero-argument callable returning one, read on every use (rates from settings,
         swapped in tests). `resolve_thread(service, actor, id)` is the tenancy rule (default: the owner's thread); `on_answer`
         runs after each stored answer; `title_job(thread_model, thread_id, models)` runs the LLM title off the request (default:
         a daemon thread; a host may enqueue a job instead). `on_ui_payload_accepted(answer, index, part)` runs after `ack_part`
         stored a browser's verdict on a part (`{"applied": bool, "reason": str}` under `part["ack"]`). `trace_sink(store, message_id)`
-        returns where a kind's trace goes (default: `MessageJsonSink`, the message row's `trace` column)."""
+        returns where a kind's trace goes (default: `MessageJsonSink`, the message row's `trace` column). `cancel_signal` carries a cancel
+        request to the worker that streams the answer (default: a flag on Django's cache, so workers must share one)."""
         self.thread_model = thread_model
         self.message_model = thread_model.messages.rel.related_model
         self._policy = policy or ChatPolicy()
@@ -142,6 +154,7 @@ class ChatService:
         self.title_job = title_job
         self.on_ui_payload_accepted = on_ui_payload_accepted
         self.trace_sink = trace_sink
+        self.cancel_signal: CancelSignal = cancel_signal or CacheCancelSignal()
         self._attachment_store: Any = False
 
     @property
@@ -216,7 +229,8 @@ class ChatService:
     def history_for_model(self, thread, chat_kind: ChatKind, *, before_seq: int) -> list[dict]:
         """The window as `[{role, content, tool_calls?}]`, oldest first: the shape `convert_history` takes.
 
-        Tool calls are replayed only for the latest `limits.replay_tool_calls_of` answers; older ones are text.
+        Tool calls are replayed only for the latest `limits.replay_tool_calls_of` answers; older ones are text. An answer that did not
+        finish (`cancelled`, `error`) keeps what it said, marked with `INTERRUPTED_NOTE`, and replays no tool calls.
         """
         rows = self.message_model.objects.window(thread, chat_kind.history_window, before_seq=before_seq)
         keep = chat_kind.limits.replay_tool_calls_of
@@ -227,10 +241,11 @@ class ChatService:
         for m in rows:
             if m.role == rules.Role.USER and not m.text and m.pk not in files:
                 continue  # a hidden feedback turn has no words: nothing to replay (providers refuse an empty user message)
-            item: dict = {"role": m.role, "content": m.text}
+            interrupted = m.role == rules.Role.ASSISTANT and m.status != rules.Status.DONE
+            item: dict = {"role": m.role, "content": f"{m.text}\n\n{INTERRUPTED_NOTE}" if interrupted else m.text}
             if m.pk in files:
                 item["attachments"] = files[m.pk]
-            if m.pk in replay:
+            if m.pk in replay and not interrupted:
                 calls = [c for c in (m.tool_calls or []) if isinstance(c, dict) and c.get("output") is not None]
                 if calls:
                     item["tool_calls"] = calls
@@ -349,7 +364,7 @@ class ChatService:
         bound = tuple(self.attachment_model.objects.filter(message_id=started.user.id, status="attached").order_by("created_at")) if started.runs_model and chat_kind.attachments is not None and self.attachment_model is not None else ()
         if started.runs_model:
             self.remember(thread, context)  # the next turn may omit what this one said (e.g. a document sent once per hash)
-        if started.kind is not rules.TurnKind.BUSY and not thread.title and started.user.text:
+        if started.kind is not rules.TurnKind.LIVE and not thread.title and started.user.text:
             self.thread_model.objects.filter(pk=thread.pk, title="").update(title=chat_kind.title_of(started.user.text)[:200])
         prior = self.history_for_model(thread, chat_kind, before_seq=started.user.seq) if started.runs_model else []
         return Opened(thread, chat_kind, started, deps, prior, store, bound)
@@ -380,12 +395,69 @@ class ChatService:
             except Exception:  # noqa: BLE001 - the fallback title stays
                 log.exception("chat: could not start the title job")
 
+    def cancel(self, thread, message_id: uuid.UUID, *, now: datetime | None = None) -> str:
+        """Ask a running answer of `thread` to stop; returns its status: `cancelling` (asked; the run ends within a poll and is stored
+        `cancelled` with what it said) or the status it already has (`done`, `error`, `cancelled`). A `running` row past the stale window is
+        dead: it is closed as `error` here. Raises `NotFound` for no such answer of this thread."""
+        store = DjangoTurnStore(thread)
+        row = store.progress(message_id)
+        if row is None or row.role is not rules.Role.ASSISTANT:
+            raise NotFound(str(message_id))
+        if row.status is not rules.Status.RUNNING:
+            return row.status.value
+        if self._stale(row, now or timezone.now()):
+            store.reap((now or timezone.now()) - timedelta(seconds=self.policy.stale_run_seconds))
+            refreshed = store.progress(message_id)
+            return refreshed.status.value if refreshed is not None else rules.Status.ERROR.value
+        self.cancel_signal.request(message_id)
+        return "cancelling"
+
+    def _stale(self, row: rules.Progress, now: datetime) -> bool:
+        return row.created_at is not None and row.created_at < now - timedelta(seconds=self.policy.stale_run_seconds)
+
+    def attach(self, thread, message_id: uuid.UUID, cursor: Cursor | None = None) -> AsyncIterator[str]:
+        """The frames of an answer written by someone else (another tab, a reconnect), read from storage: `run` with `resume`, the
+        text past `cursor.text_offset`, the steps and parts past `cursor.after`, then the closing frame once the answer is closed.
+        Raises `NotFound` (sync, before anything streams) for no such answer of this thread."""
+        try:
+            chat_kind = kinds.get(thread.kind)
+        except kinds.UnknownKind as err:
+            raise NotFound(str(thread.pk)) from err
+        store = DjangoTurnStore(thread)
+        row = store.progress(message_id)
+        if row is None or row.role is not rules.Role.ASSISTANT:
+            raise NotFound(str(message_id))
+        asked = self.message_model.objects.in_thread(thread).filter(role=rules.Role.USER, seq__lt=row.seq).order_by("-seq").values_list("client_id", flat=True).first()
+        run = RunEvent(thread_id=str(thread.pk), message_id=str(message_id), client_id=str(asked) if asked else None, seq=row.seq, resume=True)
+        return self._follow(thread, store, chat_kind, run, message_id, cursor or Cursor())
+
+    def _follow(self, thread, store: DjangoTurnStore, chat_kind: ChatKind, run: RunEvent, message_id: uuid.UUID, cursor: Cursor) -> AsyncIterator[str]:
+        policy = self.policy
+
+        def reap() -> None:
+            store.reap(timezone.now() - timedelta(seconds=policy.stale_run_seconds))
+
+        return follow(
+            lambda: store.progress(message_id), Tailer(run, cursor, chat_kind.trace_level),
+            poll_s=policy.tail_poll_s, ping_s=policy.ping_s, is_stale=lambda row: self._stale(row, timezone.now()), reap=reap,
+        )
+
+    def _price_tally(self, tally: UsageTally) -> float | None:
+        """The cost of a run that ended without the source's usage. Offline: this runs while the run is closing and must not wait on a catalogue fetch."""
+        policy = self.policy
+        pricer = self.pricer or functools.partial(price_run, offline=True, fallback_prices=policy.fallback_prices, default_price=policy.default_price)
+        return pricer(tally, tally.model).cost_usd
+
     async def frames(self, opened: Opened, *, driver_config: DriverConfig | None = None) -> AsyncIterator[str]:
-        """SSE strings of an opened turn (not `BUSY`: the caller answers that with a conflict)."""
+        """SSE strings of an opened turn. A `LIVE` turn (a resend of a running answer) is followed from storage, from the start."""
         turn = opened.turn
         answer = turn.assistant
         client_id = turn.user.client_id
         run = RunEvent(thread_id=str(opened.thread.pk), message_id=str(answer.id), client_id=str(client_id) if client_id else None, seq=answer.seq)
+        if turn.kind is rules.TurnKind.LIVE:
+            async for chunk in self._follow(opened.thread, opened.store, opened.kind, RunEvent(thread_id=run.thread_id, message_id=run.message_id, client_id=run.client_id, seq=run.seq, resume=True), answer.id, Cursor()):
+                yield chunk
+            return
         if turn.kind is rules.TurnKind.REPLAY:
             yield encode_sse(run, "widget", seq=1)
             for position, event in enumerate(replay_events(answer), start=2):
@@ -398,7 +470,7 @@ class ChatService:
         sink = (self.trace_sink or MessageJsonSink)(store, answer.id) if recorder is not None else None
 
         def parts_of(state: RunState) -> list[dict]:
-            return [{"kind": p.kind, "data": p.data} for p in state.payloads]
+            return [{"kind": p.kind, "data": p.data, "event_seq": p.event_seq} for p in state.payloads]
 
         def on_flush(state: RunState) -> None:
             rules.flush(store, answer.id, text=state.text, parts=parts_of(state), tool_calls=list(out.tool_calls))
@@ -409,14 +481,18 @@ class ChatService:
             state = outcome.state
             status = {"done": rules.Status.DONE, "error": rules.Status.ERROR}.get(outcome.status, rules.Status.CANCELLED)
             code = (outcome.error_code if outcome.error_code in rules.ErrorCode._value2member_map_ else "failed") if status is rules.Status.ERROR else ""
+            if sink is not None and recorder is not None:
+                sink.flush(recorder.doc())  # before the row closes: a follower that sees the closed row finds the whole trace
             rules.finish(
                 store, answer.id, status=status, text=state.text, error_code=code,
                 parts=parts_of(state), tool_calls=list(out.tool_calls),
                 tokens_in=state.tokens_in or 0, tokens_out=state.tokens_out or 0, cost_usd=state.cost_usd,
                 latency_ms=outcome.latency_ms, model=state.model or "", prompt_version=chat_kind.prompt_version,
             )
-            if sink is not None and recorder is not None:
-                sink.flush(recorder.doc())
+            try:
+                self.cancel_signal.clear(answer.id)
+            except Exception:  # noqa: BLE001 - the flag expires on its own
+                log.warning("chat: could not clear the cancel flag of %s", answer.id, exc_info=True)
             log_run(chat_kind, answer.id, opened.thread.pk, status, state, outcome, len(out.tool_calls), len(opened.attachments))
             policy = chat_kind.attachments
             if status is rules.Status.DONE and opened.attachments and policy is not None and policy.keep_days == 0 and self.attachment_store is not None:
@@ -440,13 +516,32 @@ class ChatService:
             trace=recorder,
         )
         try:
-            driven = await driver.open(source, run=run, key=f"chat:{opened.thread.pk}" if self.lock else None, feed=recorder)
+            driven = await driver.open(
+                source, run=run, key=f"chat:{opened.thread.pk}" if self.lock else None, feed=recorder,
+                tally=out.usage, price_tally=self._price_tally, cancel=self._cancel_probe(answer.id),
+            )
         except BaseException:
             await source.aclose()
             await _close_unrun(store, answer.id, chat_kind)
             raise
-        async for chunk in driven.frames():
-            yield chunk
+        stream = driven.frames()
+        if chat_kind.detach:
+            stream = detached(stream)  # the run goes on when this reader leaves; see `runtime.detach`
+        try:
+            async for chunk in stream:
+                yield chunk
+        finally:
+            await stream.aclose()  # a reader that left ends the run now (stored `cancelled`), not when the collector gets to it
+
+    def _cancel_probe(self, message_id: uuid.UUID) -> Callable[[], Any]:
+        from asgiref.sync import sync_to_async
+
+        requested = sync_to_async(self.cancel_signal.requested)
+
+        async def probe() -> bool:
+            return bool(await requested(message_id))
+
+        return probe
 
 
 def log_run(chat_kind: ChatKind, message_id: Any, thread_id: Any, status: rules.Status, state: RunState, outcome: RunOutcome, tools: int, files: int = 0) -> None:

@@ -21,6 +21,8 @@ class ModelRole(str, Enum):
     ESCALATION = "escalation"   # hard semantics / customer-facing — quality over cost
     VISION = "vision"           # multimodal image understanding
     REPLY = "reply"             # an email reply to a client, from private text: zero-retention endpoints only
+    TRANSLATE = "translate"     # faithful translation of short listing text / UI strings, plain text out
+    JUDGE = "judge"             # adjudication: pick the one matching candidate (or none) and say why
 
 
 class Verdict(str, Enum):

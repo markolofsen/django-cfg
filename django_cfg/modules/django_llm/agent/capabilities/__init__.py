@@ -25,6 +25,7 @@ Each concern lives in its own module:
 - ``intent_router`` — keyword → tool-bucket surface filtering.
 - ``per_turn_call_cap`` — per-turn call-count guard.
 - ``tool_guard`` — a time limit per tool call, and a failed tool becomes a readable failure instead of ending the answer.
+- ``usage_tally`` — counts the tokens of every finished model request, so a run that ends early still books what it spent.
 """
 
 from __future__ import annotations
@@ -34,6 +35,7 @@ from .intent_router import intent_router_capability
 from .lenient_json_args import lenient_json_args_capability
 from .per_turn_call_cap import per_turn_call_cap_capability
 from .tool_guard import tool_guard_capability
+from .usage_tally import usage_tally_capability
 
 __all__ = [
     "build_capabilities",
@@ -42,4 +44,5 @@ __all__ = [
     "intent_router_capability",
     "per_turn_call_cap_capability",
     "tool_guard_capability",
+    "usage_tally_capability",
 ]

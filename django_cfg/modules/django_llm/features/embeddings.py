@@ -29,6 +29,7 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 
+from ..catalog.tasks import EMBED_FAST_MODELS, EMBED_QUALITY_MODELS, EMBEDDING_DIMENSIONS as _EMBEDDING_DIMENSIONS
 from ..client import LLMClient
 from ..core.types import EmbeddingResponse
 from ..embeddings.mock_embedder import is_mock_embedding
@@ -36,9 +37,9 @@ from ..embeddings.mock_embedder import is_mock_embedding
 logger = logging.getLogger(__name__)
 
 # Project-canonical embedding models (OpenRouter slugs). 1536 everywhere.
-FAST_MODEL = "openai/text-embedding-3-small"
-QUALITY_MODEL = "openai/text-embedding-3-large"
-EMBEDDING_DIMENSIONS = 1536
+FAST_MODEL = EMBED_FAST_MODELS[0]          # the task table owns the slugs
+QUALITY_MODEL = EMBED_QUALITY_MODELS[0]
+EMBEDDING_DIMENSIONS = _EMBEDDING_DIMENSIONS
 
 
 @lru_cache(maxsize=1)

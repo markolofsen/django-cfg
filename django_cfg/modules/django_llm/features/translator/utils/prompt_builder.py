@@ -34,7 +34,8 @@ class PromptBuilder:
         self,
         text: str,
         source_language: str,
-        target_language: str
+        target_language: str,
+        domain: str | None = None,
     ) -> str:
         """
         Build prompt for text translation.
@@ -50,7 +51,10 @@ class PromptBuilder:
         source_name = self.language_names.get(source_language, source_language)
         target_name = self.language_names.get(target_language, target_language)
 
-        prompt = f"""You are a professional translator. Translate the following text from {source_name} to {target_name}.
+        domain_line = (
+            f"\nThe text comes from: {domain}. Use that domain's standard terminology.\n" if domain else ""
+        )
+        prompt = f"""You are a professional translator. Translate the following text from {source_name} to {target_name}.{domain_line}
 
 IMPORTANT INSTRUCTIONS:
 1. Translate ONLY the text provided
@@ -82,7 +86,7 @@ Translation:"""
             target_language: Target language code
             domain: Optional subject matter, e.g. "used car listings". Short
                 values carry no context of their own, and a weak model guesses
-                from the word alone — measured 2026-09-21 against `@cf-json`:
+                from the word alone — measured 2026-09-21 against a small Workers AI model:
                 "Sunroof" came back as "Крыша-складка" (a folding roof) rather
                 than "Люк", "Alloy wheels" as "Окрашенные диски" (painted),
                 "Leather seats" as "Лаковые сиденья" (lacquered). Prose in the

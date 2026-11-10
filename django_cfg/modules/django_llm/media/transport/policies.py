@@ -3,7 +3,6 @@
 from types import MappingProxyType
 from typing import Final, Mapping
 
-from ..publication.providers.sdkrouter import SDKROUTER_MAX_BYTES
 from .models import MediaTarget, MediaTransportKind, MediaTransportPolicy
 
 IMAGE_CONTENT_TYPES: Final = frozenset({
@@ -26,7 +25,7 @@ MULTIPART_UPLOAD_POLICY: Final = MediaTransportPolicy(
 PUBLIC_URL_POLICY: Final = MediaTransportPolicy(
     name=MediaTarget.PUBLIC_URL.value,
     transports=(MediaTransportKind.PUBLIC_URL,),
-    max_bytes=SDKROUTER_MAX_BYTES,
+    max_bytes=8 * 1024 * 1024,
     content_types=PUBLIC_MEDIA_CONTENT_TYPES,
 )
 

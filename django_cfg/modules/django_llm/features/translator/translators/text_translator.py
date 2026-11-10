@@ -58,6 +58,7 @@ class TextTranslator:
         fail_silently: bool = False,
         model: Optional[str] = None,
         temperature: Optional[float] = None,
+        domain: Optional[str] = None,
     ) -> str:
         """
         Translate single text.
@@ -102,7 +103,7 @@ class TextTranslator:
 
             # Generate prompt
             prompt = self.prompt_builder.build_text_translation_prompt(
-                text, source_language, target_language
+                text, source_language, target_language, domain=domain
             )
 
             # Use LLM client for translation

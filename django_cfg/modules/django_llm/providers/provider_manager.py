@@ -20,11 +20,10 @@ class LLMProvider(str, Enum):
     """Available LLM providers."""
     OPENAI = "openai"
     OPENROUTER = "openrouter"
-    SDKROUTER = "sdkrouter"
 
 
 # Type alias for provider selection
-LLMProviderType = Union[LLMProvider, Literal["openai", "openrouter", "sdkrouter"]]
+LLMProviderType = Union[LLMProvider, Literal["openai", "openrouter"]]
 
 
 class ProviderManager:
@@ -34,7 +33,7 @@ class ProviderManager:
         self,
         apikey_openrouter: Optional[str] = None,
         apikey_openai: Optional[str] = None,
-        apikey_sdkrouter: Optional[str] = None,
+        apikey_sdkrouter: Optional[str] = None,  # retired 2026-11-10; accepted and ignored
         preferred_provider: Optional[LLMProviderType] = None,
         config: Optional[Any] = None
     ):
@@ -44,14 +43,13 @@ class ProviderManager:
         Args:
             apikey_openrouter: OpenRouter API key
             apikey_openai: OpenAI API key
-            apikey_sdkrouter: token for the sdkrouter edge proxy
-                (`llm.sdkrouter.com`). Useless against any vendor directly.
-            preferred_provider: Preferred provider ("openai", "openrouter", "sdkrouter")
+            apikey_sdkrouter: ignored -- the sdkrouter proxy was retired
+                2026-11-10; kept so older callers still construct.
+            preferred_provider: Preferred provider ("openai", "openrouter")
             config: Optional host configuration object.
         """
         self.apikey_openrouter = apikey_openrouter
         self.apikey_openai = apikey_openai
-        self.apikey_sdkrouter = apikey_sdkrouter
         # Normalize preferred_provider to string
         if isinstance(preferred_provider, LLMProvider):
             self.preferred_provider = preferred_provider.value
@@ -65,7 +63,6 @@ class ProviderManager:
         # Initialize clients for available providers
         self._init_openrouter_client()
         self._init_openai_client()
-        self._init_sdkrouter_client()
 
         # Determine primary provider
         self.primary_provider = self._determine_primary_provider()
@@ -107,38 +104,6 @@ class ProviderManager:
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
 
-    def _init_sdkrouter_client(self):
-        """Initialize the sdkrouter edge-proxy client if a token is available.
-
-        OpenAI-compatible — same SDK, different `base_url`. The proxy holds the
-        upstream provider credentials as Cloudflare Worker secrets and resolves
-        model ALIASES, so a caller names `gemini-flash-lite` rather than a
-        vendor id and the upstream can move without every caller learning a new
-        name.
-
-        Replaced a prior proxy on 2026-09-02. That provider took a POOL of keys
-        and round-robined them, to sidestep a per-key rate limit; this one takes
-        a single token, because the limit it had to dodge is not the proxy's.
-        If concurrency ever needs several tokens again, the pool belongs on the
-        proxy, not in every client of it.
-        """
-        if not self.apikey_sdkrouter:
-            return
-        try:
-            extra = {}
-            http_client = vault_http_client("sdkrouter")
-            if http_client is not None:
-                extra["http_client"] = http_client
-            self.clients["sdkrouter"] = OpenAI(
-                base_url=PROVIDER_BASE_URLS["sdkrouter"],
-                api_key=self.apikey_sdkrouter,
-                **extra,
-            )
-            logger.info("sdkrouter edge client initialized")
-        except Exception as e:
-            logger.error(f"Failed to initialize sdkrouter client: {e}")
-
-
     def _determine_primary_provider(self) -> str:
         """
         Determine primary provider based on preference and available keys.
@@ -165,21 +130,13 @@ class ProviderManager:
         # Callers that need OpenAI specifically pass
         # ``preferred_provider="openai"`` or call
         # ``LLMClient.activate_provider("openai")``.
-        # The proxy wins when configured, ahead of both vendors. It is a
-        # TRANSPORT, not a third vendor — it fronts the same upstreams under the
-        # same slugs — so a box that still has a stale OPENROUTER_API_KEY lying
-        # around must not keep talking to the vendor directly. Rank the vendors
-        # first and a migration reports success while half the fleet bypasses
-        # the proxy; `test_it_outranks_a_leftover_vendor_key` pins exactly that.
-        if "sdkrouter" in self.clients:
-            return "sdkrouter"
-        elif "openrouter" in self.clients:
+        if "openrouter" in self.clients:
             return "openrouter"
         elif "openai" in self.clients:
             return "openai"
         else:
             raise ValueError(
-                "At least one API key (openrouter, openai or sdkrouter) must be provided"
+                "At least one API key (openrouter or openai) must be provided"
             )
 
     def get_client(self, provider: Optional[str] = None) -> OpenAI:

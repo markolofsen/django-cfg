@@ -50,17 +50,9 @@ from .storage import LLMCache
 
 # Provider abstraction.
 from .providers import (
-    CF,
-    CF_ALIASES,
-    CF_RETIRED_ALIASES,
-    CF_MIN_MAX_TOKENS,
-    CF_STRUCTURED_OUTPUT,
     PROVIDER_BASE_URLS,
     REASONING_MIN_MAX_TOKENS,
-    SDKROUTER_BASE_URL,
     LLMProvider,
-    canonical_cf_alias,
-    is_cf_model,
     is_reasoning_model,
     min_max_tokens_for,
 )
@@ -188,24 +180,11 @@ from .embeddings import MOCK_WARNING, OpenRouterEmbedder, is_mock_embedding
 # ``chat_completion`` loop and want the same parse→repair→re-validate
 # ladder ``LLMRouter.parse`` uses internally.
 from .structured.repair import parse_into_schema
-from .media.publication import (
-    PublishedMedia,
-    SdkRouterPublisher,
-    TemporaryMediaPublisher,
-    TemporaryPublicationError,
-)
-from .media.transport import (
-    MediaLease,
-    MediaPolicyError,
-    MediaSource,
-    MediaSourceError,
-    MediaTarget,
-    MediaTransportError,
-    MediaTransportKind,
-    MediaTransportPolicy,
-    MediaTransportRouter,
-    PreparedMedia,
-)
+
+# Task methods — name the JOB, never the model (`from ... import tasks`).
+from . import tasks
+from .catalog.tasks import get_task_models, set_task_models
+from .tasks import TaskResult
 
 if TYPE_CHECKING:
     from .core.types import ChatCompletionResponse
@@ -291,20 +270,17 @@ __all__ = [
     "parse_into_schema",
     # Catalog
     "ModelRole",
+    # Task methods
+    "tasks",
+    "TaskResult",
+    "get_task_models",
+    "set_task_models",
     # Storage
     "LLMCache",
     # Providers
     "LLMProvider",
-    "CF",
-    "CF_ALIASES",
-    "CF_RETIRED_ALIASES",
-    "CF_MIN_MAX_TOKENS",
-    "CF_STRUCTURED_OUTPUT",
     "PROVIDER_BASE_URLS",
     "REASONING_MIN_MAX_TOKENS",
-    "SDKROUTER_BASE_URL",
-    "canonical_cf_alias",
-    "is_cf_model",
     "is_reasoning_model",
     "min_max_tokens_for",
     # Routing
@@ -365,21 +341,6 @@ __all__ = [
     "ImageInputSource",
     "NormalizedImageInput",
     "normalize_image_input",
-    # Temporary provider-media publication
-    "PublishedMedia",
-    "SdkRouterPublisher",
-    "TemporaryMediaPublisher",
-    "TemporaryPublicationError",
-    "MediaLease",
-    "MediaPolicyError",
-    "MediaSource",
-    "MediaSourceError",
-    "MediaTarget",
-    "MediaTransportError",
-    "MediaTransportKind",
-    "MediaTransportPolicy",
-    "MediaTransportRouter",
-    "PreparedMedia",
     # Vision feature
     "VisionClient",
     "aread_image_text",

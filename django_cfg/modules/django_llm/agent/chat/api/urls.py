@@ -9,6 +9,8 @@
 Routes (trailing slash on by default; `trailing_slash=False` for hosts whose client calls them bare):
 
     GET  threads            POST threads            GET threads/<uuid>            POST threads/<uuid>/messages
+    GET  threads/<uuid>/messages/<uuid>/stream?after=&text_offset=   (follow a running answer: a second tab, a reconnect)
+    POST threads/<uuid>/messages/<uuid>/cancel                       (stop a running answer: 202 cancelling, or 200 with its status)
     POST threads/<uuid>/messages/<uuid>/parts/<n>/ack      (the browser's verdict on a ui payload)
     POST attachments (multipart)    DELETE attachments/<uuid>    GET attachments/<uuid>/content    GET attachments/limits
         (404 for a host whose Message has no `attachments` table; a kind with no `ChatKind.attachments` policy takes no file)
@@ -69,6 +71,8 @@ def urls(
         path(f"threads{end}", views.ThreadsView.as_view(**reading), name="threads"),
         path(f"threads/<uuid:thread_id>{end}", views.ThreadView.as_view(**reading), name="thread"),
         path(f"threads/<uuid:thread_id>/messages{end}", views.MessagesView.as_view(**sending), name="messages"),
+        path(f"threads/<uuid:thread_id>/messages/<uuid:message_id>/stream{end}", views.MessageStreamView.as_view(**reading), name="message-stream"),
+        path(f"threads/<uuid:thread_id>/messages/<uuid:message_id>/cancel{end}", views.MessageCancelView.as_view(**reading), name="message-cancel"),
         path(f"threads/<uuid:thread_id>/messages/<uuid:message_id>/parts/<int:index>/ack{end}", views.PartAckView.as_view(**reading), name="part-ack"),
     ]
     if service.attachment_model is not None:  # a host without the table keeps its routes byte for byte

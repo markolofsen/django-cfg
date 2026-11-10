@@ -11,7 +11,7 @@ refused with ``PROHIBITED_CONTENT`` (cost of that one piece, seconds):
     google/gemini-3-flash-preview  ok   $0.0183  10 s
     mistralai/voxtral-small-24b    429 twice (upstream rate limit)
     nvidia/nemotron-3-nano-omni    unusable (130 s, unreadable answer)
-    /audio/transcriptions          404 on SDKRouter
+    /audio/transcriptions          not served by the router (404)
 
 So the chain is cheapest first, with a different vendor in each step, because
 filters differ by vendor. ``gemini-2.5-*`` is left out: it blocks what 3.x passes.
@@ -19,11 +19,8 @@ filters differ by vendor. ``gemini-2.5-*`` is left out: it blocks what 3.x passe
 
 from __future__ import annotations
 
+from ...catalog.tasks import TRANSCRIBE_MODELS
 from .models import ChainEntry
 
-DEFAULT_CHAIN: tuple[ChainEntry, ...] = (
-    ChainEntry("qwen/qwen3.8-omni-flash"),        # 0.15 / 0.47
-    ChainEntry("openai/gpt-audio-mini"),          # 0.6 / 2.4
-    ChainEntry("google/gemini-3.5-flash-lite"),   # 0.3 / 2.5
-    ChainEntry("google/gemini-3.1-flash-lite"),   # 0.25 / 1.5
-)
+#: Derived from the task table (``catalog/tasks.py``), which owns the slugs.
+DEFAULT_CHAIN: tuple[ChainEntry, ...] = tuple(ChainEntry(m) for m in TRANSCRIBE_MODELS)

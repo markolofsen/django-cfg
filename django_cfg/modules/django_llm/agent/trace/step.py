@@ -156,3 +156,6 @@ class TraceDoc(BaseModel):
     truncated: bool = False  # a cap dropped steps, refs or bytes
     guided_by: str | None = None  # the prompt version that steered the answer
     steps: list[TraceStep] = Field(default_factory=list)
+    # step_id -> the stream position (SSE `id:`) of that step's newest frame; what a resume compares its `after` with.
+    # Stored, never shown: `shape_doc` drops it. A step missing here is always sent by a resume.
+    frames: dict[str, int] = Field(default_factory=dict)

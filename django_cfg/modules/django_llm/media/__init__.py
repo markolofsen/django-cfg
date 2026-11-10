@@ -2,7 +2,6 @@
 
 from .publication import (
     PublishedMedia,
-    SdkRouterPublisher,
     TemporaryMediaPublisher,
     TemporaryPublicationError,
 )
@@ -21,7 +20,6 @@ from .transport import (
 
 __all__ = [
     "PublishedMedia",
-    "SdkRouterPublisher",
     "TemporaryMediaPublisher",
     "TemporaryPublicationError",
     "MediaLease",

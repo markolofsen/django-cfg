@@ -1,6 +1,6 @@
 """A product-free run driver: one assistant turn as a widget SSE stream.
 
-Everything every host of `@djangocfg/widget-assistant` had to write around the agent
+Everything every host of `@djangocfg/widget-chat/assistant` had to write around the agent
 loop, with no model, table or product in it:
 
 * **ping**: an SSE comment every ``ping_s`` of silence (the client treats 45 s of
@@ -13,7 +13,11 @@ loop, with no model, table or product in it:
   in flight per thread; a held lock raises ``RunBusy`` (the view answers ``409 busy``);
   the lock is released after ``on_finish``;
 * **abort**: ``DrivenRun.abort()`` ends the run as ``cancelled`` (no terminal frame: the
-  widget reconciles from storage and reads ``cancelled``).
+  widget reconciles from storage and reads ``cancelled``);
+* **cancel probe**: ``open(cancel=...)`` is an async callable the loop asks every ``cancel_poll_s``;
+  true ends the run like an abort (a request made on another worker or another connection);
+* **usage tally**: ``open(tally=...)`` is the tokens of the requests that finished; a run that ends
+  without the source's own usage books them instead of zero.
 
 What it does not do: store anything (hooks do), replay a stored answer by ``client_id``
 (needs storage: the host's), pick a model or tools (the host builds the agent), know a
@@ -48,7 +52,7 @@ import inspect
 import logging
 import time
 import uuid
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal, Protocol
 
@@ -66,6 +70,7 @@ from django_cfg.modules.django_llm.agent.bus.events import (
     UIPayloadEvent,
     encode_sse,
 )
+from django_cfg.modules.django_llm.agent.runtime.tally import UsageTally
 from django_cfg.modules.django_llm.agent.runtime.errors import (
     DEFAULT_ERROR_MESSAGES,
     describe,
@@ -196,7 +201,10 @@ class DriverConfig:
     """Wall-clock cap of one run; ``None`` disables it. Past it: ``error{code: "timeout"}``."""
 
     flush_s: float = 1.0
-    """Minimum seconds between ``on_flush`` calls while text streams (a payload flushes at once)."""
+    """Minimum seconds between ``on_flush`` calls while text streams, and after it goes quiet (a payload or a trace step flushes at once)."""
+
+    cancel_poll_s: float = 0.5
+    """Seconds between asks of the ``cancel`` probe passed to ``open`` (unused without one)."""
 
     lock_ttl_s: float | None = None
     """Run lock lifetime. Default: ``max_run_s`` + 30 s (or 300 s without a cap)."""
@@ -297,30 +305,37 @@ class RunDriver:
         run: RunEvent,
         key: str | None = None,
         feed: RunFeed | None = None,
+        tally: UsageTally | None = None,
+        price_tally: Callable[[UsageTally], float | None] | None = None,
+        cancel: Callable[[], Awaitable[bool]] | None = None,
     ) -> DrivenRun:
         """Take the run lock for ``key`` (if the driver has a lock and a key) and return the run.
 
         Raises ``RunBusy`` when the lock is held. ``source`` may be a factory, called only
         once the lock is taken, so a refused run builds no agent. ``feed`` adds frames from a side channel (see ``RunFeed``).
+        ``tally`` is read when the run ends without usage (``price_tally`` gives its cost, sync and offline); ``cancel`` is asked every ``cancel_poll_s`` and true ends the run as ``cancelled``.
         """
         token = uuid.uuid4().hex
         if self.lock is not None and key is not None:
             if not await self.lock.acquire(key, token, self.config.effective_lock_ttl_s):
                 raise RunBusy(key)
         iterator = source() if callable(source) and not hasattr(source, "__aiter__") else source
-        return DrivenRun(self, iterator, run, key if self.lock is not None else None, token, feed)
+        return DrivenRun(self, iterator, run, key if self.lock is not None else None, token, feed, tally, price_tally, cancel)
 
 
 class DrivenRun:
     """One opened run. ``frames()`` is the response body; call it once."""
 
-    def __init__(self, driver: RunDriver, source: AsyncIterator[Any], run: RunEvent, key: str | None, token: str, feed: RunFeed | None = None) -> None:
+    def __init__(self, driver: RunDriver, source: AsyncIterator[Any], run: RunEvent, key: str | None, token: str, feed: RunFeed | None = None, tally: UsageTally | None = None, price_tally: Callable[[UsageTally], float | None] | None = None, cancel: Callable[[], Awaitable[bool]] | None = None) -> None:
         self._driver = driver
         self._source = source
         self._run = run
         self._key = key
         self._token = token
         self._feed = feed
+        self._tally = tally
+        self._price_tally = price_tally
+        self._cancel = cancel
         self._started = False
         self._abort = asyncio.Event()
         self.finished = asyncio.Event()
@@ -367,6 +382,9 @@ class DrivenRun:
         retryable = True
         last_sent = started
         last_flush = started
+        last_probe = started
+        unsaved = False  # text arrived since the last flush: a model that goes quiet must not leave a stale row for a follower
+        closing: list[str] = []
 
         feed = self._feed
         wake: asyncio.Future | None = None
@@ -375,8 +393,8 @@ class DrivenRun:
         def frame(event: Any) -> str | None:
             nonlocal position
             position += 1
-            if isinstance(event, TraceStepEvent):
-                event.event_seq = position
+            if isinstance(event, (TraceStepEvent, UIPayloadEvent)):
+                event.event_seq = position  # stored with the step / part: a resume sends only what is past the id it holds
             return encode_sse(event, "widget", seq=position)
 
         def feed_frames() -> list[str]:
@@ -398,7 +416,17 @@ class DrivenRun:
                 now = time.monotonic()
                 if deadline is not None and now >= deadline:
                     raise TimeoutError("run exceeded its wall-clock cap")
-                for chunk in feed_frames():
+                if self._cancel is not None and now - last_probe >= cfg.cancel_poll_s:
+                    last_probe = now
+                    if await self._cancelled():
+                        status = "cancelled"
+                        break
+                chunks = feed_frames()
+                if chunks:  # a step changed: store it before it is sent, so a second reader finds what the first one saw
+                    last_flush = now
+                    unsaved = False
+                    await self._flush(state)
+                for chunk in chunks:
                     last_sent = time.monotonic()
                     yield chunk
                 if pending is None:
@@ -408,6 +436,10 @@ class DrivenRun:
                 wait_for = cfg.ping_s - (now - last_sent)
                 if deadline is not None:
                     wait_for = min(wait_for, deadline - now)
+                if self._cancel is not None:
+                    wait_for = min(wait_for, cfg.cancel_poll_s - (now - last_probe))
+                if unsaved:
+                    wait_for = min(wait_for, cfg.flush_s - (now - last_flush))
                 waiting = {pending, abort_wait} | ({wake} if wake is not None else set())
                 done, _ = await asyncio.wait(waiting, timeout=max(0.001, wait_for), return_when=asyncio.FIRST_COMPLETED)
                 if wake is not None and wake in done:
@@ -415,6 +447,10 @@ class DrivenRun:
                 if pending not in done:
                     if self._abort.is_set():
                         continue
+                    if unsaved and time.monotonic() - last_flush >= cfg.flush_s:
+                        last_flush = time.monotonic()
+                        unsaved = False
+                        await self._flush(state)
                     if time.monotonic() - last_sent >= cfg.ping_s:
                         last_sent = time.monotonic()
                         yield PING
@@ -439,12 +475,16 @@ class DrivenRun:
                     yield frame(event) or ""
                     if last_sent - last_flush >= cfg.flush_s:
                         last_flush = last_sent
+                        unsaved = False
                         await self._flush(state)
+                    else:
+                        unsaved = True
                 elif isinstance(event, UIPayloadEvent):
                     state.payloads.append(event)
                     last_sent = time.monotonic()
                     yield frame(event) or ""
                     last_flush = last_sent
+                    unsaved = False
                     await self._flush(state)
                 elif isinstance(event, (StatusEvent, ReasoningDeltaEvent, ReasoningEndEvent)):
                     last_sent = time.monotonic()
@@ -481,11 +521,13 @@ class DrivenRun:
         finally:
             if wake is not None:
                 wake.cancel()
+            self._book_tally(state)
             if feed is not None:
                 try:
                     feed.finish(status or "cancelled", code, tokens_in=state.tokens_in, tokens_out=state.tokens_out, cost_usd=state.cost_usd, model=state.model)
                 except Exception:  # noqa: BLE001
                     logger.exception("run driver: the feed could not close")
+            closing = feed_frames()  # positions are taken now, so the stored trace carries every step's id; they are sent after the finalize
             outcome = RunOutcome(
                 status=status or "cancelled",
                 state=state,
@@ -501,7 +543,7 @@ class DrivenRun:
         outcome = self.outcome
         assert outcome is not None
         if outcome.status != "cancelled":
-            for chunk in feed_frames():
+            for chunk in closing:
                 yield chunk
         if outcome.status == "done":
             yield frame(
@@ -515,6 +557,28 @@ class DrivenRun:
         elif outcome.status == "error":
             yield frame(ErrorEvent(error=outcome.error_message, code=outcome.error_code, retryable=outcome.retryable)) or ""
         # cancelled (abort): no terminal frame
+
+    async def _cancelled(self) -> bool:
+        assert self._cancel is not None
+        try:
+            return bool(await self._cancel())
+        except Exception:  # noqa: BLE001 - a failing probe must not end a run that nobody asked to end
+            logger.exception("run driver: the cancel probe failed")
+            return False
+
+    def _book_tally(self, state: RunState) -> None:
+        """A run that ended without the source's usage (cancelled, cut by a disconnect, failed late) books the tokens its finished requests spent."""
+        tally = self._tally
+        if tally is None or state.tokens_in is not None or tally.requests == 0:
+            return
+        state.tokens_in = tally.input_tokens
+        state.tokens_out = tally.output_tokens
+        state.model = state.model or tally.model or None
+        if self._price_tally is not None:
+            try:
+                state.cost_usd = self._price_tally(tally)
+            except Exception:  # noqa: BLE001 - an unpriced run books its tokens with no cost
+                logger.exception("run driver: could not price the usage tally")
 
     async def _flush(self, state: RunState) -> None:
         try:

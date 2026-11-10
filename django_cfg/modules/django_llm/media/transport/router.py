@@ -6,7 +6,7 @@ import mimetypes
 from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 
-from ..publication import SdkRouterPublisher, TemporaryMediaPublisher
+from ..publication import TemporaryMediaPublisher
 from .errors import MediaPolicyError, MediaSourceError
 from .models import (
     MediaTarget,
@@ -155,7 +155,14 @@ class MediaTransportRouter:
                     data=media.data,
                 ))
             if transport is MediaTransportKind.PUBLIC_URL:
-                publisher = self._publisher or SdkRouterPublisher()
+                publisher = self._publisher
+                if publisher is None:
+                    # The built-in sdkrouter publisher was retired 2026-11-10; a
+                    # host that wants PUBLIC_URL hands in its own publisher.
+                    raise MediaPolicyError(
+                        "public-url media transport needs a TemporaryMediaPublisher; "
+                        "none was injected"
+                    )
                 publication = publisher.publish(
                     media.data,
                     filename=media.filename,
