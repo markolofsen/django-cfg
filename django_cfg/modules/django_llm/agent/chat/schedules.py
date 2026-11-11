@@ -42,7 +42,7 @@ def schedules(thread_model, *, stale_after_s: float, prune_days: int | None = No
     here = __name__
     entries = [
         RQScheduleConfig(
-            func=f"{here}.reap", interval=REAP_EVERY_S, queue=queue, timeout=60, result_ttl=600,
+            func=f"{here}.reap", interval=REAP_EVERY_S, queue=queue, timeout=60,
             kwargs={"model": label, "stale_after_s": float(stale_after_s)},
             description=f"chat {label}: close answers left running by a dead worker",
         )
@@ -50,7 +50,7 @@ def schedules(thread_model, *, stale_after_s: float, prune_days: int | None = No
     if _has_attachments(label):
         entries.append(
             RQScheduleConfig(
-                func=f"{here}.reap_attachments", interval=ATTACHMENTS_EVERY_S, queue=queue, timeout=300, result_ttl=600,
+                func=f"{here}.reap_attachments", interval=ATTACHMENTS_EVERY_S, queue=queue, timeout=300,
                 kwargs={"model": label},
                 description=f"chat {label}: delete unsent uploads and the bytes of files past their retention",
             )
@@ -58,7 +58,7 @@ def schedules(thread_model, *, stale_after_s: float, prune_days: int | None = No
     if prune_days is not None:
         entries.append(
             RQScheduleConfig(
-                func=f"{here}.prune", interval=PRUNE_EVERY_S, queue=queue, timeout=900, result_ttl=600,
+                func=f"{here}.prune", interval=PRUNE_EVERY_S, queue=queue, timeout=900,
                 kwargs={"model": label, "days": int(prune_days)},
                 description=f"chat {label}: delete sessions idle for {prune_days} days",
             )

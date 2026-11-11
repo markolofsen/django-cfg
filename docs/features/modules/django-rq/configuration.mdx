@@ -224,7 +224,7 @@ Configuration for scheduled jobs:
 | `scheduled_time` | `Optional[str]` | `None` | ISO datetime for one-time job |
 | `queue` | `str` | `"default"` | Queue name |
 | `timeout` | `Optional[int]` | `None` | Job timeout (overrides queue default) |
-| `result_ttl` | `Optional[int]` | `None` | Result TTL (overrides queue default) |
+| `result_ttl` | `Optional[int]` | `None` | Result TTL for a one-time entry (overrides queue default). Ignored for `cron` and `interval`: see the note under Schedule Configuration |
 | `args` | `List[Any]` | `[]` | Positional arguments |
 | `kwargs` | `Dict[str, Any]` | `{}` | Keyword arguments |
 | `job_id` | `Optional[str]` | `None` | Custom job ID |
@@ -359,6 +359,10 @@ django_rq: DjangoRQConfig = DjangoRQConfig(
 ---
 
 ## Schedule Configuration
+
+<Callout type="warning">
+A recurring entry (`cron` or `interval`) always registers with `result_ttl=-1`, whatever the config says (a configured value is ignored with a warning in the log). rq-scheduler keeps the entry in the job's own Redis key and re-runs that same job; a result TTL on the key would delete it, and the schedule would vanish about `result_ttl` seconds after its first run (django-cfg before 2.3.407). Only a one-time entry (`scheduled_time`) keeps its own `result_ttl`.
+</Callout>
 
 ### Cron Schedules
 

@@ -10,6 +10,8 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+RECURRING_RESULT_TTL = -1  # rq: never expire the job key
+
 
 def get_rq_config() -> Optional["DjangoRQConfig"]:
     """
@@ -186,6 +188,26 @@ def _generate_deterministic_job_id(schedule_config) -> str:
     # Create readable job ID
     func_name = schedule_config.func.split(".")[-1]
     return f"schedule_{func_name}_{hash_digest}"
+
+
+def _job_result_ttl(schedule_config) -> int | None:
+    """The one place that decides how long a scheduled job's Redis key lives.
+
+    rq-scheduler keeps a recurring entry in the job's own hash (`rq:job:<id>`) and the worker runs that same job each time.
+    After a run the worker puts `result_ttl` on the hash; when it expires the scheduler finds no job for the id and drops
+    the entry, so a recurring schedule vanishes ten minutes after its first run (`result_ttl=600`) or, for `cron`, after
+    rq's default 500 s (`scheduler.cron(result_ttl=None)` overrides its own -1). A recurring entry therefore never expires:
+    -1, whatever the config says. A one-time entry has no later run to lose and keeps its configured value.
+    """
+    recurring = schedule_config.cron is not None or schedule_config.interval is not None
+    if not recurring:
+        return schedule_config.result_ttl
+    if schedule_config.result_ttl is not None:
+        logger.warning(
+            f"result_ttl={schedule_config.result_ttl} on recurring schedule {schedule_config.func} is ignored: "
+            "a recurring entry lives in its job key, which must not expire"
+        )
+    return RECURRING_RESULT_TTL
 
 
 def _cleanup_old_schedules(scheduler, job_id: str, connection=None, queue_name: str = "default"):
@@ -410,7 +432,7 @@ def register_schedules_from_config():
                                 "kwargs": schedule_config.kwargs,
                                 "queue_name": target_queue,
                                 "timeout": schedule_config.timeout,
-                                "result_ttl": schedule_config.result_ttl,
+                                "result_ttl": _job_result_ttl(schedule_config),
                                 "id": job_id,
                                 "description": schedule_config.description,
                             }
@@ -433,7 +455,7 @@ def register_schedules_from_config():
                             "interval": schedule_config.interval,
                             "queue_name": target_queue,
                             "timeout": schedule_config.timeout,
-                            "result_ttl": schedule_config.result_ttl,
+                            "result_ttl": _job_result_ttl(schedule_config),
                             "id": job_id,
                             "description": schedule_config.description,
                         }

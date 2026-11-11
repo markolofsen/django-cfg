@@ -809,7 +809,7 @@ class RQScheduleConfig(BaseModel):
     result_ttl: Optional[int] = Field(
         default=None,
         ge=0,
-        description="Result TTL in seconds (overrides queue default)",
+        description="Result TTL in seconds for a one-time entry (overrides queue default). Ignored for cron/interval: a recurring entry is never allowed to expire.",
     )
 
     # Function arguments

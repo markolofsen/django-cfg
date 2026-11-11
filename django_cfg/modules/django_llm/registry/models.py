@@ -5,6 +5,7 @@ Originally adapted from unreal_llm; now part of django_cfg.modules.django_llm.
 
 import asyncio
 import json
+import os
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -297,7 +298,9 @@ class ModelsCache:
             }
 
             # Write to file atomically
-            temp_file = self.cache_file.with_suffix('.tmp')
+            # One temp name per process: every worker of a fresh container saves at the same moment, and a shared
+            # `.tmp` made the loser's rename fail with ENOENT (mls, 2.3.406 start-up, four errors).
+            temp_file = self.cache_file.with_suffix(f'.{os.getpid()}.tmp')
             with open(temp_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
 
