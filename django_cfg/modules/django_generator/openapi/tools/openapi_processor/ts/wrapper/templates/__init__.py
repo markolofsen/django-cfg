@@ -5,6 +5,7 @@ from .errors import ERRORS_TS
 from .keys import KEYS_TS
 from .logger import LOGGER_TS
 from .validation_events import VALIDATION_EVENTS_TS
+from .cfg import render_cfg_ts
 from .auth import render_auth_public_ts, render_auth_ts
 from .api import (
     GroupSpec,
@@ -20,6 +21,7 @@ __all__ = [
     "LOGGER_TS",
     "VALIDATION_EVENTS_TS",
     "GroupSpec",
+    "render_cfg_ts",
     "render_auth_public_ts",
     "render_auth_ts",
     "render_group_api_ts",

@@ -49,10 +49,24 @@ from ...tools.openapi_processor.python.wrapper.generator import (
 from ...tools.openapi_processor.ts.tool import generate as generate_ts_extras
 from .cache_keys import target_cache_slot, target_signature
 from .paths import effective_root
+from .stamp import stamp_target
 from .ts_wrapper import clean_stale_root, run_ts_wrapper, ts_extras_list
 
 
 def run_target(
+    target: GenerationTarget,
+    global_spec: dict[str, Any],
+    config: OpenAPIConfig,
+    cache: Path,
+) -> tuple[bool, str | None, bool]:
+    """Dispatch a Target, then stamp it with the django-cfg that generated it (see ``stamp``)."""
+    result = _run_target(target, global_spec, config, cache)
+    if result[0]:
+        stamp_target(effective_root(target))
+    return result
+
+
+def _run_target(
     target: GenerationTarget,
     global_spec: dict[str, Any],
     config: OpenAPIConfig,

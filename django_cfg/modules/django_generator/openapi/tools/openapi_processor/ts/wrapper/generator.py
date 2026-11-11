@@ -53,6 +53,7 @@ from .templates import (
     VALIDATION_EVENTS_TS,
     render_auth_public_ts,
     render_auth_ts,
+    render_cfg_ts,
     render_group_api_ts,
     render_group_index_ts,
     render_target_index_ts,
@@ -232,6 +233,7 @@ def generate(
     written.append(_write(helpers_dir / "logger.ts", LOGGER_TS))
     written.append(_write(helpers_dir / "validation-events.ts", VALIDATION_EVENTS_TS))
     written.append(_write(helpers_dir / "auth.ts", auth_ts))
+    written.append(_write(helpers_dir / "cfg.ts", render_cfg_ts()))
     written.append(_write(helpers_dir / "index.ts", _SHARED_BARREL))
 
     # Patch client.gen.ts so the auth interceptor installs as a
@@ -279,6 +281,7 @@ export {
   CookieStorageAdapter,
 } from './storage';
 export { APIError, NetworkError } from './errors';
+export { CFG } from './cfg';
 export {
   CFG_KEYS,
   CFG_FAMILIES,

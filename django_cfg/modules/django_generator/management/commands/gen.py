@@ -50,6 +50,8 @@ class Command(BaseCommand):
         parser.add_argument("--dry-run", action="store_true", help="Plan without writes.")
         parser.add_argument("--list-targets", action="store_true",
                             help="Show configured targets and exit.")
+        parser.add_argument("--check-stamp", action="store_true",
+                            help="Generate nothing: fail when a generated client's CFG contract differs from the installed django-cfg's.")
         parser.add_argument("--verbose", action="store_true")
         parser.add_argument("--quiet", action="store_true")
 
@@ -69,6 +71,16 @@ class Command(BaseCommand):
             for t in summary.openapi or []:
                 self.stdout.write(f"  [{t.lang}] [{t.type}] {t.path}")
                 self.stdout.write(f"           groups: {', '.join(t.groups)}")
+            return
+
+        if opts["check_stamp"]:
+            from django_cfg.modules.django_generator import inspect_config
+            from django_cfg.modules.django_generator.openapi.pipeline.runner.stamp import check_stamps
+
+            problems = check_stamps([Path(t.path) for t in inspect_config(cfg_obj).openapi or []])
+            if problems:
+                raise CommandError("generated clients do not match this django-cfg:\n  " + "\n  ".join(problems))
+            self.stdout.write("every generated client matches this django-cfg")
             return
 
         # Translate flags → run() kwargs
