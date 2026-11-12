@@ -191,7 +191,7 @@ class ImageGenClient(BaseCfgModule):
                     image.url = None
             if data is None:
                 continue
-            clean, report = image_meta.strip(data)
+            clean, report = image_meta.apply(data, "strip")
             image.b64_json = base64.b64encode(clean).decode("ascii")
             image.metadata_report = report
 

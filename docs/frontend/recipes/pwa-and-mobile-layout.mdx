@@ -54,17 +54,22 @@ Locked is not unscrollable: `--app-height` in an installed iOS app is taller tha
 
 It also removes a stale body scroll-lock: with no `[role=dialog]`, `[data-vaul-drawer]`, `[data-radix-dialog-content]`, menu or listbox mounted, an inline `position: fixed` on `<body>` (with vaul's `top`, `left`, `right`, `height`) and a leftover `data-scroll-locked` attribute (react-remove-scroll) are removed. vaul writes that inline style only in a Safari tab that is not standalone, so in an installed app this is a safety net, not the usual cause.
 
-### Debug a displaced app: the viewport HUD
+### Debug a displaced app: Settings > Debug
 
-An installed app has no address bar, so the HUD turns on three ways:
+An installed app has no address bar, so the diagnostic lives in the Settings dialog, behind `builtins.debug`, which is off by default (in development too): the tab exists only when the host passes `true`.
 
-- **Five quick taps (within 2 seconds) in the top-left 56x56 px corner** toggle it on and off; the choice is kept in `localStorage`. The corner is watched by a passive document listener, not an overlay: nothing covers the UI, and a single tap is neither prevented nor stopped.
-- `?viewportdebug=1` (or `=0`) in the URL, same storage.
-- A build with `NEXT_PUBLIC_VIEWPORT_DEBUG=1` shows it by default in an installed app until someone toggles it off.
+```tsx
+<PrivateLayout settings={{ builtins: { debug: true } }} ...>
+```
 
-A HUD at the bottom prints `window.scrollY`, the `[data-app-shell]` `scrollTop`, the `<body>` and `<html>` inline style, `innerHeight`, `visualViewport` height, `offsetTop` and `scale`, `--app-height`, and the last five resets with their trigger and what each put back. Screenshot it when the bug shows: a reset line with a trigger means the guard fired and what moved the shell is named; no reset line while the shell is displaced means nothing moved `window` or `[data-app-shell]` (look at `<body>` and `<html>` instead).
+The dialog then has a **Debug** section with:
 
-Try it without a phone: Storybook, `Layouts/Shell displacement`, with `?sb-device=pwa`. The story displaces the shell and the window, leaves a vaul body lock and opens a drawer, so Playwright WebKit can drive it. WebKit is the closest desktop engine to iOS Safari, but it is not iOS standalone: no real keyboard, no keyboard inset, an emulated display mode. It proves the scroll-back logic, not the phone.
+- a **Viewport overlay** switch (kept in `localStorage`): a HUD drawn by `UiProviders` over the whole app, so it stays on screen after the dialog closes, where the bug happens;
+- a live readout of the same values, and a **Reset scroll now** button.
+
+The values: `window.scrollY`, the `[data-app-shell]` `scrollTop`, the `<body>` and `<html>` inline style, `innerHeight`, `visualViewport` height, `offsetTop` and `scale`, `--app-height`, and the last five resets with their trigger and what each put back. Screenshot the HUD when the bug shows: a reset line with a trigger means the guard fired and what moved the shell is named; no reset line while the shell is displaced means nothing moved `window` or `[data-app-shell]` (look at `<body>` and `<html>` instead). The switch is the only way on: there is no URL parameter and no build flag.
+
+Try it without a phone: Storybook, `Layouts/Shell displacement`, with `?sb-device=pwa` (its Settings dialog has the Debug section). The story displaces the shell and the window, leaves a vaul body lock and opens a drawer, so Playwright WebKit can drive it. WebKit is the closest desktop engine to iOS Safari, but it is not iOS standalone: no real keyboard, no keyboard inset, an emulated display mode. It proves the scroll-back logic, not the phone.
 
 ## Build a PWA-safe overlay
 

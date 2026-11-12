@@ -5,6 +5,12 @@
 (Content Credentials). Pixels are never re-encoded: containers are filtered at the
 byte level, so the decoded image is identical before and after.
 
+The one step that does change pixels is the visible-mark pass in ``apply()``: it
+removes known visible AI marks (the Gemini sparkle, vendor text labels, badges). It
+runs only when the optional ``visible`` extra of ``remove-ai-watermarks`` (OpenCV) is
+installed, and only when a mark is actually found. Otherwise ``apply()`` is the
+metadata strip alone.
+
 Kept on purpose, because dropping them changes how the picture looks:
   * the colour profile (``keep_icc=True``; ``keep_icc=False`` drops it too),
   * EXIF **orientation**, reduced to a minimal EXIF holding that one tag (a JPEG or
@@ -22,10 +28,14 @@ Never raises on bad input: unsupported or damaged bytes come back unchanged with
 
 from __future__ import annotations
 
+import importlib.util
+import logging
 import os
 import struct
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Final, Literal
+
+logger = logging.getLogger(__name__)
 
 Mode = Literal["strip", "keep"]
 
@@ -59,6 +69,10 @@ class MetadataReport:
     error: str | None = None
     #: AI-provenance markers still found after both passes (library re-scan); empty when clean.
     survived: tuple[str, ...] = field(default_factory=tuple)
+    #: Visible AI marks removed from the pixels by the optional pass in ``apply()``; empty when none.
+    watermarks: tuple[str, ...] = field(default_factory=tuple)
+    #: Invisible (SynthID) stage outcome. ``apply()`` never runs it (CUDA-only), so this is "not-run".
+    invisible: str = ""
 
     @property
     def changed(self) -> bool:
@@ -378,8 +392,52 @@ def resolve_mode(explicit: str | None = None) -> Mode:
     return value  # type: ignore[return-value]
 
 
+# -- visible AI marks (optional pixel pass) ------------------------------------------
+
+_VISIBLE_SUFFIX: Final = {"png": ".png", "jpeg": ".jpg", "webp": ".webp"}
+
+
+def _remove_visible_marks(data: bytes, fmt: str) -> tuple[bytes, tuple[str, ...]]:
+    """Remove known visible AI marks from the pixels. Returns ``(bytes, labels_removed)``.
+
+    Needs OpenCV (the ``visible`` extra of ``remove-ai-watermarks``); without it the input
+    comes back unchanged and quietly. It reads the original file, before any metadata is
+    touched, because the library finds a moved mark through the provenance in that metadata.
+    GIF is not handled: the library reads one frame and would drop the animation.
+    """
+    suffix = _VISIBLE_SUFFIX.get(fmt)
+    if suffix is None or importlib.util.find_spec("cv2") is None:
+        return data, ()
+    import tempfile
+    from pathlib import Path
+
+    try:
+        from remove_ai_watermarks.api import remove_visible_detailed  # noqa: PLC0415
+
+        with tempfile.TemporaryDirectory() as tmp:
+            src, dst = Path(tmp) / f"in{suffix}", Path(tmp) / f"out{suffix}"
+            src.write_bytes(data)
+            # write_noop=False: when nothing is found no file is written, and the original bytes stay.
+            result = remove_visible_detailed(src, dst, strip_metadata=False, write_noop=False)
+            if not result.labels or not dst.exists():
+                return data, ()
+            out = dst.read_bytes()
+    except Exception as exc:  # noqa: BLE001 - a failed pixel pass must not fail the image
+        logger.warning("visible AI-mark removal failed; the metadata strip still applies: %s", exc)
+        return data, ()
+    if sniff(out) != fmt:
+        return data, ()
+    return out, tuple(result.labels)
+
+
 def apply(data: bytes, mode: str | None = None) -> tuple[bytes, MetadataReport | None]:
-    """``strip`` unless the resolved mode is ``keep`` (then ``(data, None)``)."""
+    """Clean generated image bytes unless the resolved mode is ``keep`` (then ``(data, None)``).
+
+    ``strip`` runs the visible-mark pass first (on the original bytes, see
+    ``_remove_visible_marks``), then the metadata strip on its result.
+    """
     if resolve_mode(mode) == "keep":
         return data, None
-    return strip(data)
+    pixels, marks = _remove_visible_marks(data, sniff(data))
+    clean, report = strip(pixels)
+    return clean, replace(report, bytes_before=len(data), watermarks=marks, invisible="not-run")

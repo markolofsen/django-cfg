@@ -10,7 +10,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.3.408"
+version = "2.3.409"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nand 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -51,9 +51,11 @@ classifiers = [
 ]
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    # Image metadata: base install only (no extras). django_llm.core.image_meta uses its metadata functions for containers it does not
-    # parse itself (AVIF/HEIF, TIFF, ...). Its pixel and text watermark modules are never imported.
+    # Image cleanup: django_llm.core.image_meta strips metadata (C2PA, EXIF, XMP, IPTC) and removes visible AI marks
+    # (Gemini sparkle and vendor labels). The visible-mark pass needs OpenCV, so it is a base dependency.
+    # The invisible (SynthID) stage needs torch/diffusers and a CUDA GPU; it is not installed and reports "unavailable".
     "remove-ai-watermarks>=0.58.1,<1.0",
+    "opencv-python-headless>=5.0.0.93",
     # Core
     "pydantic>=2.11.0,<3.0",
     "pydantic[email]>=2.11.0,<3.0",

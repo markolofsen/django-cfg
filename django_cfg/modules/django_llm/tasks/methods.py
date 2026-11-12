@@ -68,10 +68,11 @@ def _parse(task: str, schema: type[M], messages: list[dict], system: str | None,
 
 def _complete(task: str, messages: list[dict], system: str | None,
               max_tokens: int | None, models: Sequence[str] | None) -> TaskResult[str]:
-    text, model = _router(task, models).complete(
+    # The usage carries the bill: `humanize`, `translate` and `chat` reported $0 while it was dropped here.
+    text, model, usage = _router(task, models).complete_with_usage(
         messages=messages, system=system, max_tokens=_budget(task, max_tokens),
     )
-    return TaskResult(text, model, {}, task)
+    return TaskResult(text, model, usage, task)
 
 
 # -- extract / classify / judge (strict-json) ---------------------------------------

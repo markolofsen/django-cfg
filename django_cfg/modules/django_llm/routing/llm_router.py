@@ -518,9 +518,23 @@ class LLMRouter:
         Raises:
             LLMRouterError: all attempts failed.
         """
+        text, model, _usage = self.complete_with_usage(messages, system=system, max_tokens=max_tokens)
+        return text, model
+
+    def complete_with_usage(
+        self,
+        messages: list[dict],
+        system: str | None = None,
+        max_tokens: int = 4096,
+    ) -> tuple[str, str, dict]:
+        """Raw text completion with its bill: ``(text, model_id_used, {"tokens", "cost_usd"})``, the usage shape of ``parse``.
+
+        Raises:
+            LLMRouterError: all attempts failed.
+        """
         full_messages = self._build_messages(messages, system)
 
-        def call(model: str) -> tuple[str, str]:
+        def call(model: str) -> tuple[str, str, dict]:
             resp = self._client.chat_completion(
                 extra_body=self._extra_body,
                 messages=full_messages,
@@ -531,7 +545,7 @@ class LLMRouter:
                 provider=self.provider_for_model(model),
             )
             logger.debug("LLMRouter.complete: success model=%s", model)
-            return resp.content, model
+            return resp.content, model, {"tokens": resp.tokens_used, "cost_usd": resp.cost_usd}
 
         try:
             return self._run(call)
