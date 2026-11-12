@@ -11,6 +11,7 @@ import httpx
 from openai import OpenAI
 
 from ..._integration import BaseCfgModule, get_api_keys
+from ...core import image_meta
 from ...providers import PROVIDER_BASE_URLS
 from ...providers.config_builder import openrouter_identity
 from ...providers.vault_proxy import vault_http_client, vault_httpx_kwargs
@@ -169,6 +170,52 @@ class ImageGenClient(BaseCfgModule):
         quality: ImageQuality = "standard",
         style: ImageStyle = "vivid",
         response_format: ResponseFormat = "b64_json",
+        metadata: Optional[str] = None,
+    ) -> ImageGenResponse:
+        """... ``metadata``: "strip" (default, see ``core.image_meta``) or "keep" the provider's bytes untouched."""
+        response = self._generate(
+            prompt, model=model, model_quality=model_quality, n=n, size=size, quality=quality,
+            style=style, response_format=response_format,
+        )
+        mode = image_meta.resolve_mode(metadata)
+        if mode == "strip":
+            self._strip_images(response.images)
+        return response
+
+    def _strip_images(self, images: list[GeneratedImage]) -> None:
+        for image in images:
+            data = image.to_bytes()
+            if data is None and image.url:
+                data = self._fetch_for_strip(image.url)
+                if data is not None:
+                    image.url = None
+            if data is None:
+                continue
+            clean, report = image_meta.strip(data)
+            image.b64_json = base64.b64encode(clean).decode("ascii")
+            image.metadata_report = report
+
+    def _fetch_for_strip(self, url: str) -> Optional[bytes]:
+        """A URL result has bytes the engine never saw; fetch them (https only, 32 MiB cap) so they can be stripped."""
+        try:
+            safe = validate_https_reference(url)
+            r = httpx.get(safe, timeout=self.timeout, follow_redirects=True, headers={"Accept": "image/*"})
+            r.raise_for_status()
+            return r.content if len(r.content) <= 32 * 1024 * 1024 else None
+        except Exception:  # noqa: BLE001 - leave the provider URL in place
+            return None
+
+    def _generate(
+        self,
+        prompt: str,
+        *,
+        model: Optional[str],
+        model_quality: Optional[ModelQuality],
+        n: int,
+        size: ImageSize,
+        quality: ImageQuality,
+        style: ImageStyle,
+        response_format: ResponseFormat,
     ) -> ImageGenResponse:
         selected_model = self.select_model(model, model_quality)
         if n < 1 or n > 10:

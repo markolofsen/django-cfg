@@ -61,6 +61,8 @@ class CompositeImageEditRequest(BaseModel):
     aspect_ratio: AspectRatio = "auto"
     resolution: ImageResolution = "2K"
     transport_mode: ImageEditTransportMode | None = None
+    #: "strip" (default) removes EXIF/XMP/IPTC/text chunks/C2PA from the result; "keep" returns it untouched.
+    metadata: Literal["strip", "keep"] | None = None
     extra: dict[str, Any] | None = None
 
     def resolved_model(self) -> str:

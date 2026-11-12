@@ -40,6 +40,9 @@ from .core.image_io import (
     compress_image,
     load_image,
 )
+from .core.image_meta import MetadataReport
+from .core.image_meta import inspect as inspect_image_metadata
+from .core.image_meta import strip as strip_image_metadata
 from .core.job_status import LLMJobStatus
 
 # Catalog — model registry + role taxonomy.
@@ -78,6 +81,7 @@ from .routing import (
 
 # Client + features.
 from .client import LLMClient
+from .features.humanize import HumanizeResult, analyze as analyze_text_style
 from .features.image_edit import (
     DEFAULT_EDIT_MODEL,
     DEFAULT_MODEL_QUALITY,
@@ -378,6 +382,13 @@ __all__ = [
     "VideoTransportSecurityError",
     "VideoUsage",
     "compile_byteplus_seedance_request",
+    # Humanize feature (tasks.humanize is the entry point; analyze_text_style is the local scorer)
+    "HumanizeResult",
+    "analyze_text_style",
+    # Image metadata (strip is the default on every generated/edited image)
+    "MetadataReport",
+    "inspect_image_metadata",
+    "strip_image_metadata",
     # Translator feature
     "DjangoTranslator",
     "TranslationError",

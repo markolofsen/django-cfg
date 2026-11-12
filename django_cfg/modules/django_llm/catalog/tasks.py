@@ -102,6 +102,8 @@ TASKS: Final[Mapping[str, TaskSpec]] = MappingProxyType({
                  doc="Cheap labelling into an enum / small schema."),
         TaskSpec(name="translate", kind="text", role=ModelRole.TRANSLATE, max_tokens=2048,
                  doc="Faithful translation of listing text or UI strings."),
+        TaskSpec(name="humanize", kind="text", role=ModelRole.HUMANIZE, max_tokens=4096,
+                 doc="Rewrite prose so it stops reading as machine-written; facts preserved, verified."),
         TaskSpec(name="judge", kind="structured", role=ModelRole.JUDGE, strict_json=True, max_tokens=2000,
                  doc="Adjudication: pick the matching candidate or none, with a reason."),
         TaskSpec(name="chat", kind="text", role=ModelRole.TOOL_CHAT, max_tokens=4096,

@@ -41,6 +41,7 @@ from typing import Any, Optional
 
 import httpx
 
+from ...core import image_meta
 from ..._integration import BaseCfgModule, get_api_keys
 from ...providers import PROVIDER_BASE_URLS
 from ...providers.config_builder import openrouter_identity
@@ -212,12 +213,15 @@ class ImageEditClient(BaseCfgModule):
                 model_text=text,
             )
 
+        image_bytes, meta_report = image_meta.apply(image_bytes, getattr(request, "metadata", None))
+
         usage = body.get("usage") or {}
         cost = float(usage.get("cost") or 0.0)
 
         return ImageEditResponse(
             image_bytes=image_bytes,
             image_mime=image_mime or "image/png",
+            metadata_report=meta_report,
             text=text,
             model=resolved_model,
             cost_usd=cost,

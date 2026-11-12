@@ -76,10 +76,45 @@ def _complete(task: str, messages: list[dict], system: str | None,
 
 # -- extract / classify / judge (strict-json) ---------------------------------------
 
+def _humanize_ask(messages: list[dict], system: str, budget: int | None, chain: Sequence[str] | None) -> TaskResult[str]:
+    return _complete("humanize", messages, system, budget, chain)
+
+
+def _humanize_fields(res: TaskResult[M], defaults: dict[str, Any]) -> TaskResult[M]:
+    """Rewrite the schema's ``Humanize``-marked fields of an already-parsed answer."""
+    from ..features.humanize import apply_humanize  # lazy
+
+    failed: dict[str, str] = {}
+    value, results = apply_humanize(res.value, _humanize_ask, defaults=defaults,
+                                    on_error=lambda where, exc: failed.__setitem__(where, repr(exc)))
+    cost = sum(r.cost_usd for r in results.values())
+    usage = dict(res.usage or {})
+    usage["cost_usd"] = float(usage.get("cost_usd") or 0.0) + cost
+    usage["humanize"] = {
+        "fields": {w: {"ok": r.ok, "changed": r.changed, "before": r.before.score, "after": r.after.score,
+                       "reason": r.reason} for w, r in results.items()},
+        "errors": failed,
+    }
+    return TaskResult(value, res.model, usage, res.task)
+
+
 def extract(schema: type[M], text: str, *, system: str | None = None, max_tokens: int | None = None,
-            messages: list[dict] | None = None, models: Sequence[str] | None = None) -> TaskResult[M]:
-    """Structured extraction of ``schema`` from ``text`` (or a full ``messages`` list). ``models`` pins a chain for this call only."""
-    return _parse("extract", schema, messages or [{"role": "user", "content": text}], system, max_tokens, models)
+            messages: list[dict] | None = None, models: Sequence[str] | None = None,
+            humanize: bool | None = None, humanize_options: dict[str, Any] | None = None) -> TaskResult[M]:
+    """Structured extraction of ``schema`` from ``text`` (or a full ``messages`` list). ``models`` pins a chain for this call only.
+
+    Fields declared ``Annotated[str, Humanize(...)]`` (also ``list[str]``, nested models) are rewritten after
+    parsing; ``humanize=False`` skips that, ``humanize_options`` sets defaults (``voice``, ``domain``,
+    ``strength``, ``lang``) for fields that do not name their own. Per-field outcomes are in
+    ``result.usage["humanize"]``; a field whose rewrite is unfaithful keeps the extracted text.
+    """
+    res = _parse("extract", schema, messages or [{"role": "user", "content": text}], system, max_tokens, models)
+    if humanize is not False:
+        from ..features.humanize import has_marked_fields  # lazy
+
+        if has_marked_fields(schema):
+            return _humanize_fields(res, humanize_options or {})
+    return res
 
 
 def classify(text: str, labels: Sequence[str] | None = None, *, schema: type[M] | None = None,
@@ -150,6 +185,25 @@ def translate(text: str, target: str, source: str | None = None, domain: str | N
     )
     res = _complete("translate", [{"role": "user", "content": text}], sys_prompt, max_tokens, models)
     return TaskResult(res.value.strip(), res.model, res.usage, "translate")
+
+
+def humanize(text: str, *, lang: str | None = None, voice: str | None = None, domain: str | None = None,
+             strength: str = "medium", rounds: int = 2, target: float = 25.0, keep: Sequence[str] = (),
+             force: bool = False, max_tokens: int | None = None,
+             models: Sequence[str] | None = None) -> TaskResult[Any]:
+    """Rewrite ``text`` so it stops reading as machine-written. ``value`` is a ``HumanizeResult``.
+
+    ``.value.text`` is the text to publish: the rewrite when it kept every number, URL and name of
+    the source, otherwise the source itself (``.value.ok`` is False). Text already under ``target``
+    (local score 0-100, higher = more machine-like) costs no call unless ``force``. ``keep`` names
+    extra strings that must survive. See ``@docs/humanize.md``.
+    """
+    from ..features.humanize import humanize as _humanize  # lazy
+
+    result = _humanize(text, _humanize_ask, lang=lang, voice=voice, domain=domain, strength=strength,  # type: ignore[arg-type]
+                       rounds=rounds, target=target, keep=keep, force=force, max_tokens=max_tokens, models=models)
+    model = result.models[-1] if result.models else ""
+    return TaskResult(result, model, {"cost_usd": result.cost_usd}, "humanize")
 
 
 def chat(messages: list[dict], *, system: str | None = None, max_tokens: int | None = None,
@@ -269,6 +323,7 @@ aclassify = _twin(classify, "aclassify")
 ajudge = _twin(judge, "ajudge")
 atranslate = _twin(translate, "atranslate")
 achat = _twin(chat, "achat")
+ahumanize = _twin(humanize, "ahumanize")
 aescalate = _twin(escalate, "aescalate")
 aembed = _twin(embed, "aembed")
 atranscribe = _twin(transcribe, "atranscribe")

@@ -78,6 +78,10 @@ class GeneratedImage(BaseModel):
         description="Revised prompt used for generation (if model modified it)",
     )
     content_type: str = "image/png"
+    metadata_report: Optional[Any] = Field(
+        default=None, exclude=True,
+        description="core.image_meta.MetadataReport when metadata was stripped; None when kept",
+    )
 
     def to_data_url(self, content_type: str = "image/png") -> Optional[str]:
         """Convert b64_json to data URL."""

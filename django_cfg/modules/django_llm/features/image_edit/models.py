@@ -74,6 +74,8 @@ class ImageEditRequest(BaseModel):
     # transport selectable per request while still allowing an application
     # profile to configure one client-wide default.
     transport_mode: ImageEditTransportMode | None = None
+    #: "strip" (default) removes EXIF/XMP/IPTC/text chunks/C2PA from the result; "keep" returns it untouched.
+    metadata: Literal["strip", "keep"] | None = None
 
     # Pass-through knobs (e.g. ``seed`` for repro) merged into payload root.
     extra: Optional[Dict[str, Any]] = None
@@ -102,6 +104,7 @@ class ImageEditResponse(BaseModel):
 
     image_bytes: Optional[bytes] = None
     image_mime: str = "image/png"
+    metadata_report: Optional[Any] = None   # core.image_meta.MetadataReport when stripped, None when kept
 
     text: str = ""
     model: str = ""

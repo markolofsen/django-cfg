@@ -310,6 +310,14 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
         "google/gemini-2.5-flash-lite",
         "google/gemini-2.5-flash",
     ),
+    ModelRole.HUMANIZE: (
+        # ADDED 2026-11-12. Plain-text editing where the register of the output is
+        # the product, so the strongest writer leads and a different vendor is the
+        # net. A cheap model rewrites in the same machine voice it was meant to
+        # remove. Not yet benchmarked: see features/humanize and @docs/humanize.md.
+        "anthropic/claude-sonnet-4.6",
+        "google/gemini-3.5-flash",
+    ),
     ModelRole.JUDGE: (
         # ADDED 2026-11-10 from the MLS dedup adjudicator (catalog/services/projects/
         # judge.py): gpt-5-nano leads (reasoning model - the router's reasoning

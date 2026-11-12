@@ -4,6 +4,7 @@
 
     car = tasks.extract(Car, listing_text)               # TaskResult(value, model, usage)
     label = tasks.classify(text, labels=["sale", "rent"])
+    clean = tasks.humanize(draft, voice="a dealer writing plainly").value.text
     ru = tasks.translate("Sunroof", target="ru", domain="used car listings")
     vec = tasks.embed("some text")
     text = await tasks.aocr(png_bytes, "image/png")
@@ -34,6 +35,7 @@ from .methods import (
     aembed,
     aescalate,
     aextract,
+    ahumanize,
     ajudge,
     aocr,
     atranscribe,
@@ -43,6 +45,7 @@ from .methods import (
     embed,
     escalate,
     extract,
+    humanize,
     judge,
     ocr,
     transcribe,
@@ -51,7 +54,7 @@ from .methods import (
 
 __all__ = [
     "JudgeVerdict", "TASKS", "TaskResult", "TaskSpec",
-    "achat", "aclassify", "aembed", "aescalate", "aextract", "ajudge", "aocr", "atranscribe", "atranslate",
-    "chat", "classify", "embed", "escalate", "extract", "judge", "ocr", "transcribe", "translate",
+    "achat", "aclassify", "aembed", "aescalate", "aextract", "ahumanize", "ajudge", "aocr", "atranscribe", "atranslate",
+    "chat", "classify", "embed", "escalate", "extract", "humanize", "judge", "ocr", "transcribe", "translate",
     "get_task_models", "get_task_spec", "reset_task_overrides", "set_task_models",
 ]
