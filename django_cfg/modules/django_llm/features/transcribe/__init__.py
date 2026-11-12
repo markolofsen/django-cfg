@@ -9,14 +9,14 @@
 See ``runner`` for the policy and ``@docs`` in the docs site for the contract.
 """
 
-from .defaults import DEFAULT_CHAIN
+from .defaults import DEFAULT_CHAIN, chain_for
 from .engines import INSTRUCTION, Ask, Call, make_ask
 from .errors import ContentBlocked, Fatal, ModelUnavailable, NothingTranscribed, Transient, TranscribeError
 from .models import Answer, ChainEntry, Gap, Policy, Result, Segment
 from .runner import plan, transcribe, transcribe_range
 
 __all__ = [
-    "Answer", "Ask", "Call", "ChainEntry", "ContentBlocked", "DEFAULT_CHAIN", "Fatal", "Gap", "INSTRUCTION",
+    "Answer", "Ask", "chain_for", "Call", "ChainEntry", "ContentBlocked", "DEFAULT_CHAIN", "Fatal", "Gap", "INSTRUCTION",
     "ModelUnavailable", "NothingTranscribed", "Policy", "Result", "Segment", "Transient", "TranscribeError",
     "make_ask", "plan", "transcribe", "transcribe_range",
 ]

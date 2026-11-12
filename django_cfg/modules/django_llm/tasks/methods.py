@@ -295,9 +295,9 @@ def transcribe(audio: bytes, *, audio_format: str = "mp3", duration_s: float | N
     For long audio cut it yourself and use ``features.transcribe.transcribe`` with
     ``get_task_models("transcribe")``; this is the one-piece convenience. ``ask`` injects the transport (tests).
     """
-    from ..features.transcribe import ChainEntry, Policy, make_ask, transcribe_range
+    from ..features.transcribe import Policy, chain_for, make_ask, transcribe_range
 
-    chain = [ChainEntry(m) for m in (models or get_task_models("transcribe"))]
+    chain = chain_for(models or get_task_models("transcribe"))
     result = transcribe_range(
         0.0, float(duration_s or 1.0), lambda _offset, _seconds: audio,
         ask or make_ask(_openrouter_call(), audio_format=audio_format), chain,

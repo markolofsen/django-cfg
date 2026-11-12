@@ -21,6 +21,8 @@ class ChainEntry:
 
     model: str
     engine: Engine = "chat"
+    #: Ask an ``stt`` model to label who speaks (see ``engines.DIARIZATION``); the text then reads ``Speaker 1: ...``.
+    diarize: bool = False
 
 
 @dataclass(frozen=True)

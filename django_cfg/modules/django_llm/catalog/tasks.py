@@ -64,6 +64,7 @@ OCR_MODELS: Final[tuple[str, ...]] = (
 #: Audio transcription: cheapest first, a different vendor each step, because
 #: content filters differ by vendor. Bench: `features/transcribe/defaults.py`.
 TRANSCRIBE_MODELS: Final[tuple[str, ...]] = (
+    "microsoft/mai-transcribe-2",  # speech-to-text, labels the speakers; the rest are chat models without labels
     "qwen/qwen3.8-omni-flash",
     "openai/gpt-audio-mini",
     "google/gemini-3.5-flash-lite",
@@ -115,7 +116,7 @@ TASKS: Final[Mapping[str, TaskSpec]] = MappingProxyType({
         TaskSpec(name="ocr", kind="vision", models=OCR_MODELS, max_tokens=1500,
                  doc="Text of an image held in memory."),
         TaskSpec(name="transcribe", kind="audio", models=TRANSCRIBE_MODELS,
-                 doc="Speech to text through chat models that accept input_audio."),
+                 doc="Speech to text: a diarizing STT model first, then chat models that accept input_audio."),
         TaskSpec(name="embed", kind="embedding", models=EMBED_FAST_MODELS,
                  params={"dimensions": EMBEDDING_DIMENSIONS}, doc="Default embedding, 1536-dim."),
         TaskSpec(name="embed_quality", kind="embedding", models=EMBED_QUALITY_MODELS,

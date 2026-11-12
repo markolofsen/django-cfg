@@ -166,9 +166,14 @@ const { user, isAuthenticated, isLoading, requestOTP, verifyOTP, logout } = useA
 | `user` | `UserProfile \| null` | Current user |
 | `isAuthenticated` | `boolean` | — |
 | `isLoading` | `boolean` | Initial auth check in progress |
+| `isAdminUser` | `boolean` | `user.is_staff \|\| user.is_superuser` |
+| `status` | `'resolving' \| 'authenticated' \| 'anonymous'` | The one linear state; `resolving` until the client has read the session and its profile |
+| `isHydrated` | `boolean` | `false` on the server and during the hydration render, `true` from the first commit after mount |
 | `requestOTP` | `fn` | Send OTP to email — `requestOTP(identifier, sourceUrl?, consent?)`; `consent` = `{ marketingConsent, disclosureVersion }`; resolves with `resendIn` seconds when the server states one |
 | `verifyOTP` | `fn` | Verify code → stores JWT |
 | `logout` | `fn` | Clears tokens |
+
+**Server rendering.** The server never sees the browser's stored session, so it renders a guest. To match that HTML, `useAuth()` also renders a guest on the client's first render: `user` is `null` and `isAdminUser` is `false` until `isHydrated` turns `true`, even for a signed-in visitor whose profile is cached. The cached profile is applied right after mount, before paint, so there is no visible guest frame. Read `user` / `isAdminUser` directly in server-rendered components; no app-side mount gate is needed. Gate on `isHydrated` (or `status !== 'resolving'`) only when "guest" and "not known yet" must look different, e.g. to avoid flashing a "Sign in" button. Before `@djangocfg/api` 2.1.656 the profile was read from the cache during the first render, which caused React hydration error #418 wherever the profile changed the markup.
 
 ### `useAuthGuard` — route protection
 

@@ -22,5 +22,17 @@ from __future__ import annotations
 from ...catalog.tasks import TRANSCRIBE_MODELS
 from .models import ChainEntry
 
+#: Models served by ``/audio/transcriptions`` and able to label speakers (``engines.DIARIZATION`` holds the option).
+#: Measured 2026-11-12 on 8 minutes of a two-voice Russian call: microsoft/mai-transcribe-2 gave two speakers in
+#: 3 s at $0.10 per audio hour. Every other slug is a chat model that accepts ``input_audio`` and returns
+#: unlabelled text; it takes over when the first refuses or is down.
+STT_SPEAKERS: frozenset[str] = frozenset({"microsoft/mai-transcribe-2"})
+
+
+def chain_for(models) -> tuple[ChainEntry, ...]:
+    """The chain for these slugs, in order: an STT slug is asked with speaker labels, the rest as chat."""
+    return tuple(ChainEntry(m, "stt", diarize=True) if m in STT_SPEAKERS else ChainEntry(m) for m in models)
+
+
 #: Derived from the task table (``catalog/tasks.py``), which owns the slugs.
-DEFAULT_CHAIN: tuple[ChainEntry, ...] = tuple(ChainEntry(m) for m in TRANSCRIBE_MODELS)
+DEFAULT_CHAIN: tuple[ChainEntry, ...] = chain_for(TRANSCRIBE_MODELS)

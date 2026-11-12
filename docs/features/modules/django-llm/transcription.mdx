@@ -55,9 +55,21 @@ A refused call is often billed. Every attempt is counted: `result.cost_usd` is t
 
 ## The chain
 
-`DEFAULT_CHAIN` is data in `defaults.py`: cheap first, alternating vendors, because filters differ by vendor. Pass your own tuple of `ChainEntry(model, engine)`; `engine="stt"` posts to `/audio/transcriptions` (a dedicated speech-to-text model) instead of `/chat/completions`. SDKRouter does **not** serve that route (404 on `/v1/audio/transcriptions`, probed 2026-11-05), so there every entry is a chat model; probe your own gateway before using `stt`.
+`DEFAULT_CHAIN` is data in `defaults.py`: a speech-to-text model first, then cheap chat models alternating vendors, because filters differ by vendor. Pass your own tuple of `ChainEntry(model, engine, diarize)`, or `chain_for(slugs)` to build one from slugs (an STT slug that can label speakers is asked with labels on, the rest as chat); `engine="stt"` posts to `/audio/transcriptions` (a dedicated speech-to-text model) instead of `/chat/completions`. OpenRouter serves that route; SDKRouter does **not** (404 on `/v1/audio/transcriptions`, probed 2026-11-05), so probe your own gateway before relying on `stt`.
 
-The default chain (`qwen/qwen3.8-omni-flash`, `openai/gpt-audio-mini`, `google/gemini-3.5-flash-lite`, `google/gemini-3.1-flash-lite`) comes from trying each model on a real 10-minute Russian piece that `google/gemini-2.5-flash` refused: the 2.5 family blocks it, the four above pass (about $0.0015 to $0.0096 for the piece), Voxtral answered 429 and the free NVIDIA model was unusable. Choose your own order the same way: on a real blocked recording, not from price lists.
+### Speaker labels
+
+The first entry is `microsoft/mai-transcribe-2` with `diarize=True`: it labels who speaks (`provider.options.azure.diarization.enabled`, `response_format=verbose_json`; the options live in `engines.DIARIZATION`). Measured 2026-11-12 on 8 minutes of a two-voice Russian call: two speakers, 50 segments, 3 s, $0.10 per audio hour (`x-ai/grok-stt-1.0` returned one unlabelled segment). The answer text reads as turns, numbered from 1 in order of first appearance, one paragraph each:
+
+```
+Speaker 1: ...
+
+Speaker 2: ...
+```
+
+One voice, or an answer without speaker ids, stays plain text. **Numbers are per piece**: the same person can be `Speaker 1` in one piece and `Speaker 2` in the next, so a consumer that reads a long recording must decide who is who from what is said. The chat models behind it return unlabelled text; they take over when the STT model refuses or is down. STT takes no earlier text as context, so short consecutive pieces of a live capture should be asked of the chat entries only.
+
+The chat part of the default chain (`qwen/qwen3.8-omni-flash`, `openai/gpt-audio-mini`, `google/gemini-3.5-flash-lite`, `google/gemini-3.1-flash-lite`) comes from trying each model on a real 10-minute Russian piece that `google/gemini-2.5-flash` refused: the 2.5 family blocks it, the four above pass (about $0.0015 to $0.0096 for the piece), Voxtral answered 429 and the free NVIDIA model was unusable. Choose your own order the same way: on a real blocked recording, not from price lists.
 
 ## Troubleshooting
 

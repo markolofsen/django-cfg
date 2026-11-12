@@ -84,7 +84,8 @@ def parse_chat(model: str, resp: Any) -> Answer:
 
 
 def parse_stt(model: str, resp: Any) -> Answer:
-    """An ``/audio/transcriptions`` body: ``{"text": ..., "usage": {...}}``."""
+    """An ``/audio/transcriptions`` body: ``{"text": ..., "usage": {...}}``; with ``segments`` that carry a
+    ``speaker`` and more than one voice, the text reads ``Speaker 1: ...`` one turn per paragraph."""
     if not isinstance(resp, Mapping):
         raise ModelUnavailable(f"{model}: unreadable answer")
     if isinstance(resp.get("error"), Mapping):
@@ -92,7 +93,32 @@ def parse_stt(model: str, resp: Any) -> Answer:
     text = resp.get("text")
     if not isinstance(text, str):
         raise ModelUnavailable(f"{model}: no text in the answer")
-    return Answer(text.strip(), str(resp.get("language") or ""), _cost(resp))
+    return Answer(_turns(resp.get("segments")) or text.strip(), _language(resp.get("language")), _cost(resp))
+
+
+def _language(value: Any) -> str:
+    code = str(value or "").strip().lower().split("-")[0]
+    return code if re.fullmatch(r"[a-z]{2,3}", code) else ""
+
+
+def _turns(segments: Any) -> str:
+    """Segments with speaker ids as turns, numbered from 1 in order of first appearance; ``""`` when there is
+    nothing to label (no ids, or one voice): a monologue stays plain text."""
+    if not isinstance(segments, list):
+        return ""
+    rows = [(s.get("speaker"), str(s.get("text") or "").strip()) for s in segments if isinstance(s, Mapping)]
+    rows = [(who, text) for who, text in rows if text]
+    voices = list(dict.fromkeys(who for who, _ in rows))
+    if len(voices) < 2 or None in voices:
+        return ""
+    number = {who: i + 1 for i, who in enumerate(voices)}
+    turns: list[list] = []
+    for who, text in rows:
+        if turns and turns[-1][0] == who:
+            turns[-1][1] += " " + text
+        else:
+            turns.append([who, text])
+    return "\n\n".join(f"Speaker {number[who]}: {text}" for who, text in turns)
 
 
 def split_language(text: str) -> tuple[str, str]:

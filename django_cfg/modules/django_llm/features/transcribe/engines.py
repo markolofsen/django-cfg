@@ -22,6 +22,13 @@ INSTRUCTION = """Transcribe this audio exactly as spoken, in the language spoken
 
 MAX_TOKENS = 16000
 
+#: Provider options that switch speaker labels on, by model prefix (OpenRouter: ``provider.options.<slug>``).
+#: Measured 2026-11-12 on 8 minutes of a two-voice Russian call: microsoft/mai-transcribe-2 returned two
+#: speakers, 50 segments, $0.10 per audio hour, in 3 s; x-ai/grok-stt-1.0 returned one unlabelled segment.
+DIARIZATION: dict[str, dict] = {
+    "microsoft/": {"azure": {"diarization": {"enabled": True}}},
+}
+
 
 def make_ask(call: Call, *, audio_format: str = "mp3", instruction: str = INSTRUCTION,
              max_tokens: int = MAX_TOKENS) -> Ask:
@@ -37,9 +44,12 @@ def make_ask(call: Call, *, audio_format: str = "mp3", instruction: str = INSTRU
         data = base64.b64encode(audio).decode()
         try:
             if entry.engine == "stt":
-                resp = call("/audio/transcriptions",
-                            {"model": entry.model, "input_audio": {"data": data, "format": audio_format}})
-                return parse_stt(entry.model, resp)
+                body: dict = {"model": entry.model, "input_audio": {"data": data, "format": audio_format}}
+                options = next((o for prefix, o in DIARIZATION.items() if entry.model.startswith(prefix)), None)
+                if entry.diarize and options:
+                    body["response_format"] = "verbose_json"
+                    body["provider"] = {"options": options}
+                return parse_stt(entry.model, call("/audio/transcriptions", body))
             text = instruction
             if context:
                 text += (f'\n- This audio continues a talk whose text so far ends: "{context}". '
