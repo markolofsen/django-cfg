@@ -67,7 +67,13 @@ class Command(DjangoRQSchedulerCommand):
             from django_rq import get_connection
 
             conn = get_connection()
-            keys = conn.keys('rq:scheduler_instance:*')
+            # Only dead entries: a 'death' field, or no TTL (a live scheduler
+            # keeps a TTL of interval+10 s). A live peer during a deploy
+            # overlap is left alone; rq-scheduler's per-tick lock handles it.
+            keys = [
+                k for k in conn.scan_iter(match='rq:scheduler_instance:*')
+                if conn.hexists(k, 'death') or conn.ttl(k) == -1
+            ]
 
             if keys:
                 deleted = conn.delete(*keys)

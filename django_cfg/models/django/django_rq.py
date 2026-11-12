@@ -637,7 +637,11 @@ class DjangoRQConfig(BaseModel):
             rq_queues[queue_config.queue] = queue_config.to_django_rq_format(redis_url=redis_url)
 
         settings["RQ_QUEUES"] = rq_queues
-        settings["RQ"] = {"COMMIT_MODE": self.commit_mode}
+        settings["RQ"] = {
+            "COMMIT_MODE": self.commit_mode,
+            # One copy per recurring job + a tick stamp for health checks.
+            "SCHEDULER_CLASS": "django_cfg.modules.django_rq.scheduler.DjangoCfgScheduler",
+        }
         settings["RQ_SHOW_ADMIN_LINK"] = self.show_admin_link
 
         if self.exception_handlers:
