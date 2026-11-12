@@ -9,7 +9,7 @@ Example:
 import json
 import sys
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 
 class Command(BaseCommand):
@@ -25,13 +25,20 @@ class Command(BaseCommand):
         parser.add_argument("--json", action="store_true", help="Print JSON")
 
     def handle(self, *args, **options):
-        from django_cfg.modules.django_rq.health.status import scheduler_status
-
-        st = scheduler_status(
-            queue_names=options["queues"],
-            max_tick_age=options["max_tick_age"],
-            max_wait=options["max_wait"],
+        from django_cfg.modules.django_rq.health.status import (
+            UnknownQueueError,
+            scheduler_status,
         )
+
+        try:
+            st = scheduler_status(
+                queue_names=options["queues"],
+                max_tick_age=options["max_tick_age"],
+                max_wait=options["max_wait"],
+            )
+        except UnknownQueueError as e:
+            # CommandError: one line on stderr, exit 1, no traceback.
+            raise CommandError(str(e)) from None
         if options["json"]:
             self.stdout.write(json.dumps(st.as_dict(), default=str))
         else:

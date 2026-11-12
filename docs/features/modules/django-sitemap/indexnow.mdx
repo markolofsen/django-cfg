@@ -110,7 +110,9 @@ python manage.py indexnow_submit                  # first run: records, sends no
 ```
 
 From then on an RQ job runs hourly. It is registered automatically from the
-config. Set `schedule_interval=0` to turn it off.
+config. Set `schedule_interval=0` to turn it off. A run reads every source and
+can take minutes: `queue="cache"` (any queue declared in `django_rq.queues`)
+keeps it off the worker that serves latency-bound jobs.
 
 </Steps>
 
@@ -235,6 +237,7 @@ python manage.py indexnow_submit --url https://example.com/a/   # push these now
 | `max_urls_per_run` | `10000` | Per host per run; the rest goes on the next run. |
 | `shrink_share` / `shrink_floor` | `0.2` / `50` | A run that loses more than this many known URLs sends nothing. |
 | `schedule_interval` | `3600` | Seconds between RQ runs. `0` turns the schedule off. |
+| `queue` | `"default"` | RQ queue of the scheduled run. Use a long-job queue such as `"cache"`; it must be declared in `django_rq.queues`. |
 | `endpoint` | `https://api.indexnow.org/indexnow` | Shared by every engine. |
 | `timeout` | `30` | Seconds per request. |
 

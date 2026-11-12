@@ -307,6 +307,7 @@ class MyConfig(DjangoConfig):
 | `max_urls_per_run` | `10000` | Per host per run; the rest goes next run. |
 | `shrink_share` / `shrink_floor` | `0.2` / `50` | Above this many vanished URLs, the run sends nothing. |
 | `schedule_interval` | `3600` | RQ schedule, registered automatically. `0` turns it off. |
+| `queue` | `"default"` | RQ queue of the scheduled run. A run reads every source and can take minutes: give it a queue whose worker serves no latency-bound jobs (`queue="cache"`). Declare the queue in `django_rq.queues`. |
 
 **Several sites on one backend.** Use `sites=[IndexNowSite(host=…,
 source_suffix="-caribbean"), …]` instead of `host`. Each host takes its own

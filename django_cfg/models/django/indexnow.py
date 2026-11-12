@@ -211,6 +211,16 @@ class IndexNowConfig(BaseModel):
         description="Seconds between scheduled runs (RQ). 0 disables the schedule; the command still works.",
     )
 
+    queue: str = Field(
+        default="default",
+        min_length=1,
+        description=(
+            "RQ queue of the scheduled run. A run reads every sitemap source and may take "
+            "minutes: put it on a queue whose worker serves no latency-bound jobs, e.g. 'cache'. "
+            "The queue must be declared in `django_rq.queues`."
+        ),
+    )
+
     timeout: float = Field(default=30.0, gt=0, description="Seconds per HTTP request.")
 
     @field_validator("key")
@@ -285,7 +295,7 @@ class IndexNowConfig(BaseModel):
                 func="django_cfg.modules.django_sitemap.indexnow.submit_changed",
                 interval=self.schedule_interval,
                 timeout=900,
-                queue="default",
+                queue=self.queue,
                 description=f"Submit changed URLs to IndexNow (every {self.schedule_interval}s)",
             )
         ]

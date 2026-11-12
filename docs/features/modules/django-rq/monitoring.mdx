@@ -243,6 +243,14 @@ rate(rq_job_duration_seconds_sum[5m]) / rate(rq_job_duration_seconds_count[5m])
 
 ## CLI Commands
 
+### rq_scheduler_status
+
+Tells a dead scheduler (`scheduler_dead`) from a busy worker (`starved`), with per-queue wait age and the job each busy worker runs; exits 1 when not `ok`, so it serves as a healthcheck. See [Scheduler and Workers](./scheduler-and-workers).
+
+```bash
+python manage.py rq_scheduler_status --queue high --max-wait 60
+```
+
 ### rqstats
 
 View queue statistics:

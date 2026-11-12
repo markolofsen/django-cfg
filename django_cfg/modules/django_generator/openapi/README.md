@@ -128,6 +128,11 @@ generated SDK types unstable across regenerations.
 python manage.py suggest_enum_overrides
 ```
 
+The TextChoices classes are found by scanning installed apps only
+(`iter_app_modules`): a nested package with its own `apps.py` is skipped unless it
+is installed, and `admin`, `signals`, `urls`, `migrations` and test modules are
+never imported, so the scan registers no admin of an app that is not installed.
+
 Output is a ready-to-paste `ENUM_NAME_OVERRIDES` dict. Add it to your config:
 
 ```python

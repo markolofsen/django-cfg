@@ -80,6 +80,17 @@ def _last_tick_age(conn) -> Optional[float]:
     return max(0.0, time.time() - float(_s(raw)))
 
 
+class UnknownQueueError(ValueError):
+    """A queue asked for is not declared in ``RQ_QUEUES``."""
+
+    def __init__(self, unknown: List[str], declared: List[str]):
+        self.unknown, self.declared = unknown, declared
+        super().__init__(
+            f"unknown RQ queue {', '.join(repr(q) for q in unknown)}; "
+            f"declared: {', '.join(declared) or 'none'}"
+        )
+
+
 def scheduler_status(
     queue_names: Optional[Iterable[str]] = None,
     max_tick_age: float = 120.0,
@@ -94,16 +105,22 @@ def scheduler_status(
         max_tick_age: seconds without a scheduler tick before ``scheduler_dead``.
         max_wait: seconds a queued job may wait before ``starved``.
         connection: Redis connection (default: django_rq's for the first queue).
+
+    Raises:
+        UnknownQueueError: a name in ``queue_names`` is not in ``RQ_QUEUES``.
     """
     import django_rq
+    from django.conf import settings
     from rq import Worker
 
+    declared = list(getattr(settings, "RQ_QUEUES", None) or {})
     if queue_names:
         names = list(queue_names)
+        unknown = [n for n in names if n not in declared]
+        if unknown:
+            raise UnknownQueueError(unknown, declared)
     else:
-        from django_rq.settings import QUEUES
-
-        names = list(QUEUES.keys())
+        names = declared
     queues = [django_rq.get_queue(n) for n in names]
     conn = connection or queues[0].connection
 
@@ -158,4 +175,4 @@ def scheduler_status(
     return status
 
 
-__all__ = ["BusyWorker", "QueueWait", "SchedulerStatus", "scheduler_status"]
+__all__ = ["BusyWorker", "QueueWait", "SchedulerStatus", "UnknownQueueError", "scheduler_status"]

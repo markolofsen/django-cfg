@@ -315,6 +315,8 @@ sequenceDiagram
     end
 ```
 
+**One copy per recurring job (2.3.410):** the scheduler class is `DjangoCfgScheduler`; a tick whose previous copy still waits or runs books the next run and pushes nothing. Details, `rq_scheduler_status` and the dedicated-worker pattern: [Scheduler and Workers](./scheduler-and-workers).
+
 ---
 
 ## Monitoring Architecture

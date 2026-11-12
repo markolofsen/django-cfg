@@ -187,29 +187,7 @@ def build_textchoices_index() -> dict[frozenset, list[str]]:
     # Pass 2: walk every app's submodules. TextChoices defined at module
     # scope (apps/catalog/models/choices.py) are missed by pass 1.
     for app_config in apps.get_app_configs():
-        try:
-            module = importlib.import_module(app_config.name)
-        except ImportError:
-            continue
-        if not hasattr(module, "__path__"):
-            continue
-        for sub in pkgutil.walk_packages(module.__path__, prefix=module.__name__ + "."):
-            parts = sub.name.split(".")
-            # Skip migrations — they pin frozen choices that drift over time.
-            if "migrations" in parts:
-                continue
-            # Skip test modules — they never define production TextChoices, and
-            # may raise control-flow exceptions at import time (e.g.
-            # pytest.importorskip → Skipped, a BaseException, not Exception).
-            if "tests" in parts or any(p.startswith("test_") for p in parts):
-                continue
-            try:
-                submod = importlib.import_module(sub.name)
-            # BaseException, not Exception: pytest.importorskip raises Skipped
-            # (an OutcomeException → BaseException) at module scope, which would
-            # otherwise abort the entire schema build.
-            except BaseException:
-                continue
+        for submod in iter_app_modules(app_config.name):
             for attr_name in dir(submod):
                 try:
                     attr = getattr(submod, attr_name)
@@ -218,6 +196,61 @@ def build_textchoices_index() -> dict[frozenset, list[str]]:
                 _record(attr)
 
     return index
+
+
+# Never imported by the scan: frozen history, tests, and modules whose import
+# has side effects (admin.site.register, signal wiring, URL routing).
+_SKIP_PARTS = frozenset({"migrations", "tests", "admin", "signals", "urls"})
+
+
+def _is_app_package(path: str) -> bool:
+    """A directory with its own ``apps.py`` is a Django app."""
+    import os
+
+    return os.path.isfile(os.path.join(path, "apps.py"))
+
+
+def iter_app_modules(package_name: str):
+    """Yield the imported submodules of one installed app package.
+
+    Unlike ``pkgutil.walk_packages`` it decides before importing: a nested
+    package that is a Django app of its own (has ``apps.py``) is not entered.
+    If that app is installed it gets its own walk; if not, nothing of it is
+    imported. ``django_cfg`` is an installed app, and walking it whole used to
+    import ``django_cfg.apps.payments.admin`` and register the payments admin
+    in projects without payments.
+    """
+    import os
+
+    try:
+        module = importlib.import_module(package_name)
+    except ImportError:
+        return
+    if not hasattr(module, "__path__"):
+        return
+
+    stack: list[tuple[list[str], str]] = [(list(module.__path__), package_name)]
+    while stack:
+        paths, prefix = stack.pop()
+        for info in pkgutil.iter_modules(paths):
+            name = info.name
+            if name in _SKIP_PARTS or name.startswith("test_"):
+                continue
+            dotted = f"{prefix}.{name}"
+            if info.ispkg:
+                pkg_dir = os.path.join(getattr(info.module_finder, "path", ""), name)
+                if _is_app_package(pkg_dir):
+                    continue
+            try:
+                submod = importlib.import_module(dotted)
+            # BaseException, not Exception: pytest.importorskip raises Skipped
+            # (an OutcomeException → BaseException) at module scope, which would
+            # otherwise abort the entire schema build.
+            except BaseException:
+                continue
+            yield submod
+            if info.ispkg and hasattr(submod, "__path__"):
+                stack.append((list(submod.__path__), dotted))
 
 
 def _pick_best_class(paths: list[str], model: str, field: str) -> str | None:

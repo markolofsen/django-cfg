@@ -1,0 +1,149 @@
+---
+title: Scheduler and Workers
+description: One queued copy per recurring job, rq_scheduler_status, and why long jobs need their own worker
+---
+
+# Scheduler and Workers
+
+How recurring jobs reach a worker in django-cfg (2.3.410 and later), how to tell a
+dead scheduler from a busy worker, and how to lay out queues so a short,
+latency-bound job is never stuck behind a long one.
+
+---
+
+## One queued copy per recurring job
+
+Every `RQScheduleConfig` with `cron` or `interval` is registered with one
+deterministic job id (`schedule_<func>_<hash>`). Stock rq-scheduler pushes that id
+onto the queue on every tick, so behind a busy worker a queue fills with copies of
+the same job, and they all run back to back once the worker is free.
+
+django-cfg sets `RQ["SCHEDULER_CLASS"]` to
+`django_cfg.modules.django_rq.scheduler.DjangoCfgScheduler`. On each tick, for a
+recurring entry:
+
+| Previous copy | What the tick does |
+|---|---|
+| Still waiting in its queue | Books the next run, pushes nothing |
+| Running, heartbeat younger than 120 s | Books the next run, pushes nothing |
+| Running with a stale heartbeat (abandoned) | Pushes a new copy |
+| Gone (finished or failed) | Pushes a new copy |
+
+A skipped tick logs one INFO line:
+
+```
+rq scheduler: skipped apps.sources.tasks.hot_sync (schedule_hot_sync_…): previous copy still queued in 'low'
+```
+
+One-shot jobs (`enqueue_at`, `enqueue_in`) are untouched. Nothing to configure:
+the setting comes from `DjangoRQConfig`.
+
+Each scheduler loop also writes `djangocfg:rq:scheduler:last_tick` (unix time),
+which `rq_scheduler_status` reads.
+
+---
+
+## Scheduler dead or worker starved: `rq_scheduler_status`
+
+A late scheduled job has two different causes, and restarting the scheduler only
+fixes one of them.
+
+```bash
+python manage.py rq_scheduler_status
+python manage.py rq_scheduler_status --queue high --max-wait 60
+python manage.py rq_scheduler_status --json
+```
+
+```
+starved: scheduler_alive=True last_tick=1s
+  queue high: depth=9 wait=312s
+  queue low: depth=41 wait=780s
+  busy 342863c3…: apps.catalog.titles.describe.tasks.describe_batch 790s (high,default,low)
+  reason: high waits 312s (9 queued); workers busy: apps.catalog.titles.describe.tasks.describe_batch 790s
+```
+
+| Verdict | Meaning | Action |
+|---|---|---|
+| `ok` | Scheduler ticks, no queue waits longer than `--max-wait` | None |
+| `scheduler_dead` | No live `rq:scheduler_instance:*`, or no tick for `--max-tick-age` (default 120 s) | Restart the scheduler |
+| `starved` | The scheduler ticks, a queue waits longer than `--max-wait` (default 120 s); `busy` names the jobs holding the workers | Move the long job to its own worker (below) |
+
+A `--queue` that is not in `RQ_QUEUES` fails with one line, `unknown RQ queue 'high'; declared: default, ...`, and exit 1 (`UnknownQueueError` from `scheduler_status()`). Pass only the queues the project declares: a project without `high` uses e.g. `--queue default`.
+
+The command exits 1 when the verdict is not `ok`. The same data in Python:
+
+```python
+from django_cfg.modules.django_rq.health.status import scheduler_status
+
+st = scheduler_status(queue_names=["high"], max_wait=60)
+st.verdict, st.reason, st.queues, st.busy
+```
+
+---
+
+## A long job gets its own queue and worker
+
+One RQ worker runs one job at a time across every queue it serves. Queue order
+(`rqworker high default low`) only decides which job it takes next, never
+interrupts the one it runs. So a 13-minute LLM batch on `low` holds the worker,
+and a 30-second job on `high` waits 13 minutes.
+
+Rules:
+
+- A long job (LLM batch, import, crawl, anything that can pass a minute) gets its
+  own queue and its own worker container.
+- A latency-bound queue (heads, reapers, probes) gets a worker that serves only
+  that queue. The shared worker may serve it too.
+- The scheduler stays one process. Never scale it.
+
+```python
+# api/settings/builders/background.py
+DjangoRQConfig(
+    queues=[
+        RQQueueConfig(queue="high", default_timeout=180),
+        RQQueueConfig(queue="default"),
+        RQQueueConfig(queue="low"),
+        RQQueueConfig(queue="describe", default_timeout=3600),
+    ],
+    schedules=[
+        RQScheduleConfig(func="apps.legal.tasks.issue_head", interval=30, queue="high"),
+        RQScheduleConfig(func="apps.titles.tasks.describe_batch", interval=600, queue="describe", timeout=3600),
+    ],
+)
+```
+
+```yaml
+# docker-compose: one process per kind of work
+rq-worker:      # shared: everything short
+  command: ["python", "manage.py", "rqworker", "high", "default", "low"]
+rq-high:        # latency-bound only
+  command: ["python", "manage.py", "rqworker", "high"]
+rq-describe:    # the long job only
+  command: ["python", "manage.py", "rqworker", "describe"]
+rq-scheduler:
+  command: ["python", "manage.py", "rqscheduler", "--interval", "2"]
+  stop_grace_period: 20s
+  healthcheck:
+    test: ["CMD-SHELL", "python manage.py rq_scheduler_status --queue high --max-wait 60 > /dev/null"]
+    interval: 60s
+    timeout: 30s
+    retries: 3
+    start_period: 120s
+```
+
+`--interval 2` makes the scheduler look for due jobs every 2 s; the default 60 s
+caps every schedule at once a minute.
+
+---
+
+## The scheduler lock
+
+rq-scheduler takes `rq:scheduler_lock` for one tick (`SET NX EX interval+10`) and
+releases it at the end of the tick and on SIGTERM. During a deploy overlap two
+schedulers simply take turns; neither waits for the other's container to stop.
+`rqscheduler` start-up removes only dead `rq:scheduler_instance:*` entries (a
+`death` field or no TTL), never a live peer.
+
+If a scheduled job is late after a deploy, check `rq_scheduler_status` first: in
+the gptkino incident of 2026-11-12 the scheduler was healthy the whole time and the
+single worker was busy.
