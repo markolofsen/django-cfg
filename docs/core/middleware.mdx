@@ -130,6 +130,21 @@ Request headers used:
 |--------|---------|
 | `X-Timezone` | IANA timezone name (e.g. `America/New_York`) |
 | `X-Client-Time` | Client's current time in ISO-8601 format |
+| `X-Client-Id` | Per-browser random id, read by `ClientIdMiddleware` (below) |
+
+---
+
+## ClientIdMiddleware
+
+**Purpose:** Exposes the per-browser id the generated TS SDK sends as `request.client_id`.
+
+**Active when:** Always.
+
+- The SDK creates a random UUID once, keeps it in `localStorage` (key `cfg.client.id`) and sends it as `X-Client-Id` on every browser request.
+- The id is **optional**. Server-side rendering (listings and catalogues rendered for SEO), crawlers, scripts and curl send no header, and `request.client_id` is `None`. Nothing may depend on it being present.
+- A value that is not 8-64 characters of `A-Za-z0-9._-` is treated as absent.
+- It is a client-supplied hint, not an identity: anyone can send any value. Use it to group requests (logs, dedupe, rate-limit keys). Never use it to authenticate, and it does not replace the analytics visitor id.
+- A project that replaced `cors_allow_headers` entirely must add `x-client-id`, or cross-origin browsers refuse the request.
 
 ---
 

@@ -177,7 +177,7 @@ auth.setApiKey('your-api-key');
 
 #### Custom request headers and CORS
 
-The generated client already sends headers the default CORS list covers (`Authorization`, `X-API-Key`, `X-Timezone`, `X-Client-Time`, `X-Auth-Retry`, the chunked-upload headers, `Idempotency-Key`). If your app adds its own (`X-Holder`, `X-Content-SHA256`, ...) through a custom `fetch` or interceptor, no backend setup is needed: a preflight from an already-trusted origin gets the requested headers back. To list one explicitly set `cors_extra_headers = ["x-holder"]`; see [Custom request headers](/configuration/security#custom-request-headers). A browser "CORS error" with only `OPTIONS 200` in the server log means the preflight was refused: [how to read it](/configuration/security#reading-an-opaque-cors-error).
+The generated client already sends headers the default CORS list covers (`Authorization`, `X-API-Key`, `X-Timezone`, `X-Client-Time`, `X-Client-Id`, `X-Auth-Retry`, the chunked-upload headers, `Idempotency-Key`). If your app adds its own (`X-Holder`, `X-Content-SHA256`, ...) through a custom `fetch` or interceptor, no backend setup is needed: a preflight from an already-trusted origin gets the requested headers back. To list one explicitly set `cors_extra_headers = ["x-holder"]`; see [Custom request headers](/configuration/security#custom-request-headers). A browser "CORS error" with only `OPTIONS 200` in the server log means the preflight was refused: [how to read it](/configuration/security#reading-an-opaque-cors-error).
 
 #### Public clients (no auth) — automatic
 

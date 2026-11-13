@@ -105,6 +105,34 @@ function detectTimezone(): string | null {
   }
 }
 
+/** Per-browser client id sent as `X-Client-Id`. Random, created once, kept in
+ * localStorage. Not a fingerprint and not a login: it is never shared across
+ * sites. Without storage (private mode, SSR) it lives for this page load only.
+ */
+let _ephemeralClientId: string | null = null;
+
+function newClientId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `c-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function ephemeralClientId(): string {
+  if (_ephemeralClientId === null) _ephemeralClientId = newClientId();
+  return _ephemeralClientId;
+}
+
+function detectClientId(): string | null {
+  // Server render (SSR, catalogue crawl) has no browser: no header is sent.
+  if (typeof window === 'undefined') return null;
+  const spec = CFG_KEYS.clientId;
+  const stored = cfgStorage.read(spec.key, spec.store);
+  if (stored) return stored;
+  const created = newClientId();
+  return cfgStorage.write(spec.key, created, spec.store) ? created : ephemeralClientId();
+}
+
 /** Default API key fallback from `NEXT_PUBLIC_API_KEY`.
  *
  * Both browser and server: if NEXT_PUBLIC_API_KEY is set it is used as a
@@ -162,6 +190,10 @@ _COMMON_REQUEST_HEADERS_TS = '''\
     const tz = auth.getTimezone();
     if (tz) request.headers.set('X-Timezone', tz);
     request.headers.set('X-Client-Time', new Date().toISOString());
+
+    // Per-browser id, always sent. A per-request X-Client-Id wins.
+    const clientId = auth.getClientId();
+    if (clientId && !request.headers.has('X-Client-Id')) request.headers.set('X-Client-Id', clientId);
 '''
 
 # Wrap raw JSON error objects (thrown by hey-api on non-2xx responses) into
@@ -260,7 +292,7 @@ auth.setRefreshHandler(async (refresh) => {{
 // DO NOT EDIT — re-run `make gen`.
 
 import {{ APIError }} from './errors';
-import {{ cfgStorage, createStorage, type KeyStore }} from './keys';
+import {{ CFG_KEYS, cfgStorage, createStorage, type KeyStore }} from './keys';
 {auto_refresh_import}
 const ACCESS_KEY = '{access_key}';
 const REFRESH_KEY = '{refresh_key}';
@@ -684,6 +716,9 @@ export const auth = {{
   getTimezone(): string | null {{ return _timezoneOverride ?? detectTimezone(); }},
   setTimezone(timezone: string | null): void {{ _timezoneOverride = timezone; }},
 
+  // ── Client id (per browser, sent as `X-Client-Id`) ────────────────
+  getClientId(): string | null {{ return detectClientId(); }},
+
   // ── Base URL ──────────────────────────────────────────────────────
   getBaseUrl(): string {{
     const url = (_baseUrlOverride ?? defaultBaseUrl());
@@ -948,6 +983,7 @@ def render_auth_public_ts() -> str:
 // DO NOT EDIT — re-run `make gen`.
 
 import {{ APIError }} from './errors';
+import {{ CFG_KEYS, cfgStorage }} from './keys';
 
 export type StorageMode = 'localStorage' | 'cookie';
 
@@ -995,6 +1031,9 @@ export const auth = {{
   // IANA name sent as `X-Timezone`. `null` override = follow the browser.
   getTimezone(): string | null {{ return _timezoneOverride ?? detectTimezone(); }},
   setTimezone(timezone: string | null): void {{ _timezoneOverride = timezone; }},
+
+  // ── Client id (per browser, sent as `X-Client-Id`) ────────────────
+  getClientId(): string | null {{ return detectClientId(); }},
 
   // ── Base URL ──────────────────────────────────────────────────────
   getBaseUrl(): string {{

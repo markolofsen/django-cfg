@@ -64,6 +64,7 @@ export const CFG_KEYS = {
   monitorSessionId: k('cfg.monitor.session_id', 'local', false),
   monitorSessionCookie: k('cfg.monitor.session_id', 'cookie', false),
   monitorDebug: k('cfg.monitor.debug', 'local', false),
+  clientId: k('cfg.client.id', 'local', false),
   uiTabId: k('cfg.ui.tab_id', 'session', false),
   uiRouterSerial: k('cfg.ui.router_serial', 'session', false),
   uiState: k('cfg.ui.state', 'local', false),

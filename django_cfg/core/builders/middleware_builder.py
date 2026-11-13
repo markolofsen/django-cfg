@@ -106,6 +106,9 @@ class MiddlewareBuilder:
         # Must run early so all downstream code sees the correct timezone.
         middleware.append("django_cfg.middleware.TimezoneMiddleware")
 
+        # request.client_id from the X-Client-Id header the TS SDK sends (None when absent).
+        middleware.append("django_cfg.middleware.ClientIdMiddleware")
+
         # request.site, only where there is a choice to make
         if len(self.config.sites) > 1:
             middleware.append("django_cfg.middleware.site.SiteMiddleware")

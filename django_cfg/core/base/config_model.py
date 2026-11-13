@@ -201,6 +201,7 @@ class DjangoConfig(BaseModel):
             # format dates correctly server-side without any per-view changes.
             "x-timezone",    # IANA timezone string, e.g. "Europe/Moscow"
             "x-client-time", # ISO-8601 timestamp at request origin, e.g. "2026-05-05T12:00:00.000Z"
+            "x-client-id",   # per-browser random id (browser only; absent on SSR), see ClientIdMiddleware
 
             # File transfer / chunked upload headers
             # For the django_client module, the typescript generator will add the following headers to the request.
