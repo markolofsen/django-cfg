@@ -24,6 +24,7 @@ class ModelRole(str, Enum):
     TRANSLATE = "translate"     # faithful translation of short listing text / UI strings, plain text out
     HUMANIZE = "humanize"       # rewrite prose so it stops reading as generated: style, facts untouched
     JUDGE = "judge"             # adjudication: pick the one matching candidate (or none) and say why
+    WRITE = "write"             # catalogue copy: localized prose written from facts, returned in a strict schema
 
 
 class Verdict(str, Enum):

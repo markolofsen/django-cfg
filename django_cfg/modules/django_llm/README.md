@@ -85,6 +85,10 @@ django_llm/
 This README is the front page. The actual decisions, derivations,
 incident write-ups, and architecture diagrams are in:
 
+* [`@docs/task-methods.md`](./@docs/task-methods.md) — `tasks.*`:
+  name the job (`extract`, `write`, `translate` ...), never the model.
+* [`@docs/model-choice.md`](./@docs/model-choice.md) — which model
+  each task runs on, why, measured numbers, when to re-bench.
 * [`@docs/architecture.md`](./@docs/architecture.md) — how the
   layers wire together (catalog → routing → features → client →
   providers).

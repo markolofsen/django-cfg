@@ -719,6 +719,22 @@ export const auth = {{
   // ── Client id (per browser, sent as `X-Client-Id`) ────────────────
   getClientId(): string | null {{ return detectClientId(); }},
 
+  // ── Context headers for a hand-written fetch ──────────────────────
+  // The generated client's interceptor adds these itself. A raw `fetch` (an SSE
+  // stream, an upload) does not pass through it: spread this into its headers.
+  // Lower-case names, so they merge with a host's own object without duplicates.
+  clientHeaders(): Record<string, string> {{
+    const headers: Record<string, string> = {{}};
+    const locale = auth.getLocale();
+    if (locale) headers['accept-language'] = locale;
+    const tz = auth.getTimezone();
+    if (tz) headers['x-timezone'] = tz;
+    headers['x-client-time'] = new Date().toISOString();
+    const clientId = auth.getClientId();
+    if (clientId) headers['x-client-id'] = clientId;
+    return headers;
+  }},
+
   // ── Base URL ──────────────────────────────────────────────────────
   getBaseUrl(): string {{
     const url = (_baseUrlOverride ?? defaultBaseUrl());
@@ -1034,6 +1050,22 @@ export const auth = {{
 
   // ── Client id (per browser, sent as `X-Client-Id`) ────────────────
   getClientId(): string | null {{ return detectClientId(); }},
+
+  // ── Context headers for a hand-written fetch ──────────────────────
+  // The generated client's interceptor adds these itself. A raw `fetch` (an SSE
+  // stream, an upload) does not pass through it: spread this into its headers.
+  // Lower-case names, so they merge with a host's own object without duplicates.
+  clientHeaders(): Record<string, string> {{
+    const headers: Record<string, string> = {{}};
+    const locale = auth.getLocale();
+    if (locale) headers['accept-language'] = locale;
+    const tz = auth.getTimezone();
+    if (tz) headers['x-timezone'] = tz;
+    headers['x-client-time'] = new Date().toISOString();
+    const clientId = auth.getClientId();
+    if (clientId) headers['x-client-id'] = clientId;
+    return headers;
+  }},
 
   // ── Base URL ──────────────────────────────────────────────────────
   getBaseUrl(): string {{

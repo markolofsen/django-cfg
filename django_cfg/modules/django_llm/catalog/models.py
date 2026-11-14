@@ -84,6 +84,7 @@ _CATALOG: dict[str, ModelTraits] = {
             ModelRole.EXTRACTION: Verdict.GOOD,   # bench: 28/28, $0.0014/call — stable, OpenAI provider
             ModelRole.CLASSIFY: Verdict.GOOD,
             ModelRole.TOOL_CHAT: Verdict.OK,      # single-tool reliable, weak on 3+ tool chains
+            ModelRole.WRITE: Verdict.OK,          # 2026-11-14 films: 96 %, $0.0010, but 1.5 facts outside sources/film, flatter prose
         },
     ),
     "deepseek/deepseek-v4-flash": ModelTraits(
@@ -129,6 +130,7 @@ _CATALOG: dict[str, ModelTraits] = {
         roles={
             ModelRole.EXTRACTION: Verdict.AVOID,
             ModelRole.CLASSIFY: Verdict.OK,
+            ModelRole.WRITE: Verdict.GOOD,        # 2026-11-14 gptkino films en+ru: 98 % after one re-ask, $0.0021/film
         },
         issues=(
             "thinking cannot be disabled (Gemini 3.x) — truncates strict JSON ~14%",
@@ -191,6 +193,7 @@ _CATALOG: dict[str, ModelTraits] = {
         slug="openai/gpt-5-mini",
         reasoning=True, reasoning_disablable=False,
         roles={
+            ModelRole.WRITE: Verdict.GOOD,       # 2026-11-14 gptkino films en+ru: 98 % after one re-ask, $0.0036/film, 17 s
             ModelRole.REPLY: Verdict.GOOD,       # 31/40 drafted, judge 15/31; 2026-09-29 archive 24/24, judge 58 %, ~$0.016
         },
         issues=(
@@ -325,6 +328,17 @@ _RECOMMENDED: dict[ModelRole, tuple[str, ...]] = {
         # non-reasoning net on another vendor.
         "openai/gpt-5-nano",
         "google/gemini-2.5-flash-lite",
+    ),
+    ModelRole.WRITE: (
+        # ADDED 2026-11-14 from the gptkino film-description bench (R2): 50 films,
+        # en+ru in one strict schema, the writer's own checks, one re-ask, blind
+        # judge openai/gpt-5 on 30. gemini-3.1-flash-lite: 92 % first try, 98 %
+        # after the re-ask, $0.0021 a film, 3.8 s; gpt-5-mini (reasoning low):
+        # 84 % / 98 %, $0.0036, 17 s. Flash-lite also read better (natural 4.60
+        # vs 4.43) and kept ru names in Cyrillic. gpt-5-mini is the other-vendor
+        # net. Details: @docs/model-choice.md.
+        "google/gemini-3.1-flash-lite",
+        "openai/gpt-5-mini",
     ),
     ModelRole.REPLY: (
         # ADDED 2026-09-25 from a 40-reply evaluation (verdicts in openrouter.py).

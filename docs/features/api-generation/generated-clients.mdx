@@ -175,6 +175,10 @@ const unsubscribe = auth.onSessionExpired(() => {
 auth.setApiKey('your-api-key');
 ```
 
+#### Context headers and a hand-written `fetch`
+
+Every request the generated client makes carries `Accept-Language`, `X-Timezone`, `X-Client-Time` and `X-Client-Id` (a random per-browser id, optional: SSR and crawlers send none; the server reads it as `request.client_id`, see [ClientIdMiddleware](/core/middleware#clientidmiddleware)). A request that does not go through the client (an SSE stream, an upload) gets none of them: spread `auth.clientHeaders()` from `@djangocfg/api` into its headers. The chat widget does this for its stream.
+
 #### Custom request headers and CORS
 
 The generated client already sends headers the default CORS list covers (`Authorization`, `X-API-Key`, `X-Timezone`, `X-Client-Time`, `X-Client-Id`, `X-Auth-Retry`, the chunked-upload headers, `Idempotency-Key`). If your app adds its own (`X-Holder`, `X-Content-SHA256`, ...) through a custom `fetch` or interceptor, no backend setup is needed: a preflight from an already-trusted origin gets the requested headers back. To list one explicitly set `cors_extra_headers = ["x-holder"]`; see [Custom request headers](/configuration/security#custom-request-headers). A browser "CORS error" with only `OPTIONS 200` in the server log means the preflight was refused: [how to read it](/configuration/security#reading-an-opaque-cors-error).

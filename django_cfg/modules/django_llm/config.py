@@ -45,7 +45,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 #: `sync` compares this across trees; `promote` refuses to overwrite a HIGHER
 #: version than the one it carries. Left alone, everything still works — the
 #: gate only ever refuses a downgrade, never a match.
-ENGINE_VERSION: str = "1.13.0"
+ENGINE_VERSION: str = "1.14.0"
 
 
 def get_logger(name: str) -> logging.Logger:

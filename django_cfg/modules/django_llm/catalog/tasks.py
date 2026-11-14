@@ -9,8 +9,8 @@ together and owns the override path:
 
 Two kinds of entry:
 
-* **role tasks** (``extract``, ``classify``, ``translate``, ``judge``, ``chat``,
-  ``escalate``, ``reply``) point at a ``ModelRole``; the chain is the role's
+* **role tasks** (``extract``, ``classify``, ``translate``, ``judge``, ``write``,
+  ``chat``, ``escalate``, ``reply``) point at a ``ModelRole``; the chain is the role's
   ladder in ``catalog/models.py`` (so ``routing.presets`` and the task methods
   can never disagree).
 * **plane tasks** (``ocr``, ``transcribe``, ``embed``, ``embed_quality``) have no
@@ -107,6 +107,8 @@ TASKS: Final[Mapping[str, TaskSpec]] = MappingProxyType({
                  doc="Rewrite prose so it stops reading as machine-written; facts preserved, verified."),
         TaskSpec(name="judge", kind="structured", role=ModelRole.JUDGE, strict_json=True, max_tokens=2000,
                  doc="Adjudication: pick the matching candidate or none, with a reason."),
+        TaskSpec(name="write", kind="structured", role=ModelRole.WRITE, strict_json=True, max_tokens=5000,
+                 doc="Catalogue copy: localized prose (descriptions, SEO title, meta) written from facts into a schema."),
         TaskSpec(name="chat", kind="text", role=ModelRole.TOOL_CHAT, max_tokens=4096,
                  doc="General assistant turn / multi-tool chat."),
         TaskSpec(name="escalate", kind="text", role=ModelRole.ESCALATION, max_tokens=4096,

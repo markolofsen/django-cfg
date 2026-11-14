@@ -164,7 +164,7 @@ class MyConfig(DjangoConfig):
     # cors_allow_headers: list = [...]               # REPLACES the default list
 ```
 
-The default list covers what django-cfg and its generated TypeScript client send: `authorization`, `content-type`, `x-csrftoken`, `x-api-key`, `x-timezone`, `x-client-time`, `x-auth-retry`, the chunked-upload headers (`x-chunk-*`, `x-is-last`, `x-total-chunks`) and `idempotency-key`. Any other header a frontend adds (a custom `fetch` wrapper, an extra interceptor) is covered by reflection; see [generated clients](/features/api-generation/generated-clients#custom-request-headers-and-cors).
+The default list covers what django-cfg and its generated TypeScript client send: `authorization`, `content-type`, `x-csrftoken`, `x-api-key`, `x-timezone`, `x-client-time`, `x-client-id`, `x-auth-retry`, the chunked-upload headers (`x-chunk-*`, `x-is-last`, `x-total-chunks`) and `idempotency-key`. Any other header a frontend adds (a custom `fetch` wrapper, an extra interceptor) is covered by reflection; see [generated clients](/features/api-generation/generated-clients#custom-request-headers-and-cors).
 
 ### Log lines
 

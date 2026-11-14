@@ -109,7 +109,24 @@ def extract(schema: type[M], text: str, *, system: str | None = None, max_tokens
     ``strength``, ``lang``) for fields that do not name their own. Per-field outcomes are in
     ``result.usage["humanize"]``; a field whose rewrite is unfaithful keeps the extracted text.
     """
-    res = _parse("extract", schema, messages or [{"role": "user", "content": text}], system, max_tokens, models)
+    return _structured("extract", schema, text, system, max_tokens, messages, models, humanize, humanize_options)
+
+
+def write(schema: type[M], brief: str, *, system: str | None = None, max_tokens: int | None = None,
+          messages: list[dict] | None = None, models: Sequence[str] | None = None,
+          humanize: bool | None = None, humanize_options: dict[str, Any] | None = None) -> TaskResult[M]:
+    """Write catalogue copy into ``schema``: localized prose (descriptions, SEO titles, meta) from ``brief``.
+
+    Same contract as ``extract`` (strict schema, re-ask, ``Humanize`` fields), on the ``write`` chain, which is
+    picked for prose quality per dollar rather than extraction determinism (``@docs/model-choice.md``).
+    """
+    return _structured("write", schema, brief, system, max_tokens, messages, models, humanize, humanize_options)
+
+
+def _structured(task: str, schema: type[M], text: str, system: str | None, max_tokens: int | None,
+                messages: list[dict] | None, models: Sequence[str] | None,
+                humanize: bool | None, humanize_options: dict[str, Any] | None) -> TaskResult[M]:
+    res = _parse(task, schema, messages or [{"role": "user", "content": text}], system, max_tokens, models)
     if humanize is not False:
         from ..features.humanize import has_marked_fields  # lazy
 
@@ -320,6 +337,7 @@ def _twin(fn: Callable[..., Any], name: str) -> Callable[..., Any]:
 
 
 aextract = _twin(extract, "aextract")
+awrite = _twin(write, "awrite")
 aclassify = _twin(classify, "aclassify")
 ajudge = _twin(judge, "ajudge")
 atranslate = _twin(translate, "atranslate")
