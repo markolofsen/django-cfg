@@ -111,6 +111,50 @@ Each assistant gets one action, built from the endpoint URL (`E`) and a short al
 | Notion | Copy `E`; in an agent: Tools & Access, Add connection, Custom MCP server; auth OAuth (Business and Enterprise plans) |
 | Perplexity | Copy `E`, open `https://www.perplexity.ai/computer/plugins`: Add custom, MCP connector, Remote; auth OAuth |
 
+## Install script and agent skill
+
+Every profile serves two files beside `info/`, to anyone (an installer has no
+credential yet):
+
+| URL | What it is |
+|---|---|
+| `<endpoint>/install.sh` | POSIX `sh` that registers the server in Claude Code, Codex and Gemini CLI, whichever are in `PATH`, and installs the skill |
+| `<endpoint>/SKILL.md` | An agent skill generated from the live server |
+
+```sh
+curl -fsSL https://api.example.com/mcp/install.sh | sh
+curl -fsSL https://api.example.com/mcp/install.sh | MCP_API_KEY=<key> sh   # key profile
+curl -fsSL https://api.example.com/mcp/install.sh | sh -s -- --dry-run         # --uninstall, --no-skill, --force
+```
+
+An OAuth profile (`enable_oauth`) registers by URL and signs in on first use. A key
+profile reads your API key from `MCP_API_KEY` (not a bare `API_KEY`, which a shell often holds for something else), else asks on the terminal without echo;
+with neither it stops before writing anything. Your API key is never in the script.
+
+Say what the skill is for (an agent decides from the description alone whether to
+load it; `mcp_doctor` warns while it is missing):
+
+```python
+mcp.skill(
+    description="Use when the user asks about Acme listings, prices or agents.",
+    sections={"Rules": "Prices are in EUR. Never invent a listing id."},
+    # alias="acme",             # registration name; default: the server name, slugged
+    # file="mcp/SKILL.md",      # replaces the generated text entirely
+)
+```
+
+`ProfileBuilder.skill(...)` does the same for one profile. The `public` and `default`
+profiles use the bare alias, any other profile `<alias>-<profile>`.
+
+The tool table and the server's `instructions` appear in `SKILL.md` only on a request
+that carries a credential the profile accepts (the rule of `/info/`; there is no
+anonymous profile). An anonymous reader gets "call `tools/list` after connecting". The
+skill the installer fetches is the anonymous one.
+
+Skill locations (vendor documentation, checked 2026-11-14): Claude Code
+`~/.claude/skills/<alias>/SKILL.md`; Codex `~/.agents/skills/` (its user scope);
+Gemini CLI `~/.gemini/skills/` or the same `~/.agents/skills/`, so one copy serves both.
+
 ## Clients that add a server in a form (Notion, Perplexity, Mistral, Copilot Studio, n8n, Zapier, Make)
 
 Some apps have no config file and no link: the person fills a form. Two ways in, both already served:

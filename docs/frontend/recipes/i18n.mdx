@@ -252,6 +252,18 @@ function LanguagePicker() {
 
 `changeLocale` sets the `NEXT_LOCALE` cookie and performs a hard navigation.
 
+### Locale hint
+
+`BaseApp` shows a small dismissible card ("This page is available in Deutsch") when the browser's first language that
+your site speaks differs from the current one. It is written in the visitor's language, needs no setup beyond `i18n`,
+renders nothing for a one-language site or a crawler, and remembers a dismissal per language pair (180 days), not
+globally. Switching language yourself counts as an answer. Tune it with `i18n.suggestion`:
+
+```tsx
+<BaseApp i18n={{ locale, locales, onLocaleChange: changeLocale, suggestion: { exclude: [/^\/[a-z]{2}\/legal/] } }} />
+// suggestion: false  → off
+```
+
 ### Pattern 6: Server Components
 
 ```typescript

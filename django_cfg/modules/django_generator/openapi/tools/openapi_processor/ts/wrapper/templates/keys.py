@@ -68,6 +68,7 @@ export const CFG_KEYS = {
   uiTabId: k('cfg.ui.tab_id', 'session', false),
   uiRouterSerial: k('cfg.ui.router_serial', 'session', false),
   uiState: k('cfg.ui.state', 'local', false),
+  uiLocaleHint: k('cfg.ui.locale_hint', 'local', false),
   chatSpeechLanguage: k('cfg.chat.speech_language', 'local', false),
   chatRecentTools: k('cfg.chat.recent_tools', 'local', false),
   formsSpeechDebug: k('cfg.forms.speech_debug', 'local', false),

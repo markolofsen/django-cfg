@@ -15,10 +15,13 @@ from django.urls.resolvers import RegexPattern, URLResolver
 from .views import MCPView
 from .agents.api.views import MCPAgentChatView, MCPAgentStreamView, MCPAgentHistoryView
 from .info_view import MCPInfoView
+from .distribution.views import MCPInstallScriptView, MCPSkillView
 
 urlpatterns = [
     path("", MCPView.as_view(), name="mcp-endpoint"),
     path("info/", MCPInfoView.as_view(), name="mcp-info"),
+    path("install.sh", MCPInstallScriptView.as_view(), name="mcp-install-script"),
+    path("SKILL.md", MCPSkillView.as_view(), name="mcp-skill"),
     path("agent/", MCPAgentChatView.as_view(), name="mcp-agent"),
     path("agent/stream/", MCPAgentStreamView.as_view(), name="mcp-agent-stream"),
     path("agent/history/", MCPAgentHistoryView.as_view(), name="mcp-agent-history"),
@@ -80,6 +83,20 @@ def _patterns_for(config) -> list:
                 f"{prefix}/info/",
                 MCPInfoView.as_view(profile=name),
                 name=f"mcp-{name}-info",
+            )
+        )
+        patterns.append(
+            path(
+                f"{prefix}/install.sh",
+                MCPInstallScriptView.as_view(profile=name),
+                name=f"mcp-{name}-install-script",
+            )
+        )
+        patterns.append(
+            path(
+                f"{prefix}/SKILL.md",
+                MCPSkillView.as_view(profile=name),
+                name=f"mcp-{name}-skill",
             )
         )
         if getattr(profile, "oauth", None):

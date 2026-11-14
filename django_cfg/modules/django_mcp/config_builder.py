@@ -20,6 +20,7 @@ from django_cfg.modules.django_mcp import (
     MCPExtraKey,
     MCPOAuthConfig,
     MCPProfile,
+    MCPSkillConfig,
     MCPTargetConfig,
 )
 from django_cfg.modules.django_mcp.tools.base import MCPTool, tool_registry
@@ -59,6 +60,7 @@ class ProfileBuilder:
         self._rate_limit: str = "100/minute"
         self._oauth: Optional[MCPOAuthConfig] = None
         self._instructions: Optional[str] = None
+        self._skill: Optional[MCPSkillConfig] = None
 
     def enable_oauth(self, consent_url: Optional[str] = None, issuer: Optional[str] = None, **ttl: int) -> "ProfileBuilder":
         """Let clients sign in (OAuth 2.1, PKCE) instead of sending a key.
@@ -153,6 +155,20 @@ class ProfileBuilder:
         self._instructions = text
         return self
 
+    def skill(
+        self,
+        *,
+        description: Optional[str] = None,
+        sections: Optional[Dict[str, str]] = None,
+        file: Optional[str] = None,
+        alias: Optional[str] = None,
+    ) -> "ProfileBuilder":
+        """Skill and install script of this profile; see :meth:`MCPConfigBuilder.skill`."""
+        self._skill = MCPSkillConfig(
+            alias=alias, description=description, sections=sections or {}, file=file
+        )
+        return self
+
     def build(self) -> MCPProfile:
         """Validated here, so a bad profile fails where it was written."""
         return MCPProfile(
@@ -178,6 +194,7 @@ class ProfileBuilder:
             key_validator=self._key_validator,
             oauth=self._oauth,
             instructions=self._instructions,
+            skill=self._skill,
         )
 
     def __enter__(self) -> "ProfileBuilder":
@@ -249,6 +266,7 @@ class MCPConfigBuilder:
         self._public_profile: Optional[Dict[str, Any]] = None
         self._synthesised_profiles: bool = False
         self._instructions: Optional[str] = None
+        self._skill: Optional[MCPSkillConfig] = None
 
     def enable_public_profile(
         self,
@@ -444,6 +462,35 @@ class MCPConfigBuilder:
     def set_instructions(self, text: str) -> "MCPConfigBuilder":
         """`instructions` sent in the initialize result (profiles may override)."""
         self._instructions = text
+        return self
+
+    def skill(
+        self,
+        *,
+        description: Optional[str] = None,
+        sections: Optional[Dict[str, str]] = None,
+        file: Optional[str] = None,
+        alias: Optional[str] = None,
+    ) -> "MCPConfigBuilder":
+        """What ``<endpoint>/SKILL.md`` and ``<endpoint>/install.sh`` say.
+
+            mcp.skill(
+                description="Use when the user asks about listings, prices or agents of Example.",
+                sections={"Rules": "Prices are in EUR. Never invent a listing id."},
+            )
+
+        Both endpoints exist on every profile without this call; it sets the
+        wording. The skill is generated from the live server (connection,
+        sign-in rule, tools), then ``sections`` follow in order. ``file`` (a path
+        under ``BASE_DIR``) replaces the generated text entirely: use it only
+        when the generated shape is wrong for you. ``alias`` names the
+        registration and the skill folder (``^[a-z0-9][a-z0-9_-]{0,31}$``).
+        ``mcp_doctor`` warns while ``description`` is missing: an agent chooses
+        whether to load the skill from that line alone.
+        """
+        self._skill = MCPSkillConfig(
+            alias=alias, description=description, sections=sections or {}, file=file
+        )
         return self
 
     def add_remote_manifest(
@@ -698,6 +745,7 @@ class MCPConfigBuilder:
             llm_model=self._llm_model,
             introspection=self._introspection,
             instructions=self._instructions,
+            skill=self._skill,
             install_targets=self._targets,
             profiles={name: b.build() for name, b in self._profiles.items()},
             exposed_apps=exposed_apps,

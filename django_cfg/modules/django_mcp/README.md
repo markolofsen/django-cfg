@@ -69,6 +69,51 @@ curl -X POST http://localhost:8000/cfg/mcp/agent/ \
 | `POST /cfg/mcp/` | JSON-RPC 2.0 | MCP protocol (tools/list, tools/call) |
 | `POST /cfg/mcp/agent/` | REST | Chat-style agent interface |
 
+## Install script and agent skill
+
+Every profile serves two files beside `info/`, to anyone (an installer has no
+credential yet):
+
+| URL | What it is |
+|---|---|
+| `<endpoint>/install.sh` | POSIX `sh` that registers the server in Claude Code, Codex and Gemini CLI, whichever are in `PATH`, and installs the skill |
+| `<endpoint>/SKILL.md` | An agent skill generated from the live server |
+
+```sh
+curl -fsSL https://api.example.com/mcp/install.sh | sh
+curl -fsSL https://api.example.com/mcp/install.sh | MCP_API_KEY=<key> sh   # key profile
+curl -fsSL https://api.example.com/mcp/install.sh | sh -s -- --dry-run         # --uninstall, --no-skill, --force
+```
+
+An OAuth profile (`enable_oauth`) registers by URL and signs in on first use. A key
+profile reads your API key from `MCP_API_KEY` (not a bare `API_KEY`, which a shell often holds for something else), else asks on the terminal without echo;
+with neither it stops before writing anything. Your API key is never in the script.
+
+Say what the skill is for (an agent decides from the description alone whether to
+load it; `mcp_doctor` warns while it is missing):
+
+```python
+mcp.skill(
+    description="Use when the user asks about Acme listings, prices or agents.",
+    sections={"Rules": "Prices are in EUR. Never invent a listing id."},
+    # alias="acme",             # registration name; default: the server name, slugged
+    # file="mcp/SKILL.md",      # replaces the generated text entirely
+)
+```
+
+`ProfileBuilder.skill(...)` does the same for one profile. The `public` and `default`
+profiles use the bare alias, any other profile `<alias>-<profile>`.
+
+The tool table and the server's `instructions` appear in `SKILL.md` only on a request
+that carries a credential the profile accepts (the rule of `/info/`; there is no
+anonymous profile). An anonymous reader gets "call `tools/list` after connecting". The
+skill the installer fetches is the anonymous one.
+
+Skill locations (vendor documentation, checked 2026-11-14): Claude Code
+`~/.claude/skills/<alias>/SKILL.md`; Codex `~/.agents/skills/` (its user scope);
+Gemini CLI `~/.gemini/skills/` or the same `~/.agents/skills/`, so one copy serves both.
+Details and decisions: `@dev/.../mcp-install-script-and-skill/PLAN.md`.
+
 ## Built-in Tools (11)
 
 | Category | Tools |
@@ -149,6 +194,7 @@ project_root/
 | `config_builder.py` | `MCPConfigBuilder` API |
 | `apps.py` | Django AppConfig + auto-discovery |
 | `views.py` | MCP JSON-RPC endpoint |
+| `distribution/` | `install.sh` template, `SKILL.md` generator and their views |
 | `auto_loader.py` | Discovers `mcp/` from project root |
 | `tools/` | Built-in tools (introspection, queries) |
 | `agent/` | Agent runner, ORM tools, context |

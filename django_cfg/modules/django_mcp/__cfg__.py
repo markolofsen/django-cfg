@@ -279,6 +279,46 @@ class MCPOAuthConfig(BaseModel):
     refresh_ttl: int = Field(default=60 * 60 * 24 * 180, ge=60, description="Refresh token lifetime, seconds.")
 
 
+ALIAS_PATTERN = r"^[a-z0-9][a-z0-9_-]{0,31}$"
+
+
+class MCPSkillConfig(BaseModel):
+    """The agent skill (``SKILL.md``) and install script a profile publishes.
+
+    Every profile serves ``<endpoint>/install.sh`` and ``<endpoint>/SKILL.md``
+    whether or not this is set; this only says what they contain. The skill is
+    generated from the live server, then ``sections`` are appended in order; only
+    an explicit ``file`` replaces the generated text.
+    """
+    model_config = ConfigDict(extra="forbid", frozen=False)
+
+    alias: Optional[str] = Field(
+        default=None,
+        pattern=ALIAS_PATTERN,
+        description=(
+            "Name clients register the server under and the skill folder name: "
+            "lowercase letters, digits, '-' and '_', at most 32. Default: the "
+            "server name, slugged."
+        ),
+    )
+    description: Optional[str] = Field(
+        default=None,
+        max_length=1024,
+        description=(
+            "Frontmatter ``description``. An agent decides from it alone whether to "
+            "load the skill, so write it as 'Use when ...'."
+        ),
+    )
+    sections: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Extra '## <title>' sections appended after the generated ones, in order.",
+    )
+    file: Optional[str] = Field(
+        default=None,
+        description="Path (relative to BASE_DIR) of a hand-written SKILL.md that replaces the generated one entirely.",
+    )
+
+
 class MCPProfile(BaseModel):
     """One MCP surface: who may use it, what it serves, where it is mounted.
 
@@ -361,6 +401,11 @@ class MCPProfile(BaseModel):
         default=None,
         description="Text sent as `instructions` in initialize; overrides the config-level one.",
     )
+    skill: Optional[MCPSkillConfig] = Field(
+        default=None,
+        description="Skill and install script of this profile; overrides the config-level one.",
+    )
+
     @property
     def serves_all_tools(self) -> bool:
         return ALL_TOOLS in self.tools
@@ -649,6 +694,10 @@ class DjangoMCPModuleConfig(BaseModel):
     instructions: Optional[str] = Field(
         default=None,
         description="Text sent as `instructions` in initialize (how to use this server's tools).",
+    )
+    skill: Optional[MCPSkillConfig] = Field(
+        default=None,
+        description="Skill and install script served by every profile that does not set its own.",
     )
     enable_streaming: bool = Field(
         default=False,

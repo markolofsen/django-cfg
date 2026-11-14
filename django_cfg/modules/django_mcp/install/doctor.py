@@ -48,8 +48,53 @@ def diagnose(config: Any, targets: dict[str, Target], *, skip_probe: bool = Fals
     findings += _check_key(config)
     findings += _check_identity(config)
     findings += _check_targets(config, targets)
+    findings += _check_skill(config)
     if not skip_probe:
         findings += _check_reachable(targets)
+    return findings
+
+
+def _check_skill(config: Any) -> list[Finding]:
+    """The skill an agent is offered, one finding per profile.
+
+    An agent chooses whether to load a skill from its ``description`` alone, so a
+    missing or vague one makes the skill silently useless: it is installed and
+    never used.
+    """
+    from django_cfg.modules.django_mcp.distribution.skill import effective_skill, read_skill_file
+
+    profiles = getattr(config, "profiles", None) or {}
+    findings: list[Finding] = []
+    for name, profile in (profiles or {"default": None}).items():
+        skill = effective_skill(config, profile)
+        check = "agent skill" if len(profiles) < 2 else f"agent skill ({name})"
+        description = (skill.description or "").strip()
+        fix = 'mcp.skill(description="Use when the user asks about ... (what it is for)")'
+        if not description:
+            findings.append(
+                Finding(
+                    "warn",
+                    check,
+                    "no description. SKILL.md is served with a generic one, and an "
+                    "agent decides from that line alone whether to load the skill.",
+                    fix,
+                )
+            )
+        elif "use when" not in description.lower():
+            findings.append(
+                Finding("warn", check, "the description does not say when to use the skill", fix)
+            )
+        else:
+            findings.append(Finding("ok", check, "described"))
+        if skill.file and read_skill_file(skill) is None:
+            findings.append(
+                Finding(
+                    "fail",
+                    check,
+                    f"file {skill.file!r} cannot be read from inside BASE_DIR; the generated skill is served instead",
+                    "fix the path or drop file=",
+                )
+            )
     return findings
 
 
