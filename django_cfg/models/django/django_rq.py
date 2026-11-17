@@ -574,6 +574,13 @@ class DjangoRQConfig(BaseModel):
             except Exception:
                 pass
 
+        # Notion lead outbox sweeper, when django_notion is enabled
+        if getattr(config, 'notion', None):
+            try:
+                schedules.extend(config.notion.get_rq_schedules())
+            except Exception:
+                pass
+
         # Storage outbox worker, when the outbox deletes files here
         if getattr(config, 'storage', None):
             try:

@@ -1,0 +1,219 @@
+---
+title: django_notion — leads in Notion
+description: Mirror leads from Django into a Notion Leads database through an outbox, RQ delivery and retries, without ever breaking the save.
+---
+
+# django_notion
+
+Duplicates leads from Django into a Notion **Leads** database. The lead is saved in the project database first (the
+source of truth); the module mirrors it and **never** breaks the save. Leads are its only job today; the name is
+general so other mirrors can join later.
+
+- Config: `NotionConfig` (`DjangoConfig.notion`), `NotionTarget`. Token from `NOTION__TOKEN`, or per target.
+- Wiring: `connect(Model, adapter=..., route=...)`. No hand-written signals.
+- Safety: outbox table + RQ delivery + retries + sweeper. Notion down = rows wait, nothing raises.
+- Also: Telegram and admin-email copy of every lead (`notify_telegram`, `notify_email`, with the Notion link) and a plain-text acknowledgement to the lead's author (`acknowledge`), independent of Notion.
+- Checks: `manage.py notion_doctor` (read-only). Admin: *Notion outbox* with a **Retry** action.
+- Operations (permissions, live check, Hub cutover): [Operations](#operations).
+
+## Quick start
+
+```python
+# config.py
+from django_cfg.modules.django_notion import NotionConfig, NotionTarget
+
+notion = NotionConfig(
+    enabled=True,
+    project="mls",  # prefix of the idempotency key
+    targets={
+        "mls":  NotionTarget(data_source_id="419b879d-c730-4c81-9b7f-a80b986a07fd"),  # CRM: MLS / Leads
+        "saas": NotionTarget(data_source_id="<CRM: SaaS Leads data source id>"),
+    },
+)
+```
+
+```python
+# apps/inquiries/apps.py  (ready())
+from django_cfg.modules.django_notion import NotionLead, connect
+
+def to_lead(inq) -> NotionLead:
+    return NotionLead(name=inq.name, email=inq.email, phone=inq.phone, message=inq.message, form=inq.form,
+                      page_url=inq.page_url, received_at=inq.created_at, extra=inq.payload)
+
+def route(inq):  # None = do not send
+    return "mls" if inq.site in {"caribbean-mls", "danmerriam.com"} else "saas"
+
+connect(Inquiry, adapter=to_lead, route=route)
+```
+
+`NOTION__TOKEN` in the environment (never in code). `python manage.py migrate` creates the outbox table.
+
+## What reaches Notion
+
+| NotionLead | Column | Notes |
+|---|---|---|
+| name | Name (title) | falls back to email, phone, "Lead" |
+| (always) | Status = New, Source (Website by default) | Status is set only on create |
+| brand | Brand (multi-select) | which site or product the lead came from, e.g. `Caribbean MLS`, `Dan Merriam`, `carapis` |
+| email, phone, message, form, page_url | Email, Phone, Message, Form, Page URL | bad email / URL goes to Details |
+| received_at | Received at | |
+| extra | Details | one `Label: value` line per field: UTM, ad clicks (gclid), locale, company, segment, country... |
+| (always) | Hub run id | the idempotency key `<project>:<app.model>:<pk>` |
+
+Never written: Owner, Next step, Notes, Client, Conversation summary (people and Hub own them).
+
+Only what people filter or sort by is a column; every other field goes to Details with no schema change.
+
+**Details rules**: order Company, Source page, Locale, then the rest alphabetically; nested `Budget / Min: 10`; lists
+`a, b`; bool `Yes`/`No`; empty values dropped; a value over 1000 characters is cut with a note; Details over ~6000
+characters ends with the number of fields not shown. Never copied: `website`, `startedAt`, `elapsedMs`, idempotency keys,
+Hub keys, and any name containing password, token, api key, authorization, captcha, cookie (also secret, csrf, turnstile).
+A column can be renamed or switched off per target: `NotionTarget(columns={"brand": "Site", "form": None})`; a switched-off
+column's value moves into Details (into the page body when Details itself is off).
+
+## Delivery
+
+1. `post_save(created)` writes a `NotionOutbox` row **inside the lead's transaction** (in a savepoint) with the lead payload.
+2. `transaction.on_commit` queues the RQ job `django_notion.tasks.deliver_outbox`.
+3. The job creates the page under the target's **data source** (API `2025-09-03`) and stores `notion_page_id`.
+4. Failure: `failed` + `next_attempt_at` (30 s, 60 s, 120 s ... up to `max_backoff_seconds`); 429 waits `Retry-After` and does not
+   count as an attempt; a Notion 400 (validation) is `dead` at once; after `max_attempts` a row is `dead`. **Retry** in the admin resets it.
+5. The sweeper (RQ schedule added automatically, every `sweep_interval_seconds`) queues due rows, recovers rows stuck in
+   `sending`, and purges sent rows older than `retention_days`. If Redis is down when the lead is saved, the sweeper still delivers it.
+
+A page that has a `notion_page_id` is never created again.
+
+## Configuration
+
+```python
+from django_cfg import NotionConfig, NotionLead, NotionTarget   # also exported from the package root
+
+notion = NotionConfig(
+    enabled=True,
+    targets={"mls": NotionTarget(data_source_id="...", token=None)},  # token=SecretStr(...) = this target's own integration
+    enrich=True,            # Project, Environment, Site, API host (Brand defaults to the project name)
+    notify_telegram=True,   # Telegram copy of every lead
+    notify_email=True,      # email copy to the administrators
+    notify_link_wait_seconds=30,  # wait this long for the Notion page link
+    acknowledge=True,       # plain-text 'we received your request' to the lead's author
+    acknowledge_reply_within="2 business hours",  # optional
+)
+```
+
+- **Token**: `NOTION__TOKEN` is the default for every target. A `NotionTarget(token=SecretStr(...))` uses its own integration
+  instead (one workspace per brand); neither ever appears in `repr`, logs or errors.
+- **Enrich** (`enrich=True`): the project name, environment, site and API host are added to every lead; a value the adapter
+  set is never overwritten.
+- **Request context**: when `notion.enabled`, `django_notion.context.RequestContextMiddleware` is installed automatically. While a
+  request is handled it keeps the page (`Referer`), campaign parameters (UTM, `gclid`, `msclkid`) and `Accept-Language`; the
+  lead gets them as `page_url` and `extra` (Details), again without overwriting what the adapter set. Outside a request
+  (shell, RQ job) nothing is added.
+
+## Telegram, admin email and the author's acknowledgement
+
+Every captured lead is also announced, once, on three channels that need no new settings:
+
+| Channel | Goes through | Skipped silently when | Switch |
+|---|---|---|---|
+| Telegram | `django_telegram` (`DjangoConfig.telegram`: bot token and chat id), HTML parse mode, all fields escaped | no bot token or no chat id | `notify_telegram` |
+| Admin email | `django_email`, to `get_admin_emails()` (`config.admin_emails`, then Django `ADMINS`), subject `[<project>] New lead: <name>` | no recipients | `notify_email` |
+| Acknowledgement | `django_email` `send_html(text_only=True)`: a **plain-text** letter to the lead's own address, subject `We received your request — <project>` | the lead has no syntactically valid email, the address is an admin or our own sender, or it already got one in the last 24 h | `acknowledge` |
+
+Telegram and the admin email carry Name, Email, Phone, Form, Page URL, Brand, the Message (cut at 1500 characters), the
+Details lines (never secrets or the Notion token) and, when the page exists, `Notion: https://www.notion.so/<page id without dashes>`.
+
+**Notion link without waiting for Notion.** The announcement job runs right after the lead is saved. When a Notion page is still to
+come (target configured with a token, row not `sent`/`dead`), Telegram and the admin email wait up to
+`notify_link_wait_seconds` (default 30; 0 = never wait) counted from the lead's creation. A successful delivery wakes them at once
+with the link; if the grace ends first (Notion slow, failing or down) they go **without** the link, and never a second message
+later. With no Notion token for the lead nothing waits. The acknowledgement waits with them (same job) and **never** contains the
+link.
+
+**Acknowledgement letter.** Plain text only, no HTML part, no template, no tracking. Language from the lead's `Locale`
+(`Accept-Language`, filled by the request-context middleware): en, ru, ko, de, fr, es, pt, zh, ja, ar, else English; the words live
+in `notify_texts.py`. Content: greeting (by name when known), "we received your request", optionally "We usually reply within
+`acknowledge_reply_within`" (free text such as `2 business hours`, not translated; omitted when empty), a recap (form, message
+excerpt of at most 200 characters), a signature with the project name and `site_url` (the only link). `Reply-To` is the first admin
+email. `acknowledge_subject` and `acknowledge_body` (placeholders `{name} {project} {site}`) replace the subject and the main
+paragraph; a broken template falls back to itself, never breaks the send. The 24 h limit counts letters actually sent per address
+(`NotionOutbox.ack_email`); two simultaneous leads from one address may both pass it.
+
+- **Independent.** Own RQ job (`tasks.notify_outbox`), queued next to the delivery job. A Notion failure, a missing Notion
+  token or Notion being down does not stop any channel, and a failing channel never stops the others or the lead save.
+- **Once.** `telegram_notified_at`, `email_notified_at`, `ack_notified_at` settle a channel (sent, or skipped on purpose) and are never
+  cleared; a Notion retry never repeats an announcement. A failed channel is retried by the sweeper with backoff (30 s doubling to
+  `max_backoff_seconds`) and the `max_attempts` cap, only for the channel that failed (`notify_attempts`, `notify_error`).
+  Rows that existed before the migrations are marked settled, so an upgrade announces nothing old.
+- **Limits.** Telegram and email are handed to their own queue / thread, so "sent" means accepted for sending; a later
+  provider error is in their logs, not in the outbox. A lead is still captured only for a configured Notion target (the outbox row
+  belongs to one), so a project that wants only Telegram and email still sets `notion.enabled` and one target. A crash between
+  sending and writing the flag can announce one lead twice. The auto-reply goes to an address the visitor typed: keep the 24 h limit on.
+
+## Enabling on a project: mandatory steps
+
+1. **Turn off Hub intake for that form first.** Hub (`crm/`, `/apix/crm/leads/<public_id>/`) already writes site forms into the
+   same Notion bases; with both on, every lead lands twice. This module becomes the single writer for Django projects.
+2. Create a separate Notion integration with **Insert content** only, share the Leads database with it, set `NOTION__TOKEN`.
+3. Check on staging (see [Operations](#operations)), then `python manage.py notion_doctor`.
+4. Mention in the privacy policy that contact details (email, phone, message) are processed in Notion.
+
+## Tests
+
+`tests/modules/test_django_notion.py` (fake client, no network): `DJANGO_SETTINGS_MODULE=tests.settings PYTHONPATH=. .venv/bin/python -m pytest tests/modules/test_django_notion.py -q`.
+
+## Operations
+
+### Permissions (Insert content only)
+
+Notion docs: *Create a page* requires **Insert content** on the target. Retrieve database / data source state no capability; the
+capabilities page ties **Read content** to Retrieve a database. So:
+
+- Delivery needs only Insert content **if the target has `data_source_id`** (no read call at runtime).
+- A target with only `database_id` is resolved to its data source with `databases.retrieve` (Read content). With an Insert-only
+  token that fails with `restricted_resource`/404 and rows stay `failed`: set `data_source_id` instead (Notion: open the database,
+  copy the data source id, or fetch `collection://<id>` through the Notion MCP).
+- `notion_doctor` reads the schema (Read content). With an Insert-only token it reports a **warning** ("cannot verify") and
+  checks only that the token is accepted. Give it Read content temporarily on staging if you want the column check.
+- `lookup_before_retry=True` also needs Read content.
+
+Status of these claims: derived from the Notion documentation and the SDK source (2026-11-17). **Not verified against a real
+integration.**
+
+### Duplicates
+
+The Notion API has no idempotency key. After a timeout or 5xx the page may exist already; with an Insert-only token we cannot
+look. The row is marked `maybe_created`; the retry then creates the page again (at-least-once, a rare duplicate beats a lost lead).
+The `Hub run id` column holds the key, so duplicates are searchable. With Read content and `lookup_before_retry=True` the
+retry first queries `Hub run id = key`.
+
+### Live check (owner, staging)
+
+Nothing was run against a real Notion workspace. Before the first project goes live:
+
+1. Duplicate the Leads database into a staging page; create a new integration (Insert content, plus Read content for the first doctor run); share the staging database with it.
+2. `NOTION__TOKEN=<staging token>`, a target with the staging database's `data_source_id`.
+3. `python manage.py notion_doctor` -> no `[ERROR]`.
+4. In a shell create one test lead through the connected model; run `python manage.py rqworker` (or call `tasks.deliver_outbox(<id>)`).
+5. Expect: one page, Status New, Source Website, Hub run id = key, Details lines as in the rules. Admin outbox row `sent` with a page id.
+6. Revoke Read content, repeat with a new lead: the page must still be created (confirms the Insert-only claim).
+7. Break the token: the row becomes `failed`, the lead is still saved. Fix and press **Retry**.
+8. Then switch the target to production ids and the production-only integration.
+
+### Hub cutover
+
+Hub already writes website leads into the same bases. For each form moved to this module: disable the Hub intake for that form,
+deploy with the module enabled, watch one real lead, keep Hub for sites that are not Django.
+
+### Privacy
+
+Email, phone and message text go to Notion (and are kept in the outbox for `retention_days`). The project's privacy policy must say so.
+
+### Troubleshooting
+
+| Symptom | Cause |
+|---|---|
+| Row `failed`, `NOTION__TOKEN is not set` | env missing in the RQ worker, not only in the web process |
+| `restricted_resource` / 404 | the database is not shared with the integration, or `database_id` resolution without Read content |
+| `dead`, `validation_error` | a column is missing/renamed or has another type: run `notion_doctor`, fix, **Retry** |
+| Rows stay `pending` | no RQ worker, or the sweeper schedule is not running |
+| Lead saved, no row | adapter/route raised: see the `django_notion` logger, the lead itself is unaffected |

@@ -560,6 +560,7 @@ class DjangoEmailService(BaseCfgModule):
         log_locale: str = "",
         text_only: bool = False,
         site: SiteArg = None,
+        reply_to: Optional[List[str]] = None,
     ) -> bool:
         """
         Send an HTML email with optional plain text alternative in background thread (non-blocking).
@@ -577,13 +578,15 @@ class DjangoEmailService(BaseCfgModule):
                 a page imitating one, and no client can break the layout.
             site: The site this letter speaks for (a ``Site`` or its key). Sets
                 the From display name and Reply-To; None is the default site.
+            reply_to: Reply-To addresses for this letter; None keeps the
+                site's / configured Reply-To.
 
         Returns:
             True if email queued successfully
         """
         site = self._resolve_site(site)
         from_email = self._get_formatted_from_email(from_email, site)
-        reply_to = self._get_reply_to(site)
+        reply_to = list(reply_to) if reply_to else self._get_reply_to(site)
 
         if text_message is None:
             text_message = html_to_text(html_message)

@@ -160,6 +160,10 @@ class InstalledAppsBuilder:
         if self.config.mcp and self.config.mcp.enabled:
             apps.append("django_cfg.modules.django_mcp")
 
+        # Notion lead mirror (outbox table + delivery)
+        if self.config.notion and self.config.notion.enabled:
+            apps.append("django_cfg.modules.django_notion")
+
         return apps
 
     def _get_extension_apps(self) -> List[str]:

@@ -23,8 +23,9 @@ logger.error("Database connection failed")
 ```
 
 **Automatic configuration based on environment:**
-- Development: Console output with colors, DEBUG level
-- Production: File logging with rotation, WARNING level
+- Development server (`runserver`): short readable lines, `INFO`
+- Everything else (production, tests, `shell`, `migrate`, workers): `WARNING` and above, JSON off a terminal
+- `DEBUG` only when you ask for it (`DJANGO_CFG_LOG_LEVEL=DEBUG`)
 
 ---
 
@@ -101,8 +102,9 @@ Logging follows 12-factor: **stdout/stderr by default, a file only when you ask*
 
 | Mode | Console | File |
 | --- | --- | --- |
-| Default | `django_cfg` at `WARNING` | none |
-| `debug=True` | `django_cfg` at `DEBUG` | none |
+| Default | `django_cfg` at `WARNING` (`INFO` on a development `runserver`) | none |
+| `debug=True` | same as default: Django `DEBUG` does not raise the level | none |
+| `DJANGO_CFG_LOG_LEVEL=DEBUG` | `django_cfg` at `DEBUG` | none |
 | `logging.dir` / `DJANGO_CFG_LOG_DIR=/var/log/app` | as above | `django.log`, `djangocfg/monitor.log` there |
 
 In every mode monitor events also go to `djangocfg/monitor.log` (10 MB x 5) in `/var/log/<app>` if writable, else `~/.local/state/<app>/log` (`~/Library/Logs/<app>` on macOS); if neither is writable, stdout only and one warning.
@@ -175,7 +177,7 @@ logger = logging.getLogger(__name__)
 **Level sources (priority order):**
 1. `DjangoConfig(logging=DjangoLoggingConfig(level=...))`
 2. `DJANGO_CFG_LOG_LEVEL`
-3. `DEBUG` when `config.debug`, else `WARNING`
+3. By environment (`env_mode`) and command: `INFO` for a development `runserver` / `runserver_ngrok`, else `WARNING`. `DEBUG` never comes from `config.debug`.
 
 ---
 

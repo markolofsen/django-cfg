@@ -10,7 +10,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.3.415"
+version = "2.3.416"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nand 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -82,6 +82,9 @@ dependencies = [
     "psutil>=7.0.0",
     "faker>=40.0.0,<41.0",
     
+    # django_notion: leads mirrored into Notion (API 2025-09-03, data sources)
+    "notion-client>=3.1.0,<4.0",
+
     # Database
     "psycopg[binary,pool]>=3.2.0,<4.0",
     "dj-database-url>=3.0.0,<4.0",

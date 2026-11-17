@@ -113,6 +113,10 @@ class MiddlewareBuilder:
         if len(self.config.sites) > 1:
             middleware.append("django_cfg.middleware.site.SiteMiddleware")
 
+        # Page, campaign and language of the request, for the Notion lead mirror
+        if self.config.notion and self.config.notion.enabled:
+            middleware.append("django_cfg.modules.django_notion.context.RequestContextMiddleware")
+
         # Accounts middleware (user activity tracking)
         # accounts is always enabled - core django-cfg functionality
         middleware.append("django_cfg.middleware.UserActivityMiddleware")

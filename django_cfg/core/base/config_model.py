@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 # MCP module is always available within django_cfg
 from django_cfg.modules.django_mcp.__cfg__ import DjangoMCPModuleConfig  # noqa: F401
+from django_cfg.modules.django_notion.__cfg__ import NotionConfig  # noqa: F401
 
 from ...models import (
     ApiKeys,
@@ -554,6 +555,11 @@ class DjangoConfig(BaseModel):
         description="Model Context Protocol (MCP) integration for AI agents",
     )
 
+    notion: Optional["NotionConfig"] = Field(
+        default=None,
+        description="Mirror leads into a Notion database (django_notion)",
+    )
+
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                          FRONTEND / UI                                    ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
@@ -581,9 +587,18 @@ class DjangoConfig(BaseModel):
     # ║                         DJANGO-CFG SETTINGS                               ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
+    startup_banner: bool = Field(
+        default=False,
+        description=(
+            "Print the verbose startup block (shaped by startup_info_mode) on a dev server. "
+            "Off by default: a dev server prints one line, everything else nothing. "
+            "Env DJANGO_CFG_BANNER=1 does the same without a config change."
+        ),
+    )
+
     startup_info_mode: StartupInfoMode = Field(
         default=StartupInfoMode.FULL,
-        description="Startup info: NONE, SHORT, or FULL",
+        description="Shape of the verbose startup block (NONE, SHORT, FULL); used only when startup_banner / DJANGO_CFG_BANNER is on",
     )
 
     show_ai_hints: bool = Field(

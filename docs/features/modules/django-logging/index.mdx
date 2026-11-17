@@ -42,7 +42,7 @@ django-cfg decides this itself; a project that sets nothing gets a sane result.
 
 | You set | Result |
 | --- | --- |
-| nothing | General logs: stdout/stderr (JSON off a terminal), `django_cfg` at `WARNING` (`DEBUG` when `debug=True`). Monitor events also go to a small rotating file `djangocfg/monitor.log` (10 MB x 5) in `/var/log/<app>` if writable, else the per-user state dir (`~/.local/state/<app>/log` on Linux, `~/Library/Logs/<app>` on macOS). If neither is writable: no file, events on stdout only, one warning |
+| nothing | General logs: stdout/stderr (JSON off a terminal), `django_cfg` at `WARNING` (`INFO` on a development `runserver`; `DEBUG` only when asked with `level` / `DJANGO_CFG_LOG_LEVEL`). Monitor events also go to a small rotating file `djangocfg/monitor.log` (10 MB x 5) in `/var/log/<app>` if writable, else the per-user state dir (`~/.local/state/<app>/log` on Linux, `~/Library/Logs/<app>` on macOS). If neither is writable: no file, events on stdout only, one warning |
 | `logging.dir` or `DJANGO_CFG_LOG_DIR=/var/log/myapp` | also `django.log` there, and `djangocfg/monitor.log` in that directory (monitor events only in `monitor.log`, not twice) |
 
 The directory is created when the first record is written, not at import. If it cannot be written, django-cfg logs one warning and keeps logging to stdout. Nothing is ever written inside the project tree, and `<cwd>/logs` is not used.
@@ -57,7 +57,7 @@ from django_cfg import DjangoConfig, DjangoLoggingConfig
 class Config(DjangoConfig):
     logging: DjangoLoggingConfig = DjangoLoggingConfig(
         dir="/var/log/myapp",  # None = no general file; the monitor file uses the default chain
-        level="INFO",          # django_cfg loggers; default WARNING, DEBUG with debug=True
+        level="INFO",          # django_cfg loggers; default WARNING (INFO on a development runserver); DEBUG only here
         rotate_mb=10,          # rotate a file at this size; 0 = never (leave it to logrotate)
         backups=5,             # rotated files kept per log
         retain_days=14,        # boot prune: age of rotated files

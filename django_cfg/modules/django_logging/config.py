@@ -21,6 +21,9 @@ from django_cfg.core.utils import runtime_paths as rp
 
 TEXT_FORMAT = "[%(asctime)s] %(levelname)s in %(name)s [%(filename)s:%(lineno)d]: %(message)s"
 
+#: Short readable line for a development server.
+SHORT_FORMAT = "%(levelname)-7s %(name)s: %(message)s"
+
 #: ``extra`` key under which django_monitor hands its event dict to the formatter.
 MONITOR_EVENT_ATTR = "monitor_event"
 
@@ -185,17 +188,35 @@ class NotMonitorFilter(logging.Filter):
         return not (record.name == "django_cfg.monitor" or record.name.startswith("django_cfg.monitor."))
 
 
-def resolve_level(debug: bool) -> str:
+def _env_name(environment: Any) -> str:
+    value = getattr(environment, "value", environment)
+    return str(value or "").strip().lower()
+
+
+def resolve_level(debug: bool = False, environment: Any = None) -> str:
+    """
+    Level of the ``django_cfg`` logger.
+
+    1. Explicit: ``logging.level`` in config, then ``DJANGO_CFG_LOG_LEVEL``. Only these give DEBUG.
+    2. Otherwise by environment (``DjangoConfig.env_mode``) and command:
+
+       - development dev server (``runserver`` ...): ``INFO``
+       - everything else (production, tests, ``shell``, ``migrate``, workers): ``WARNING``
+
+    Django ``DEBUG`` does not raise the level; ``debug`` is accepted for compatibility only.
+    """
     levels = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
     value = str(rp._config_logging("level") or "").upper()
     if value not in levels:
         value = os.environ.get(rp.ENV_LOG_LEVEL, "").strip().upper()
     if value in levels:
         return value
-    return "DEBUG" if debug else "WARNING"
+    if _env_name(environment) == "development" and rp.is_dev_server_command():
+        return "INFO"
+    return "WARNING"
 
 
-def build_logging_config(debug: bool = False) -> Dict[str, Any]:
+def build_logging_config(debug: bool = False, environment: Any = None) -> Dict[str, Any]:
     """
     The ``LOGGING`` dict django-cfg generates.
 
@@ -206,6 +227,8 @@ def build_logging_config(debug: bool = False) -> Dict[str, Any]:
     """
     rp.warn_deprecated_env()
     fmt = rp.log_format()
+    level = resolve_level(debug, environment)
+    short = fmt == "text" and _env_name(environment) == "development" and rp.is_dev_server_command()
     config: Dict[str, Any] = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -213,14 +236,16 @@ def build_logging_config(debug: bool = False) -> Dict[str, Any]:
             "django_cfg": (
                 {"()": "django_cfg.modules.django_logging.config.JsonFormatter"}
                 if fmt == "json"
-                else {"format": TEXT_FORMAT}
+                else {"format": SHORT_FORMAT if short else TEXT_FORMAT}
             ),
         },
         "handlers": {
             "console": {"class": "logging.StreamHandler", "formatter": "django_cfg"},
         },
-        "root": {"handlers": ["console"], "level": "INFO"},
-        "loggers": {"django_cfg": {"level": resolve_level(debug), "propagate": True}},
+        # Root follows the resolved level (never below INFO), so other libraries' INFO does not
+        # reach a `shell` or a worker either.
+        "root": {"handlers": ["console"], "level": "INFO" if level in ("DEBUG", "INFO") else level},
+        "loggers": {"django_cfg": {"level": level, "propagate": True}},
     }
 
     dotted = "django_cfg.modules.django_logging.config.LazySizeRotatingFileHandler"

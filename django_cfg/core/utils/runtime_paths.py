@@ -286,6 +286,16 @@ def ensure_dir(path: Path) -> Path:
     return fallback
 
 
+#: Management commands that start a development server.
+DEV_SERVER_COMMANDS = frozenset({"runserver", "runserver_plus", "runserver_ngrok", "rundev", "devserver"})
+
+
+def is_dev_server_command(argv=None) -> bool:
+    """True when this process is ``manage.py <dev server command>`` (runserver and friends)."""
+    argv = sys.argv if argv is None else argv
+    return len(argv) > 1 and argv[1] in DEV_SERVER_COMMANDS
+
+
 def log_format() -> str:
     """``json`` or ``text``.
 

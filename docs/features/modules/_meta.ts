@@ -12,6 +12,8 @@ export default {
   'django-email': 'Email',
   'django-telegram': 'Telegram Bot',
 
+  'django-notion': 'Notion Leads',
+
   // ── Commerce ─────────────────────────────────────────────────
   'django-payments': 'Payments',
 

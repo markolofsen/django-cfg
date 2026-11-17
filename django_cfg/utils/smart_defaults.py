@@ -338,15 +338,15 @@ class SmartDefaults:
         only when a log dir is configured (see modules/django_logging/config.py).
 
         Args:
-            environment: Environment name (ignored - for compatibility)
-            debug: Debug mode (lowers the django_cfg logger level to DEBUG)
+            environment: EnvironmentMode / name; decides the default level
+            debug: Django DEBUG (does not change the level; see resolve_level)
 
         Returns:
             Django ``LOGGING`` dict
         """
         from django_cfg.modules.django_logging.config import build_logging_config
 
-        return build_logging_config(debug=debug)
+        return build_logging_config(debug=debug, environment=environment)
 
     @staticmethod
     def get_middleware_defaults() -> List[str]:

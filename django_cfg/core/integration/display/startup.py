@@ -2,7 +2,6 @@
 Startup display manager for Django CFG.
 """
 
-from cmath import e
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -19,6 +18,22 @@ class StartupDisplayManager(BaseDisplayManager):
         """Initialize startup display manager."""
         super().__init__(config)
         self.ai_hints_manager = AIHintsDisplayManager(config)
+
+    def display_one_line(self):
+        """The default banner: one short line for a dev server, plus the editable-install warning."""
+        if not self.config:
+            return
+        self._display_editable_warning()
+        try:
+            env = getattr(self.config, "env_mode", "") or ""
+            name = getattr(self.config, "project_name", "") or ""
+            self.console.print(
+                f"django-cfg {self.get_version()} \u00b7 {name} \u00b7 {env}",
+                highlight=False,
+                markup=False,
+            )
+        except Exception:
+            pass
 
     def display_startup_info(self):
         """Display startup information based on config.startup_info_mode."""

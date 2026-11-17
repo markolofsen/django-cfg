@@ -32,7 +32,7 @@ Example:
 default_app_config = "django_cfg.apps.DjangoCfgConfig"
 
 # Version information
-__version__ = "2.3.415"
+__version__ = "2.3.416"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -108,6 +108,7 @@ from .models.django.storage import CDNPurgeConfig, FileCleanupConfig, StorageCon
 from .models.django.storage_backend import S3StorageConfig
 from .models.django.openapi import OpenAPIClientConfig
 from .models.services import EmailConfig, TelegramConfig
+from .modules.django_notion import NotionConfig, NotionLead, NotionTarget
 
 # ---------------------------------------------------------------------------
 # [GROUP 5] Middleware & routing
@@ -281,7 +282,7 @@ __all__ = [
     "DjangoLoggingConfig",
     "CurrencyConfig", "PaymentsConfig", "AdminAccessConfig", "GeoConfig", "IndexNowConfig", "IndexNowSite", "Site", "SiteConfig", "site_for", "site_key", "sites", "AnalyticsConfig", "AttachmentsConfig", "ChatConfig", "SimpleHistoryConfig",
     "ConstanceConfig", "ConstanceField", "StorageConfig", "FileCleanupConfig", "CDNPurgeConfig", "S3StorageConfig", "OpenAPIClientConfig",
-    "EmailConfig", "TelegramConfig",
+    "EmailConfig", "TelegramConfig", "NotionConfig", "NotionTarget", "NotionLead",
     # middleware (lazy — DRF reads settings at import time)
     "DefaultPagination", "LargePagination", "SmallPagination", "NoPagination",
     # utils & testing

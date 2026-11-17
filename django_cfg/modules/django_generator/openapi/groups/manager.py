@@ -264,7 +264,7 @@ class GroupManager:
                 try:
                     importlib.import_module(urls_mod)
                 except (ImportError, ModuleNotFoundError):
-                    logger.debug(f"Django-CFG app '{app_name}' has no urls.py - skipping")
+                    pass  # an app without urls.py is normal; not worth a record
                     continue
                 # Strip django_ prefix for modules: django_monitor -> monitor
                 module_name = app_name.split('.')[-1].removeprefix("django_")

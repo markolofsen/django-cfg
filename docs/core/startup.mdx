@@ -136,8 +136,12 @@ from django_cfg.core.config import DjangoConfig, StartupInfoMode
 class MyProjectConfig(DjangoConfig):
     project_name: str = "My Project"
     
-    # Control startup information display
-    startup_info_mode: StartupInfoMode = StartupInfoMode.FULL  # Default
+    # By default a dev server prints ONE line (django-cfg <ver> . <project> . <env>);
+    # other commands, tests, workers and containers print nothing.
+    # Opt in to the verbose block with DJANGO_CFG_BANNER=1 or startup_banner=True;
+    # startup_info_mode then picks its shape.
+    startup_banner: bool = False
+    startup_info_mode: StartupInfoMode = StartupInfoMode.FULL
 ```
 
 ### Environment Variables:
