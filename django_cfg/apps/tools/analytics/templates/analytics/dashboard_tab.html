@@ -20,8 +20,10 @@
   .an-seg a:hover, .an-seg button:hover { color:#ededed; }
   .an-seg .is-active { background:#303030; color:#fff; }
 
-  .an-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:#303030; border:1px solid #303030; border-radius:12px; overflow:hidden; margin-bottom:24px; }
-  .an-stat { background:#0a0a0a; padding:18px 20px; }
+  /* Hairlines are each cell's own 1px ring in the 1px gap, not the grid's background showing
+     through: a short last row then leaves card-coloured space, not a grey block. */
+  .an-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:#0a0a0a; border:1px solid #303030; border-radius:12px; overflow:hidden; margin-bottom:24px; }
+  .an-stat { background:#0a0a0a; padding:18px 20px; box-shadow:0 0 0 1px #303030; }
   .an-stat__label { font-size:12px; color:#8f8f8f; margin-bottom:8px; }
   .an-stat__value { font-size:28px; font-weight:600; letter-spacing:-.02em; line-height:1; color:#fff; }
 
@@ -89,7 +91,14 @@
       series,
       activeIndex: series.length ? Math.max(0, series.map(p => Math.max(p.pageviews, p.visitors)).lastIndexOf(Math.max(...series.map(p => Math.max(p.pageviews, p.visitors))))) : 0,
       init() { if (!this.series.some(point => point.pageviews || point.visitors)) this.activeIndex = this.series.length - 1; },
-      pageviewPeak() { return Math.max(1, ...this.series.map(point => point.pageviews)); },
+      /* Top of the pageview axis: twice a 1-2-5 step, so the three labels (top, half, 0) are
+         distinct integers even with no traffic ("2, 1, 0", never "1, 1, 0"). Bars use the same top. */
+      pageviewPeak() {
+        const peak = Math.max(1, ...this.series.map(point => point.pageviews));
+        const half = Math.max(1, Math.ceil(peak / 2));
+        const magnitude = 10 ** Math.floor(Math.log10(half));
+        return 2 * [1, 2, 5, 10].map(m => m * magnitude).find(step => step >= half);
+      },
       visitorPeak() { return Math.max(1, ...this.series.map(point => point.visitors)); },
       pageviewHeight(point) { return Math.max(point.pageviews ? 3 : 1, Math.round(point.pageviews / this.pageviewPeak() * 100)); },
       visitorY(point) { return 98 - Math.round(point.visitors / this.visitorPeak() * 94); },

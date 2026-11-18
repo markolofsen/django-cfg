@@ -1,5 +1,5 @@
 """
-Geo widgets using Unfold admin styling.
+Geo widgets on the stock admin select2.
 
 Provides Select2-compatible autocomplete widgets for country and city selection,
 as well as a rich LocationField widget with MapLibre map.
@@ -12,19 +12,18 @@ from django.conf import settings
 from django.forms import Select
 from django.urls import reverse
 
-from unfold.widgets import AutocompleteWidgetMixin
-
 from .location_widget import LocationFieldWidget
 
 
-class GeoAutocompleteWidget(AutocompleteWidgetMixin, Select):
+class GeoAutocompleteWidget(Select):
     """
     Base autocomplete widget for geo fields.
 
-    Uses Unfold styling with Select2 for AJAX search.
+    select2 (shipped with contrib.admin) with AJAX search, initialised by
+    ``django_admin/js/cfg-select2.init.js`` on the ``cfg-autocomplete`` class.
     """
 
-    option_template_name = "unfold/widgets/select_option_autocomplete.html"
+    option_template_name = "geo/widgets/select_option_autocomplete.html"
     url_name: str = ""
 
     def __init__(
@@ -32,7 +31,17 @@ class GeoAutocompleteWidget(AutocompleteWidgetMixin, Select):
         attrs: Optional[dict[str, Any]] = None,
         choices: tuple | list = (),
     ) -> None:
-        self.is_required = False  # Set before calling super
+        self.is_required = False
+        attrs = dict(attrs or {})
+        attrs.update({
+            "data-ajax--cache": "true",
+            "data-ajax--delay": 250,
+            "data-ajax--type": "GET",
+            "data-theme": "admin-autocomplete",
+            "data-allow-clear": json.dumps(not self.is_required),
+            "data-placeholder": "",
+            "class": " ".join(c for c in ("cfg-autocomplete admin-autocomplete", attrs.get("class", "")) if c),
+        })
         super().__init__(attrs, choices)
 
     def build_attrs(
@@ -79,7 +88,7 @@ class CountrySelectWidget(GeoAutocompleteWidget):
             f"admin/js/vendor/jquery/jquery{extra}.js",
             "admin/js/vendor/select2/select2.full.js",
             "admin/js/jquery.init.js",
-            "unfold/js/select2.init.js",
+            "django_admin/js/cfg-select2.init.js",
         )
         css = {
             "screen": (
@@ -142,7 +151,7 @@ class CitySelectWidget(GeoAutocompleteWidget):
             f"admin/js/vendor/jquery/jquery{extra}.js",
             "admin/js/vendor/select2/select2.full.js",
             "admin/js/jquery.init.js",
-            "unfold/js/select2.init.js",
+            "django_admin/js/cfg-select2.init.js",
         )
         css = {
             "screen": (

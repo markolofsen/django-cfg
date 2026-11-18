@@ -1,0 +1,17 @@
+{% extends "admin/import_export/change_list_import_export.html" %}
+{% comment %}
+PydanticAdmin changelist (CfgActionsMixin): actions_list buttons and the
+list_before_template / list_after_template hooks. import_export's own template
+underneath extends the project's change_list_template, or admin/change_list.html.
+{% endcomment %}
+
+{% block object-tools-items %}
+  {% include "django_admin/includes/object_tools_actions.html" with cfg_actions=cfg_actions_list %}
+  {{ block.super }}
+{% endblock %}
+
+{% block content %}
+  {% if cl.model_admin.list_before_template and not is_popup %}<div class="cfg-before-list">{% include cl.model_admin.list_before_template %}</div>{% endif %}
+  {{ block.super }}
+  {% if cl.model_admin.list_after_template and not is_popup %}<div class="cfg-after-list">{% include cl.model_admin.list_after_template %}</div>{% endif %}
+{% endblock %}

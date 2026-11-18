@@ -8,8 +8,12 @@ Helps diagnose email, database, and other configuration issues.
 import os
 
 from django.conf import settings
-from django.core.mail import get_connection
 
+from django_cfg.core.backends.mailers import (
+    default_connection,
+    default_mailer_config,
+    mailers_configured,
+)
 from django_cfg.management.utils import SafeCommand
 
 
@@ -69,27 +73,31 @@ class Command(SafeCommand):
         """Show detailed email configuration."""
         self.stdout.write(self.style.SUCCESS("\n📧 Email Configuration:"))
 
-        # Basic email settings
+        # The default mailer, read the same way on Django 5.2 (EMAIL_*) and
+        # 6.1+ (MAILERS, where reading EMAIL_* raises).
+        mailer = default_mailer_config()
+        options = mailer['OPTIONS']
+        source = "MAILERS['default']" if mailers_configured() else "EMAIL_* settings"
+        self.stdout.write(f"  📝 Source: {source}")
+
         email_settings = {
-            'EMAIL_BACKEND': getattr(settings, 'EMAIL_BACKEND', 'Not set'),
-            'EMAIL_HOST': getattr(settings, 'EMAIL_HOST', 'Not set'),
-            'EMAIL_PORT': getattr(settings, 'EMAIL_PORT', 'Not set'),
-            'EMAIL_USE_TLS': getattr(settings, 'EMAIL_USE_TLS', 'Not set'),
-            'EMAIL_USE_SSL': getattr(settings, 'EMAIL_USE_SSL', 'Not set'),
-            'EMAIL_HOST_USER': getattr(settings, 'EMAIL_HOST_USER', 'Not set'),
+            'backend': mailer['BACKEND'],
+            'host': options.get('host', 'Not set'),
+            'port': options.get('port', 'Not set'),
+            'use_tls': options.get('use_tls', 'Not set'),
+            'use_ssl': options.get('use_ssl', 'Not set'),
+            'username': options.get('username') or 'Not set',
+            # Presence only, never the value.
+            'password': '***SET***' if options.get('password') else 'Not set',
             'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', 'Not set'),
         }
-
-        # Show password status (not actual password)
-        password_set = bool(getattr(settings, 'EMAIL_HOST_PASSWORD', None))
-        email_settings['EMAIL_HOST_PASSWORD'] = '***SET***' if password_set else 'Not set'
 
         for key, value in email_settings.items():
             icon = "✅" if value != 'Not set' else "❌"
             self.stdout.write(f"  {icon} {key}: {value}")
 
         # Analyze backend type
-        backend = email_settings['EMAIL_BACKEND']
+        backend = email_settings['backend']
         if 'console' in backend:
             self.stdout.write(self.style.WARNING("  ⚠️  Console backend - emails will be printed to console"))
         elif 'locmem' in backend:
@@ -283,7 +291,7 @@ class Command(SafeCommand):
 
         try:
             # Test Django's email connection
-            connection = get_connection()
+            connection = default_connection()
             connection.open()
             self.stdout.write("  ✅ Django email connection successful")
             connection.close()
@@ -316,7 +324,9 @@ class Command(SafeCommand):
         """Show email configuration recommendations."""
         self.stdout.write(self.style.SUCCESS("\n💡 Email Configuration Recommendations:"))
 
-        backend = getattr(settings, 'EMAIL_BACKEND', '')
+        mailer = default_mailer_config()
+        backend = mailer['BACKEND']
+        options = mailer['OPTIONS']
         debug = getattr(settings, 'DEBUG', False)
 
         if 'console' in backend and not debug:
@@ -324,9 +334,9 @@ class Command(SafeCommand):
             self.stdout.write("     Consider switching to SMTP backend")
 
         if 'smtp' in backend:
-            host = getattr(settings, 'EMAIL_HOST', '')
-            user = getattr(settings, 'EMAIL_HOST_USER', '')
-            password = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
+            host = options.get('host', '')
+            user = options.get('username', '')
+            password = options.get('password', '')
 
             if not host:
                 self.stdout.write("  ❌ SMTP host not configured")

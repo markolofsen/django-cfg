@@ -14,23 +14,17 @@ DEFAULT_DRF_AUTHENTICATION_CLASSES: List[str] = [
     "rest_framework.authentication.TokenAuthentication",
 ]
 
+# The admin entry of INSTALLED_APPS: django.contrib.admin with CfgAdminSite as admin.site.
+ADMIN_APP = "django_cfg.modules.admin_site.apps.CfgAdminConfig"
+
 # Default Django apps installed by django-cfg
 DEFAULT_APPS: List[str] = [
     # WhiteNoise for static files (must be before django.contrib.staticfiles)
     "whitenoise.runserver_nostatic",
-    # Unfold Admin
-    "unfold",
-    "unfold.contrib.filters",  # optional, if special filters are needed
-    "unfold.contrib.forms",  # optional, if special form elements are needed
-    "unfold.contrib.inlines",  # optional, if special inlines are needed
     "import_export",  # django-import-export package
-    "unfold.contrib.import_export",  # optional, if django-import-export package is used
-    "unfold.contrib.guardian",  # optional, if django-guardian package is used
-    "unfold.contrib.simple_history",  # optional, if django-simple-history package is used
-    "unfold.contrib.location_field",  # optional, if django-location-field package is used
-    "unfold.contrib.constance",  # optional, if django-constance package is used
-    # Django Core
-    "django.contrib.admin",
+    # Django Core. The admin is django-cfg's CfgAdminConfig: stock django.contrib.admin
+    # with CfgAdminSite as admin.site (navigation, branding, login form).
+    ADMIN_APP,
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",

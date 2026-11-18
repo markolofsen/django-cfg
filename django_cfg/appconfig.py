@@ -7,7 +7,6 @@ that name, so Django never saw an AppConfig defined in it and ready() never ran.
 looks for when it resolves the "django_cfg" INSTALLED_APPS entry.
 
 Each startup concern lives in its own module under django_cfg/startup/:
-  constance.py          — Constance + Unfold admin registration
   drf_patch.py          — JWT-aware DRF authentication patch
   mime_types.py         — Media types a slim container image leaves out
   type_stubs.py         — Auto-install DRF validated_data type stubs (dev only)
@@ -58,7 +57,6 @@ class DjangoCfgConfig(AppConfig):
             from django_cfg.startup import sites  # noqa: F401  (registers the check)
         except Exception as exc:  # noqa: BLE001
             logger.warning("django_cfg sites check not registered: %s", exc)
-        from django_cfg.startup.constance import register_constance_admin
         from django_cfg.startup.drf_patch import patch_drf_authentication
         from django_cfg.startup.mime_types import register_media_types
         from django_cfg.startup.type_stubs import install_type_stubs
@@ -67,7 +65,6 @@ class DjangoCfgConfig(AppConfig):
         # table has to be complete before anything can write a file.
         for hook in (
             register_media_types,
-            register_constance_admin,
             install_type_stubs,
             patch_drf_authentication,
         ):

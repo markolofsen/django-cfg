@@ -1,8 +1,7 @@
 """
 Image preview display utility.
 
-Renders clickable image thumbnails that open a global modal.
-The modal is shared across all images on the page.
+Renders image thumbnails linked to the full image (no modal).
 """
 
 import re
@@ -14,11 +13,7 @@ from django.utils.safestring import SafeString, mark_safe
 
 class ImagePreviewDisplay:
     """
-    Display utility for image preview with modal zoom and pan.
-
-    Uses a lightweight thumbnail that dispatches event to global modal.
-    The global modal (image_preview_modal.html) should be included ONCE
-    in the base admin template.
+    Display utility for image previews: a thumbnail that links to the full image.
 
     Usage in admin:
         ImagePreviewField(
@@ -52,7 +47,7 @@ class ImagePreviewDisplay:
         config: Optional[Dict[str, Any]] = None,
     ) -> SafeString:
         """
-        Render image thumbnail (opens global modal on click).
+        Render an image thumbnail linked to the full image.
 
         Args:
             image_url: URL of the image
@@ -149,19 +144,6 @@ class ImagePreviewDisplay:
         )
 
     @classmethod
-    def render_modal(cls) -> SafeString:
-        """
-        Render global modal component.
-
-        Call this ONCE in base admin template to enable
-        image preview functionality across all pages.
-
-        Returns:
-            HTML string with global modal component
-        """
-        return render_to_string('django_admin/widgets/image_preview_modal.html')
-
-    @classmethod
     def from_field(
         cls,
         obj: Any,
@@ -199,8 +181,7 @@ class ImagePreviewDisplay:
                 if fallback_text:
                     variant = config.get('fallback_badge_variant', 'secondary')
                     return mark_safe(
-                        f'<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium '
-                        f'bg-base-100 text-base-600 dark:bg-base-800 dark:text-base-400">{fallback_text}</span>'
+                        f'<span class="cfg-badge cfg-badge--neutral">{fallback_text}</span>'
                     )
                 return config.get('empty_value', "—")
 
@@ -237,8 +218,7 @@ class ImagePreviewDisplay:
             fallback_text = config.get('fallback_text')
             if fallback_text:
                 return mark_safe(
-                    f'<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium '
-                    f'bg-base-100 text-base-600 dark:bg-base-800 dark:text-base-400">{fallback_text}</span>'
+                    f'<span class="cfg-badge cfg-badge--neutral">{fallback_text}</span>'
                 )
             return config.get('empty_value', "—")
 

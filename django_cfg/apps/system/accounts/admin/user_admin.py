@@ -7,7 +7,7 @@ from django_cfg.modules.django_admin for a clean, code-reduced admin.
 
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
+from django.contrib.auth.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
 from django_cfg.icons import Icons
 from django_cfg.modules.django_admin import (
@@ -238,7 +238,7 @@ class CustomUserAdmin(BaseUserAdmin, PydanticAdmin):
     """
     config = customuser_config
 
-    # Forms from unfold
+    # Stock auth forms
     form = UserChangeForm
     add_form = UserCreationForm
     change_password_form = AdminPasswordChangeForm

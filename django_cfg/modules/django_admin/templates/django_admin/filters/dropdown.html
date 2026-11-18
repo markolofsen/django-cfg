@@ -1,0 +1,9 @@
+{% load i18n %}
+<details data-filter-title="{{ title }}" open>
+  <summary>{% blocktranslate with filter_title=title %} By {{ filter_title }} {% endblocktranslate %}</summary>
+  <ul><li>
+    <select aria-label="{{ title }}" onchange="window.location.href=this.value" style="width: 100%">
+      {% for choice in choices %}<option value="{{ choice.query_string|iriencode }}"{% if choice.selected %} selected{% endif %}>{{ choice.display }}</option>{% endfor %}
+    </select>
+  </li></ul>
+</details>

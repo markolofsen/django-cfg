@@ -5,7 +5,7 @@ import logging
 from typing import Any, List, Optional
 
 from django.utils.html import escape, format_html
-from django.utils.safestring import SafeString
+from django.utils.safestring import SafeString, mark_safe
 
 from ...models.display_models import UserDisplayConfig
 
@@ -43,16 +43,16 @@ class UserDisplay:
         config = config or UserDisplayConfig()
 
         if not user:
-            return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">No user</span>')
+            return mark_safe('<span class="cfg-muted">No user</span>')
 
         name = getattr(user, 'get_full_name', lambda: '')() or getattr(user, 'username', 'Unknown')
-        html = format_html('<span class="font-medium">{}</span>', escape(name))
+        html = format_html('<span class="cfg-strong">{}</span>', escape(name))
 
         if config.show_email:
             email = getattr(user, 'email', '')
             if email:
                 html = format_html(
-                    '{}<br><span class="text-xs text-font-subtle-light dark:text-font-subtle-dark">{}</span>',
+                    '{}<br><span class="cfg-small cfg-muted">{}</span>',
                     html, escape(email),
                 )
 

@@ -1,61 +1,142 @@
 ---
 title: Scheduler and Workers
-description: One queued copy per recurring job, rq_scheduler_status, and why long jobs need their own worker
+description: One rqcron per project on RQ's native cron, cron vs interval vs one-off, rq_cron_status, and why long jobs need their own worker
 ---
 
 # Scheduler and Workers
 
-How recurring jobs reach a worker in django-cfg (2.3.410 and later), how to tell a
-dead scheduler from a busy worker, and how to lay out queues so a short,
-latency-bound job is never stuck behind a long one.
+How scheduled and delayed jobs reach a worker in django-cfg (RQ 3 native cron,
+`python manage.py rqcron`), how to tell a dead `rqcron` from a busy worker, and
+how to lay out queues so a short, latency-bound job is never stuck behind a long
+one.
 
 ---
 
-## One queued copy per recurring job
+## One `rqcron` per project
 
-Every `RQScheduleConfig` with `cron` or `interval` is registered with one
-deterministic job id (`schedule_<func>_<hash>`). Stock rq-scheduler pushes that id
-onto the queue on every tick, so behind a busy worker a queue fills with copies of
-the same job, and they all run back to back once the worker is free.
+```bash
+python manage.py rqcron                 # run the schedules
+python manage.py rqcron --list          # print the registered schedules as JSON and exit
+python manage.py rqcron --poll 2 -l DEBUG
+```
 
-django-cfg sets `RQ["SCHEDULER_CLASS"]` to
-`django_cfg.modules.django_rq.scheduler.DjangoCfgScheduler`. On each tick, for a
-recurring entry:
+| Option | Default | Meaning |
+|---|---|---|
+| `--list` | off | Print `schedules`, `count` and `not_registered` as JSON, then exit |
+| `--poll SECONDS` | `1` | Seconds between loops: the most a delayed job is late |
+| `-l`, `--logging-level` | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
 
-| Previous copy | What the tick does |
+`rqcron` registers every `RQScheduleConfig` of `DjangoRQConfig.get_all_schedules()`
+on the queue the entry names. There is no `--queue` and no config file argument.
+
+Run exactly one per project. A second `rqcron` does no harm: it fails to take the
+leader lock `djangocfg:rq:cron:leader`, logs `rq cron: standby, leader is <name>`,
+enqueues nothing, and takes over when the leader stops.
+
+An entry whose queue is not in `RQ_QUEUES`, or whose function cannot be imported,
+is logged and listed under `not_registered` by `rqcron --list`; nothing is pushed
+for it.
+
+`rqcron` replaces `rqscheduler`. `rq-scheduler` is no longer a dependency, and
+`python manage.py rqscheduler` now reaches django-rq's own command, which fails
+with "rq_scheduler not installed". At first start `rqcron` removes the
+registrations the project left under rq-scheduler in Redis, so the old schedules
+stop.
+
+---
+
+## Cron, interval, one-off
+
+| Entry | When it runs |
 |---|---|
-| Still waiting in its queue | Books the next run, pushes nothing |
-| Running, heartbeat younger than 120 s | Books the next run, pushes nothing |
+| `cron="0 9 * * *"` | At the cron times, evaluated in **UTC** |
+| `interval=300` | Every 300 s after the previous run |
+| `scheduled_time="2026-12-01T09:00:00"` | Once at that time (a naive time is UTC) |
+
+```python
+schedules=[
+    RQScheduleConfig(func="apps.reports.tasks.daily", cron="0 9 * * *", queue="default"),
+    RQScheduleConfig(func="apps.prices.tasks.refresh", interval=300, queue="high", timeout=120),
+    RQScheduleConfig(func="apps.ops.tasks.migrate_once", scheduled_time="2026-12-01T09:00:00"),
+]
+```
+
+- **Every run is a fresh job** with its own id. The schedule lives in the
+  `rqcron` process, not in a job hash, so a run's `result_ttl` is honoured and
+  cannot delete the schedule.
+- **Queue defaults apply.** An entry without `timeout` / `result_ttl` gets the
+  queue's `default_timeout` / `default_result_ttl`. `timeout` is rq's
+  `job_timeout`.
+- **The schedule name** is `job_id` when set, else `schedule_<func>_<hash>`. It
+  keys the run history `rq:cron_job:<name>:jobs`, which the django-rq 4.2 admin
+  shows on the cron job page. For a one-off, it is also the job id.
+- **`repeat=N`** stops the entry after N runs.
+- **A one-off runs once.** `rqcron` books it with `enqueue_at` when it starts
+  leading; a marker key keeps a restart from booking it again.
+
+### Resume after a restart
+
+On start, or when a standby takes over, `cron` and `interval` entries compute
+their next run from the last run in their history. A deploy does not fire every
+interval job at once; a daily interval job that ran an hour ago runs again in 23
+hours.
+
+---
+
+## A run is skipped while the previous copy is pending
+
+Behind a busy worker, a scheduler that pushes on every due time fills the queue
+with copies of the same job, which all run back to back once the worker is free.
+`rqcron` checks the newest id in the entry's history first:
+
+| Previous copy | What the due run does |
+|---|---|
+| Still waiting in its queue | Skipped; the next run is booked |
+| Running, heartbeat younger than 120 s | Skipped; the next run is booked |
 | Running with a stale heartbeat (abandoned) | Pushes a new copy |
 | Gone (finished or failed) | Pushes a new copy |
 
-A skipped tick logs one INFO line:
+A skipped run logs one INFO line:
 
 ```
-rq scheduler: skipped apps.sources.tasks.hot_sync (schedule_hot_sync_…): previous copy still queued in 'low'
+rq cron: skipped apps.sources.tasks.hot_sync (schedule_hot_sync_…): previous copy 3f2a… still queued in 'low'
 ```
 
-One-shot jobs (`enqueue_at`, `enqueue_in`) are untouched. Nothing to configure:
-the setting comes from `DjangoRQConfig`.
-
-Each scheduler loop also writes `djangocfg:rq:scheduler:last_tick` (unix time),
-which `rq_scheduler_status` reads.
+Nothing to configure.
 
 ---
 
-## Scheduler dead or worker starved: `rq_scheduler_status`
+## Delayed jobs
 
-A late scheduled job has two different causes, and restarting the scheduler only
+`queue.enqueue_in(...)`, `queue.enqueue_at(...)`, `Retry(interval=...)` and the
+one-off entries park jobs in `rq:scheduled:<queue>`. The same `rqcron` process
+runs RQ's `RQScheduler` for every queue in `RQ_QUEUES` and moves them into their
+queues when due (within `--poll` seconds). Workers do not need `--with-scheduler`
+for this. A worker that still runs with it does no harm: the per-queue locks let
+both coexist.
+
+```python
+from datetime import timedelta
+import django_rq
+
+django_rq.get_queue("default").enqueue_in(timedelta(minutes=10), "apps.mail.tasks.reminder", user_id=1)
+```
+
+---
+
+## Cron dead or worker starved: `rq_cron_status`
+
+A late scheduled job has two different causes, and restarting `rqcron` only
 fixes one of them.
 
 ```bash
-python manage.py rq_scheduler_status
-python manage.py rq_scheduler_status --queue high --max-wait 60
-python manage.py rq_scheduler_status --json
+python manage.py rq_cron_status
+python manage.py rq_cron_status --queue high --max-wait 60
+python manage.py rq_cron_status --json
 ```
 
 ```
-starved: scheduler_alive=True last_tick=1s
+starved: cron_alive=True heartbeat=4s leader=…
   queue high: depth=9 wait=312s
   queue low: depth=41 wait=780s
   busy 342863c3…: apps.catalog.titles.describe.tasks.describe_batch 790s (high,default,low)
@@ -64,20 +145,28 @@ starved: scheduler_alive=True last_tick=1s
 
 | Verdict | Meaning | Action |
 |---|---|---|
-| `ok` | Scheduler ticks, no queue waits longer than `--max-wait` | None |
-| `scheduler_dead` | No live `rq:scheduler_instance:*`, or no tick for `--max-tick-age` (default 120 s) | Restart the scheduler |
-| `starved` | The scheduler ticks, a queue waits longer than `--max-wait` (default 120 s); `busy` names the jobs holding the workers | Move the long job to its own worker (below) |
+| `ok` | `rqcron` alive, no queue waits longer than `--max-wait` | None |
+| `cron_dead` | No heartbeat in `rq:cron_schedulers`, or the newest is older than `--max-heartbeat-age` (default 120 s) | Restart `rqcron` |
+| `starved` | `rqcron` alive, a queue waits longer than `--max-wait` (default 120 s); `busy` names the jobs holding the workers | Move the long job to its own worker (below) |
 
-A `--queue` that is not in `RQ_QUEUES` fails with one line, `unknown RQ queue 'high'; declared: default, ...`, and exit 1 (`UnknownQueueError` from `scheduler_status()`). Pass only the queues the project declares: a project without `high` uses e.g. `--queue default`.
+`--queue` is repeatable (`--queue high --queue default`); without it every queue is
+judged. A `--queue` that is not in `RQ_QUEUES` fails with one line,
+`unknown RQ queue 'high'; declared: default, ...`, and exit 1. Pass only the queues
+the project declares.
 
-The command exits 1 when the verdict is not `ok`. The same data in Python:
+`--json` prints `verdict`, `cron_alive`, `heartbeat_age_sec`, `leader`, `queues`,
+`busy`, `reason`. The command exits 1 when the verdict is not `ok`. The same data
+in Python:
 
 ```python
-from django_cfg.modules.django_rq.health.status import scheduler_status
+from django_cfg.modules.django_rq.health.status import cron_status
 
-st = scheduler_status(queue_names=["high"], max_wait=60)
+st = cron_status(queue_names=["high"], max_wait=60)
 st.verdict, st.reason, st.queues, st.busy
 ```
+
+The queue-health monitor's `scheduler_lag` is the most overdue cron run of the
+leading `rqcron`, or the most overdue delayed job in `rq:scheduled:<queue>`.
 
 ---
 
@@ -94,7 +183,7 @@ Rules:
   own queue and its own worker container.
 - A latency-bound queue (heads, reapers, probes) gets a worker that serves only
   that queue. The shared worker may serve it too.
-- The scheduler stays one process. Never scale it.
+- `rqcron` stays one service. Never scale it.
 
 ```python
 # api/settings/builders/background.py
@@ -120,30 +209,29 @@ rq-high:        # latency-bound only
   command: ["python", "manage.py", "rqworker", "high"]
 rq-describe:    # the long job only
   command: ["python", "manage.py", "rqworker", "describe"]
-rq-scheduler:
-  command: ["python", "manage.py", "rqscheduler", "--interval", "2"]
+rq-cron:        # exactly one per project
+  command: ["python", "manage.py", "rqcron"]
   stop_grace_period: 20s
   healthcheck:
-    test: ["CMD-SHELL", "python manage.py rq_scheduler_status --queue high --max-wait 60 > /dev/null"]
+    test: ["CMD-SHELL", "python manage.py rq_cron_status --queue high --queue default --max-wait 60 > /dev/null 2>&1"]
     interval: 60s
     timeout: 30s
     retries: 3
     start_period: 120s
 ```
 
-`--interval 2` makes the scheduler look for due jobs every 2 s; the default 60 s
-caps every schedule at once a minute.
+`rqcron` loops every second (`--poll`), so an `interval` below a minute and a
+delayed job are on time.
 
 ---
 
-## The scheduler lock
+## Deploy overlap
 
-rq-scheduler takes `rq:scheduler_lock` for one tick (`SET NX EX interval+10`) and
-releases it at the end of the tick and on SIGTERM. During a deploy overlap two
-schedulers simply take turns; neither waits for the other's container to stop.
-`rqscheduler` start-up removes only dead `rq:scheduler_instance:*` entries (a
-`death` field or no TTL), never a live peer.
+During a deploy the old and the new `rqcron` may run together for a moment. Only
+the one holding `djangocfg:rq:cron:leader` enqueues; the lock expires 30 s after
+its holder stops refreshing it, and a standby that takes over resumes every entry
+from its history, so nothing runs twice.
 
-If a scheduled job is late after a deploy, check `rq_scheduler_status` first: in
+If a scheduled job is late after a deploy, check `rq_cron_status` first: in
 the gptkino incident of 2026-11-12 the scheduler was healthy the whole time and the
 single worker was busy.

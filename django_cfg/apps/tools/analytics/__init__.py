@@ -24,5 +24,3 @@ Configuration:
 
 See @dev/active/analytics/PLAN.md for the measurements and the rejected designs.
 """
-
-default_app_config = "django_cfg.apps.tools.analytics.apps.AnalyticsAppConfig"

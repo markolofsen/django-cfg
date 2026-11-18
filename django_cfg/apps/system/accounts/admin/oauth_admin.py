@@ -5,8 +5,9 @@ Admin interface for OAuth connections and states.
 """
 
 from django.contrib import admin
+from django.contrib.admin import ModelAdmin
 from django.utils.html import format_html
-from unfold.admin import ModelAdmin
+from django.utils.safestring import mark_safe
 
 from ..models.oauth import OAuthConnection, OAuthState
 
@@ -151,12 +152,8 @@ class OAuthStateAdmin(ModelAdmin):
 
     def is_expired_badge(self, obj):
         if obj.is_expired:
-            return format_html(
-                '<span style="color: red;">Expired</span>'
-            )
-        return format_html(
-            '<span style="color: green;">Valid</span>'
-        )
+            return mark_safe('<span class="cfg-danger">Expired</span>')
+        return mark_safe('<span class="cfg-success">Valid</span>')
     is_expired_badge.short_description = 'Status'
 
     def cleanup_expired(self, request, queryset):

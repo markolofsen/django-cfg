@@ -19,7 +19,7 @@ from .logger import (
     reset_generation_logger,
 )
 from .openapi import run_openapi
-from .orm import run_orm
+from .orm import run_orm, validate_orm
 from .sdk import run_sdk
 
 
@@ -33,6 +33,7 @@ def run(
     only_target: str | None = None,
     only_groups: list[str] | None = None,
     dry_run: bool = False,
+    force: bool = False,
     stdout: Any = None,
     # New logging options (v6.1)
     verbose: bool = False,
@@ -51,6 +52,8 @@ def run(
         only_target: Filter to specific target type (admin, packages, extensions, etc.)
         only_groups: Filter to specific groups
         dry_run: Preview without changes
+        force: Overwrite an output folder even when git shows uncommitted
+            changes in it that the generator did not make (default: refuse)
         stdout: Django command stdout for output (deprecated, use logger)
 
         Logging options (v6.1):
@@ -99,14 +102,28 @@ def run(
     run_sdk_gen = only_target is None or only_target not in ("orm",)
     run_orm_gen = only_target is None or only_target == "orm"
 
+    # Preflight: a target that cannot succeed stops the run before any
+    # generator writes anything (2026-11-18: an ORM target naming a removed
+    # app emptied its folder, then failed).
+    if config.orm and run_orm_gen:
+        problems = validate_orm(config.orm)
+        if problems:
+            for problem in problems:
+                logger.error(problem)
+            logger.summary()
+            return logger
+
     if config.openapi and run_openapi_gen:
-        run_openapi(config.openapi, only_platforms, only_target, only_groups, dry_run, logger)
+        run_openapi(
+            config.openapi, only_platforms, only_target, only_groups, dry_run, logger,
+            force=force,
+        )
 
     if config.sdk and run_sdk_gen:
-        run_sdk(config.sdk, only_groups, dry_run, logger)
+        run_sdk(config.sdk, only_groups, dry_run, logger, force=force)
 
     if config.orm and run_orm_gen:
-        run_orm(config.orm, dry_run, logger)
+        run_orm(config.orm, dry_run, logger, force=force)
 
     # Summary
     logger.summary()

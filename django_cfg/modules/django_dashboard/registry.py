@@ -19,8 +19,8 @@ class TabRegistry:
 
     def has_permission(self, tab: DashboardTab, request: Any) -> bool:
         if tab.superuser_only:
-            return bool(request.user.is_superuser)
+            return bool(getattr(request.user, "is_superuser", False))
         if not tab.permission:
-            return bool(request.user.is_staff)
+            return bool(getattr(request.user, "is_staff", False))
         fn = _resolve(tab.permission)
         return bool(fn(request))

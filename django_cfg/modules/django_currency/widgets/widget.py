@@ -19,17 +19,11 @@ from ._rate_utils import get_currency_choices, get_currency_rate
 # Build CURRENCY_SYMBOLS from CURRENCY_CONFIGS for backwards compatibility
 CURRENCY_SYMBOLS: Dict[str, str] = {code: cfg.symbol for code, cfg in CURRENCY_CONFIGS.items()}
 
-# Unfold-compatible CSS classes
-INPUT_CLASSES = " ".join([
-    "border", "border-base-200", "bg-white", "font-medium", "px-3", "py-2",
-    "min-w-20", "placeholder-base-400", "rounded-default", "shadow-xs",
-    "text-font-default-light", "text-sm", "w-full",
-    "focus:outline-2", "focus:-outline-offset-2", "focus:outline-primary-600",
-    "dark:bg-base-900", "dark:border-base-700", "dark:text-font-default-dark",
-])
-
-SELECT_CLASSES = " ".join([*INPUT_CLASSES.split(), "pr-8!", "max-w-2xl", "appearance-none", "text-ellipsis"])
-AUTOCOMPLETE_CLASSES = "unfold-admin-autocomplete admin-autocomplete"
+# Stock admin inputs: Django's own CSS styles the elements, we add no utility classes.
+INPUT_CLASSES = "vTextField"
+SELECT_CLASSES = ""
+# admin-autocomplete is Django's select2 hook; cfg-autocomplete is ours (cfg.css).
+AUTOCOMPLETE_CLASSES = "cfg-autocomplete admin-autocomplete"
 
 
 def format_money(
@@ -199,22 +193,22 @@ class MoneyFieldWidget(MultiWidget):
 
         if target_amount is not None:
             target_str = format_money(target_amount, self.target_currency, smart_precision=True)
-            parts.append(f'<span class="text-primary-600 dark:text-primary-400 font-medium">→ {target_str}</span>')
+            parts.append(f'<span class="cfg-primary cfg-strong">→ {target_str}</span>')
 
         if rate:
             rate_str = f"{float(rate):.10f}".rstrip("0").rstrip(".")
-            rate_html = f'<span class="text-base-400 dark:text-base-500">1 {display_currency} = {rate_str} {self.target_currency}</span>'
+            rate_html = f'<span class="cfg-muted">1 {display_currency} = {rate_str} {self.target_currency}</span>'
             if rate_at:
                 from django.utils.timesince import timesince
-                rate_html += f'<span class="text-base-400 dark:text-base-500"> • {timesince(rate_at)} ago</span>'
+                rate_html += f'<span class="cfg-muted"> • {timesince(rate_at)} ago</span>'
             parts.append(rate_html)
 
         if not parts:
             return ""
 
         return mark_safe(
-            '<div class="flex items-center gap-3 mt-1 text-xs">'
-            + '<span class="text-base-300 dark:text-base-600">|</span>'.join(parts)
+            '<div class="cfg-row cfg-small">'
+            + '<span class="cfg-muted">|</span>'.join(parts)
             + "</div>"
         )
 
@@ -236,18 +230,18 @@ class MoneyFieldWidget(MultiWidget):
         amount_str = format_money(amount, currency)
         target_str = format_money(target_amount, self.target_currency, smart_precision=True) if target_amount is not None else None
 
-        parts = ['<div class="money-field-display flex flex-col gap-0.5">']
-        parts.append('<div class="flex items-center gap-2 text-sm">')
-        parts.append(f'<span class="font-semibold text-font-default-light dark:text-font-default-dark">{amount_str}</span>')
+        parts = ['<div class="money-field-display cfg-stack">']
+        parts.append('<div class="cfg-row">')
+        parts.append(f'<span class="cfg-strong">{amount_str}</span>')
 
         if target_amount is not None and currency.upper() != self.target_currency.upper():
-            parts.append('<span class="text-base-400 dark:text-base-500">→</span>')
-            parts.append(f'<span class="text-primary-600 dark:text-primary-400 font-medium">{target_str}</span>')
+            parts.append('<span class="cfg-muted">→</span>')
+            parts.append(f'<span class="cfg-primary cfg-strong">{target_str}</span>')
         parts.append("</div>")
 
         if rate:
             rate_str = f"{float(rate):.10f}".rstrip("0").rstrip(".")
-            parts.append('<div class="flex items-center gap-1.5 text-xs text-base-400 dark:text-base-500">')
+            parts.append('<div class="cfg-row cfg-small cfg-muted">')
             parts.append(f"<span>1 {currency} = {rate_str} {self.target_currency}</span>")
             if rate_at:
                 from django.utils.timesince import timesince

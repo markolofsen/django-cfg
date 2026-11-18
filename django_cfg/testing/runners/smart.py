@@ -119,7 +119,19 @@ class SmartTestRunner(DiscoverRunner):
 
         runner_self = self
 
-        def patched_create_test_db(creation_self, verbosity=1, autoclobber=False, serialize=True, keepdb=False):
+        # `serialize` is forwarded only when the caller passed it. Django 5.2's
+        # setup_databases() passes serialize=False and serializes every database
+        # itself once all of them (and their mirrors) exist; Django 6.0+ passes
+        # nothing, because the argument is deprecated (RemovedInDjango2028Warning,
+        # 6.0 release notes: use serialize_db_to_string()). A default of True here
+        # sent serialize=True on 6.x: the warning on every run, and each database
+        # serialized twice, the first time before the mirrors were configured.
+        # Same positional order as Django's signature (serialize third).
+        unset = object()
+
+        def patched_create_test_db(creation_self, verbosity=1, autoclobber=False, serialize=unset, keepdb=False):
+            serialize_kw = {} if serialize is unset else {"serialize": serialize}
+
             # Step 1: create the empty DB (no migrations yet).
             # autoclobber=True: always drop any leftover test DB from a
             # previous interrupted run — no interactive prompt in CI.
@@ -156,8 +168,8 @@ class SmartTestRunner(DiscoverRunner):
                     creation_self,
                     verbosity=verbosity,
                     autoclobber=autoclobber,
-                    serialize=serialize,
                     keepdb=keepdb,
+                    **serialize_kw,
                 )
             finally:
                 creation_self._create_test_db = original_inner

@@ -1,0 +1,56 @@
+---
+title: "Admin Overview: MCP and Modules"
+description: The two built-in tabs of the admin Overview, connecting your own assistant to the MCP server and the on/off/error state of each module.
+---
+
+The admin Overview (the admin index) gets two tabs without configuration, next to your own dashboard tabs.
+
+## MCP: connect your assistant
+
+Shown to staff while MCP is enabled. One card per MCP profile:
+
+| Row | What it says |
+|---|---|
+| Address | The URL a client registers (`DjangoConfig.api_url` + the profile path, as `install.sh` uses) |
+| Name | The registration alias (`skill(alias=...)`, else the server name) |
+| Tools | `all tools`, `tools marked public` or the names, plus the tool count and rate limit |
+| Credential | Whose key works on this profile, for the person looking |
+
+The credential is decided per person, with the same check the endpoint runs:
+
+| Credential | When | Who can see the value |
+|---|---|---|
+| Your personal API key | The profile accepts your `UserAPIKey` (the default validator of `enable_public_profile()`) | You |
+| Key bound to your account | `access_key` or `add_access_key(..., service_username=<you>)` | You |
+| Create key | The profile takes personal keys and you have none yet | You, after pressing Create key |
+| Sign-in (OAuth) | The profile has `oauth` | Nobody: the client signs in on first use |
+| Shared deployment key | The profile's unbound `MCP__ACCESS_KEY` | Superusers only |
+
+A key bound to another account is never shown.
+
+Commands, from the same formats as `@djangocfg/widget-mcp`:
+
+- **Claude Code**: `claude mcp add --scope user --transport http <name> <url> --header "X-MCP-Access-Key: <key>"` (removes an earlier entry first).
+- **Codex**: appends `[mcp_servers.<name>]` with `url` and `http_headers` to `~/.codex/config.toml` (`codex mcp add` takes no header); the table is also shown for pasting by hand. On an OAuth profile: `codex mcp add <name> --url <url> && codex mcp login <name>`.
+- **Custom**: the `mcpServers` JSON entry (`type`, `url`, `headers`) and the `install.sh` line.
+
+**The key is not in the page.** Commands show `••••••••` and the last four characters. Show and Copy fetch the real value with a `POST` that carries the CSRF token and answers `Cache-Control: no-store`; Hide forgets it. No key goes into a URL or a log line (the audit line names the user id and the profile).
+
+## Modules
+
+Superusers only. One card per module, with a state and a one-line hint:
+
+| Module | Reads |
+|---|---|
+| MCP | profiles, their paths and credential kinds |
+| Notion | enabled, token set, targets, Telegram/email copies |
+| Telegram | token and chat id set, dedup and its window |
+| Email | `MAILERS` (Django 6.1) or `EMAIL_BACKEND`, the configured backend; a console/file/memory backend is a warning |
+| RQ | queues, schedule count, per-queue depth, `rqcron` heartbeat (the check of `manage.py rq_cron_status`, with a 2 s deadline) |
+| LLM | OpenRouter and OpenAI keys set, MCP agent model |
+| Constance | installed, number of settings, backend |
+| OAuth sign-in | GitHub and Google configured, MCP profiles with OAuth |
+| Analytics | enabled, ingest path |
+| Logging | handlers, level, format, directory |
+
+States: **on**, **off**, **check** (configured but incomplete), **error** (a failing check). Secrets are reported as `set` / `not set`; a failing check shows the exception class only, since a Redis error message can carry a password.

@@ -88,10 +88,21 @@ def _filter_internal_keys(cfg: Dict[str, Any]) -> Dict[str, Any]:
 # Register built-in widgets
 
 # User widgets
+def _user_for(obj, field):
+    """The user to show: the field's value when it is a user, else the row itself when the
+    row is a user (a ``UserField`` on the user admin, e.g. ``avatar``)."""
+    value = getattr(obj, field, None)
+    if hasattr(value, "get_username"):
+        return value
+    if hasattr(obj, "get_username"):
+        return obj
+    return value
+
+
 WidgetRegistry.register(
     "user_avatar",
     lambda obj, field, cfg: UserDisplay.with_avatar(
-        getattr(obj, field),
+        _user_for(obj, field),
         UserDisplayConfig(**_filter_internal_keys(cfg)) if cfg else None
     )
 )

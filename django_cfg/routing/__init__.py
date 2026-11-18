@@ -1,19 +1,9 @@
 """
 Django-CFG Routing
 
-URL routing and callback utilities.
+Database routing (``DATABASE_ROUTERS``).
 """
 
-from .callbacks import *
-from .routers import *
+from .routers import DatabaseRouter
 
-__all__ = [
-    # From routers
-    "DynamicRouter",
-    "APIRouter",
-    "AdminRouter",
-
-    # From callbacks
-    "health_callback",
-    "status_callback",
-]
+__all__ = ["DatabaseRouter"]

@@ -1,27 +1,16 @@
 /**
- * JSONEditor Unfold Theme Integration
- * Automatically switches between light and dark themes based on Unfold's theme
+ * JSONEditor on the stock Django admin.
+ * Colours are Django admin variables, so the editor follows Django's
+ * light/dark/auto toggle without selectors of its own.
  */
 
-/* CSS Variables for theming */
 .jsoneditor {
-    /* Light theme (default) */
-    --jsoneditor-bg-color: #ffffff;
-    --jsoneditor-text-color: #1f2937;
-    --jsoneditor-border-color: #e5e7eb;
-    --jsoneditor-hover-bg: #f9fafb;
-    --jsoneditor-select-bg: #dbeafe;
-    --jsoneditor-menu-bg: #f9fafb;
-}
-
-/* Dark theme (when .dark class is active on parent) */
-:is(.dark .jsoneditor) {
-    --jsoneditor-bg-color: #1f2937;
-    --jsoneditor-text-color: #f9fafb;
-    --jsoneditor-border-color: #374151;
-    --jsoneditor-hover-bg: #374151;
-    --jsoneditor-select-bg: #1e40af;
-    --jsoneditor-menu-bg: #111827;
+    --jsoneditor-bg-color: var(--body-bg, #ffffff);
+    --jsoneditor-text-color: var(--body-fg, #1f2937);
+    --jsoneditor-border-color: var(--border-color, #e5e7eb);
+    --jsoneditor-hover-bg: var(--darkened-bg, #f9fafb);
+    --jsoneditor-select-bg: var(--selected-bg, #dbeafe);
+    --jsoneditor-menu-bg: var(--darkened-bg, #f9fafb);
 }
 
 /* Apply variables to JSONEditor elements */
@@ -80,21 +69,17 @@
     border-color: var(--jsoneditor-border-color) !important;
 }
 
-/* Scrollbar styling for dark mode */
-:is(.dark .jsoneditor) ::-webkit-scrollbar {
+/* Scrollbars */
+.jsoneditor ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
-:is(.dark .jsoneditor) ::-webkit-scrollbar-track {
-    background: #1f2937;
+.jsoneditor ::-webkit-scrollbar-track {
+    background: var(--jsoneditor-bg-color);
 }
 
-:is(.dark .jsoneditor) ::-webkit-scrollbar-thumb {
-    background: #4b5563;
+.jsoneditor ::-webkit-scrollbar-thumb {
+    background: var(--jsoneditor-border-color);
     border-radius: 4px;
-}
-
-:is(.dark .jsoneditor) ::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
 }

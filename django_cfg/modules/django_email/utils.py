@@ -40,6 +40,19 @@ def send_email(
     )
 
 
+def _admin_address(entry) -> str:
+    """One ``ADMINS`` entry as an address.
+
+    Django 6.0 deprecates the ``(name, address)`` pair in favour of a plain
+    address string (pairs are refused in Django 2028), so both shapes occur:
+    unpacking a string as a pair raises, and the old code then fell through to
+    "no admins configured".
+    """
+    if isinstance(entry, (list, tuple)):
+        return entry[1]
+    return str(entry)
+
+
 def get_admin_emails() -> List[str]:
     """
     Get admin email addresses from config or Django settings.
@@ -70,8 +83,7 @@ def get_admin_emails() -> List[str]:
 
         admins = getattr(settings, "ADMINS", [])
         if admins:
-            # ADMINS is a list of (name, email) tuples
-            return [email for name, email in admins]
+            return [_admin_address(entry) for entry in admins]
     except Exception:
         pass
 

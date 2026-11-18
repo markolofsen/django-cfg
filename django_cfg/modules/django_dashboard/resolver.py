@@ -49,6 +49,14 @@ def _builtin_tabs() -> List[DashboardTab]:
             # A broken built-in tab must never take down the whole dashboard.
             logger.exception("Analytics dashboard tab failed to load")
 
+    # MCP (while MCP is enabled) and Modules: modules/django_overview.
+    try:
+        from django_cfg.modules.django_overview.tabs import get_dashboard_tabs as overview_tabs
+
+        tabs.extend(overview_tabs())
+    except Exception:
+        logger.exception("Overview tabs (MCP, Modules) failed to load")
+
     return tabs
 
 

@@ -1,7 +1,7 @@
 """
 Admin configuration for geo models.
 
-Uses django_cfg declarative admin with Unfold styling.
+Uses django_cfg declarative admin (PydanticAdmin).
 """
 
 from django.contrib import admin

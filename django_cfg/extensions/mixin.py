@@ -96,7 +96,7 @@ class ExtensionMixin:
         """
         Get navigation configuration from all extensions.
 
-        Returns list of navigation section dicts ready for Unfold.
+        Returns list of navigation section dicts for the admin sidebar.
 
         Returns:
             List of navigation section dictionaries

@@ -7,18 +7,10 @@ Renders multiple conditional status badges.
 from typing import Any, Dict, List, Optional
 
 from django.template.loader import render_to_string
-from django.utils.safestring import SafeString, mark_safe
+from django.utils.html import format_html
+from django.utils.safestring import SafeString
 
-
-# Badge color classes mapping
-BADGE_COLORS = {
-    'primary': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-    'secondary': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-    'success': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-    'danger': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-    'warning': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-    'info': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300',
-}
+from ..html import _classes as C
 
 
 class StatusBadgesDisplay:
@@ -57,10 +49,7 @@ class StatusBadgesDisplay:
             'badges': badges,
             'separator': config.get('separator', ' '),
             'empty_text': config.get('empty_text'),
-            'empty_color_class': BADGE_COLORS.get(
-                config.get('empty_variant', 'secondary'),
-                BADGE_COLORS['secondary']
-            ),
+            'empty_color_class': C.badge(config.get('empty_variant', 'secondary'), default='neutral'),
         }
 
         return render_to_string(
@@ -90,9 +79,9 @@ class StatusBadgesDisplay:
 
         # Validate field exists
         if not hasattr(obj, field):
-            return mark_safe(
-                f'<span class="text-red-600 font-bold">'
-                f'StatusBadgesField Error: Field "{field}" not found</span>'
+            return format_html(
+                '<span class="cfg-danger cfg-strong">StatusBadgesField Error: Field "{}" not found</span>',
+                field,
             )
 
         badge_rules = config.get('badge_rules', [])
@@ -111,7 +100,7 @@ class StatusBadgesDisplay:
             if field_value == condition_value:
                 badges.append({
                     'label': label,
-                    'color_class': BADGE_COLORS.get(variant, BADGE_COLORS['secondary']),
+                    'color_class': C.badge(variant, default='neutral'),
                     'icon': icon,
                 })
 

@@ -4,7 +4,7 @@ Inline admin classes for Accounts app using Django Admin Utilities.
 Enhanced inline classes with better organization and conditional loading.
 """
 
-from unfold.admin import TabularInline
+from django.contrib.admin import TabularInline
 
 
 from ..models import UserActivity, UserAPIKey, UserRegistrationSource

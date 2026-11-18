@@ -156,7 +156,6 @@ def get_standard_dependencies() -> Dict[str, str]:
         "telegram-bot-api": "telebot",
 
         # Admin & UI
-        "django-unfold": "unfold",
         "django-constance": "constance",
 
         # API & Documentation

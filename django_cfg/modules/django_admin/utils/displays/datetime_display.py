@@ -8,7 +8,7 @@ from typing import Optional
 from django.contrib.humanize.templatetags.humanize import naturaltime
 from django.utils import timezone
 from django.utils.html import escape, format_html
-from django.utils.safestring import SafeString
+from django.utils.safestring import SafeString, mark_safe
 
 from ...models.display_models import DateTimeDisplayConfig
 
@@ -77,7 +77,7 @@ class DateTimeDisplay:
         config = config or DateTimeDisplayConfig()
 
         if not dt:
-            return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')
+            return mark_safe('<span class="cfg-muted">—</span>')
 
         display_dt = cls._to_local(dt, config.use_local_tz)
         date_str = display_dt.strftime("%Y-%m-%d")
@@ -87,18 +87,18 @@ class DateTimeDisplay:
 
         if config.show_relative:
             return format_html(
-                '<div class="text-xs" style="white-space: nowrap;">'
-                '<div class="font-medium">{}</div>'
-                '<div class="text-font-subtle-light dark:text-font-subtle-dark">{} {}</div>'
-                '<div class="text-font-subtle-light dark:text-font-subtle-dark">{}</div>'
+                '<div class="cfg-small" style="white-space: nowrap;">'
+                '<div class="cfg-strong">{}</div>'
+                '<div class="cfg-muted">{} {}</div>'
+                '<div class="cfg-muted">{}</div>'
                 '</div>',
                 escape(date_str), escape(time_str), escape(tz_abbrev), escape(relative_time),
             )
 
         return format_html(
-            '<div class="text-xs" style="white-space: nowrap;">'
-            '<div class="font-medium">{}</div>'
-            '<div class="text-font-subtle-light dark:text-font-subtle-dark">{} {}</div>'
+            '<div class="cfg-small" style="white-space: nowrap;">'
+            '<div class="cfg-strong">{}</div>'
+            '<div class="cfg-muted">{} {}</div>'
             '</div>',
             escape(date_str), escape(time_str), escape(tz_abbrev),
         )
@@ -109,7 +109,7 @@ class DateTimeDisplay:
         config = config or DateTimeDisplayConfig()
 
         if not dt:
-            return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')
+            return mark_safe('<span class="cfg-muted">—</span>')
 
         display_dt = cls._to_local(dt, config.use_local_tz)
         tz_abbrev = cls._get_tz_abbrev(display_dt)
@@ -127,6 +127,6 @@ class DateTimeDisplay:
         full_time = f"{display_dt.strftime(config.datetime_format)} {tz_abbrev}".strip()
 
         return format_html(
-            '<span class="text-xs text-font-default-light dark:text-font-default-dark" title="{}">{}</span>',
+            '<span class="cfg-small" title="{}">{}</span>',
             escape(full_time), escape(display_text),
         )

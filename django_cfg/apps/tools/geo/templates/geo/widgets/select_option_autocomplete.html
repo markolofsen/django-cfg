@@ -1,0 +1,2 @@
+{# Only the selected option is rendered; the rest comes from the AJAX search. #}
+{% for name, value in widget.attrs.items %}{% if name == "selected" %}<option value="{{ value|stringformat:'s' }}"{% include "django/forms/widgets/attrs.html" %}>{{ widget.label }}</option>{% endif %}{% endfor %}

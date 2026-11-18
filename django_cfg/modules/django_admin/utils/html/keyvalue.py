@@ -9,6 +9,8 @@ from typing import Any, List, Optional
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString, mark_safe
 
+from . import _classes as C
+
 
 class KeyValueElements:
     """Key-value display utilities."""
@@ -55,38 +57,25 @@ class KeyValueElements:
         Returns:
             SafeString with key-value HTML
         """
-        # Classes
-        classes = ['mb-2']
+        classes = [C.KV]
         if indent:
-            classes.append('ml-5')
+            classes.append("cfg-kv-indent")
         if divider:
-            classes.append('mt-4 pt-2 border-t border-base-200 dark:border-base-700')
+            classes.append("cfg-kv-divider")
 
         # Wrap value if variant or size specified
         if value_variant or value_size:
             value = KeyValueElements.text(value, variant=value_variant, size=value_size)
 
-        # Build parts
-        parts = []
-        parts.append(f'<div class="{" ".join(classes)}">')
+        icon_html = KeyValueElements.icon(icon, size="xs") if icon else ""
 
-        # Icon
-        if icon:
-            parts.append(str(KeyValueElements.icon(icon, size="xs")))
-            parts.append(' ')
-
-        # Key
-        parts.append(f'<span class="font-semibold text-font-default-light dark:text-font-default-dark">{escape(key)}:</span> ')
-
-        # Value
-        parts.append(str(value))
-
-        parts.append('</div>')
-
-        return mark_safe(''.join(parts))
+        return format_html(
+            '<dl class="{}"><dt>{}{}</dt><dd>{}</dd></dl>',
+            C.join(*classes), icon_html, key, value,
+        )
 
     @staticmethod
-    def divider(css_class: str = "my-2") -> SafeString:
+    def divider(css_class: str = "") -> SafeString:
         """
         Render horizontal divider line.
 
@@ -103,7 +92,9 @@ class KeyValueElements:
         Returns:
             SafeString with hr element
         """
-        return format_html('<hr class="{}">', css_class)
+        if css_class:
+            return format_html('<hr class="{}">', css_class)
+        return mark_safe('<hr>')
 
     @staticmethod
     def breakdown(*items: SafeString) -> SafeString:
@@ -128,7 +119,7 @@ class KeyValueElements:
         # Filter out None values
         filtered = [str(item) for item in items if item is not None]
 
-        return mark_safe(''.join(filtered))
+        return format_html('<div class="{}">{}</div>', C.STACK, mark_safe(''.join(filtered)))
 
     @staticmethod
     def key_value_list(
@@ -144,7 +135,7 @@ class KeyValueElements:
             items: List of dicts with 'key', 'value', and optional keys:
                 - icon: Material icon name
                 - indent: Boolean for indentation
-                - value_class: Tailwind classes for value
+                - value_class: extra CSS classes for the value (cfg-success, ...)
                 - divider: Boolean to show divider above
                 - size: 'sm', 'base', 'lg'
             layout: "vertical" or "horizontal"
@@ -162,58 +153,28 @@ class KeyValueElements:
             # With icons and styling
             html.key_value_list([
                 {'key': 'Available', 'value': '60 BTC', 'icon': Icons.CHECK_CIRCLE},
-                {'key': 'Total Value', 'value': '$1,234.56', 'value_class': 'text-green-700 text-lg', 'divider': True},
+                {'key': 'Total Value', 'value': '$1,234.56', 'value_class': 'cfg-success', 'divider': True},
             ])
 
         Returns:
             SafeString with formatted key-value list HTML
         """
-        spacing_map = {
-            'tight': 'mb-1',
-            'normal': 'mb-2',
-            'relaxed': 'mb-3'
-        }
-        spacing_class = spacing_map.get(spacing, 'mb-2')
-
         parts = []
         for item in items:
-            key = item.get('key', '')
-            value = item.get('value', '')
-            icon = item.get('icon', '')
-            indent = item.get('indent', False)
-            value_class = item.get('value_class', '')
-            divider = item.get('divider', False)
-            size = item.get('size', 'base')
-
-            # Icon HTML
-            icon_html = ""
-            if icon:
-                icon_html = f'{KeyValueElements.icon(icon, size="xs")} '
-
-            # Size classes
-            size_map = {
-                'sm': 'text-sm',
-                'base': 'text-base',
-                'lg': 'text-lg'
-            }
-            size_class = size_map.get(size, 'text-base')
-
-            # Classes
-            indent_class = 'ml-5' if indent else ''
-            divider_class = 'mt-4 pt-2 border-t border-base-200 dark:border-base-700' if divider else ''
-
-            # Build item HTML
-            item_html = format_html(
-                '<div class="{} {} {} {}">{}<span class="font-semibold">{}:</span> <span class="{}">{}</span></div>',
-                spacing_class,
-                indent_class,
-                divider_class,
-                size_class,
-                icon_html,
-                escape(key),
-                value_class,
-                value  # Already SafeString from html.number()
+            row_classes = C.join(
+                "cfg-kv-indent" if item.get('indent') else "",
+                "cfg-kv-divider" if item.get('divider') else "",
             )
-            parts.append(item_html)
+            icon = item.get('icon', '')
+            icon_html = KeyValueElements.icon(icon, size="xs") if icon else ""
+            parts.append(format_html(
+                '<dt class="{}">{}{}</dt><dd class="{}">{}</dd>',
+                row_classes,
+                icon_html,
+                item.get('key', ''),
+                C.join(row_classes, item.get('value_class', ''), C.SMALL if item.get('size') == 'sm' else ''),
+                item.get('value', ''),  # SafeString from html.number() stays unescaped
+            ))
 
-        return mark_safe(''.join(str(p) for p in parts))
+        css = C.join(C.KV, "cfg-kv-tight" if spacing == "tight" else "")
+        return format_html('<dl class="{}">{}</dl>', css, mark_safe(''.join(str(p) for p in parts)))

@@ -1,0 +1,88 @@
+{% extends "admin/base_site.html" %}
+{% load i18n django_cfg %}
+
+{# Overview: dashboard tabs (each an iframe with its own styles) and the MCP chat column, #}
+{# on the stock admin. Styles: django_cfg/cfg-admin.css (.cfg-overview, .cfg-tab...). #}
+{# The admin index only (CfgAdminSite.index_template). Not named admin/index.html: the stock #}
+{# admin/app_index.html extends that name, and app pages must stay the stock model list. #}
+
+{% block bodyclass %}{{ block.super }} cfg-overview-page{% endblock %}
+{% block nav-breadcrumbs %}{% endblock %}
+{% block content_title %}{% endblock %}
+
+{% block content %}
+{% version_update_info as version %}
+{% if version.update_available %}
+<a class="cfg-notice" href="{{ version.update_url }}" target="_blank" rel="noopener noreferrer">
+  <span class="cfg-row">
+    <span class="material-symbols-outlined cfg-icon-xl cfg-warning" aria-hidden="true">system_update</span>
+    <span class="cfg-stack">
+      <span class="cfg-medium">New django-cfg version available</span>
+      <span class="cfg-small cfg-muted">{{ version.current_version }} → <span class="cfg-success cfg-medium">{{ version.latest_version }}</span></span>
+    </span>
+  </span>
+  <span class="material-symbols-outlined cfg-muted" aria-hidden="true">open_in_new</span>
+</a>
+{% endif %}
+
+{% get_dashboard_config as dashboard %}
+{% has_mcp_chat as show_chat %}
+<div class="cfg-overview{% if not show_chat %} cfg-no-chat{% endif %}">
+  <div class="cfg-overview-tabs">
+    {% if dashboard and dashboard.tabs %}
+      <div class="cfg-tabs">
+        <nav role="tablist" aria-label="Dashboard tabs">
+          {% for tab in dashboard.tabs %}
+          <button type="button" class="cfg-tab" role="tab" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                  data-cfg-tab="{% url 'django_cfg_dashboard_tab' slug=tab.slug %}">
+            <span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">{{ tab.icon }}</span>{{ tab.title }}
+          </button>
+          {% endfor %}
+        </nav>
+        <a class="cfg-tab" id="cfg-tab-open" href="{% url 'django_cfg_dashboard_tab' slug=dashboard.tabs.0.slug %}" target="_blank" rel="noopener" title="Open in a new tab">
+          <span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">open_in_new</span>
+        </a>
+      </div>
+      <div class="cfg-tab-loading" id="cfg-tab-loading" hidden><div class="cfg-spinner"></div></div>
+      <iframe class="cfg-tab-frame" id="cfg-tab-frame" title="Dashboard tab"
+              src="{% url 'django_cfg_dashboard_tab' slug=dashboard.tabs.0.slug %}?iframe=1"></iframe>
+      <script>
+      (function () {
+        var frame = document.getElementById('cfg-tab-frame');
+        var loading = document.getElementById('cfg-tab-loading');
+        var open = document.getElementById('cfg-tab-open');
+        frame.addEventListener('load', function () { loading.hidden = true; });
+        document.querySelectorAll('[data-cfg-tab]').forEach(function (button) {
+          button.addEventListener('click', function () {
+            if (button.getAttribute('aria-selected') === 'true') return;
+            document.querySelectorAll('[data-cfg-tab]').forEach(function (b) {
+              b.setAttribute('aria-selected', b === button ? 'true' : 'false');
+            });
+            loading.hidden = false;
+            open.href = button.dataset.cfgTab;
+            frame.src = button.dataset.cfgTab + '?iframe=1';
+          });
+        });
+      })();
+      </script>
+    {% else %}
+      <div class="cfg-empty-state">
+        <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
+        <p>No dashboard tabs configured.</p>
+        <p class="cfg-small">Add <code class="cfg-code">dashboard=DashboardConfig(...)</code> to your config.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if show_chat %}
+  <div class="cfg-overview-chat">
+    <div class="cfg-panel-header">
+      <span class="cfg-row-tight cfg-medium"><span class="material-symbols-outlined cfg-icon-base" aria-hidden="true">smart_toy</span>MCP Agent</span>
+      <a class="cfg-small cfg-muted" href="https://pypi.org/project/django-cfg/" target="_blank" rel="noopener noreferrer">{% lib_name %}</a>
+    </div>
+    {% include "django_mcp/admin_chat.html" %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+

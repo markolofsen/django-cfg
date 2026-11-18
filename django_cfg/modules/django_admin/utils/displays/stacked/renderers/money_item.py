@@ -10,9 +10,9 @@ def render_money(obj: Any, field_name: str, config: dict) -> str:
     if hasattr(obj, full_display_field):
         value = getattr(obj, full_display_field)
         if value:
-            return f'<span class="text-sm font-medium">{value}</span>'
+            return f'<span class="cfg-strong">{value}</span>'
 
     value = getattr(obj, field_name, None)
     if value is None:
         return ""
-    return f'<span class="text-sm font-medium">{value:,.2f}</span>'
+    return f'<span class="cfg-strong">{value:,.2f}</span>'

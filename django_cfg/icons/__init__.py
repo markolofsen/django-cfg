@@ -1,5 +1,5 @@
 """
-Material Icons for Django CFG Unfold.
+Material Symbols icon names for django-cfg (admin navigation, badges, actions).
 
 Provides IDE-friendly Material Design Icons constants.
 """

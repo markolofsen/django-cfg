@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.utils.html import conditional_escape
+
+from ....html import _classes as C
 from .._types import TextRendererConfig  # type: ignore[import]
 
 
@@ -19,20 +22,22 @@ def render_text(value: Any, config: TextRendererConfig) -> str:
     suffix = config.get("suffix") or ""
     text = f"{prefix}{text}{suffix}"
 
-    classes = ["text-sm"]
+    classes = []
     if config.get("bold"):
-        classes.append("font-semibold")
+        classes.append(C.STRONG)
     if config.get("muted"):
-        classes.append("text-font-subtle-light dark:text-font-subtle-dark")
+        classes.append(C.MUTED)
     if config.get("monospace"):
-        classes.append("font-mono")
+        classes.append(C.MONO)
 
     icon_html = ""
     if config.get("icon"):
-        icon_html = f'<span class="material-symbols-outlined text-sm mr-1">{config["icon"]}</span>'
+        icon_html = f'<span class="cfg-icon">{config["icon"]}</span>'
 
     tooltip = ""
     if truncate and len(full_value) > truncate:
-        tooltip = f'title="{full_value}"'
+        tooltip = f'title="{conditional_escape(full_value)}"'
 
-    return f'<span class="{" ".join(classes)}" {tooltip}>{icon_html}{text}</span>'
+    class_attr = f' class="{C.join(*classes)}"' if classes else ""
+    tooltip_attr = f" {tooltip}" if tooltip else ""
+    return f"<span{class_attr}{tooltip_attr}>{icon_html}{conditional_escape(text)}</span>"

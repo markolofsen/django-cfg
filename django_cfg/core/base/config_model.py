@@ -25,6 +25,7 @@ from django_cfg.modules.django_notion.__cfg__ import NotionConfig  # noqa: F401
 from ...models import (
     AccountEmailsConfig,
     AdminAccessConfig,
+    AdminSiteConfig,
     AnalyticsConfig,
     ApiKeys,
     AxesConfig,
@@ -46,7 +47,6 @@ from ...models import (
     StorageConfig,
     TelegramConfig,
     TwoFactorConfig,
-    UnfoldConfig,
 )
 from ...modules.django_dashboard.models import DashboardConfig
 from ...modules.django_logging.__cfg__ import DjangoLoggingConfig
@@ -425,9 +425,9 @@ class DjangoConfig(BaseModel):
     # ║                          ADMIN INTERFACE                                  ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    unfold: Optional[UnfoldConfig] = Field(
+    admin_site: Optional[AdminSiteConfig] = Field(
         default=None,
-        description="Unfold admin interface configuration",
+        description="Admin site: branding, sidebar navigation, header links, login form",
     )
 
     dashboard: Optional[DashboardConfig] = Field(

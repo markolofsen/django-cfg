@@ -20,8 +20,8 @@ Production-ready Redis-based task queue with built-in monitoring:
 - ✅ **High performance** - 10,000+ jobs/second with low memory usage
 - ✅ **Redis-backed** queue with automatic job persistence
 - ✅ **Type-safe** configuration with Pydantic validation
-- ✅ **Worker management** via CLI commands (rqworker, rqscheduler)
-- ✅ **Cron scheduling** with RQ Scheduler for periodic tasks
+- ✅ **Worker management** via CLI commands (rqworker, rqcron)
+- ✅ **Cron scheduling** on RQ's native cron (`rqcron`) for periodic tasks
 - ✅ **Built-in monitoring** - Django Admin, REST API, Prometheus metrics
 - ✅ **Job dependencies** and retry logic with exponential backoff
 
@@ -168,7 +168,7 @@ Integrations automatically configure Django settings:
 
 | Integration | Type | Production Ready | Auto-Config | CLI Tools |
 |-------------|------|------------------|-------------|-----------|
-| **Django-RQ** | Task Queue | ✅ Yes | ✅ Yes | ✅ `rqworker`, `rqscheduler`, `rqstats` |
+| **Django-RQ** | Task Queue | ✅ Yes | ✅ Yes | ✅ `rqworker`, `rqcron`, `rqstats` |
 | **JWT Auth** | Security | ✅ Yes | ✅ Yes | - |
 | **2FA/TOTP** | Security | ✅ Yes | ✅ Yes | - |
 | **OTP Login** | Security | ✅ Yes | ✅ Yes | - |

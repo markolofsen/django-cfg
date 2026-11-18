@@ -30,7 +30,7 @@ graph TB
     A --> R[(Redis)]
     W[rq-worker] --> P
     W --> R
-    C[rq-scheduler] --> R
+    C[rq-scheduler: rqcron] --> R
     X[resetter - profile demo-reset] -. docker.sock .-> A
 ```
 
@@ -58,7 +58,7 @@ Facts that are easy to get wrong:
 - **The worker and scheduler reuse the API image.** Only `api` has a `build:`
   section; `rq-worker` and `rq-scheduler` use `djangocfg-api:latest` with another
   `command` (`python manage.py rqworker high default low knowledge` and
-  `python manage.py rqscheduler`).
+  `python manage.py rqcron`, one per project).
 - **Django is served by uvicorn** (ASGI, 4 workers) on port 8000, health-checked at
   `/healthz/ready`.
 

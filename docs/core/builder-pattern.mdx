@@ -48,7 +48,7 @@ apps = builder.build()
 
 1. **Accounts Before Admin:** Inserts `django_cfg.apps.system.accounts` (plus `totp` and `mailer`) before `django.contrib.admin` for proper migration order
 
-2. **RQ Ordering:** When `django_rq` is enabled, `django_cfg.modules.django_rq` is added before `django_rq` so django-cfg's `rqscheduler` command wins
+2. **RQ Ordering:** When `django_rq` is enabled, `django_cfg.modules.django_rq` is added before `django_rq` so django-cfg's `rqcron` and `rqworker` commands win over django-rq's
 
 ### MiddlewareBuilder
 

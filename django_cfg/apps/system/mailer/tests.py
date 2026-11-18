@@ -168,8 +168,9 @@ class DurableIntentTests(TestCase):
 
         seen = {}
 
-        def _observe(_fn):
-            # Called instead of sending: at this moment the transport has not run.
+        def _observe(_fn, *args, **kwargs):
+            # Called instead of sending (same signature as _handle_email_sending,
+            # which takes fail_silently=): at this moment the transport has not run.
             row = EmailLog.objects.get()
             seen["status"] = row.status
             seen["sent_at"] = row.sent_at

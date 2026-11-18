@@ -2,10 +2,12 @@
 Text display utilities with truncation and styling.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
+
+from ..html import _classes as C
 
 
 class TextDisplay:
@@ -26,9 +28,7 @@ class TextDisplay:
         value = getattr(obj, field_name, None)
 
         if value is None or value == "":
-            return format_html(
-                '<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>'
-            )
+            return format_html('<span class="{}">—</span>', C.MUTED)
 
         text = str(value)
         truncate = config.get('truncate')
@@ -45,17 +45,13 @@ class TextDisplay:
             is_truncated = True
 
         # Build CSS classes
-        classes = ["text-sm"]
+        classes = []
         if monospace:
-            classes.append("font-mono")
+            classes.append(C.MONO)
 
-        # Link styling - use primary colors for clickable fields
-        is_link = config.get('is_link', False)
-        if is_link:
-            classes.append("text-primary-600")
-            classes.append("dark:text-primary-400")
-            classes.append("hover:text-primary-700")
-            classes.append("dark:hover:text-primary-500")
+        # Link styling - use the primary tone for clickable fields
+        if config.get('is_link', False):
+            classes.append("cfg-primary")
 
         # Build inline styles
         styles = []
@@ -105,17 +101,13 @@ class TextDisplay:
             max_width: CSS max-width value
         """
         if not text:
-            return format_html(
-                '<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>'
-            )
+            return format_html('<span class="{}">—</span>', C.MUTED)
 
         text = str(text)
         is_truncated = len(text) > max_length
         display_text = text[:max_length] + "..." if is_truncated else text
 
-        classes = ["text-sm"]
-        if monospace:
-            classes.append("font-mono")
+        classes = [C.MONO] if monospace else []
 
         style = f"white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: {max_width}; display: block"
 

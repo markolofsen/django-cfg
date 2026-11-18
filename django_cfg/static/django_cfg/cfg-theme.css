@@ -1,0 +1,675 @@
+/* django-cfg admin theme: shadcn/ui tokens on the stock Django admin (Django 5.2 and 6.1).
+
+   Dark by default. Light through Django's own toggle: `cfg-theme.js` stores "dark" once per
+   browser when nothing (or theme.js's unchosen "auto") is stored, so `admin/js/theme.js` sets
+   data-theme="dark"; light and auto keep working. Without JS (no data-theme) the page is dark.
+
+   Selectors: tokens sit on `html:root` (0,1,1), later than base.css / dark_mode.css, so they beat
+   Django's `:root`, `html[data-theme="light"]` and `html[data-theme="dark"]`. Light is
+   `html:root[data-theme="light"]` and `html:root[data-theme="auto"]` under a light OS (0,2,1).
+
+   Token sources (read 2026-11-18, not from memory):
+   - shadcn/ui `apps/v4/registry/themes.ts` @ 968d8cb9 ("neutral", light + dark, oklch; radius 0.625rem);
+     `new-york-v4/ui/{button,badge,alert,input,table}.tsx` for the component recipes.
+   - Tailwind CSS 4.3.4 `theme.css` for the tone colours (green, amber, blue, red) and shadow-xs/md.
+   - Geist / Geist Mono variable fonts from npm `geist` 1.9.2 (SIL OFL 1.1, fonts/Geist-OFL.txt).
+   Mapping table and inventory: @dev/active/modern-django/M2c-theme.md. */
+
+@font-face {
+    font-family: "Geist";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("fonts/Geist-Variable.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Geist Mono";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("fonts/GeistMono-Variable.woff2") format("woff2");
+}
+
+/* ---- Tokens: dark (default) ---- */
+html:root {
+    --cfg-background: oklch(0.145 0 0);
+    --cfg-foreground: oklch(0.985 0 0);
+    --cfg-card: oklch(0.205 0 0);
+    --cfg-subtle: oklch(0.205 0 0);
+    --cfg-primary: oklch(0.922 0 0);
+    --cfg-primary-foreground: oklch(0.205 0 0);
+    --cfg-secondary: oklch(0.269 0 0);
+    --cfg-muted-foreground: oklch(0.708 0 0);
+    --cfg-accent: oklch(0.269 0 0);
+    --cfg-destructive: oklch(0.704 0.191 22.216);
+    --cfg-danger-fg: oklch(0.704 0.191 22.216);
+    --cfg-destructive-solid: color-mix(in oklab, oklch(0.704 0.191 22.216) 60%, oklch(0.145 0 0));
+    --cfg-border: oklch(1 0 0 / 10%);
+    --cfg-input: oklch(1 0 0 / 15%);
+    --cfg-ring: oklch(0.556 0 0);
+    --cfg-control: color-mix(in oklab, var(--cfg-input) 30%, transparent);
+    --cfg-link: oklch(0.707 0.165 254.624);
+    --cfg-link-hover: oklch(0.809 0.105 251.813);
+    --cfg-success-fg: oklch(0.792 0.209 151.711);
+    --cfg-warning-fg: oklch(0.828 0.189 84.429);
+    --cfg-info-fg: oklch(0.707 0.165 254.624);
+    --cfg-success-fill: oklch(0.723 0.219 149.579);
+    --cfg-warning-fill: oklch(0.769 0.188 70.08);
+    --cfg-danger-fill: oklch(0.637 0.237 25.331);
+    --cfg-info-fill: oklch(0.623 0.214 259.815);
+    --cfg-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --cfg-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+    --cfg-radius-lg: 0.625rem;
+    --cfg-radius: calc(var(--cfg-radius-lg) * 0.8);
+    --cfg-radius-sm: calc(var(--cfg-radius-lg) * 0.6);
+    --cfg-tint: 16%;
+
+    /* Django admin variables (base.css + dark_mode.css, 5.2 and 6.1), every one of them */
+    --primary: var(--cfg-accent);
+    --secondary: var(--cfg-primary);
+    --accent: var(--cfg-foreground);
+    --primary-fg: var(--cfg-foreground);
+    --body-fg: var(--cfg-foreground);
+    --body-bg: var(--cfg-background);
+    --body-quiet-color: var(--cfg-muted-foreground);
+    --body-medium-color: color-mix(in oklab, var(--cfg-foreground) 80%, var(--cfg-background));
+    --body-loud-color: var(--cfg-foreground);
+    --header-color: var(--cfg-foreground);
+    --header-branding-color: var(--cfg-foreground);
+    --header-bg: var(--cfg-background);
+    --header-link-color: var(--cfg-foreground);
+    --breadcrumbs-fg: var(--cfg-muted-foreground);
+    --breadcrumbs-link-fg: var(--cfg-muted-foreground);
+    --breadcrumbs-bg: var(--cfg-background);
+    --link-fg: var(--cfg-link);
+    --link-hover-color: var(--cfg-link-hover);
+    --link-selected-fg: var(--cfg-foreground);
+    --hairline-color: var(--cfg-border);
+    --border-color: var(--cfg-input);
+    --error-fg: var(--cfg-danger-fg);
+    --message-debug-bg: var(--cfg-subtle);
+    --message-info-bg: color-mix(in oklab, var(--cfg-info-fill) var(--cfg-tint), var(--cfg-background));
+    --message-success-bg: color-mix(in oklab, var(--cfg-success-fill) var(--cfg-tint), var(--cfg-background));
+    --message-warning-bg: color-mix(in oklab, var(--cfg-warning-fill) var(--cfg-tint), var(--cfg-background));
+    --message-error-bg: color-mix(in oklab, var(--cfg-danger-fill) var(--cfg-tint), var(--cfg-background));
+    --darkened-bg: var(--cfg-subtle);
+    --selected-bg: var(--cfg-accent);
+    --selected-row: color-mix(in oklab, var(--cfg-foreground) 7%, var(--cfg-background));
+    --button-fg: var(--cfg-primary-foreground);
+    --button-bg: var(--cfg-primary);
+    --button-hover-bg: color-mix(in oklab, var(--cfg-primary) 90%, var(--cfg-background));
+    --default-button-bg: var(--cfg-primary);
+    --default-button-hover-bg: var(--button-hover-bg);
+    --close-button-bg: var(--cfg-secondary);
+    --close-button-hover-bg: color-mix(in oklab, var(--cfg-secondary) 80%, var(--cfg-background));
+    --delete-button-bg: var(--cfg-destructive-solid);
+    --delete-button-hover-bg: color-mix(in oklab, var(--cfg-destructive-solid) 90%, var(--cfg-background));
+    --object-tools-fg: var(--cfg-foreground);
+    --object-tools-bg: var(--cfg-background);
+    --object-tools-hover-bg: var(--cfg-accent);
+    --font-family-primary: "Geist", "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-family-monospace: "Geist Mono", ui-monospace, Menlo, Monaco, "Cascadia Mono", "Roboto Mono",
+        "Courier New", monospace;
+    color-scheme: dark;
+}
+
+/* ---- Tokens: light (the toggle's "light", or "auto" under a light OS) ---- */
+html:root[data-theme="light"] {
+    --cfg-background: oklch(1 0 0);
+    --cfg-foreground: oklch(0.145 0 0);
+    --cfg-card: oklch(1 0 0);
+    --cfg-subtle: oklch(0.985 0 0);
+    --cfg-primary: oklch(0.205 0 0);
+    --cfg-primary-foreground: oklch(0.985 0 0);
+    --cfg-secondary: oklch(0.97 0 0);
+    --cfg-muted-foreground: oklch(0.556 0 0);
+    --cfg-accent: oklch(0.97 0 0);
+    --cfg-destructive: oklch(0.577 0.245 27.325);
+    --cfg-danger-fg: oklch(0.505 0.213 27.518);
+    --cfg-destructive-solid: oklch(0.577 0.245 27.325);
+    --cfg-border: oklch(0.922 0 0);
+    --cfg-input: oklch(0.922 0 0);
+    --cfg-ring: oklch(0.708 0 0);
+    --cfg-link: oklch(0.546 0.245 262.881);
+    --cfg-link-hover: oklch(0.488 0.243 264.376);
+    --cfg-success-fg: oklch(0.527 0.154 150.069);
+    --cfg-warning-fg: oklch(0.555 0.163 48.998);
+    --cfg-info-fg: oklch(0.488 0.243 264.376);
+    --cfg-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --cfg-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --cfg-tint: 10%;
+    --cfg-control: transparent;
+    color-scheme: light;
+}
+@media (prefers-color-scheme: light) {
+    html:root[data-theme="auto"] {
+        --cfg-background: oklch(1 0 0);
+        --cfg-foreground: oklch(0.145 0 0);
+        --cfg-card: oklch(1 0 0);
+        --cfg-subtle: oklch(0.985 0 0);
+        --cfg-primary: oklch(0.205 0 0);
+        --cfg-primary-foreground: oklch(0.985 0 0);
+        --cfg-secondary: oklch(0.97 0 0);
+        --cfg-muted-foreground: oklch(0.556 0 0);
+        --cfg-accent: oklch(0.97 0 0);
+        --cfg-destructive: oklch(0.577 0.245 27.325);
+    --cfg-danger-fg: oklch(0.505 0.213 27.518);
+        --cfg-destructive-solid: oklch(0.577 0.245 27.325);
+        --cfg-border: oklch(0.922 0 0);
+        --cfg-input: oklch(0.922 0 0);
+        --cfg-ring: oklch(0.708 0 0);
+        --cfg-link: oklch(0.546 0.245 262.881);
+        --cfg-link-hover: oklch(0.488 0.243 264.376);
+        --cfg-success-fg: oklch(0.527 0.154 150.069);
+        --cfg-warning-fg: oklch(0.555 0.163 48.998);
+        --cfg-info-fg: oklch(0.488 0.243 264.376);
+        --cfg-shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --cfg-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --cfg-tint: 10%;
+        --cfg-control: transparent;
+        color-scheme: light;
+    }
+}
+
+/* ---- Fallback for browsers without oklch() (before 2023): the same tokens in hex ---- */
+@supports not (color: oklch(0 0 0)) {
+    html:root {
+        --cfg-background: #0a0a0a; --cfg-foreground: #fafafa; --cfg-card: #171717; --cfg-subtle: #171717;
+        --cfg-primary: #e5e5e5; --cfg-primary-foreground: #171717; --cfg-secondary: #262626;
+        --cfg-muted-foreground: #a1a1a1; --cfg-accent: #262626; --cfg-destructive: #ff6467;
+        --cfg-destructive-solid: #9f3e40; --cfg-border: rgb(255 255 255 / 10%); --cfg-input: rgb(255 255 255 / 15%);
+        --cfg-ring: #737373; --cfg-danger-fg: #ff6467; --cfg-link: #51a2ff; --cfg-link-hover: #8ec5ff; --cfg-success-fg: #05df72;
+        --cfg-warning-fg: #ffb900; --cfg-info-fg: #51a2ff; --cfg-success-fill: #00c950; --cfg-warning-fill: #fe9a00;
+        --cfg-danger-fill: #fb2c36; --cfg-info-fill: #2b7fff;
+    }
+    html:root[data-theme="light"] {
+        --cfg-background: #fff; --cfg-foreground: #0a0a0a; --cfg-card: #fff; --cfg-subtle: #fafafa;
+        --cfg-primary: #171717; --cfg-primary-foreground: #fafafa; --cfg-secondary: #f5f5f5;
+        --cfg-muted-foreground: #737373; --cfg-accent: #f5f5f5; --cfg-destructive: #e7000b;
+        --cfg-destructive-solid: #e7000b; --cfg-border: #e5e5e5; --cfg-input: #e5e5e5; --cfg-ring: #a1a1a1; --cfg-danger-fg: #c10007;
+        --cfg-link: #155dfc; --cfg-link-hover: #1447e6; --cfg-success-fg: #008236; --cfg-warning-fg: #bb4d00;
+        --cfg-info-fg: #1447e6;
+    }
+    @media (prefers-color-scheme: light) {
+        html:root[data-theme="auto"] {
+            --cfg-background: #fff; --cfg-foreground: #0a0a0a; --cfg-card: #fff; --cfg-subtle: #fafafa;
+            --cfg-primary: #171717; --cfg-primary-foreground: #fafafa; --cfg-secondary: #f5f5f5;
+            --cfg-muted-foreground: #737373; --cfg-accent: #f5f5f5; --cfg-destructive: #e7000b;
+            --cfg-destructive-solid: #e7000b; --cfg-border: #e5e5e5; --cfg-input: #e5e5e5; --cfg-ring: #a1a1a1; --cfg-danger-fg: #c10007;
+            --cfg-link: #155dfc; --cfg-link-hover: #1447e6; --cfg-success-fg: #008236; --cfg-warning-fg: #bb4d00;
+            --cfg-info-fg: #1447e6;
+        }
+    }
+}
+
+/* ================================================================= base */
+body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-feature-settings: "cv11"; }
+h1 { font-weight: 600; font-size: 1.5rem; letter-spacing: -0.025em; color: var(--cfg-foreground); }
+h2.subhead, #content h2 { font-weight: 500; }
+code, pre, kbd, samp, tt { font-family: var(--font-family-monospace); }
+code strong { color: var(--cfg-warning-fg); }
+blockquote { border-left-color: var(--cfg-border); color: var(--cfg-muted-foreground); }
+:focus-visible { outline: 2px solid color-mix(in oklab, var(--cfg-ring) 70%, transparent); outline-offset: 2px; }
+::selection { background: var(--cfg-primary); color: var(--cfg-primary-foreground); }
+a.deletelink:link, a.deletelink:visited { color: var(--cfg-danger-fg); }
+a.deletelink:focus, a.deletelink:hover { color: var(--cfg-danger-fg); text-decoration: underline; }
+/* Links, shadcn style: no underline at rest, underline on hover and keyboard focus; links inside
+   running text (help, messages, error notes, paragraphs) keep it, so they stay findable without colour.
+   Django 6.0+ base.css underlines every content link with
+   a:not([role=button], #header a, #nav-sidebar a, #content-main.app-list a, .object-tools a), specificity
+   (1,1,2); 5.2 has no such rule. :not(#cfg-u) (an id nothing has) lifts these rules to that weight, and
+   they come later, so they win on both versions without an important flag. Button-like links are left alone. */
+html a[href]:not(#cfg-u) { text-decoration: none; }
+html a[href]:not(#cfg-u, [role="button"], .button, .object-tools a, .paginator a, .cfg-tab, .cfg-action, .cfg-notice,
+    .cfg-link, #header a, #nav-sidebar a, thead th a, .calendar a, .timelist a, .calendarnav-previous,
+    .calendarnav-next, .related-widget-wrapper-link, .inline-deletelink, .submit-row a):is(:hover, :focus-visible) {
+    text-decoration: underline; text-underline-offset: 4px;
+}
+html :is(p, .help, ul.messagelist li, .errornote, ul.errorlist, blockquote, .cfg-markdown) a[href]:not(#cfg-u, .paginator a,
+    .datetimeshortcuts a, .button, [role="button"], .deletelink) {
+    text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in oklab, currentColor 45%, transparent);
+}
+html :is(p, .help, ul.messagelist li, .errornote, ul.errorlist, blockquote, .cfg-markdown) a[href]:not(#cfg-u):hover { text-decoration-color: currentColor; }
+
+/* ================================================================= header, breadcrumbs */
+#header {
+    flex-shrink: 0; min-height: 56px; box-sizing: border-box; padding: 8px 24px; gap: 16px;
+    border-bottom: 1px solid var(--cfg-border);
+}
+#site-name { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+#site-name a:link, #site-name a:visited { color: var(--cfg-foreground); }
+#site-name a .cfg-icon { margin-right: 6px; }
+#user-tools, #logout-form button {
+    font-weight: 400; font-size: 0.8125rem; letter-spacing: normal; text-transform: none; color: var(--cfg-muted-foreground);
+}
+#user-tools a, #logout-form button { border-bottom: 0; }
+#header #user-tools a:link, #header #user-tools a:visited, #header #logout-form button { color: var(--cfg-muted-foreground); }
+#header #user-tools a:hover, #header #user-tools a:focus, #header #logout-form button:hover { color: var(--cfg-foreground); text-decoration: none; }
+#user-tools strong { color: var(--cfg-foreground); font-weight: 500; }
+.theme-toggle svg.theme-icon-when-auto, .theme-toggle svg.theme-icon-when-dark, .theme-toggle svg.theme-icon-when-light {
+    fill: var(--cfg-muted-foreground); color: transparent;
+}
+.theme-toggle:hover svg { fill: var(--cfg-foreground); }
+
+/* :is(div, ol): the element weight of Django's own rules (5.2 responsive div.breadcrumbs 10px 30px,
+   6.0+ ol.breadcrumbs 10px 40px also on phones) outweighs a bare .breadcrumbs */
+:is(div, ol).breadcrumbs {
+    padding: 10px 24px; font-size: 0.8125rem; border-bottom: 1px solid var(--cfg-border);
+    background: var(--cfg-background); color: var(--cfg-muted-foreground);
+}
+.breadcrumbs a:link, .breadcrumbs a:visited { color: var(--cfg-muted-foreground); }
+.breadcrumbs a:focus, .breadcrumbs a:hover { color: var(--cfg-foreground); }
+ol.breadcrumbs li[aria-current="page"], ol.breadcrumbs li a[aria-current="page"] { color: var(--cfg-foreground); }
+
+/* ================================================================= sidebar (Vercel-like rows) */
+#nav-sidebar { background: var(--cfg-background); border-right-color: var(--cfg-border); padding: 8px 8px 24px; box-sizing: border-box; }
+.toggle-nav-sidebar { background-color: var(--cfg-background); border-right-color: var(--cfg-border); color: var(--cfg-muted-foreground); }
+#nav-filter {
+    height: 2rem; margin: 4px 0 8px; padding: 0 10px; border-radius: var(--cfg-radius);
+    border: 1px solid var(--cfg-input); background: transparent; font-size: 0.8125rem;
+}
+#nav-filter:focus { border-color: var(--cfg-ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--cfg-ring) 50%, transparent); outline: none; }
+#nav-filter.no-results { background: var(--message-error-bg); }
+#nav-sidebar .module { margin-bottom: 12px; }
+#nav-sidebar .module caption, #nav-sidebar .module caption a.section:link, #nav-sidebar .module caption a.section:visited {
+    background: none; border: 0; padding: 8px 8px 4px; text-transform: none; letter-spacing: normal;
+    font-size: 0.75rem; font-weight: 500; color: var(--cfg-muted-foreground);
+}
+#nav-sidebar .current-app .section:link, #nav-sidebar .current-app .section:visited { color: var(--cfg-foreground); font-weight: 500; }
+#nav-sidebar tr { background: transparent; }
+#nav-sidebar th, #nav-sidebar td { border-bottom: 0; padding: 6px 8px; }
+#nav-sidebar th { border-radius: var(--cfg-radius-sm) 0 0 var(--cfg-radius-sm); }
+#nav-sidebar td:last-child { border-radius: 0 var(--cfg-radius-sm) var(--cfg-radius-sm) 0; }
+#nav-sidebar th a:link, #nav-sidebar th a:visited { color: var(--cfg-muted-foreground); font-weight: 400; }
+#nav-sidebar tr:hover th a, #nav-sidebar th a:focus { color: var(--cfg-foreground); }
+#nav-sidebar tr:hover { background: color-mix(in oklab, var(--cfg-accent) 60%, transparent); }
+#nav-sidebar .current-model { background: var(--cfg-accent); }
+#nav-sidebar .current-model th a:link, #nav-sidebar .current-model th a:visited { color: var(--cfg-foreground); font-weight: 500; }
+#nav-sidebar .cfg-nav-icon { color: inherit; }
+#nav-sidebar a.addlink, #nav-sidebar a.changelink, #nav-sidebar a.viewlink { color: var(--cfg-muted-foreground); font-size: 0.75rem; }
+
+/* ================================================================= content, cards, headings */
+#content { padding: 24px 32px; }
+#content-main > .module:not(#changelist), .dashboard .module, fieldset.module, #content-related, .inline-group {
+    border: 1px solid var(--cfg-border); border-radius: var(--cfg-radius-lg); background: var(--cfg-card); overflow: hidden;
+}
+#content-related { background: var(--cfg-card); }
+.inline-group { overflow-x: auto; } /* a tabular inline wider than a phone scrolls inside its card */
+.module h2, .module caption, .inline-group h2, fieldset .fieldset-heading, fieldset .inline-heading,
+:not(.inline-related) .collapse summary {
+    background: transparent; color: var(--cfg-foreground); border: 0; border-bottom: 1px solid var(--cfg-border);
+    padding: 12px 16px; font-size: 0.875rem; font-weight: 600; text-transform: none; letter-spacing: normal;
+}
+.module caption a.section:link, .module caption a.section:visited { color: var(--cfg-foreground); }
+.collapse summary .fieldset-heading, .collapse summary .inline-heading { border: 0; padding: 0; }
+fieldset.module { padding: 0; }
+.form-row { border-bottom-color: var(--cfg-border); padding: 12px 16px; }
+fieldset.module > .form-row:last-child { border-bottom: 0; }
+label, legend { color: var(--cfg-foreground); font-weight: 500; }
+.required label, label.required { font-weight: 600; }
+.help, p.help, div.help, form .help { color: var(--cfg-muted-foreground); }
+.inline-related h3 { background: var(--cfg-subtle); color: var(--cfg-foreground); border-bottom: 1px solid var(--cfg-border); }
+.inline-related h4, .inline-related:not(.tabular) .collapse summary { background: var(--cfg-subtle); border-color: var(--cfg-border); color: var(--cfg-foreground); }
+.inline-group div.add-row, .inline-group .tabular tr.add-row td { background: var(--cfg-card); border-bottom-color: var(--cfg-border); }
+
+/* ================================================================= tables */
+thead th, tfoot td, .module table thead th {
+    background: var(--cfg-subtle); color: var(--cfg-muted-foreground); text-transform: none;
+    font-size: 0.8125rem; font-weight: 500; letter-spacing: normal; padding: 10px 12px;
+    border-top: 0; border-bottom: 1px solid var(--cfg-border);
+}
+thead th a:link, thead th a:visited { color: var(--cfg-muted-foreground); }
+thead th.sorted { background: var(--cfg-accent); }
+thead th.sorted a:link, thead th.sorted a:visited { color: var(--cfg-foreground); }
+table thead th .text a:focus, table thead th .text a:hover { background: var(--cfg-accent); color: var(--cfg-foreground); }
+td, th { border-bottom-color: var(--cfg-border); }
+tr:nth-child(odd), tr:nth-child(even), tr:nth-child(even) .errorlist, .row-form-errors { background: transparent; }
+#changelist table tbody td, #changelist table tbody th { padding: 10px 12px; vertical-align: middle; }
+#changelist tbody tr:hover { background: color-mix(in oklab, var(--cfg-accent) 50%, transparent); }
+#changelist tbody tr.selected, #changelist tbody tr:has(.action-select:checked) { background-color: var(--selected-row); }
+#changelist .results { border: 1px solid var(--cfg-border); border-radius: var(--cfg-radius-lg); }
+#changelist .results table { width: 100%; }
+
+/* changelist chrome: toolbar, search, actions, date hierarchy, paginator */
+#changelist .toplinks, #changelist .xfull, .change-list .toplinks { border-bottom-color: var(--cfg-border); }
+#toolbar { background: transparent; border: 0; padding: 0 0 12px; margin-bottom: 0; color: var(--cfg-muted-foreground); }
+#toolbar #searchbar { height: 2.25rem; box-sizing: border-box; min-width: 16rem; }
+#changelist .actions { background: transparent; border: 0; padding: 0 0 12px; color: var(--cfg-muted-foreground); }
+#changelist .actions span.all, #changelist .actions span.action-counter, #changelist .actions span.clear,
+#changelist .actions span.question { color: var(--cfg-muted-foreground); }
+.change-list .toplinks a, .change-list .toplinks .date-back { color: var(--cfg-muted-foreground); }
+.change-list .toplinks a:hover { color: var(--cfg-foreground); }
+.paginator, #changelist .paginator, #changelist .changelist-footer, #changelist .changelist-footer .paginator {
+    background: transparent; border-color: var(--cfg-border); color: var(--cfg-muted-foreground);
+}
+#changelist .changelist-footer { border: 0; }
+.paginator a:link, .paginator a:visited, .paginator a:not(.showall), .paginator .this-page {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; height: 2rem;
+    box-sizing: border-box; padding: 0 8px; border-radius: var(--cfg-radius); border: 1px solid transparent;
+    background: transparent; color: var(--cfg-foreground); text-decoration: none; font-weight: 400;
+}
+.paginator a:not([aria-current="page"], .showall):hover, .paginator a:not([aria-current="page"], .showall):focus,
+.paginator a:not(.showall):hover { background: var(--cfg-accent); color: var(--cfg-foreground); }
+.paginator a[aria-current="page"], .paginator .this-page { border-color: var(--cfg-input); background: var(--cfg-background); font-weight: 500; }
+.paginator a.showall:link, .paginator a.showall:visited { color: var(--cfg-link); min-width: 0; }
+
+/* filters (right column) */
+#changelist-filter {
+    background: var(--cfg-card); border: 1px solid var(--cfg-border); border-radius: var(--cfg-radius-lg);
+    padding: 0 0 8px; overflow: hidden;
+}
+#changelist-filter h2 { background: transparent; color: var(--cfg-foreground); font-weight: 600; text-transform: none; letter-spacing: normal; font-size: 0.875rem; padding: 12px 16px; border-bottom: 1px solid var(--cfg-border); }
+#changelist-filter h3, #changelist-filter details summary { color: var(--cfg-foreground); font-weight: 500; font-size: 0.8125rem; }
+#changelist-filter details > summary::before { color: var(--cfg-muted-foreground); }
+#changelist-filter ul { border-bottom-color: var(--cfg-border); }
+#changelist-filter a:link, #changelist-filter a:visited { color: var(--cfg-muted-foreground); }
+#changelist-filter a:hover, #changelist-filter a:focus { color: var(--cfg-foreground); }
+#changelist-filter li.selected { border-left: 2px solid var(--cfg-foreground); }
+#changelist-filter li.selected a:link, #changelist-filter li.selected a:visited { color: var(--cfg-foreground); font-weight: 500; }
+#changelist-filter #changelist-filter-extra-actions { border-bottom-color: var(--cfg-border); }
+
+/* ================================================================= inputs (shadcn Input: h-9, rounded-md, ring-[3px] on focus) */
+input:not([type]), input[type="text"], input[type="password"], input[type="email"], input[type="url"],
+input[type="number"], input[type="tel"], input[type="search"], input[type="date"], input[type="time"],
+input[type="datetime-local"], textarea, select, .vTextField {
+    border: 1px solid var(--cfg-input); border-radius: var(--cfg-radius); padding: 6px 10px;
+    background-color: var(--cfg-control); color: var(--cfg-foreground);
+    box-shadow: var(--cfg-shadow-xs); font-family: var(--font-family-primary); font-size: 0.875rem;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+select { height: 2.25rem; padding-top: 0; padding-bottom: 0; }
+select[multiple] { height: auto; padding: 4px; }
+input:not([type]):focus, input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus,
+input[type="url"]:focus, input[type="number"]:focus, input[type="tel"]:focus, input[type="search"]:focus,
+textarea:focus, select:focus, .vTextField:focus, #toolbar #searchbar:focus {
+    border-color: var(--cfg-ring); outline: none;
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--cfg-ring) 50%, transparent);
+}
+input::placeholder, textarea::placeholder { color: var(--cfg-muted-foreground); }
+.errors input, .errors select, .errors textarea, td ul.errorlist + input, td ul.errorlist + select {
+    border-color: var(--cfg-destructive);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--cfg-destructive) 20%, transparent);
+}
+input[type="checkbox"], input[type="radio"] { accent-color: var(--cfg-primary); }
+input[type="file"]::file-selector-button {
+    height: 2rem; margin-right: 10px; padding: 0 12px; border: 1px solid var(--cfg-input); border-radius: var(--cfg-radius);
+    background: var(--cfg-control); color: var(--cfg-foreground); font: inherit; font-weight: 500; cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover { background: var(--cfg-accent); }
+
+/* ================================================================= buttons: primary, outline, ghost, destructive */
+.button, input[type="submit"], input[type="button"], .submit-row input, a.button {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-sizing: border-box;
+    height: 2.25rem; padding: 0 16px; border: 1px solid transparent; border-radius: var(--cfg-radius);
+    font-family: var(--font-family-primary); font-size: 0.875rem; font-weight: 500; line-height: 1;
+    background: var(--cfg-primary); color: var(--cfg-primary-foreground); box-shadow: var(--cfg-shadow-xs);
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+a.button { padding: 0 12px; text-decoration: none; }
+.button:hover, input[type="submit"]:hover, input[type="button"]:hover, .button:focus, input[type="submit"]:focus,
+input[type="button"]:focus, .button:active, input[type="submit"]:active, input[type="button"]:active {
+    background: var(--button-hover-bg);
+}
+.button:focus-visible, input[type="submit"]:focus-visible, input[type="button"]:focus-visible, a.button:focus-visible {
+    outline: none; border-color: var(--cfg-ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--cfg-ring) 50%, transparent);
+}
+.button.default, input[type="submit"].default, .submit-row input.default { font-weight: 500; background: var(--cfg-primary); text-transform: none; }
+.submit-row input.default:hover, .submit-row input.default:focus { background: var(--button-hover-bg); }
+/* outline: secondary submit buttons, the changelist "Go" and search, selector buttons */
+.submit-row input:not(.default), #toolbar form input[type="submit"], .actions .button, #changelist .actions .button,
+.delete-confirmation form .cancel-link, a.button.cancel-link, .submit-row a.closelink, .calendar-cancel {
+    background: var(--cfg-control); color: var(--cfg-foreground); border: 1px solid var(--cfg-input); box-shadow: var(--cfg-shadow-xs);
+}
+.submit-row input:not(.default):hover, #toolbar form input[type="submit"]:hover, .actions .button:hover,
+#changelist .actions .button:hover, .delete-confirmation form .cancel-link:hover, a.button.cancel-link:hover, .submit-row a.closelink:hover,
+.calendar-cancel:hover, .calendar-cancel:focus {
+    background: var(--cfg-accent); color: var(--cfg-foreground); border-color: var(--cfg-input);
+}
+#toolbar form input[type="submit"] { height: 2.25rem; padding: 0 14px; }
+#changelist .actions .button, #changelist .actions select { height: 2rem; padding-top: 0; padding-bottom: 0; }
+#changelist .actions .button { padding: 0 12px; font-size: 0.8125rem; }
+/* destructive */
+.submit-row a.deletelink, .delete-confirmation form input[type="submit"] {
+    display: inline-flex; align-items: center; height: 2.25rem; box-sizing: border-box; padding: 0 16px;
+    border-radius: var(--cfg-radius); background: var(--delete-button-bg); color: #fff; font-weight: 500; text-decoration: none;
+}
+.submit-row a.deletelink:hover, .submit-row a.deletelink:focus, .delete-confirmation form input[type="submit"]:hover,
+.delete-confirmation form input[type="submit"]:focus { background: var(--delete-button-hover-bg); color: #fff; }
+.delete-confirmation form .cancel-link { display: inline-flex; align-items: center; height: 2.25rem; box-sizing: border-box; padding: 0 16px; border-radius: var(--cfg-radius); }
+.button[disabled], input[type="submit"][disabled], input[type="button"][disabled] { opacity: 0.5; cursor: not-allowed; }
+.submit-row {
+    background: var(--cfg-card); border: 1px solid var(--cfg-border); border-radius: var(--cfg-radius-lg);
+    padding: 12px 16px; gap: 8px; align-items: center;
+}
+/* object tools (Add, History, Import, Export, cfg actions): outline, Add is primary */
+.object-tools li + li { margin-left: 8px; }
+/* a POST action (django_admin/includes/action_link.html) is a <button> in its own <form> */
+.object-tools .cfg-action-form { display: inline; margin: 0; padding: 0; }
+.object-tools a:link, .object-tools a:visited, .object-tools button.cfg-action, .object-tools .cfg-action-group > details > summary {
+    display: inline-flex; align-items: center; gap: 6px; float: none; height: 2.25rem; box-sizing: border-box;
+    padding: 0 14px; border: 1px solid var(--cfg-input); border-radius: var(--cfg-radius);
+    background: var(--cfg-background); color: var(--cfg-foreground); box-shadow: var(--cfg-shadow-xs);
+    font-family: var(--font-family-primary); font-size: 0.875rem; font-weight: 500; line-height: 1;
+    text-transform: none; letter-spacing: normal; text-decoration: none; cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+.object-tools a:hover, .object-tools a:focus, .object-tools button.cfg-action:hover, .object-tools button.cfg-action:focus,
+.object-tools .cfg-action-group > details > summary:hover { background: var(--cfg-accent); color: var(--cfg-foreground); }
+.object-tools a.addlink, .object-tools a.viewsitelink { background-image: none; padding-right: 14px; }
+.object-tools a.addlink:link, .object-tools a.addlink:visited { background: var(--cfg-primary); color: var(--cfg-primary-foreground); border-color: transparent; }
+.object-tools a.addlink:hover, .object-tools a.addlink:focus { background: var(--button-hover-bg); color: var(--cfg-primary-foreground); }
+.object-tools a.addlink::before { content: "add"; font-family: "Material Symbols Outlined"; font-feature-settings: "liga"; font-size: 1.15em; font-weight: 400; line-height: 1; }
+.object-tools a.viewsitelink::after { content: "open_in_new"; font-family: "Material Symbols Outlined"; font-feature-settings: "liga"; font-size: 1.05em; font-weight: 400; line-height: 1; }
+
+/* ================================================================= messages as shadcn alerts */
+ul.messagelist li {
+    position: relative; padding: 12px 16px 12px 44px; margin: 0 0 12px; border: 1px solid var(--cfg-border);
+    border-radius: var(--cfg-radius-lg); background-color: var(--cfg-card); background-image: none;
+    color: var(--cfg-foreground); font-size: 0.875rem;
+}
+ul.messagelist li::before {
+    position: absolute; left: 16px; top: 12px; font-family: "Material Symbols Outlined"; font-feature-settings: "liga";
+    font-size: 18px; line-height: 1.15; content: "info"; color: var(--cfg-info-fg);
+}
+ul.messagelist li.success { border-color: color-mix(in oklab, var(--cfg-success-fg) 35%, var(--cfg-border)); background-image: none; background-color: var(--cfg-card); }
+ul.messagelist li.success::before { content: "check_circle"; color: var(--cfg-success-fg); }
+ul.messagelist li.warning { border-color: color-mix(in oklab, var(--cfg-warning-fg) 35%, var(--cfg-border)); background-image: none; background-color: var(--cfg-card); }
+ul.messagelist li.warning::before { content: "warning"; color: var(--cfg-warning-fg); }
+ul.messagelist li.error { border-color: color-mix(in oklab, var(--cfg-destructive) 40%, var(--cfg-border)); background-image: none; background-color: var(--cfg-card); color: var(--cfg-danger-fg); }
+ul.messagelist li.error::before { content: "error"; color: var(--cfg-danger-fg); }
+ul.messagelist li.info, ul.messagelist li.debug { background-image: none; background-color: var(--cfg-card); }
+ul.messagelist li.debug::before { content: "bug_report"; color: var(--cfg-muted-foreground); }
+.errornote {
+    border: 1px solid color-mix(in oklab, var(--cfg-destructive) 40%, var(--cfg-border)); border-radius: var(--cfg-radius-lg);
+    background: var(--cfg-card); color: var(--cfg-danger-fg); font-weight: 500; padding: 12px 16px;
+}
+ul.errorlist { color: var(--cfg-danger-fg); background: transparent; }
+
+/* ================================================================= widgets */
+/* calendar and clock popups (DateTimeShortcuts) */
+.calendarbox, .clockbox {
+    background: var(--cfg-card); color: var(--cfg-foreground); border: 1px solid var(--cfg-border);
+    border-radius: var(--cfg-radius-lg); box-shadow: var(--cfg-shadow-md); overflow: hidden;
+}
+.calendar table { background: transparent; }
+.calendar caption, .calendarbox h2, .clockbox h2 { background: transparent; color: var(--cfg-foreground); font-weight: 600; border-bottom: 0; }
+.calendar th { background: transparent; color: var(--cfg-muted-foreground); border-bottom-color: var(--cfg-border); font-weight: 500; }
+.calendar td { border-top-color: transparent; }
+.calendar td.nonday { background: transparent; }
+.calendar td a, .timelist a { color: var(--cfg-foreground); border-radius: var(--cfg-radius-sm); }
+.calendar td a:hover, .calendar td a:focus, .timelist a:hover, .timelist a:focus { background: var(--cfg-accent); color: var(--cfg-foreground); }
+.calendar td a:active, .timelist a:active { background: var(--cfg-primary); color: var(--cfg-primary-foreground); }
+.calendar td.selected a { background: var(--cfg-primary); color: var(--cfg-primary-foreground); }
+.calendar td.today a { color: var(--cfg-link); }
+.calendarnav { color: var(--cfg-muted-foreground); }
+.calendar-shortcuts { background: transparent; border-top-color: var(--cfg-border); color: var(--cfg-muted-foreground); }
+.calendar-cancel { border-radius: 0; border-width: 1px 0 0; box-shadow: none; }
+.calendar-cancel a { color: var(--cfg-foreground); }
+.datetimeshortcuts a { color: var(--cfg-link); }
+/* filter_horizontal / filter_vertical (SelectFilter2) */
+.selector-available-title, .selector-chosen-title {
+    background: var(--cfg-subtle); color: var(--cfg-foreground); border-color: var(--cfg-input);
+    border-radius: var(--cfg-radius) var(--cfg-radius) 0 0;
+}
+.selector-chosen-title label, .selector-available-title label { color: var(--cfg-foreground); }
+.selector-chosen-title { box-shadow: inset 0 2px 0 var(--cfg-primary); }
+.selector .selector-filter { border-color: var(--cfg-input); }
+.selector select { border-radius: 0 0 var(--cfg-radius) var(--cfg-radius); box-shadow: none; }
+.selector-chosen .list-footer-display { background: var(--cfg-subtle); color: var(--cfg-muted-foreground); border-color: var(--cfg-input); }
+.selector-chosen .list-footer-display__clear { color: var(--cfg-foreground); }
+.selector ul.selector-chooser, .stacked ul.selector-chooser { background-color: var(--cfg-accent); border-radius: var(--cfg-radius); }
+.selector-chooseall, .selector-clearall {
+    background-color: transparent; color: var(--cfg-foreground); border: 1px solid var(--cfg-input); border-radius: var(--cfg-radius);
+    text-decoration: none; font-weight: 500;
+}
+:enabled.selector-chooseall:hover, :enabled.selector-clearall:hover, :enabled.selector-chooseall:focus,
+:enabled.selector-clearall:focus { background-color: var(--cfg-accent); }
+.form-row select option:checked { background-color: var(--cfg-accent); color: var(--cfg-foreground); }
+/* select2 (autocomplete_fields, the cfg autocomplete filter) */
+.select2-container--admin-autocomplete .select2-selection--single,
+.select2-container--admin-autocomplete .select2-selection--multiple {
+    min-height: 2.25rem; border-color: var(--cfg-input); border-radius: var(--cfg-radius);
+    background-color: var(--cfg-control); box-shadow: var(--cfg-shadow-xs);
+}
+.select2-container--admin-autocomplete .select2-selection--single .select2-selection__rendered { line-height: calc(2.25rem - 2px); }
+.select2-container--admin-autocomplete .select2-selection--single .select2-selection__arrow { height: calc(2.25rem - 2px); }
+.select2-container--admin-autocomplete .select2-selection--single .select2-selection__arrow b { border-top-color: var(--cfg-muted-foreground); }
+.select2-container--admin-autocomplete.select2-container--open .select2-selection--single .select2-selection__arrow b { border-bottom-color: var(--cfg-muted-foreground); }
+.select2-container--admin-autocomplete.select2-container--focus .select2-selection,
+.select2-container--admin-autocomplete.select2-container--open .select2-selection {
+    border-color: var(--cfg-ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--cfg-ring) 50%, transparent);
+}
+.select2-container--admin-autocomplete .select2-dropdown {
+    background: var(--cfg-card); border-color: var(--cfg-border); border-radius: var(--cfg-radius); box-shadow: var(--cfg-shadow-md);
+}
+.select2-container--admin-autocomplete .select2-results > .select2-results__options { background: var(--cfg-card); }
+.select2-container--admin-autocomplete .select2-search--dropdown { background: var(--cfg-card); }
+.select2-container--admin-autocomplete .select2-results__option--highlighted[aria-selected] { background-color: var(--cfg-accent); color: var(--cfg-foreground); }
+.select2-container--admin-autocomplete .select2-selection--multiple .select2-selection__choice { background: var(--cfg-accent); border-color: var(--cfg-border); border-radius: var(--cfg-radius-sm); }
+/* related-object links, inline delete, clearable file */
+.related-widget-wrapper-link { opacity: 0.75; }
+.related-widget-wrapper-link:hover { opacity: 1; }
+/* Stock SVG icons in theme colours: Django's own SVG used as a mask over a token colour, so the shape is
+   Django's and the colour is ours. An <img> keeps its box; object-position moves its bitmap out of it. */
+.related-widget-wrapper-link img {
+    object-position: -9999px 0; background-color: var(--cfg-muted-foreground);
+    -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat;
+}
+.related-widget-wrapper-link:hover img, .related-widget-wrapper-link:focus-visible img { background-color: var(--cfg-foreground); }
+.change-related img { -webkit-mask-image: url("../admin/img/icon-changelink.svg"); mask-image: url("../admin/img/icon-changelink.svg"); }
+.add-related img { -webkit-mask-image: url("../admin/img/icon-addlink.svg"); mask-image: url("../admin/img/icon-addlink.svg"); }
+.view-related img { -webkit-mask-image: url("../admin/img/icon-viewlink.svg"); mask-image: url("../admin/img/icon-viewlink.svg"); }
+.delete-related img { -webkit-mask-image: url("../admin/img/icon-deletelink.svg"); mask-image: url("../admin/img/icon-deletelink.svg"); }
+.delete-related:hover img, .delete-related:focus-visible img { background-color: var(--cfg-danger-fg); }
+/* calendar and clock buttons next to date/time inputs (two-state sprites: the top state is the shape) */
+.datetimeshortcuts .clock-icon, .datetimeshortcuts .date-icon {
+    background: var(--cfg-muted-foreground);
+    -webkit-mask: 0 0 / 24px auto no-repeat; mask: 0 0 / 24px auto no-repeat;
+}
+.datetimeshortcuts .clock-icon { -webkit-mask-image: url("../admin/img/icon-clock.svg"); mask-image: url("../admin/img/icon-clock.svg"); }
+.datetimeshortcuts .date-icon { -webkit-mask-image: url("../admin/img/icon-calendar.svg"); mask-image: url("../admin/img/icon-calendar.svg"); }
+.datetimeshortcuts button:hover :is(.clock-icon, .date-icon), .datetimeshortcuts button:focus-visible :is(.clock-icon, .date-icon) {
+    background: var(--cfg-foreground);
+}
+/* add / change / view / delete text links (app index, history, inlines): the icon as a ::before mask.
+   Object tools and the submit row draw their own (a Material Symbol, a destructive button). */
+:is(a.addlink, a.changelink, a.inlinechangelink, a.viewlink, a.inlineviewlink, a.deletelink):not(.object-tools a, .submit-row a) {
+    background-image: none; padding-left: 0;
+}
+:is(a.addlink, a.changelink, a.inlinechangelink, a.viewlink, a.inlineviewlink, a.deletelink):not(.object-tools a, .submit-row a)::before {
+    content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 5px; vertical-align: -1px;
+    background-color: currentColor; -webkit-mask: center / contain no-repeat; mask: center / contain no-repeat;
+}
+:is(a.addlink):not(.object-tools a, .submit-row a)::before { -webkit-mask-image: url("../admin/img/icon-addlink.svg"); mask-image: url("../admin/img/icon-addlink.svg"); }
+:is(a.changelink, a.inlinechangelink):not(.object-tools a, .submit-row a)::before { -webkit-mask-image: url("../admin/img/icon-changelink.svg"); mask-image: url("../admin/img/icon-changelink.svg"); }
+:is(a.viewlink, a.inlineviewlink):not(.object-tools a, .submit-row a)::before { -webkit-mask-image: url("../admin/img/icon-viewlink.svg"); mask-image: url("../admin/img/icon-viewlink.svg"); }
+:is(a.deletelink):not(.object-tools a, .submit-row a)::before { -webkit-mask-image: url("../admin/img/icon-deletelink.svg"); mask-image: url("../admin/img/icon-deletelink.svg"); }
+p.file-upload a, .file-upload a { color: var(--cfg-link); }
+
+/* ================================================================= login */
+.login { background: var(--cfg-background); }
+.login #container {
+    background: var(--cfg-card); border: 1px solid var(--cfg-border); border-radius: var(--cfg-radius-lg);
+    box-shadow: var(--cfg-shadow-md); width: 24rem; max-width: calc(100% - 32px);
+}
+.login #header { background: transparent; border-bottom: 1px solid var(--cfg-border); padding: 20px 24px; flex-direction: column; gap: 8px; }
+.login #header #site-name { margin: 0; text-align: center; }
+.login #content { padding: 24px; }
+.login .form-row { border: 0; padding: 6px 0; }
+.login .form-row label { font-weight: 500; color: var(--cfg-foreground); }
+.login .form-row #id_username, .login .form-row #id_password { height: 2.25rem; padding: 0 12px; }
+.login .submit-row { background: none; border: 0; padding: 16px 0 0; }
+.login .submit-row input { width: 100%; background: var(--cfg-primary); color: var(--cfg-primary-foreground); border-color: transparent; }
+.login .submit-row input:hover, .login .submit-row input:focus { background: var(--button-hover-bg); }
+.login .password-reset-link a { color: var(--cfg-muted-foreground); }
+
+/* ================================================================= third-party pages on the stock admin */
+/* django-constance: its constance.css paints modified rows #ffc, unreadable on a dark surface */
+html #result_list .changed { background-color: var(--message-warning-bg); }
+/* django-import-export: preview rows, error popover (its own colours follow only the OS scheme) */
+html table.import-preview tr.new { background-color: var(--message-success-bg); }
+html table.import-preview tr.update { background-color: var(--message-warning-bg); }
+html table.import-preview tr.delete { background-color: var(--message-error-bg); }
+html table.import-preview tr.skip { background-color: var(--cfg-subtle); color: var(--cfg-muted-foreground); }
+html table.import-preview td ins { background-color: var(--message-success-bg); }
+html table.import-preview td del { background-color: var(--message-error-bg); }
+html .validation-error-container { background: var(--cfg-card); border: 1px solid var(--cfg-border); border-radius: var(--cfg-radius); box-shadow: var(--cfg-shadow-md); }
+html .validation-error-count { background: var(--cfg-destructive-solid); border-radius: var(--cfg-radius-sm); }
+html .validation-error-field-label { color: var(--cfg-danger-fg); border-bottom-color: var(--cfg-destructive); }
+/* MCP chat column on Overview (django_mcp/admin_chat.html keys its dark mode on a .dark class that no longer exists) */
+.cfg-overview-chat .mcp-chat { border-color: var(--cfg-border); }
+.cfg-overview-chat .mcp-msg-user { background: var(--cfg-primary); color: var(--cfg-primary-foreground); }
+.cfg-overview-chat .mcp-msg-assistant { background: var(--cfg-accent); color: var(--cfg-foreground); }
+.cfg-overview-chat .mcp-msg-tool { border-color: var(--cfg-border); color: var(--cfg-muted-foreground); font-family: var(--font-family-monospace); }
+.cfg-overview-chat .mcp-msg-error { background: var(--message-error-bg); color: var(--cfg-danger-fg); border-color: color-mix(in oklab, var(--cfg-destructive) 40%, var(--cfg-border)); }
+.cfg-overview-chat .mcp-thinking { color: var(--cfg-muted-foreground); }
+.cfg-overview-chat .mcp-input-row { border-top-color: var(--cfg-border); }
+.cfg-overview-chat .mcp-textarea { border-color: var(--cfg-input); border-radius: var(--cfg-radius); }
+.cfg-overview-chat .mcp-textarea:focus { border-color: var(--cfg-ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--cfg-ring) 50%, transparent); }
+.cfg-overview-chat .mcp-send-btn { background: var(--cfg-primary); color: var(--cfg-primary-foreground); border-radius: var(--cfg-radius); }
+.cfg-overview-chat .mcp-send-btn:hover { background: var(--button-hover-bg); }
+.cfg-overview-chat .mcp-send-btn:disabled { background: var(--cfg-accent); color: var(--cfg-muted-foreground); }
+
+/* ================================================================= small screens, motion */
+@media (max-width: 1024px) {
+    #header { padding: 8px 16px; }
+    :is(div, ol).breadcrumbs { padding: 10px 16px; }
+    #content { padding: 16px; }
+}
+@media (max-width: 767px) {
+    #toolbar #searchbar { min-width: 0; }
+    /* our padding on width:100% controls (responsive.css) would push them past the card */
+    .form-row :is(input, select, textarea, .vTextField), .selector .selector-filter input { box-sizing: border-box; max-width: 100%; }
+    .form-row .select2-container { max-width: 100%; }
+    /* responsive.css sizes these by the viewport (100vw - 30px), which ignores the card padding */
+    .aligned .form-row > div { width: auto; max-width: 100%; }
+    .aligned .form-row, .inline-group .tabular { max-width: 100%; }
+    .object-tools li + li { margin-left: 0; }
+    .object-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+    /* django-constance: four columns (name, default, value, modified) do not fit a phone and the card
+       clips the value; each setting becomes a stacked block: name and help, the value field, then the
+       default and the modified mark as small labelled lines (constance's own markup has no labels) */
+    #content-main.constance #results table, #content-main.constance #results tbody, #content-main.constance #results tr,
+    #content-main.constance #results th, #content-main.constance #results td { display: block; width: auto; box-sizing: border-box; }
+    #content-main.constance #results thead { display: none; }
+    #content-main.constance #results tr { display: flex; flex-direction: column; padding: 12px 16px; border-bottom: 1px solid var(--cfg-border); }
+    #content-main.constance #results tr:last-child { border-bottom: 0; }
+    #content-main.constance #results th, #content-main.constance #results td { padding: 0; border: 0; }
+    #content-main.constance #results td:nth-child(2) { order: 2; }
+    #content-main.constance #results td:nth-child(3) { order: 1; margin: 8px 0; }
+    #content-main.constance #results td:nth-child(4) { order: 3; }
+    #content-main.constance #results td :is(input, textarea, select) { max-width: 100%; box-sizing: border-box; }
+    #content-main.constance #results textarea { width: 100%; }
+    #content-main.constance #results td:nth-child(2), #content-main.constance #results td:nth-child(4) { font-size: 0.75rem; color: var(--cfg-muted-foreground); }
+    #content-main.constance #results td:nth-child(2) p { display: inline; margin: 0; }
+    #content-main.constance #results td:nth-child(2)::before { content: "Default: "; }
+    #content-main.constance #results td:nth-child(4)::before { content: "Modified: "; }
+    #content-main.constance #results td:nth-child(4) img { vertical-align: middle; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        transition-duration: 0.01ms !important; animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important; scroll-behavior: auto !important;
+    }
+}

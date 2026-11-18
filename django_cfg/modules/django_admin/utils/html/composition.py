@@ -9,6 +9,8 @@ from typing import Any, Optional, Union
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
 
+from . import _classes as C
+
 
 class CompositionElements:
     """Element composition utilities."""
@@ -45,18 +47,7 @@ class CompositionElements:
             html.icon_text("Active")  # Just text
             html.icon_text(Icons.CHECK, "Yes", color="success")  # Icon with color
         """
-        # Color mapping to Tailwind/Unfold classes
-        color_classes = {
-            'success': 'text-green-600 dark:text-green-400',
-            'warning': 'text-yellow-600 dark:text-yellow-400',
-            'danger': 'text-red-600 dark:text-red-400',
-            'error': 'text-red-600 dark:text-red-400',
-            'info': 'text-blue-600 dark:text-blue-400',
-            'secondary': 'text-gray-600 dark:text-gray-400',
-            'primary': 'text-indigo-600 dark:text-indigo-400',
-        }
-        
-        color_class = color_classes.get(color, '') if color else ''
+        color_class = C.text_tone(color)
         
         if text is None:
             # Just text
@@ -95,18 +86,7 @@ class CompositionElements:
             html.colored_text("Active", "success")
             html.colored_text("5 minutes ago", "warning")
         """
-        # Color mapping to Tailwind/Unfold classes
-        color_classes = {
-            'success': 'text-green-600 dark:text-green-400',
-            'warning': 'text-yellow-600 dark:text-yellow-400',
-            'danger': 'text-red-600 dark:text-red-400',
-            'error': 'text-red-600 dark:text-red-400',
-            'info': 'text-blue-600 dark:text-blue-400',
-            'secondary': 'text-gray-600 dark:text-gray-400',
-            'primary': 'text-indigo-600 dark:text-indigo-400',
-        }
-        
-        color_class = color_classes.get(color, '') if color else ''
+        color_class = C.text_tone(color)
         
         if color_class:
             return format_html('<span class="{}">{}</span>', color_class, escape(str(text)))
@@ -152,18 +132,9 @@ class CompositionElements:
         filtered_items = [item for item in items if item is not None]
 
         if not filtered_items:
-            return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')
+            return format_html('<span class="{}">—</span>', C.MUTED)
 
-        size_classes = {
-            'small': 'text-xs',
-            'medium': 'text-sm',
-            'large': 'text-base'
-        }
-        size_class = size_classes.get(size, 'text-xs')
-
-        classes = size_class
-        if css_class:
-            classes += f" {css_class}"
+        classes = C.join(C.SMALL if size == 'small' else '', css_class)
 
         # Convert items to strings, keeping SafeString as-is
         from django.utils.safestring import SafeString, mark_safe
@@ -177,7 +148,9 @@ class CompositionElements:
         # Join with separator - str() doesn't lose SafeString when joined then mark_safe'd
         joined = mark_safe(separator.join(str(item) for item in processed_items))
 
-        return format_html('<span class="{}">{}</span>', classes, joined)
+        if classes:
+            return format_html('<span class="{}">{}</span>', classes, joined)
+        return format_html('<span>{}</span>', joined)
 
     @staticmethod
     def header(
@@ -224,14 +197,15 @@ class CompositionElements:
         avatar_html = ""
         if initials:
             avatar_html = format_html(
-                '<span class="inline-flex items-center justify-center rounded-full w-8 h-8 text-xs font-semibold {} mr-3">{}</span>',
-                CompositionElements._get_avatar_classes(avatar_variant),
+                '<span class="{} cfg-avatar">{}</span>',
+                C.badge(avatar_variant, default='primary'),
                 escape(initials)
             )
 
         # Title
         title_html = format_html(
-            '<div class="font-medium text-sm text-font-default-light dark:text-font-default-dark">{}</div>',
+            '<div class="{}">{}</div>',
+            C.STRONG,
             escape(title)
         )
 
@@ -239,31 +213,19 @@ class CompositionElements:
         subtitle_html = ""
         if subtitle:
             subtitle_html = format_html(
-                '<div class="text-xs text-font-subtle-light dark:text-font-subtle-dark mt-0.5">{}</div>',
+                '<div class="{}">{}</div>',
+                C.join(C.SMALL, C.MUTED),
                 escape(subtitle)
             )
 
         # Combine
         return format_html(
-            '<div class="flex items-center">{}<div>{}{}</div></div>',
+            '<div class="{}">{}<div>{}{}</div></div>',
+            C.ROW,
             avatar_html,
             title_html,
             subtitle_html
         )
-
-    @staticmethod
-    def _get_avatar_classes(variant: str) -> str:
-        """Get CSS classes for avatar badge variant."""
-        # Unfold-compatible Tailwind CSS classes
-        variant_classes = {
-            'success': 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400',
-            'warning': 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
-            'danger': 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400',
-            'info': 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
-            'primary': 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400',
-            'secondary': 'bg-base-100 text-base-700 dark:bg-base-500/20 dark:text-base-200',
-        }
-        return variant_classes.get(variant, variant_classes['primary'])
 
     @staticmethod
     def stacked(items: list, css_class: str = "") -> SafeString:
@@ -291,7 +253,7 @@ class CompositionElements:
         filtered_items = [item for item in items if item is not None]
 
         if not filtered_items:
-            return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')
+            return format_html('<span class="{}">—</span>', C.MUTED)
 
         # Convert items to divs
         divs = []
@@ -304,8 +266,6 @@ class CompositionElements:
         # Join divs
         joined = mark_safe(''.join(str(d) for d in divs))
 
-        classes = "flex flex-col"
-        if css_class:
-            classes += f" {css_class}"
+        classes = C.join(C.STACK, css_class)
 
         return format_html('<div class="{}">{}</div>', classes, joined)

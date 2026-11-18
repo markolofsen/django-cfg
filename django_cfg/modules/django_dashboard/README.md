@@ -1,6 +1,6 @@
 # django_dashboard
 
-Custom tabbed dashboard panels inside the Django Unfold admin overview page.
+Custom tabbed dashboard panels inside the admin Overview page (stock Django admin).
 
 Each tab is a standard Django view: a plain Python callback returns a `dict`, a Django template renders it. No Streamlit, no iframes, no special base classes.
 
@@ -160,7 +160,7 @@ Built-in base templates:
 
 | Template | Purpose |
 |----------|---------|
-| `django_dashboard/base.html` | Full page: extends Unfold `admin/base.html`, renders tab bar, `{% block tab_content %}` |
+| `django_dashboard/base.html` | Full page: extends `admin/base_site.html`, renders tab bar, `{% block tab_content %}` |
 | `django_dashboard/tabs_bar.html` | Tab bar snippet only (included by `base.html`) |
 | `django_dashboard/base_iframe.html` | Base used when the tab is opened with `?iframe=1` |
 | `django_dashboard/tab_empty.html` | Fallback when no template is set (callback-only tab) |

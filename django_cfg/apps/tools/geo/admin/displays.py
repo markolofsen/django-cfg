@@ -62,7 +62,7 @@ class GeoLocationDisplay:
         """Format the location for display."""
         city = getattr(obj, self.name, None)
         if not city:
-            return mark_safe('<span class="text-base-400">—</span>')
+            return mark_safe('<span class="cfg-muted">—</span>')
 
         # Handle both FK (City object) and city_id (int)
         if isinstance(city, int):
@@ -92,16 +92,16 @@ class GeoLocationDisplay:
                 parts.append(f'<span>{flag}</span>')
 
         # City name
-        parts.append(f'<span class="font-medium">{city.name}</span>')
+        parts.append(f'<span class="cfg-strong">{city.name}</span>')
 
         # State
         if self.show_state and hasattr(city, "state") and city.state:
             state_code = getattr(city.state, "state_code", None) or city.state.name
-            parts.append(f'<span class="text-base-400">{state_code}</span>')
+            parts.append(f'<span class="cfg-muted">{state_code}</span>')
 
         # Country
         if hasattr(city, "country") and city.country:
-            parts.append(f'<span class="text-base-400">{city.country.iso2}</span>')
+            parts.append(f'<span class="cfg-muted">{city.country.iso2}</span>')
 
         # Coordinates
         if self.show_coordinates:
@@ -109,11 +109,11 @@ class GeoLocationDisplay:
             lon = getattr(city, "longitude", None)
             if lat is not None and lon is not None:
                 parts.append(
-                    f'<span class="text-xs text-base-400">({lat:.4f}, {lon:.4f})</span>'
+                    f'<span class="cfg-small cfg-muted">({lat:.4f}, {lon:.4f})</span>'
                 )
 
         result = self._join_parts(parts)
-        return mark_safe(f'<span class="flex items-center gap-1">{result}</span>')
+        return mark_safe(f'<span class="cfg-row">{result}</span>')
 
     def _format_dto(
         self,
@@ -129,26 +129,26 @@ class GeoLocationDisplay:
             parts.append(f'<span>{country.emoji}</span>')
 
         # City name
-        parts.append(f'<span class="font-medium">{city.name}</span>')
+        parts.append(f'<span class="cfg-strong">{city.name}</span>')
 
         # State
         if self.show_state and state:
             state_code = state.iso2 or state.name
-            parts.append(f'<span class="text-base-400">{state_code}</span>')
+            parts.append(f'<span class="cfg-muted">{state_code}</span>')
 
         # Country
         if country:
-            parts.append(f'<span class="text-base-400">{country.iso2}</span>')
+            parts.append(f'<span class="cfg-muted">{country.iso2}</span>')
 
         # Coordinates
         if self.show_coordinates and city.coordinates:
             lat, lon = city.coordinates
             parts.append(
-                f'<span class="text-xs text-base-400">({lat:.4f}, {lon:.4f})</span>'
+                f'<span class="cfg-small cfg-muted">({lat:.4f}, {lon:.4f})</span>'
             )
 
         result = self._join_parts(parts)
-        return mark_safe(f'<span class="flex items-center gap-1">{result}</span>')
+        return mark_safe(f'<span class="cfg-row">{result}</span>')
 
     def _join_parts(self, parts: list) -> str:
         """Join parts with proper separators."""
@@ -160,7 +160,7 @@ class GeoLocationDisplay:
             return parts[0]
 
         # Check if first is flag (no class)
-        if 'class="font' not in parts[0] and 'text-base-400' not in parts[0]:
+        if 'class="' not in parts[0]:
             # First is flag
             return f"{parts[0]} {', '.join(parts[1:])}"
 
@@ -219,7 +219,7 @@ class CountryDisplay:
         """Format the country for display."""
         value = getattr(obj, self.name, None)
         if not value:
-            return mark_safe('<span class="text-base-400">—</span>')
+            return mark_safe('<span class="cfg-muted">—</span>')
 
         # Handle Country model instance
         if hasattr(value, "iso2"):
@@ -246,7 +246,7 @@ class CountryDisplay:
             parts.append(country.iso2)
 
         return mark_safe(
-            f'<span class="flex items-center gap-2">'
+            f'<span class="cfg-row">'
             f'{" ".join(parts)}'
             f'</span>'
         )
@@ -272,7 +272,7 @@ class CountryDisplay:
             parts.append(country.iso2)
 
         return mark_safe(
-            f'<span class="flex items-center gap-2">'
+            f'<span class="cfg-row">'
             f'{" ".join(parts)}'
             f'</span>'
         )
@@ -324,19 +324,19 @@ class CoordinatesDisplay:
         lon = getattr(obj, self.lon_field, None)
 
         if lat is None or lon is None:
-            return mark_safe('<span class="text-base-400">—</span>')
+            return mark_safe('<span class="cfg-muted">—</span>')
 
         formatted = f"{lat:.{self.precision}f}, {lon:.{self.precision}f}"
 
         if self.show_link:
             maps_url = f"https://www.google.com/maps?q={lat},{lon}"
             return format_html(
-                '<a href="{}" target="_blank" class="text-primary-600 hover:underline">{}</a>',
+                '<a href="{}" target="_blank" class="cfg-primary">{}</a>',
                 maps_url,
                 formatted,
             )
 
-        return mark_safe(f'<span class="font-mono text-sm">{formatted}</span>')
+        return mark_safe(f'<span class="cfg-mono">{formatted}</span>')
 
     def __call__(self, obj: Any) -> str:
         """Allow using as callable."""

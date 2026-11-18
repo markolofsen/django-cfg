@@ -11,7 +11,9 @@ import shutil
 from pathlib import Path
 
 from ..config import GenerationTarget, OpenAPIConfig
+from ..errors import WriteError
 from ..fs import mirror_tree
+from ..staging import Stage
 
 
 def cache_dir(config: OpenAPIConfig) -> Path:
@@ -56,29 +58,26 @@ def find_project_root(start: Path) -> Path:
     return start.parent
 
 
-def publish_to_consumer(target: GenerationTarget) -> None:
-    """Copy the freshly generated tree from ``source_path`` to ``target.path``.
+def stage_consumer(target: GenerationTarget, built: Path) -> Stage | None:
+    """Stage the copy of a freshly generated tree for the consumer ``target.path``.
 
-    No-op when ``source_path`` isn't set, when the two paths are the
-    same, or when the source tree is empty. The destination is replaced
-    wholesale — anything the consumer kept under that path (manual
-    edits, stale files from a previous layout) is removed.
+    ``None`` when ``source_path`` isn't set or both paths are the same folder
+    (nothing to publish). Otherwise returns a ``Stage`` next to ``target.path``
+    holding a copy of ``built`` (the staged source tree); the caller checks and
+    commits it. The consumer folder is replaced wholesale on commit, as before;
+    until then it is untouched.
     """
     if target.source_path is None:
-        return
-    src = Path(target.source_path)
-    dst = Path(target.path)
-    if src.resolve() == dst.resolve():
-        return
-    if not src.exists():
-        return
+        return None
+    if Path(target.source_path).resolve() == Path(target.path).resolve():
+        return None
+    stage = Stage.open(Path(target.path), seed=False)
     try:
-        if dst.exists():
-            shutil.rmtree(dst)
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(src, dst)
-    except OSError:
-        return
+        shutil.copytree(built, stage.path, symlinks=True, dirs_exist_ok=True)
+    except OSError as e:
+        stage.discard()
+        raise WriteError(f"cannot stage the copy for {target.path}: {e}") from e
+    return stage
 
 
 def mirror_target_to_tmp(target: GenerationTarget) -> None:
@@ -102,5 +101,5 @@ __all__ = [
     "effective_root",
     "find_project_root",
     "mirror_target_to_tmp",
-    "publish_to_consumer",
+    "stage_consumer",
 ]

@@ -30,8 +30,4 @@ Usage:
         )
 """
 
-default_app_config = "django_cfg.apps.system.totp.apps.TOTPConfig"
-
-__all__ = [
-    "default_app_config",
-]
+__all__: list[str] = []

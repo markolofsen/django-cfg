@@ -9,6 +9,8 @@ from typing import Any, Literal, Optional
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
 
+from . import _classes as C
+
 
 class CodeElements:
     """Code display elements."""
@@ -26,8 +28,7 @@ class CodeElements:
             html.code("/path/to/file")
             html.code("command --arg value")
         """
-        base_classes = "font-mono text-xs bg-base-100 dark:bg-base-800 px-1.5 py-0.5 rounded"
-        classes = f"{base_classes} {css_class}".strip()
+        classes = C.join(C.CODE, css_class)
 
         return format_html(
             '<code class="{}">{}</code>',
@@ -56,32 +57,16 @@ class CodeElements:
             html.code_block(stdout, max_height="400px")
             html.code_block(stderr, max_height="400px", variant="warning")
         """
-        # Unfold-compatible Tailwind CSS classes
-        variant_classes = {
-            'default': 'bg-base-50 dark:bg-base-900 border-base-200 dark:border-base-700',
-            'warning': 'bg-orange-50 dark:bg-orange-500/20 border-orange-200 dark:border-orange-500/30',
-            'danger': 'bg-red-50 dark:bg-red-500/20 border-red-200 dark:border-red-500/30',
-            'success': 'bg-green-50 dark:bg-green-500/20 border-green-200 dark:border-green-500/30',
-            'info': 'bg-blue-50 dark:bg-blue-500/20 border-blue-200 dark:border-blue-500/30',
-        }
-
-        variant_class = variant_classes.get(variant, variant_classes['default'])
-
-        # Base styles
-        base_classes = f"font-mono text-xs whitespace-pre-wrap break-words border rounded-md p-3 {variant_class}"
+        base_classes = C.box(None if variant == "default" else variant)
 
         # Add max-height and overflow if specified
-        style = ""
-        if max_height:
-            style = f'style="max-height: {max_height}; overflow-y: auto;"'
-
         # Add language class for potential syntax highlighting
         lang_class = f"language-{language}" if language else ""
+        classes = C.join(base_classes, lang_class)
 
-        return format_html(
-            '<pre class="{} {}" {}><code>{}</code></pre>',
-            base_classes,
-            lang_class,
-            style,
-            escape(str(text))
-        )
+        if max_height:
+            return format_html(
+                '<pre class="{}" style="max-height: {}; overflow-y: auto;"><code>{}</code></pre>',
+                classes, max_height, str(text),
+            )
+        return format_html('<pre class="{}"><code>{}</code></pre>', classes, str(text))

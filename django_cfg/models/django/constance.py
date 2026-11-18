@@ -1,11 +1,10 @@
 """
 Django Constance Configuration Models
 
-Type-safe configuration for django-constance with automatic
-Unfold admin integration and smart field grouping.
+Type-safe configuration for django-constance with smart field grouping.
+The admin page is Constance's own, on the stock Django admin.
 """
 
-from importlib.util import find_spec
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
@@ -13,23 +12,12 @@ from pydantic import BaseModel, Field, field_validator
 from django_cfg.models.base import BaseCfgAutoModule
 
 
-def _unfold_installed() -> bool:
-    """True when the django-unfold package can be imported."""
-    return find_spec("unfold") is not None
-
-
-def _without_unfold_widget(config: List[Any]) -> List[Any]:
-    """Drop the Unfold widget from a ``[field_path, kwargs]`` pair."""
-    field_path, kwargs = config
-    return [field_path, {k: v for k, v in kwargs.items() if k != "widget"}]
-
-
 class ConstanceField(BaseModel):
     """
     Configuration for a single Constance field.
 
     Provides type-safe field definition with automatic
-    Django settings generation and Unfold integration.
+    Django settings generation.
     """
 
     name: str = Field(
@@ -85,46 +73,16 @@ class ConstanceField(BaseModel):
         return (self.default, self.help_text)
 
     def to_constance_field_config(self) -> List[Any]:
-        """Convert to Constance additional fields configuration.
-
-        Unfold widgets are used when django-unfold is installed; without it
-        the plain Django form field is returned.
-        """
-        config = self._unfold_field_config()
-        return config if _unfold_installed() else _without_unfold_widget(config)
-
-    def _unfold_field_config(self) -> List[Any]:
+        """Convert to a Constance additional field: ``[form field path, kwargs]``."""
         if self.field_type == "choice" and self.choices:
-            return [
-                "django.forms.fields.ChoiceField",
-                {
-                    "widget": "unfold.widgets.UnfoldAdminSelectWidget",
-                    "choices": self.choices,
-                },
-            ]
+            return ["django.forms.fields.ChoiceField", {"choices": self.choices}]
 
-        # Map field types to Django form fields with Unfold widgets
         field_mapping = {
-            "str": [
-                "django.forms.CharField",
-                {"widget": "unfold.widgets.UnfoldAdminTextInputWidget"},
-            ],
-            "longtext": [
-                "django.forms.CharField",
-                {"widget": "unfold.widgets.UnfoldAdminTextareaWidget"},
-            ],
-            "int": [
-                "django.forms.IntegerField",
-                {"widget": "unfold.widgets.UnfoldAdminIntegerFieldWidget"},
-            ],
-            "float": [
-                "django.forms.FloatField",
-                {"widget": "unfold.widgets.UnfoldAdminTextInputWidget"},
-            ],
-            "bool": [
-                "django.forms.BooleanField",
-                {"widget": "unfold.widgets.UnfoldBooleanSwitchWidget"},
-            ],
+            "str": ["django.forms.CharField", {}],
+            "longtext": ["django.forms.CharField", {"widget": "django.forms.Textarea"}],
+            "int": ["django.forms.IntegerField", {}],
+            "float": ["django.forms.FloatField", {}],
+            "bool": ["django.forms.BooleanField", {}],
         }
 
         return field_mapping.get(self.field_type, field_mapping["str"])
@@ -132,11 +90,10 @@ class ConstanceField(BaseModel):
 
 class ConstanceConfig(BaseModel, BaseCfgAutoModule):
     """
-    Django Constance configuration with automatic Unfold integration.
+    Django Constance configuration.
 
     Provides type-safe configuration for django-constance with:
     - Automatic field grouping in admin interface
-    - Unfold widget integration
     - Smart Django settings generation
     - Field validation and type safety
     """
@@ -224,11 +181,6 @@ class ConstanceConfig(BaseModel, BaseCfgAutoModule):
     def get_additional_fields_dict(self) -> Dict[str, List[Any]]:
         """Generate CONSTANCE_ADDITIONAL_FIELDS dictionary."""
         additional_fields: Dict[Any, List[Any]] = {}
-        if _unfold_installed():
-            from unfold.contrib.constance.settings import UNFOLD_CONSTANCE_ADDITIONAL_FIELDS
-
-            additional_fields.update(UNFOLD_CONSTANCE_ADDITIONAL_FIELDS)
-
         # Add custom field configurations
         for field in self.fields:
             if field.field_type == "choice" or field.choices:
@@ -257,7 +209,7 @@ class ConstanceConfig(BaseModel, BaseCfgAutoModule):
             # Redis settings (if using Redis backend)
             "CONSTANCE_REDIS_CONNECTION_CLASS": self.redis_connection_class,
             "CONSTANCE_REDIS_PREFIX": self.redis_prefix,
-            # Additional fields with Unfold widgets
+            # Additional form fields (choice fields)
             "CONSTANCE_ADDITIONAL_FIELDS": self.get_additional_fields_dict(),
             # Ignore admin version check
             "CONSTANCE_IGNORE_ADMIN_VERSION_CHECK": True,

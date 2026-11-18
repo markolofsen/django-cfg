@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from django.core.management import call_command
 
 from ...public.config import SDK
+from ..pipeline.errors import GeneratorError
 from .utils import copy_groups, get_source_dir
 
 if TYPE_CHECKING:
@@ -22,6 +23,8 @@ def run_sdk(
     only_groups: list[str] | None,
     dry_run: bool,
     logger: GenerationLogger,
+    *,
+    force: bool = False,
 ) -> None:
     """Run SDK package generation."""
     for pkg in cfg.packages:
@@ -59,5 +62,9 @@ def run_sdk(
 
         # Copy
         source = get_source_dir(platform)
-        copied = copy_groups(source, pkg.target, effective_groups, logger)
+        try:
+            copied = copy_groups(source, pkg.target, effective_groups, logger, force=force)
+        except GeneratorError as e:
+            logger.error(f"SDK {pkg.name}: {e}")
+            continue
         logger.gen_complete(copied, f"groups to {pkg.target.name}")

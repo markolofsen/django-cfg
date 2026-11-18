@@ -7,7 +7,16 @@ gateway owns the provider integration (which ESP, which sender identities,
 rate limits) — Django never holds provider credentials and never knows which
 provider is behind the gateway.
 
-Selected via ``EmailConfig(backend="gateway", ...)``, which emits::
+Selected via ``EmailConfig(backend="gateway", ...)``, which emits on Django
+6.1+::
+
+    MAILERS = {"default": {
+        "BACKEND": "django_cfg.core.backends.gateway.GatewayEmailBackend",
+        "OPTIONS": {"gateway_url": "https://email-api.example.com/send",
+                    "gateway_secret": "...", "timeout": 30},
+    }}
+
+and on Django 5.2 (no ``MAILERS`` there)::
 
     EMAIL_BACKEND = "django_cfg.core.backends.gateway.GatewayEmailBackend"
     EMAIL_GATEWAY_URL = "https://email-api.example.com/send"
@@ -32,7 +41,7 @@ Expected response envelope::
 import base64
 import logging
 import time
-from email.mime.base import MIMEBase
+from email.message import Message
 from email.utils import parseaddr
 
 import httpx
@@ -68,8 +77,14 @@ def _encode_content(content) -> str:
 
 
 def _attachment_payload(attachment) -> dict:
-    """Map one Django attachment (tuple or MIMEBase) to a payload attachment."""
-    if isinstance(attachment, MIMEBase):
+    """Map one Django attachment (tuple or MIME part) to a payload attachment.
+
+    A MIME part is any ``email.message.Message``: ``MIMEBase`` (Django 5.2) or
+    ``email.message.MIMEPart`` (Django 6.1+, which deprecates ``MIMEBase``
+    attachments). Checking ``MIMEBase`` alone sent a 6.1 ``MIMEPart`` to the
+    tuple branch below, which cannot unpack it.
+    """
+    if isinstance(attachment, Message):
         payload = {
             "content": _encode_content(attachment.get_payload(decode=True) or b""),
             "filename": attachment.get_filename() or "attachment",
@@ -151,22 +166,30 @@ class GatewayEmailBackend(BaseEmailBackend):
         transport=None,
         **kwargs,
     ):
-        super().__init__(fail_silently=fail_silently)
+        # Django 6.1: ``fail_silently`` is no longer kept by BaseEmailBackend
+        # (passing it up is deprecated); a backend that supports it keeps its
+        # own attribute. ``kwargs`` carries ``alias`` from ``mail.mailers`` and
+        # must reach the base class, which reports unknown OPTIONS.
+        super().__init__(**kwargs)
+        self.fail_silently = fail_silently
         self.gateway_url = gateway_url or getattr(settings, "EMAIL_GATEWAY_URL", None)
         self.gateway_secret = gateway_secret or getattr(
             settings, "EMAIL_GATEWAY_SECRET", None
         )
-        self.timeout = timeout if timeout is not None else getattr(
-            settings, "EMAIL_TIMEOUT", None
-        ) or 30
+        if timeout is None and getattr(self, "alias", None) is None:
+            # Built without MAILERS (Django 5.2, or EMAIL_* on 6.1): the timeout
+            # is the shared EMAIL_TIMEOUT setting. Under MAILERS that setting is
+            # gone (reading it raises) and the timeout comes from OPTIONS.
+            timeout = getattr(settings, "EMAIL_TIMEOUT", None)
+        self.timeout = timeout or 30
         self._transport = transport  # test seam (httpx.MockTransport)
         self._client = None
 
         if not (self.gateway_url and self.gateway_secret):
             raise ImproperlyConfigured(
-                "GatewayEmailBackend requires EMAIL_GATEWAY_URL and "
-                "EMAIL_GATEWAY_SECRET settings (EmailConfig gateway_url / "
-                "gateway_secret)."
+                "GatewayEmailBackend requires gateway_url and gateway_secret "
+                "(MAILERS OPTIONS on Django 6.1+, EMAIL_GATEWAY_URL / "
+                "EMAIL_GATEWAY_SECRET settings on 5.2; EmailConfig emits both)."
             )
 
     def open(self):

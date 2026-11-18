@@ -27,8 +27,8 @@ def schedules(thread_model, *, stale_after_s: float, prune_days: int | None = No
     """The entries for one chat: reap dead answers, reap uploads (when the chat has an attachment table), prune idle sessions.
 
     `thread_model` is the model or its `app_label.Model` label. `stale_after_s` must stay above every kind's `limits.timeout_s`.
-    `prune_days=None` keeps threads for ever (no prune entry). `queue` must be one a worker reads. Moving an entry to another
-    `queue` or renaming it leaves the old one registered in Redis: cancel it by hand.
+    `prune_days=None` keeps threads for ever (no prune entry). `queue` must be one a worker reads. `rqcron` registers the
+    entries at its start, so a moved or dropped entry is gone after the next restart.
     """
     if stale_after_s <= 0:
         raise ValueError("stale_after_s must be positive")

@@ -21,13 +21,12 @@ class DependencyChecker:
     """Check and validate RQ dependencies."""
 
     REQUIRED_DEPS = {
-        "django_rq": "django-rq>=3.0.0",
+        "django_rq": "django-rq>=4.2.0",
         "redis": "redis>=4.0.0",
-        "rq": "rq>=1.10.0",
+        "rq": "rq>=3.0.0",
     }
 
     OPTIONAL_DEPS = {
-        "rq_scheduler": "rq-scheduler>=0.13.0",
         "hiredis": "hiredis>=2.0.0",
     }
 
@@ -35,7 +34,6 @@ class DependencyChecker:
         "django_rq": "Django integration for RQ",
         "redis": "Python Redis client",
         "rq": "Redis Queue (RQ) library",
-        "rq_scheduler": "Cron-style scheduling for RQ",
         "hiredis": "High-performance Redis parser",
     }
 

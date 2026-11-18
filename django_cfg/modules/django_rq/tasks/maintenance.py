@@ -11,12 +11,25 @@ import django_rq
 from rq.job import Job, JobStatus
 from rq.queue import Queue
 from rq.registry import (
+    CanceledJobRegistry,
+    DeferredJobRegistry,
     FailedJobRegistry,
     FinishedJobRegistry,
+    ScheduledJobRegistry,
     StartedJobRegistry,
 )
 
 logger = logging.getLogger(__name__)
+
+# A job id in any of these is alive; a delayed job (`enqueue_in`, `Retry(interval)`) waits in the scheduled one.
+_LIVE_REGISTRIES = (
+    FinishedJobRegistry,
+    FailedJobRegistry,
+    StartedJobRegistry,
+    ScheduledJobRegistry,
+    DeferredJobRegistry,
+    CanceledJobRegistry,
+)
 
 
 def _make_aware(dt: datetime) -> datetime:
@@ -24,33 +37,6 @@ def _make_aware(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
-
-
-def _is_live_schedule_id(job_id: str, redis_conn) -> bool:
-    """
-    Report whether this job ID belongs to a schedule that is currently registered.
-
-    Schedule IDs are deterministic (`schedule_<func>_<hash>`), so a schedule
-    keeps the SAME ID for its entire life. That makes an ID stranded in a
-    registry indistinguishable, by ID alone, from the live schedule -- and the
-    stranded entry carries the created_at of the ORIGINAL registration, which is
-    never refreshed per run. Any cutoff long enough will therefore mark a live
-    schedule as "old" and, with delete_job=True, delete the job hash the
-    scheduler needs.
-
-    The cost is asymmetric: skipping a genuinely dead job leaves one key in
-    Redis until the next pass, while deleting a live one silently stops a
-    recurring task. django-cfg schedules backstops here (storage reclamation
-    aborts billed multipart uploads), so this returns True when unsure.
-    """
-    from django_cfg.modules.django_rq.health.scheduler import SCHEDULED_JOBS_KEY
-
-    try:
-        # rq-scheduler keeps every registered schedule's ID in this sorted set.
-        return redis_conn.zscore(SCHEDULED_JOBS_KEY, job_id) is not None
-    except Exception as e:
-        logger.warning(f"Could not check schedule membership for {job_id}: {e} -- keeping it")
-        return True
 
 
 def cleanup_old_jobs(
@@ -75,14 +61,11 @@ def cleanup_old_jobs(
             "finished_deleted": 10,
             "failed_deleted": 5,
             "total_deleted": 15,
-            "schedules_skipped": 2,
             "dry_run": False
         }
 
-    Note:
-        IDs belonging to currently-registered schedules are never deleted,
-        regardless of age -- see _is_live_schedule_id for why age is not a
-        usable signal for them. They are counted in "schedules_skipped".
+    Every run of a schedule is a fresh job (rq cron), so schedule runs are
+    cleaned like any other job.
 
     Example:
         >>> from django_cfg.modules.django_rq.tasks.maintenance import cleanup_old_jobs
@@ -106,10 +89,6 @@ def cleanup_old_jobs(
             "dry_run": dry_run,
             "finished_total": 0,
             "failed_total": 0,
-            # Live schedules deliberately left alone. Reported rather than
-            # silently skipped: a registry that never shrinks should be
-            # explainable from this number, not a mystery.
-            "schedules_skipped": 0,
         }
 
         logger.info(
@@ -125,10 +104,6 @@ def cleanup_old_jobs(
 
         for job_id in finished_job_ids:
             try:
-                if _is_live_schedule_id(job_id, redis_conn):
-                    stats["schedules_skipped"] += 1
-                    logger.debug(f"Keeping live schedule (finished registry): {job_id}")
-                    continue
                 job = Job.fetch(job_id, connection=redis_conn)
                 if job.created_at and job.created_at < cutoff_date:
                     logger.debug(
@@ -149,10 +124,6 @@ def cleanup_old_jobs(
 
         for job_id in failed_job_ids:
             try:
-                if _is_live_schedule_id(job_id, redis_conn):
-                    stats["schedules_skipped"] += 1
-                    logger.debug(f"Keeping live schedule (failed registry): {job_id}")
-                    continue
                 job = Job.fetch(job_id, connection=redis_conn)
                 if job.created_at and job.created_at < cutoff_date:
                     logger.debug(
@@ -178,8 +149,7 @@ def cleanup_old_jobs(
         logger.info(
             f"=== Cleanup completed: {stats['total_deleted']} jobs deleted "
             f"(finished: {stats['finished_deleted']}/{stats['finished_total']}, "
-            f"failed: {stats['failed_deleted']}/{stats['failed_total']}, "
-            f"live schedules kept: {stats['schedules_skipped']}) "
+            f"failed: {stats['failed_deleted']}/{stats['failed_total']}) "
             f"[dry_run={dry_run}] ==="
         )
         logger.info(f"Stats: {stats}")
@@ -230,7 +200,6 @@ def cleanup_orphaned_job_keys(
             "dry_run": dry_run,
             "total_job_keys": 0,
             "valid_job_ids": 0,
-            "scheduled_job_ids": 0,
             "queued_job_ids": 0,
             "registry_job_ids": 0,
         }
@@ -273,7 +242,7 @@ def cleanup_orphaned_job_keys(
                 logger.debug(f"Queue '{qname}': {len(queue_job_ids)} queued jobs")
 
                 # Add jobs from registries
-                for registry_class in [FinishedJobRegistry, FailedJobRegistry, StartedJobRegistry]:
+                for registry_class in _LIVE_REGISTRIES:
                     registry = registry_class(queue=queue)
                     registry_job_ids = registry.get_job_ids()
                     for job_id in registry_job_ids:
@@ -292,23 +261,11 @@ def cleanup_orphaned_job_keys(
         stats["queued_job_ids"] = queued_count
         stats["registry_job_ids"] = registry_count
 
-        # Add scheduled jobs from rq-scheduler
-        # Scheduled jobs are stored in rq:scheduler:scheduled_jobs sorted set
-        # and should not be considered orphaned
-        scheduled_job_ids_raw = redis_conn.zrange("rq:scheduler:scheduled_jobs", 0, -1)
-        scheduled_count = 0
-        for job_id in scheduled_job_ids_raw:
-            if isinstance(job_id, bytes):
-                job_id = job_id.decode("utf-8")
-            valid_job_ids.add(f"rq:job:{job_id}")
-            scheduled_count += 1
-
-        stats["scheduled_job_ids"] = scheduled_count
         stats["valid_job_ids"] = len(valid_job_ids)
 
         logger.info(
             f"Valid job IDs: {len(valid_job_ids)} total "
-            f"(queued={queued_count}, registries={registry_count}, scheduled={scheduled_count})"
+            f"(queued={queued_count}, registries={registry_count})"
         )
 
         # Find orphaned keys
@@ -513,126 +470,4 @@ def get_rq_stats(queue_name: str = "default") -> Dict[str, any]:
 
     except Exception as e:
         logger.error(f"Failed to get RQ stats: {e}", exc_info=True)
-        raise
-
-
-def diagnose_scheduled_jobs(queue_name: str = "default") -> Dict[str, any]:
-    """
-    Diagnose scheduled jobs health - check if job keys exist for all scheduled jobs.
-
-    This function helps identify issues where scheduled job IDs are in
-    rq:scheduler:scheduled_jobs but their job keys (rq:job:*) are missing.
-
-    Args:
-        queue_name: Queue name to get Redis connection (default: "default")
-
-    Returns:
-        Dictionary with diagnosis results:
-        {
-            "total_scheduled": 12,
-            "healthy": 10,
-            "missing_keys": 2,
-            "missing_job_ids": ["job_id_1", "job_id_2"],
-            "jobs": [...]
-        }
-
-    Example:
-        >>> from django_cfg.modules.django_rq.tasks.maintenance import diagnose_scheduled_jobs
-        >>> result = diagnose_scheduled_jobs()
-        >>> if result["missing_keys"] > 0:
-        >>>     print(f"WARNING: {result['missing_keys']} scheduled jobs have missing keys!")
-    """
-    try:
-        queue = django_rq.get_queue(queue_name)
-        redis_conn = queue.connection
-
-        result = {
-            "total_scheduled": 0,
-            "healthy": 0,
-            "missing_keys": 0,
-            "missing_job_ids": [],
-            "jobs": [],
-        }
-
-        logger.info("=== Diagnosing scheduled jobs ===")
-
-        # Get all scheduled job IDs with their scores (scheduled times)
-        scheduled_jobs = redis_conn.zrange(
-            "rq:scheduler:scheduled_jobs", 0, -1, withscores=True
-        )
-        result["total_scheduled"] = len(scheduled_jobs)
-
-        logger.info(f"Total scheduled jobs: {len(scheduled_jobs)}")
-
-        for job_data in scheduled_jobs:
-            job_id, score = job_data
-            if isinstance(job_id, bytes):
-                job_id = job_id.decode("utf-8")
-
-            # Convert score to datetime
-            from datetime import datetime
-            scheduled_time = datetime.utcfromtimestamp(score)
-
-            job_key = f"rq:job:{job_id}"
-            key_exists = redis_conn.exists(job_key)
-            key_ttl = redis_conn.ttl(job_key) if key_exists else -2
-
-            job_info = {
-                "job_id": job_id,
-                "scheduled_time": scheduled_time.isoformat(),
-                "key_exists": bool(key_exists),
-                "key_ttl": key_ttl,
-            }
-
-            if key_exists:
-                try:
-                    job = Job.fetch(job_id, connection=redis_conn)
-                    job_info.update({
-                        "func": job.func_name,
-                        "status": str(job.get_status()),
-                        "result_ttl": job.result_ttl,
-                        "ttl": job.ttl,
-                        "created_at": job.created_at.isoformat() if job.created_at else None,
-                        "interval": job.meta.get("interval"),
-                        "cron_string": job.meta.get("cron_string"),
-                        "repeat": job.meta.get("repeat"),
-                    })
-                    result["healthy"] += 1
-                    logger.debug(
-                        f"✓ {job_id[:50]}... | {job.func_name} | "
-                        f"scheduled={scheduled_time} | result_ttl={job.result_ttl}"
-                    )
-                except Exception as e:
-                    job_info["fetch_error"] = str(e)
-                    result["missing_keys"] += 1
-                    result["missing_job_ids"].append(job_id)
-                    logger.warning(
-                        f"✗ {job_id[:50]}... | KEY EXISTS but FETCH FAILED: {e}"
-                    )
-            else:
-                result["missing_keys"] += 1
-                result["missing_job_ids"].append(job_id)
-                logger.warning(
-                    f"✗ {job_id[:50]}... | KEY MISSING! scheduled={scheduled_time}"
-                )
-
-            result["jobs"].append(job_info)
-
-        # Summary
-        logger.info(
-            f"=== Diagnosis complete: {result['healthy']} healthy, "
-            f"{result['missing_keys']} missing keys ==="
-        )
-
-        if result["missing_keys"] > 0:
-            logger.warning(
-                f"ACTION REQUIRED: {result['missing_keys']} scheduled jobs have missing keys. "
-                f"These jobs will be removed from scheduler on next check cycle. "
-                f"Missing IDs: {result['missing_job_ids']}"
-            )
-
-        return result
-
-    except Exception as e:
-        logger.error(f"Failed to diagnose scheduled jobs: {e}", exc_info=True)
         raise

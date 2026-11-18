@@ -7,8 +7,6 @@ Combines:
   - FastAPI ORM generator (was django_fastapi)
 """
 
-default_app_config = "django_cfg.modules.django_generator.apps.DjangoGeneratorConfig"
-
 # Internal pipeline (drf-spectacular → slicer → external CLIs)
 from .openapi.pipeline.config import (
     OpenAPIConfig,

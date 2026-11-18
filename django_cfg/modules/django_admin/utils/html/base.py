@@ -9,6 +9,8 @@ from typing import Any, Literal, Optional
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
 
+from . import _classes as C
+
 
 class BaseElements:
     """Basic HTML building blocks."""
@@ -27,17 +29,8 @@ class BaseElements:
             size: xs, sm, base, lg, xl
             css_class: Additional CSS classes
         """
-        size_classes = {
-            'xs': 'text-xs',
-            'sm': 'text-sm',
-            'base': 'text-base',
-            'lg': 'text-lg',
-            'xl': 'text-xl'
-        }
-        size_class = size_classes.get(size, 'text-xs')
-        classes = f"material-symbols-outlined {size_class}"
-        if css_class:
-            classes += f" {css_class}"
+        # xs/sm shrink the glyph; base and larger follow the surrounding text.
+        classes = C.join(C.ICON, C.SMALL if size in ("xs", "sm") else "", css_class)
 
         return format_html('<span class="{}">{}</span>', classes, icon_name)
 
@@ -88,44 +81,16 @@ class BaseElements:
         """
         classes = []
 
-        # Unfold-compatible Tailwind text colors
         if variant:
-            variant_classes = {
-                'success': 'text-green-700 dark:text-green-400',
-                'warning': 'text-orange-700 dark:text-orange-400',
-                'danger': 'text-red-700 dark:text-red-400',
-                'info': 'text-blue-700 dark:text-blue-400',
-                'primary': 'text-primary-600 dark:text-primary-400',
-            }
-            classes.append(variant_classes.get(variant, ''))
-
-        # Muted
+            classes.append(C.text_tone(variant))
         if muted:
-            classes.append('text-font-subtle-light dark:text-font-subtle-dark')
+            classes.append(C.MUTED)
+        if size in ('xs', 'sm'):
+            classes.append(C.SMALL)
+        if weight in ('medium', 'semibold', 'bold'):
+            classes.append(C.STRONG)
 
-        # Size
-        if size:
-            size_classes = {
-                'xs': 'text-xs',
-                'sm': 'text-sm',
-                'base': 'text-base',
-                'lg': 'text-lg',
-                'xl': 'text-xl',
-                '2xl': 'text-2xl',
-            }
-            classes.append(size_classes.get(size, ''))
-
-        # Weight
-        if weight:
-            weight_classes = {
-                'normal': 'font-normal',
-                'medium': 'font-medium',
-                'semibold': 'font-semibold',
-                'bold': 'font-bold',
-            }
-            classes.append(weight_classes.get(weight, ''))
-
-        css_class = ' '.join(filter(None, classes))
+        css_class = C.join(*classes)
 
         if css_class:
             return format_html('<span class="{}">{}</span>', css_class, content)
@@ -169,22 +134,14 @@ class BaseElements:
             classes.append(css_class)
             
         if variant:
-            # Unfold-compatible Tailwind text colors for links
-            variant_classes = {
-                'success': 'text-green-700 dark:text-green-400 hover:text-green-800',
-                'warning': 'text-orange-700 dark:text-orange-400 hover:text-orange-800',
-                'danger': 'text-red-700 dark:text-red-400 hover:text-red-800',
-                'info': 'text-blue-700 dark:text-blue-400 hover:text-blue-800',
-                'primary': 'text-primary-600 dark:text-primary-400 hover:text-primary-700',
-            }
-            classes.append(variant_classes.get(variant, ''))
+            classes.append(C.text_tone(variant))
 
-        final_css_class = " ".join(classes)
+        final_css_class = C.join(*classes)
         
         content = escape(text)
         if icon:
             # Use BaseElements.icon directly
-            icon_html = BaseElements.icon(icon, size="sm", css_class="mr-1 align-text-bottom")
+            icon_html = BaseElements.icon(icon, size="sm")
             content = format_html("{} {}", icon_html, content)
 
         if target:
@@ -197,7 +154,4 @@ class BaseElements:
     @staticmethod
     def empty(text: str = "—") -> SafeString:
         """Render empty/placeholder value."""
-        return format_html(
-            '<span class="text-font-subtle-light dark:text-font-subtle-dark">{}</span>',
-            escape(text)
-        )
+        return format_html('<span class="{}">{}</span>', C.MUTED, text)

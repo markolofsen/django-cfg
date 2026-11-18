@@ -13,6 +13,7 @@ from django_cfg.icons import Icons
 
 from ...models.badge_models import StatusBadgeConfig
 from ...models.base import BadgeVariant
+from ..html import _classes as C
 
 logger = logging.getLogger(__name__)
 
@@ -33,23 +34,13 @@ class StatusBadge:
         'inactive': BadgeVariant.SECONDARY,
     }
 
-    # Unfold-compatible Tailwind CSS classes
-    VARIANT_CLASSES = {
-        BadgeVariant.SUCCESS: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400',
-        BadgeVariant.WARNING: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
-        BadgeVariant.DANGER: 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400',
-        BadgeVariant.INFO: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
-        BadgeVariant.PRIMARY: 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-400',
-        BadgeVariant.SECONDARY: 'bg-base-100 text-base-700 dark:bg-base-500/20 dark:text-base-200',
-    }
-
     @classmethod
     def auto(cls, status: str, config: Optional[StatusBadgeConfig] = None) -> SafeString:
         """Auto status badge with color mapping."""
         config = config or StatusBadgeConfig()
 
         if status is None or status == '':
-            return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')
+            return format_html('<span class="{}">—</span>', C.MUTED)
 
         # Normalize status for lookup (handle booleans)
         if isinstance(status, bool):
@@ -90,7 +81,7 @@ class StatusBadge:
             except ValueError:
                 variant = BadgeVariant.INFO
 
-        css_classes = cls.VARIANT_CLASSES.get(variant, cls.VARIANT_CLASSES[BadgeVariant.INFO])
+        css_classes = C.badge(variant)
 
         if config.css_classes:
             css_classes += ' ' + ' '.join(config.css_classes)
@@ -101,7 +92,7 @@ class StatusBadge:
             icon_to_use = icon or config.icon
             if icon_to_use:
                 # Use custom icon
-                icon_html = format_html('<span class="material-symbols-outlined text-xs mr-1">{}</span>', icon_to_use)
+                icon_html = format_html('<span class="{}">{}</span>', C.ICON, icon_to_use)
             else:
                 # Auto-detect icon based on variant
                 icon_map = {
@@ -113,12 +104,10 @@ class StatusBadge:
                     BadgeVariant.SECONDARY: Icons.INFO,
                 }
                 icon_name = icon_map.get(variant, Icons.INFO)
-                icon_html = format_html('<span class="material-symbols-outlined text-xs mr-1">{}</span>', icon_name)
+                icon_html = format_html('<span class="{}">{}</span>', C.ICON, icon_name)
 
         return format_html(
-            '<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {}">'
-            '{}{}'
-            '</span>',
+            '<span class="{}">{}{}</span>',
             css_classes, icon_html, escape(text)
         )
 

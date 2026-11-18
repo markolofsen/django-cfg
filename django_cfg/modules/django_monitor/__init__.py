@@ -19,8 +19,6 @@ from __future__ import annotations
 
 import json
 
-default_app_config = "django_cfg.modules.django_monitor.apps.DjangoMonitorConfig"
-
 from .exceptions import MonitorConfigError, MonitorError, MonitorSyncError
 
 _EVENT_FIELDS = (

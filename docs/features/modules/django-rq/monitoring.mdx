@@ -243,12 +243,14 @@ rate(rq_job_duration_seconds_sum[5m]) / rate(rq_job_duration_seconds_count[5m])
 
 ## CLI Commands
 
-### rq_scheduler_status
+### rq_cron_status
 
-Tells a dead scheduler (`scheduler_dead`) from a busy worker (`starved`), with per-queue wait age and the job each busy worker runs; exits 1 when not `ok`, so it serves as a healthcheck. See [Scheduler and Workers](./scheduler-and-workers).
+Tells a dead `rqcron` (`cron_dead`: no heartbeat within `--max-heartbeat-age`, default 120 s) from a busy worker (`starved`: a queued job waited longer than `--max-wait`, default 120 s), with per-queue wait age, the leading `rqcron` and the job each busy worker runs; exits 1 when not `ok`, so it serves as the compose healthcheck of the `rqcron` service. See [Scheduler and Workers](./scheduler-and-workers).
 
 ```bash
-python manage.py rq_scheduler_status --queue high --max-wait 60
+python manage.py rq_cron_status --queue high --max-wait 60
+python manage.py rq_cron_status --json
+# {"verdict", "cron_alive", "heartbeat_age_sec", "leader", "queues", "busy", "reason"}
 ```
 
 ### rqstats
@@ -294,11 +296,14 @@ python manage.py rqworker default --verbose
 ### Scheduler Management
 
 ```bash
-# Start scheduler
-python manage.py rqscheduler
+# Start the cron scheduler (one per project)
+python manage.py rqcron
 
-# Scheduler with verbose logging
-python manage.py rqscheduler --verbose
+# Print the registered schedules (and not_registered entries) as JSON
+python manage.py rqcron --list
+
+# Cron scheduler with debug logging
+python manage.py rqcron -l DEBUG
 ```
 
 ---

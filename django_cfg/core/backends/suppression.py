@@ -13,7 +13,8 @@ suite the entire time it is skipped.
 
 ``django.core.mail`` has exactly one narrow waist: **every** way to send —
 ``send_mail``, ``EmailMessage.send()``, ``EmailMultiAlternatives.send()``, a
-direct ``get_connection()``, ``mail_admins`` — ends at a backend's
+connection from ``mail.mailers`` (``get_connection()`` on 5.2), ``mail_admins``
+— ends at a backend's
 ``send_messages()``. Gating there makes the bypass *unexpressible* rather than
 merely detectable: there is no send path in Django that reaches a transport
 without passing through a backend, so a future method added to the service, or a
@@ -66,7 +67,7 @@ import logging
 from typing import Iterable, List, Optional
 
 from django.conf import settings
-from django.core.mail import get_connection
+from django.core.exceptions import ImproperlyConfigured
 from django.core.mail.backends.base import BaseEmailBackend
 from django.utils.module_loading import import_string
 
@@ -166,7 +167,19 @@ def _load_resolver():
 class SuppressionGateBackend(BaseEmailBackend):
     """Wraps another email backend and drops suppressed recipients first.
 
-    Selected with::
+    Selected on Django 6.1+ with ``MAILERS``; the transport is a second mailer
+    alias, named by the ``inner_mailer`` option::
+
+        MAILERS = {
+            "default": {
+                "BACKEND": "django_cfg.core.backends.suppression.SuppressionGateBackend",
+                "OPTIONS": {"inner_mailer": "transport"},
+            },
+            "transport": EmailConfig(...).to_mailer(),
+        }
+        EMAIL_SUPPRESSION_RESOLVER = "myproject.email.gate.allowed_recipients"
+
+    and on Django 5.2 with::
 
         EMAIL_BACKEND = "django_cfg.core.backends.suppression.SuppressionGateBackend"
         EMAIL_GATE_INNER_BACKEND = "django_cfg.core.backends.gateway.GatewayEmailBackend"
@@ -186,11 +199,44 @@ class SuppressionGateBackend(BaseEmailBackend):
     recorded as not-sent, which is exactly what happened.
     """
 
-    def __init__(self, fail_silently=False, inner_backend=None, resolver=None, **kwargs):
-        super().__init__(fail_silently=fail_silently)
+    def __init__(
+        self,
+        fail_silently=False,
+        inner_backend=None,
+        inner_mailer=None,
+        resolver=None,
+        alias=None,
+        **kwargs,
+    ):
+        # ``alias`` is set only when ``mail.mailers`` builds the gate (Django
+        # 6.1+ with MAILERS). Then the transport is its own mailer and every
+        # other option goes to the base class, which rejects unknown OPTIONS
+        # (a typo must not pass silently). Without MAILERS the extra keyword
+        # arguments are the inner backend's, as before.
+        if alias is not None:
+            super().__init__(alias=alias, **kwargs)
+            self._inner_kwargs = {}
+            if inner_mailer is None:
+                # A backend path here would be built outside MAILERS, and the
+                # SMTP backend would then read EMAIL_* settings that raise once
+                # MAILERS is defined. The transport is configured as a mailer.
+                raise ImproperlyConfigured(
+                    f"SuppressionGateBackend (mailer {alias!r}) needs the "
+                    "'inner_mailer' option: the MAILERS alias of the transport."
+                )
+            if inner_mailer == alias:
+                raise ImproperlyConfigured(
+                    f"SuppressionGateBackend (mailer {alias!r}) cannot wrap itself."
+                )
+        else:
+            super().__init__()
+            self._inner_kwargs = kwargs
+        # Django 6.1 no longer keeps fail_silently on BaseEmailBackend; a backend
+        # that supports it holds its own attribute.
+        self.fail_silently = fail_silently
         self._resolver = resolver
-        self._inner_kwargs = kwargs
         self._explicit_inner = inner_backend
+        self._inner_mailer = inner_mailer
         self._inner = None
 
     def _get_inner(self):
@@ -202,6 +248,16 @@ class SuppressionGateBackend(BaseEmailBackend):
         between sends in a test.
         """
         if self._inner is not None:
+            return self._inner
+        if self._inner_mailer is not None:
+            from django.core import mail
+
+            if not hasattr(mail, "mailers"):
+                raise ImproperlyConfigured(
+                    "inner_mailer needs Django 6.1+ (MAILERS); on 5.2 set "
+                    "EMAIL_GATE_INNER_BACKEND or pass inner_backend."
+                )
+            self._inner = mail.mailers[self._inner_mailer]
             return self._inner
         if self._explicit_inner is not None:
             # A backend instance passed in directly (tests, or a project wiring
@@ -216,9 +272,14 @@ class SuppressionGateBackend(BaseEmailBackend):
                 "EMAIL_GATE_INNER_BACKEND",
                 "django.core.mail.backends.smtp.EmailBackend",
             )
-        self._inner = get_connection(
-            backend=path, fail_silently=self.fail_silently, **self._inner_kwargs
-        )
+        # What ``get_connection(backend=path, ...)`` did on 5.2, without the call
+        # that Django 6.1 deprecates (and refuses with a path once MAILERS is
+        # defined). ``fail_silently`` is passed only when set: an explicit
+        # ``False`` would reach BaseEmailBackend on 6.1 and warn for nothing.
+        options = dict(self._inner_kwargs)
+        if self.fail_silently:
+            options["fail_silently"] = True
+        self._inner = import_string(path)(**options)
         return self._inner
 
     def open(self):

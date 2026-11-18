@@ -161,3 +161,5 @@ urlpatterns.extend(profile_urlpatterns())
 
 # Custom admin dashboard tabs — always registered; view returns 404 if dashboard not configured
 urlpatterns.append(path('cfg/admin/dashboard/', include('django_cfg.modules.django_dashboard.urls')))
+# The MCP tab's key endpoints (POST, staff, CSRF); see modules/django_overview
+urlpatterns.append(path('cfg/admin/overview/', include('django_cfg.modules.django_overview.urls')))

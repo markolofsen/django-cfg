@@ -128,8 +128,8 @@ Start Django-RQ workers and scheduler for background task processing:
 # Start RQ worker (listens on default, high, low queues)
 python manage.py rqworker default high low
 
-# Start RQ scheduler (for cron/interval tasks)
-python manage.py rqscheduler
+# Start the RQ cron scheduler (cron/interval schedules and delayed jobs; one per project)
+python manage.py rqcron
 ```
 
 ---

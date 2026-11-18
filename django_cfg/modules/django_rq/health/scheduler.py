@@ -1,48 +1,69 @@
 """
-RQ scheduler-lag measurement for the queue-health monitor.
+Scheduler-lag measurement for the queue-health monitor.
 
-rq-scheduler stores scheduled jobs in the ``rq:scheduler:scheduled_jobs`` Redis
-sorted set, scored by their next-run UNIX timestamp. The "scheduler lag" is how
-far in the past the most-overdue entry is — a large lag means the scheduler is
-not enqueueing due jobs on time.
+Two things can be late, and the lag is the worse of them:
+
+- a recurring schedule: the leading ``rqcron`` saves each cron job's
+  ``next_enqueue_time`` in its hash (``rq:cron_scheduler:<name>``); an entry in
+  the past is overdue;
+- a delayed job (``enqueue_in/at``, ``Retry(interval=...)``, a one-off
+  ``scheduled_time``): it waits in ``rq:scheduled:<queue>`` scored by its due
+  time until a scheduler moves it.
+
+A large lag means nobody is enqueueing due work on time.
 """
 
 from __future__ import annotations
 
+import json
 import time
-from typing import Optional
 
-SCHEDULED_JOBS_KEY = "rq:scheduler:scheduled_jobs"
+from rq.utils import as_text, utcparse
+
+SCHEDULED_REGISTRY_PATTERN = "rq:scheduled:*"
 
 
-def collect_scheduler_lag(redis_conn) -> Optional[float]:
+def _cron_lag(redis_conn, now: float) -> float | None:
+    from django_cfg.modules.django_rq.cron import LEADER_KEY
+
+    leader = redis_conn.get(LEADER_KEY)
+    if not leader:
+        return None
+    raw = redis_conn.hget(f"rq:cron_scheduler:{as_text(leader)}", "cron_jobs")
+    if not raw:
+        return None
+    lags = []
+    for job in json.loads(as_text(raw)):
+        nxt = job.get("next_enqueue_time")
+        if nxt:
+            lags.append(now - utcparse(nxt).timestamp())
+    return max(lags) if lags else None
+
+
+def _delayed_lag(redis_conn, now: float) -> float | None:
+    lags = []
+    for key in redis_conn.scan_iter(match=SCHEDULED_REGISTRY_PATTERN):
+        earliest = redis_conn.zrange(key, 0, 0, withscores=True)
+        if earliest:
+            lags.append(now - float(earliest[0][1]))
+    return max(lags) if lags else None
+
+
+def collect_scheduler_lag(redis_conn) -> float | None:
     """
-    Return the lag in seconds of the most-overdue scheduled job.
+    Return the lag in seconds of the most-overdue cron run or delayed job.
 
-    Args:
-        redis_conn: A Redis connection.
-
-    Returns:
-        Lag in seconds (>= 0) for the earliest-scored entry that is in the past,
-        ``0.0`` when no scheduled job is overdue, or ``None`` when there are no
-        scheduled jobs at all / the ZSET is unavailable.
+    Returns ``0.0`` when nothing is overdue, ``None`` when there is nothing to
+    measure (no leading ``rqcron`` and no delayed job) or Redis is unavailable.
     """
+    now = time.time()
     try:
-        # The lowest score is the soonest (most overdue) scheduled time.
-        earliest = redis_conn.zrange(SCHEDULED_JOBS_KEY, 0, 0, withscores=True)
+        found = [lag for lag in (_cron_lag(redis_conn, now), _delayed_lag(redis_conn, now)) if lag is not None]
     except Exception:
         return None
-
-    if not earliest:
+    if not found:
         return None
-
-    _job_id, score = earliest[0]
-    now = time.time()
-    lag = now - float(score)
-    return max(0.0, lag)
+    return max(0.0, max(found))
 
 
-__all__ = [
-    "SCHEDULED_JOBS_KEY",
-    "collect_scheduler_lag",
-]
+__all__ = ["SCHEDULED_REGISTRY_PATTERN", "collect_scheduler_lag"]

@@ -136,9 +136,14 @@ def copy_groups(
     logger: GenerationLogger | Any,
     *,
     clean_first: bool = True,
+    force: bool = False,
 ) -> int:
     """
     Copy group directories from source to target.
+
+    The copy is built in a staged folder next to ``target`` and swapped in
+    at the end (``pipeline/staging.py``): a failure leaves ``target`` as it
+    was, and uncommitted changes under it stop the copy unless ``force``.
 
     Args:
         source: Source directory containing group folders
@@ -146,34 +151,47 @@ def copy_groups(
         groups: List of group names to copy
         logger: GenerationLogger or Django stdout for logging
         clean_first: If True, clean target directory before copying (default: True)
+        force: Replace ``target`` even when git shows uncommitted changes in it
 
     Returns:
         Number of groups copied
     """
-    # Clean target directory first
-    if clean_first and target.exists():
-        clean_target(target, logger)
+    from ..pipeline.staging import Stage
 
-    copied = 0
+    stage = Stage.open(target)
+    try:
+        if clean_first:
+            clean_target(stage.path)
 
-    for group in groups:
-        src = source / group
-        dst = target / group
+        copied = 0
+        for group in groups:
+            src = source / group
+            dst = stage.path / group
 
-        if not src.exists():
-            if hasattr(logger, "warning"):
-                logger.warning(f"Source not found: {src}")
-            else:
-                log(f"  Warning: source not found {src}", logger, "warning")
-            continue
+            if not src.exists():
+                if hasattr(logger, "warning"):
+                    logger.warning(f"Source not found: {src}")
+                else:
+                    log(f"  Warning: source not found {src}", logger, "warning")
+                continue
 
-        if dst.exists():
-            shutil.rmtree(dst)
+            if dst.exists():
+                shutil.rmtree(dst)
 
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(src, dst)
-        copied += 1
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(src, dst)
+            copied += 1
 
+        stage.commit(force=force)
+    except BaseException:
+        stage.discard()
+        raise
+
+    if clean_first and logger:
+        if hasattr(logger, "gen_clean"):
+            logger.gen_clean(target)
+        else:
+            log(f"  Cleaned: {target}", logger)
     if hasattr(logger, "gen_copy"):
         logger.gen_copy(source, target, copied)
 

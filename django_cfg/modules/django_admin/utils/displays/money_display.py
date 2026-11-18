@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import logging
 from decimal import Decimal
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
 
-from django.utils.html import escape, format_html
-from django.utils.safestring import SafeString
+from django.utils.html import format_html
+from django.utils.safestring import SafeString, mark_safe
 
 from ...models.display_models import MoneyDisplayConfig
+from ..html import _classes as C
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class MoneyDisplay:
         config = config or MoneyDisplayConfig()
 
         if amount is None:
-            return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')
+            return format_html('<span class="{}">—</span>', C.MUTED)
 
         amount = Decimal(str(amount))
 
@@ -55,19 +56,19 @@ class MoneyDisplay:
 
         if config.rate_mode:
             return format_html(
-                '<span class="font-mono text-sm">{} <span class="text-font-subtle-light dark:text-font-subtle-dark text-xs">{}</span></span>',
+                '<span class="cfg-mono">{} <span class="cfg-muted cfg-small">{}</span></span>',
                 formatted_amount, config.currency,
             )
 
         if amount < 0:
-            color_class = "text-red-600 dark:text-red-400"
+            color_class = "cfg-danger"
         elif amount == 0:
-            color_class = "text-font-default-light dark:text-font-default-dark"
+            color_class = ""
         else:
-            color_class = "text-green-600 dark:text-green-400"
+            color_class = "cfg-success"
 
         sign = "+" if config.show_sign and amount > 0 else ""
-        return format_html('<span class="font-mono {}">{}{}{}</span>', color_class, sign, symbol, formatted_amount)
+        return format_html('<span class="{}">{}{}{}</span>', C.join(C.MONO, color_class), sign, symbol, formatted_amount)
 
     @classmethod
     def with_breakdown(
@@ -79,25 +80,18 @@ class MoneyDisplay:
         """Display with breakdown."""
         config = config or MoneyDisplayConfig()
 
-        html = format_html('<div class="text-right">')
+        html = mark_safe('<div class="cfg-stack">')
         html += cls.amount(main_amount, config)
 
         if breakdown_items:
-            color_classes = {
-                'success': 'text-green-600 dark:text-green-400',
-                'warning': 'text-yellow-600 dark:text-yellow-400',
-                'danger': 'text-red-600 dark:text-red-400',
-                'secondary': 'text-font-subtle-light dark:text-font-subtle-dark',
-            }
             for item in breakdown_items:
                 label = item.get('label', 'Item')
                 item_amount = item.get('amount', 0)
                 color = item.get('color', 'secondary')
-                color_class = color_classes.get(color, 'text-font-subtle-light dark:text-font-subtle-dark')
                 html += format_html(
-                    '<div class="text-xs {}">{}: {}</div>',
-                    color_class, escape(label), cls.amount(item_amount, config),
+                    '<div class="{}">{}: {}</div>',
+                    C.join(C.SMALL, C.text_tone(color) or C.MUTED), label, cls.amount(item_amount, config),
                 )
 
-        html += format_html('</div>')
+        html += mark_safe('</div>')
         return html

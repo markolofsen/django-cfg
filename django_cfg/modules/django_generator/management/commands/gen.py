@@ -11,6 +11,7 @@ Usage:
     python manage.py gen --target packages      # only TargetType.PACKAGES
     python manage.py gen --groups cfg_accounts  # filter by group name(s)
     python manage.py gen --dry-run              # plan without writes
+    python manage.py gen --force                # overwrite uncommitted changes in an output folder
     python manage.py gen --list-targets         # show targets summary
 """
 
@@ -48,6 +49,11 @@ class Command(BaseCommand):
         )
         # Behaviour
         parser.add_argument("--dry-run", action="store_true", help="Plan without writes.")
+        parser.add_argument(
+            "--force", action="store_true",
+            help="Overwrite an output folder even when git shows uncommitted changes "
+                 "in it that the generator did not make (default: refuse, write nothing).",
+        )
         parser.add_argument("--list-targets", action="store_true",
                             help="Show configured targets and exit.")
         parser.add_argument("--check-stamp", action="store_true",
@@ -95,6 +101,7 @@ class Command(BaseCommand):
             only_target=opts.get("target"),
             only_groups=opts.get("groups"),
             dry_run=opts.get("dry_run", False),
+            force=opts.get("force", False),
             verbose=opts.get("verbose", False),
             quiet=opts.get("quiet", False),
         )

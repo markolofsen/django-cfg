@@ -5,9 +5,8 @@ point of the model — the fieldsets present the letter in reading order rather
 than as an alphabetical field list.
 
 Written with ``PydanticAdmin``/``AdminConfig`` like the rest of django-cfg
-(accounts, payments, currency) rather than a bare ``unfold.ModelAdmin``: badges,
-filters and datetime rendering then come from one place, and the admin picks up
-theme changes without being touched.
+(accounts, payments, currency) rather than a bare ``admin.ModelAdmin``: badges,
+filters and datetime rendering then come from one place.
 """
 
 from django.contrib import admin

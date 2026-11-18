@@ -27,8 +27,14 @@ def get_dashboard_config(context):
         # The merge lives in ONE place — see modules/django_dashboard/resolver.py.
         # It used to be duplicated here, and the copy in views/tab.py disagreed,
         # so extension tabs rendered in this bar and then 404'd when clicked.
+        from django_cfg.modules.django_dashboard.registry import TabRegistry
         from django_cfg.modules.django_dashboard.resolver import get_dashboard_config
 
-        return get_dashboard_config()
+        config = get_dashboard_config()
+        if config is None:
+            return None
+        registry = TabRegistry()
+        visible = [t for t in config.tabs if registry.has_permission(t, request)]
+        return config.model_copy(update={"tabs": visible}) if visible else None
     except Exception:
         return None

@@ -2,7 +2,7 @@
 Django-RQ Configuration for django-cfg.
 
 Type-safe configuration for django-rq with automatic Django settings generation
-and support for scheduled tasks via rq-scheduler.
+and scheduled tasks on RQ's native cron (``manage.py rqcron``).
 
 Django-RQ is a Redis-based task queue: https://github.com/rq/django-rq
 
@@ -13,7 +13,7 @@ Features:
 - Built-in Prometheus metrics support
 - Exception handler configuration
 - Admin interface with monitoring
-- RQ Scheduler for cron-like scheduling
+- Cron and interval schedules on RQ's native cron (``rqcron``)
 - High performance (10,000+ jobs/sec)
 
 Example:
@@ -43,37 +43,12 @@ Example:
     )
     ```
 
-Scheduler Support:
-    Use rq-scheduler for cron-like scheduled tasks:
-
-    ```bash
-    pip install rq-scheduler
-    python manage.py rqscheduler
-    ```
-
-    ```python
-    import django_rq
-    scheduler = django_rq.get_scheduler('default')
-
-    # Schedule job for specific time
-    from datetime import datetime
-    scheduler.enqueue_at(datetime(2025, 12, 31, 23, 59), my_task)
-
-    # Schedule job with interval
-    scheduler.schedule(
-        scheduled_time=datetime.utcnow(),
-        func=my_task,
-        interval=60,  # Every 60 seconds
-        repeat=None,  # Repeat forever
-    )
-
-    # Cron-style scheduling
-    scheduler.cron(
-        "0 0 * * *",  # Every day at midnight
-        func=my_task,
-        queue_name='default'
-    )
-    ```
+Schedules:
+    Declare ``RQScheduleConfig`` entries in ``DjangoRQConfig.schedules`` and run one
+    ``python manage.py rqcron`` per project. It registers every entry on RQ's
+    ``CronScheduler``, never pushes a copy while the previous one is queued or
+    running, and also moves delayed jobs (``enqueue_in/at``, ``Retry(interval)``).
+    Health: ``python manage.py rq_cron_status``.
 """
 
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -278,15 +253,14 @@ class DjangoRQConfig(BaseModel):
     CRITICAL: redis_db is REQUIRED for project isolation!
     Each project MUST use a unique Redis database (0-15) to prevent conflicts.
 
-    WARNING: If multiple projects share the same Redis DB, scheduler jobs will
-    randomly disappear when any project flushes cache or clears Redis keys.
-    This causes scheduled tasks to stop repeating after a few executions.
+    WARNING: projects sharing one Redis DB share RQ's cron registry, queues and
+    the rqcron leader lock: one project's rqcron would stand by for the other's.
 
     See deployment/REDIS.md for DB assignments.
 
     Installation:
         ```bash
-        pip install django-rq rq-scheduler
+        pip install django-cfg[rq]
         ```
 
     Running workers:
@@ -297,8 +271,8 @@ class DjangoRQConfig(BaseModel):
         # Start worker for multiple queues (priority order)
         python manage.py rqworker high default low
 
-        # Start scheduler for scheduled tasks
-        python manage.py rqscheduler
+        # Run the schedules (one per project)
+        python manage.py rqcron
         ```
 
     Admin interface:
@@ -397,7 +371,7 @@ class DjangoRQConfig(BaseModel):
     # RQ Scheduler - scheduled jobs configuration
     schedules: List["RQScheduleConfig"] = Field(
         default_factory=list,
-        description="Scheduled jobs for rq-scheduler (cron-style, interval, or one-time)",
+        description="Scheduled jobs run by `rqcron` (cron, interval, or one-time)",
     )
 
     # RQ queue-health monitor configuration
@@ -646,11 +620,7 @@ class DjangoRQConfig(BaseModel):
             rq_queues[queue_config.queue] = queue_config.to_django_rq_format(redis_url=redis_url)
 
         settings["RQ_QUEUES"] = rq_queues
-        settings["RQ"] = {
-            "COMMIT_MODE": self.commit_mode,
-            # One copy per recurring job + a tick stamp for health checks.
-            "SCHEDULER_CLASS": "django_cfg.modules.django_rq.scheduler.DjangoCfgScheduler",
-        }
+        settings["RQ"] = {"COMMIT_MODE": self.commit_mode}
         settings["RQ_SHOW_ADMIN_LINK"] = self.show_admin_link
 
         if self.exception_handlers:
@@ -742,12 +712,13 @@ class DjangoRQConfig(BaseModel):
 
 class RQScheduleConfig(BaseModel):
     """
-    Configuration for RQ Scheduler scheduled job.
+    One scheduled job, run by ``manage.py rqcron`` on RQ's native cron.
 
-    RQ Scheduler supports:
-    - Cron-style scheduling
-    - Interval-based scheduling
-    - One-time scheduled jobs
+    - ``cron``: cron string, evaluated in UTC
+    - ``interval``: seconds; resumes from the last run after a restart
+    - ``scheduled_time``: one-time, enqueued once with ``enqueue_at``
+    Every run is a fresh job; a run is skipped while the previous copy is still
+    queued or running.
     - Declarative task parameters (limit, verbosity, report_type, days, force)
 
     Example:
@@ -793,7 +764,7 @@ class RQScheduleConfig(BaseModel):
     # Schedule type (one of: cron, interval, or scheduled_time)
     cron: Optional[str] = Field(
         default=None,
-        description="Cron expression (e.g., '0 0 * * *' for daily at midnight)",
+        description="Cron expression, evaluated in UTC (e.g., '0 0 * * *' for daily at midnight UTC)",
     )
 
     interval: Optional[int] = Field(
@@ -816,13 +787,13 @@ class RQScheduleConfig(BaseModel):
     timeout: Optional[int] = Field(
         default=None,
         ge=1,
-        description="Job timeout in seconds (overrides queue default)",
+        description="Job timeout in seconds, rq's `job_timeout` (overrides the queue's default_timeout)",
     )
 
     result_ttl: Optional[int] = Field(
         default=None,
         ge=0,
-        description="Result TTL in seconds for a one-time entry (overrides queue default). Ignored for cron/interval: a recurring entry is never allowed to expire.",
+        description="How long each run's result is kept, in seconds (overrides the queue's default_result_ttl)",
     )
 
     # Function arguments
@@ -839,7 +810,7 @@ class RQScheduleConfig(BaseModel):
     # Metadata
     job_id: Optional[str] = Field(
         default=None,
-        description="Custom job ID (generated if not provided)",
+        description="Schedule name: the key of its run history in rq cron (default: schedule_<func>_<hash>); the job id of a one-time entry",
     )
 
     description: Optional[str] = Field(
@@ -850,7 +821,7 @@ class RQScheduleConfig(BaseModel):
     repeat: Optional[int] = Field(
         default=None,
         ge=1,
-        description="Number of times to repeat (None = repeat forever for interval jobs)",
+        description="Stop after this many runs (counted in the run history; None = forever)",
     )
 
     # Common task parameters (automatically added to kwargs)

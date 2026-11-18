@@ -1,0 +1,54 @@
+{# Stock admin/app_list.html (Django 6.1 markup) plus: icons, and for django-cfg navigation sections (app.cfg_section) #}
+{# the current item comes from CfgAdminSite (cfg_current), not from a substring test on the path. #}
+{# Icons are drawn by CSS from data-icon, so the sidebar filter (nav_sidebar.js) never matches the glyph name. #}
+{% load i18n %}
+
+{% if app_list %}
+  {% for app in app_list %}
+    <div class="app-{{ app.app_label }} module{% if app.cfg_section %}{% if app.cfg_current %} current-app{% endif %}{% elif app.app_url in request.path|urlencode %} current-app{% endif %}">
+      <table>
+        <caption>
+          <a href="{{ app.app_url }}" class="section">{% if app.icon %}<span class="cfg-nav-icon" data-icon="{{ app.icon }}" aria-hidden="true"></span>{% endif %}{{ app.name }}</a>
+        </caption>
+        <thead class="visually-hidden">
+          <tr>
+            <th scope="col">{% translate 'Model name' %}</th>
+            <th scope="col">{% translate 'Add link' %}</th>
+            <th scope="col">{% translate 'Change or view list link' %}</th>
+          </tr>
+        </thead>
+        {% for model in app.models %}
+          {% with model_name=model.object_name|lower %}
+            <tr class="model-{{ model_name }}{% if app.cfg_section %}{% if model.cfg_current %} current-model{% endif %}{% elif model.admin_url in request.path|urlencode %} current-model{% endif %}">
+              <th scope="row" id="{{ app.app_label }}-{{ model_name }}">
+                {% if model.admin_url %}
+                  <a href="{{ model.admin_url }}"{% if app.cfg_section %}{% if model.cfg_current %} aria-current="page"{% endif %}{% if model.cfg_external %} target="_blank" rel="noopener"{% endif %}{% elif model.admin_url in request.path|urlencode %} aria-current="page"{% endif %}>{% if model.icon %}<span class="cfg-nav-icon" data-icon="{{ model.icon }}" aria-hidden="true"></span>{% endif %}{{ model.name }}</a>
+                {% else %}
+                  {{ model.name }}
+                {% endif %}
+              </th>
+
+              {% if model.add_url %}
+                <td><a href="{{ model.add_url }}" class="addlink" aria-describedby="{{ app.app_label }}-{{ model_name }}">{% translate 'Add' %}</a></td>
+              {% else %}
+                <td></td>
+              {% endif %}
+
+              {% if model.admin_url and show_changelinks %}
+                {% if model.view_only %}
+                  <td><a href="{{ model.admin_url }}" class="viewlink" aria-describedby="{{ app.app_label }}-{{ model_name }}">{% translate 'View' %}</a></td>
+                {% else %}
+                  <td><a href="{{ model.admin_url }}" class="changelink" aria-describedby="{{ app.app_label }}-{{ model_name }}">{% translate 'Change' %}</a></td>
+                {% endif %}
+              {% elif show_changelinks %}
+                <td></td>
+              {% endif %}
+            </tr>
+          {% endwith %}
+        {% endfor %}
+      </table>
+    </div>
+  {% endfor %}
+{% else %}
+  <p>{% translate 'You don’t have permission to view or edit anything.' %}</p>
+{% endif %}

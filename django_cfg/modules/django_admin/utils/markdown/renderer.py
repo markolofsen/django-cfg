@@ -147,7 +147,7 @@ class MarkdownRenderer:
         enable_plugins: bool = True
     ) -> SafeString:
         """
-        Render markdown text to HTML with beautiful Tailwind styling.
+        Render markdown text to HTML (``cfg-markdown`` container).
 
         Args:
             text: Markdown content
@@ -159,60 +159,24 @@ class MarkdownRenderer:
             SafeString with rendered HTML
         """
         if not MISTUNE_AVAILABLE:
-            return format_html(
-                '<div class="text-orange-700 dark:text-orange-400 p-3 bg-orange-50 dark:bg-orange-500/20 border border-orange-200 dark:border-orange-500/30 rounded">'
-                '<strong>⚠️ Mistune not installed:</strong> Install with: pip install mistune>=3.1.4'
+            return mark_safe(
+                '<div class="cfg-box cfg-box--warning">'
+                '<strong>Mistune not installed:</strong> install with: pip install mistune&gt;=3.1.4'
                 '</div>'
             )
 
         if not text:
-            return format_html(
-                '<span class="text-font-subtle-light dark:text-font-subtle-dark">No content</span>'
-            )
+            return mark_safe('<span class="cfg-muted">No content</span>')
 
         # Get markdown parser
         md = cls._get_markdown_parser(enable_plugins)
         if not md:
-            return format_html(
-                '<div class="text-red-700 dark:text-red-400">Error: Could not initialize markdown parser</div>'
-            )
+            return mark_safe('<div class="cfg-danger">Error: Could not initialize markdown parser</div>')
 
         # Render markdown to HTML
         html_content = md(str(text))
 
-        # Beautiful Tailwind prose styles
-        base_classes = (
-            "prose prose-sm dark:prose-invert max-w-none "
-            "prose-headings:font-semibold prose-headings:text-font-default-light dark:prose-headings:text-font-default-dark "
-            "prose-h1:text-2xl prose-h1:mb-4 prose-h1:mt-6 prose-h1:border-b prose-h1:border-base-200 dark:prose-h1:border-base-700 prose-h1:pb-2 "
-            "prose-h2:text-xl prose-h2:mb-3 prose-h2:mt-5 prose-h2:border-b prose-h2:border-base-200 dark:prose-h2:border-base-700 prose-h2:pb-1 "
-            "prose-h3:text-lg prose-h3:mb-2 prose-h3:mt-4 "
-            "prose-h4:text-base prose-h4:mb-2 prose-h4:mt-3 "
-            "prose-p:mb-3 prose-p:leading-relaxed prose-p:text-font-default-light dark:prose-p:text-font-default-dark "
-            "prose-a:text-primary-600 dark:prose-a:text-primary-400 prose-a:no-underline hover:prose-a:underline prose-a:font-medium "
-            "prose-strong:text-font-default-light dark:prose-strong:text-font-default-dark prose-strong:font-semibold "
-            "prose-code:bg-base-100 dark:prose-code:bg-base-800 prose-code:text-red-700 dark:prose-code:text-red-400 "
-            "prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:font-mono "
-            "prose-code:before:content-none prose-code:after:content-none "
-            "prose-pre:bg-base-50 dark:prose-pre:bg-base-900 prose-pre:border prose-pre:border-base-200 dark:prose-pre:border-base-700 prose-pre:rounded-lg "
-            "prose-blockquote:border-l-4 prose-blockquote:border-primary-300 dark:prose-blockquote:border-primary-600 "
-            "prose-blockquote:bg-base-50 dark:prose-blockquote:bg-base-900 prose-blockquote:pl-4 prose-blockquote:pr-4 prose-blockquote:py-2 "
-            "prose-blockquote:italic prose-blockquote:text-font-subtle-light dark:prose-blockquote:text-font-subtle-dark "
-            "prose-ul:list-disc prose-ul:pl-6 prose-ul:mb-3 prose-ul:text-font-default-light dark:prose-ul:text-font-default-dark "
-            "prose-ol:list-decimal prose-ol:pl-6 prose-ol:mb-3 prose-ol:text-font-default-light dark:prose-ol:text-font-default-dark "
-            "prose-li:mb-1 "
-            "prose-table:border-collapse prose-table:w-full prose-table:text-sm "
-            "prose-th:bg-base-100 dark:prose-th:bg-base-800 prose-th:border prose-th:border-base-300 dark:prose-th:border-base-600 "
-            "prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold prose-th:text-font-default-light dark:prose-th:text-font-default-dark "
-            "prose-td:border prose-td:border-base-200 dark:prose-td:border-base-700 prose-td:px-4 prose-td:py-2 "
-            "prose-td:text-font-default-light dark:prose-td:text-font-default-dark "
-            "prose-img:rounded-lg prose-img:shadow-md prose-img:border prose-img:border-base-200 dark:prose-img:border-base-700 "
-            "prose-hr:border-base-200 dark:prose-hr:border-base-700 prose-hr:my-6 "
-            "prose-em:text-font-default-light dark:prose-em:text-font-default-dark "
-        )
-
-        # Combine with custom classes
-        classes = f"{base_classes} {css_class}".strip()
+        classes = f"cfg-markdown {css_class}".strip()
 
         # Add container div with max-height if specified
         style = ""
@@ -276,9 +240,7 @@ class MarkdownRenderer:
             )
         """
         if not content:
-            return format_html(
-                '<span class="text-font-subtle-light dark:text-font-subtle-dark text-sm">No documentation available</span>'
-            )
+            return mark_safe('<span class="cfg-muted">No documentation available</span>')
 
         # Convert to string if Path object
         content_str = str(content)
@@ -294,7 +256,7 @@ class MarkdownRenderer:
                 is_from_file = True
             else:
                 return format_html(
-                    '<div class="text-orange-700 dark:text-orange-400 p-3 bg-orange-50 dark:bg-orange-500/20 border border-orange-200 dark:border-orange-500/30 rounded">'
+                    '<div class="cfg-box cfg-box--warning">'
                     '<strong>⚠️ File not found:</strong> {}'
                     '</div>',
                     escape(content_str)
@@ -314,29 +276,15 @@ class MarkdownRenderer:
         # Wrap in beautiful collapsible section
         open_attr = 'open' if default_open else ''
 
-        # Generate unique ID to scope the style
-        import uuid
-        details_id = f"md-details-{uuid.uuid4().hex[:8]}"
-
         return format_html(
-            '<style>#{} > summary::after {{ display: none !important; content: none !important; }} #{}[open] > summary .material-symbols-outlined {{ transform: rotate(90deg); }}</style>'
-            '<details id="{}" class="group border border-base-200 dark:border-base-700 rounded-lg overflow-hidden bg-white dark:bg-base-800 shadow-sm hover:shadow-md transition-shadow" {}>'
-            '<summary class="cursor-pointer px-4 py-3 bg-base-50 dark:bg-base-900 hover:bg-base-100 dark:hover:bg-base-800 transition-colors flex items-center gap-3 select-none" style="list-style: none;">'
-            '<span class="material-symbols-outlined text-primary-600 dark:text-primary-400 transition-transform" style="font-size: 18px; line-height: 1;">{}</span>'
-            '<span class="font-semibold text-sm text-font-default-light dark:text-font-default-dark">{}</span>'
-            '</summary>'
-            '<div class="p-4 bg-white dark:bg-base-800" {}>'
-            '{}'
-            '</div>'
+            '<details class="cfg-docs-section" {}>'
+            '<summary><span class="cfg-strong">{}</span></summary>'
+            '<div{}>{}</div>'
             '</details>',
-            details_id,
-            details_id,
-            details_id,
             mark_safe(open_attr),
-            'chevron_right',  # Arrow icon
-            escape(title),
-            mark_safe(f'style="max-height: {max_height}; overflow-y: auto;"') if max_height else '',
-            rendered_html
+            title,
+            mark_safe(f' style="max-height: {max_height}; overflow-y: auto;"') if max_height else '',
+            rendered_html,
         )
 
     @classmethod

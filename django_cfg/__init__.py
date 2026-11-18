@@ -29,7 +29,7 @@ Example:
 """
 
 # Version information
-__version__ = "2.3.417"
+__version__ = "2.4.0"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -153,32 +153,15 @@ from .modules.django_telegram import (
 from .testing.runners import FastTestRunner, SmartTestRunner
 
 # ---------------------------------------------------------------------------
-# [OPTIONAL] Unfold admin  (requires: django-unfold)
+# Admin site: branding, sidebar navigation, header links (DjangoConfig.admin_site)
 # ---------------------------------------------------------------------------
-try:
-    from .modules.django_unfold.models.config import (
-        UnfoldConfig,
-        UnfoldDashboardConfig,
-        UnfoldSidebar,
-        UnfoldTheme,
-        UnfoldThemeConfig,
-    )
-    from .modules.django_unfold.models.dropdown import SiteDropdownItem
-    from .modules.django_unfold.models.navigation import (
-        NavigationItem,
-        NavigationItemType,
-        NavigationSection,
-    )
-except ImportError:
-    UnfoldConfig = None  # type: ignore[assignment]
-    UnfoldTheme = None  # type: ignore[assignment]
-    UnfoldThemeConfig = None  # type: ignore[assignment]
-    UnfoldSidebar = None  # type: ignore[assignment]
-    UnfoldDashboardConfig = None  # type: ignore[assignment]
-    NavigationItem = None  # type: ignore[assignment]
-    NavigationSection = None  # type: ignore[assignment]
-    NavigationItemType = None  # type: ignore[assignment]
-    SiteDropdownItem = None  # type: ignore[assignment]
+from .modules.admin_site.models.config import AdminSidebar, AdminSiteConfig
+from .modules.admin_site.models.dropdown import SiteDropdownItem
+from .modules.admin_site.models.navigation import (
+    NavigationItem,
+    NavigationItemType,
+    NavigationSection,
+)
 
 # ---------------------------------------------------------------------------
 # Dashboard tabs (always available — no optional deps)
@@ -306,9 +289,8 @@ __all__ = [
     "Icons", "IconCategories",
     # openapi client
     "OpenAPIGroupConfig", "OpenAPIConfig",
-    # optional: unfold
-    "UnfoldConfig", "UnfoldTheme", "UnfoldThemeConfig",
-    "UnfoldSidebar", "UnfoldDashboardConfig",
+    # admin site
+    "AdminSiteConfig", "AdminSidebar",
     "NavigationItem", "NavigationSection", "NavigationItemType", "SiteDropdownItem",
     # dashboard
     "DashboardConfig", "DashboardTab",

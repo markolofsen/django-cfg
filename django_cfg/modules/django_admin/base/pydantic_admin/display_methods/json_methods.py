@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 def highlight_json(json_obj: Any) -> SafeString:
     """
-    Apply syntax highlighting to JSON using Pygments (Unfold style).
+    Apply syntax highlighting to JSON using Pygments.
 
     Returns dual-theme HTML: light uses 'colorful', dark uses 'monokai'.
     Falls back to plain escaped JSON when Pygments is not installed.
@@ -45,8 +45,8 @@ def highlight_json(json_obj: Any) -> SafeString:
 
     response = json.dumps(json_obj, indent=2, ensure_ascii=False)
     return mark_safe(  # type: ignore[return-value]
-        f'<div class="block dark:hidden">{_format(response, "colorful")}</div>'
-        f'<div class="hidden dark:block">{_format(response, "monokai")}</div>'
+        f'<div class="cfg-light-only">{_format(response, "colorful")}</div>'
+        f'<div class="cfg-dark-only">{_format(response, "monokai")}</div>'
     )
 
 

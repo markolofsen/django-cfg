@@ -80,31 +80,25 @@ def mermaid_plugin(md):
 
 def get_mermaid_styles() -> str:
     """
-    Get CSS styles for Mermaid diagrams with Unfold semantic colors.
+    Get CSS styles for Mermaid diagrams on Django admin colours (light/dark from Django's toggle).
 
     Returns:
         CSS string for Mermaid container styling
     """
     return """
 <style>
-    /* Mermaid container styles with Unfold semantic colors */
+    /* Mermaid container styles on Django admin variables */
     .mermaid-container {
         margin: 1.5rem 0;
         padding: 0;
     }
 
     .mermaid-wrapper {
-        border: 1px solid rgb(var(--color-base-200));
+        border: 1px solid var(--hairline-color);
         border-radius: 0.5rem;
         padding: 1.5rem;
-        background: rgb(var(--color-base-50));
+        background: var(--darkened-bg);
         overflow-x: auto;
-    }
-
-    /* Dark mode styles with semantic colors */
-    .dark .mermaid-wrapper {
-        border-color: rgb(var(--color-base-700));
-        background: rgb(var(--color-base-900));
     }
 
     /* Mermaid diagram */
@@ -124,30 +118,20 @@ def get_mermaid_styles() -> str:
         height: auto;
     }
 
-    /* Loading state with semantic colors */
+    /* Loading state */
     .mermaid[data-processed="false"] {
-        color: rgb(var(--color-base-400));
+        color: var(--body-quiet-color);
         text-align: center;
         padding: 2rem;
     }
 
-    .dark .mermaid[data-processed="false"] {
-        color: rgb(var(--color-base-500));
-    }
-
-    /* Error state with semantic colors */
+    /* Error state */
     .mermaid.error {
-        color: rgb(239, 68, 68);
-        border: 1px solid rgb(252, 165, 165);
-        background: rgb(254, 242, 242);
+        color: var(--error-fg);
+        border: 1px solid var(--error-fg);
+        background: var(--message-error-bg);
         padding: 1rem;
         border-radius: 0.375rem;
-    }
-
-    .dark .mermaid.error {
-        color: rgb(248, 113, 113);
-        border-color: rgb(153, 27, 27);
-        background: rgb(127, 29, 29);
     }
 </style>
 """
@@ -155,7 +139,7 @@ def get_mermaid_styles() -> str:
 
 def get_mermaid_script(theme: str = "default") -> str:
     """
-    Get Mermaid.js initialization script with Unfold semantic colors.
+    Get Mermaid.js initialization script (dark mode from Django's admin theme).
 
     IMPORTANT - Mermaid rendering gotchas:
     =====================================
@@ -186,9 +170,10 @@ def get_mermaid_script(theme: str = "default") -> str:
     // Make mermaid available globally for Alpine.js components
     window.mermaid = mermaid;
 
-    // Auto-detect dark mode
-    const isDarkMode = document.documentElement.classList.contains('dark') ||
-                       window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // Dark mode: Django's toggle sets html[data-theme] to dark/light/auto
+    const adminTheme = document.documentElement.dataset.theme;
+    const isDarkMode = adminTheme === 'dark' ||
+                       (adminTheme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     // =========================================================================
     // IMPORTANT: startOnLoad must be FALSE for modal/dynamic content!

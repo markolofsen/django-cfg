@@ -7,8 +7,7 @@ Shows image without modal (use image_preview for interactive version).
     src="{{ image_url }}"
     alt="{{ alt_text }}"
     {% if style %}style="{{ style }}"{% endif %}
-    class="object-cover"
 >
 {% if caption %}
-<br><small class="text-base-500 dark:text-base-400">{{ caption }}</small>
+<br><small class="cfg-muted">{{ caption }}</small>
 {% endif %}

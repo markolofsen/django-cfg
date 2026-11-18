@@ -14,12 +14,11 @@ except ImportError:
 
 class JSONEditorWidget(BaseJSONEditorWidget):
     """
-    JSON editor widget with copy-to-clipboard button and Unfold theme support.
+    JSON editor widget with copy-to-clipboard button, themed by the Django admin.
 
     Extends django-json-widget's JSONEditorWidget to add:
     - Copy button with visual feedback
-    - Automatic Unfold dark/light theme switching
-    - Enhanced styling for Unfold integration
+    - Light/dark from the Django admin theme (json_editor_theme.css)
 
     Features:
     - Rich JSON editor (tree/code/view modes)

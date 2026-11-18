@@ -109,6 +109,18 @@ python manage.py gen --dry-run
 
 ---
 
+## Safe Writes and `--force`
+
+Every generator (OpenAPI clients for TypeScript, Python, Go and Swift, the ORM mirror, SDK packages) cleans its output folder and writes it again. It no longer does that in place: a target is generated into a hidden copy next to the folder (`.<name>.djcfg-stage-*`, same disk) and the folder is replaced only when the target succeeded. If generation fails at any point, the output folder is left exactly as it was. Before anything is generated, the ORM targets are checked: an app in `ORMTarget.apps` that is not installed stops the run with an error naming it, and nothing is written.
+
+When the output folder is inside a git repository, `gen` also refuses to replace it while `git status` shows uncommitted changes there that the generator did not make itself, such as a hand edit or a new file you added. The error lists the files. Commit or move them, or rerun with `--force` to overwrite them. Changes the generator made itself (output you have not committed yet) and deleted files do not block. Without git, or outside a repository, this check is skipped.
+
+```bash
+python manage.py gen --force   # overwrite uncommitted changes in the output folders
+```
+
+---
+
 ## Common Workflows
 
 ### Development
@@ -160,4 +172,5 @@ api-list:
 | `--target TYPE` | Filter by target type (`admin`, `packages`, `extensions`, `parsers`, `sdk`, `web`) |
 | `--groups GROUP ...` | Generate specific groups only |
 | `--dry-run` | Preview without writing files |
+| `--force` | Replace an output folder even when it holds uncommitted changes the generator did not make |
 | `--list-targets` | Show all configured targets and exit |

@@ -319,7 +319,6 @@ class SmartDefaults:
         base_settings = {
             'USE_TZ': True,
             'USE_I18N': True,
-            'USE_L10N': True,
         }
 
         # Return minimal settings - SecurityBuilder handles the rest
@@ -376,20 +375,10 @@ class SmartDefaults:
     def get_installed_apps_defaults() -> List[str]:
         """Get default installed apps."""
         return [
-            # Unfold admin
-            "unfold",
-            "unfold.contrib.filters",
-            "unfold.contrib.forms",
-            "unfold.contrib.inlines",
             "import_export",
-            "unfold.contrib.import_export",
-            "unfold.contrib.guardian",
-            "unfold.contrib.simple_history",
-            "unfold.contrib.location_field",
-            "unfold.contrib.constance",
 
-            # Django core
-            "django.contrib.admin",
+            # Django core (the admin is django-cfg's CfgAdminConfig)
+            "django_cfg.modules.admin_site.apps.CfgAdminConfig",
             "django.contrib.auth",
             "django.contrib.contenttypes",
             "django.contrib.sessions",

@@ -72,14 +72,20 @@
         }
     </style>
     <script>
-    /* Inherit dark mode from parent Unfold page */
+    /* Inherit the admin theme from the parent page (cfg-theme.css): Django's toggle sets
+       data-theme="dark" | "light" | "auto" (auto follows the OS); no stored choice is dark.
+       Opened standalone, the stored choice is read the same way. Tab templates key on
+       Tailwind's `dark` class; the canvas stays dark either way (see above). */
     (function() {
-        try {
-            if (window.parent.document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.add('dark');
-                document.body.classList.add('dark');
-            }
-        } catch(e) {}
+        var theme;
+        try { theme = window.parent.document.documentElement.dataset.theme; } catch (e) {}
+        if (!theme) { try { theme = window.localStorage.getItem('theme'); } catch (e) {} }
+        theme = theme || 'dark';
+        var dark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) {
+            document.documentElement.classList.add('dark');
+            document.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dark'); });
+        }
     })();
     </script>
 </head>

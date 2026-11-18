@@ -1,7 +1,7 @@
 """
 Django Admin: declarative configuration with Pydantic.
 
-Type-safe, reusable admin configurations built on django-unfold. Describe a
+Type-safe, reusable admin configurations on the stock Django admin. Describe a
 model admin with an AdminConfig (list columns, display fields, filters,
 fieldsets, actions, widgets) and let PydanticAdmin generate the ModelAdmin
 attributes and display methods.
@@ -45,6 +45,7 @@ import it from ``django_cfg.modules.django_admin.base``.
 """
 
 # Core config models
+from .actions import action
 from .config import (
     ActionConfig,
     AdminConfig,
@@ -118,6 +119,7 @@ from .widgets import WidgetRegistry
 __version__ = "2.0.0"
 
 __all__ = [
+    "action",
     # Core - Primary API
     # "PydanticAdmin",  # Import directly from .base to avoid AppRegistryNotReady
     "AdminConfig",

@@ -41,6 +41,14 @@ class ActionConfig(BaseModel):
     icon: Optional[str] = Field(None, description="Material icon name")
     url_path: Optional[str] = Field(None, description="Custom URL path for changelist actions (auto-generated if not provided)")
     confirmation: bool = Field(False, description="Require confirmation before execution")
+    method: Literal["post", "get"] = Field(
+        "post",
+        description=(
+            "Changelist actions only. 'post': the button is a POST form with the CSRF token and "
+            "a GET answers 405 (an action that changes something). 'get': a link, for a handler "
+            "that renders its own page or form."
+        ),
+    )
     handler: Union[str, Callable] = Field(..., description="Python path to action handler function or callable")
     permissions: List[str] = Field(default_factory=list, description="Required permissions")
 

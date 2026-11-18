@@ -3,7 +3,7 @@ Integration generators module.
 
 Contains generators for third-party integrations and frameworks:
 - Session configuration
-- External services (Telegram, Unfold, Constance)
+- External services (Telegram, admin site, Constance)
 - API frameworks (JWT, DRF, Spectacular, OpenAPI Client)
 - OAuth providers (GitHub, etc.)
 - Task scheduling (django-rq)

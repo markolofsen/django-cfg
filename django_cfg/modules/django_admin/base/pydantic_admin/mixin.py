@@ -52,7 +52,10 @@ class PydanticAdminMixin(ViewMixin):
     - formfield_for_dbfield override
     """
 
-    config: AdminConfig
+    # No ``config``: the class is a plain ModelAdmin (its own stock attributes,
+    # Django's defaults for the rest) that still gets this base's widgets,
+    # action buttons and template hooks. Readers must handle ``None``.
+    config: AdminConfig | None = None
     _config_processed = False
 
     @property
@@ -63,7 +66,7 @@ class PydanticAdminMixin(ViewMixin):
     @staticmethod
     def _highlight_json(json_obj: Any) -> str:
         """
-        Apply syntax highlighting to JSON using Pygments (Unfold style).
+        Apply syntax highlighting to JSON using Pygments.
 
         Returns HTML with Pygments syntax highlighting for light and dark themes.
         """
@@ -132,6 +135,8 @@ class PydanticAdminMixin(ViewMixin):
         # Form options
         cls.autocomplete_fields = config.autocomplete_fields or getattr(cls, 'autocomplete_fields', [])
         cls.raw_id_fields = config.raw_id_fields or getattr(cls, 'raw_id_fields', [])
+        cls.filter_horizontal = config.filter_horizontal or getattr(cls, 'filter_horizontal', ())
+        cls.filter_vertical = config.filter_vertical or getattr(cls, 'filter_vertical', ())
         cls.prepopulated_fields = config.prepopulated_fields or getattr(cls, 'prepopulated_fields', {})
         cls.formfield_overrides = config.formfield_overrides or getattr(cls, 'formfield_overrides', {})
 
@@ -184,9 +189,6 @@ class PydanticAdminMixin(ViewMixin):
 
         # Import/Export configuration
         if config.import_export_enabled:
-            # Set import/export template
-            cls.change_list_template = 'admin/import_export/change_list_import_export.html'
-
             if config.resource_class:
                 # Use provided resource class
                 cls.resource_class = config.resource_class
@@ -210,21 +212,15 @@ class PydanticAdminMixin(ViewMixin):
         if config.documentation:
             cls._setup_documentation(config)
 
-        # Image preview modal (include once if image_preview widget is used)
-        cls._setup_image_preview_modal(config)
-
     @classmethod
     def _setup_documentation(cls, config: AdminConfig):
         """
-        Setup documentation using unfold's template hooks.
-
-        Uses unfold's built-in hooks:
+        Setup documentation using the template hooks of CfgActionsMixin:
         - list_before_template: Shows documentation before changelist table
         - change_form_before_template: Shows documentation before fieldsets
         """
         doc_config = config.documentation
 
-        # Set unfold template hooks
         if doc_config.show_on_changelist:
             cls.list_before_template = "django_admin/documentation_block.html"
 
@@ -233,66 +229,3 @@ class PydanticAdminMixin(ViewMixin):
 
         # Store documentation config for access in views
         cls.documentation_config = doc_config
-
-    @classmethod
-    def _setup_image_preview_modal(cls, config: AdminConfig):
-        """
-        Setup global image preview modal if image_preview widget is used.
-
-        Uses unfold's template hooks to include modal once per page:
-        - list_after_template: for changelist page
-        - change_form_after_template: for change form page
-        """
-        # Check if any display_fields use image_preview widget
-        has_image_preview = getattr(cls, '_has_image_preview', False)
-
-        if not has_image_preview and config.display_fields:
-            for field_config in config.display_fields:
-                if hasattr(field_config, 'ui_widget') and field_config.ui_widget == 'image_preview':
-                    has_image_preview = True
-                    break
-
-        if has_image_preview:
-            cls.list_after_template = "django_admin/widgets/image_preview_modal.html"
-            cls.change_form_after_template = "django_admin/widgets/image_preview_modal.html"
-
-    # Legacy method aliases for backward compatibility
-    @classmethod
-    def _create_jsonfield_display_methods(cls, config: AdminConfig):
-        """Legacy alias for backward compatibility."""
-        return create_jsonfield_display_methods(cls, config)
-
-    @classmethod
-    def _create_imagefield_display_methods(cls, readonly_fields: list, config: AdminConfig):
-        """Legacy alias for backward compatibility."""
-        return create_imagefield_display_methods(cls, readonly_fields, config)
-
-    @classmethod
-    def _create_markdownfield_display_methods(cls, readonly_fields: list, config: AdminConfig):
-        """Legacy alias for backward compatibility."""
-        return create_markdownfield_display_methods(cls, readonly_fields, config)
-
-    @classmethod
-    def _apply_jsonfield_replacements_to_fieldsets(cls, fieldsets, replacements):
-        """Legacy alias for backward compatibility."""
-        return apply_replacements_to_fieldsets(fieldsets, replacements)
-
-    @classmethod
-    def _generate_resource_class(cls, config: AdminConfig):
-        """Legacy alias for backward compatibility."""
-        return generate_resource_class(config)
-
-    @classmethod
-    def _build_list_display(cls, config: AdminConfig):
-        """Legacy alias for backward compatibility."""
-        return build_list_display(cls, config)
-
-    @classmethod
-    def _build_list_display_links(cls, config: AdminConfig):
-        """Legacy alias for backward compatibility."""
-        return build_list_display_links(config)
-
-    @classmethod
-    def _register_actions(cls, config: AdminConfig):
-        """Legacy alias for backward compatibility."""
-        return register_actions(cls, config)

@@ -89,7 +89,7 @@ def _make_markdown_method(
     def display_method(self: Any, obj: Any) -> SafeString | str:
         value = getattr(obj, fname, None)
         if not value:
-            return mark_safe('<span class="text-gray-400 italic">—</span>')  # type: ignore[return-value]
+            return mark_safe('<span class="cfg-muted">—</span>')  # type: ignore[return-value]
 
         content = MarkdownIntegration.markdown_docs(
             content=value,

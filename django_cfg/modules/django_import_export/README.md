@@ -5,7 +5,7 @@ Simple integration with `django-import-export` package through django-cfg regist
 ## Features
 
 - 🔗 **Registry Integration**: Access django-import-export components through django-cfg imports
-- 🎨 **Unfold Styling**: Automatic beautiful styling through unfold admin interface
+- 🎨 **Stock styling**: the import/export templates and forms as django-import-export ships them
 - 📦 **Zero Overhead**: Direct re-exports without unnecessary wrappers
 - 🚀 **Full Compatibility**: 100% compatible with original django-import-export
 
@@ -47,7 +47,7 @@ Instead of creating unnecessary wrappers, this module simply:
 
 1. **Re-exports** original django-import-export components
 2. **Integrates** them into django-cfg registry for consistent imports
-3. **Relies** on unfold for beautiful styling
+3. **Uses** the stock import/export templates on the stock Django admin
 4. **Maintains** 100% compatibility with original package
 
 ## Usage
@@ -69,31 +69,16 @@ No additional configuration needed. Just install `django-import-export`:
 pip install django-import-export
 ```
 
-The module automatically works with:
-- Unfold admin interface styling
+The module works with:
+- the stock Django admin (no theme)
 - Django-cfg configuration system
 - All original django-import-export features
 
-## Custom Templates
-
-This module includes custom templates for proper Unfold integration:
-
-### Button Styling
-- Import/Export buttons are styled as round icon buttons matching Unfold's design
-- Import button: Green with upload icon
-- Export button: Blue with download icon
-- Positioned next to the "Add" button in the admin interface
-
-### Template Locations
-Templates are located in `templates/admin/import_export/`:
-- `change_list_import_export.html` - For both import and export
-- `change_list_import.html` - Import only
-- `change_list_export.html` - Export only
-- `change_list_import_item.html` - Import button template
-- `change_list_export_item.html` - Export button template
+No template overrides: the Import and Export links are the stock
+`object-tools` items from `import_export/templates/admin/import_export/`.
 
 ## Full Documentation
 
 For complete documentation, see the official [django-import-export docs](https://django-import-export.readthedocs.io/).
 
-This module adds custom Unfold-styled templates for better visual integration with the admin interface.
+The stock django-import-export templates are used; no override ships here.

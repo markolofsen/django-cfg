@@ -1,0 +1,19 @@
+{% load i18n %}
+<details data-filter-title="{{ title }}" open>
+  <summary>{% blocktranslate with filter_title=title %} By {{ filter_title }} {% endblocktranslate %}</summary>
+  <ul><li>
+    <input type="search" value="{{ spec.value }}" aria-label="{{ title }}" data-cfg-text-filter="{{ spec.lookup_kwarg }}" style="width: 100%">
+  </li></ul>
+</details>
+<script>
+  document.querySelectorAll("[data-cfg-text-filter]").forEach(function (input) {
+    input.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter") { return; }
+      event.preventDefault();
+      const q = new URLSearchParams(window.location.search);
+      if (input.value) { q.set(input.dataset.cfgTextFilter, input.value); } else { q.delete(input.dataset.cfgTextFilter); }
+      q.delete("p");
+      window.location.search = q.toString();
+    });
+  });
+</script>

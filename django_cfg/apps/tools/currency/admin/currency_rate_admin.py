@@ -5,7 +5,6 @@ Admin interface for CurrencyRate model using django_cfg.
 """
 
 from django.contrib import admin, messages
-from unfold.decorators import action as unfold_action
 
 from django_cfg.apps.tools.currency.models import CurrencyRate
 from django_cfg.icons import Icons
@@ -16,6 +15,7 @@ from django_cfg.modules.django_admin import (
     DecimalField,
     FieldsetConfig,
     TextField,
+    action,
     computed_field,
 )
 from django_cfg.modules.django_admin.base import PydanticAdmin
@@ -109,10 +109,10 @@ class CurrencyRateAdmin(PydanticAdmin):
     # ========== CHANGELIST ACTIONS (buttons above list) ==========
     actions_list = ["update_all_rates_action"]
 
-    @unfold_action(
+    @action(
         description="Update All Rates",
         url_path="update-all-rates",
-        attrs={"class": "button-primary"},
+        variant="primary",
     )
     def update_all_rates_action(self, request):
         """Update all currency rates from providers."""
@@ -137,7 +137,7 @@ class CurrencyRateAdmin(PydanticAdmin):
         """Display currency pair with badges."""
         return self.html.inline(
             self.html.badge(obj.base_currency, variant="info"),
-            self.html.span("→", "text-gray-400"),
+            self.html.span("→", "cfg-muted"),
             self.html.badge(obj.quote_currency, variant="primary"),
             separator=" ",
         )

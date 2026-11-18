@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.utils.html import escape, format_html
-from django.utils.safestring import SafeString
+from django.utils.safestring import SafeString, mark_safe
 
 from .._types import CountryDisplayConfig
 
@@ -27,7 +27,7 @@ class CountryDisplay:
         value = getattr(obj, field_name, None)
 
         if not value:
-            return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')
+            return mark_safe('<span class="cfg-muted">—</span>')
 
         show_flag = cfg.get("show_flag", True)
         show_name = cfg.get("show_name", True)
@@ -48,15 +48,15 @@ class CountryDisplay:
             if emoji:
                 parts.append(format_html('<span>{}</span>', emoji))
         if show_name:
-            parts.append(format_html('<span class="font-medium">{}</span>', country.name))
+            parts.append(format_html('<span class="cfg-strong">{}</span>', country.name))
         elif show_code:
-            parts.append(format_html('<span class="font-medium">{}</span>', country.iso2))
+            parts.append(format_html('<span class="cfg-strong">{}</span>', country.iso2))
         if show_code and show_name:
-            parts.append(format_html('<span class="text-base-400">({})</span>', country.iso2))
+            parts.append(format_html('<span class="cfg-muted">({})</span>', country.iso2))
 
         return format_html(
-            '<span class="flex items-center gap-2">{}</span>',
-            format_html(" ".join(str(p) for p in parts)),
+            '<span class="cfg-row">{}</span>',
+            mark_safe(" ".join(str(p) for p in parts)),
         )
 
     @classmethod
@@ -69,15 +69,15 @@ class CountryDisplay:
                 if show_flag and country.emoji:
                     parts.append(format_html('<span>{}</span>', country.emoji))
                 if show_name:
-                    parts.append(format_html('<span class="font-medium">{}</span>', country.name))
+                    parts.append(format_html('<span class="cfg-strong">{}</span>', country.name))
                 elif show_code:
-                    parts.append(format_html('<span class="font-medium">{}</span>', code))
+                    parts.append(format_html('<span class="cfg-strong">{}</span>', code))
                 if show_code and show_name:
-                    parts.append(format_html('<span class="text-base-400">({})</span>', code))
+                    parts.append(format_html('<span class="cfg-muted">({})</span>', code))
                 return format_html(
-                    '<span class="flex items-center gap-2">{}</span>',
-                    format_html(" ".join(str(p) for p in parts)),
+                    '<span class="cfg-row">{}</span>',
+                    mark_safe(" ".join(str(p) for p in parts)),
                 )
         except Exception:
             pass
-        return format_html('<span class="font-medium">{}</span>', code)
+        return format_html('<span class="cfg-strong">{}</span>', code)

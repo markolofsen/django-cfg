@@ -76,7 +76,7 @@ class AdminConfig(BaseModel):
     list_filter: List[FilterSpec] = Field(
         default_factory=list,
         description=(
-            "List filters. Accepts strings, Unfold/Django filter classes, tuples, "
+            "List filters. Accepts strings, Django filter classes, tuples, "
             "or FilterConfig(field='x', type='choices_dropdown') for declarative style."
         ),
     )

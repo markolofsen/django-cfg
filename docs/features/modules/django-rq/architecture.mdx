@@ -31,7 +31,7 @@ graph TB
     subgraph "Django-RQ Core"
         Queue[RQ Queues]
         Connection[Redis Connection]
-        Scheduler[RQ Scheduler]
+        Scheduler[rqcron<br/>RQ cron]
     end
 
     subgraph "Infrastructure"
@@ -249,20 +249,22 @@ graph LR
 
 ### 5. Scheduler Architecture
 
-RQ Scheduler provides cron-like scheduling:
+Schedules run on RQ's native cron (`rq.cron`). One `python manage.py rqcron` per project builds `DjangoCfgCronScheduler` from `DjangoRQConfig.get_all_schedules()`; the same process runs RQ's delayed-job scheduler for every queue in `RQ_QUEUES`:
 
 ```mermaid
 graph TB
     subgraph "Configuration"
         Config[RQScheduleConfig]
-        Cron[Cron Expression]
+        Cron[Cron Expression<br/>UTC]
         Interval[Interval Seconds]
         OneTime[Scheduled Time]
     end
 
-    subgraph "RQ Scheduler"
-        Scheduler[Scheduler Process]
-        SortedSet[Redis Sorted Set<br/>Scheduled Jobs]
+    subgraph "rqcron process"
+        Cronsched[DjangoCfgCronScheduler<br/>leader lock]
+        Delayed[RQScheduler<br/>delayed jobs]
+        History[Run history<br/>rq:cron_job:name:jobs]
+        ScheduledSet[rq:scheduled:queue<br/>Sorted Set]
     end
 
     subgraph "Execution"
@@ -274,48 +276,46 @@ graph TB
     Config -->|defines| Interval
     Config -->|defines| OneTime
 
-    Cron -->|parsed by| Scheduler
-    Interval -->|parsed by| Scheduler
-    OneTime -->|parsed by| Scheduler
+    Cron -->|registered by| Cronsched
+    Interval -->|registered by| Cronsched
+    OneTime -->|enqueue_at once| ScheduledSet
 
-    Scheduler -->|checks| SortedSet
-    Scheduler -->|enqueue when due| Queue
+    Cronsched -->|reads last run| History
+    Cronsched -->|enqueue when due| Queue
+    Delayed -->|moves due jobs| Queue
+    ScheduledSet -->|due| Delayed
     Queue -->|provides jobs| Worker
 
-    style Scheduler fill:#f59e0b
-    style SortedSet fill:#ef4444
+    style Cronsched fill:#f59e0b
+    style ScheduledSet fill:#ef4444
 ```
 
 **Schedule Registration:**
 
 ```mermaid
 sequenceDiagram
+    participant Cmd as manage.py rqcron
     participant Config as DjangoRQConfig
-    participant AppReady as AppConfig.ready()
-    participant Helper as register_schedules_from_config()
-    participant Scheduler as RQ Scheduler
+    participant Scheduler as DjangoCfgCronScheduler
+    participant Redis as Redis
 
-    Note over AppReady: Django startup
-    AppReady->>Helper: Call on startup
-    Helper->>Config: Get schedules
-    Config-->>Helper: List[RQScheduleConfig]
-
+    Cmd->>Config: get_all_schedules()
+    Config-->>Cmd: List[RQScheduleConfig]
     loop For each schedule
-        Helper->>Helper: Import task function
-        Helper->>Helper: Parse schedule (cron/interval)
-        Helper->>Scheduler: scheduler.schedule() or scheduler.cron()
-        Scheduler->>Scheduler: Store in Redis sorted set
+        Cmd->>Scheduler: add(schedule)
+        Note over Scheduler: queue not in RQ_QUEUES or import fails: not_registered
     end
-
-    Note over Scheduler: Scheduler process runs
-    loop Forever
-        Scheduler->>Scheduler: Check due jobs
-        Scheduler->>Scheduler: Enqueue due jobs
-        Scheduler->>Scheduler: Sleep until next check
+    Scheduler->>Redis: remove rq-scheduler leftovers of this project
+    loop Every poll (1 s)
+        Scheduler->>Redis: SET NX djangocfg:rq:cron:leader
+        Note over Scheduler: standby enqueues nothing
+        Scheduler->>Redis: on taking the lead, resume from run history, enqueue_at one-offs
+        Scheduler->>Redis: move due delayed jobs
+        Scheduler->>Redis: enqueue due runs (skip while previous copy queued or running)
     end
 ```
 
-**One copy per recurring job (2.3.410):** the scheduler class is `DjangoCfgScheduler`; a tick whose previous copy still waits or runs books the next run and pushes nothing. Details, `rq_scheduler_status` and the dedicated-worker pattern: [Scheduler and Workers](./scheduler-and-workers).
+**One copy per recurring job:** every run is a fresh job with its own id; a due run whose previous copy still waits in the queue or runs with a heartbeat younger than 120 s is skipped and the next run is booked. Cron strings are evaluated in UTC, and after a restart interval and cron schedules resume from their run history instead of all firing at once. Details, `rq_cron_status` and the dedicated-worker pattern: [Scheduler and Workers](./scheduler-and-workers).
 
 ---
 
@@ -702,7 +702,7 @@ graph TB
     subgraph "Server"
         Django[Django App<br/>Gunicorn]
         Worker[RQ Worker<br/>4 processes]
-        Scheduler[RQ Scheduler]
+        Scheduler[rqcron<br/>RQ cron]
         Redis[(Redis)]
     end
 
@@ -735,7 +735,7 @@ graph TB
     subgraph "Worker Servers"
         Worker1[Worker Pool 1<br/>8 workers]
         Worker2[Worker Pool 2<br/>8 workers]
-        Scheduler[RQ Scheduler]
+        Scheduler[rqcron<br/>RQ cron]
     end
 
     subgraph "Data Layer"
@@ -768,69 +768,14 @@ graph TB
 
 ---
 
-## Troubleshooting: Stale Schedule Data
+## Troubleshooting: A Scheduled Task Does Not Run
 
-### Problem: Scheduled Tasks Don't Repeat
+1. `python manage.py rqcron --list` prints every registered schedule as JSON. An entry whose queue is not in `RQ_QUEUES`, or whose function cannot be imported, is listed under `not_registered` with the reason and is never pushed.
+2. `python manage.py rq_cron_status` tells `cron_dead` (no `rqcron` heartbeat) from `starved` (workers busy; it names what they run).
+3. In the `rqcron` log, `rq cron: skipped <func> (<name>): previous copy ... still queued|running` means the previous run has not finished; the schedule is alive.
+4. `rq cron: standby, leader is <name>` means another `rqcron` holds `djangocfg:rq:cron:leader`; only the leader enqueues.
 
-If your interval-based scheduled tasks run once but don't repeat, the issue is likely **stale job data in Redis**.
-
-**Symptoms:**
-- Scheduler logs show "✓ Registered interval schedule"
-- Task executes once at startup
-- Task disappears from `rq:scheduler:scheduled_jobs` after first run
-- `job.meta` is empty (`{}`) when fetched
-
-**Root Cause:**
-
-When a job with the same ID already exists in Redis with corrupted/empty `meta`, rq-scheduler may not properly update it. The `interval` value in `meta` is required for repeat execution.
-
-**Solution:**
-
-Django-cfg 1.7.3+ includes automatic cleanup of stale job data. For older versions, manually clear scheduler data:
-
-```bash
-# Clear all scheduled job data
-redis-cli KEYS "rq:job:schedule_*" | xargs redis-cli DEL
-redis-cli DEL "rq:scheduler:scheduled_jobs"
-
-# Restart scheduler to re-register
-docker restart your-scheduler-container
-```
-
-**Verification:**
-
-```python
-# Check that meta is saved correctly after registration
-from rq.job import Job
-from django_rq import get_connection
-
-conn = get_connection()
-job = Job.fetch('schedule_your_task_id', connection=conn)
-print(f'meta: {job.meta}')  # Should show {'interval': 60} or similar
-```
-
-**Prevention:**
-
-Django-cfg 1.7.3+ automatically:
-1. Removes stale job data before registering new schedules
-2. Verifies `meta` is saved correctly in Redis
-3. Logs warnings if `meta` appears corrupted
-
-```mermaid
-sequenceDiagram
-    participant Scheduler as RQ Scheduler
-    participant Helper as register_schedules_from_config()
-    participant Redis as Redis
-
-    Note over Helper: Registration starts
-    Helper->>Redis: DELETE rq:job:schedule_xyz (cleanup stale data)
-    Helper->>Scheduler: scheduler.schedule(interval=60)
-    Scheduler->>Redis: HSET rq:job:schedule_xyz meta {interval: 60}
-    Helper->>Redis: HGET rq:job:schedule_xyz meta
-    Helper->>Helper: Verify meta contains interval
-
-    Note over Scheduler: Task runs every 60s
-```
+Each schedule's runs are listed in its history `rq:cron_job:<name>:jobs`, where `<name>` is `job_id` when set, else `schedule_<func>_<hash>`. django-rq's admin shows the cron schedulers and each cron job's run history.
 
 ---
 

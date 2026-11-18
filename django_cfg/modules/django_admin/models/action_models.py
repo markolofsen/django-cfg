@@ -12,10 +12,7 @@ from .base import BaseConfig
 
 class ActionVariant(str, Enum):
     """
-    Action variant enum for consistent styling.
-    
-    Based on Unfold ActionVariant but with our own namespace.
-    Matches unfold.enums.ActionVariant exactly.
+    Action variant enum: the button style, rendered as ``cfg-action-<value>``.
     """
     DEFAULT = "default"
     PRIMARY = "primary"

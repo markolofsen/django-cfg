@@ -1,22 +1,22 @@
 """
 Navigation configuration models for extension apps.
 
-Extends unfold navigation with auto-generated admin URLs for extensions.
+Extends the admin site navigation models with auto-generated admin URLs for extensions.
 """
 
 from typing import Optional, Union, Callable
 
 from pydantic import Field, computed_field
 
-from django_cfg.modules.django_unfold.models.navigation import (
-    NavigationItem as UnfoldNavigationItem,
-    NavigationSection as UnfoldNavigationSection,
+from django_cfg.modules.admin_site.models.navigation import (
+    NavigationItem as SiteNavigationItem,
+    NavigationSection as SiteNavigationSection,
 )
 
 from .constants import APP_LABEL_PREFIX
 
 
-class NavigationItem(UnfoldNavigationItem):
+class NavigationItem(SiteNavigationItem):
     """
     Navigation item with automatic admin URL generation for extensions.
 
@@ -37,10 +37,10 @@ class NavigationItem(UnfoldNavigationItem):
     @computed_field
     @property
     def resolved_link(self) -> Union[str, Callable]:
-        """Get the link resolved for Unfold."""
+        """The link: explicit link, else the app+model admin URL."""
         # Priority: explicit link > app+model auto-generation
         if self.link:
-            from django_cfg.modules.django_unfold.utils import auto_resolve_url
+            from django_cfg.modules.admin_site.utils import auto_resolve_url
             return auto_resolve_url(self.link)
         if self.app and self.model:
             from django_cfg.core.admin_access import get_admin_prefix
@@ -48,12 +48,8 @@ class NavigationItem(UnfoldNavigationItem):
             return f"{get_admin_prefix()}{APP_LABEL_PREFIX}{self.app}/{self.model}/"
         return "#"
 
-    def get_link_for_unfold(self):
-        """Get the link in the format expected by Unfold."""
-        return self.resolved_link
 
-
-class NavigationSection(UnfoldNavigationSection):
+class NavigationSection(SiteNavigationSection):
     """Admin navigation section configuration with icon support."""
 
     icon: Optional[str] = Field(None, description="Material icon name")

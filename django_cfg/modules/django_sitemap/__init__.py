@@ -8,8 +8,6 @@ See `@plans/plan13-sitemap/` in the carapis project for the full design.
 """
 from __future__ import annotations
 
-default_app_config = "django_cfg.modules.django_sitemap.apps.SitemapAppConfig"
-
 from .config import SitemapConfig, get_sitemap_config, set_sitemap_config
 from .registry import all_sources, get, register
 from .sources import SitemapSource, resolve_field

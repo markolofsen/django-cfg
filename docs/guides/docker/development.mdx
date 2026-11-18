@@ -49,7 +49,7 @@ Notes taken from the file:
 
 `docker-compose-local-services.yml` (project name `djangocfg-services`) starts Redis
 (host port 7379, 16 databases, a named volume) and, built from the same Django
-image, `rq_worker` (queues `default high low knowledge`) and `rq_scheduler`.
+image, `rq_worker` (queues `default high low knowledge`) and `rq_scheduler` (`python manage.py rqcron`).
 
 ```bash
 docker compose -f docker-compose-local-services.yml up -d

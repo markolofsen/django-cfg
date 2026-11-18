@@ -1,16 +1,16 @@
 """
-Scheduler-vs-worker status for healthchecks.
+Cron-vs-worker status for healthchecks.
 
 One read of Redis that answers "why is my scheduled job late?":
 
-- ``scheduler_dead``: no live ``rq:scheduler_instance:*`` key, or the last
-  scheduler tick (``DjangoCfgScheduler``) is older than ``max_tick_age``.
-- ``starved``: the scheduler ticks, but a queue's oldest job has waited longer
-  than ``max_wait``; ``busy`` names what the workers are running instead.
+- ``cron_dead``: no ``rqcron`` process has sent a heartbeat to RQ's cron
+  scheduler registry (``rq:cron_schedulers``) within ``max_heartbeat_age``.
+- ``starved``: cron is alive, but a queue's oldest job has waited longer than
+  ``max_wait``; ``busy`` names what the workers are running instead.
 - ``ok`` otherwise.
 
-``python manage.py rq_scheduler_status`` prints it and exits 1 when not ok,
-so a compose healthcheck can use it directly.
+``python manage.py rq_cron_status`` prints it and exits 1 when not ok, so a
+compose healthcheck can use it directly.
 """
 
 from __future__ import annotations
@@ -20,7 +20,6 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Iterable, List, Optional
 
-SCHEDULER_INSTANCE_PREFIX = "rq:scheduler_instance:"
 
 
 @dataclass
@@ -40,10 +39,11 @@ class BusyWorker:
 
 
 @dataclass
-class SchedulerStatus:
-    verdict: str  # "ok" | "scheduler_dead" | "starved"
-    scheduler_alive: bool
-    last_tick_age_sec: Optional[float]
+class CronStatus:
+    verdict: str  # "ok" | "cron_dead" | "starved"
+    cron_alive: bool
+    heartbeat_age_sec: Optional[float]  # newest rqcron heartbeat
+    leader: Optional[str] = None  # the rqcron that enqueues (others are standby)
     queues: List[QueueWait] = field(default_factory=list)
     busy: List[BusyWorker] = field(default_factory=list)
     reason: str = ""
@@ -64,20 +64,21 @@ def _age(dt: Optional[datetime]) -> Optional[float]:
     return max(0.0, (datetime.now(timezone.utc) - dt).total_seconds())
 
 
-def _scheduler_alive(conn) -> bool:
-    for key in conn.scan_iter(match=SCHEDULER_INSTANCE_PREFIX + "*"):
-        if not conn.hexists(key, "death"):
-            return True
-    return False
+def _heartbeat_age(conn) -> Optional[float]:
+    """Age of the newest heartbeat in RQ's cron scheduler registry, None when empty."""
+    from rq import cron_scheduler_registry
 
-
-def _last_tick_age(conn) -> Optional[float]:
-    from django_cfg.modules.django_rq.scheduler import SCHEDULER_TICK_KEY
-
-    raw = conn.get(SCHEDULER_TICK_KEY)
-    if raw is None:
+    newest = conn.zrange(cron_scheduler_registry.get_registry_key(), -1, -1, withscores=True)
+    if not newest:
         return None
-    return max(0.0, time.time() - float(_s(raw)))
+    return max(0.0, time.time() - float(newest[0][1]))
+
+
+def _leader(conn) -> Optional[str]:
+    from django_cfg.modules.django_rq.cron import LEADER_KEY
+
+    raw = conn.get(LEADER_KEY)
+    return _s(raw) if raw else None
 
 
 class UnknownQueueError(ValueError):
@@ -91,18 +92,18 @@ class UnknownQueueError(ValueError):
         )
 
 
-def scheduler_status(
+def cron_status(
     queue_names: Optional[Iterable[str]] = None,
-    max_tick_age: float = 120.0,
+    max_heartbeat_age: float = 120.0,
     max_wait: float = 120.0,
     connection=None,
-) -> SchedulerStatus:
+) -> CronStatus:
     """
-    Read scheduler liveness, per-queue wait and busy workers.
+    Read cron liveness, per-queue wait and busy workers.
 
     Args:
         queue_names: queues to judge (default: every queue in ``RQ_QUEUES``).
-        max_tick_age: seconds without a scheduler tick before ``scheduler_dead``.
+        max_heartbeat_age: seconds without an ``rqcron`` heartbeat before ``cron_dead``.
         max_wait: seconds a queued job may wait before ``starved``.
         connection: Redis connection (default: django_rq's for the first queue).
 
@@ -124,8 +125,8 @@ def scheduler_status(
     queues = [django_rq.get_queue(n) for n in names]
     conn = connection or queues[0].connection
 
-    alive = _scheduler_alive(conn)
-    tick_age = _last_tick_age(conn)
+    hb_age = _heartbeat_age(conn)
+    alive = hb_age is not None and hb_age <= max_heartbeat_age
 
     waits: List[QueueWait] = []
     for q in queues:
@@ -155,14 +156,14 @@ def scheduler_status(
                 running_sec=_age(job.started_at),
             ))
 
-    status = SchedulerStatus(
-        verdict="ok", scheduler_alive=alive, last_tick_age_sec=tick_age,
+    status = CronStatus(
+        verdict="ok", cron_alive=alive, heartbeat_age_sec=hb_age, leader=_leader(conn),
         queues=waits, busy=busy,
     )
-    if not alive:
-        status.verdict, status.reason = "scheduler_dead", "no live rq:scheduler_instance key"
-    elif tick_age is not None and tick_age > max_tick_age:
-        status.verdict, status.reason = "scheduler_dead", f"last tick {tick_age:.0f}s ago"
+    if hb_age is None:
+        status.verdict, status.reason = "cron_dead", "no rqcron heartbeat in rq:cron_schedulers"
+    elif not alive:
+        status.verdict, status.reason = "cron_dead", f"last rqcron heartbeat {hb_age:.0f}s ago"
     else:
         late = [w for w in waits if w.wait_sec is not None and w.wait_sec > max_wait]
         if late:
@@ -175,4 +176,4 @@ def scheduler_status(
     return status
 
 
-__all__ = ["BusyWorker", "QueueWait", "SchedulerStatus", "UnknownQueueError", "scheduler_status"]
+__all__ = ["BusyWorker", "CronStatus", "QueueWait", "UnknownQueueError", "cron_status"]

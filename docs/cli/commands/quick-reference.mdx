@@ -126,14 +126,14 @@ python manage.py rqworker
 # Start RQ worker pool (multiple workers)
 python manage.py rqworker_pool
 
-# Start RQ scheduler
-python manage.py rqscheduler
+# Start the RQ cron scheduler (one per project)
+python manage.py rqcron
 
 # Show queue statistics
 python manage.py rqstats
 
-# Clean stale job locks
-python manage.py rq_cleanup_locks
+# rqcron alive or queue starved? (exit 1 when not ok)
+python manage.py rq_cron_status
 ```
 
 ## 🌐 URLs & Routing

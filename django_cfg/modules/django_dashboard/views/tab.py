@@ -1,5 +1,6 @@
 from functools import wraps
 
+from django.contrib import admin
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
@@ -73,7 +74,11 @@ def dashboard_tab(request: HttpRequest, slug: str) -> HttpResponse:
     extra_context = registry.get_context(tab, request)
     is_iframe = request.GET.get("iframe") == "1"
     visible_tabs = [t for t in config.tabs if registry.has_permission(t, request)]
+    # Standalone (not in the Overview iframe) the tab is an admin page: it needs the
+    # admin site context for the header, sidebar and theme toggle.
+    site_context = {} if is_iframe else admin.site.each_context(request)
     context = {
+        **site_context,
         **extra_context,
         "current_tab": tab,
         "all_tabs": visible_tabs,

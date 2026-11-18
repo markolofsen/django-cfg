@@ -1,0 +1,169 @@
+"""
+NavigationManager — orchestrates all navigation sections.
+
+Conditional logic lives here; section content lives in sections/.
+"""
+import importlib
+import logging
+import traceback
+from typing import Any, Dict, List
+
+from django_cfg.modules.admin_site.models.navigation import NavigationSection
+from django_cfg.modules.admin_site.navigation.sections import (
+    build_accounts_section,
+    build_analytics_section,
+    build_currency_section,
+    build_dashboard_section,
+    build_geo_section,
+    build_mailer_section,
+    build_payments_section,
+    build_totp_section,
+)
+from django_cfg.modules.base import BaseCfgModule
+
+logger = logging.getLogger(__name__)
+
+
+class NavigationManager(BaseCfgModule):
+    """Builds the django-cfg sections of the admin sidebar."""
+
+    def __init__(self, config=None):
+        super().__init__()
+        self._config = config
+        self._config_loaded = config is not None
+
+    @property
+    def config(self):
+        if not self._config_loaded:
+            try:
+                self._config = self.get_config()
+            except Exception:
+                self._config = None
+            finally:
+                self._config_loaded = True
+        return self._config
+
+    def get_navigation_config(self) -> List[Dict[str, Any]]:
+        """Build the django-cfg navigation sections of the admin sidebar."""
+        sections: List[NavigationSection] = []
+
+        sections.append(build_dashboard_section())
+
+        if self.is_currency_enabled():
+            sections.append(build_currency_section())
+
+        if self.is_geo_enabled():
+            sections.append(build_geo_section())
+
+        if self.is_payments_enabled():
+            sections.append(build_payments_section())
+
+        # Analytics is enabled in EVERY django-cfg project, so gating this on
+        # `enabled` alone would put an Analytics section — with three empty
+        # tables — in the sidebar of every project that has never sent an event.
+        # A site row is created automatically on the first event from a trusted
+        # domain, so "a site exists" is exactly "traffic has arrived".
+        # Same rule as the dashboard tab (apps/tools/analytics/dashboard.py).
+        if self.is_analytics_enabled() and self._has_analytics_data():
+            sections.append(build_analytics_section())
+
+        sections.append(build_accounts_section(
+            is_oauth_enabled=self.is_oauth_provider_enabled("github") or self.is_oauth_provider_enabled("google")
+        ))
+
+        if self.is_totp_enabled():
+            sections.append(build_totp_section())
+
+        # Unconditional: the mailer app ships with every django-cfg project, and
+        # the letter copy has to be reachable before anyone looks for a switch.
+        sections.append(build_mailer_section())
+
+        sections.extend(self._get_extension_navigation())
+
+        return [s.to_dict() for s in sections]
+
+    def _has_analytics_data(self) -> bool:
+        """True once any analytics site is registered.
+
+        Runs on every admin page render, so it must be cheap and must NEVER
+        raise: navigation is built before `migrate` has necessarily run, and a
+        missing table here would take the entire admin down.
+        """
+        try:
+            from django_cfg.apps.tools.analytics.models import AnalyticsSite
+
+            return AnalyticsSite.objects.exists()
+        except Exception:
+            return False
+
+    def _get_extension_navigation(self) -> List[NavigationSection]:
+        """Load navigation from auto-discovered extensions."""
+        from django_cfg.icons import Icons
+        from django_cfg.modules.admin_site.models.navigation import NavigationItem
+
+        sections = []
+        try:
+            extensions = self._get_discovered_extensions()
+            for ext in extensions:
+                try:
+                    if ext.type != "app" or not ext.manifest:
+                        continue
+                    config_mod = importlib.import_module(f"extensions.apps.{ext.name}.__cfg__")
+                    settings_obj = getattr(config_mod, "settings", None)
+                    if not settings_obj or not getattr(settings_obj, "enabled", True):
+                        continue
+                    nav = getattr(settings_obj, "navigation", None)
+                    if not nav:
+                        continue
+
+                    # ``navigation`` may be a single section or a list of
+                    # sections (multi-section extensions like CRM).
+                    nav_sections = nav if isinstance(nav, (list, tuple)) else [nav]
+                    for nav_section in nav_sections:
+                        items = []
+                        for nav_item in nav_section.items:
+                            try:
+                                # Prefer the raw string link (e.g. an
+                                # "admin:<app>_<model>_changelist" name) — the site
+                                # resolves it later via NavigationItem.to_dict().
+                                # ``resolved_link`` may be a deferred *callable*
+                                # (auto_resolve_url) which is not a valid ``link``
+                                # for the navigation model, so only fall back to it
+                                # for the app+model shortcut where ``link`` is None
+                                # and it yields a plain string path.
+                                link = nav_item.link
+                                if not link:
+                                    resolved = getattr(nav_item, "resolved_link", None)
+                                    link = resolved if isinstance(resolved, str) else None
+                                if link and link != "#":
+                                    icon = nav_item.icon if not isinstance(nav_item.icon, str) else getattr(Icons, nav_item.icon, Icons.EXTENSION)
+                                    items.append(NavigationItem(title=nav_item.title, icon=icon, link=link))
+                            except Exception:
+                                logger.warning(f"Failed nav item in extension '{ext.name}':\n{traceback.format_exc()}")
+
+                        if items:
+                            section_icon = getattr(nav_section, "icon", None)
+                            if section_icon and isinstance(section_icon, str):
+                                section_icon = getattr(Icons, section_icon, Icons.EXTENSION)
+                            sections.append(NavigationSection(
+                                title=nav_section.title,
+                                separator=True,
+                                collapsible=getattr(nav_section, "collapsible", True),
+                                items=items,
+                            ))
+                except Exception:
+                    logger.error(f"Extension '{ext.name}' nav failed:\n{traceback.format_exc()}")
+        except Exception:
+            logger.error(f"Extension nav discovery failed:\n{traceback.format_exc()}")
+
+        return sections
+
+
+_navigation_manager = None
+
+
+def get_navigation_manager() -> NavigationManager:
+    global _navigation_manager
+    if _navigation_manager is None:
+        _navigation_manager = NavigationManager()
+    return _navigation_manager

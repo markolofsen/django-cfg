@@ -1,19 +1,36 @@
 {% extends "admin/base.html" %}
-
 {% load static %}
 
-{# Same shape as Unfold's own admin/base_site.html. Extending admin/base.html (not #}
-{# unfold/layouts/base.html) is what brings the `messages` block, so flash messages show. #}
-
-{% block extrahead %}
-    {{ block.super }}
-    <link rel="stylesheet" href="{% static 'admin/css/theme.css' %}">
-{% endblock %}
+{# The stock base_site.html plus our stylesheet and branding. Extending admin/base.html #}
+{# keeps the stock `messages` block, so flash messages show (test_admin_flash_messages). #}
 
 {% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
 
+{# Theme: cfg-theme.js stores "dark" before Django's theme.js reads the choice (dark by #}
+{# default, the stock toggle still works). The two stylesheets go at the end of <head>, #}
+{# after the page stylesheets (forms.css, changelists.css, login.css, widget media) and #}
+{# responsive.css, so they win at equal specificity without !important. #}
+{% block dark-mode-vars %}<script src="{% static 'django_cfg/cfg-theme.js' %}"{% if csp_nonce %} nonce="{{ csp_nonce }}"{% endif %}></script>
+{{ block.super }}{% endblock %}
+
+{% block responsive %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'django_cfg/cfg-admin.css' %}"{% if csp_nonce %} nonce="{{ csp_nonce }}"{% endif %}>
+<link rel="stylesheet" href="{% static 'django_cfg/cfg-theme.css' %}"{% if csp_nonce %} nonce="{{ csp_nonce }}"{% endif %}>
+{% endblock %}
+
 {% block branding %}
-    {% include "unfold/helpers/site_branding.html" %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}">{% if cfg_site_symbol %}<span class="material-symbols-outlined cfg-icon" aria-hidden="true">{{ cfg_site_symbol }}</span>{% endif %}{{ site_header|default:_('Django administration') }}</a>
+  {% if cfg_site_subheader %}<span class="cfg-site-subheader">{{ cfg_site_subheader }}</span>{% endif %}
+  {% if cfg_environment %}<span class="cfg-badge cfg-badge--{{ cfg_environment.tone }}" title="Environment">{{ cfg_environment.label }}</span>{% endif %}
+</div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block userlinks %}
+{% for item in cfg_site_dropdown %}<a class="cfg-site-links" href="{{ item.link }}"{% if "://" in item.link %} target="_blank" rel="noopener"{% endif %}>{{ item.title }}</a> / {% endfor %}{{ block.super }}
 {% endblock %}
 
 {% block nav-global %}{% endblock %}

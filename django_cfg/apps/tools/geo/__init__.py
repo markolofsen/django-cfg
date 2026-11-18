@@ -27,7 +27,7 @@ Features:
     - 150,000+ cities with coordinates
     - Proximity search (find nearby cities)
     - Select2-compatible AJAX widgets
-    - Unfold admin integration
+    - Stock admin integration
 
 Management Commands:
     python manage.py geo_populate  # Load initial data
@@ -67,8 +67,6 @@ from .services import (
     validate_coordinates,
 )
 from .widgets import CitySelectWidget, CountrySelectWidget, GeoAutocompleteWidget, LocationFieldWidget
-
-default_app_config = "django_cfg.apps.tools.geo.apps.GeoAppConfig"
 
 
 def __getattr__(name: str):

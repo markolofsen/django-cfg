@@ -77,7 +77,7 @@ class ForeignKeyField(FieldConfig):
     null_display: str = Field("—", description="Value to display when FK is null")
 
     # CSS styling
-    subtitle_css_class: str = Field("text-sm text-gray-500", description="CSS classes for subtitle")
+    subtitle_css_class: str = Field("cfg-muted cfg-small", description="CSS classes for subtitle")
 
     def get_widget_config(self) -> Dict[str, Any]:
         """Extract foreignkey widget configuration."""

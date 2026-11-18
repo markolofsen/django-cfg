@@ -1,7 +1,7 @@
 """
 Extension-provided admin dashboard tabs.
 
-Mirrors ``django_unfold.navigation.manager._get_extension_navigation``: each
+Mirrors ``admin_site.navigation.manager._get_extension_navigation``: each
 discovered ``type == "app"`` extension may declare ``dashboard_tabs`` in its
 ``__cfg__.py`` ``settings`` object, and those tabs are merged into the
 project's ``DashboardConfig.tabs`` at render time. This keeps the consumer

@@ -23,11 +23,11 @@ class BooleanDisplay:
         if value:
             icon = true_icon or Icons.CHECK_CIRCLE
             return format_html(
-                '<span class="material-symbols-outlined text-green-600 dark:text-green-400" style="font-size: 20px;">{}</span>',
+                '<span class="cfg-icon cfg-success">{}</span>',
                 icon,
             )
         icon = false_icon or Icons.CANCEL
         return format_html(
-            '<span class="material-symbols-outlined text-red-600 dark:text-red-400" style="font-size: 20px;">{}</span>',
+            '<span class="cfg-icon cfg-danger">{}</span>',
             icon,
         )

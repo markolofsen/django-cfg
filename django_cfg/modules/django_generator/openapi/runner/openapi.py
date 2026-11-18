@@ -45,8 +45,14 @@ def run_openapi(
     only_groups: list[str] | None,
     dry_run: bool,
     logger: GenerationLogger,
+    *,
+    force: bool = False,
 ) -> None:
-    """Translate user Targets to pipeline GenerationTargets and run."""
+    """Translate user Targets to pipeline GenerationTargets and run.
+
+    ``force`` lets a target replace an output folder that holds uncommitted
+    changes the generator did not make (see ``pipeline/staging.py``).
+    """
     targets = _build_targets(cfg, only_platforms, only_target, only_groups)
     if not targets:
         logger.warning("No targets to run")
@@ -64,7 +70,7 @@ def run_openapi(
         service.set_config(OpenAPIConfig(enabled=True))
 
     logger.gen_start("OpenAPI", "all platforms")
-    report = run_pipeline(service.config, targets, dry_run=False)
+    report = run_pipeline(service.config, targets, dry_run=False, force=force)
 
     for name in report.targets_run:
         logger.success(f"✓ {name}")

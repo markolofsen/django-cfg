@@ -1,15 +1,18 @@
-{% load static %}
-{# Multi-Section Markdown Documentation Block with Modal View and Mermaid Support #}
-
-{% if documentation_config and documentation_sections_count > 0 %}
-
-{# Load Mermaid resources once per page #}
-{% if documentation_config.enable_plugins and not mermaid_loaded %}
-    {{ mermaid_resources|safe }}
-    {% with mermaid_loaded=True %}{% endwith %}
-{% endif %}
-
-{# Modal View - Show trigger button and modal #}
-{% include 'django_admin/documentation_modal.html' %}
-
+{% comment %}
+Documentation of a model admin (AdminConfig.documentation): one <details> per
+markdown section, above the changelist or the form.
+{% endcomment %}
+{% if documentation_config and documentation_sections %}
+{% if documentation_config.enable_plugins %}{{ mermaid_resources|safe }}{% endif %}
+<div class="cfg-docs">
+    <details{% if documentation_config.default_open %} open{% endif %}>
+        <summary><span class="cfg-strong">{{ documentation_config.title }}</span>{% if documentation_sections|length > 1 %} <span class="cfg-muted cfg-small">({{ documentation_sections|length }})</span>{% endif %}</summary>
+        {% for section in documentation_sections %}
+            <details class="cfg-docs-section"{% if section.default_open %} open{% endif %}>
+                <summary>{{ section.title }}</summary>
+                <div class="cfg-markdown">{{ section.content|safe }}</div>
+            </details>
+        {% endfor %}
+    </details>
+</div>
 {% endif %}

@@ -17,7 +17,7 @@ Note: Extension configs are handled in extensions/apps/<name>/__cfg__.py
 
 # Base classes
 # External modules (imported from other locations)
-from ..modules.django_unfold.models.config import UnfoldConfig
+from ..modules.admin_site.models.config import AdminSidebar, AdminSiteConfig
 
 # API & Authentication
 from .api.config import APIConfig
@@ -103,7 +103,8 @@ __all__ = [
     "FileCleanupConfig",
     "S3StorageConfig",
     "OpenAPIClientConfig",
-    "UnfoldConfig",
+    "AdminSiteConfig",
+    "AdminSidebar",
     "AxesConfig",
     # Services
     "EmailConfig",

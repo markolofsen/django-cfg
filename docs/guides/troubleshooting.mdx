@@ -633,8 +633,8 @@ Tasks enqueued but status shows "pending" forever.
 # Check queues, workers and failed jobs
 python manage.py rqstats
 
-# Clear stale job locks
-python manage.py rq_cleanup_locks
+# Scheduled jobs late? Tell a dead rqcron from a busy worker
+python manage.py rq_cron_status
 
 # Restart worker
 # Kill existing worker and start fresh

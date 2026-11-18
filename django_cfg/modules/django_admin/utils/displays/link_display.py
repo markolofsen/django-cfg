@@ -52,7 +52,7 @@ class LinkDisplay:
             'link_icon': config.get('link_icon'),
             'link_target': config.get('link_target', '_blank'),
             'subtitle_text': config.get('subtitle_text'),
-            'subtitle_css_class': config.get('subtitle_css_class', 'text-sm text-gray-500'),
+            'subtitle_css_class': config.get('subtitle_css_class', 'cfg-muted cfg-small'),
         }
 
         return render_to_string(
@@ -127,7 +127,7 @@ class LinkDisplay:
             'link_icon': config.get('link_icon'),
             'link_target': config.get('link_target', '_blank'),
             'subtitle_text': subtitle_text,
-            'subtitle_css_class': config.get('subtitle_css_class', 'text-sm text-gray-500'),
+            'subtitle_css_class': config.get('subtitle_css_class', 'cfg-muted cfg-small'),
         }
 
         return cls.render(text, link_url, render_config)

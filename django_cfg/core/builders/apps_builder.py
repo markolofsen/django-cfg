@@ -9,7 +9,7 @@ Size: ~220 lines (focused on one task)
 import logging
 from typing import TYPE_CHECKING, List
 
-from ..constants import DEFAULT_APPS
+from ..constants import ADMIN_APP, DEFAULT_APPS
 
 if TYPE_CHECKING:
     from ..base.config_model import DjangoConfig
@@ -23,7 +23,6 @@ class InstalledAppsBuilder:
     - Combine default Django/third-party apps
     - Add django-cfg apps based on enabled features
     - Handle special ordering (accounts before admin)
-    - Auto-detect dashboard apps from Unfold
     - Add project-specific apps
     - Remove duplicates while preserving order
 
@@ -91,7 +90,7 @@ class InstalledAppsBuilder:
 
         # Add apps one by one, inserting accounts before admin
         for app in DEFAULT_APPS:
-            if app == "django.contrib.admin":
+            if app == ADMIN_APP:
                 # Insert accounts before admin (for proper migration order)
                 # accounts is always enabled - core django-cfg functionality
                 apps.append("django_cfg.apps.system.accounts")
@@ -197,7 +196,7 @@ class InstalledAppsBuilder:
 
         # Add Django-RQ if enabled
         # IMPORTANT: django_cfg.modules.django_rq MUST come before django_rq
-        # so that django-cfg's rqscheduler command overrides django-rq's version
+        # so that django-cfg's rqcron/rqworker commands override django-rq's versions
         if hasattr(self.config, "django_rq") and self.config.django_rq and self.config.django_rq.enabled:
             apps.append("django_cfg.modules.django_rq")  # Django-CFG RQ metrics module (must be first!)
             apps.append("django_rq")  # Core django-rq package

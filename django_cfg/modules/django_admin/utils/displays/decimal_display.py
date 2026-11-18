@@ -8,6 +8,8 @@ from typing import Any, Dict, Optional, Union
 from django.utils.html import escape, format_html
 from django.utils.safestring import SafeString
 
+from ..html import _classes as C
+
 
 class DecimalDisplay:
     """Decimal number display with formatting options."""
@@ -48,9 +50,7 @@ class DecimalDisplay:
             config = {}
 
         if value is None:
-            return format_html(
-                '<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>'
-            )
+            return format_html('<span class="{}">—</span>', C.MUTED)
 
         # Parse config
         decimal_places = config.get('decimal_places', 2)
@@ -71,7 +71,7 @@ class DecimalDisplay:
             # Already Decimal - use as is
         except Exception:
             return format_html(
-                '<span class="text-red-700 dark:text-red-400">{}</span>',
+                '<span class="cfg-danger">{}</span>',
                 escape(str(value))
             )
 
@@ -108,18 +108,18 @@ class DecimalDisplay:
         # Build display text
         display_text = f"{sign}{prefix}{formatted}{suffix}"
 
-        # Color based on sign (Unfold-compatible)
+        # Color based on sign
         color_class = ""
         if show_sign or is_negative:
             if is_negative:
-                color_class = "text-red-700 dark:text-red-400"
+                color_class = "cfg-danger"
             elif value > 0:
-                color_class = "text-green-700 dark:text-green-400"
+                color_class = "cfg-success"
 
         # Build CSS classes
-        classes = ["text-sm", "tabular-nums"]
+        classes = []
         if monospace:
-            classes.append("font-mono")
+            classes.append(C.MONO)
         if color_class:
             classes.append(color_class)
 

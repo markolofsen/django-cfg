@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Dict, Tuple
 
+from django.utils.html import format_html
 from django.utils.safestring import SafeString, mark_safe
 
 if TYPE_CHECKING:
@@ -116,11 +117,9 @@ def _make_image_method(fname: str, field_obj: Any) -> Any:
             ))
 
         filename = image_url.split("/")[-1].split("?")[0]
-        return mark_safe(  # type: ignore[return-value]
-            f'<a href="{image_url}" target="_blank" '
-            f'class="inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 hover:underline">'
-            f'<span class="material-symbols-outlined text-sm">attachment</span>'
-            f"{filename}</a>"
+        return format_html(  # type: ignore[return-value]
+            '<a href="{}" target="_blank" class="cfg-row"><span class="cfg-icon">attachment</span>{}</a>',
+            image_url, filename,
         )
 
     image_display_method.short_description = (  # type: ignore[attr-defined]

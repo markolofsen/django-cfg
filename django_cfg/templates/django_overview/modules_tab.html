@@ -1,0 +1,29 @@
+{% extends overview_base %}
+{% load static %}
+{% block tab_content %}
+{% if not is_iframe %}<link rel="stylesheet" href="{% static 'django_cfg/cfg-overview.css' %}">{% endif %}
+{# Booleans, names and counts only: module_status.py never puts a secret value in a row. #}
+<div class="cfg-ov">
+  <header class="cfg-ov-head">
+    <h2 class="cfg-ov-title">Modules</h2>
+    <p class="cfg-ov-lead">What is switched on in this deployment, and what needs attention. Secrets are reported as set or not set, never shown.</p>
+  </header>
+  <div class="cfg-ov-grid">
+    {% for m in modules %}
+    <section class="cfg-ov-card cfg-ov-module cfg-ov-state-{{ m.state }}" data-module="{{ m.key }}">
+      <div class="cfg-ov-card-head">
+        <h3>{{ m.title }}</h3>
+        <span class="cfg-badge {% if m.state == 'on' %}cfg-badge--success{% elif m.state == 'warn' %}cfg-badge--warning{% elif m.state == 'error' %}cfg-badge--danger{% else %}cfg-badge--neutral{% endif %}">{% if m.state == 'on' %}on{% elif m.state == 'warn' %}check{% elif m.state == 'error' %}error{% else %}off{% endif %}</span>
+      </div>
+      <p class="cfg-ov-summary">{{ m.summary }}</p>
+      {% if m.details %}
+      <dl class="cfg-ov-kv cfg-ov-kv-compact">
+        {% for label, value in m.details %}<dt>{{ label }}</dt><dd>{{ value }}</dd>{% endfor %}
+      </dl>
+      {% endif %}
+      {% if m.hint %}<p class="cfg-ov-hint">{{ m.hint }}</p>{% endif %}
+    </section>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

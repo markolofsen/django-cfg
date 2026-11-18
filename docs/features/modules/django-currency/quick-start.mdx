@@ -132,15 +132,17 @@ Start the RQ worker and scheduler to enable automatic rate updates:
 # Terminal 1: Start worker
 python manage.py rqworker default
 
-# Terminal 2: Start scheduler
-python manage.py rqscheduler
+# Terminal 2: Start scheduler (one per project)
+python manage.py rqcron
 ```
 
-You should see:
+You should see a line like:
 ```text
-Registering 10 scheduled jobs from config...
-✓ Registered interval schedule: django_cfg.apps.tools.currency.tasks.update_all_rates (every 3600s)
+rqcron: 10 recurring, 0 one-off, 0 not registered
 ```
+
+`python manage.py rqcron --list` prints every registered schedule, including
+`django_cfg.apps.tools.currency.tasks.update_all_rates`.
 
 ---
 

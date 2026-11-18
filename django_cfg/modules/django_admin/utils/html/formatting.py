@@ -228,7 +228,7 @@ class FormattingElements:
 
         if show_tooltip:
             return format_html(
-                '<span class="cursor-help" title="{}">{}</span>',
+                '<span title="{}">{}</span>',
                 escape(text),
                 truncated
             )
@@ -263,12 +263,12 @@ class FormattingElements:
 
         if show_tooltip:
             return format_html(
-                '<code class="font-mono text-xs bg-base-100 dark:bg-base-800 px-1.5 py-0.5 rounded cursor-help" title="{}">{}</code>',
+                '<code class="cfg-code" title="{}">{}</code>',
                 uuid_str,
                 short_uuid
             )
 
         return format_html(
-            '<code class="font-mono text-xs bg-base-100 dark:bg-base-800 px-1.5 py-0.5 rounded">{}</code>',
+            '<code class="cfg-code">{}</code>',
             short_uuid
         )

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ....html import _classes as C
 from .._types import DateTimeItemConfig  # type: ignore[import]
 
 
@@ -14,9 +15,9 @@ def render_datetime(value: Any, config: DateTimeItemConfig) -> str:
     from django.utils import timezone
     from django.utils.timesince import timesince
 
-    classes = ["text-xs"]
+    classes = [C.SMALL]
     if config.get("muted", True):
-        classes.append("text-font-subtle-light dark:text-font-subtle-dark")
+        classes.append(C.MUTED)
 
     if config.get("show_relative", False):
         try:

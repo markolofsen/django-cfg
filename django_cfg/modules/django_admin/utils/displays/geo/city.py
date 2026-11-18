@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.utils.html import escape, format_html
-from django.utils.safestring import SafeString
+from django.utils.safestring import SafeString, mark_safe
 
 from .._types import CityDisplayConfig
 
@@ -27,7 +27,7 @@ class CityDisplay:
         value = getattr(obj, field_name, None)
 
         if not value:
-            return format_html('<span class="text-font-subtle-light dark:text-font-subtle-dark">—</span>')
+            return mark_safe('<span class="cfg-muted">—</span>')
 
         show_flag = cfg.get("show_flag", True)
         show_state = cfg.get("show_state", True)
@@ -52,21 +52,21 @@ class CityDisplay:
             if emoji:
                 parts.append(format_html('<span>{}</span>', emoji))
 
-        parts.append(format_html('<span class="font-medium">{}</span>', city.name))
+        parts.append(format_html('<span class="cfg-strong">{}</span>', city.name))
 
         if show_state and hasattr(city, "state") and city.state:
             state_code = getattr(city.state, "state_code", None) or city.state.name
-            parts.append(format_html('<span class="text-base-400">{}</span>', state_code))
+            parts.append(format_html('<span class="cfg-muted">{}</span>', state_code))
 
         if show_country and hasattr(city, "country") and city.country:
-            parts.append(format_html('<span class="text-base-400">{}</span>', city.country.iso2))
+            parts.append(format_html('<span class="cfg-muted">{}</span>', city.country.iso2))
 
         if show_coordinates:
             lat = getattr(city, "latitude", None)
             lon = getattr(city, "longitude", None)
             if lat is not None and lon is not None:
                 parts.append(format_html(
-                    '<span class="text-xs text-base-400">({:.4f}, {:.4f})</span>', lat, lon,
+                    '<span class="cfg-small cfg-muted">({:.4f}, {:.4f})</span>', lat, lon,
                 ))
 
         if parts and show_flag and hasattr(city, "country") and city.country and city.country.emoji:
@@ -74,7 +74,7 @@ class CityDisplay:
         else:
             content = ", ".join(str(p) for p in parts)
 
-        return format_html('<span class="flex items-center gap-1">{}</span>', content)
+        return format_html('<span class="cfg-row">{}</span>', mark_safe(content))
 
     @classmethod
     def _format_id(
@@ -91,24 +91,24 @@ class CityDisplay:
 
                 if show_flag and country and country.emoji:
                     parts.append(format_html('<span>{}</span>', country.emoji))
-                parts.append(format_html('<span class="font-medium">{}</span>', city.name))
+                parts.append(format_html('<span class="cfg-strong">{}</span>', city.name))
 
                 if show_state and state:
                     state_code = state.iso2 or state.name
-                    parts.append(format_html('<span class="text-base-400">{}</span>', state_code))
+                    parts.append(format_html('<span class="cfg-muted">{}</span>', state_code))
                 if show_country and country:
-                    parts.append(format_html('<span class="text-base-400">{}</span>', country.iso2))
+                    parts.append(format_html('<span class="cfg-muted">{}</span>', country.iso2))
                 if show_coordinates and city.coordinates:
                     lat, lon = city.coordinates
                     parts.append(format_html(
-                        '<span class="text-xs text-base-400">({:.4f}, {:.4f})</span>', lat, lon,
+                        '<span class="cfg-small cfg-muted">({:.4f}, {:.4f})</span>', lat, lon,
                     ))
 
                 if parts and show_flag and country and country.emoji:
                     content = f"{parts[0]} {', '.join(str(p) for p in parts[1:])}"
                 else:
                     content = ", ".join(str(p) for p in parts)
-                return format_html('<span class="flex items-center gap-1">{}</span>', content)
+                return format_html('<span class="cfg-row">{}</span>', mark_safe(content))
         except Exception:
             pass
         return format_html('<span>{}</span>', city_id)

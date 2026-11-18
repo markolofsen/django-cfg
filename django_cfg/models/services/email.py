@@ -4,6 +4,7 @@ Email Configuration Model
 Django email settings with Pydantic 2.
 """
 
+import django
 from typing import Any, Dict, Optional
 
 from pydantic import Field, field_validator, model_validator
@@ -11,6 +12,11 @@ from pydantic import Field, field_validator, model_validator
 from ...core.utils.display_name import normalize_display_name
 from ..base import BaseConfig
 
+
+
+# Django 6.1 added MAILERS and deprecated the EMAIL_* connection settings.
+# Lives here (models layer) so core can import it without a layer inversion.
+HAS_MAILERS = django.VERSION >= (6, 1)
 
 class EmailConfig(BaseConfig):
     """
@@ -174,67 +180,111 @@ class EmailConfig(BaseConfig):
             raise ValueError("Cannot use both TLS and SSL simultaneously")
         return v
 
-    def to_django_settings(self) -> Dict[str, Any]:
-        """Convert to Django email settings."""
+    def backend_path(self) -> str:
+        """Dotted path of the Django email backend class for ``backend``."""
         if self.backend == 'smtp':
-            # Choose backend based on SSL verification setting
             if self.ssl_verify:
-                backend_class = 'django.core.mail.backends.smtp.EmailBackend'
-            else:
-                # Use custom backend that accepts self-signed SSL certs
-                backend_class = 'django_cfg.core.backends.smtp.UnverifiedSSLEmailBackend'
+                return 'django.core.mail.backends.smtp.EmailBackend'
+            # Accepts self-signed certificates (development only).
+            return 'django_cfg.core.backends.smtp.UnverifiedSSLEmailBackend'
+        paths = {
+            'console': 'django.core.mail.backends.console.EmailBackend',
+            'file': 'django.core.mail.backends.filebased.EmailBackend',
+            'memory': 'django.core.mail.backends.locmem.EmailBackend',
+            'dummy': 'django.core.mail.backends.dummy.EmailBackend',
+            'gateway': 'django_cfg.core.backends.gateway.GatewayEmailBackend',
+        }
+        try:
+            return paths[self.backend]
+        except KeyError:
+            raise ValueError(f"Unsupported email backend: {self.backend}") from None
 
-            settings = {
-                'EMAIL_BACKEND': backend_class,
-                'EMAIL_HOST': self.host,
-                'EMAIL_PORT': self.port,
-                'EMAIL_USE_TLS': self.use_tls,
-                'EMAIL_USE_SSL': self.use_ssl,
-                'EMAIL_TIMEOUT': self.timeout,
+    def backend_options(self) -> Dict[str, Any]:
+        """Constructor options for the backend, as Django 6.1 ``MAILERS`` OPTIONS.
+
+        Names follow Django's mapping of the deprecated settings
+        (``EMAIL_HOST`` -> ``host``, ``EMAIL_HOST_USER`` -> ``username``, ...).
+        """
+        if self.backend == 'smtp':
+            options: Dict[str, Any] = {
+                'host': self.host,
+                'port': self.port,
+                'use_tls': self.use_tls,
+                'use_ssl': self.use_ssl,
+                'timeout': self.timeout,
             }
-
             if self.username:
-                settings['EMAIL_HOST_USER'] = self.username
-
+                options['username'] = self.username
             if self.password:
-                settings['EMAIL_HOST_PASSWORD'] = self.password
-
-        elif self.backend == 'console':
-            settings = {
-                'EMAIL_BACKEND': 'django.core.mail.backends.console.EmailBackend',
+                options['password'] = self.password
+            return options
+        if self.backend == 'file':
+            return {'file_path': self.file_path}
+        if self.backend == 'gateway':
+            return {
+                'gateway_url': self.gateway_url,
+                'gateway_secret': self.gateway_secret,
+                'timeout': self.timeout,
             }
+        return {}
 
-        elif self.backend == 'file':
-            settings = {
-                'EMAIL_BACKEND': 'django.core.mail.backends.filebased.EmailBackend',
-                'EMAIL_FILE_PATH': self.file_path,
-            }
+    def to_mailer(self) -> Dict[str, Any]:
+        """One ``MAILERS`` entry: ``{"BACKEND": ..., "OPTIONS": {...}}``.
 
-        elif self.backend == 'memory':
-            settings = {
-                'EMAIL_BACKEND': 'django.core.mail.backends.locmem.EmailBackend',
-            }
+        Public so a project can compose its own ``MAILERS`` (a second alias, a
+        backend that wraps this one) from the same ``EmailConfig``.
+        """
+        mailer: Dict[str, Any] = {'BACKEND': self.backend_path()}
+        options = self.backend_options()
+        if options:
+            mailer['OPTIONS'] = options
+        return mailer
 
-        elif self.backend == 'dummy':
-            settings = {
-                'EMAIL_BACKEND': 'django.core.mail.backends.dummy.EmailBackend',
-            }
+    def to_django_settings(self) -> Dict[str, Any]:
+        """Convert to Django email settings.
 
-        elif self.backend == 'gateway':
-            settings = {
-                'EMAIL_BACKEND': 'django_cfg.core.backends.gateway.GatewayEmailBackend',
-                'EMAIL_GATEWAY_URL': self.gateway_url,
-                'EMAIL_GATEWAY_SECRET': self.gateway_secret,
-                'EMAIL_TIMEOUT': self.timeout,
-            }
-
+        Django 6.1+ gets ``MAILERS`` (the ``EMAIL_*`` connection settings are
+        deprecated there and removed in Django 2028; Django refuses both at
+        once). Django 5.2 has no ``MAILERS`` and gets ``EMAIL_*``.
+        """
+        if HAS_MAILERS:
+            settings: Dict[str, Any] = {'MAILERS': {'default': self.to_mailer()}}
         else:
-            raise ValueError(f"Unsupported email backend: {self.backend}")
+            settings = self._legacy_email_settings()
 
         if self.default_from:
             settings['DEFAULT_FROM_EMAIL'] = self.default_from
 
         if self.subscribe_url:
             settings['EMAIL_SUBSCRIBE_URL'] = self.subscribe_url
+
+        return settings
+
+    def _legacy_email_settings(self) -> Dict[str, Any]:
+        """``EMAIL_*`` settings for Django 5.2, which has no ``MAILERS``."""
+        settings: Dict[str, Any] = {'EMAIL_BACKEND': self.backend_path()}
+
+        if self.backend == 'smtp':
+            settings.update({
+                'EMAIL_HOST': self.host,
+                'EMAIL_PORT': self.port,
+                'EMAIL_USE_TLS': self.use_tls,
+                'EMAIL_USE_SSL': self.use_ssl,
+                'EMAIL_TIMEOUT': self.timeout,
+            })
+            if self.username:
+                settings['EMAIL_HOST_USER'] = self.username
+            if self.password:
+                settings['EMAIL_HOST_PASSWORD'] = self.password
+
+        elif self.backend == 'file':
+            settings['EMAIL_FILE_PATH'] = self.file_path
+
+        elif self.backend == 'gateway':
+            settings.update({
+                'EMAIL_GATEWAY_URL': self.gateway_url,
+                'EMAIL_GATEWAY_SECRET': self.gateway_secret,
+                'EMAIL_TIMEOUT': self.timeout,
+            })
 
         return settings

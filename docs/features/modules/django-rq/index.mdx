@@ -82,7 +82,7 @@ Django-RQ provides the **best developer experience** for background tasks in Dja
 - **Job retries**: Automatic retry with exponential backoff
 - **Job dependencies**: Chain jobs with `.depends_on()`
 - **Job scheduling**: Schedule jobs with `enqueue_at()` or `enqueue_in()`
-- **RQ Scheduler**: Cron-like scheduling with `rq-scheduler`
+- **RQ cron**: cron and interval schedules on RQ's native cron (`rqcron`)
 - **Automatic cleanup**: Built-in cleanup removes old jobs daily
 - **Job TTL**: Configurable TTL for finished and failed jobs
 - **Worker pools**: Multi-process workers with `rqworker-pool`
@@ -99,7 +99,7 @@ Django-RQ provides the **best developer experience** for background tasks in Dja
 
 - **Type-safe config**: Pydantic models with validation
 - **Auto-discovery**: Django-cfg finds and registers tasks
-- **CLI commands**: `rqworker`, `rqscheduler`, `rqstats`, `rq_cleanup_locks`
+- **CLI commands**: `rqworker`, `rqcron`, `rqstats`, `rq_cron_status`
 - **Testing support**: Synchronous mode for tests
 - **Hot reload**: Workers reload on code changes (dev mode)
 
@@ -107,7 +107,7 @@ Django-RQ provides the **best developer experience** for background tasks in Dja
 
 - **Zero-config**: Works out of the box with redis_url
 - **Automatic maintenance**: Cleanup tasks run automatically in background
-- **Smart scheduling**: Deterministic job IDs prevent duplicate schedules
+- **Smart scheduling**: a run is skipped while its previous copy is still queued or running; schedules resume from their run history after a restart
 - **Centralized config**: All settings in one place
 - **Environment-aware**: Different config per environment
 - **Built-in apps**: Integration with Knowbase, Payments, etc.
@@ -203,7 +203,7 @@ Django-RQ is **already included** in django-cfg via the `rq` optional dependency
 
 ```bash
 pip install "django-cfg[rq]"
-# Installs: django-rq>=4.0.0, rq>=2.7.0, rq-scheduler>=0.14.0, redis>=5.0
+# Installs: django-rq>=4.2.0, rq>=3.0.0,<4.0, redis>=5.0, hiredis>=2.0
 ```
 
 ### 2. Configuration
@@ -344,7 +344,7 @@ class MyConfig(DjangoConfig):
             # Daily report
             RQScheduleConfig(
                 func="apps.crypto.tasks.generate_report",
-                cron="0 0 * * *",  # Every day at midnight
+                cron="0 0 * * *",  # Every day at midnight UTC
                 queue="low",
                 report_type="daily",
             ),
@@ -352,10 +352,11 @@ class MyConfig(DjangoConfig):
     )
 ```
 
-Start scheduler:
+Start the cron scheduler (one per project; it runs every schedule, whatever its queue):
 
 ```bash
-python manage.py rqscheduler
+python manage.py rqcron
+python manage.py rqcron --list   # print the registered schedules as JSON and exit
 ```
 
 ---
@@ -596,14 +597,14 @@ python manage.py rqworker default --verbose
 ### Start Scheduler
 
 ```bash
-# Start scheduler for cron jobs
-python manage.py rqscheduler
+# Start the cron scheduler (one per project; also moves delayed jobs of every queue)
+python manage.py rqcron
 
-# Scheduler with specific queue
-python manage.py rqscheduler --queue default
+# Print the registered schedules as JSON and exit
+python manage.py rqcron --list
 
 # Scheduler with logging
-python manage.py rqscheduler --verbose
+python manage.py rqcron -l DEBUG
 ```
 
 ### Monitor Stats

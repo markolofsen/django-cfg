@@ -20,6 +20,7 @@ publishes to its own consumer path.
 
 from __future__ import annotations
 
+import dataclasses
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -35,11 +36,13 @@ from ..errors import GeneratorError
 from ..postprocess import normalize_tags, warn_tag_format
 from ..spec_loader import load_spec
 from .dispatch import run_target
+from ..staging import Stage
 from .paths import (
     cache_dir,
+    effective_root,
     find_project_root,
     mirror_target_to_tmp,
-    publish_to_consumer,
+    stage_consumer,
 )
 from .progress import (
     now,
@@ -54,7 +57,11 @@ def run_pipeline(
     targets: list[GenerationTarget],
     *,
     dry_run: bool = False,
+    force: bool = False,
 ) -> RunReport:
+    """Generate every target. Each one is written to a staged copy of its
+    output folder and swapped in only on success (``_run_staged``); ``force``
+    lets the swap overwrite uncommitted changes the generator did not make."""
     report = RunReport()
 
     if not targets:
@@ -121,7 +128,7 @@ def run_pipeline(
     if workers <= 1 or len(targets) <= 1:
         # Sequential fallback — easier to debug, identical output.
         for target in targets:
-            _process_one(target, global_spec, config, cache, report)
+            _process_one(target, global_spec, config, cache, report, force=force)
         _finalize(report, run_started)
         return report
 
@@ -135,7 +142,7 @@ def run_pipeline(
 
     def _submit(target: GenerationTarget):
         started[target.name] = now()
-        return ex.submit(run_target, target, global_spec, config, cache)
+        return ex.submit(_run_staged, target, global_spec, config, cache, force)
 
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="djcfg-gen") as ex:
         futures = {_submit(t): t for t in targets}
@@ -164,7 +171,6 @@ def run_pipeline(
 
             if ok:
                 report.targets_run.append(target.name)
-                publish_to_consumer(target)
                 if config.mirror_to_tmp:
                     mirror_target_to_tmp(target)
             else:
@@ -242,10 +248,12 @@ def _process_one(
     config: OpenAPIConfig,
     cache: Path,
     report: RunReport,
+    *,
+    force: bool = False,
 ) -> None:
     """Sequential single-target step (used for parallelism=1)."""
     started = now()
-    ok, err, hit = run_target(target, global_spec, config, cache)
+    ok, err, hit = _run_staged(target, global_spec, config, cache, force)
     elapsed = now() - started
     report.timings[target.name] = elapsed
     report.cache_hits[target.name] = hit
@@ -255,11 +263,60 @@ def _process_one(
     )
     if ok:
         report.targets_run.append(target.name)
-        publish_to_consumer(target)
         if config.mirror_to_tmp:
             mirror_target_to_tmp(target)
     else:
         report.failures.append((target.name, err or "unknown error"))
+
+
+def _run_staged(
+    target: GenerationTarget,
+    global_spec: dict[str, Any],
+    config: OpenAPIConfig,
+    cache: Path,
+    force: bool,
+) -> tuple[bool, str | None, bool]:
+    """Run one target against a staged copy of its output folder.
+
+    The tools clean their output folder before writing (``rmtree(out_dir)``,
+    ``clean_stale_root``). They do it in a copy next to the real folder; the
+    real folder (and, with ``source_path``, the consumer folder) is replaced
+    only when the target succeeded and the git guard passed for both. On any
+    failure both stay exactly as they were.
+    """
+    try:
+        stage = Stage.open(effective_root(target))
+    except GeneratorError as e:
+        return False, str(e), False
+    consumer: Stage | None = None
+    try:
+        if target.source_path is not None:
+            staged = dataclasses.replace(target, source_path=stage.path)
+        else:
+            staged = dataclasses.replace(target, path=stage.path)
+        ok, err, hit = run_target(staged, global_spec, config, cache)
+        if not ok:
+            stage.discard()
+            return ok, err, hit
+        try:
+            consumer = stage_consumer(target, stage.path)
+            stage.check(force=force)
+            if consumer is not None:
+                consumer.check(force=force)
+            stage.commit(force=True)  # checked above, together with the consumer
+            if consumer is not None:
+                consumer.commit(force=True)
+        except GeneratorError as e:
+            stage.discard()
+            if consumer is not None:
+                consumer.discard()
+            return False, str(e), hit
+        return True, None, hit
+    except BaseException:
+        stage.discard()
+        if consumer is not None:
+            consumer.discard()
+        raise
 
 
 def _resolve_parallelism(target_count: int) -> int:

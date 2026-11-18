@@ -1,0 +1,134 @@
+/* The MCP and Modules tabs of the admin Overview (modules/django_overview).
+   Only --cfg-* tokens from cfg-theme.css, so the tabs follow the admin theme: dark by
+   default, light through Django's toggle. Loaded after cfg-admin.css and cfg-theme.css. */
+
+/* Own document inside the Overview iframe: the admin canvas, not the black tab canvas. */
+html:root .cfg-ov-frame {
+    margin: 0;
+    background: var(--cfg-background);
+    color: var(--cfg-foreground);
+    font-family: var(--font-family-primary);
+    font-size: 0.875rem;
+}
+/* Standalone (no ?iframe=1) the dashboard base draws a black box; use the page instead. */
+.dashboard-tab-content:has(> .cfg-ov) { background: transparent; color-scheme: normal; padding: 0; }
+
+.cfg-ov { padding: 24px 28px 32px; max-width: 72rem; box-sizing: border-box; }
+.cfg-ov *, .cfg-ov *::before, .cfg-ov *::after { box-sizing: border-box; }
+.cfg-ov-head { margin-bottom: 20px; }
+.cfg-ov-title { margin: 0 0 4px; font-size: 1.125rem; font-weight: 600; letter-spacing: -0.01em; color: var(--cfg-foreground); background: none; padding: 0; text-transform: none; }
+.cfg-ov-lead { margin: 0; color: var(--cfg-muted-foreground); max-width: 46rem; line-height: 1.5; }
+.cfg-ov-muted { color: var(--cfg-muted-foreground); font-size: 0.75rem; }
+.cfg-ov-hint { margin: 6px 0 0; color: var(--cfg-muted-foreground); font-size: 0.75rem; line-height: 1.5; }
+.cfg-ov-empty { padding: 32px; text-align: center; color: var(--cfg-muted-foreground); border: 1px dashed var(--cfg-border); border-radius: var(--cfg-radius-lg); }
+
+.cfg-ov-card {
+    background: var(--cfg-card);
+    border: 1px solid var(--cfg-border);
+    border-radius: var(--cfg-radius-lg);
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    min-width: 0;
+}
+.cfg-ov-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.cfg-ov-card-head h3 { margin: 0; font-size: 0.9375rem; font-weight: 600; color: var(--cfg-foreground); background: none; padding: 0; text-transform: none; }
+.cfg-ov-card-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.cfg-ov-kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+.cfg-ov-kv dt { color: var(--cfg-muted-foreground); font-weight: 500; font-size: 0.8125rem; padding-top: 4px; }
+.cfg-ov-kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.cfg-ov-kv-compact { gap: 4px 12px; font-size: 0.8125rem; }
+.cfg-ov-kv-compact dt { padding-top: 0; font-weight: 400; }
+
+.cfg-ov-code {
+    font-family: var(--font-family-monospace);
+    font-size: 0.8125rem;
+    background: var(--cfg-accent);
+    color: var(--cfg-foreground);
+    border-radius: var(--cfg-radius-sm);
+    padding: 1px 6px;
+    overflow-wrap: anywhere;
+}
+.cfg-ov-hint .cfg-ov-code, .cfg-ov-lead .cfg-ov-code { font-size: 0.6875rem; }
+.cfg-ov-copyline { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+.cfg-ov-cred { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.cfg-ov-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 2rem; padding: 0 10px;
+    font: inherit; font-size: 0.8125rem; font-weight: 500; line-height: 1;
+    color: var(--cfg-foreground);
+    background: var(--cfg-control);
+    border: 1px solid var(--cfg-input);
+    border-radius: var(--cfg-radius);
+    box-shadow: var(--cfg-shadow-xs);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color .12s ease, color .12s ease;
+}
+.cfg-ov-btn:hover { background: var(--cfg-accent); }
+.cfg-ov-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--cfg-ring) 50%, transparent); }
+.cfg-ov-btn:disabled { opacity: .5; cursor: default; }
+.cfg-ov-btn-primary { background: var(--cfg-primary); color: var(--cfg-primary-foreground); border-color: transparent; }
+.cfg-ov-btn-primary:hover { background: color-mix(in oklab, var(--cfg-primary) 90%, transparent); }
+.cfg-ov-btn-ghost { background: transparent; border-color: transparent; box-shadow: none; height: 1.75rem; padding: 0 6px; color: var(--cfg-muted-foreground); }
+.cfg-ov-btn-ghost:hover { color: var(--cfg-foreground); }
+
+.cfg-ov-callout { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--cfg-border); border-left-width: 3px; border-radius: var(--cfg-radius); font-size: 0.8125rem; }
+.cfg-ov-callout-warning { border-left-color: var(--cfg-warning-fg); }
+.cfg-ov-callout-danger { border-left-color: var(--cfg-danger-fg); color: var(--cfg-danger-fg); }
+
+.cfg-ov-clients { margin-top: 16px; border-top: 1px solid var(--cfg-border); padding-top: 14px; }
+.cfg-ov-seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--cfg-accent); border-radius: var(--cfg-radius); max-width: 100%; overflow-x: auto; }
+.cfg-ov-seg button {
+    font: inherit; font-size: 0.8125rem; font-weight: 500;
+    border: 0; border-radius: var(--cfg-radius-sm);
+    padding: 5px 12px; background: transparent; color: var(--cfg-muted-foreground);
+    cursor: pointer; white-space: nowrap;
+}
+.cfg-ov-seg button:hover { color: var(--cfg-foreground); }
+.cfg-ov-seg button[aria-selected="true"] { background: var(--cfg-background); color: var(--cfg-foreground); box-shadow: var(--cfg-shadow-xs); }
+.cfg-ov-seg button:focus-visible { outline: 2px solid color-mix(in oklab, var(--cfg-ring) 70%, transparent); outline-offset: 1px; }
+.cfg-ov-panel { margin-top: 10px; }
+
+.cfg-ov-snippet { position: relative; margin-top: 8px; }
+.cfg-ov-snippet pre {
+    margin: 0;
+    padding: 12px 88px 12px 12px;
+    background: var(--cfg-background);
+    color: var(--cfg-foreground);
+    border: 1px solid var(--cfg-border);
+    border-radius: var(--cfg-radius);
+    font-family: var(--font-family-monospace);
+    font-size: 0.75rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.cfg-ov-copy { position: absolute; top: 6px; right: 6px; height: 1.75rem; }
+
+.cfg-ov-toast {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    padding: 6px 12px; border-radius: var(--cfg-radius);
+    background: var(--cfg-primary); color: var(--cfg-primary-foreground);
+    font-size: 0.8125rem; font-weight: 500; box-shadow: var(--cfg-shadow-md, var(--cfg-shadow-xs));
+}
+
+/* Modules */
+.cfg-ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 12px; }
+.cfg-ov-grid .cfg-ov-card { margin: 0; }
+.cfg-ov-module .cfg-ov-card-head { margin-bottom: 6px; }
+.cfg-ov-summary { margin: 0 0 10px; color: var(--cfg-foreground); }
+.cfg-ov-state-off .cfg-ov-summary { color: var(--cfg-muted-foreground); }
+.cfg-ov-state-warn { border-left: 3px solid var(--cfg-warning-fg); }
+.cfg-ov-state-error { border-left: 3px solid var(--cfg-danger-fg); }
+
+@media (max-width: 640px) {
+    .cfg-ov { padding: 16px; }
+    .cfg-ov-kv { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .cfg-ov-kv dd { margin-bottom: 8px; }
+    .cfg-ov-kv-compact { grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; }
+    .cfg-ov-kv-compact dd { margin-bottom: 0; }
+    .cfg-ov-snippet pre { padding-right: 12px; padding-top: 40px; }
+}
+@media (prefers-reduced-motion: reduce) { .cfg-ov-btn { transition: none; } }

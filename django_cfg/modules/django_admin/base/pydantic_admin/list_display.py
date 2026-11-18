@@ -102,6 +102,30 @@ def build_list_display_links(config: 'AdminConfig') -> List[str]:
     return result
 
 
+def render_header(value):
+    """
+    Render a header cell (``FieldConfig.header=True``) on the stock admin.
+
+    A ``[title, subtitle, initials, avatar]`` list is rendered with
+    ``HtmlBuilder.header()`` (avatar initials, title, muted subtitle).
+    """
+    from ...utils import HtmlBuilder
+
+    if not isinstance(value, (list, tuple)):
+        return value
+    items = list(value) + [None] * 4
+    title, subtitle, initials, avatar = items[:4]
+    if isinstance(avatar, dict) and avatar.get("show") is False:
+        initials = None
+    if isinstance(subtitle, (list, tuple)):  # (value, []) shape: no subtitle
+        subtitle = None
+    return HtmlBuilder.header(
+        title=str(title) if title is not None else "",
+        subtitle=str(subtitle) if subtitle else None,
+        initials=str(initials) if initials else None,
+    )
+
+
 def generate_display_method(field_config, is_link: bool = False):
     """
     Generate display method from FieldConfig.
@@ -130,8 +154,6 @@ def generate_display_method(field_config, is_link: bool = False):
         if value is None and not has_link_field and not has_static_text and not has_rows and not has_fallback_field:
             empty = field_config.empty_value
             # For header fields, return tuple format
-            if field_config.header:
-                return (empty, [])
             return empty
 
         # Render using widget
@@ -152,21 +174,12 @@ def generate_display_method(field_config, is_link: bool = False):
             if rendered is None:
                 rendered = field_config.empty_value
 
-            # If it's already a list or tuple (e.g., from user_avatar widget), return as-is
+            # A list (user_avatar widget) is a header cell: title, subtitle, initials, avatar
             if isinstance(rendered, (list, tuple)):
-                return rendered
+                return render_header(rendered)
 
-            # Otherwise mark as safe and return
-            result = mark_safe(rendered)
+            return mark_safe(rendered)
 
-            # For non-list header fields, wrap in tuple format
-            if field_config.header:
-                return (result, [])
-            return result
-
-        # Fallback to simple value
-        if field_config.header:
-            return (value, [])
         return value
 
     # Set display method attributes
@@ -178,9 +191,5 @@ def generate_display_method(field_config, is_link: bool = False):
     # Check if field has boolean attribute (only for BooleanField or base FieldConfig)
     if hasattr(field_config, 'boolean') and field_config.boolean:
         display_method.boolean = True
-
-    if field_config.header:
-        # For header display (user with avatar)
-        display_method.header = True
 
     return display_method

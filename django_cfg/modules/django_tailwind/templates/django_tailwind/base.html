@@ -33,17 +33,17 @@
     </style>
 
     <!-- Dark mode initialization (prevents flash) -->
-    <!-- Supports both django-tailwind darkMode and Unfold theme keys -->
+    <!-- Supports both django-tailwind darkMode and the Django admin theme key -->
     <script>
         (function() {
             // Check multiple sources for dark mode preference
-            const unfoldTheme = localStorage.getItem('theme'); // Unfold uses 'theme' key with 'dark'/'light' values
+            const adminTheme = localStorage.getItem('theme'); // Django admin toggle: 'dark' / 'light' / 'auto'
             const legacyDarkMode = localStorage.getItem('darkMode'); // Legacy django-tailwind key
             const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-            const isDark = unfoldTheme === 'dark' ||
+            const isDark = adminTheme === 'dark' ||
                           legacyDarkMode === 'true' ||
-                          (!unfoldTheme && !legacyDarkMode && systemPrefersDark);
+                          ((!adminTheme || adminTheme === 'auto') && !legacyDarkMode && systemPrefersDark);
 
             if (isDark) {
                 document.documentElement.classList.add('dark');

@@ -24,6 +24,7 @@ from django.core.mail import EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
+from ...core.backends.mailers import default_backend_path, default_mailer_config
 from ...core.site import Site, site_for
 from ..base import BaseCfgModule
 
@@ -361,7 +362,10 @@ class DjangoEmailService(BaseCfgModule):
         pytest, parallel workers), and it is exactly the condition under which
         sending must not outlive the test.
         """
-        return "locmem" in getattr(settings, "EMAIL_BACKEND", "")
+        # Through `default_backend_path`, not `settings.EMAIL_BACKEND`: under
+        # Django 6.1 MAILERS that setting raises, `getattr(..., "")` answers ""
+        # and every test send would leave on a thread.
+        return "locmem" in default_backend_path()
 
     def _send_in_background(self, func, *args, **kwargs):
         """
@@ -413,12 +417,17 @@ class DjangoEmailService(BaseCfgModule):
             _SEND_THREADS.append(thread)
         thread.start()
 
-    def _handle_email_sending(self, email_func, *args, **kwargs):
+    def _handle_email_sending(self, email_func, *args, fail_silently=False, **kwargs):
         """
         Wrapper for email sending with proper timeout/exception handling.
 
         Args:
             email_func: Email sending function to call
+            fail_silently: Swallow an unexpected exception too (SMTP and timeout
+                errors always return 0). Handled HERE and not passed on: Django
+                6.1 deprecates ``fail_silently`` on ``send_mail`` and
+                ``EmailMessage.send`` (removed in Django 2028), and its migration
+                guide says to wrap the send instead, which is what this does.
             *args, **kwargs: Arguments to pass to the function
 
         Returns:
@@ -485,7 +494,7 @@ class DjangoEmailService(BaseCfgModule):
             _notify_telegram_on_email_error(msg, {
                 "type": type(e).__name__,
             })
-            if not kwargs.get('fail_silently', False):
+            if not fail_silently:
                 raise
             return 0
 
@@ -610,7 +619,7 @@ class DjangoEmailService(BaseCfgModule):
             )
             if not text_only:
                 message.attach_alternative(html_message, "text/html")
-            return message.send(fail_silently=fail_silently)
+            return message.send()
 
         # The intent is recorded HERE, on the calling thread, before the sender is
         # handed off. Opening it inside `_do_send` would look equivalent and is
@@ -629,7 +638,7 @@ class DjangoEmailService(BaseCfgModule):
             # `_handle_email_sending` swallows every SMTP error and returns 0, so
             # keying off exceptions alone would file a failed send as "sent".
             try:
-                sent = self._handle_email_sending(_send)
+                sent = self._handle_email_sending(_send, fail_silently=fail_silently)
             except Exception as exc:
                 _close_send(row_ids, "failed", str(exc))
                 raise
@@ -841,7 +850,9 @@ class DjangoEmailService(BaseCfgModule):
                 # The return value was previously discarded, which left this path
                 # unable to distinguish a delivered letter from one the transport
                 # refused outright — `send()` reports 0 without raising.
-                sent = email.send(fail_silently=fail_silently)
+                # No `fail_silently` to Django (deprecated in 6.1): the except
+                # below records the failure and re-raises unless asked not to.
+                sent = email.send()
                 if sent:
                     logger.info(f"Multipart email sent successfully to {recipient_list}")
                     _close_send(row_ids, "sent", "")
@@ -1056,15 +1067,16 @@ class DjangoEmailService(BaseCfgModule):
 
     def get_backend_info(self) -> Dict[str, Any]:
         """Get information about the current email backend."""
-        backend = getattr(settings, 'EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+        mailer = default_mailer_config()
+        options = mailer['OPTIONS']
 
         info = {
-            'backend': backend,
+            'backend': mailer['BACKEND'],
             'configured': self.is_configured(),
-            'host': getattr(settings, 'EMAIL_HOST', None),
-            'port': getattr(settings, 'EMAIL_PORT', None),
-            'use_tls': getattr(settings, 'EMAIL_USE_TLS', False),
-            'use_ssl': getattr(settings, 'EMAIL_USE_SSL', False),
+            'host': options.get('host'),
+            'port': options.get('port'),
+            'use_tls': options.get('use_tls', False),
+            'use_ssl': options.get('use_ssl', False),
         }
 
         if self.email_config:

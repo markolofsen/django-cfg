@@ -1,7 +1,7 @@
 """
 Third-party integrations generator.
 
-Handles external service integrations like Telegram, Unfold, Constance.
+Handles integrations like Telegram, the admin site, Constance.
 Size: ~150 lines (focused on third-party services)
 """
 
@@ -20,7 +20,7 @@ class ThirdPartyIntegrationsGenerator:
 
     Responsibilities:
     - Telegram bot configuration
-    - Unfold admin theme
+    - Admin site (CFG_ADMIN_SITE)
     - Constance dynamic settings
     - Track enabled integrations
 
@@ -58,7 +58,7 @@ class ThirdPartyIntegrationsGenerator:
 
         # Generate settings for each integration
         settings.update(self._generate_telegram_settings())
-        settings.update(self._generate_unfold_settings())
+        settings.update(self._generate_admin_site_settings())
         settings.update(self._generate_constance_settings())
         settings.update(self._generate_simple_history_settings())
 
@@ -83,20 +83,20 @@ class ThirdPartyIntegrationsGenerator:
 
         return {"TELEGRAM_CONFIG": telegram_settings}
 
-    def _generate_unfold_settings(self) -> Dict[str, Any]:
+    def _generate_admin_site_settings(self) -> Dict[str, Any]:
         """
-        Generate Unfold admin theme settings.
+        Generate the admin site settings (``CFG_ADMIN_SITE``, read by ``CfgAdminSite``).
 
         Returns:
-            Dictionary with Unfold configuration
+            Dictionary with the admin site configuration
         """
-        if not self.config.unfold:
+        if not self.config.admin_site:
             return {}
 
-        unfold_settings = self.config.unfold.to_django_settings(self.config.project_name)
-        self.integrations.append("unfold")
+        site_settings = self.config.admin_site.to_django_settings(self.config.project_name)
+        self.integrations.append("admin_site")
 
-        return unfold_settings
+        return site_settings
 
     def _generate_constance_settings(self) -> Dict[str, Any]:
         """

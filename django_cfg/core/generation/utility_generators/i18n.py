@@ -56,10 +56,6 @@ class I18nSettingsGenerator:
             "USE_TZ": True,
         }
 
-        # Adjust for different environments
-        if self.config.is_development:
-            settings["USE_L10N"] = True  # Deprecated but sometimes needed
-
         return settings
 
 

@@ -12,21 +12,11 @@ from django.forms.widgets import Select
 from django.urls import reverse
 from django.utils.safestring import mark_safe, SafeString
 
-# Unfold-compatible CSS classes (same as money_widget.py)
-INPUT_CLASSES = " ".join([
-    "border", "border-base-200", "bg-white", "font-medium", "px-3", "py-2",
-    "min-w-20", "placeholder-base-400", "rounded-default", "shadow-xs",
-    "text-font-default-light", "text-sm", "w-full",
-    "focus:outline-2", "focus:-outline-offset-2", "focus:outline-primary-600",
-    "dark:bg-base-900", "dark:border-base-700", "dark:text-font-default-dark",
-])
-
-SELECT_CLASSES = " ".join([
-    *INPUT_CLASSES.split(),
-    "pr-8!", "max-w-2xl", "appearance-none", "text-ellipsis",
-])
-
-AUTOCOMPLETE_CLASSES = "unfold-admin-autocomplete admin-autocomplete"
+# Stock admin inputs: Django's own CSS styles the elements, we add no utility classes.
+INPUT_CLASSES = "vTextField"
+SELECT_CLASSES = ""
+# admin-autocomplete is Django's select2 hook; cfg-autocomplete is ours (cfg.css).
+AUTOCOMPLETE_CLASSES = "cfg-autocomplete admin-autocomplete"
 
 
 def get_country_choices() -> List[Tuple[str, str]]:
@@ -56,7 +46,6 @@ class CountrySelectWidget(Select):
     - AJAX search via cfg_geo:search-countries endpoint
     - Displays country name with flag emoji
     - Stores ISO2 code as value
-    - Compatible with Unfold admin styling
 
     Usage:
         # Auto-applied to CountryField in PydanticAdmin
@@ -110,7 +99,7 @@ class CountrySelectWidget(Select):
         Returns HTML: 🇰🇷 South Korea
         """
         if not code:
-            return mark_safe('<span class="text-base-400">—</span>')
+            return mark_safe('<span class="cfg-muted">—</span>')
 
         try:
             from django_cfg.apps.tools.geo.services.database import get_geo_db
@@ -119,9 +108,9 @@ class CountrySelectWidget(Select):
             if country:
                 flag = country.emoji or ""
                 return mark_safe(
-                    f'<span class="flex items-center gap-2">'
+                    f'<span class="cfg-row">'
                     f'<span>{flag}</span>'
-                    f'<span class="font-medium">{country.name}</span>'
+                    f'<span class="cfg-strong">{country.name}</span>'
                     f'</span>'
                 )
         except Exception:
@@ -215,7 +204,7 @@ class CitySelectWidget(Select):
         Returns HTML: 🇰🇷 Seoul, 11, KR
         """
         if not city_id:
-            return mark_safe('<span class="text-base-400">—</span>')
+            return mark_safe('<span class="cfg-muted">—</span>')
 
         try:
             from django_cfg.apps.tools.geo.models import City
@@ -227,20 +216,20 @@ class CitySelectWidget(Select):
             if flag:
                 parts.append(f'<span>{flag}</span>')
 
-            parts.append(f'<span class="font-medium">{city.name}</span>')
+            parts.append(f'<span class="cfg-strong">{city.name}</span>')
 
             if city.state:
                 state_code = getattr(city.state, "state_code", None) or city.state.name
-                parts.append(f'<span class="text-base-400">{state_code}</span>')
+                parts.append(f'<span class="cfg-muted">{state_code}</span>')
 
             if city.country:
-                parts.append(f'<span class="text-base-400">{city.country.iso2}</span>')
+                parts.append(f'<span class="cfg-muted">{city.country.iso2}</span>')
 
             return mark_safe(
-                '<span class="flex items-center gap-2">' +
+                '<span class="cfg-row">' +
                 ', '.join(parts[1:] if flag else parts) +
                 '</span>' if not flag else
-                f'<span class="flex items-center gap-2">{parts[0]} ' +
+                f'<span class="cfg-row">{parts[0]} ' +
                 ', '.join(parts[1:]) +
                 '</span>'
             )

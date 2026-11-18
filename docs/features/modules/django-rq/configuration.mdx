@@ -35,7 +35,7 @@ class MyConfig(DjangoConfig):
 ```
 
 :::warning Required Field
-`redis_db` is **required** and must be unique per project to prevent RQ scheduler conflicts.
+`redis_db` is **required** and must be unique per project to prevent RQ cron conflicts.
 See [Redis Isolation](#redis-isolation) for details.
 :::
 
@@ -219,17 +219,17 @@ Configuration for scheduled jobs:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `func` | `str` | *required* | Function path (e.g., `apps.myapp.tasks.my_task`) |
-| `cron` | `Optional[str]` | `None` | Cron expression (e.g., `0 0 * * *`) |
-| `interval` | `Optional[int]` | `None` | Interval in seconds |
-| `scheduled_time` | `Optional[str]` | `None` | ISO datetime for one-time job |
+| `cron` | `Optional[str]` | `None` | Cron expression (e.g., `0 0 * * *`), evaluated in UTC |
+| `interval` | `Optional[int]` | `None` | Interval in seconds; resumes from the last run after a restart |
+| `scheduled_time` | `Optional[str]` | `None` | ISO datetime for a one-time job (no offset = UTC); enqueued once with `enqueue_at` |
 | `queue` | `str` | `"default"` | Queue name |
-| `timeout` | `Optional[int]` | `None` | Job timeout (overrides queue default) |
-| `result_ttl` | `Optional[int]` | `None` | Result TTL for a one-time entry (overrides queue default). Ignored for `cron` and `interval`: see the note under Schedule Configuration |
+| `timeout` | `Optional[int]` | `None` | Job timeout, RQ `job_timeout` (overrides queue `default_timeout`) |
+| `result_ttl` | `Optional[int]` | `None` | Result TTL of each run (overrides queue `default_result_ttl`) |
 | `args` | `List[Any]` | `[]` | Positional arguments |
 | `kwargs` | `Dict[str, Any]` | `{}` | Keyword arguments |
-| `job_id` | `Optional[str]` | `None` | Custom job ID |
+| `job_id` | `Optional[str]` | `None` | Schedule name (key of its run history `rq:cron_job:<name>:jobs`); the job id of a one-off. Default: `schedule_<func>_<hash>` |
 | `description` | `Optional[str]` | `None` | Human-readable description |
-| `repeat` | `Optional[int]` | `None` | Number of times to repeat |
+| `repeat` | `Optional[int]` | `None` | Stop after this many runs |
 
 **Declarative Task Parameters:**
 
@@ -360,13 +360,13 @@ django_rq: DjangoRQConfig = DjangoRQConfig(
 
 ## Schedule Configuration
 
-<Callout type="warning">
-A recurring entry (`cron` or `interval`) always registers with `result_ttl=-1`, whatever the config says (a configured value is ignored with a warning in the log). rq-scheduler keeps the entry in the job's own Redis key and re-runs that same job; a result TTL on the key would delete it, and the schedule would vanish about `result_ttl` seconds after its first run (django-cfg before 2.3.407). Only a one-time entry (`scheduled_time`) keeps its own `result_ttl`.
+<Callout type="info">
+Schedules run in one `python manage.py rqcron` process per project, on RQ's native cron. Every run is a fresh job with its own id, so `timeout` and `result_ttl` apply to each run as configured; an entry that sets neither gets the queue's `default_timeout` / `default_result_ttl`. A due run is skipped while the previous copy is still queued or running (heartbeat younger than 120 s). An entry whose queue is not in `RQ_QUEUES`, or whose function cannot be imported, is logged and listed under `not_registered` in `rqcron --list`. Details: [Scheduler and Workers](./scheduler-and-workers).
 </Callout>
 
 ### Cron Schedules
 
-Use cron expressions for time-based scheduling:
+Use cron expressions for time-based scheduling. Cron strings are evaluated in **UTC**:
 
 ```python
 schedules=[
@@ -1050,7 +1050,7 @@ if stats['total_deleted'] < 1000:
 **Protected:**
 - Queued jobs (waiting to be processed)
 - Running jobs (currently being processed)
-- Scheduled jobs (cron/interval tasks)
+- Delayed jobs waiting in `rq:scheduled:<queue>` (`enqueue_in/at`, one-off `scheduled_time` entries)
 - All non-RQ Redis data
 
 ### Safety Guarantees
@@ -1058,7 +1058,7 @@ if stats['total_deleted'] < 1000:
 Cleanup is designed to be safe for production use:
 
 - **Isolated scope**: Only touches RQ-specific keys (`rq:job:*`, `rq:finished:*`, `rq:failed:*`)
-- **No interference**: Scheduled jobs use separate storage and are never cleaned
+- **No interference**: Schedules live in the `rqcron` process, not in Redis job keys; ids in the Scheduled, Deferred and Canceled registries are kept
 - **Data protection**: Your application data (custom Redis keys) is never touched
 - **Configurable retention**: Keep job history as long as you need
 - **Dry run mode**: Test before applying changes
@@ -1071,14 +1071,8 @@ Check cleanup task execution in logs:
 # View cleanup logs (container stdout; or the file under DJANGO_CFG_LOG_DIR)
 docker compose logs -f worker | grep cleanup
 
-# Check scheduled jobs
-python manage.py shell -c "
-from django_rq import get_scheduler
-scheduler = get_scheduler('default')
-for job in scheduler.get_jobs():
-    if 'cleanup' in job.func_name:
-        print(f'{job.func_name}: {job.meta}')
-"
+# Check the cleanup schedules registered with rqcron
+python manage.py rqcron --list | grep -A5 cleanup
 ```
 
 ---
@@ -1088,15 +1082,15 @@ for job in scheduler.get_jobs():
 ### Why It's Required
 
 :::danger Critical Issue
-If multiple projects share the same Redis DB, **scheduled tasks will randomly stop working**.
-When any project flushes cache (`cache.clear()`, `FLUSHDB`), it deletes ALL keys including
-RQ scheduler jobs. Tasks execute 2-3 times then disappear forever.
+If multiple projects share the same Redis DB, **scheduled tasks of all but one project stop running**.
+Every `rqcron` takes the same leader lock (`djangocfg:rq:cron:leader`), so only one project's
+schedules are enqueued, and a cache flush (`cache.clear()`, `FLUSHDB`) deletes queued and delayed jobs and run histories.
 :::
 
-When multiple Django projects share a single Redis instance, RQ schedulers can conflict:
+When multiple Django projects share a single Redis instance, RQ cron and queues conflict:
 
-1. **Cache Flush Kills Jobs**: Any project clearing cache deletes scheduler job metadata
-2. **Shared Keys**: All schedulers read from the same `rq:scheduler:scheduled_jobs` set
+1. **Cache Flush Kills Jobs**: Any project clearing cache deletes queued and delayed jobs and the run history schedules resume from
+2. **Shared Keys**: All `rqcron` processes compete for one leader lock `djangocfg:rq:cron:leader`; the losers stay standby
 3. **Job Theft**: Workers from one project try to execute jobs from another
 4. **Missing Functions**: Jobs fail because task functions don't exist in other projects
 5. **Duplicate Execution**: Same job runs multiple times across projects
@@ -1194,7 +1188,7 @@ DjangoRQConfig(redis_db=16, ...)  # Error: must be <= 15
 - [Monitoring](./monitoring) - Monitoring and management
 
 ### Reference
-- [Django-RQ Docs](https://github.com/rq/django-rq) - Official documentation (v4+)
-- [RQ Docs](https://python-rq.org/) - Core RQ documentation (v2.7+)
-- [RQ Scheduler](https://github.com/rq/rq-scheduler) - Scheduler documentation (v0.14+)
+- [Django-RQ Docs](https://github.com/rq/django-rq) - Official documentation (v4.2+)
+- [RQ Docs](https://python-rq.org/) - Core RQ documentation (v3)
+- [RQ Cron](https://python-rq.org/docs/cron/) - Native cron scheduler (RQ 3)
 - [RQ Changelog](https://github.com/rq/rq/blob/master/CHANGES.md) - Breaking changes in RQ 2.x

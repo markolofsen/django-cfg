@@ -1,0 +1,18 @@
+{% comment %}
+actions_list / actions_detail buttons inside Django's <ul class="object-tools">.
+Each item: title, icon, variant, attrs, confirm, path; a group has children.
+{% endcomment %}
+{% for item in cfg_actions %}
+  {% if item.children %}
+    <li class="cfg-action-group">
+      <details>
+        <summary class="cfg-action{% if item.variant %} cfg-action-{{ item.variant }}{% endif %}">{% if item.icon %}<span class="cfg-icon">{{ item.icon }}</span> {% endif %}{{ item.title }}</summary>
+        <ul class="cfg-action-menu">
+          {% for sub in item.children %}<li>{% include "django_admin/includes/action_link.html" with action=sub %}</li>{% endfor %}
+        </ul>
+      </details>
+    </li>
+  {% else %}
+    <li>{% include "django_admin/includes/action_link.html" with action=item %}</li>
+  {% endif %}
+{% endfor %}

@@ -205,9 +205,9 @@ Django-RQ worker management, scheduling, and monitoring.
 |---------|-------------|
 | `rqworker` | Start RQ worker process |
 | `rqworker_pool` | Start RQ worker pool (multiple workers) |
-| `rqscheduler` | Start RQ scheduler for cron/interval tasks |
+| `rqcron` | Run the project's schedules and delayed jobs on RQ's native cron (one per project) |
 | `rqstats` | Show RQ queue statistics |
-| `rq_cleanup_locks` | Clean stale RQ job locks |
+| `rq_cron_status` | Tell a dead `rqcron` from a starved queue; exits 1 when not ok |
 
 **[Full Documentation →](/features/modules/django-rq)**
 

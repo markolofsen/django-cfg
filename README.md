@@ -6,7 +6,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/django-cfg.svg?style=flat-square&logo=pypi)](https://pypi.org/project/django-cfg/)
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg?style=flat-square&logo=python)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/django-5.2+-green.svg?style=flat-square&logo=django)](https://www.djangoproject.com/)
+[![Django](https://img.shields.io/badge/django-5.2%20%7C%206.0%20%7C%206.1-green.svg?style=flat-square&logo=django)](https://www.djangoproject.com/)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/django-cfg.svg?style=flat-square)](https://pypi.org/project/django-cfg/)
 
@@ -153,7 +153,7 @@ User auth • Support tickets • Newsletter • CRM • AI agents • Knowledge
 ## What's Included
 
 **Backend:**
-- Django 5.2+ with type-safe config
+- Django 5.2 LTS, 6.0 and 6.1 with type-safe config
 - PostgreSQL, Redis, Centrifugo
 - gRPC server with streaming
 - 8 production-ready apps

@@ -92,5 +92,3 @@ __all__ = [
     "connect_signals_for_model",
     "disconnect_signals_for_model",
 ]
-
-default_app_config = "django_cfg.modules.django_cleanup.apps.DjangoCleanupConfig"

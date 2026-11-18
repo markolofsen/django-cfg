@@ -168,7 +168,7 @@ def get_dashboard_config(context):
     existed, resolved, and rendered when visited by URL; they just never appeared
     in the tab bar, so nobody could reach them.
 
-    `admin/index.html` loads {% load django_cfg %}, so THIS is the tag that
+    `admin/cfg_overview.html` (the admin index) loads {% load django_cfg %}, so THIS is the tag that
     actually renders the admin tab bar — not the identically-named one in
     django_cfg_dashboard.py. Both now delegate to the one resolver.
     """
@@ -180,8 +180,16 @@ def get_dashboard_config(context):
         from django_cfg.modules.django_dashboard.resolver import (
             get_dashboard_config as _resolve,
         )
+        from django_cfg.modules.django_dashboard.registry import TabRegistry
 
-        return _resolve()
+        # Only the tabs this user may open: a superuser-only tab in the bar of a
+        # staff member was a button that answered 403.
+        config = _resolve()
+        if config is None:
+            return None
+        registry = TabRegistry()
+        visible = [t for t in config.tabs if registry.has_permission(t, request)]
+        return config.model_copy(update={"tabs": visible}) if visible else None
     except Exception:
         return None
 

@@ -46,7 +46,7 @@ Both wait for `api` to be healthy and use the same image. If `api` is up and the
 is not: `docker logs djangocfg-rq-worker`, then check the queue names against the
 project (`python manage.py rqworker high default low knowledge` fails on a queue the
 project does not declare), and `docker exec djangocfg-rq-worker pgrep -af rqworker`.
-`python manage.py rq_scheduler_status` tells a dead scheduler from a starved queue.
+`python manage.py rq_cron_status` tells a dead `rqcron` from a starved queue.
 
 ## Database
 

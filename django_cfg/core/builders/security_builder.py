@@ -141,7 +141,6 @@ class SecurityBuilder:
             'SECURE_HSTS_INCLUDE_SUBDOMAINS': False,
             'SECURE_HSTS_PRELOAD': False,
             'SECURE_CONTENT_TYPE_NOSNIFF': False,
-            'SECURE_BROWSER_XSS_FILTER': False,
             'X_FRAME_OPTIONS': 'SAMEORIGIN',
 
             # === Django-Axes: Brute-force protection ===
@@ -259,7 +258,6 @@ class SecurityBuilder:
             'SECURE_HSTS_INCLUDE_SUBDOMAINS': True,
             'SECURE_HSTS_PRELOAD': True,
             'SECURE_CONTENT_TYPE_NOSNIFF': True,
-            'SECURE_BROWSER_XSS_FILTER': True,
             'X_FRAME_OPTIONS': 'DENY',
 
             # === Django-Axes: Brute-force protection ===

@@ -143,14 +143,14 @@ This creates:
 
 ## RQ Worker Setup
 
-For automatic rate updates, run RQ worker and scheduler:
+For automatic rate updates, run an RQ worker and `rqcron` (one per project):
 
 ```bash
 # Terminal 1: Worker
 python manage.py rqworker default
 
 # Terminal 2: Scheduler
-python manage.py rqscheduler
+python manage.py rqcron
 ```
 
 The `update_all_rates` task runs automatically based on `update_interval`.

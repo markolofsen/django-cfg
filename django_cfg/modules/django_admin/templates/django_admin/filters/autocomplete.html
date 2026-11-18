@@ -1,0 +1,18 @@
+{% load i18n %}
+<details data-filter-title="{{ title }}" open>
+  <summary>{% blocktranslate with filter_title=title %} By {{ filter_title }} {% endblocktranslate %}</summary>
+  <ul>
+    <li>{{ spec.widget_html }}</li>
+    {% for choice in choices %}{% if forloop.first and spec.lookup_val %}<li><a href="{{ choice.query_string|iriencode }}">{{ choice.display }}</a></li>{% endif %}{% endfor %}
+  </ul>
+</details>
+<script>
+  window.addEventListener("load", function () {
+    django.jQuery("[data-cfg-filter]").off("change.cfg").on("change.cfg", function () {
+      const q = new URLSearchParams(window.location.search);
+      if (this.value) { q.set(this.dataset.cfgFilter, this.value); } else { q.delete(this.dataset.cfgFilter); }
+      q.delete("p");
+      window.location.search = q.toString();
+    });
+  });
+</script>

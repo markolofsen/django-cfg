@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 from django.db import models
-from django.utils.safestring import mark_safe
 
 if TYPE_CHECKING:
     from ...config import AdminConfig
@@ -31,7 +30,7 @@ class ViewMixin:
 
     # Attributes provided by Django's ModelAdmin at runtime
     model: type[models.Model]
-    config: "AdminConfig"
+    config: Optional["AdminConfig"]
     readonly_fields: list[str]
     documentation_config: Any
 
@@ -61,19 +60,26 @@ class ViewMixin:
         return None
 
     def get_queryset(self, request):
-        """Apply select_related, prefetch_related, and annotations from config."""
+        """Apply select_related, prefetch_related, and annotations from config.
+
+        An admin without ``config`` (stock attributes only) gets the stock
+        queryset; the changelist then applies ``list_select_related`` as usual.
+        """
         qs = super().get_queryset(request)
+        config = self.config
+        if config is None:
+            return qs
 
         # Auto-apply optimizations from config
-        if self.config.select_related:
-            qs = qs.select_related(*self.config.select_related)
+        if config.select_related:
+            qs = qs.select_related(*config.select_related)
 
-        if self.config.prefetch_related:
-            qs = qs.prefetch_related(*self.config.prefetch_related)
+        if config.prefetch_related:
+            qs = qs.prefetch_related(*config.prefetch_related)
 
         # Auto-apply annotations from config
-        if self.config.annotations:
-            qs = qs.annotate(**self.config.annotations)
+        if config.annotations:
+            qs = qs.annotate(**config.annotations)
 
         return qs
 
@@ -149,11 +155,6 @@ class ViewMixin:
                 extra_context['documentation_config'] = doc_config
                 extra_context['documentation_sections'] = doc_config.get_sections(app_path)
 
-                # Add tree structure for modal view
-                import json
-                tree_structure = doc_config.get_tree_structure(app_path)
-                extra_context['documentation_tree'] = mark_safe(json.dumps(tree_structure))
-                extra_context['documentation_sections_count'] = len(doc_config.get_sections(app_path))
 
                 # Add management commands if enabled
                 if doc_config.show_management_commands:
@@ -189,11 +190,6 @@ class ViewMixin:
                 extra_context['documentation_config'] = doc_config
                 extra_context['documentation_sections'] = doc_config.get_sections(app_path)
 
-                # Add tree structure for modal view
-                import json
-                tree_structure = doc_config.get_tree_structure(app_path)
-                extra_context['documentation_tree'] = mark_safe(json.dumps(tree_structure))
-                extra_context['documentation_sections_count'] = len(doc_config.get_sections(app_path))
 
                 # Add management commands if enabled
                 if doc_config.show_management_commands:
@@ -227,19 +223,18 @@ class ViewMixin:
             # Only apply for editable fields
             if not is_readonly:
                 try:
-                    # Use our custom JSONEditorWidget with Unfold theme support
+                    # Our JSONEditorWidget (copy button, Django admin theme)
                     from ...widgets import JSONEditorWidget
 
                     # Get field-specific config from AdminConfig.widgets
                     field_widget_config = getattr(self.__class__, '_field_widget_configs', {}).get(db_field.name, {})
 
-                    # Default widget settings with Unfold theme support
+                    # Default widget settings
                     widget_kwargs = {
                         'mode': 'code',
                         'height': '400px',
                         'options': {
                             'modes': ['code', 'tree', 'view'],
-                            # Unfold dark theme colors
                             'mainMenuBar': True,
                             'navigationBar': False,
                         }
@@ -250,7 +245,7 @@ class ViewMixin:
                         widget_kwargs.update(field_widget_config)
                         logger.debug(f"Applied custom JSONWidget config for '{db_field.name}': {field_widget_config}")
 
-                    # Apply JSONEditorWidget (overrides Unfold's UnfoldAdminTextareaWidget)
+                    # Apply JSONEditorWidget (replaces the stock Textarea)
                     kwargs['widget'] = JSONEditorWidget(**widget_kwargs)
                     logger.debug(f"Auto-applied JSONEditorWidget to editable field '{db_field.name}'")
                 except ImportError:

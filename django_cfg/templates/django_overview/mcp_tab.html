@@ -1,0 +1,183 @@
+{% extends overview_base %}
+{% load static %}
+{% block tab_content %}
+{% if not is_iframe %}<link rel="stylesheet" href="{% static 'django_cfg/cfg-overview.css' %}">{% endif %}
+{# No key is in this page. Commands show a mask; "Show" and "Copy" POST (CSRF) for the real one: #}
+{# django_overview/views.py. The token below is the CSRF token, not an MCP key. #}
+<div class="cfg-ov" data-csrf="{{ csrf_token }}">
+  <header class="cfg-ov-head">
+    <h2 class="cfg-ov-title">Connect your assistant</h2>
+    <p class="cfg-ov-lead">Register this server in Claude Code, Codex or any MCP client with your own credential. The key never appears in this page until you press Show; Copy puts the full command on the clipboard.</p>
+  </header>
+
+  {% if not mcp_enabled %}
+    <div class="cfg-ov-empty">MCP is not enabled in this project.</div>
+  {% endif %}
+
+  {% for p in profiles %}
+  <section class="cfg-ov-card" data-mcp-profile="{{ p.name }}"
+           data-reveal-url="{% url 'django_cfg_overview_mcp_reveal' profile=p.name %}"
+           data-create-url="{% url 'django_cfg_overview_mcp_create' profile=p.name %}">
+    <div class="cfg-ov-card-head">
+      <div class="cfg-ov-card-title">
+        <span class="material-symbols-outlined cfg-icon-base" aria-hidden="true">hub</span>
+        <h3>{{ p.name }}</h3>
+        {% if p.tool_count is not None %}<span class="cfg-badge cfg-badge--neutral">{{ p.tool_count }} tool{{ p.tool_count|pluralize }}</span>{% endif %}
+        {% if p.oauth %}<span class="cfg-badge cfg-badge--info">OAuth</span>{% endif %}
+      </div>
+      <span class="cfg-ov-muted cfg-mono">{{ p.path }}</span>
+    </div>
+
+    <dl class="cfg-ov-kv">
+      <dt>Address</dt>
+      <dd><span class="cfg-ov-copyline"><code class="cfg-ov-code">{{ p.url }}</code>
+        <button type="button" class="cfg-ov-btn cfg-ov-btn-ghost" data-copy-text="{{ p.url }}" aria-label="Copy address"><span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">content_copy</span></button></span></dd>
+      <dt>Name</dt><dd><code class="cfg-ov-code">{{ p.alias }}</code></dd>
+      <dt>Tools</dt><dd>{{ p.tools }}{% if p.rate_limit %} <span class="cfg-ov-muted">· {{ p.rate_limit }}</span>{% endif %}</dd>
+      <dt>Credential</dt>
+      <dd>
+        <div class="cfg-ov-cred">
+          <span class="cfg-badge {% if p.credential.kind == 'personal' %}cfg-badge--success{% elif p.credential.kind == 'shared' %}cfg-badge--warning{% elif p.credential.kind == 'oauth' %}cfg-badge--info{% else %}cfg-badge--neutral{% endif %}">{{ p.credential.label }}</span>
+          {% if p.credential.revealable %}
+            <code class="cfg-ov-code" data-key-field>{{ p.credential.masked }}</code>
+            <button type="button" class="cfg-ov-btn" data-action="toggle" aria-pressed="false"><span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">visibility</span><span data-toggle-label>Show</span></button>
+            <button type="button" class="cfg-ov-btn" data-action="copy-key"><span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">content_copy</span>Copy key</button>
+          {% endif %}
+          {% if p.credential.creatable %}
+            <button type="button" class="cfg-ov-btn cfg-ov-btn-primary" data-action="create"><span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">key</span>Create key</button>
+          {% endif %}
+        </div>
+        {% if p.credential.hint %}<p class="cfg-ov-hint">{{ p.credential.hint }}</p>{% endif %}
+      </dd>
+    </dl>
+
+    {% if p.error %}<div class="cfg-ov-callout cfg-ov-callout-warning">{{ p.error }}</div>{% endif %}
+    <div class="cfg-ov-callout cfg-ov-callout-danger" data-error hidden></div>
+
+    {% if p.commands %}
+    {% with secret=p.credential.revealable %}
+    <div class="cfg-ov-clients">
+      <div class="cfg-ov-seg" role="tablist" aria-label="Client">
+        <button type="button" role="tab" aria-selected="true" data-client="claude">Claude Code</button>
+        <button type="button" role="tab" aria-selected="false" data-client="codex">Codex</button>
+        <button type="button" role="tab" aria-selected="false" data-client="custom">Custom</button>
+      </div>
+
+      <div class="cfg-ov-panel" data-panel="claude">
+        <p class="cfg-ov-hint">Paste into a terminal. Registers the server for your user in every project{% if p.credential.kind == 'oauth' %}; then run <code class="cfg-ov-code">/mcp</code> in Claude Code to sign in{% endif %}.</p>
+        <div class="cfg-ov-snippet"><pre data-cmd="claude"{% if secret %} data-secret{% endif %}>{{ p.commands.claude }}</pre>
+          <button type="button" class="cfg-ov-btn cfg-ov-copy" data-copy="claude"><span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">content_copy</span>Copy</button></div>
+      </div>
+
+      <div class="cfg-ov-panel" data-panel="codex" hidden>
+        <p class="cfg-ov-hint">{% if p.credential.kind == 'oauth' %}Adds the server and opens the sign-in page.{% else %}<code class="cfg-ov-code">codex mcp add</code> takes no header, so this appends the server to <code class="cfg-ov-code">~/.codex/config.toml</code>; it removes an earlier entry first, so running it again replaces it.{% endif %}</p>
+        <div class="cfg-ov-snippet"><pre data-cmd="codex"{% if secret %} data-secret{% endif %}>{{ p.commands.codex }}</pre>
+          <button type="button" class="cfg-ov-btn cfg-ov-copy" data-copy="codex"><span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">content_copy</span>Copy</button></div>
+        <p class="cfg-ov-hint">Or paste this table into <code class="cfg-ov-code">~/.codex/config.toml</code> yourself:</p>
+        <div class="cfg-ov-snippet"><pre data-cmd="codex_toml"{% if secret %} data-secret{% endif %}>{{ p.commands.codex_toml }}</pre>
+          <button type="button" class="cfg-ov-btn cfg-ov-copy" data-copy="codex_toml"><span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">content_copy</span>Copy</button></div>
+      </div>
+
+      <div class="cfg-ov-panel" data-panel="custom" hidden>
+        <p class="cfg-ov-hint">The <code class="cfg-ov-code">mcpServers</code> entry most clients accept (Cursor, Claude Desktop config, VS Code with <code class="cfg-ov-code">servers</code>). {% if p.credential.kind != 'oauth' %}Header: <code class="cfg-ov-code">{{ key_header }}</code>; the same value also works as <code class="cfg-ov-code">Authorization: Bearer</code>.{% endif %}</p>
+        <div class="cfg-ov-snippet"><pre data-cmd="json"{% if secret %} data-secret{% endif %}>{{ p.commands.json }}</pre>
+          <button type="button" class="cfg-ov-btn cfg-ov-copy" data-copy="json"><span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">content_copy</span>Copy</button></div>
+        <p class="cfg-ov-hint">Install script: registers in Claude Code, Codex and Gemini CLI, whichever are installed, and adds the skill.</p>
+        <div class="cfg-ov-snippet"><pre data-cmd="install"{% if secret %} data-secret{% endif %}>{{ p.commands.install }}</pre>
+          <button type="button" class="cfg-ov-btn cfg-ov-copy" data-copy="install"><span class="material-symbols-outlined cfg-icon-sm" aria-hidden="true">content_copy</span>Copy</button></div>
+      </div>
+    </div>
+    {% endwith %}
+    {% endif %}
+  </section>
+  {% endfor %}
+  <div class="cfg-ov-toast" role="status" aria-live="polite" hidden></div>
+</div>
+
+<script{% if csp_nonce %} nonce="{{ csp_nonce }}"{% endif %}>
+(function () {
+  var root = document.querySelector('.cfg-ov');
+  if (!root) return;
+  var csrf = root.dataset.csrf;
+  var toast = root.querySelector('.cfg-ov-toast'), toastTimer;
+
+  function say(text) {
+    toast.textContent = text; toast.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { toast.hidden = true; }, 1800);
+  }
+  function copy(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).then(function () { say('Copied'); }, function () { fallback(text); });
+    }
+    fallback(text); return Promise.resolve();
+  }
+  function fallback(text) {
+    var area = document.createElement('textarea');
+    area.value = text; area.setAttribute('readonly', ''); area.style.position = 'fixed'; area.style.opacity = '0';
+    document.body.appendChild(area); area.select();
+    try { document.execCommand('copy'); say('Copied'); } catch (e) { say('Copy failed'); }
+    area.remove();
+  }
+  function post(url) {
+    return fetch(url, { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+                        headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.json().then(function (body) { if (!r.ok) throw new Error(body.detail || ('HTTP ' + r.status)); return body; }); });
+  }
+
+  root.querySelectorAll('[data-mcp-profile]').forEach(function (card) {
+    var payload = null, shown = false;
+    var errorBox = card.querySelector('[data-error]');
+    var keyField = card.querySelector('[data-key-field]');
+    var masked = {};
+    card.querySelectorAll('pre[data-cmd]').forEach(function (pre) { masked[pre.dataset.cmd] = pre.textContent; });
+    var maskedKey = keyField ? keyField.textContent : '';
+
+    function fail(err) { errorBox.textContent = err.message; errorBox.hidden = false; }
+    function load() {
+      if (payload) return Promise.resolve(payload);
+      return post(card.dataset.revealUrl).then(function (body) { payload = body; errorBox.hidden = true; return body; });
+    }
+    function render() {
+      card.querySelectorAll('pre[data-cmd]').forEach(function (pre) {
+        pre.textContent = shown && payload ? payload.commands[pre.dataset.cmd] : masked[pre.dataset.cmd];
+      });
+      if (keyField) keyField.textContent = shown && payload ? payload.key : maskedKey;
+      var toggle = card.querySelector('[data-action="toggle"]');
+      if (toggle) {
+        toggle.setAttribute('aria-pressed', shown ? 'true' : 'false');
+        toggle.querySelector('[data-toggle-label]').textContent = shown ? 'Hide' : 'Show';
+        toggle.querySelector('.material-symbols-outlined').textContent = shown ? 'visibility_off' : 'visibility';
+      }
+    }
+
+    card.addEventListener('click', function (event) {
+      var button = event.target.closest('button');
+      if (!button || !card.contains(button)) return;
+      if (button.dataset.client) {
+        card.querySelectorAll('[data-client]').forEach(function (b) { b.setAttribute('aria-selected', b === button ? 'true' : 'false'); });
+        card.querySelectorAll('[data-panel]').forEach(function (panel) { panel.hidden = panel.dataset.panel !== button.dataset.client; });
+        return;
+      }
+      if (button.dataset.copyText) { copy(button.dataset.copyText); return; }
+      var action = button.dataset.action;
+      if (action === 'toggle') {
+        if (shown) { shown = false; payload = null; render(); return; }  // hiding forgets the key
+        load().then(function () { shown = true; render(); }, fail);
+        return;
+      }
+      if (action === 'copy-key') { load().then(function (p) { return copy(p.key); }, fail); return; }
+      if (action === 'create') {
+        button.disabled = true;
+        post(card.dataset.createUrl).then(function () { window.location.reload(); }, function (err) { button.disabled = false; fail(err); });
+        return;
+      }
+      if (button.dataset.copy) {
+        var pre = card.querySelector('pre[data-cmd="' + button.dataset.copy + '"]');
+        if (!pre.hasAttribute('data-secret')) { copy(pre.textContent); return; }
+        load().then(function (p) { return copy(p.commands[button.dataset.copy]); }, fail);
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

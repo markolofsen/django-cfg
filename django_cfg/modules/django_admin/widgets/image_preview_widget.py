@@ -1,8 +1,8 @@
 """
-Image preview widget with modal zoom and pan functionality.
+Image upload widget with a preview thumbnail linked to the full file.
 
 Provides interactive image preview with:
-- Click to open in modal
+- Click to open the full image
 - Scroll zoom with mouse wheel
 - Pan/drag image
 - Image info display (dimensions, size, format)
@@ -16,11 +16,11 @@ from django import forms
 
 class ImagePreviewWidget(forms.ClearableFileInput):
     """
-    Image preview widget with modal zoom and pan.
+    Image upload widget with a preview thumbnail.
 
     Features:
     - Thumbnail preview in form
-    - Click to open fullscreen modal
+    - Click opens the full image in a new tab
     - Mouse wheel zoom
     - Drag to pan
     - Image info overlay (dimensions, size, format)
@@ -39,11 +39,6 @@ class ImagePreviewWidget(forms.ClearableFileInput):
     """
 
     template_name = "django_admin/widgets/image_preview.html"
-
-    class Media:
-        css = {
-            'all': ('django_admin/css/image_preview.css',)
-        }
 
     def __init__(
         self,

@@ -1,0 +1,34 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="same-origin">
+<title>{{ current_tab.title }}</title>
+{# The Overview tabs of django_overview are drawn with the admin theme itself (cfg-theme.css), #}
+{# not the dark Tailwind canvas of django_dashboard/base_iframe.html: the same tokens as the page #}
+{# around them, light or dark. The theme is the parent's data-theme, followed live. #}
+<script{% if csp_nonce %} nonce="{{ csp_nonce }}"{% endif %}>
+(function () {
+  var root = document.documentElement, parent = null;
+  try { parent = window.parent !== window ? window.parent.document.documentElement : null; } catch (e) {}
+  function apply() {
+    var theme = parent && parent.dataset.theme;
+    if (!theme) { try { theme = window.localStorage.getItem('theme'); } catch (e) {} }
+    root.dataset.theme = theme || 'dark';
+  }
+  apply();
+  if (parent && window.MutationObserver) {
+    new MutationObserver(apply).observe(parent, { attributes: true, attributeFilter: ['data-theme'] });
+  }
+})();
+</script>
+<link rel="stylesheet" href="{% static 'admin/css/base.css' %}">
+<link rel="stylesheet" href="{% static 'django_cfg/cfg-admin.css' %}">
+<link rel="stylesheet" href="{% static 'django_cfg/cfg-theme.css' %}">
+<link rel="stylesheet" href="{% static 'django_cfg/cfg-overview.css' %}">
+</head>
+<body class="cfg-ov-frame">
+{% block tab_content %}{% endblock %}
+</body>
+</html>

@@ -1,7 +1,5 @@
 """Django MCP Module - Model Context Protocol integration."""
 
-default_app_config = "django_cfg.modules.django_mcp.apps.DjangoMCPConfig"
-
 from .__cfg__ import (
     ALL_TOOLS,
     ANONYMOUS_REMOVED,

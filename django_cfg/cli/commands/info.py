@@ -99,7 +99,7 @@ def info(verbose: bool):
     categories = {
         "🔧 Core Dependencies": ["django", "pydantic", "pydantic-yaml", "click"],
         "🌐 Service Integrations": ["openai", "telegram-bot-api"],
-        "🎨 Admin & UI": ["django-unfold", "django-constance"],
+        "🎨 Admin & UI": ["django-constance"],
         "📊 API & Documentation": ["djangorestframework", "drf-spectacular"],
         "⚡ Background Processing": ["rearq", "redis"],
     }
@@ -141,9 +141,6 @@ def info(verbose: bool):
     click.echo("🚀 Quick Start:")
     click.echo("   # Create a new project")
     click.echo("   django-cfg create-project 'My Awesome Project'")
-    click.echo()
-    click.echo("   # Install optional dependencies")
-    click.echo("   pip install django-unfold")
     click.echo()
     click.echo("📚 Documentation: https://djangocfg.com")
     click.echo("🐙 GitHub: https://github.com/markolofsen/django-cfg")

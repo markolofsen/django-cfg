@@ -14,7 +14,6 @@ from .config_helper import (
     get_rq_config,
     is_prometheus_enabled,
     is_rq_enabled,
-    register_schedules_from_config,
 )
 from .job_service import (
     JobActionResult,
@@ -34,7 +33,6 @@ __all__ = [
     "get_rq_config",
     "is_rq_enabled",
     "is_prometheus_enabled",
-    "register_schedules_from_config",
     # Cancellation
     "request_cancellation",
     "force_stop_job",

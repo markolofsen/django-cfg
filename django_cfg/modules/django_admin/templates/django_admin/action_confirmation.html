@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% load i18n l10n admin_urls %}
+{% comment %}Intermediate page of a bulk action declared with confirm= (ActionConfig.confirmation).{% endcomment %}
+
+{% block extrahead %}{{ block.super }}{{ media }}{% endblock %}
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} cfg-action-confirmation{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+&rsaquo; {{ title }}
+</div>
+{% endblock %}
+
+{% block content %}
+<p>{{ message }}</p>
+<ul>{% for obj in queryset|slice:":20" %}<li>{{ obj }}</li>{% endfor %}{% if queryset|length > 20 %}<li>…</li>{% endif %}</ul>
+<form method="post">{% csrf_token %}
+  <div>
+    {% for obj in queryset %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk|unlocalize }}">{% endfor %}
+    <input type="hidden" name="action" value="{{ action_name }}">
+    <input type="hidden" name="{{ confirm_field }}" value="yes">
+    <input type="submit" value="{% translate 'Yes, I’m sure' %}">
+    <a href="{% url opts|admin_urlname:'changelist' %}" class="button cancel-link">{% translate "No, take me back" %}</a>
+  </div>
+</form>
+{% endblock %}

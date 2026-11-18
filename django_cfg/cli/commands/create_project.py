@@ -301,7 +301,7 @@ def _show_next_steps(target_path: Path, project_name: str) -> None:
         features.add_column("", width=30)
         features.add_column("", width=30)
         features.add_row("🤖 AI-native docs", "🔧 Pydantic v2 config")
-        features.add_row("🎨 Unfold admin UI", "📊 API documentation")
+        features.add_row("🎨 Django admin UI", "📊 API documentation")
         features.add_row("🔐 JWT authentication", "🗃️ Multi-database")
         features.add_row("⚡ Django-RQ tasks", "🐳 Docker ready")
 
@@ -349,7 +349,7 @@ def _show_next_steps_plain(target_path: Path, project_name: str) -> None:
     click.echo("💡 Features included:")
     click.echo("   🤖 AI-native documentation")
     click.echo("   🔧 Type-safe configuration with Pydantic v2")
-    click.echo("   🎨 Modern Unfold admin interface")
+    click.echo("   🎨 Django admin with django-cfg navigation")
     click.echo("   📊 Auto-generated API documentation")
     click.echo("   🔐 JWT authentication system")
     click.echo("   🗃️ Multi-database support")

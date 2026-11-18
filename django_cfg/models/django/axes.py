@@ -102,12 +102,19 @@ class AxesConfig(BaseModel):
     # === Whitelist/Blacklist ===
     allowed_ips: List[str] = Field(
         default_factory=list,
-        description="IP addresses that bypass axes protection (e.g., ['192.168.1.100'])"
+        description=(
+            "IP addresses never locked out, however many failures they make "
+            "(e.g., ['192.168.1.100']). Exact addresses: django-axes compares "
+            "with `in`, so a CIDR range does not match."
+        ),
     )
 
     denied_ips: List[str] = Field(
         default_factory=list,
-        description="IP addresses that are always blocked (e.g., ['10.0.0.2'])"
+        description=(
+            "IP addresses always refused, even with a correct password "
+            "(e.g., ['10.0.0.2']). Exact addresses, as for allowed_ips."
+        ),
     )
 
     # === Advanced Settings ===
@@ -176,11 +183,18 @@ class AxesConfig(BaseModel):
         if self.lockout_url:
             settings['AXES_LOCKOUT_URL'] = self.lockout_url
 
+        # django-axes has no AXES_ALLOWED_IPS / AXES_DENIED_IPS (not in 8 or 9;
+        # unknown settings are ignored, so the lists used to do nothing). The
+        # names it reads (axes/conf.py, axes/helpers.py, 9.0.0): an address in
+        # AXES_IP_WHITELIST is never locked only with AXES_NEVER_LOCKOUT_WHITELIST
+        # (AXES_ONLY_WHITELIST would instead refuse every other address), and
+        # AXES_IP_BLACKLIST is refused before any other check.
         if self.allowed_ips:
-            settings['AXES_ALLOWED_IPS'] = self.allowed_ips
+            settings['AXES_IP_WHITELIST'] = list(self.allowed_ips)
+            settings['AXES_NEVER_LOCKOUT_WHITELIST'] = True
 
         if self.denied_ips:
-            settings['AXES_DENIED_IPS'] = self.denied_ips
+            settings['AXES_IP_BLACKLIST'] = list(self.denied_ips)
 
         return settings
 

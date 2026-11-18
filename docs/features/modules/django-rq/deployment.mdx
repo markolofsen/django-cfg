@@ -86,22 +86,19 @@ graph TB
 **Key Components**
 1. **Django API**: Web server (1+ processes)
 2. **RQ Workers**: Background job processors (1+ per queue)
-3. **RQ Scheduler**: Cron-like scheduler (1 process)
+3. **RQ Cron** (`rqcron`): RQ's native cron scheduler (1 process per project)
 4. **Redis**: Message broker and result backend
 
 </Callout>
 
-<Callout type="error">
-**Critical: RQ Scheduler Queue Configuration**
+<Callout type="info">
+**One `rqcron` per project**
 
-The `rqscheduler` command only processes jobs for **ONE queue** (default: `default`).
-
-If your scheduled tasks use `queue="high"` in `RQScheduleConfig`, you **MUST** run:
-```bash
-python manage.py rqscheduler --queue high
-```
-
-**Best practice:** Put ALL scheduled tasks (`RQScheduleConfig`) on the same queue (recommended: `high`) and run the scheduler with that queue. Workers listen to all queues, so they will execute the jobs regardless of which queue they're on.
+`python manage.py rqcron` registers every `RQScheduleConfig` entry, whatever its
+`queue`, and also moves delayed jobs (`enqueue_in/at`, `Retry(interval=...)`,
+one-off `scheduled_time` entries) for every queue in `RQ_QUEUES`. It takes no
+`--queue` and no config file. A second `rqcron` is only a standby (leader lock
+`djangocfg:rq:cron:leader`). Details: [Scheduler and Workers](./scheduler-and-workers).
 
 </Callout>
 
@@ -176,9 +173,8 @@ services:
           cpus: '0.5'
           memory: 512M
 
-  # RQ Scheduler
-  # IMPORTANT: --queue must match the queue used in RQScheduleConfig (api/config.py)
-  # rqscheduler only processes ONE queue. All scheduled tasks should use the same queue.
+  # RQ Cron: exactly one per project. Runs every RQScheduleConfig entry and
+  # moves delayed jobs for every queue in RQ_QUEUES.
   rq-scheduler:
     image: your-registry/django-app:latest
     container_name: rq-scheduler
@@ -186,10 +182,13 @@ services:
     env_file: .env.prod
     environment:
       DJANGO_SETTINGS_MODULE: api.settings
-    command: python manage.py rqscheduler --queue high
+    command: python manage.py rqcron
     depends_on:
       - redis
       - django
+    healthcheck:
+      test: ["CMD-SHELL", "python manage.py rq_cron_status --queue high --queue default > /dev/null 2>&1"]
+      interval: 60s
     deploy:
       resources:
         limits:
@@ -277,11 +276,10 @@ services:
     volumes:
       - ./:/app
 
-  # IMPORTANT: --queue must match the queue used in RQScheduleConfig
-  # rqscheduler only processes ONE queue
+  # One rqcron per project: all schedules, delayed jobs of every queue
   rq-scheduler:
     build: .
-    command: python manage.py rqscheduler --queue high
+    command: python manage.py rqcron
     env_file: .env.local
     depends_on:
       - redis
@@ -310,9 +308,8 @@ python manage.py runserver
 # Terminal 2: RQ Worker
 python manage.py rqworker default high low knowledge
 
-# Terminal 3: RQ Scheduler (optional)
-# IMPORTANT: --queue must match the queue used in RQScheduleConfig
-python manage.py rqscheduler --queue high
+# Terminal 3: RQ cron (needed for schedules and delayed jobs)
+python manage.py rqcron
 ```
 
 ### Using Makefile
@@ -340,8 +337,7 @@ Create `Procfile`:
 ```procfile filename="Procfile.dev"
 web: python manage.py runserver 0.0.0.0:8000
 worker: python manage.py rqworker default high low knowledge
-# IMPORTANT: --queue must match the queue used in RQScheduleConfig
-scheduler: python manage.py rqscheduler --queue high
+scheduler: python manage.py rqcron
 ```
 
 ```bash
@@ -352,12 +348,10 @@ honcho start -f Procfile.dev
 
 
 <Callout type="info">
-**Hot Reload in Development**
-Workers automatically reload on code changes when using `--with-scheduler` flag:
-
-```bash
-python manage.py rqworker default --with-scheduler
-```
+**Workers do not reload on code changes**
+Restart the worker (and `rqcron`) after editing task code. `--with-scheduler`
+does not reload anything: it only runs RQ's delayed-job scheduler inside the
+worker, which `rqcron` already does for every queue.
 
 </Callout>
 
@@ -449,7 +443,7 @@ kind: Deployment
 metadata:
   name: rq-scheduler
 spec:
-  replicas: 1  # Only 1 scheduler needed
+  replicas: 1  # One rqcron per project; a second would only wait as standby
   selector:
     matchLabels:
       app: rq-scheduler
@@ -461,8 +455,7 @@ spec:
       containers:
       - name: scheduler
         image: your-registry/django-app:latest
-        # IMPORTANT: --queue must match the queue used in RQScheduleConfig
-        command: ["python", "manage.py", "rqscheduler", "--queue", "high"]
+        command: ["python", "manage.py", "rqcron"]
         envFrom:
         - configMapRef:
             name: django-config
@@ -539,7 +532,7 @@ kubectl scale deployment/rq-worker --replicas=8
 
 <Callout type="warning">
 **Scheduler Replicas**
-Always keep `rq-scheduler` replicas at **1** to avoid duplicate scheduled jobs.
+Keep `rq-scheduler` (`rqcron`) replicas at **1**. A second replica enqueues nothing: it waits as standby behind the leader lock `djangocfg:rq:cron:leader` and takes over when the leader stops.
 
 </Callout>
 
@@ -643,8 +636,7 @@ spec:
 ```yaml filename="Procfile"
 web: gunicorn api.wsgi:application --bind 0.0.0.0:$PORT
 worker: python manage.py rqworker default high low knowledge
-# IMPORTANT: --queue must match the queue used in RQScheduleConfig
-scheduler: python manage.py rqscheduler --queue high
+scheduler: python manage.py rqcron
 ```
 
 ```bash
@@ -721,13 +713,12 @@ class ProductionConfig(DjangoConfig):
             RQQueueConfig(queue="low", default_timeout=600),
             RQQueueConfig(queue="knowledge", default_timeout=1800),
         ],
-        # IMPORTANT: All schedules must use the same queue!
-        # rqscheduler only processes ONE queue (specified with --queue flag)
+        # One rqcron runs every schedule, whatever its queue
         schedules=[
             RQScheduleConfig(
                 func="apps.crypto.tasks.update_coin_prices",
                 interval=300,  # Every 5 minutes
-                queue="high",  # Must match rqscheduler --queue
+                queue="high",  # Any queue declared in queues=[...]
             ),
         ],
         show_admin_link=True,
@@ -795,7 +786,11 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'INFO',
         },
-        'rq.scheduler': {
+        'rq.scheduler': {  # delayed jobs moved by rqcron
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'django_cfg.modules.django_rq.cron': {  # rqcron: skips, leader changes
             'handlers': ['console'],
             'level': 'INFO',
         },
@@ -979,25 +974,16 @@ journalctl -u rq-worker -f
 | Jobs failing silently | Exceptions not logged | Check failed registry in admin |
 | High memory usage | Result TTL too long | Reduce `default_result_ttl` in config |
 | Slow job processing | Too few workers | Scale workers horizontally |
-| Scheduler not running | Process crashed | Check logs, restart scheduler |
-| **Scheduled jobs not executing** | **Queue mismatch** | **Ensure `rqscheduler --queue X` matches `RQScheduleConfig(queue="X")`** |
-| **Scheduler hangs on startup** | **Stale locks in Redis** | **Automatic cleanup built-in, or run `python manage.py rq_cleanup_locks`** |
+| Scheduler not running | Process crashed | Check logs, restart `rqcron`; `python manage.py rq_cron_status` reports `cron_dead` |
+| **Scheduled job not registered** | **Queue not in `RQ_QUEUES`, or the function cannot be imported** | **`python manage.py rqcron --list` names it under `not_registered`** |
+| **Scheduled job late** | **Workers busy on long jobs** | **`rq_cron_status` reports `starved` and names the busy workers** |
 
-### Stale Scheduler Locks
+### Leader Lock
 
-If the scheduler container crashes without proper cleanup, stale lock keys (`rq:scheduler_instance:*`) may remain in Redis and prevent new schedulers from starting.
-
-**Django-CFG handles this automatically** - the `rqscheduler` command cleans up stale locks before starting.
-
-For manual cleanup:
-
-```bash
-# Check for stale locks (dry run)
-python manage.py rq_cleanup_locks --dry-run
-
-# Clean up stale locks
-python manage.py rq_cleanup_locks
-```
+`rqcron` holds `djangocfg:rq:cron:leader` (`SET NX`, 30 s TTL, refreshed every loop).
+A crashed leader's lock expires on its own within 30 s and a standby takes over;
+there is no lock to clean up by hand. Run `rq_cron_status` to see the current
+`leader`.
 
 ---
 
