@@ -5,7 +5,7 @@ description: Learn why django cfg in Django-CFG. Step-by-step guide to why djang
 
 # Why Django-CFG?
 
-Django-CFG replaces a hand-written `settings.py` with a typed, validated Pydantic v2 model, and ships the pieces most production Django projects end up building anyway: an Unfold admin, OTP sign-in, multi-database routing, OpenAPI client generation, RQ background jobs, email, Telegram, LLM and MCP modules.
+Django-CFG replaces a hand-written `settings.py` with a typed, validated Pydantic v2 model, and ships the pieces most production Django projects end up building anyway: a themed Django admin, OTP sign-in, multi-database routing, OpenAPI client generation, RQ background jobs, email, Telegram, LLM and MCP modules.
 
 ## The Problem with Traditional Django
 
@@ -63,18 +63,17 @@ You also get IDE autocomplete for every option.
 
 ### Modern admin
 
-Unfold admin with Tailwind, dark mode, a dashboard and `PydanticAdmin` for declarative model admins.
+The stock Django admin with the django-cfg theme (dark by default, Django's own light/dark toggle), sidebar navigation, an Overview with dashboard tabs, and `PydanticAdmin` for declarative model admins.
 
 ```python
-from django_cfg import UnfoldConfig
+from django_cfg import AdminSiteConfig
 
-unfold: UnfoldConfig = UnfoldConfig(
+admin_site: AdminSiteConfig = AdminSiteConfig(
     site_title="My Admin",
-    theme=None,  # None = theme switcher, or "light" / "dark"
 )
 ```
 
-The dashboard lives at `/admin/`; its tabs are server-rendered pages at `/cfg/admin/dashboard/<slug>/`.
+The Overview lives at `/admin/`; its tabs are server-rendered pages at `/cfg/admin/dashboard/<slug>/`.
 
 ### Multi-database routing
 
@@ -184,7 +183,7 @@ mcp_config = mcp.build()  # assign to DjangoConfig.mcp
 | Feature | Traditional Django | Django-CFG |
 |---|---|---|
 | Type safety | runtime errors | Pydantic v2 validation |
-| Admin | default Django admin | Unfold + Tailwind, dashboard |
+| Admin | default Django admin | themed Django admin, Overview |
 | Multi-database | hand-written router | `DatabaseConfig(apps=[...])` |
 | API docs and clients | manual | generated from the schema |
 | User management | basic User model | OTP, profiles, 2FA |

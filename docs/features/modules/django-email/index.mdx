@@ -150,7 +150,7 @@ class MyConfig(DjangoConfig):
     admin_emails = ["ops@example.com", "alerts@example.com"]
 ```
 
-See [Configuration Reference](./configuration) for all `EmailConfig` fields and provider examples.
+See [Configuration Reference](./configuration) for all `EmailConfig` fields and provider examples. On Django 6.1+ the config is emitted as `MAILERS`, on 5.2 as `EMAIL_*`; on 6.1 remove any `EMAIL_BACKEND` from your own settings ([Django 5.2 and 6.1](/configuration/email#django-52-and-61-email_-or-mailers)).
 
 ## Public API
 
@@ -184,14 +184,14 @@ service = DjangoEmailService()
 | `send_with_attachments(subject, recipient_list, attachments, ...)` | Universal attachment method |
 | `send_template_with_tracking(subject, template_name, context, ..., email_log_id)` | Template email with open/click tracking pixels |
 | `is_configured()` | Returns `True` if `email_config.host` is set |
-| `get_backend_info()` | Returns dict with current backend, host, port, TLS settings |
+| `get_backend_info()` | Returns dict with current backend, host, port, TLS settings (read from `MAILERS` or `EMAIL_*`) |
 
 ### Admin Email Resolution
 
 `get_admin_emails()` resolves addresses in priority order:
 
 1. `config.admin_emails` (list on `DjangoConfig`)
-2. Django `ADMINS` setting (list of `(name, email)` tuples)
+2. Django `ADMINS` setting (`(name, email)` pairs, or address strings as on Django 6.0+)
 3. Empty list (no warning sent)
 
 ## Error Handling

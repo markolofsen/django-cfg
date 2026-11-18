@@ -100,7 +100,7 @@ from django_cfg import (
     DatabaseConfig,
     CacheConfig,
     EmailConfig,
-    UnfoldConfig,
+    AdminSiteConfig,
     SpectacularConfig,
     TelegramConfig,
     DjangoRQConfig,
@@ -190,11 +190,9 @@ class MyProductionConfig(DjangoConfig):
     )
 
     # === Admin Interface ===
-    unfold: UnfoldConfig | None = UnfoldConfig(
+    admin_site: AdminSiteConfig | None = AdminSiteConfig(
         site_title=f"{env.app.name} Admin",
         site_header=f"{env.app.name} Administration",
-        dashboard_enabled=True,
-        show_search=True,
     )
 
     # === API Documentation ===

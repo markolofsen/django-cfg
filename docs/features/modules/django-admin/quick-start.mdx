@@ -10,7 +10,7 @@ Get your first declarative admin up and running in 5 minutes.
 
 ## Installation
 
-Django Admin module is included with Django-CFG by default. No additional installation required. It sits on django-unfold, a base dependency pinned `>=0.110,<0.111`; django-cfg adds `unfold` to `INSTALLED_APPS` before `django.contrib.admin` for you. `PydanticAdmin` is the main admin class: it subclasses Unfold's `ModelAdmin`, so plain Unfold options and `@action` / `@display` still work on it.
+Django Admin module is included with Django-CFG by default. No additional installation required. It is the stock Django admin (`django.contrib.admin`) with the django-cfg theme; django-unfold is not used since 2.4.0. `PydanticAdmin` is the main admin class: it subclasses `import_export.admin.ImportExportModelAdmin` over Django's `ModelAdmin`, so plain `ModelAdmin` options and Django's `@admin.action` / `@admin.display` work on it.
 
 
 <Callout type="info">

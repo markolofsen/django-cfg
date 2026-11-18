@@ -34,7 +34,7 @@ Type-safe email service configuration.
 | `default_from_name` | `str \| None` | `None` | Display name shown in the inbox (defaults to the project name) |
 | `reply_to` | `str \| None` | `None` | Address that receives replies, when it differs from the sender |
 | `file_path` | `str` | `"emails/"` | Path for file-based email backend |
-| `timeout` | `int` | `30` | Email send timeout in seconds (≥1) |
+| `timeout` | `int` | `30` | Email send timeout in seconds (1-300) |
 | `gateway_url` | `str \| None` | `None` | Email gateway send endpoint (required for `backend="gateway"`) |
 | `gateway_secret` | `str \| None` | `None` | Shared secret sent to the gateway as a Bearer token (required for `backend="gateway"`) |
 | `subscribe_url` | `str \| None` | `None` | Newsletter subscribe URL for the system-email P.S. footer |
@@ -43,7 +43,56 @@ Type-safe email service configuration.
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `to_django_settings()` | `dict` | Convert to Django email settings |
+| `to_django_settings()` | `dict` | Django email settings: `MAILERS` on Django 6.1+, `EMAIL_*` on 5.2 (see below) |
+| `to_mailer()` | `dict` | One `MAILERS` entry, `{"BACKEND": ..., "OPTIONS": {...}}` |
+| `backend_path()` | `str` | Dotted path of the backend class for `backend` |
+| `backend_options()` | `dict` | The backend's constructor options under Django's `MAILERS` names |
+
+## Django 5.2 and 6.1: `EMAIL_*` or `MAILERS`
+
+Django 6.1 deprecates `EMAIL_BACKEND` and the other `EMAIL_*` connection settings
+(removed in Django 2028) in favour of `MAILERS`, and refuses both at once. `EmailConfig`
+emits what the running Django expects:
+
+| Django | Generated settings |
+|--------|--------------------|
+| 5.2 | `EMAIL_BACKEND`, `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, ... (and `EMAIL_GATEWAY_URL` / `EMAIL_GATEWAY_SECRET` for the gateway) |
+| 6.1+ | `MAILERS = {"default": EmailConfig.to_mailer()}` |
+
+Both lines also get `DEFAULT_FROM_EMAIL` (when `default_from` is set) and
+`EMAIL_SUBSCRIBE_URL` (when `subscribe_url` is set); those are not connection settings.
+
+`MAILERS["default"]["OPTIONS"]` uses Django's names: `host`, `port`, `username`,
+`password`, `use_tls`, `use_ssl`, `timeout` for `smtp`; `file_path` for `file`;
+`gateway_url`, `gateway_secret`, `timeout` for `gateway`. `console`, `memory` and `dummy`
+have no options.
+
+**On Django 6.1, remove every `EMAIL_BACKEND = ...` (and other `EMAIL_*` connection
+setting) from your own settings, test settings included.** Django refuses it next to
+`MAILERS`. Tests need no override: Django's test runner already swaps every mailer for
+the locmem backend.
+
+To compose your own `MAILERS` (a second alias, a backend that wraps another), build the
+entries from the same `EmailConfig`. The suppression gate takes its transport from another
+alias with the `inner_mailer` option:
+
+```python
+MAILERS = {
+    "default": {
+        "BACKEND": "django_cfg.core.backends.suppression.SuppressionGateBackend",
+        "OPTIONS": {"inner_mailer": "transport"},  # required under MAILERS
+    },
+    "transport": EmailConfig(backend="gateway", gateway_url=..., gateway_secret=...).to_mailer(),
+}
+```
+
+On Django 5.2 the same gate is `EMAIL_BACKEND = "django_cfg.core.backends.suppression.SuppressionGateBackend"`
+with `EMAIL_GATE_INNER_BACKEND` naming the transport class.
+
+To read the configured mailer on either line, use `django_cfg.core.backends.mailers`:
+`default_mailer_config()` (`{"BACKEND", "OPTIONS"}` in one shape), `default_backend_path()`,
+`default_connection()` and `HAS_MAILERS`. Under `MAILERS`, `settings.EMAIL_BACKEND` raises,
+and `getattr(settings, "EMAIL_BACKEND", "")` quietly returns `""`.
 
 ### Backend Comparison
 
@@ -75,7 +124,11 @@ class MyConfig(DjangoConfig):
 
 **Generated Django settings:**
 ```python
+# Django 5.2
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Django 6.1+
+MAILERS = {'default': {'BACKEND': 'django.core.mail.backends.console.EmailBackend'}}
 ```
 
 **Usage:**
@@ -128,6 +181,7 @@ class MyConfig(DjangoConfig):
 
 **Generated Django settings:**
 ```python
+# Django 5.2
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
@@ -137,6 +191,23 @@ EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 DEFAULT_FROM_EMAIL = 'noreply@myapp.com'
 EMAIL_TIMEOUT = 30
+
+# Django 6.1+
+MAILERS = {
+    'default': {
+        'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+        'OPTIONS': {
+            'host': 'smtp.gmail.com',
+            'port': 587,
+            'use_tls': True,
+            'use_ssl': False,
+            'timeout': 30,
+            'username': 'your-email@gmail.com',
+            'password': 'your-app-password',
+        },
+    },
+}
+DEFAULT_FROM_EMAIL = 'noreply@myapp.com'
 ```
 
 
@@ -167,10 +238,24 @@ class MyConfig(DjangoConfig):
 
 **Generated Django settings:**
 ```python
+# Django 5.2
 EMAIL_BACKEND = 'django_cfg.core.backends.gateway.GatewayEmailBackend'
 EMAIL_GATEWAY_URL = 'https://email-api.example.com/send'
 EMAIL_GATEWAY_SECRET = 'your-shared-secret'
 EMAIL_TIMEOUT = 30
+DEFAULT_FROM_EMAIL = 'noreply@myapp.com'
+
+# Django 6.1+ (no EMAIL_GATEWAY_*)
+MAILERS = {
+    'default': {
+        'BACKEND': 'django_cfg.core.backends.gateway.GatewayEmailBackend',
+        'OPTIONS': {
+            'gateway_url': 'https://email-api.example.com/send',
+            'gateway_secret': 'your-shared-secret',
+            'timeout': 30,
+        },
+    },
+}
 DEFAULT_FROM_EMAIL = 'noreply@myapp.com'
 ```
 
@@ -486,18 +571,20 @@ send_mail(
 
 ```python
 # tests/test_email.py
-from django.core.mail import send_mail
-from django.test import TestCase, override_settings
+from django.core import mail
+from django.test import TestCase
 
 class EmailTestCase(TestCase):
-    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_send_email(self):
-        send_mail('Subject', 'Body', 'from@example.com', ['to@example.com'])
+        mail.send_mail('Subject', 'Body', 'from@example.com', ['to@example.com'])
 
-        from django.core.mail import outbox
-        self.assertEqual(len(outbox), 1)
-        self.assertEqual(outbox[0].subject, 'Subject')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, 'Subject')
 ```
+
+Django's test runner sends through the locmem backend on both lines (it swaps
+`EMAIL_BACKEND` on 5.2 and every `MAILERS` alias on 6.1), so no override is needed. Do not
+add `@override_settings(EMAIL_BACKEND=...)`: on Django 6.1 it conflicts with `MAILERS`.
 
 ## Security Best Practices
 
@@ -720,7 +807,7 @@ EmailConfig validates:
 
 - **Backend** - Must be one of: `smtp`, `console`, `file`, `memory`, `dummy`, `gateway`
 - **Port** - Must be 1-65535
-- **Timeout** - Must be ≥ 1 second
+- **Timeout** - Must be 1-300 seconds
 - **Gateway credentials** - `backend="gateway"` requires both `gateway_url` and `gateway_secret`
 
 **Example validation error:**

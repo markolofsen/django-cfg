@@ -223,20 +223,20 @@ Enable Django-CFG features one by one:
 
 ```python
 # config.py - Add features gradually
-from django_cfg import DjangoConfig, UnfoldConfig, SpectacularConfig, TelegramConfig, DjangoRQConfig
+from django_cfg import AdminSiteConfig, DjangoConfig, DjangoRQConfig, RQQueueConfig, SpectacularConfig, TelegramConfig
 
 class MyConfig(DjangoConfig):
     # ... existing settings ...
 
-    # Week 1: Enable beautiful admin
-    unfold: UnfoldConfig | None = UnfoldConfig()
+    # Week 1: Brand the admin (it is themed and has the Overview without this)
+    admin_site: AdminSiteConfig | None = AdminSiteConfig(site_title="My Admin")
 
     # Week 2: Enable API documentation
     spectacular: SpectacularConfig | None = SpectacularConfig()
 
     # Week 3: Add integrations, each one a config object
     telegram: TelegramConfig | None = TelegramConfig(bot_token="...", chat_id=123456)
-    django_rq: DjangoRQConfig | None = DjangoRQConfig(queues=["default"])
+    django_rq: DjangoRQConfig | None = DjangoRQConfig(queues=[RQQueueConfig(queue="default")])
 
     # Accounts, OTP sign-in, mailer and health are always installed
 ```
@@ -324,7 +324,7 @@ Create a migration plan based on your comparison:
 - [ ] Test basic functionality
 
 ## Phase 2: Admin Interface (Week 2)
-- [ ] Enable Unfold admin
+- [ ] Set `admin_site` branding and navigation
 - [ ] Customize admin interface
 - [ ] Train team on new admin
 
@@ -570,7 +570,7 @@ After migration, you'll have:
 |---------|--------|-------|
 | **Configuration** | 500+ line settings.py | Type-safe config.py |
 | **Type Safety** | None | 100% validated |
-| **Admin Interface** | Basic Django admin | Modern Unfold admin |
+| **Admin Interface** | Basic Django admin | Themed Django admin with Overview |
 | **API Docs** | Manual setup | Auto-generated |
 | **User Management** | Basic User model | OTP auth + profiles |
 | **Background Tasks** | Manual Celery setup | Built-in Django-RQ |

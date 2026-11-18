@@ -1,0 +1,66 @@
+---
+title: "Release v2.4.0 and v2.4.1"
+description: "Stock Django admin with cfg-theme (Unfold removed, renames without aliases), POST admin actions, Django 6.1 with MAILERS, rqcron replaces rq-scheduler, get_logger removed, browser errors stored by default."
+---
+
+# Release v2.4.0 and v2.4.1
+
+**Released:** November 18, 2026 (both). 2.4.1 fixes the `rqcron` healthcheck and stores browser errors.
+
+Full notes: `projects/django-cfg/CHANGELOG.md`, sections `[2.4.0]` and `[2.4.1]`. This page lists what a project has to change.
+
+## Django 6.1
+
+django-cfg pins `django>=5.2.14,<6.2`: Django 5.2 LTS, 6.0 and 6.1. On Django 6.1 `EmailConfig` emits `MAILERS` and no `EMAIL_BACKEND`; Django refuses `EMAIL_BACKEND` next to `MAILERS`, so remove any `EMAIL_BACKEND = ...` from your own settings and test settings. On 5.2 the `EMAIL_*` settings are unchanged. See [Email](/configuration/email).
+
+## Admin: stock Django admin, no Unfold
+
+django-unfold is no longer a dependency. The admin is the stock Django admin with django-cfg navigation, branding and `cfg-theme.css` (shadcn/ui "neutral" tokens, dark by default, Django's own light/auto toggle). `PydanticAdmin` / `AdminConfig` keep their contract.
+
+The Unfold-named API is renamed with no aliases; an old name fails at start:
+
+| Before | After |
+| --- | --- |
+| `UnfoldConfig` | `AdminSiteConfig` |
+| `UnfoldSidebar` | `AdminSidebar` |
+| `DjangoConfig.unfold` | `DjangoConfig.admin_site` |
+| `settings.UNFOLD` | `settings.CFG_ADMIN_SITE` |
+| `django_cfg.modules.django_unfold.*` | `django_cfg.modules.admin_site.*` |
+| `theme=`, `show_search=` and the other Unfold-only arguments | delete them |
+
+Full table: [Admin Site](/features/modules/admin-site#migrating-from-unfold-240).
+
+**Overview.** `/admin/` is `admin/cfg_overview.html`, set as `CfgAdminSite.index_template`; `/admin/<app_label>/` is the stock app page. New built-in tabs: **MCP** (connect commands and the admin's own credential) and **Modules** (on / off / error per module). See [Admin Overview](/features/modules/django-mcp/admin-overview).
+
+**Actions.** `actions_list` / `actions_detail` buttons are POST forms with the CSRF token; a GET answers 405. An action that is a page with its own form must say `@action(method="get")` (or `ActionConfig(method="get")`), or its button posts an empty form. A bulk action with confirmation runs on the second POST with `post=yes`, as Django's `delete_selected`. See [Django Admin](/features/modules/django-admin/configuration#actions).
+
+## RQ: rqcron replaces rq-scheduler
+
+`rq-scheduler`, `manage.py rqscheduler`, `rq_scheduler_status` and `rq_cleanup_locks` are removed. Run exactly one `python manage.py rqcron` per project (no `--queue`: one process serves every queue and also moves delayed jobs). `RQScheduleConfig` keeps every field. Requires `django-rq>=4.2.0` (run `migrate`: the admin permission is now `django_rq.admin`) and `rq>=3.0.0`.
+
+Container healthcheck (2.4.1): read the age of the alive file `rqcron` touches every loop, no Django boot. The command is `django_cfg.modules.django_rq.cron.HEALTHCHECK_CMD`:
+
+```yaml
+healthcheck:
+  test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(time.time() - os.stat(os.environ.get('RQCRON_ALIVE_FILE', '/tmp/rqcron.alive')).st_mtime > 90)"]
+```
+
+`python manage.py rq_cron_status` stays for diagnosis (`cron_dead` vs `starved`); it boots Django, so it is not the healthcheck. See [Scheduler and Workers](/features/modules/django-rq/scheduler-and-workers).
+
+## Logging
+
+`get_logger`, `DjangoLogger` and `DjangoCfgLogger` are removed with no alias. Replace `get_logger(name)` with `logging.getLogger(name)`. Logs go to stdout unless a log directory is set. See [Django Logging](/features/modules/django-logging).
+
+## Browser errors are stored (2.4.1)
+
+Errors sent by `@djangocfg/devtools` to `POST /cfg/monitor/ingest/` are now stored, one row per signature, with a read-only admin page and MCP tools. **Run `migrate`** (new app `django_cfg_frontend_errors`). Opt out with `frontend_errors = FrontendErrorsConfig(enabled=False)`. See [Frontend Errors](/features/modules/django-frontend-errors).
+
+## Upgrade checklist
+
+1. Rename `UnfoldConfig` / `UnfoldSidebar` / `unfold=` to `AdminSiteConfig` / `AdminSidebar` / `admin_site=`; delete `theme=`, `show_search=` and other Unfold-only arguments.
+2. Remove `from unfold...` imports and Unfold-only admin attributes (a `DroppedUnfoldAttributeWarning` names each one).
+3. Add `method="get"` to button actions that render a form page.
+4. On Django 6.1, remove `EMAIL_BACKEND` from your settings and test settings.
+5. Replace each `rqscheduler` service with one `rqcron` service and the alive-file healthcheck; drop `rq-scheduler` from your dependencies.
+6. Replace `get_logger` with `logging.getLogger`.
+7. Run `migrate`.

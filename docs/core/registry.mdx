@@ -55,7 +55,7 @@ models or read `REST_FRAMEWORK`, which fails before `django.setup()`.
 | Django models | `EnvironmentConfig`, `AxesConfig`, `DjangoRQConfig`, `RQQueueConfig`, `RQScheduleConfig`, `CurrencyConfig`, `PaymentsConfig`, `GeoConfig`, `StorageConfig`, `S3StorageConfig`, `ConstanceConfig`, `OpenAPIClientConfig`, `Site`, `SiteConfig` and others |
 | Services | `EmailConfig`, `TelegramConfig`, `NotionConfig`, `DjangoEmailService`, `send_email`, `DjangoTelegram`, `send_telegram_message`, `send_telegram_photo` |
 | Admin | `AdminConfig`, `FieldConfig`, `FieldsetConfig`, `ActionConfig`, `WidgetRegistry`, `Icons`, `IconCategories` |
-| Unfold (needs `django-unfold`) | `UnfoldConfig`, `UnfoldTheme`, `UnfoldColors`, `UnfoldSidebar`, `NavigationItem`, `NavigationSection`, `SiteDropdownItem` |
+| Admin site | `AdminSiteConfig`, `AdminSidebar`, `NavigationItem`, `NavigationSection`, `NavigationItemType`, `SiteDropdownItem` |
 | MCP | `DjangoMCPModuleConfig`, `MCPConfigBuilder`, `MCPProfile` and the `MCP_*` helpers |
 | Testing | `SmartTestRunner`, `FastTestRunner` |
 
@@ -85,13 +85,13 @@ from django_cfg import *                              # avoid: pulls the whole f
 
 ### Optional dependencies
 
-Unfold and MCP names are `None` when their optional dependency is missing:
+MCP names are `None` when the MCP optional dependency is missing:
 
 ```python
-from django_cfg import UnfoldConfig
+from django_cfg import DjangoMCPModuleConfig
 
-if UnfoldConfig is None:
-    ...  # django-unfold is not installed
+if DjangoMCPModuleConfig is None:
+    ...  # the MCP dependency is not installed
 ```
 
 ### Import modules by their own path when a name is not in the facade

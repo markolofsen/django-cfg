@@ -1,6 +1,6 @@
 ---
 title: Startup & Validation
-description: Django-CFG startup hooks and system checks (DRF patches, media types, type stubs, Constance admin, admin_access and site warnings) plus the startup banner.
+description: Django-CFG startup hooks and system checks (DRF patches, media types, type stubs, admin_access and site warnings) plus the startup banner.
 ---
 
 # Startup & Validation
@@ -28,13 +28,6 @@ See [./middleware](./middleware) for full details on the JWT authentication clas
 It writes `typings/rest_framework/serializers.pyi` and patches `pyrightconfig.json` so that Pyright narrows `serializer.validated_data` to `dict[str, Any]` after `is_valid(raise_exception=True)` is called. This eliminates a common Pyright false-positive in DRF views.
 
 The hook is a no-op in production and silently swallows all exceptions to avoid breaking the server start.
-
-### Constance Admin Registration (`constance.py`)
-
-`register_constance_admin()` registers the Constance `Config` model in the Django admin using an `Unfold`-styled `ModelAdmin` when both `django-constance` and `django-unfold` are installed.
-
-- No-op if `CONSTANCE_CONFIG` is empty or either package is missing.
-- Ensures the Constance settings page respects the Unfold admin theme without requiring manual `admin.py` configuration in the project.
 
 ### Media Types (`mime_types.py`)
 

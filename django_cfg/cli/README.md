@@ -55,11 +55,11 @@ Downloads the latest django-cfg template from GitHub (https://github.com/markolo
 - ✅ OTP authentication (Email-based)
 - ✅ TOTP 2FA support (Authenticator apps)
 - ✅ Telegram bot integration
-- ✅ Modern Unfold admin interface
+- ✅ Stock Django admin with the django-cfg theme
 - ✅ Auto-generated API documentation
 - ✅ JWT authentication system
 - ✅ Multi-database support with routing
-- ✅ Background task processing with Dramatiq
+- ✅ Background task processing with RQ
 - ✅ Docker deployment ready
 
 ## 📋 Commands

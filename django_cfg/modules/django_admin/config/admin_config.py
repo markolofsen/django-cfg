@@ -86,7 +86,7 @@ class AdminConfig(BaseModel):
     )
     show_facets: bool = Field(
         False,
-        description="Show result counts next to filter options (Django 5.0+, requires SHOW_FACETS=ShowFacets.ALLOW in settings)",
+        description="Always show result counts next to filter options (ShowFacets.ALWAYS); False keeps Django's default (counts behind the 'Show counts' toggle)",
     )
 
     # Ordering

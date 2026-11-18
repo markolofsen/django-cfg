@@ -1,0 +1,33 @@
+---
+title: Admin Site Updates
+description: What changed in the django-cfg admin site — Unfold removed in 2.4.0, the stock Django admin with cfg-theme, and the November 2026 slim-down.
+---
+
+# What's New in the Admin Site
+
+## 2.4.0 (2026-11-18): stock Django admin, no Unfold
+
+- **django-unfold removed.** The admin is the stock Django admin (5.2 and 6.1) with django-cfg navigation and branding. `PydanticAdmin` / `AdminConfig` keep their contract.
+- **Renames, no aliases.** `UnfoldConfig` is `AdminSiteConfig`, `UnfoldSidebar` is `AdminSidebar`, `DjangoConfig.unfold` is `DjangoConfig.admin_site`, `settings.UNFOLD` is `settings.CFG_ADMIN_SITE`, `modules/django_unfold` is `modules/admin_site`. `theme=`, `show_search=` and the other Unfold-only arguments are gone. Full table: [Migrating from Unfold](/features/modules/admin-site#migrating-from-unfold-240).
+- **Theme.** `cfg-theme.css` puts shadcn/ui "neutral" tokens on the stock admin; dark by default, light and auto through Django's own toggle.
+- **Overview.** `/admin/` is `admin/cfg_overview.html` (`index_template`), with the new MCP and Modules tabs; `/admin/<app_label>/` is the stock app page again.
+- **Actions.** `actions_list` / `actions_detail` buttons are POST forms with the CSRF token, and a GET answers 405. An action that is a page with its own form needs `@action(method="get")`. A bulk action with confirmation runs on the second POST with `post=yes`, as Django's `delete_selected`.
+
+## 2.3.x (November 2026): admin slim-down
+
+Before 2.4.0 django-unfold was the admin base (pinned `django-unfold>=0.110,<0.111`). `PydanticAdmin` / `AdminConfig` stay the main admin classes. What changed around them:
+
+- **Dashboard REST API removed.** The Next.js dashboard and its API at `/cfg/dashboard/api/` (`statistics`, `health`, `charts`, `commands`) are gone; nothing was found calling them. The HTML dashboard tabs at `/cfg/admin/dashboard/<slug>/` remain: see [Dashboard](/features/modules/django-dashboard).
+- **`SystemMonitor` removed** from the admin module.
+- **Icons import.** `Icons` is public as `from django_cfg import Icons` (the files live in `django_cfg/icons`). `from django_cfg.modules.django_admin import Icons` no longer works.
+- **Flash messages work.** `templates/admin/base_site.html` extends `admin/base.html`, which carries the messages block, so `self.message_user(...)` and `messages.*` appear once after a redirect.
+- **One `TimezoneMiddleware`.** It was listed twice in the generated `MIDDLEWARE`; it is now listed once.
+- **`sqlite:////abs/path`** in a database URL is an absolute path; `sqlite:///rel/path` is relative.
+- **`/favicon.ico`** is served by django-cfg (a small SVG) after the project's own routes, so a project route wins.
+- **Constance** no longer imports Unfold unconditionally: without Unfold it falls back to plain fields.
+- The System dashboard tab counts tables through Django's introspection, so it works on any database backend.
+
+## Related
+
+- [Admin Site](/features/modules/admin-site): field reference, navigation, theme.
+- [Django Admin](/features/modules/django-admin): `PydanticAdmin` and `AdminConfig`.

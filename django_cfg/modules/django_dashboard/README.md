@@ -167,6 +167,22 @@ Built-in base templates:
 
 Your templates should `{% extends dashboard_base %}` (the variable picks `base.html` or `base_iframe.html`) and fill `{% block tab_content %}`.
 
+### Colours: use the theme tokens
+
+A tab follows the admin theme, light or dark (`cfg-theme.css`; the iframe copies the parent's
+`data-theme` and follows the toggle live; opened standalone with nothing stored it is dark). The
+canvas is `var(--cfg-background)`, so a tab that hard-codes dark colours shows white text on white
+in the light theme. Draw with the tokens instead:
+
+- Tailwind classes (defined in `django_dashboard/_tailwind.html`): `bg-background`, `bg-card`,
+  `bg-subtle`, `bg-accent`, `text-foreground`, `text-muted-foreground`, `border-border`
+  (plain `border` uses it too), `divide-border`, `text-link`, `ring`/`input`, and per status
+  (`success`, `warning`, `info`, `danger`): `text-success`, `bg-success-fill`,
+  `bg-success-tint`, `border-success-line`. No `/opacity` modifier on these.
+- Plain CSS: `var(--cfg-background)`, `var(--cfg-card)`, `var(--cfg-foreground)`,
+  `var(--cfg-muted-foreground)`, `var(--cfg-border)`, `var(--cfg-success-fg)` ... (`cfg-theme.css`).
+- `dark:` variants still work (the `dark` class follows the theme) for a hue with no token.
+
 ---
 
 ## Custom CSS (Tailwind)

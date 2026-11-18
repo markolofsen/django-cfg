@@ -19,7 +19,7 @@ Django-CFG is a configuration framework for Django that replaces traditional set
 
 - **Startup validation:** configuration errors fail before Django loads, not in production
 - **Self-documenting config:** type hints and field descriptions show up in the IDE
-- **Sensible built-ins:** accounts (OTP sign-in), the Unfold admin, health endpoints and the client generator are installed by default; Redis cache, RQ, payments, MCP and others are config sections you switch on
+- **Sensible built-ins:** accounts (OTP sign-in), the Django admin with the django-cfg theme and navigation, health endpoints and the client generator are installed by default; Redis cache, RQ, payments, MCP and others are config sections you switch on
 - **Environment-aware:** development, production and test modes via `env_mode`
 - **Built-in practices:** security domains drive `ALLOWED_HOSTS`, CORS and CSRF; smart logging with request ids
 
@@ -611,7 +611,7 @@ class MyConfig(DjangoConfig):
 
 ### Integrations
 
-- **Unfold:** Modern admin interface (replaces default Django admin)
+- **Admin site:** the stock Django admin with django-cfg navigation, branding and a dark-by-default theme (`admin_site=AdminSiteConfig(...)`)
 - **Django-CFG API Client Generation:** API zones with automatic OpenAPI documentation
 - **Django-RQ:** Background task processing (`django_rq=DjangoRQConfig(...)`)
 - **Telegram:** Bot integration for notifications

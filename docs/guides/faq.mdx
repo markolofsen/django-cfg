@@ -52,7 +52,7 @@ python -c "import django_cfg; print(django_cfg.__version__)"
 
 ### Which Django and Python versions are supported?
 
-Django 5.2 (`>=5.2.14,<6.0`) and Python 3.12 or 3.13. Django is not a base dependency of django-cfg; install it alongside.
+Django 5.2 LTS, 6.0 and 6.1 (`>=5.2.14,<6.2`) and Python 3.12 or 3.13. Django is a base dependency of django-cfg, so `pip install django-cfg` installs a supported version. On Django 6.1, email is emitted as `MAILERS`: see [Email](/configuration/email).
 
 ---
 
@@ -663,7 +663,7 @@ Open an issue or a discussion on GitHub.
 **Yes!** Django-CFG is actively developed:
 
 - Frequent releases (see [Updates](/updates))
-- Django 5.2 and Python 3.12 / 3.13 supported
+- Django 5.2, 6.0 and 6.1, Python 3.12 / 3.13 supported
 
 **Roadmap**: [GitHub Projects](https://github.com/markolofsen/django-cfg/issues)
 

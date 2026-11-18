@@ -78,12 +78,12 @@ Coordinates all specialized generators.
 4. **Database Settings** - DATABASES
 5. **Cache Settings** - CACHES
 6. **Security Settings** - ALLOWED_HOSTS, CORS, SSL
-7. **Email Settings** - EMAIL_BACKEND
+7. **Email Settings** - `EMAIL_*` on Django 5.2, `MAILERS` on 6.1
 8. **Logging Settings** - LOGGING
 9. **I18n Settings** - LANGUAGE_CODE, TIME_ZONE
 10. **Limits Settings** - Upload limits
 11. **Session Settings** - SESSION_ENGINE
-12. **Third-Party Settings** - Unfold, Constance, etc.
+12. **Third-Party Settings** - admin site (`CFG_ADMIN_SITE`), Constance, Telegram
 13. **API Settings** - DRF, Spectacular, JWT
 14. **Tasks Settings** - Django-RQ
 
@@ -300,7 +300,7 @@ Generates email configuration.
 
 **Location:** `django_cfg.core.generation.utility_generators.email`
 
-**Generates:**
+**Generates** (Django 5.2; on Django 6.1 the same values go into `MAILERS["default"]` and no `EMAIL_BACKEND` is emitted, see [Email](/configuration/email)):
 - `EMAIL_BACKEND` - Email backend class
 - `EMAIL_HOST` - SMTP server
 - `EMAIL_PORT` - SMTP port
@@ -368,8 +368,8 @@ Generates third-party package settings.
 
 **Generates:**
 - `CONSTANCE_*` - django-constance settings
-- `UNFOLD` - Unfold admin configuration
-- `IMPORT_EXPORT_*` - django-import-export settings
+- `CFG_ADMIN_SITE` - admin site branding and navigation (from `AdminSiteConfig`)
+- Telegram bot settings
 
 #### APIFrameworksGenerator
 

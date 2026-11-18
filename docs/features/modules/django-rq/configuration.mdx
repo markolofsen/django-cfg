@@ -756,7 +756,7 @@ django-rq v4 ships with `COMMIT_MODE = "on_db_commit"` as its own default. djang
 
 ### API Token Authentication
 
-Secure API endpoints with token:
+`api_token` becomes django-rq's `RQ_API_TOKEN`, the token of django-rq's own statistics JSON endpoint:
 
 ```python
 django_rq: DjangoRQConfig = DjangoRQConfig(
@@ -765,9 +765,6 @@ django_rq: DjangoRQConfig = DjangoRQConfig(
     api_token="your-secret-token-here",
 )
 
-# Access API with token
-# GET /api/cfg/rq/monitor/health/
-# Header: Authorization: Token your-secret-token-here
 ```
 
 ### Custom Queue Defaults

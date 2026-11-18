@@ -129,7 +129,7 @@ send_telegram_message("Deploy finished", chat_id="123456789")
 - `django_telegram` - Telegram (`DjangoTelegram`, `send_telegram_message`, `send_telegram_photo`)
 - `django_logging` - the generated `LOGGING` dict, smart collapsing handler, log pruning
 - `django_rq` - Django-RQ integration
-- `django_admin`, `django_unfold` - the Unfold admin and `PydanticAdmin`
+- `django_admin`, `admin_site` - `PydanticAdmin` and the admin site (stock Django admin, navigation, theme)
 - `django_llm`, `django_mcp`, `django_notion`, `django_currency`, `django_health`, `django_import_export`, `django_generator`, `django_monitor`, `django_sitemap`, `django_cleanup`, `django_migrator`, `django_tailwind`, `django_drf_theme`, `django_dashboard`
 
 ### 6. Management commands (`django_cfg/management/commands/`)
@@ -221,7 +221,7 @@ from .config import config
 globals().update(config.get_all_settings())
 ```
 
-The generated dict contains `INSTALLED_APPS` (Unfold first, then Django, then django-cfg apps),
+The generated dict contains `INSTALLED_APPS` (WhiteNoise and import-export, the django-cfg admin app `CfgAdminConfig` in place of `django.contrib.admin`, then Django, third-party and django-cfg apps),
 `DATABASES`, `MIDDLEWARE`, `TEMPLATES`, `CACHES`, `LOGGING`, `REST_FRAMEWORK` and the security settings.
 See [Django Integration](./django-integration).
 

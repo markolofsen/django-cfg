@@ -1,26 +1,24 @@
 ---
 title: Import/Export
-description: Seamless django-import-export integration with Unfold admin styling, providing admin classes, forms, and resources through the Django-CFG registry.
+description: django-import-export through the Django-CFG registry - admin classes, forms and resources, with the stock templates and forms.
 ---
 
 # Import/Export
 
-The `django_import_export` module integrates [django-import-export](https://django-import-export.readthedocs.io/) into Django-CFG, re-exporting its components through the Django-CFG registry and automatically applying Unfold admin styling via custom templates and form classes.
+The `django_import_export` module integrates [django-import-export](https://django-import-export.readthedocs.io/) into Django-CFG, re-exporting its components through the Django-CFG registry. The templates and forms are the ones django-import-export ships; the django-cfg admin theme styles them.
 
 ## What It Provides
 
 - **Registry integration** — import admin classes, forms, and resources from `django_cfg` directly
-- **Unfold styling** — import/export buttons and forms use Unfold-compatible form classes and templates automatically
-- **Zero overhead** — thin wrappers around the original library; no behavioural changes
+- **Stock templates and forms** — as django-import-export ships them; the admin theme (`cfg-theme.css`) styles its rows
+- **Zero overhead** — direct re-exports of the original library; no behavioural changes
 - **Full compatibility** — 100% compatible with upstream `django-import-export`
 
 ## Installation
 
-```bash
-pip install django-import-export
-```
+`django-import-export` is a base dependency of django-cfg (`>=4.3.0,<5.0`) and `import_export` is in the generated `INSTALLED_APPS`. No additional configuration is required.
 
-The module is included in Django-CFG and activated automatically when `django-import-export` is installed. No additional configuration is required.
+`PydanticAdmin` is already built on `ImportExportModelAdmin`, so a `PydanticAdmin` gets import/export with `AdminConfig(import_export_enabled=True)`: the resource is generated from the config, or pass `resource_class`.
 
 ## Quick Start
 
@@ -69,19 +67,15 @@ from django_cfg import (
 | `ExportMixin` | `import_export.admin.ExportMixin` | Mixin for export-only admin |
 | `ImportMixin` | `import_export.admin.ImportMixin` | Mixin for import-only admin |
 
-Each class applies the correct Unfold-styled template and form class automatically:
-
-- `ImportExportModelAdmin` and `ImportExportMixin` use `change_list_import_export.html`
-- `ExportMixin` uses `change_list_export.html`
-- `ImportMixin` uses `change_list_import.html`
+The classes are the upstream ones, with their own changelist templates and form classes.
 
 ### Forms
 
 | Form | Description |
 | --- | --- |
-| `ImportForm` | Standard import form, Unfold styled |
-| `ExportForm` | Standard export form, Unfold styled |
-| `SelectableFieldsExportForm` | Export form with field selection, Unfold styled |
+| `ImportForm` | `import_export.forms.ImportForm` |
+| `ExportForm` | `import_export.forms.ExportForm` |
+| `SelectableFieldsExportForm` | `import_export.forms.SelectableFieldsExportForm`, export with field selection |
 
 ### Resources
 
@@ -188,23 +182,15 @@ class ProductResource(BaseResource):
         return f"{product.price:.2f}"
 ```
 
-## Custom Templates
+## Templates
 
-The module ships custom admin templates located in `templates/admin/import_export/` that integrate with the Unfold design system:
-
-| Template | Used when |
-| --- | --- |
-| `change_list_import_export.html` | Both import and export enabled |
-| `change_list_import.html` | Import-only |
-| `change_list_export.html` | Export-only |
-| `change_list_import_item.html` | Import button component |
-| `change_list_export_item.html` | Export button component |
-
-Import/export buttons render as round icon buttons matching the Unfold admin style, positioned next to the standard "Add" button.
+django-cfg ships no import/export templates. The changelist, import and export pages are the
+ones in `import_export/templates/admin/import_export/`; to change one, override it in your
+project's `templates/admin/import_export/` as with any Django admin template.
 
 ## Changelist Context
 
-`ImportExportMixin` and `ImportExportModelAdmin` inject permission flags into the changelist template context:
+With `import_export_enabled=True`, `PydanticAdmin` adds the permission flags to the changelist template context:
 
 ```python
 extra_context['has_import_permission'] = self.has_import_permission(request)
@@ -221,7 +207,7 @@ The module exists to provide a single consistent import path. The underlying lib
 # Instead of:
 from import_export.admin import ImportExportModelAdmin
 from import_export.resources import ModelResource
-from unfold.contrib.import_export.forms import ImportForm, ExportForm
+from import_export.forms import ImportForm, ExportForm
 
 # Use:
 from django_cfg import ImportExportModelAdmin, BaseResource, ImportForm, ExportForm
@@ -231,5 +217,5 @@ from django_cfg import ImportExportModelAdmin, BaseResource, ImportForm, ExportF
 
 For complete resource, field, and widget documentation, see the official [django-import-export documentation](https://django-import-export.readthedocs.io/).
 
-TAGS: import-export, admin, data-management, csv, xlsx, unfold
-DEPENDS_ON: [django-admin, django-unfold]
+TAGS: import-export, admin, data-management, csv, xlsx
+DEPENDS_ON: [django-admin]

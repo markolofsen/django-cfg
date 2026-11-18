@@ -1,0 +1,177 @@
+---
+title: Admin Site
+description: The django-cfg admin site — the stock Django admin with typed branding, sidebar navigation, header links, dev login autofill and the cfg-theme stylesheet (dark by default). Configured with AdminSiteConfig.
+---
+
+# Admin Site
+
+Since 2.4.0 the django-cfg admin is the **stock Django admin** (5.2 and 6.1). django-cfg adds branding, a sidebar built from the enabled modules, header links, a dev login form and its own stylesheet. django-unfold is no longer a dependency.
+
+The module is `django_cfg.modules.admin_site`. You configure it with `DjangoConfig.admin_site = AdminSiteConfig(...)`; django-cfg turns that into the `CFG_ADMIN_SITE` setting, which `CfgAdminSite` reads. Model admins are still written with [`PydanticAdmin` / `AdminConfig`](/features/modules/django-admin).
+
+## How it is installed
+
+- `CfgAdminConfig` takes the place of `django.contrib.admin` in `INSTALLED_APPS` (same app label `admin`). Its `default_site` is `CfgAdminSite`, so `admin.site` and `@admin.register` resolve to it. Projects change nothing.
+- `/admin/` is the **Overview** (`admin/cfg_overview.html`, set as `CfgAdminSite.index_template`), with the dashboard tabs and the built-in MCP and Modules tabs: see [Dashboard](/features/modules/django-dashboard) and [Admin Overview](/features/modules/django-mcp/admin-overview). `/admin/<app_label>/` is the stock model list of the app. To replace the Overview, set `index_template` on the site; do not override `admin/index.html`.
+- The environment badge in the header comes from `env_mode` (`production`, `development`, `test`).
+
+## Theme
+
+`static/django_cfg/cfg-theme.css` restyles the stock admin with shadcn/ui "neutral" tokens and the Geist fonts. It is loaded by `admin/base_site.html` after the stock stylesheets and sets Django's own admin CSS variables, so it works on 5.2 and 6.1.
+
+- **Dark by default.** On the first visit (no stored choice) the admin starts dark. Light and auto stay on Django's own theme toggle, and the choice is kept.
+- There is no theme or colour field in `AdminSiteConfig`. The look is the same in every project.
+- Button actions take the `cfg-action-<variant>` classes (`primary`, `success`, `warning`, `danger`, `info`, `default`).
+
+## Quick start
+
+```python
+# config.py
+from django_cfg import AdminSiteConfig, DjangoConfig
+
+class MyConfig(DjangoConfig):
+    admin_site = AdminSiteConfig(
+        site_title="My Project Admin",
+        site_header="My Project",
+        site_symbol="settings",
+    )
+```
+
+Without `admin_site` the site is titled from `project_name` (`"<project_name> Admin"`).
+
+## AdminSiteConfig fields
+
+`AdminSiteConfig` forbids unknown fields: an old Unfold argument fails at start.
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `site_title` | `str \| None` | `"<project_name> Admin"` | Browser title of admin pages |
+| `site_header` | `str \| None` | `project_name` | Header text |
+| `site_subheader` | `str \| None` | none | Small text next to the header |
+| `site_symbol` | `str` | `"settings"` | Material Symbols icon before the header |
+| `site_url` | `str` | `"/"` | Target of the "View site" link |
+| `sidebar` | `AdminSidebar` | `AdminSidebar()` | Sidebar options |
+| `navigation` | `List[NavigationSection]` | `[]` | Project sections, after the django-cfg ones |
+| `site_dropdown` | `List[SiteDropdownItem]` | `[]` | Extra links next to the user links in the header |
+| `login_form` | `str \| None` | `None` | Import path of the admin login form |
+| `dev_autofill_email` | `str \| None` | `None` | Email pre-filled on the login form in development |
+| `dev_autofill_password` | `str \| None` | `None` | Password pre-filled on the login form in development |
+| `dev_autofill_force` | `bool` | `False` | Pre-fill outside development too |
+
+### AdminSidebar fields
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `show_all_applications` | `bool` | `True` | After the sections, list the registered apps no section links to |
+| `navigation` | `List[dict]` | `[]` | Extra sections as raw dicts (`{"title", "items": [{"title", "icon", "link"}]}`), after `AdminSiteConfig.navigation` |
+
+The stock sidebar filter box is always shown.
+
+## Navigation
+
+The sidebar starts with the django-cfg sections built by `NavigationManager`: **Dashboard** (Overview, Settings, Health Check, Endpoints Status; superusers), **Users & Access** (users, groups, OTP secrets, registration sources and the OAuth tables when GitHub or Google OAuth is on) and **Mail**, plus **Currency**, **Geo**, **Payments**, **TOTP** and **Analytics** when that module is on (Analytics only after the first site sent an event). Extension sections follow. Your own sections come after them:
+
+```python
+from django_cfg import (
+    AdminSiteConfig,
+    DjangoConfig,
+    Icons,
+    NavigationItem,
+    NavigationSection,
+)
+
+class MyConfig(DjangoConfig):
+    admin_site = AdminSiteConfig(
+        site_title="My Admin",
+        navigation=[
+            NavigationSection(
+                title="Content",
+                items=[
+                    NavigationItem(title="Posts", icon=Icons.ARTICLE, link="admin:blog_post_changelist"),
+                    NavigationItem(title="Categories", icon=Icons.CATEGORY, link="admin:blog_category_changelist"),
+                ],
+            ),
+        ],
+    )
+```
+
+### NavigationSection fields
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `title` | `str` | required | Section heading |
+| `separator` | `bool` | `True` | Show a separator |
+| `collapsible` | `bool` | `True` | Section can collapse |
+| `open` | `bool` | `False` | Open by default |
+| `items` | `List[NavigationItem]` | `[]` | Items |
+
+### NavigationItem fields
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `title` | `str` | required | Label |
+| `icon` | `str \| None` | `None` | Material Symbols name |
+| `link` | `str \| None` | `None` | A path, a URL, or a URL name such as `admin:app_model_changelist` |
+| `permission` | `str \| Callable \| None` | `None` | Callable taking the request, or its import path; a falsy result hides the item |
+| `type` | `NavigationItemType` | `LINK` | `LINK`, `SEPARATOR` or `GROUP` |
+
+A URL name is reversed when the sidebar is built; one that does not resolve hides the item. A link of the form `admin:<app>_<model>_changelist` with no `permission` gets one that checks `<app>.view_<model>` (superusers always pass). `NavigationItem.resolved_link` gives the link with URL names turned into resolvers.
+
+## Site dropdown
+
+```python
+from django_cfg import AdminSiteConfig, SiteDropdownItem
+
+admin_site = AdminSiteConfig(
+    site_dropdown=[
+        SiteDropdownItem(title="Docs", icon="menu_book", link="https://docs.example.com"),
+    ],
+)
+```
+
+`title`, `icon` and `link` are required. A link that fails to build is skipped and logged.
+
+## Login autofill
+
+When `dev_autofill_email` or `dev_autofill_password` is set and `login_form` is empty, the login form is `django_cfg.modules.admin_site.forms.DevAuthForm`. It pre-fills only when one of these is true:
+
+- `DEBUG=True`
+- `config.environment.is_development` is `True`
+- `dev_autofill_force=True`
+
+```python
+admin_site = AdminSiteConfig(
+    site_title="Demo Admin",
+    dev_autofill_email="demo@example.com",
+    dev_autofill_password="demo123",
+    dev_autofill_force=True,  # a demo site
+)
+```
+
+<Callout type="warning">
+Never use `dev_autofill_force=True` on a site with real user data. The credentials are in your source code: use a dedicated demo account only.
+</Callout>
+
+## Migrating from Unfold (2.4.0)
+
+The Unfold-named API was renamed with no aliases. An old name is an `ImportError` or a pydantic "extra fields not permitted" error at start.
+
+| Before | After |
+| --- | --- |
+| `from django_cfg import UnfoldConfig` | `from django_cfg import AdminSiteConfig` |
+| `from django_cfg import UnfoldSidebar` | `from django_cfg import AdminSidebar` |
+| `DjangoConfig.unfold = UnfoldConfig(...)` | `DjangoConfig.admin_site = AdminSiteConfig(...)` |
+| `settings.UNFOLD` | `settings.CFG_ADMIN_SITE` |
+| `django_cfg.modules.django_unfold.*` | `django_cfg.modules.admin_site.*` |
+| `theme=`, `border_radius=`, `show_history=`, `show_view_on_site=`, `show_back_button=`, `show_languages=`, `command_search=`, `dashboard_enabled=`, `environment_callback=`, `show_search=`, `navigation_items=`, `site_dropdown_items=` | delete the argument; `show_all_applications` moved to `AdminSidebar`, raw dict sections go to `AdminSidebar.navigation` |
+| `UnfoldSidebar(show_search=...)` | delete the argument |
+| `UnfoldTheme`, `UnfoldThemeConfig`, `UnfoldDashboardConfig`, `django_cfg.routing.callbacks` | removed |
+| `NavigationItem.get_link_for_unfold()` | `NavigationItem.resolved_link` |
+
+A `PydanticAdmin` that still sets an Unfold-only attribute (`compressed_fields`, `list_filter_submit`, ...) gets a `DroppedUnfoldAttributeWarning` naming the replacement. Button actions are POST forms since 2.4.0: see [Django Admin actions](/features/modules/django-admin/configuration#actions).
+
+## See also
+
+- [Changelog](./CHANGELOG): what changed in the admin site
+- [Django Admin](/features/modules/django-admin): `PydanticAdmin` and `AdminConfig`
+- [Dashboard](/features/modules/django-dashboard): Overview tabs

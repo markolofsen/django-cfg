@@ -268,9 +268,9 @@ class DjangoConfig(BaseModel):
     #                      ADMIN INTERFACE
     # ══════════════════════════════════════════════════════════════
 
-    unfold: Optional[UnfoldConfig] = Field(
+    admin_site: Optional[AdminSiteConfig] = Field(
         default=None,
-        description="Unfold admin interface configuration",
+        description="Admin site: branding, sidebar navigation, header links, login form",
     )
     admin_timezone: Optional[str] = Field(
         default=None,
@@ -691,7 +691,7 @@ def get_installed_apps(self) -> List[str]:
 
 The method delegates to `ConfigService` which builds the apps list from:
 - Django core apps
-- WhiteNoise, Unfold Admin
+- WhiteNoise, the django-cfg admin site (`CfgAdminConfig` in place of `django.contrib.admin`)
 - REST Framework, JWT, CORS
 - Security (Axes), Import/Export
 - Django-CFG core modules
@@ -918,7 +918,7 @@ class MyConfig(DjangoConfig):
 ### With Integrations
 
 ```python
-from django_cfg import DjangoConfig, DatabaseConfig, DRFConfig, UnfoldConfig
+from django_cfg import AdminSiteConfig, DjangoConfig, DatabaseConfig, DRFConfig
 
 class MyConfig(DjangoConfig):
     project_name: str = "My Project"
@@ -936,8 +936,8 @@ class MyConfig(DjangoConfig):
         page_size=20,
     )
 
-    # Unfold admin interface
-    unfold: UnfoldConfig = UnfoldConfig(
+    # Admin site (stock Django admin + cfg-theme)
+    admin_site: AdminSiteConfig = AdminSiteConfig(
         site_title="My Admin",
     )
 ```
@@ -1003,7 +1003,7 @@ config = MyConfig(
 - [**Currency**](/features/modules/django-currency) - Currency conversion and exchange rates
 - [**Sitemap & IndexNow**](/features/modules/django-sitemap) - Sitemap sources for Next.js; IndexNow push
 - [**Telegram**](/features/modules/django-telegram) - Telegram bot notifications
-- [**Unfold Admin**](/features/modules/django-unfold) - Modern admin interface
+- [**Admin Site**](/features/modules/admin-site) - Stock Django admin with django-cfg navigation and theme
 
 ### Integrations
 - [**Django-RQ**](/features/modules/django-rq) - Background task queue

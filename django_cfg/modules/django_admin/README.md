@@ -1,6 +1,6 @@
 # Django Admin — Declarative Configuration
 
-> **Status (2026-11-18).** `PydanticAdmin` / `AdminConfig` is the main admin class and django-unfold is the base (pinned `>=0.110,<0.111`).
+> **Status (2026-11-18, 2.4.0).** `PydanticAdmin` / `AdminConfig` is the main admin class, on the stock Django admin (django-unfold was removed; the look is `cfg-theme.css`). An Unfold-only attribute on an admin class (`compressed_fields`, `list_filter_submit`, ...) emits a `DroppedUnfoldAttributeWarning`.
 > Removed (nothing used them): Flash messages (`FlashFieldConfig`, `one_time_flash_fields`, `flash_once`), `ToonField`, `VideoField`, `AvatarField`,
 > `CounterBadgeField`, `ResourceConfig`, `BackgroundTaskConfig`. `Icons` and `MoneyFieldWidget` moved out: `from django_cfg import Icons`,
 > `django_cfg.modules.django_currency`.

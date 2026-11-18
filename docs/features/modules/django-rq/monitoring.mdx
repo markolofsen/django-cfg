@@ -5,7 +5,7 @@ description: Complete guide to monitoring Django-RQ jobs, queues, and workers in
 
 # Django-RQ Monitoring
 
-Comprehensive monitoring and management guide for Django-RQ in django-cfg, including Django Admin, REST API, Prometheus metrics, and CLI tools.
+Monitoring and management of Django-RQ in django-cfg: the Django admin, Prometheus metrics, CLI tools and the Python API.
 
 ---
 
@@ -16,7 +16,7 @@ Django-cfg provides multiple ways to monitor Django-RQ:
 | Method | Use Case | Real-time | Production |
 |--------|----------|-----------|------------|
 | **Django Admin** | Manual monitoring and management | ✅ Yes | ✅ Yes |
-| **REST API** | Programmatic access, dashboards | ✅ Yes | ✅ Yes |
+| **Python API / `rq_cron_status --json`** | Programmatic access, dashboards | ✅ Yes | ✅ Yes |
 | **Prometheus** | Metrics and alerting | ✅ Yes | ✅ Yes |
 | **CLI Commands** | Quick checks, debugging | ✅ Yes | ⚠️ Limited |
 | **Web Dashboard** | Visual monitoring (django-rq) | ✅ Yes | ✅ Yes |
@@ -67,111 +67,22 @@ django_rq: DjangoRQConfig = DjangoRQConfig(
 
 ---
 
-## REST API
+## Programmatic access
 
-### Endpoints
+django-cfg has no RQ REST API (there is no `/api/cfg/rq/...` route). For a dashboard or a check, use:
 
-Django-cfg provides comprehensive REST API for monitoring:
+- `python manage.py rq_cron_status --json` for the cron heartbeat, per-queue wait and busy workers (below);
+- the **Modules** tab of the admin Overview, which shows RQ queues, depth and the `rqcron` heartbeat (see [Admin Overview](/features/modules/django-mcp/admin-overview));
+- the `django_rq` Python API in your own view or task:
 
-```
-GET  /api/cfg/rq/monitor/          - Health check and system info
-GET  /api/cfg/rq/monitor/health/   - System health status
-GET  /api/cfg/rq/monitor/config/   - RQ configuration
+```python
+import django_rq
 
-GET  /api/cfg/rq/queues/            - List all queues
-GET  /api/cfg/rq/queues/{name}/     - Queue details
-POST /api/cfg/rq/queues/{name}/empty/ - Empty queue
-
-GET  /api/cfg/rq/workers/           - List all workers
-GET  /api/cfg/rq/workers/{name}/    - Worker details
-
-GET  /api/cfg/rq/jobs/              - List all jobs
-GET  /api/cfg/rq/jobs/{id}/         - Job details
-POST /api/cfg/rq/jobs/{id}/cancel/  - Cancel job (cooperative cancellation)
-POST /api/cfg/rq/jobs/{id}/cancel/?force=true - Force stop (kills worker)
-POST /api/cfg/rq/jobs/{id}/requeue/ - Requeue job
-DELETE /api/cfg/rq/jobs/{id}/       - Delete job
-
-GET  /api/cfg/rq/jobs/registries/failed/     - List failed jobs
-GET  /api/cfg/rq/jobs/registries/finished/   - List finished jobs
-GET  /api/cfg/rq/jobs/registries/deferred/   - List deferred jobs
-GET  /api/cfg/rq/jobs/registries/started/    - List running jobs
-POST /api/cfg/rq/jobs/registries/failed/requeue-all/?queue=default - Requeue all failed
-POST /api/cfg/rq/jobs/registries/failed/clear/?queue=default       - Clear failed registry
-POST /api/cfg/rq/jobs/registries/finished/clear/?queue=default     - Clear finished registry
-
-GET  /api/cfg/rq/schedules/         - List scheduled jobs
+queue = django_rq.get_queue("default")
+print(queue.count, len(queue.failed_job_registry))
 ```
 
-### Examples
-
-**Get System Health:**
-
-```bash
-curl http://localhost:8000/api/cfg/rq/monitor/health/
-```
-
-Response:
-```json
-{
-  "healthy": true,
-  "queues": {
-    "default": {"count": 5, "workers": 2},
-    "high": {"count": 0, "workers": 1}
-  },
-  "total_jobs": 5,
-  "total_workers": 3
-}
-```
-
-**List Queues:**
-
-```bash
-curl http://localhost:8000/api/cfg/rq/queues/
-```
-
-Response:
-```json
-[
-  {
-    "name": "default",
-    "count": 5,
-    "queued_jobs": 5,
-    "started_jobs": 0,
-    "finished_jobs": 42,
-    "failed_jobs": 3,
-    "workers": 2
-  }
-]
-```
-
-**Get Job Details:**
-
-```bash
-curl http://localhost:8000/api/cfg/rq/jobs/{job-id}/
-```
-
-Response:
-```json
-{
-  "id": "abc123",
-  "func_name": "apps.crypto.tasks.update_coin_prices",
-  "status": "finished",
-  "queue": "default",
-  "created_at": "2025-01-15T10:30:00Z",
-  "started_at": "2025-01-15T10:30:05Z",
-  "ended_at": "2025-01-15T10:30:15Z",
-  "result": {"success": true, "updated": 50},
-  "args": [],
-  "kwargs": {"limit": 50, "verbosity": 1}
-}
-```
-
-**Cancel Job:**
-
-```bash
-curl -X POST http://localhost:8000/api/cfg/rq/jobs/{job-id}/cancel/
-```
+To stop a running job cooperatively, see [Job Cancellation](./job-cancellation).
 
 ---
 
@@ -449,19 +360,20 @@ RQQueueConfig(
 
 ### Issue: Failed Jobs Accumulating
 
-**Check:**
-```bash
-# View failed jobs
-curl http://localhost:8000/api/cfg/rq/jobs/?status=failed
+**Check:** the failed registry of the queue in the django-rq admin pages, or:
+
+```python
+import django_rq
+
+registry = django_rq.get_queue("default").failed_job_registry
+print(len(registry))
 ```
 
-**Solution:**
-```bash
-# Requeue all failed jobs
-curl -X POST http://localhost:8000/api/cfg/rq/jobs/registries/failed/requeue-all/?queue=default
+**Solution:** requeue or delete the jobs from the django-rq admin, or in a shell:
 
-# Or clear failed jobs
-curl -X POST http://localhost:8000/api/cfg/rq/jobs/registries/failed/clear/?queue=default
+```python
+for job_id in registry.get_job_ids():
+    registry.requeue(job_id)
 ```
 
 ---

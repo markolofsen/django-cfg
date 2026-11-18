@@ -30,8 +30,8 @@ from django_cfg import (
     DatabaseConfig,
     EmailConfig,
     TelegramConfig,
-    UnfoldConfig,
-    UnfoldSidebar,
+    AdminSiteConfig,
+    AdminSidebar,
     NavigationSection,
     NavigationItem,
     Icons,
@@ -85,12 +85,11 @@ class DjangoCfgConfig(DjangoConfig):
         else None
     )
 
-    # Modern admin interface
-    unfold: UnfoldConfig = UnfoldConfig(
+    # Admin site: branding and sidebar navigation
+    admin_site: AdminSiteConfig = AdminSiteConfig(
         site_title="Django-CFG Sample Admin",
         site_header="Django-CFG Sample",
-        sidebar=UnfoldSidebar(
-            show_search=True,
+        sidebar=AdminSidebar(
             show_all_applications=True,
         ),
         navigation=[
@@ -212,23 +211,10 @@ See [Service Integrations](./service-integrations) for service setup details.
 
 #### Admin Interface Configuration
 
-Unfold theme customization:
+Branding and sidebar navigation with typed config objects:
 
 ```python
-unfold: UnfoldConfig = UnfoldConfig(
-    site_title="Django-CFG Sample Admin",
-    navigation=[...],
-)
-```
-
-See [Admin Interface](./admin-interface) for customization options.
-
-#### Admin Interface Configuration
-
-Unfold theme customization with typed config objects:
-
-```python
-unfold: UnfoldConfig = UnfoldConfig(
+admin_site: AdminSiteConfig = AdminSiteConfig(
     site_title="Django-CFG Sample Admin",
     navigation=[...],
 )

@@ -1,0 +1,51 @@
+{# Tailwind CDN with the token colours, shared by base_iframe.html and base.html. #}
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+/* Token colours for tab templates: bg-card, text-foreground, text-muted-foreground,
+   border-border, text-success, bg-warning-tint ... They switch with the theme, so a
+   template needs no `dark:` pair. Tokens are var()/color-mix(): no `/opacity` modifier. */
+(function () {
+    function tone(name) {
+        return {
+            DEFAULT: 'var(--cfg-' + name + '-fg)',
+            fill: 'var(--cfg-' + name + '-fill)',
+            tint: 'color-mix(in oklab, var(--cfg-' + name + '-fill) var(--cfg-tint), var(--cfg-background))',
+            line: 'color-mix(in oklab, var(--cfg-' + name + '-fill) 40%, var(--cfg-background))',
+        };
+    }
+    tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    background: 'var(--cfg-background)',
+                    foreground: 'var(--cfg-foreground)',
+                    card: 'var(--cfg-card)',
+                    subtle: 'var(--cfg-subtle)',
+                    muted: { DEFAULT: 'var(--cfg-subtle)', foreground: 'var(--cfg-muted-foreground)' },
+                    accent: 'var(--cfg-accent)',
+                    border: 'var(--cfg-border)',
+                    input: 'var(--cfg-input)',
+                    ring: 'var(--cfg-ring)',
+                    primary: { DEFAULT: 'var(--cfg-primary)', foreground: 'var(--cfg-primary-foreground)' },
+                    link: { DEFAULT: 'var(--cfg-link)', hover: 'var(--cfg-link-hover)' },
+                    success: tone('success'),
+                    warning: tone('warning'),
+                    info: tone('info'),
+                    danger: tone('danger'),
+                    /* Kept for older tab templates; new ones use the tokens above. */
+                    'base': {
+                        50:  'rgb(249 250 251)',
+                        100: 'rgb(243 244 246)',
+                        200: 'rgb(229 231 235)',
+                        700: 'rgb(55 65 81)',
+                        800: 'rgb(31 41 55)',
+                        900: 'rgb(17 24 39)',
+                    }
+                },
+                borderColor: { DEFAULT: 'var(--cfg-border)' },
+            }
+        }
+    };
+})();
+</script>

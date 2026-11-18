@@ -10,8 +10,8 @@ Form widgets for the `django_admin` module, and the registry that renders the
 
 ## JSONEditorWidget (wired)
 
-`JSONEditorWidget` extends django-json-widget with a copy button and Unfold light or
-dark theme switching (template `django_admin/widgets/json_editor.html`, CSS
+`JSONEditorWidget` extends django-json-widget with a copy button that follows Django's
+light/dark toggle (template `django_admin/widgets/json_editor.html`, CSS
 `django_admin/css/json_editor_theme.css`). `PydanticAdmin.formfield_for_dbfield`
 applies it **to every editable `JSONField`**, so no configuration is needed. A field
 listed in `readonly_fields` keeps the plain display. The defaults of the auto-applied

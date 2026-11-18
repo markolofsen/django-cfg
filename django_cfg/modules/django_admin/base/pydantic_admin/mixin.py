@@ -98,7 +98,11 @@ class PydanticAdminMixin(ViewMixin):
         cls.list_display = build_list_display(cls, config)
         cls.list_filter = _resolve_list_filter(config.list_filter)
         if config.show_facets:
-            cls.show_facets = True
+            # Django compares by identity (`is ShowFacets.ALWAYS`): a plain True matched
+            # neither ALWAYS nor ALLOW and switched the counts and their toggle off.
+            from django.contrib.admin import ShowFacets
+
+            cls.show_facets = ShowFacets.ALWAYS
         cls.search_fields = config.search_fields
         cls.ordering = config.ordering if config.ordering else []
 

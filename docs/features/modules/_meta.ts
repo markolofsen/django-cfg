@@ -4,6 +4,7 @@ export default {
 
   // ── Core Infrastructure ──────────────────────────────────────
   'django-monitor': 'Monitor',
+  'django-frontend-errors': 'Frontend Errors',
   'django-logging': 'Logging',
   'django-health': 'Health Checks',
 
@@ -19,7 +20,7 @@ export default {
 
   // ── Admin & UI ───────────────────────────────────────────────
   'django-admin': 'Django Admin',
-  'django-unfold': 'Unfold Theme',
+  'admin-site': 'Admin Site',
   'django-dashboard': 'Dashboard',
   'django-drf-theme': 'DRF Theme',
 

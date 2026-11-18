@@ -321,97 +321,25 @@ sequenceDiagram
 
 ## Monitoring Architecture
 
-### REST API Layer
+django-cfg has no RQ REST API. Monitoring has three parts:
 
-Django-CFG provides comprehensive REST API for monitoring:
+- **Queue-health monitor** (`modules/django_rq/health`): when `DjangoRQConfig.health.enabled` is on, a scheduled job collects per-queue metrics (depth, oldest-job age, failed count, worker liveness, scheduler lag), evaluates them against thresholds and sends Telegram alerts with a Redis cooldown. Also `python manage.py rq_health_check`.
+- **Cron status** (`health/status.py`, `cron_status()`): the `rqcron` heartbeat, per-queue wait and busy workers; printed by `python manage.py rq_cron_status` and shown in the Modules tab of the admin Overview.
+- **django-rq's own admin pages** for queues, workers, jobs and cron.
 
 ```mermaid
 graph TB
-    subgraph "API Endpoints"
-        Monitor[/api/cfg/rq/monitor/]
-        Queues[/api/cfg/rq/queues/]
-        Workers[/api/cfg/rq/workers/]
-        Jobs[/api/cfg/rq/jobs/]
-        Schedules[/api/cfg/rq/schedules/]
-        Testing[/api/cfg/rq/testing/]
-    end
-
-    subgraph "ViewSets"
-        MonitorVS[RQMonitorViewSet]
-        QueuesVS[QueueViewSet]
-        WorkersVS[WorkerViewSet]
-        JobsVS[JobViewSet]
-        SchedulesVS[ScheduleViewSet]
-        TestingVS[TestingViewSet]
-    end
-
-    subgraph "Services"
-        RQService[RQ Service Layer]
-        Converters[RQ Converters]
-        Models[Pydantic Models]
-    end
-
-    subgraph "Data Sources"
-        Redis[(Redis)]
-        RQQueues[RQ Queue Objects]
-        RQWorkers[RQ Worker Objects]
-    end
-
-    Monitor --> MonitorVS
-    Queues --> QueuesVS
-    Workers --> WorkersVS
-    Jobs --> JobsVS
-    Schedules --> SchedulesVS
-    Testing --> TestingVS
-
-    MonitorVS --> RQService
-    QueuesVS --> RQService
-    WorkersVS --> RQService
-    JobsVS --> RQService
-
-    RQService --> Converters
-    Converters --> Models
-    RQService --> Redis
-    RQService --> RQQueues
-    RQService --> RQWorkers
-
-    style Monitor fill:#10b981
-    style Queues fill:#3b82f6
-    style Workers fill:#8b5cf6
-    style Jobs fill:#f59e0b
-```
-
-### Data Flow
-
-```mermaid
-sequenceDiagram
-    participant Client as Frontend/CLI
-    participant API as REST API
-    participant ViewSet as ViewSet
-    participant Service as RQ Service
-    participant Redis as Redis
-    participant RQ as RQ Objects
-
-    Client->>API: GET /api/cfg/rq/queues/
-    API->>ViewSet: list(request)
-    ViewSet->>Service: get_all_queues()
-
-    Service->>RQ: get_queue('default')
-    RQ->>Redis: LLEN rq:queue:default
-    Redis-->>RQ: 42
-    RQ-->>Service: Queue(count=42)
-
-    Service->>Service: Convert to RQQueueModel
-    Service-->>ViewSet: List[RQQueueModel]
-
-    ViewSet->>ViewSet: Serialize to DRF
-    ViewSet-->>API: JSON Response
-    API-->>Client: [{name: "default", count: 42}]
+    Cron["rqcron (leader)"] -->|heartbeat| Redis[(Redis)]
+    Workers[RQ workers] --> Redis
+    Health["QueueHealthMonitor (scheduled job)"] -->|metrics| Redis
+    Health -->|alerts| Telegram[Telegram]
+    Status["rq_cron_status / Overview Modules tab"] -->|cron_status| Redis
+    Admin["django-rq admin pages"] --> Redis
 ```
 
 ### Pydantic Models
 
-Internal models for type-safe data handling:
+Internal models (`modules/django_rq/services/models`) for type-safe data handling:
 
 ```mermaid
 classDiagram

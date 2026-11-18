@@ -17,7 +17,7 @@ graph TB
     end
 
     subgraph "Django Application"
-        ADMIN[Admin Interface<br/>Unfold Theme]
+        ADMIN[Admin Interface<br/>Django admin + cfg-theme]
         REST[REST API<br/>DRF + Swagger]
         AUTH[Authentication<br/>OTP System]
     end
@@ -68,7 +68,7 @@ graph TB
 - **🚀 Project Creation** - Using `django-cfg create-project`
 - **⚙️ Configuration Management** - Type-safe settings with Pydantic v2
 - **🗄️ Multi-Database Setup** - Automatic routing and migrations
-- **🎨 Admin Customization** - Modern Unfold interface with dashboards
+- **🎨 Admin Customization** - Themed Django admin with the Overview and dashboard tabs
 - **📊 API Documentation** - Auto-generated OpenAPI/Swagger
 - **🔐 Authentication System** - OTP-based user management
 - **⚡ Background Tasks** - ReArq integration
@@ -115,11 +115,11 @@ Demonstrates sophisticated database routing with separate databases for differen
 See [Multi-Database Setup](./multi-database) for details.
 
 ### Modern Admin Interface
-Built on the Unfold theme with:
-- Custom dashboard with real-time metrics
-- Organized navigation structure
-- Beautiful UI with Material Design icons
-- Responsive design for mobile access
+The stock Django admin with the django-cfg theme (dark by default):
+- Overview at `/admin/` with dashboard tabs
+- Sidebar navigation from `AdminSiteConfig`
+- Material Symbols icons
+- Responsive layout for mobile
 
 See [Admin Interface](./admin-interface) for customization options.
 
@@ -241,7 +241,7 @@ class DjangoCfgConfig(DjangoConfig):
     telegram: Optional[TelegramConfig] = TelegramConfig(...)
 
     # Admin interface
-    unfold: UnfoldConfig = UnfoldConfig(...)
+    admin_site: AdminSiteConfig = AdminSiteConfig(...)
 
 # Create and register config instance
 config = DjangoCfgConfig()

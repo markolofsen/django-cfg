@@ -749,7 +749,7 @@ Then gradually move custom settings into config class.
 
 ### Which Django and Python versions are supported?
 
-Django 5.2 (`>=5.2.14,<6.0`) and Python 3.12 or 3.13. Django is not a base dependency of django-cfg; install it alongside.
+Django 5.2 LTS, 6.0 and 6.1 (`>=5.2.14,<6.2`) and Python 3.12 or 3.13. Django is a base dependency of django-cfg, so `pip install django-cfg` installs a supported version. On Django 6.1, email is emitted as `MAILERS`: see [Email](/configuration/email).
 
 ---
 

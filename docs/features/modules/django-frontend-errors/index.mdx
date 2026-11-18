@@ -1,0 +1,60 @@
+---
+title: Frontend errors (django_frontend_errors)
+description: Browser errors reported by @djangocfg/devtools are stored one row per signature, with an admin page and MCP tools. On by default.
+---
+
+# Frontend errors — `django_frontend_errors`
+
+Browser errors travel one way: `@djangocfg/devtools` captures them
+(`window.onerror`, unhandled rejections, the error boundary, failed requests),
+batches them and posts to `POST /cfg/monitor/ingest/`. `django_monitor` writes a
+log line and a Telegram alert. This module adds the part that was missing: the
+same events are **stored and queryable**. There is no second client and no second
+endpoint.
+
+## What you get
+
+- **A table, one row per signature.** Key: `fingerprint` + `environment` +
+  `project_name`. A repeat raises `count` and `last_seen` and refreshes the latest
+  `url`, `message`, `stack_trace`, browser, OS and `session_id`. The table grows
+  with the number of distinct errors, not with traffic. When the client sends no
+  fingerprint the server makes one from the event type, the message and the URL path.
+- **An admin page**, *Frontend errors*, read-only: filters by environment, event
+  type, level, project and browser; search by URL, message, fingerprint and build id.
+- **MCP tools** `frontend_errors_top` (ranked signatures) and
+  `frontend_errors_recent` (rows with a truncated stack, free-text search). They
+  never return session ids or user agents.
+- **Retention.** Rows not seen for `retention_days` (default 30) are deleted: swept
+  at most once an hour while events arrive, or run
+  `python manage.py purge_frontend_errors [--days N] [--dry-run]`.
+
+Only error events are stored (`JS_ERROR`, `NETWORK_ERROR`, `ERROR`, `WARNING`; level
+`error`, and `warning` unless `store_warnings=False`). Page views, console and info
+stay in the log. A storage failure is logged and dropped; ingest still answers 202.
+
+## Configuration
+
+On by default. Run `python manage.py migrate` after upgrading.
+
+```python
+from django_cfg import FrontendErrorsConfig
+
+class MyConfig(DjangoConfig):
+    frontend_errors = FrontendErrorsConfig(retention_days=14, store_warnings=False)
+    # frontend_errors = FrontendErrorsConfig(enabled=False)   # turn it off
+```
+
+## Render errors and the error boundary
+
+A React render error is caught by the error boundary, which shows the fallback; the
+exception never reaches `window.onerror`. `BaseApp` therefore reports it itself
+through the same devtools queue (`devtools.capture`, then an immediate flush), with
+the component stack. The flush on `visibilitychange: hidden` still goes out with
+`keepalive`, so a reload does not lose it. Use `MonitorBoundary` for boundaries
+inside your own pages.
+
+<Callout type="info">
+The monitor event log file is separate: set `DJANGO_CFG_LOG_DIR` to a directory
+outside the project tree (in Docker, a named volume) to keep it across container
+recreation. The stored errors do not depend on it.
+</Callout>

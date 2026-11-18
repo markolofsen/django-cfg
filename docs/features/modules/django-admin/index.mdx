@@ -6,10 +6,10 @@ description: Declarative Pydantic-based Django admin configuration with type-saf
 # Django Admin Module
 
 <Callout type="info">
-**Status (2026-11-18).** `PydanticAdmin` / `AdminConfig` is the main admin class, and django-unfold is the base (pinned `django-unfold>=0.110,<0.111`). The one-time Flash fields (`FlashFieldConfig`, `flash_once`), `ToonField`, `VideoField`, `AvatarField`, `CounterBadgeField`, `ResourceConfig` and `BackgroundTaskConfig` were removed (nothing used them). Ordinary Django messages (`self.message_user`, `messages.*`) work: the admin `base_site.html` extends `admin/base.html`, which renders them.
+**Since 2.4.0** the admin is the stock Django admin: django-unfold is no longer a dependency. `PydanticAdmin` / `AdminConfig` keep their contract. The look comes from `cfg-theme.css` (shadcn-like neutral tokens, dark by default); branding and sidebar navigation from `AdminSiteConfig` ([Admin Site](/features/modules/admin-site)). Removed earlier (nothing used them): the one-time Flash fields (`FlashFieldConfig`, `flash_once`), `ToonField`, `VideoField`, `AvatarField`, `CounterBadgeField`, `ResourceConfig` and `BackgroundTaskConfig`. Ordinary Django messages (`self.message_user`, `messages.*`) work: the admin `base_site.html` extends `admin/base.html`, which renders them.
 </Callout>
 
-Django-CFG includes a Pydantic-based admin layer: you describe an admin class as a typed `AdminConfig` (list columns, display fields, filters, fieldsets, actions) and `PydanticAdmin` builds the Django and Unfold admin from it.
+Django-CFG includes a Pydantic-based admin layer: you describe an admin class as a typed `AdminConfig` (list columns, display fields, filters, fieldsets, actions) and `PydanticAdmin` builds the Django `ModelAdmin` from it.
 
 ## Overview
 
@@ -20,7 +20,7 @@ The Django Admin module provides:
 - **Automatic Display Methods** - Auto-generated display methods with widgets
 - **HTML Builder Utilities** - `self.html` methods for custom displays
 - **Computed Field Decorators** - `@computed_field` for type-safe custom logic
-- **Modern UI** - Seamless Unfold integration with Material Design icons
+- **Themed stock admin** - Django's own admin with the django-cfg theme and Material Symbols icons
 - **Query Optimization** - Built-in select_related/prefetch_related support
 - **Zero Boilerplate** - Minimal code, maximum functionality
 
@@ -324,28 +324,30 @@ config = AdminConfig(
                       └── datetime → render_datetime()
 ```
 
-## Integration with Unfold
+## Base class
 
-The admin module is designed to work seamlessly with Django Unfold:
+`PydanticAdmin` is built on the stock Django admin:
 
 ```python
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 # PydanticAdmin inherits from:
-# UnfoldImportExportModelAdmin
-#   └─ ImportExportModelAdmin  # Import/Export functionality
-#   └─ UnfoldModelAdmin        # Modern Unfold UI
-#        └─ Django ModelAdmin
+# ImportExportModelAdmin            # import_export.admin
+#   └─ ImportExportMixin            # import/export views and buttons
+#        └─ django.contrib.admin.ModelAdmin
 ```
 
+Plain `ModelAdmin` options and Django's `@admin.action` / `@admin.display` work on it.
+An Unfold-only attribute (`compressed_fields`, `list_filter_submit`, `actions_row`, ...)
+has no effect: the class gets a `DroppedUnfoldAttributeWarning` that names the replacement.
+Delete the line.
 
 <Callout type="info">
-**Always Unfold-Ready**
-Every admin class using `PydanticAdmin` automatically gets:
-- Modern Unfold UI
-- Material Design icons
+**What every `PydanticAdmin` gets**
+- The stock admin with the django-cfg theme (light, dark and auto on Django's own toggle)
+- Material Symbols icons
 - Import/Export support (optional)
-- Responsive layout
+- Button actions (`actions_list`, `actions_detail`) as POST forms with the CSRF token
 
 </Callout>
 

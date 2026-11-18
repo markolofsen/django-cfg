@@ -60,7 +60,7 @@ poetry run python manage.py runserver
 ```
 
 **What you get instantly:**
-- 🎨 Django Admin (Unfold) → `http://127.0.0.1:8000/admin/`
+- 🎨 Django Admin (stock admin, django-cfg theme) → `http://127.0.0.1:8000/admin/`
 - 📡 Real-time WebSockets → Live updates
 - 🔌 Auto-generated API clients → TypeScript / Python / Go
 - 🐳 Docker Ready → Production configs
@@ -162,7 +162,7 @@ User auth • Support tickets • Newsletter • CRM • AI agents • Knowledge
 - REST API with auto TypeScript generation
 
 **Admin:**
-- Django Unfold for CRUD
+- Stock Django admin with the django-cfg theme (`cfg-theme.css`) and `PydanticAdmin`
 - JWT authentication
 - Dark theme by default
 - Constance-backed dynamic settings

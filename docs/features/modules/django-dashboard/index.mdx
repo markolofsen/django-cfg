@@ -1,14 +1,14 @@
 ---
 title: django_dashboard — Admin Dashboard Tabs
-description: Add custom tabbed panels to the Django Unfold admin overview page using plain Django views and templates.
+description: Add custom tabbed panels to the django-cfg admin Overview page using plain Django views and templates.
 ---
 
 # django_dashboard — Admin Dashboard Tabs
 
-`django_dashboard` adds a tabbed panel system to the Django Unfold admin overview page. Each tab is a standard Django view: a Python callback function returns a `dict`, and a Django template renders it. No Streamlit and no special base classes. The same template can also be shown inside an iframe (see below).
+`django_dashboard` adds a tabbed panel system to the admin Overview page (`/admin/`, the template `admin/cfg_overview.html`, set as `CfgAdminSite.index_template`; app pages `/admin/<app_label>/` stay the stock model list). Each tab is a standard Django view: a Python callback function returns a `dict`, and a Django template renders it. No Streamlit and no special base classes. The same template can also be shown inside an iframe (see below).
 
 <Callout type="info">
-These HTML tabs (`/cfg/admin/dashboard/<slug>/`) are the only dashboard surface. The REST dashboard API at `/cfg/dashboard/api/` was removed on 2026-11-18. The admin base is django-unfold, pinned `>=0.110,<0.111`. Tabs are protected by staff login only, not by any proxy basic auth in front of `/cfg/admin/`.
+These HTML tabs (`/cfg/admin/dashboard/<slug>/`) are the only dashboard surface. The REST dashboard API at `/cfg/dashboard/api/` was removed on 2026-11-18. The admin is the stock Django admin with the django-cfg theme (no django-unfold since 2.4.0). Tabs are protected by staff login (plus `permission` / `superuser_only` per tab), not by any proxy basic auth in front of `/cfg/admin/`. django-cfg adds its own tabs after yours: **MCP** (while MCP is enabled) and **Modules** (superusers), from `modules/django_overview`; see [Admin Overview](/features/modules/django-mcp/admin-overview).
 </Callout>
 
 ## How it works
@@ -21,7 +21,8 @@ DjangoConfig.dashboard: DashboardConfig
               ├── icon        → Material icon name
               ├── callback    → dotted path  fn(request) -> dict
               ├── template    → Django template path
-              └── permission  → dotted path  fn(request) -> bool
+              ├── permission  → dotted path  fn(request) -> bool
+              └── superuser_only → bool (default False)
 ```
 
 When a tab is requested, the view:
@@ -156,7 +157,7 @@ Every tab template receives:
 
 | Template | Purpose |
 |----------|---------|
-| `django_dashboard/base.html` | Full page — extends Unfold `admin/base.html`, renders the tab bar and `{% block tab_content %}`. |
+| `django_dashboard/base.html` | Full page — extends `admin/base_site.html` (the stock admin with the theme), renders the tab bar and `{% block tab_content %}`. |
 | `django_dashboard/tabs_bar.html` | Tab bar snippet only (included by `base.html`). |
 | `django_dashboard/tab_empty.html` | Fallback rendered when no template is set (callback-only tab). |
 

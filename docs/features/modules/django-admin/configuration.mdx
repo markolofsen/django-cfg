@@ -342,7 +342,8 @@ config = AdminConfig(
   - `"info"` - Light blue button for informational actions
 - **icon** (str, optional): Material Icon name (e.g., `"check_circle"`, `"warning"`, `"delete"`)
 - **url_path** (str, optional): Custom URL path for changelist actions (auto-generated if not provided)
-- **confirmation** (bool, optional): If `True`, shows confirmation dialog before executing (default: `False`)
+- **confirmation** (bool, optional): If `True`, asks before running (default: `False`). A bulk action shows a confirmation page and runs on its second POST, which carries `post=yes` (Django's `delete_selected` contract). A changelist button asks with the browser's `confirm()` before it posts
+- **method** (`"post"` or `"get"`, changelist actions only, default `"post"`): `"post"` renders the button as a POST form with the CSRF token, and a GET to the action URL answers 405; use it for an action that changes something. `"get"` renders a link, for a handler that shows its own page or form (it checks `request.method` itself)
 - **handler** (callable or str, required): Action handler function or import path to handler
 - **permissions** (list[str], optional): Required permissions to show this action
 
@@ -351,7 +352,7 @@ config = AdminConfig(
 **Action Handler Signatures**
 
 - **Bulk actions**: `handler(modeladmin, request, queryset)` - receives selected items
-- **Changelist actions**: `handler(modeladmin, request)` - no queryset, must return HttpResponse
+- **Changelist actions**: `handler(modeladmin, request)` - no queryset, must return HttpResponse. The button posts by default; a handler that renders a form page needs `method="get"`
 
 </Callout>
 
@@ -404,7 +405,7 @@ config = AdminConfig(
             description="Publish selected documents",
             variant="success",
             icon="publish",
-            confirmation=True,  # Shows confirmation dialog
+            confirmation=True,  # Confirmation page, then a second POST with post=yes
             handler=publish_documents
         ),
         ActionConfig(
@@ -560,6 +561,7 @@ Changelist actions are buttons that appear **above the listing** and don't requi
 | Selection Required | Yes | No |
 | Handler Signature | `(modeladmin, request, queryset)` | `(modeladmin, request)` |
 | Return Value | None | HttpResponse (redirect) |
+| Request | POST from the actions form | POST form with the CSRF token (GET answers 405), or a link with `method="get"` |
 | `action_type` | `"bulk"` (default) | `"changelist"` |
 
 **Example: Sync Buttons for External API**
@@ -665,6 +667,38 @@ config = AdminConfig(
 └────────────────────────────────────────────────────┘
 ```
 
+**A button that opens a form page**
+
+A changelist button is a POST form by default, so a handler that shows its own page must
+say `method="get"`. Otherwise the button posts an empty form to it, and a direct GET answers 405:
+
+```python
+# proxies/admin/actions.py
+from django.shortcuts import redirect, render
+
+def import_from_text(modeladmin, request):
+    form = ImportForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        count = import_proxies(form.cleaned_data["text"])
+        modeladmin.message_user(request, f"Imported {count} proxies.")
+        return redirect("admin:proxies_proxy_changelist")
+    return render(request, "proxies/import.html", {"form": form})
+```
+
+```python
+ActionConfig(
+    name='import_from_text',
+    action_type='changelist',
+    description='Import from text',
+    icon='upload',
+    method='get',  # a link: the handler renders its own form and takes its own POST
+    handler='apps.proxies.admin.actions.import_from_text',
+),
+```
+
+The same applies to `@action(method="get")` on a method listed in `actions_list` or
+`actions_detail` of a `PydanticAdmin`.
+
 **Common Use Cases for Changelist Actions:**
 
 - **Data Synchronization**: Sync with external APIs, refresh data
@@ -679,8 +713,9 @@ config = AdminConfig(
 
 1. **Must return HttpResponse**: Always return `redirect()` or other HttpResponse
 2. **No queryset parameter**: Handler receives only `(modeladmin, request)`
-3. **Use for model-level operations**: Not for selected items
-4. **Always provide user feedback**: Use Django messages framework
+3. **POST by default**: the button is a form with the CSRF token; a page with its own form needs `method="get"`
+4. **Use for model-level operations**: Not for selected items
+5. **Always provide user feedback**: Use Django messages framework
 
 </Callout>
 
@@ -1231,7 +1266,7 @@ JSON fields in readonly mode now feature:
 **Theme-Aware Colors:**
 - **Light theme:** `colorful` Pygments style
 - **Dark theme:** `monokai` Pygments style
-- Automatic switching with Unfold dark mode
+- Follows the admin's light/dark toggle (Django's theme switch)
 
 Example:
 ```python

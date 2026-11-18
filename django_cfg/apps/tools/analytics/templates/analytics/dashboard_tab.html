@@ -4,73 +4,75 @@
 <style>
   /* Analytics is a quiet instrument panel: one blue signal, exact values on
      demand, and no visual competition with the data.  Styles stay local so a
-     tab cannot alter the host admin. */
-  .an { color: #ededed; font-variant-numeric: tabular-nums; }
+     tab cannot alter the host admin. Colours are the admin theme's --cfg-* tokens;
+     the visitors line is the one hue the theme has no token for (teal 600 / 300). */
+  .an { color: var(--cfg-foreground); font-variant-numeric: tabular-nums; --an-visitors: #0d9488; }
+  html.dark .an { --an-visitors: #5eead4; }
   .an [x-cloak] { display:none !important; }
   .an-head { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
   .an-head__left { display:flex; align-items:center; gap:12px; min-width:0; }
-  .an-site { font-size:14px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .an-source-select { appearance:none; background:#161616; border:1px solid #303030; border-radius:7px; color:#ededed; font:inherit; font-size:12px; padding:7px 28px 7px 9px; cursor:pointer; }
-  .an-live { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#a1a1a1; white-space:nowrap; }
-  .an-live__dot { width:6px; height:6px; border-radius:50%; background:#0070f3; box-shadow:0 0 0 3px rgba(0,112,243,.18); animation:an-pulse 2.4s ease-in-out infinite; }
+  .an-site { font-size:14px; font-weight:600; color:var(--cfg-foreground); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .an-source-select { appearance:none; background:var(--cfg-card); border:1px solid var(--cfg-border); border-radius:7px; color:var(--cfg-foreground); font:inherit; font-size:12px; padding:7px 28px 7px 9px; cursor:pointer; }
+  .an-live { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--cfg-muted-foreground); white-space:nowrap; }
+  .an-live__dot { width:6px; height:6px; border-radius:50%; background:var(--cfg-info-fill); box-shadow:0 0 0 3px color-mix(in oklab, var(--cfg-info-fill) 18%, transparent); animation:an-pulse 2.4s ease-in-out infinite; }
   @keyframes an-pulse { 50% { opacity:.35; } }
 
-  .an-seg { display:inline-flex; padding:2px; gap:2px; background:#171717; border:1px solid #303030; border-radius:8px; }
-  .an-seg a, .an-seg button { border:0; font:inherit; font-size:12px; font-weight:500; line-height:1; padding:7px 11px; border-radius:6px; color:#919191; background:transparent; text-decoration:none; cursor:pointer; transition:color .12s ease, background .12s ease; }
-  .an-seg a:hover, .an-seg button:hover { color:#ededed; }
-  .an-seg .is-active { background:#303030; color:#fff; }
+  .an-seg { display:inline-flex; padding:2px; gap:2px; background:var(--cfg-subtle); border:1px solid var(--cfg-border); border-radius:8px; }
+  .an-seg a, .an-seg button { border:0; font:inherit; font-size:12px; font-weight:500; line-height:1; padding:7px 11px; border-radius:6px; color:var(--cfg-muted-foreground); background:transparent; text-decoration:none; cursor:pointer; transition:color .12s ease, background .12s ease; }
+  .an-seg a:hover, .an-seg button:hover { color:var(--cfg-foreground); }
+  .an-seg .is-active { background:var(--cfg-accent); color:var(--cfg-foreground); }
 
   /* Hairlines are each cell's own 1px ring in the 1px gap, not the grid's background showing
      through: a short last row then leaves card-coloured space, not a grey block. */
-  .an-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:#0a0a0a; border:1px solid #303030; border-radius:12px; overflow:hidden; margin-bottom:24px; }
-  .an-stat { background:#0a0a0a; padding:18px 20px; box-shadow:0 0 0 1px #303030; }
-  .an-stat__label { font-size:12px; color:#8f8f8f; margin-bottom:8px; }
-  .an-stat__value { font-size:28px; font-weight:600; letter-spacing:-.02em; line-height:1; color:#fff; }
+  .an-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:var(--cfg-card); border:1px solid var(--cfg-border); border-radius:12px; overflow:hidden; margin-bottom:24px; }
+  .an-stat { background:var(--cfg-card); padding:18px 20px; box-shadow:0 0 0 1px var(--cfg-border); }
+  .an-stat__label { font-size:12px; color:var(--cfg-muted-foreground); margin-bottom:8px; }
+  .an-stat__value { font-size:28px; font-weight:600; letter-spacing:-.02em; line-height:1; color:var(--cfg-foreground); }
 
-  .an-card { background:#0a0a0a; border:1px solid #303030; border-radius:12px; overflow:hidden; }
-  .an-card__head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid #303030; font-size:13px; font-weight:600; color:#ededed; }
+  .an-card { background:var(--cfg-card); border:1px solid var(--cfg-border); border-radius:12px; overflow:hidden; }
+  .an-card__head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid var(--cfg-border); font-size:13px; font-weight:600; color:var(--cfg-foreground); }
   .an-card__body { padding:16px; }
-  .an-muted { color:#8f8f8f; font-size:12px; font-weight:400; }
+  .an-muted { color:var(--cfg-muted-foreground); font-size:12px; font-weight:400; }
 
   /* The chart is a set of real buttons, not a decorative bar image: it works
      with mouse, keyboard, and touch, and always exposes the exact value. */
   .an-chart { min-width:0; }
   .an-chart__topline { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:30px; margin-bottom:12px; }
-  .an-chart__readout { color:#bdbdbd; font-size:12px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .an-chart__readout strong { color:#fff; font-weight:600; }
-  .an-chart__legend { display:flex; align-items:center; gap:12px; color:#a1a1a1; font-size:12px; white-space:nowrap; }
+  .an-chart__readout { color:var(--cfg-muted-foreground); font-size:12px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .an-chart__readout strong { color:var(--cfg-foreground); font-weight:600; }
+  .an-chart__legend { display:flex; align-items:center; gap:12px; color:var(--cfg-muted-foreground); font-size:12px; white-space:nowrap; }
   .an-chart__legend span { display:inline-flex; align-items:center; gap:5px; }
-  .an-chart__legend i { width:8px; height:8px; border-radius:2px; background:#287fd9; }
-  .an-chart__legend i.an-chart__key-visitors { width:12px; height:2px; border-radius:2px; background:#5eead4; }
+  .an-chart__legend i { width:8px; height:8px; border-radius:2px; background:var(--cfg-info-fill); }
+  .an-chart__legend i.an-chart__key-visitors { width:12px; height:2px; border-radius:2px; background:var(--an-visitors); }
   .an-chart__frame { display:grid; grid-template-columns:42px minmax(0,1fr); gap:10px; }
-  .an-chart__scale { position:relative; height:164px; color:#6e6e6e; font-size:10px; }
+  .an-chart__scale { position:relative; height:164px; color:var(--cfg-muted-foreground); font-size:10px; }
   .an-chart__scale span { position:absolute; right:0; transform:translateY(-50%); }
   .an-chart__scale span:first-child { top:0; transform:none; }
   .an-chart__scale span:nth-child(2) { top:50%; }
   .an-chart__scale span:last-child { bottom:0; transform:none; }
-  .an-chart__plot { position:relative; display:flex; align-items:stretch; gap:3px; height:164px; padding:12px 0 0; border-bottom:1px solid #252525; background:repeating-linear-gradient(to bottom, transparent 0, transparent 40px, #151515 41px); }
+  .an-chart__plot { position:relative; display:flex; align-items:stretch; gap:3px; height:164px; padding:12px 0 0; border-bottom:1px solid var(--cfg-border); background:repeating-linear-gradient(to bottom, transparent 0, transparent 40px, var(--cfg-border) 41px); }
   .an-chart__day { position:relative; z-index:1; flex:1 1 0; min-width:3px; display:flex; align-items:flex-end; padding:0; border:0; background:transparent; cursor:crosshair; }
-  .an-chart__day:focus-visible { outline:2px solid #5aa2ff; outline-offset:2px; border-radius:3px; }
-  .an-chart__bar { width:100%; min-height:2px; max-width:42px; margin:auto; border-radius:3px 3px 0 0; background:#0070f3; opacity:.52; transition:height .18s ease, opacity .12s ease, background .12s ease; }
-  .an-chart__day:hover .an-chart__bar, .an-chart__day:focus .an-chart__bar, .an-chart__day.is-active .an-chart__bar { opacity:1; background:#53a0ff; }
-  .an-chart__bar.is-zero { background:#303030; opacity:1; }
+  .an-chart__day:focus-visible { outline:2px solid var(--cfg-link); outline-offset:2px; border-radius:3px; }
+  .an-chart__bar { width:100%; min-height:2px; max-width:42px; margin:0 auto; /* not margin:auto: a vertical auto margin centres the bar instead of standing it on the axis */ border-radius:3px 3px 0 0; background:var(--cfg-info-fill); opacity:.52; transition:height .18s ease, opacity .12s ease, background .12s ease; }
+  .an-chart__day:hover .an-chart__bar, .an-chart__day:focus .an-chart__bar, .an-chart__day.is-active .an-chart__bar { opacity:1; background:var(--cfg-info-fg); }
+  .an-chart__bar.is-zero { background:var(--cfg-input); opacity:1; }
   .an-chart__visitor-line { position:absolute; z-index:2; inset:12px 0 0; width:100%; height:calc(100% - 12px); overflow:visible; pointer-events:none; }
-  .an-chart__visitor-line polyline { fill:none; stroke:#5eead4; stroke-width:1.8; vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 3px rgba(94,234,212,.26)); }
-  .an-chart__visitor-line circle { fill:#0a0a0a; stroke:#5eead4; stroke-width:2; vector-effect:non-scaling-stroke; }
-  .an-chart__axis { display:flex; justify-content:space-between; gap:12px; padding-top:9px; color:#777; font-size:11px; }
+  .an-chart__visitor-line polyline { fill:none; stroke:var(--an-visitors); stroke-width:1.8; vector-effect:non-scaling-stroke; filter:drop-shadow(0 0 3px color-mix(in oklab, var(--an-visitors) 26%, transparent)); }
+  .an-chart__visitor-line circle { fill:var(--cfg-card); stroke:var(--an-visitors); stroke-width:2; vector-effect:non-scaling-stroke; }
+  .an-chart__axis { display:flex; justify-content:space-between; gap:12px; padding-top:9px; color:var(--cfg-muted-foreground); font-size:11px; }
   .an-chart__axis span:nth-child(2) { text-align:center; }
   .an-chart__axis span:last-child { text-align:right; }
 
   .an-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:24px; }
   .an-funnel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:16px; margin-top:24px; }
   .an-funnel { padding:8px 16px 14px; }
-  .an-funnel__step { display:grid; grid-template-columns:22px minmax(0,1fr) auto; align-items:center; gap:9px; padding:10px 0; border-bottom:1px solid #202020; }
+  .an-funnel__step { display:grid; grid-template-columns:22px minmax(0,1fr) auto; align-items:center; gap:9px; padding:10px 0; border-bottom:1px solid var(--cfg-border); }
   .an-funnel__step:last-child { border-bottom:0; }
-  .an-funnel__position { color:#777; font-size:11px; }
-  .an-funnel__name { min-width:0; color:#d7d7d7; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .an-funnel__event { display:block; margin-top:2px; color:#777; font-size:11px; }
-  .an-funnel__count { color:#fff; font-size:12px; text-align:right; }
-  .an-funnel__rate { display:block; margin-top:2px; color:#8f8f8f; font-size:11px; }
+  .an-funnel__position { color:var(--cfg-muted-foreground); font-size:11px; }
+  .an-funnel__name { min-width:0; color:var(--cfg-foreground); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .an-funnel__event { display:block; margin-top:2px; color:var(--cfg-muted-foreground); font-size:11px; }
+  .an-funnel__count { color:var(--cfg-foreground); font-size:12px; text-align:right; }
+  .an-funnel__rate { display:block; margin-top:2px; color:var(--cfg-muted-foreground); font-size:11px; }
   @media (max-width:640px) {
     .an-head__left { width:100%; }
     .an-source-select { max-width:180px; }

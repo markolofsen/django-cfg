@@ -16,7 +16,7 @@ generator turns it into the matching Django settings. Nothing is registered by h
 1. core, templates, static
 2. databases, caches
 3. security, email, logging, i18n, limits, sessions, testing
-4. third-party apps (Unfold, Constance, and so on)
+4. third-party apps (admin site, Constance, Telegram)
 5. API (DRF, drf-spectacular, OpenAPI groups)
 6. OAuth, Django-RQ, Tailwind, payments
 
@@ -42,7 +42,7 @@ installed apps and middleware comes from `config.get_installed_apps()` and
 | `openapi_client` (`OpenAPIClientConfig`) | `REST_FRAMEWORK`, `SPECTACULAR_SETTINGS` and the per-group schema URLs |
 | `django_rq` (`DjangoRQConfig`) | `RQ_QUEUES`, worker and scheduler settings |
 | `payments` (`PaymentsConfig`) | `CFG_PAYMENTS_OWNER_MODEL` when the app is enabled |
-| `unfold` | the `UNFOLD` dictionary of the admin theme |
+| `admin_site` (`AdminSiteConfig`) | `CFG_ADMIN_SITE`, read by `CfgAdminSite` |
 
 ## DRF is reloaded after generation
 

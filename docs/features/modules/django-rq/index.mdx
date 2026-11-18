@@ -530,23 +530,9 @@ Access monitoring at `/admin/django_rq/`:
 - **Jobs**: Browse all jobs with filtering
 - **Failed Jobs**: Requeue or delete failed jobs
 
-### REST API
+### Programmatic access
 
-Query jobs programmatically:
-
-```python
-# GET /api/cfg/rq/queues/
-# Returns all queues with statistics
-
-# GET /api/cfg/rq/jobs/?status=failed
-# Returns failed jobs
-
-# POST /api/cfg/rq/jobs/{job_id}/requeue/
-# Requeue specific job
-
-# GET /api/cfg/rq/monitor/health/
-# System health check
-```
+django-cfg has no RQ REST API. Use `python manage.py rq_cron_status --json`, the Modules tab of the admin Overview, or the `django_rq` Python API (`django_rq.get_queue("default").count`). See [Monitoring](./monitoring).
 
 ### Prometheus Metrics
 

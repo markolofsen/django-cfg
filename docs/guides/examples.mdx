@@ -150,11 +150,11 @@ user = User.objects.create(...)      # Goes to default database
 
 ## Admin Interface Examples
 
-Examples of customizing the modern Unfold admin interface.
+Examples of customizing the admin (the stock Django admin with the django-cfg theme): see [Admin Site](/features/modules/admin-site).
 
 ### Dashboard Integration
 
-The dashboard is available at `/admin/`. Its tabs are server-rendered pages at `/cfg/admin/dashboard/<slug>/`, declared with `DashboardConfig` and `DashboardTab`.
+The Overview is at `/admin/`. Its tabs are server-rendered pages at `/cfg/admin/dashboard/<slug>/`, declared with `DashboardConfig` and `DashboardTab`.
 
 **See**: [Sample Project Admin Interface](./sample-project/admin-interface)
 

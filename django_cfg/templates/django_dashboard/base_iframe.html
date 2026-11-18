@@ -4,30 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ current_tab.title }}</title>
+    <script>
+    /* The tab follows the admin theme (cfg-theme.css), as django_overview/iframe_base.html does:
+       the parent's data-theme ("dark" | "light" | "auto") is copied onto this <html> and followed
+       live. Opened standalone (?iframe=1), the stored choice is read; none stored is dark.
+       Tailwind's `dark` class is kept in sync for templates that use `dark:` variants. */
+    (function () {
+        var root = document.documentElement, parent = null;
+        try { parent = window.parent !== window ? window.parent.document.documentElement : null; } catch (e) {}
+        var os = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+        function apply() {
+            var theme = parent && parent.dataset.theme;
+            if (!theme) { try { theme = window.localStorage.getItem('theme'); } catch (e) {} }
+            theme = theme || 'dark';
+            root.dataset.theme = theme;
+            root.classList.toggle('dark', theme === 'dark' || (theme === 'auto' && !!os && os.matches));
+        }
+        apply();
+        if (parent && window.MutationObserver) {
+            new MutationObserver(apply).observe(parent, { attributes: true, attributeFilter: ['data-theme'] });
+        }
+        if (os && os.addEventListener) { os.addEventListener('change', apply); }
+    })();
+    </script>
+    {# The theme tokens (--cfg-*), in a cascade layer: its admin element rules (links, tables, #}
+    {# headings) then lose to Tailwind and to the tab's own styles, while the tokens apply. #}
+    <style>@import url("{% static 'django_cfg/cfg-theme.css' %}") layer(cfg-theme);</style>
     {# Both icon families — tab templates use either; a missing one renders the glyph name as text. #}
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
-    {# Tailwind CDN #}
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-    tailwind.config = {
-        darkMode: 'class',
-        theme: {
-            extend: {
-                colors: {
-                    'base': {
-                        50:  'rgb(249 250 251)',
-                        100: 'rgb(243 244 246)',
-                        200: 'rgb(229 231 235)',
-                        700: 'rgb(55 65 81)',
-                        800: 'rgb(31 41 55)',
-                        900: 'rgb(17 24 39)',
-                    }
-                }
-            }
-        }
-    };
-    </script>
+    {% include "django_dashboard/_tailwind.html" %}
     {# Alpine.js 3.15.12 #}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
     {# Lucide icons 1.14.0 — use via: <i data-lucide="circle-check"></i> + lucide.createIcons() #}
@@ -40,25 +46,18 @@
     {% endif %}
     <style>
         *, *::before, *::after { box-sizing: border-box; }
+        /* The canvas is the admin page's own background token, light or dark. */
         html, body {
             margin: 0;
             padding: 0;
-            /* A dashboard tab is often opened directly with `?iframe=1` while
-               debugging or sharing a URL. In that case there is no parent
-               admin document from which to inherit `.dark`, and transparent
-               would expose the browser's white canvas. Dashboard tabs are a
-               dark surface in both embedded and direct modes. */
-            background: #000;
+            background: var(--cfg-background);
+            color: var(--cfg-foreground);
             height: 100%;
             overflow-x: hidden;
         }
         body {
-            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            font-family: var(--font-family-primary, ui-sans-serif, system-ui, -apple-system, sans-serif);
             font-size: 14px;
-            background: #000;
-        }
-        html.dark, html.dark body {
-            background-color: #000;
         }
 
         /* The gutter lives HERE, once, for every tab.
@@ -71,23 +70,6 @@
             .dashboard-tab-content { padding: 16px 16px 24px; }
         }
     </style>
-    <script>
-    /* Inherit the admin theme from the parent page (cfg-theme.css): Django's toggle sets
-       data-theme="dark" | "light" | "auto" (auto follows the OS); no stored choice is dark.
-       Opened standalone, the stored choice is read the same way. Tab templates key on
-       Tailwind's `dark` class; the canvas stays dark either way (see above). */
-    (function() {
-        var theme;
-        try { theme = window.parent.document.documentElement.dataset.theme; } catch (e) {}
-        if (!theme) { try { theme = window.localStorage.getItem('theme'); } catch (e) {} }
-        theme = theme || 'dark';
-        var dark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        if (dark) {
-            document.documentElement.classList.add('dark');
-            document.addEventListener('DOMContentLoaded', function () { document.body.classList.add('dark'); });
-        }
-    })();
-    </script>
 </head>
 <body>
     <div class="dashboard-tab-content">

@@ -15,7 +15,7 @@ description: Comprehensive comparison of Django-CFG vs django-environ, python-de
 - **Simple projects** (< 10 config values): django-environ or python-decouple
 - **Production applications** (type safety critical): Django-CFG or pydantic-settings
 - **Django-specific features** (built-in apps, admin, AI agents): Django-CFG (only option)
-- **Modern admin interfaces** (dashboards): Django-CFG (built-in Unfold admin)
+- **Modern admin interfaces** (dashboards): Django-CFG (stock Django admin with a theme and Overview)
 
 TAGS: comparison, alternatives, decision-guide, django-environ, pydantic-settings, python-decouple
 DEPENDS_ON: [django, pydantic, configuration-management]
@@ -33,7 +33,7 @@ USED_BY: [developers, tech-leads, architects]
 | **Django Integration** | ✅ Native | ⚠️ Partial | ❌ Generic | ❌ Generic | ✅ Native |
 | **Nested Config** | ✅ Models | ❌ Flat | ❌ Flat | ✅ Models | ⚠️ Dicts |
 | **Built-in Apps** | ✅ Yes | ❌ None | ❌ None | ❌ None | ❌ None |
-| **Modern Admin** | ✅ Unfold built-in | ❌ None | ❌ None | ❌ None | ❌ None |
+| **Modern Admin** | ✅ Themed Django admin | ❌ None | ❌ None | ❌ None | ❌ None |
 | **AI Agents** | ✅ Built-in | ❌ None | ❌ None | ❌ None | ❌ None |
 | **Multi-DB Routing** | ✅ Automatic | ❌ Manual | ❌ Manual | ❌ Manual | ⚠️ Manual |
 | **Lines of Code** | ✅ 30-50 | ⚠️ 150-200 | ⚠️ 150-200 | ⚠️ 100-150 | ❌ 200-500+ |
@@ -234,23 +234,23 @@ class MyConfig(DjangoConfig):
 
 ### Modern Admin Out of the Box
 
-Django-CFG ships an Unfold-based admin (Tailwind, dark mode) with a dashboard and `PydanticAdmin` for declarative model admins. It needs no separate process or service.
+Django-CFG ships the stock Django admin with its own theme (shadcn-like, dark by default), sidebar navigation, an Overview with dashboard tabs, and `PydanticAdmin` for declarative model admins. It needs no separate process or service.
 
 ```python
-from django_cfg import DjangoConfig, UnfoldConfig
+from django_cfg import AdminSiteConfig, DjangoConfig
 
 config = DjangoConfig(
     project_name="My Project",
     secret_key="x" * 50,
-    unfold=UnfoldConfig(site_title="My Admin", theme=None),  # None = theme switcher
+    admin_site=AdminSiteConfig(site_title="My Admin"),
 )
 ```
 
-The dashboard is at `/admin/`; its tabs are server-rendered pages at `/cfg/admin/dashboard/<slug>/`.
+The Overview is at `/admin/`; its dashboard tabs are server-rendered pages at `/cfg/admin/dashboard/<slug>/`.
 
 | Feature | django-environ | pydantic-settings | Django-CFG |
 |---------|----------------|-------------------|------------|
-| **Admin interface** | Django admin only | Django admin only | Unfold admin with dashboard |
+| **Admin interface** | Django admin only | Django admin only | Themed Django admin with Overview |
 | **Admin classes** | Manual | Manual | `PydanticAdmin` |
 | **Separate services** | n/a | n/a | None |
 
@@ -742,7 +742,7 @@ Q6: Is your team comfortable with Pydantic?
 **Choose Django-CFG if you need**:
 - Type safety (Pydantic v2)
 - IDE autocomplete
-- Built-in Unfold admin with a dashboard
+- Built-in themed Django admin with an Overview
 - Built-in apps (support, accounts, AI agents)
 - Auto TypeScript generation from Django models
 - Minimal configuration code
@@ -772,7 +772,7 @@ Q6: Is your team comfortable with Pydantic?
 
 ### Does Django-CFG include a modern admin interface?
 
-Yes. It ships an Unfold admin (Tailwind, dark mode) with a dashboard at `/admin/` and `PydanticAdmin` for declarative model admins. No separate process is needed.
+Yes. It ships the stock Django admin with its own theme (dark by default) and an Overview at `/admin/` and `PydanticAdmin` for declarative model admins. No separate process is needed.
 
 ---
 

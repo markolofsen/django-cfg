@@ -5,7 +5,7 @@ description: Complete reference for EmailConfig fields, backend options (SMTP, H
 
 # Email Configuration
 
-`EmailConfig` is a Pydantic v2 model set on `DjangoConfig.email`. It maps directly to Django's `EMAIL_*` settings and is applied automatically at startup.
+`EmailConfig` is a Pydantic v2 model set on `DjangoConfig.email`. It is applied automatically at startup: as `MAILERS` on Django 6.1+, as the `EMAIL_*` settings on Django 5.2. See [Django 5.2 and 6.1](/configuration/email#django-52-and-61-email_-or-mailers).
 
 ```python
 from django_cfg.models.services.email import EmailConfig
@@ -215,22 +215,29 @@ email = EmailConfig(backend="file", file_path="sent_emails/")
 
 ## Django Settings Mapping
 
-`EmailConfig` maps to standard Django settings applied automatically at startup:
+`EmailConfig` maps to standard Django settings applied automatically at startup. Django 6.1
+deprecates the `EMAIL_*` connection settings and refuses them next to `MAILERS`, so the
+output depends on the Django line:
 
-| EmailConfig field | Django setting |
-| --- | --- |
-| `backend` | `EMAIL_BACKEND` |
-| `host` | `EMAIL_HOST` |
-| `port` | `EMAIL_PORT` |
-| `use_tls` | `EMAIL_USE_TLS` |
-| `use_ssl` | `EMAIL_USE_SSL` |
-| `timeout` | `EMAIL_TIMEOUT` |
-| `username` | `EMAIL_HOST_USER` |
-| `password` | `EMAIL_HOST_PASSWORD` |
-| `default_from` | `DEFAULT_FROM_EMAIL` |
-| `gateway_url` | `EMAIL_GATEWAY_URL` (gateway backend only) |
-| `gateway_secret` | `EMAIL_GATEWAY_SECRET` (gateway backend only) |
-| `subscribe_url` | `EMAIL_SUBSCRIBE_URL` (only when set) |
+| EmailConfig field | Django 5.2 setting | Django 6.1+ (`MAILERS["default"]`) |
+| --- | --- | --- |
+| `backend` | `EMAIL_BACKEND` | `BACKEND` |
+| `host` | `EMAIL_HOST` | `OPTIONS["host"]` |
+| `port` | `EMAIL_PORT` | `OPTIONS["port"]` |
+| `use_tls` | `EMAIL_USE_TLS` | `OPTIONS["use_tls"]` |
+| `use_ssl` | `EMAIL_USE_SSL` | `OPTIONS["use_ssl"]` |
+| `timeout` | `EMAIL_TIMEOUT` | `OPTIONS["timeout"]` |
+| `username` | `EMAIL_HOST_USER` | `OPTIONS["username"]` |
+| `password` | `EMAIL_HOST_PASSWORD` | `OPTIONS["password"]` |
+| `file_path` | `EMAIL_FILE_PATH` (file backend only) | `OPTIONS["file_path"]` |
+| `gateway_url` | `EMAIL_GATEWAY_URL` (gateway backend only) | `OPTIONS["gateway_url"]` |
+| `gateway_secret` | `EMAIL_GATEWAY_SECRET` (gateway backend only) | `OPTIONS["gateway_secret"]` |
+| `default_from` | `DEFAULT_FROM_EMAIL` | `DEFAULT_FROM_EMAIL` |
+| `subscribe_url` | `EMAIL_SUBSCRIBE_URL` (only when set) | `EMAIL_SUBSCRIBE_URL` (only when set) |
+
+On Django 6.1, remove any `EMAIL_BACKEND = ...` from your own settings, test settings
+included. `to_mailer()`, `backend_path()` and `backend_options()` build the same entry
+for a project that composes its own `MAILERS`.
 
 You do not call `to_django_settings()` directly — django-cfg applies it during configuration loading.
 

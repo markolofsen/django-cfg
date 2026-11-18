@@ -2,20 +2,35 @@
 {% load static %}
 
 {# A dashboard tab opened outside its Overview iframe (no ?iframe=1): the stock admin #}
-{# page with the tab bar on top. Tab templates may use Tailwind and Alpine: both are #}
-{# loaded here as in base_iframe.html. #}
+{# page with the tab bar on top. Tab templates may use Tailwind (with the token colours) #}
+{# and Alpine: both are loaded here as in base_iframe.html. #}
 
 {% block extrahead %}
     {{ block.super }}
-    <script src="https://cdn.tailwindcss.com"></script>
+    {% include "django_dashboard/_tailwind.html" %}
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js"></script>
     {% if dashboard_config.tailwind_css %}
     <link rel="stylesheet" href="{% static dashboard_config.tailwind_css %}">
     {% endif %}
-    {# Tab templates are drawn for a dark surface (base_iframe.html); keep that surface #}
-    {# here too, so a light admin theme does not put them on a white canvas. #}
+    {# The page is the admin itself, so the --cfg-* tokens are already here; Tailwind's `dark` #}
+    {# class follows the admin's data-theme for tab templates that still use `dark:` variants. #}
+    <script>
+    (function () {
+        var root = document.documentElement;
+        var os = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+        function apply() {
+            var theme = root.dataset.theme || 'dark';
+            root.classList.toggle('dark', theme === 'dark' || (theme === 'auto' && !!os && os.matches));
+        }
+        apply();
+        if (window.MutationObserver) {
+            new MutationObserver(apply).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+        }
+        if (os && os.addEventListener) { os.addEventListener('change', apply); }
+    })();
+    </script>
     <style>
-        .dashboard-tab-content { background: #000; color-scheme: dark; border-radius: 4px; padding: 24px 28px 32px; }
+        .dashboard-tab-content { background: var(--cfg-background); color: var(--cfg-foreground); padding: 24px 28px 32px; }
         @media (max-width: 640px) { .dashboard-tab-content { padding: 16px 16px 24px; } }
     </style>
 {% endblock %}

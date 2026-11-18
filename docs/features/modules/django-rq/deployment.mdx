@@ -313,24 +313,6 @@ python manage.py rqworker default high low knowledge
 python manage.py rqcron
 ```
 
-### Using Makefile
-
-```bash
-# If django-cfg includes Makefile
-
-# Start services
-make rq
-
-# View worker logs
-make rq-worker
-
-# View scheduler logs
-make rq-scheduler
-
-# Check queue stats
-make rq-stats
-```
-
 ### Using Honcho/Foreman
 
 Create `Procfile`:
