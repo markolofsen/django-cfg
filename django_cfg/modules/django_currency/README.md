@@ -100,5 +100,10 @@ class ProductAdmin(MoneyFieldAdminMixin, admin.ModelAdmin):
     pass
 ```
 
-Adds readonly fields for `price_target`, `price_rate`, `price_rate_at` and
-renders `MoneyFieldWidget` (amount + currency dropdown) in edit forms.
+Adds `price_target`, `price_rate` and `price_rate_at` to the readonly fields, but
+only those that actually exist on the model (they are model fields you declare, not
+descriptors), and renders `MoneyFieldWidget` (amount + currency dropdown) in edit
+forms. The widget lives in `django_cfg.modules.django_currency.widgets`.
+
+For list views, `MoneyFieldDisplay` in `django_admin` shows the amount, the converted
+amount and the rate (see the django_admin numeric field docs).

@@ -39,7 +39,7 @@ the next redeploy.
 from django_cfg import DjangoConfig, StorageConfig, S3StorageConfig
 
 class MyConfig(DjangoConfig):
-    storage = StorageConfig(
+    storage: StorageConfig = StorageConfig(
         backend=S3StorageConfig.r2(account_id="…", bucket_name="media"),
     )
 ```
@@ -112,7 +112,7 @@ store them as `R2__ACCESS_KEY_ID` and `R2__SECRET_ACCESS_KEY`.
 
 ```python
 class MyConfig(DjangoConfig):
-    storage = StorageConfig(
+    storage: StorageConfig = StorageConfig(
         backend=S3StorageConfig.r2(
             account_id="abc123",
             bucket_name="media",

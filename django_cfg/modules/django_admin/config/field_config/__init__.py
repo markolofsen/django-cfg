@@ -8,11 +8,9 @@ from typing import Annotated, Any, Union
 
 from pydantic import Discriminator, Tag
 
-from .avatar import AvatarField
 from .badge import BadgeField
 from .base import FieldConfig
 from .boolean import BooleanField
-from .counter_badge import CounterBadgeField
 from .currency import CurrencyField
 from .datetime import DateTimeField
 from .decimal import DecimalField
@@ -26,15 +24,11 @@ from .short_uuid import ShortUUIDField
 from .stacked import RowItem, StackedField
 from .status_badges import BadgeRule, StatusBadgesField
 from .text import TextField
-from .toon import ToonField
 from .user import UserField
-from .video import VideoField
 
 
 def _get_field_type(v: Any) -> str:
     """Discriminator function for FieldConfigType."""
-    if isinstance(v, ToonField):
-        return "toon"
     if isinstance(v, BadgeField):
         return "badge"
     if isinstance(v, CurrencyField):
@@ -59,16 +53,10 @@ def _get_field_type(v: Any) -> str:
         return "link"
     if isinstance(v, StatusBadgesField):
         return "status_badges"
-    if isinstance(v, CounterBadgeField):
-        return "counter_badge"
     if isinstance(v, DecimalField):
         return "decimal"
-    if isinstance(v, AvatarField):
-        return "avatar"
     if isinstance(v, ShortUUIDField):
         return "short_uuid"
-    if isinstance(v, VideoField):
-        return "video"
     if isinstance(v, ForeignKeyField):
         return "foreignkey"
     if isinstance(v, StackedField):
@@ -92,14 +80,10 @@ FieldConfigType = Annotated[
         Annotated[MoneyFieldDisplay, Tag("money")],
         Annotated[LinkField, Tag("link")],
         Annotated[StatusBadgesField, Tag("status_badges")],
-        Annotated[CounterBadgeField, Tag("counter_badge")],
         Annotated[DecimalField, Tag("decimal")],
-        Annotated[AvatarField, Tag("avatar")],
         Annotated[ShortUUIDField, Tag("short_uuid")],
-        Annotated[VideoField, Tag("video")],
         Annotated[ForeignKeyField, Tag("foreignkey")],
         Annotated[StackedField, Tag("stacked")],
-        Annotated[ToonField, Tag("toon")],
         Annotated[FieldConfig, Tag("base")],
     ],
     Discriminator(_get_field_type),
@@ -122,12 +106,8 @@ __all__ = [
     "ShortUUIDField",
     "LinkField",
     "ForeignKeyField",
-    "AvatarField",
     "StackedField",
     "RowItem",
     "StatusBadgesField",
     "BadgeRule",
-    "CounterBadgeField",
-    "VideoField",
-    "ToonField",
 ]

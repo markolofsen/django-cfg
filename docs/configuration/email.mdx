@@ -7,8 +7,8 @@ description: EmailConfig model for SMTP, Console, and HTTP-gateway email backend
 
 
 <Callout type="info">
-**Automatic Backend Selection**
-Django-CFG provides **type-safe email configuration** with automatic backend selection - Console for development, SMTP for production.
+**Backend selection**
+Django-CFG provides **type-safe email configuration**. The default backend is `console`; set `backend="smtp"` (or `"gateway"`) and `default_from` for production.
 
 </Callout>
 
@@ -31,6 +31,8 @@ Type-safe email service configuration.
 | `use_ssl` | `bool` | `False` | Use SSL encryption |
 | `ssl_verify` | `bool` | `True` | Verify SSL certificates (set False for self-signed certs in dev) |
 | `default_from` | `str \| None` | `None` | The one sending address for every site. Required in production with `smtp`/`gateway` (startup error otherwise). |
+| `default_from_name` | `str \| None` | `None` | Display name shown in the inbox (defaults to the project name) |
+| `reply_to` | `str \| None` | `None` | Address that receives replies, when it differs from the sender |
 | `file_path` | `str` | `"emails/"` | Path for file-based email backend |
 | `timeout` | `int` | `30` | Email send timeout in seconds (≥1) |
 | `gateway_url` | `str \| None` | `None` | Email gateway send endpoint (required for `backend="gateway"`) |
@@ -356,40 +358,31 @@ class MyConfig(DjangoConfig):
 
 ## Environment-Specific Configuration
 
-### Using Properties
+### Choosing by environment
+
+`DjangoConfig` has no `_environment` attribute and `email` is a field, not a property. Decide in the class body, from `DJANGO_ENV`:
 
 ```python
 import os
+from django_cfg import DjangoConfig, EmailConfig
+
+_env = os.environ.get("DJANGO_ENV", "production")
 
 class MyConfig(DjangoConfig):
     secret_key: str = "your-secret-key"
-
-    @property
-    def email(self) -> EmailConfig:
-        if self._environment == "production":
-            return EmailConfig(
-                backend="smtp",
-                host=os.getenv('EMAIL_HOST'),
-                port=587,
-                username=os.getenv('SMTP_USER'),
-                password=os.getenv('SMTP_PASSWORD'),
-                use_tls=True,
-                default_from="noreply@myapp.com"
-            )
-        elif self._environment == "staging":
-            return EmailConfig(
-                backend="smtp",
-                host="smtp.gmail.com",
-                port=587,
-                username=os.getenv('SMTP_USER'),
-                password=os.getenv('SMTP_PASSWORD'),
-                use_tls=True,
-                default_from="staging@myapp.com"
-            )
-        else:  # development
-            return EmailConfig(
-                backend="console"
-            )
+    email: EmailConfig = (
+        EmailConfig(
+            backend="smtp",
+            host=os.environ.get("EMAIL_HOST", "localhost"),
+            port=587,
+            username=os.environ.get("SMTP_USER"),
+            password=os.environ.get("SMTP_PASSWORD"),
+            use_tls=True,
+            default_from="noreply@myapp.com",
+        )
+        if _env == "production"
+        else EmailConfig(backend="console")
+    )
 ```
 
 ### Using Environment Variables

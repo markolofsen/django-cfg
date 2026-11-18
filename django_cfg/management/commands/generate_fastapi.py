@@ -2,7 +2,7 @@
 Django-CFG wrapper for generate_fastapi command.
 
 This is a simple alias for django_cfg.modules.django_generator.fastapi.management.commands.generate_fastapi.
-All logic is in django_fastapi module.
+All logic is in django_generator.fastapi.
 
 Usage:
     python manage.py generate_fastapi

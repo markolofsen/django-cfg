@@ -42,8 +42,8 @@ No changes needed to your `config.py`:
 ```python
 # config.py — nothing extra required
 class MyConfig(DjangoConfig):
-    project_name = "myapp"
-    databases = {
+    project_name: str = "myapp"
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url("postgresql://user:pass@localhost/myapp")
     }
 ```
@@ -168,7 +168,7 @@ python manage.py test --verbosity=2
 
 ## See Also
 
-- [Test Runners](./test-runners) — `SmartTestRunner`, `FastTestRunner`, `MigrationManager` API
+- [Test Runners](./test-runners) — `SmartTestRunner` and `FastTestRunner`
 - [test_db Command](./test-db-command) — CLI for manual database management
 - [Migration Internals](./migration-internals) — deep-dive into what can go wrong
 

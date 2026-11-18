@@ -6,32 +6,19 @@ navigation and theming support.
 """
 
 from .models import *
-from .navigation import NavigationManager, get_navigation_manager, NavBuilder
-from .system_monitor import SystemMonitor
+from .navigation import NavBuilder, NavigationManager, get_navigation_manager
 from .tailwind import get_css_variables, get_unfold_colors
-
-
-# Lazy initialization functions to avoid circular imports
-def get_system_monitor() -> SystemMonitor:
-    """Get the global system monitor instance."""
-    global _system_monitor
-    if '_system_monitor' not in globals():
-        globals()['_system_monitor'] = SystemMonitor()
-    return globals()['_system_monitor']
 
 # Export main components
 __all__ = [
     'NavigationManager',
     'get_navigation_manager',
     'NavBuilder',
-    'SystemMonitor',
-    'get_system_monitor',
     'get_unfold_colors',
     'get_css_variables',
     # Models
     'UnfoldConfig',
     'UnfoldTheme',
-    'UnfoldColors',
     'UnfoldSidebar',
     'UnfoldThemeConfig',
     'UnfoldDashboardConfig',

@@ -20,7 +20,7 @@ Just inherit from `PydanticAdmin` and the currency features work out of the box.
 |-----------|---------|
 | `PydanticAdmin` | Base admin class (includes MoneyFieldAdminMixin) |
 | `MoneyFieldDisplay` | Display field for admin lists |
-| `MoneyFieldWidget` | Form widget for editing (auto-applied) |
+| `MoneyFieldWidget` | Form widget for editing (auto-applied by `MoneyField.formfield`; lives in `django_cfg.modules.django_currency.widgets`) |
 
 ---
 
@@ -229,7 +229,7 @@ def get_readonly_fields(self, request, obj=None):
 
 ### 3. Widget Assignment
 
-Replaces default widget with `MoneyFieldWidget`:
+Replaces default widget with `MoneyFieldWidget` (`from django_cfg.modules.django_currency.widgets import MoneyFieldWidget`):
 
 ```python
 def formfield_for_dbfield(self, db_field, request, **kwargs):

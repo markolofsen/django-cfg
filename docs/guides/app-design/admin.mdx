@@ -128,7 +128,19 @@ config = AdminConfig(
 
 ## Actions
 
-Custom admin actions with confirmation and bulk support:
+Custom admin actions. Each `ActionConfig` needs a `handler` (a dotted path or a callable); it is called as `handler(modeladmin, request, queryset)` for a bulk action:
+
+```python
+# apikeys/admin/actions.py
+def revoke_keys(modeladmin, request, queryset):
+    count = queryset.update(is_active=False)
+    modeladmin.message_user(request, f"Revoked {count} keys.")
+
+
+def activate_keys(modeladmin, request, queryset):
+    count = queryset.update(is_active=True)
+    modeladmin.message_user(request, f"Activated {count} keys.")
+```
 
 ```python
 from django_cfg.modules.django_admin import ActionConfig
@@ -138,13 +150,15 @@ config = AdminConfig(
     actions=[
         ActionConfig(
             name="revoke_keys",
-            label="Revoke selected keys",
+            description="Revoke selected keys",
+            handler="apikeys.admin.actions.revoke_keys",
             icon="block",
             variant="danger",
         ),
         ActionConfig(
             name="activate_keys",
-            label="Activate selected keys",
+            description="Activate selected keys",
+            handler="apikeys.admin.actions.activate_keys",
             icon="check_circle",
             variant="success",
         ),
@@ -154,14 +168,6 @@ config = AdminConfig(
 @admin.register(APIKey)
 class APIKeyAdmin(PydanticAdmin):
     config = config
-
-    def revoke_keys(self, request, queryset):
-        count = queryset.update(is_active=False)
-        self.message_user(request, f"Revoked {count} keys.")
-
-    def activate_keys(self, request, queryset):
-        count = queryset.update(is_active=True)
-        self.message_user(request, f"Activated {count} keys.")
 ```
 
 ## Read-Only Admin

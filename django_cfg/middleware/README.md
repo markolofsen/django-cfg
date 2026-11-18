@@ -29,17 +29,12 @@ Middleware for automatic user activity tracking by updating the `last_login` fie
 - ✅ Smart API request detection (JSON, DRF, REST methods)
 - ✅ 5-minute update interval to prevent database spam
 - ✅ In-memory caching for performance optimization
-- ✅ Only works when `accounts` app is enabled
+- ✅ Always active (the accounts app is core django-cfg)
 - ✅ KISS principle - no configuration needed
 
 ### 🚀 Automatic Integration
 
-The middleware is automatically included when `enable_accounts = True`:
-
-```python
-class MyConfig(DjangoConfig):
-    enable_accounts = True  # UserActivityMiddleware will be auto-included
-```
+`MiddlewareBuilder` (`core/builders/middleware_builder.py`) always adds `UserActivityMiddleware`; there is no flag to turn it on or off. The same builder also adds, in order: `RealIPMiddleware` (first), `NoIndexMiddleware` and `AdminAccessMiddleware` (when enabled), `RequestIdMiddleware`, the default Django middleware (with CORS), then `TimezoneMiddleware`, `ClientIdMiddleware`, `SiteMiddleware` and the Notion request-context middleware (when enabled), `UserActivityMiddleware`, and finally your `custom_middleware` and the pool-cleanup middleware.
 
 ### 🎯 API Request Detection
 
@@ -79,8 +74,6 @@ print(stats)
 #     'tracked_users': 42,
 #     'update_interval': 300,
 #     'api_only': True,
-#     'accounts_enabled': True,
-#     'middleware_active': True
 # }
 ```
 
@@ -100,12 +93,11 @@ LOGGING = {
 }
 ```
 
-### 🎛️ Manual Integration
+### 🎛️ Outside django-cfg
 
-If you need to include the middleware manually:
+In a project that does not use `MiddlewareBuilder`, add it to `MIDDLEWARE` yourself (after `AuthenticationMiddleware`):
 
 ```python
-# settings.py
 MIDDLEWARE = [
     # ... other middleware
     'django_cfg.middleware.UserActivityMiddleware',
@@ -129,7 +121,7 @@ The `last_login` field is automatically displayed in accounts admin:
 
 ### 🚨 Important Notes
 
-1. **Accounts only**: Middleware only works when `enable_accounts = True`
+1. **Always on**: added by django-cfg for every project
 2. **Authentication**: Only tracks authenticated users
 3. **Performance**: 5-minute interval prevents database spam
 4. **Safety**: Middleware doesn't break requests on errors
@@ -162,9 +154,9 @@ online_users = User.objects.filter(
 The middleware works automatically with no configuration needed:
 
 ```python
-# Your DjangoConfig
+# Your DjangoConfig: nothing to set, the middleware is active
 class MyProjectConfig(DjangoConfig):
-    enable_accounts = True  # That's it! Middleware is active
+    ...
 
 # API requests will automatically update last_login:
 # POST /cfg/accounts/profile/
@@ -500,8 +492,8 @@ DjangoTelegram.send_info("Test", {"message": "Testing admin notifications"})
 
 3. Check logs:
 ```bash
-# Enable DEBUG logging
-tail -f logs/django.log | grep admin_notifications
+# Logs go to stdout (no logs/django.log by default); read the container or terminal output
+docker logs -f <container> 2>&1 | grep admin_notifications
 ```
 
 **Problem: Wrong IP address**

@@ -126,46 +126,22 @@ finally:
 
 ---
 
-## Monitor Database in Tests
+## Mirrored Databases in Tests
 
-<Callout type="info">
-This section applies if you use the built-in `monitor` app (`django_cfg.apps.system.monitor`).
-</Callout>
+When two aliases point at the same physical database (for example a second alias with `conn_max_age=0` so writes are never rolled back by `ATOMIC_REQUESTS`), the test run would normally create two test databases and a `ForeignKey(User)` created in a `TestCase` transaction on `default` would be invisible to the other connection.
 
-The `monitor` database alias points to the **same physical PostgreSQL database** as `default`, but uses a separate connection (`conn_max_age=0`) so error records written by `ServerEvent.record()` are never rolled back by `ATOMIC_REQUESTS`.
-
-In tests this split causes **cross-connection FK violations**: a `User` created inside a `TestCase` transaction on `default` is invisible to the `monitor` connection, breaking any `ForeignKey(User)` constraints on monitor models.
-
-### MonitorTestCase
-
-All tests that touch monitor models should inherit from `MonitorTestCase`:
+Declare the mirror on the `DatabaseConfig`:
 
 ```python
-from django_cfg.apps.system.monitor.tests.conftest import MonitorTestCase
-
-class MyEventTest(MonitorTestCase):
-    def test_something(self):
-        user = make_user()
-        event = make_event(user=user)  # no FK violation
-        self.assertEqual(event.user, user)
+databases: dict[str, DatabaseConfig] = {
+    "default": DatabaseConfig(...),
+    "events": DatabaseConfig(..., conn_max_age=0, test_mirror="default"),
+}
 ```
 
-`MonitorTestCase` does two things:
+django-cfg then emits `DATABASES["events"]["TEST"] = {"MIRROR": "default"}`. Django reuses `default`'s test database for the `events` alias, so no second test database is created and the two connections see the same data. Tests that query the mirror alias must list it in `databases = {"default", "events"}` on the `TestCase`.
 
-1. Sets `databases = {"default", "monitor"}` so Django allows queries to both aliases
-2. Removes the `django_cfg_monitor` routing rule in `setUp` / restores it in `tearDown` — forcing all monitor models to use the `default` connection and share the test transaction with auth models
-
-### How TEST MIRROR works
-
-`DatabaseSettingsGenerator` automatically detects when the `monitor` alias points to the same physical DB as `default` and sets:
-
-```python
-DATABASES["monitor"]["TEST"]["MIRROR"] = "default"
-```
-
-Django then reuses `default`'s test DB for the `monitor` alias — no separate test DB is created, and `django_cfg_monitor` migrations run only once (on `default`).
-
-The `DatabaseRouter` is patched to allow `django_cfg_monitor` app migrations to run on `default` when `monitor` is a MIRROR alias. No manual configuration is needed.
+The generated `DatabaseRouter` redirects a mirrored alias to its target only while tests run.
 
 ---
 
@@ -175,5 +151,5 @@ The `DatabaseRouter` is patched to allow `django_cfg_monitor` app migrations to 
 - [test_db Command](./test-db-command) — CLI for manual database management
 - [Migration Internals](./migration-internals) — root cause analysis of test DB failures
 
-TAGS: SmartTestRunner, FastTestRunner, MigrationManager, test runners, migration fix, MonitorTestCase, monitor database
+TAGS: SmartTestRunner, FastTestRunner, test runners, migration fix, test_mirror
 DEPENDS_ON: [overview, test-db-command, migration-internals]

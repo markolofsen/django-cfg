@@ -201,12 +201,12 @@ def webhook_handler(request):
 
 ## Usage Patterns
 
-### Lead Submission (Built-in)
+### Lead Submission (leads extension)
 
-Django-CFG's lead system works out of the box:
+`/cfg/leads/` is the default public CORS path. The leads app ships as a django-cfg extension, not as a built-in app; once it is installed, its submit endpoint is covered by the default:
 
 ```python
-# Already configured in django_cfg.apps.business.leads
+# Shape of the leads extension's view
 class LeadViewSet(PublicAPIMixin, viewsets.ModelViewSet):
     queryset = Lead.objects.all()
     serializer_class = LeadSubmissionSerializer

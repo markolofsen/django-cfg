@@ -1,11 +1,9 @@
 """
-Django-CFG template tags: lib metadata, environment, frontend detection,
+Django-CFG template tags: lib metadata, environment,
 JWT tokens, admin dashboard tabs. Load with ``{% load django_cfg %}``.
 """
 
-import socket
 from django import template
-from django.conf import settings
 from django.utils.safestring import mark_safe
 
 register = template.Library()
@@ -13,25 +11,6 @@ register = template.Library()
 # ---------------------------------------------------------------------------
 # Internals (shared)
 # ---------------------------------------------------------------------------
-
-def _is_port_available(host: str, port: int, timeout: float = 0.1, retries: int = 3, retry_delay: float = 0.05) -> bool:
-    import time
-    for attempt in range(retries):
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(timeout)
-            result = sock.connect_ex((host, port))
-            sock.close()
-            if result == 0:
-                return True
-            if attempt < retries - 1:
-                time.sleep(retry_delay)
-        except Exception:
-            if attempt < retries - 1:
-                time.sleep(retry_delay)
-            continue
-    return False
-
 
 def _get_jwt_refresh(user):
     from rest_framework_simplejwt.tokens import RefreshToken
@@ -109,39 +88,6 @@ def is_dev():
         return config and config.is_development
     except Exception:
         return False
-
-
-@register.simple_tag
-def is_frontend_dev_mode():
-    if not settings.DEBUG:
-        return False
-    return _is_port_available('localhost', 3000) or _is_port_available('localhost', 3777)
-
-
-@register.simple_tag
-def nextjs_admin_url(path=''):
-    path = path.strip('/')
-    if not settings.DEBUG:
-        return f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
-    if _is_port_available('localhost', 3777):
-        base_url = 'http://localhost:3777/admin'
-        return f'{base_url}/{path}' if path else base_url
-    return f'/cfg/admin/admin/{path}' if path else '/cfg/admin/admin/'
-
-
-@register.simple_tag
-def has_nextjs_external_admin():
-    return False
-
-
-@register.simple_tag
-def nextjs_external_admin_url(route=''):
-    return ''
-
-
-@register.simple_tag
-def nextjs_external_admin_title():
-    return ''
 
 
 # ---------------------------------------------------------------------------

@@ -5,6 +5,9 @@ Admin interface for Currency metadata model using django_cfg.
 """
 
 from django.contrib import admin
+
+from django_cfg.apps.tools.currency.models import Currency
+from django_cfg.icons import Icons
 from django_cfg.modules.django_admin import (
     AdminConfig,
     BadgeField,
@@ -12,12 +15,8 @@ from django_cfg.modules.django_admin import (
     DocumentationConfig,
     FieldsetConfig,
     TextField,
-    Icons,
 )
 from django_cfg.modules.django_admin.base import PydanticAdmin
-
-from django_cfg.apps.tools.currency.models import Currency
-
 
 # ========== ADMIN CONFIG ==========
 currency_admin_config = AdminConfig(

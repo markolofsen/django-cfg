@@ -2,13 +2,14 @@
 Startup display manager for Django CFG.
 """
 
+import traceback
+
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
-import traceback
 
-from .base import BaseDisplayManager
 from .ai_hints import AIHintsDisplayManager
+from .base import BaseDisplayManager
 
 
 class StartupDisplayManager(BaseDisplayManager):
@@ -138,7 +139,6 @@ class StartupDisplayManager(BaseDisplayManager):
 
             # Get library info
             from django_cfg.config import (
-                LIB_SITE_URL,
                 LIB_GITHUB_URL,
                 LIB_SITE_URL,
                 LIB_SUPPORT_URL,
@@ -674,7 +674,9 @@ class StartupDisplayManager(BaseDisplayManager):
     def _display_openapi_client_info(self):
         """Display Django Client (OpenAPI) information."""
         try:
-            from django_cfg.modules.django_generator.openapi.pipeline.config.service import get_openapi_service
+            from django_cfg.modules.django_generator.openapi.pipeline.config.service import (
+                get_openapi_service,
+            )
 
             service = get_openapi_service()
             if not service.config or not service.config.enabled:
@@ -864,9 +866,7 @@ class StartupDisplayManager(BaseDisplayManager):
     def _display_logging_info(self):
         """Display where logs go."""
         try:
-            from ...utils.runtime_paths import resolve_log_dir
-
-            from ...utils.runtime_paths import resolve_monitor_log_dir
+            from ...utils.runtime_paths import resolve_log_dir, resolve_monitor_log_dir
 
             log_dir = resolve_log_dir()
             log_info = Text("📝 Logs → ", style="dim")
@@ -898,6 +898,6 @@ class StartupDisplayManager(BaseDisplayManager):
                     return
 
             self.ai_hints_manager.display_ai_hints(mode=mode)
-        except Exception as e:
+        except Exception:
             # Don't crash on AI hints error, just skip
             pass

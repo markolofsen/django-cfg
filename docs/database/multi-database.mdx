@@ -57,7 +57,7 @@ from django_cfg import DjangoConfig, DatabaseConfig
 from .environment import env
 
 class MyDjangoConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url),
     }
 
@@ -107,7 +107,7 @@ from django_cfg import DjangoConfig, DatabaseConfig
 from .environment import env
 
 class MyDjangoConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url),
     }
 
@@ -287,7 +287,7 @@ from django_cfg import DjangoConfig, DatabaseConfig
 from .environment import env
 
 class MyDjangoConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url),
     }
 ```
@@ -319,7 +319,7 @@ class DatabaseConfig(BaseSettings):
 ```python
 # api/config.py
 class MyDjangoConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url),
     }
 
@@ -370,7 +370,7 @@ class DatabaseConfig(BaseSettings):
 ```python
 # api/config.py
 class MyDjangoConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url),
     }
 
@@ -490,18 +490,16 @@ DATABASE_URL_SHOP="postgresql://user:pass@localhost/shop"
 
 ### 3. Different Engines Per Environment
 
-```yaml
+```bash
 # Development - fast SQLite
-database:
-  url: "sqlite:///db/default.sqlite3"
-  url_blog: "sqlite:///db/blog.sqlite3"
+DATABASE__URL="sqlite:///db/default.sqlite3"
+DATABASE__URL_BLOG="sqlite:///db/blog.sqlite3"
 ```
 
-```yaml
+```bash
 # Production - robust PostgreSQL
-database:
-  url: "postgresql://user:pass@db.example.com/main"
-  url_blog: "postgresql://user:pass@db.example.com/blog"
+DATABASE__URL="postgresql://user:pass@db.example.com/main"
+DATABASE__URL_BLOG="postgresql://user:pass@db.example.com/blog"
 ```
 
 ## See Also

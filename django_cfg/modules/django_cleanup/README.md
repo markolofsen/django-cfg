@@ -27,33 +27,33 @@ class Document(models.Model):
 ### Configuration via DjangoConfig
 
 ```python
-from django_cfg import DjangoConfig
-from django_cfg.models import StorageConfig
+from django_cfg import DjangoConfig, StorageConfig, FileCleanupConfig
 
 class MyConfig(DjangoConfig):
     project_name = "My Project"
 
     # Configure storage cleanup
     storage = StorageConfig(
-        auto_cleanup=True,           # Enable automatic cleanup (default: True)
-        delete_on_replace=True,      # Delete old file when replaced (default: True)
-        log_deletions=True,          # Log file deletions (default: False)
-        check_shared_files=False,    # Check if file is shared (default: False)
-        respect_soft_delete=True,    # Don't delete for soft-deleted records (default: True)
-        exclude_models=[
-            "backups.DatabaseBackup",  # Keep backup files
-        ],
-        exclude_fields=[
-            "documents.Contract.original_scan",  # Keep original scans
-        ],
+        cleanup=FileCleanupConfig(
+            auto_cleanup=True,           # Enable automatic cleanup (default: True)
+            delete_on_replace=True,      # Delete old file when replaced (default: True)
+            log_deletions=True,          # Log file deletions (default: False)
+            check_shared_files=False,    # Check if file is shared (default: False)
+            respect_soft_delete=True,    # Don't delete for soft-deleted records (default: True)
+            exclude_models=[
+                "backups.DatabaseBackup",  # Keep backup files
+            ],
+            exclude_fields=[
+                "documents.Contract.original_scan",  # Keep original scans
+            ],
+        ),
     )
 ```
 
 ### Disable Cleanup
 
 ```python
-from django_cfg import DjangoConfig
-from django_cfg.models import StorageConfig
+from django_cfg import DjangoConfig, StorageConfig
 
 class MyConfig(DjangoConfig):
     storage = StorageConfig(enabled=False)
@@ -97,9 +97,11 @@ fields = get_file_fields(MyModel)  # Returns [(field_name, field), ...]
 
 ## Configuration Options
 
+`enabled` is on `StorageConfig`; every other option is a field of `FileCleanupConfig`, passed as `StorageConfig(cleanup=FileCleanupConfig(...))`. Passing them directly to `StorageConfig` still works but is deprecated. Opt-in delete sync (outbox, owned files, CDN purge) is described in `@docs/outbox.md`.
+
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `enabled` | bool | `True` | Enable the cleanup module |
+| `enabled` | bool | `True` | Enable the cleanup module (field of `StorageConfig`) |
 | `auto_cleanup` | bool | `True` | Auto-register signals for all models with file fields |
 | `delete_on_replace` | bool | `True` | Delete old file when field is updated with new file |
 | `log_deletions` | bool | `False` | Log file deletions at INFO level |
@@ -161,7 +163,7 @@ When parent is deleted, related models' files are also cleaned up (via cascade s
 If multiple records reference the same file, enable `check_shared_files`:
 
 ```python
-storage = StorageConfig(check_shared_files=True)
+storage = StorageConfig(cleanup=FileCleanupConfig(check_shared_files=True))
 ```
 
 This adds a DB query per file field to check for other references.
@@ -170,14 +172,14 @@ This adds a DB query per file field to check for other references.
 
 | Feature | django_cfg.django_cleanup | django-cleanup |
 |---------|---------------------------|----------------|
-| Auto-discovery | ✅ | ✅ |
-| Delete on replace | ✅ | ✅ |
-| Transaction-safe | ✅ | ✅ |
-| Soft-delete aware | ✅ | ❌ |
-| DjangoConfig integration | ✅ | ❌ |
-| Exclude models/fields | ✅ | ❌ |
-| Shared file check | ✅ | ❌ |
-| Logging | ✅ | ❌ |
+| Auto-discovery | yes | yes |
+| Delete on replace | yes | yes |
+| Transaction-safe | yes | yes |
+| Soft-delete aware | yes | no |
+| DjangoConfig integration | yes | no |
+| Exclude models/fields | yes | no |
+| Shared file check | yes | no |
+| Logging | yes | no |
 
 ## API Reference
 
@@ -188,10 +190,10 @@ This adds a DB query per file field to check for other references.
 delete_file(file_field: FieldFile, save: bool = False) -> bool
 
 # Delete file by name using storage
-delete_file_by_name(storage, file_name: str, log: bool = False) -> bool
+delete_file_by_name(storage, file_name: str, log_deletions: bool = False) -> bool
 
 # Clean up all files for an instance
-cleanup_instance_files(instance, config, fields: list = None) -> int
+cleanup_instance_files(instance, config, fields_to_clean: list = None) -> int
 
 # Get all FileField/ImageField from a model
 get_file_fields(model: Type[Model]) -> List[Tuple[str, FileField]]
@@ -237,7 +239,7 @@ clear_config_cache()
 
 1. Check if model is excluded: `is_model_excluded(MyModel, get_config())`
 2. Check if using soft-delete: `is_soft_deleted(instance, get_config())`
-3. Enable logging: `StorageConfig(log_deletions=True)`
+3. Enable logging: `StorageConfig(cleanup=FileCleanupConfig(log_deletions=True))`
 
 ### Files deleted unexpectedly
 

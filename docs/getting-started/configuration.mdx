@@ -50,11 +50,11 @@ graph TB
 Django-CFG uses **pydantic-settings** to load configuration from environment variables and .env files. This provides type-safe configuration with automatic validation.
 
 **Key benefits:**
-- ✅ Simple - one configuration method for all environments
-- ✅ [Type-safe loader](../../core/type-safety) with Pydantic models
-- ✅ Single import point via environment module
-- ✅ 12-factor app compliant
-- ✅ Works everywhere (Docker, K8s, CI/CD)
+- Simple - one configuration method for all environments
+- [Type-safe loader](../../core/type-safety) with Pydantic models
+- Single import point via environment module
+- 12-factor app compliant
+- Works everywhere (Docker, K8s, CI/CD)
 
 
 <Callout type="warning">
@@ -498,8 +498,8 @@ config = MyProjectConfig()
 
 
 <Callout type="info">
-**Automatic Detection**
-Django-CFG automatically detects the environment based on `IS_DEV`, `IS_PROD`, and `IS_TEST` environment variables. Defaults to development if none are set.
+**How the mode is chosen**
+`IS_DEV`, `IS_PROD` and `IS_TEST` are read by the `EnvironmentMode` loader above, and `config.py` passes the result as `env_mode`. `DjangoConfig.env_mode` itself defaults to `production`; while it is still the default, django-cfg also honours `DJANGO_ENV`, `ENVIRONMENT` or `ENV` (`development`, `production`, `test`).
 
 </Callout>
 
@@ -538,12 +538,12 @@ Uses: System ENV variables (no .env file!)
 <Callout type="warning">
 **Production Checklist**
 Before deploying to production:
-- ✅ Set `IS_PROD=true`
-- ✅ Configure all environment variables
-- ✅ Set `DEBUG=false`
-- ✅ Use PostgreSQL (not SQLite)
-- ✅ Set up reverse proxy for SSL/TLS
-- ✅ Configure `SECURITY_DOMAINS`
+- Set `IS_PROD=true`
+- Configure all environment variables
+- Set `DEBUG=false`
+- Use PostgreSQL (not SQLite)
+- Set up reverse proxy for SSL/TLS
+- Configure `SECURITY_DOMAINS`
 
 </Callout>
 
@@ -612,7 +612,7 @@ db = DatabaseConfig.from_url(
 **Supported URL schemes:**
 - `postgresql://` - PostgreSQL
 - `mysql://` - MySQL
-- `sqlite:///` - SQLite (use 3 slashes)
+- `sqlite:///` - SQLite (three slashes: relative path; `sqlite:////` four slashes: absolute path)
 - Other Django-supported backends
 
 ## Best Practices
@@ -678,7 +678,7 @@ AWS Secrets Manager
 HashiCorp Vault
 ```
 
-**Never use .env files in production!**
+**Do not ship `.env` files with production secrets; inject them as environment variables.**
 
 </details>
 

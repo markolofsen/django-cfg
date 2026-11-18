@@ -65,10 +65,10 @@ Use lowercase `snake_case`. The first tag becomes the slicer group.
 
 ```python
 # Good — slicer produces "cfg" group
-@extend_schema(tags=["cfg_dashboard_activity"])
+@extend_schema(tags=["cfg_accounts_profile"])
 
 # Bad — slicer warning + scattered groups
-@extend_schema(tags=["Dashboard - Activity"])
+@extend_schema(tags=["Accounts - Profile"])
 ```
 
 ---

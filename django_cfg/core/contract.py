@@ -13,8 +13,9 @@ from __future__ import annotations
 
 from django_cfg import __version__ as CFG_VERSION
 
-#: The release in which the contract last changed (2.3.413: generated clients send `X-Client-Id`; the default CORS list allows it).
-CONTRACT_SINCE = "2.3.413"
+#: The release in which the contract last changed (2.3.415: the emitted keys registry gained `cfg.ui.locale_hint`; before that 2.3.413:
+#: generated clients send `X-Client-Id`, the default CORS list allows it).
+CONTRACT_SINCE = "2.3.415"
 
 #: The meta keys written into a generated `openapi.json` (`info`). Named `x-cfg-*`, not after the package: they are about the
 #: contract, and the same names travel to every language target.

@@ -95,6 +95,22 @@ class TelegramConfig(BaseModel):
         le=60.0,
     )
 
+    # Duplicate suppression (applies to every text message, at the single send point)
+    dedupe: bool = Field(
+        default=True,
+        description=(
+            "Send the same text to the same chat once per window; repeats are counted "
+            "and one 'Repeated N times' message follows. Per call: dedupe=False."
+        ),
+    )
+
+    dedupe_window_seconds: int = Field(
+        default=60,
+        description="Window for dedupe: repeats of a message inside it are folded into one summary",
+        ge=1,
+        le=86400,
+    )
+
     @field_validator('bot_token')
     @classmethod
     def validate_bot_token(cls, v: str) -> str:

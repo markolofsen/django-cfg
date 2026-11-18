@@ -71,7 +71,6 @@ my_awesome_app/
 - ✅ Multi-database support
 - ✅ Background task processing (django-rq)
 - ✅ Docker deployment ready
-- ✅ Streamlit admin (auto-starts with Django)
 - ✅ Electron desktop app template
 
 ---
@@ -426,8 +425,10 @@ python manage.py migrate_all [OPTIONS]
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `--dry-run` | `flag` | Show what would be migrated without executing |
+| `--check` | `flag` | Forensic check only: no DDL, no record changes; exit 1 on any drift |
+| `--repair` | `flag` | Auto-repair detected drift (fake-apply / fake-rewind) |
 | `--skip-makemigrations` | `flag` | Skip makemigrations step |
+| `--non-interactive` | `flag` | Refuse every interactive prompt (CI mode) |
 
 **Examples:**
 
@@ -435,8 +436,8 @@ python manage.py migrate_all [OPTIONS]
 # Migrate all databases
 python manage.py migrate_all
 
-# Dry run to see what would happen
-python manage.py migrate_all --dry-run
+# Report drift without changing anything
+python manage.py migrate_all --check
 
 # Skip makemigrations
 python manage.py migrate_all --skip-makemigrations
@@ -605,12 +606,12 @@ python manage.py migrate_all
 
 ## Development Server
 
-### `runserver` (Enhanced)
+### `runserver` 
 
 Enhanced development server with better output and options.
 
 ```bash
-poetry run cli runserver [OPTIONS]
+poetry run python manage.py runserver [OPTIONS]
 ```
 
 | Option | Type | Default | Description |
@@ -624,13 +625,13 @@ poetry run cli runserver [OPTIONS]
 
 ```bash
 # Basic server
-poetry run cli runserver
+poetry run python manage.py runserver
 
 # Custom port and host
-poetry run cli runserver --port 3000 --host 0.0.0.0
+poetry run python manage.py runserver --port 3000 --host 0.0.0.0
 
 # Production-like settings
-poetry run cli runserver --no-reload --port 8080
+poetry run python manage.py runserver --no-reload --port 8080
 ```
 
 **Features:**
@@ -643,32 +644,33 @@ poetry run cli runserver --no-reload --port 8080
 
 ## User Management
 
-### `superuser` (Enhanced)
+### `superuser` 
 
 Enhanced superuser creation with better UX.
 
 ```bash
-poetry run cli superuser [OPTIONS]
+poetry run python manage.py superuser [OPTIONS]
 ```
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `--email` | `TEXT` | - | Email address for superuser |
-| `--username` | `TEXT` | email | Username (optional, defaults to email) |
-| `--interactive` | `flag` | `True` | Interactive mode |
-| `--no-input` | `flag` | `False` | Non-interactive mode |
+| `--username` | `TEXT` | - | Username |
+| `--password` | `TEXT` | - | Password |
+| `--first-name`, `--last-name` | `TEXT` | - | Name fields |
+| `--interactive` | `flag` | `False` | Prompt for everything (also the behaviour when no value is given) |
 
 **Examples:**
 
 ```bash
 # Interactive superuser creation
-poetry run cli superuser
+poetry run python manage.py superuser
 
 # Pre-fill email
-poetry run cli superuser --email admin@example.com
+poetry run python manage.py superuser --email admin@example.com
 
-# Non-interactive (password will be prompted)
-poetry run cli superuser --email admin@test.com --no-input
+# Non-interactive: give the values on the command line
+poetry run python manage.py superuser --username admin --email admin@test.com --password '<password>'
 ```
 
 ---
@@ -678,26 +680,26 @@ poetry run cli superuser --email admin@test.com --no-input
 Create API tokens for authentication.
 
 ```bash
-python manage.py create_token USERNAME [OPTIONS]
+python manage.py create_token [OPTIONS]
 ```
 
-| Argument/Option | Type | Default | Description |
-|-----------------|------|---------|-------------|
-| `USERNAME` | `str` | *required* | Username to create token for |
-| `--name` | `TEXT` | - | Token name/description |
-| `--expires-in` | `INTEGER` | - | Expiration in days |
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--user` | `TEXT` | - | Username to create the token for |
+| `--type` | `api\|auth\|secret` | - | Type of token |
+| `--length` | `INTEGER` | `32` | Token length |
+| `--expires` | `INTEGER` | - | Expiration in days |
+
+Without `--user` and `--type` the command asks for them interactively.
 
 **Examples:**
 
 ```bash
-# Create token for user
-python manage.py create_token admin
+# Create an API token for a user
+python manage.py create_token --user admin --type api
 
-# Create token with specific name
-python manage.py create_token admin --name "API Access Token"
-
-# Create token with expiration (30 days)
-python manage.py create_token admin --expires-in 30
+# Create a token that expires in 30 days
+python manage.py create_token --user admin --type api --expires 30
 ```
 
 ---
@@ -727,34 +729,38 @@ python manage.py email_key_report
 
 ## URL Management
 
-### `show_urls` (Enhanced)
+### `show_urls` 
 
 Lists all URL patterns in the project.
 
 ```bash
-poetry run cli show-urls [OPTIONS]
+poetry run python manage.py show_urls [OPTIONS]
 ```
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `--format` | `table\|json\|list` | `table` | Output format |
-| `--include-admin` | `flag` | `False` | Include admin URLs |
-| `--pattern` | `TEXT` | - | Filter URLs by pattern |
+| `--format` | `list\|tree\|table` | `tree` | Output format |
+| `--filter` | `TEXT` | - | Filter URLs by pattern (regex) |
+| `--namespace` | `TEXT` | - | Only URLs of one namespace |
+| `--include-unnamed` | `flag` | `False` | Include URLs without a name |
+| `--show-methods` | `flag` | `False` | Show HTTP methods |
+| `--show-views` | `flag` | `False` | Show view functions and classes |
+| `--plain` | `flag` | `False` | No colors |
 
 **Examples:**
 
 ```bash
-# Show all URLs in table format
-poetry run cli show-urls
+# Show all URLs as a tree
+poetry run python manage.py show_urls
 
-# JSON format for automation
-poetry run cli show-urls --format json
+# Table with methods
+poetry run python manage.py show_urls --format table --show-methods
 
 # Filter API URLs only
-poetry run cli show-urls --pattern "api/"
+poetry run python manage.py show_urls --filter "api/"
 
-# Include admin URLs
-poetry run cli show-urls --include-admin
+# One namespace
+poetry run python manage.py show_urls --namespace cfg_accounts
 ```
 
 ---
@@ -769,9 +775,9 @@ python manage.py list_urls [OPTIONS]
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `--pattern` | `TEXT` | Filter by pattern |
-| `--names-only` | `flag` | Show URL names only |
-| `--output` | `FILE` | Export to file |
+| `--filter` | `TEXT` | Only URLs containing this string |
+| `--api` | `flag` | Only API URLs |
+| `--webhook` | `flag` | Only webhook-related URLs |
 
 **Examples:**
 
@@ -779,14 +785,14 @@ python manage.py list_urls [OPTIONS]
 # List all URLs
 python manage.py list_urls
 
-# Filter by pattern
-python manage.py list_urls --pattern api
+# Filter by text
+python manage.py list_urls --filter users
 
-# Show URL names only
-python manage.py list_urls --names-only
+# API URLs only
+python manage.py list_urls --api
 
-# Export to file
-python manage.py list_urls --output urls.txt
+# Webhook URLs only
+python manage.py list_urls --webhook
 ```
 
 ---
@@ -803,8 +809,10 @@ python manage.py clear_constance [OPTIONS]
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `--keys` | `TEXT` | Clear specific keys (comma-separated) |
-| `--dry-run` | `flag` | Dry run to see what would be cleared |
+| `--cache-only` | `flag` | Clear only the cache, not the database records |
+| `--db-only` | `flag` | Clear only the database records, not the cache |
+| `--confirm` | `flag` | Skip the confirmation prompt |
+| `--dry-run` | `flag` | Show what would be cleared without clearing it |
 
 **Examples:**
 
@@ -812,8 +820,8 @@ python manage.py clear_constance [OPTIONS]
 # Clear all constance cache
 python manage.py clear_constance
 
-# Clear specific keys
-python manage.py clear_constance --keys KEY1,KEY2
+# Database records only, no prompt
+python manage.py clear_constance --db-only --confirm
 
 # Dry run to see what would be cleared
 python manage.py clear_constance --dry-run
@@ -824,8 +832,8 @@ python manage.py clear_constance --dry-run
 ## Tips
 
 - Use `check_settings --verbose` before deployment
-- Use `migrate_all --dry-run` to preview migrations
-- Use `create_token --expires-in 90` for limited lifetime tokens
+- Use `migrate_all --check` to preview migrations
+- Use `create_token --expires 90` for limited lifetime tokens
 
 ## Workflow Examples
 
@@ -833,7 +841,7 @@ python manage.py clear_constance --dry-run
 # Pre-deployment checklist
 python manage.py check_settings --verbose && \
 python manage.py check_settings --verbose && \
-python manage.py migrate_all --dry-run
+python manage.py migrate_all --check
 ```
 
 ## See Also

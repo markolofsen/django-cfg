@@ -1,4 +1,4 @@
-"""Django app configuration for django_fastapi module."""
+"""Django app configuration for django_generator.fastapi."""
 
 from django.apps import AppConfig
 

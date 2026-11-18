@@ -1,0 +1,89 @@
+---
+title: notion_export — a model into a Notion data source
+description: One command moves the rows of a Django model into a Notion data source, one way, dry run by default, safe to re-run. Ships with a minimal preset for the user model.
+---
+
+# notion_export
+
+`manage.py notion_export <app.Model> --to <data source> [--apply --limit N --batch ID --manifest FILE --samples N]`
+copies rows of a Django model into a Notion data source. It is for **backfill and reconcile**. New leads still go through
+the [outbox](./) (`connect(...)`); this command never replaces that.
+
+- **One way.** Django to Notion. An edit made in Notion is never read into Django, and nothing in Notion is updated or deleted
+  (the integration cannot delete).
+- **Dry run unless `--apply`.** The dry run reads Notion (Read content) and writes nothing.
+- **Safe to re-run.** Every row has a join key in a Notion column. The command scans that column first and skips rows already there.
+- **Throttled.** About 3 requests a second; a 429 waits `Retry-After`.
+- **No personal data in output.** Reports hold counts, primary keys and masked shapes. The `--manifest` file holds
+  `pk<TAB>page id<TAB>batch`, so a wrong batch can be found and removed by hand. It is written row by row as each page is created, so an interrupted run still leaves the list; an unwritable path stops the run before anything is created.
+- **A mapping only reads.** A source that is a verb (`delete`, `save`, `remove_*`) or a method marked `alters_data` is refused. A rule in `Exclusion.when` that raises leaves that row out (counted as `<reason> (rule failed, row left out)`) and the plan goes on.
+
+`--to` is a Notion data source id, or the name of a `NotionConfig.targets` entry. The token comes from `NOTION__TOKEN` or the target.
+
+## The user preset
+
+```bash
+python manage.py notion_export django_cfg_accounts.CustomUser --to <data source>            # dry run
+python manage.py notion_export django_cfg_accounts.CustomUser --to <data source> --apply --limit 3
+```
+
+Columns the data source needs: **Email** (email), **Name** (title), **Date joined** (date), **Email verified** (checkbox),
+**Import batch** (text). The command checks the names and types first and refuses to write when one is missing.
+
+| Sent | Never sent |
+|---|---|
+| email (the key), name, date joined, email-verified flag | password, tokens, sessions, staff status, permissions |
+
+Left out by default: staff and superusers, inactive and deleted accounts, addresses that are not valid, **unverified addresses**
+and **accounts with no login in the last 90 days**. Personal data goes to a third party, so the default is the smallest set.
+Widening is the project's explicit choice:
+
+```python
+# apps/crm/apps.py  (ready())
+from django_cfg.modules.django_notion.export import register_export, user_export
+
+register_export(user_export(verified_only=False, active_within_days=180), replace=True)
+```
+
+## Another model
+
+A mapping is declared data, not code per project.
+
+```python
+from django_cfg.modules.django_notion.export import Exclusion, ExportField, ExportMapping, register_export
+
+register_export(ExportMapping(
+    model="shop.Customer",
+    key=ExportField("Email", "email", "email"),                    # the join key: always written, compared case-insensitively
+    fields=(
+        ExportField("Name", "full_name", "title"),
+        ExportField("Orders", "order_count", "number"),
+        ExportField("Joined", "created_at", "date"),
+    ),
+    exclusions=(Exclusion("test account", lambda c, now: c.is_test),),
+    queryset=lambda qs: qs.filter(country="DE"),                  # optional base filter
+))
+```
+
+Kinds: `title`, `rich_text`, `email`, `phone_number`, `url`, `number`, `checkbox`, `date`, `select`. An empty value leaves
+its column out. A `source` is an attribute name; a method such as `get_full_name` is called. `transform(value, obj)` reshapes it.
+
+A field whose name says it is a secret (password, token, session, api key, otp, hash, staff, superuser, permission ...) is
+refused when the mapping is built. A project that really means it names the attribute in `allow_secret=frozenset({...})`.
+
+## Guards worth knowing
+
+- The key column must hold a value Notion stores. After each create the response is read back; if the key is not in it
+  (a column of the wrong type), the run stops, because every further row would attach to nobody and be created again next time.
+- Text is cut at 2000 **UTF-16 units** per element (an emoji counts two), the way Notion counts.
+- `--limit N` creates at most N new rows. Use `--limit 3` first against a scratch data source.
+- `--apply` always reads Notion first; there is no way to apply blind.
+
+## Troubleshooting
+
+| Symptom | Cause |
+|---|---|
+| `BLOCKER: data source: missing column 'X'` | add the column in Notion (the integration cannot create columns) |
+| `column 'Email' is rich_text, the mapping writes email` | wrong column type; fix it in Notion |
+| `data source not readable (object_not_found)` | the data source is not shared with the integration, or it lacks Read content |
+| `key_not_stored` | the key column type does not hold the key; nothing more was written |

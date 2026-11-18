@@ -5,9 +5,9 @@ Auto-configuring Telegram notification service that integrates with DjangoConfig
 Supports custom bot_token and chat_id per-call with fallback to config defaults.
 """
 from __future__ import annotations
-import logging
 
-from typing import TYPE_CHECKING, Any, BinaryIO, Dict, Optional, Union
+import logging
+from typing import TYPE_CHECKING, Any, BinaryIO, Dict, Optional, Tuple, Union
 
 if TYPE_CHECKING:
     from .shortcuts import TelegramContext, TelegramLinks
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 import telebot
 
 from ..base import BaseCfgModule
-
+from . import dedupe as _dedupe
 from .exceptions import TelegramConfigError, TelegramSendError
 from .formatters import EMOJI_MAP, escape_for_parse_mode
 from .queue import MessagePriority, telegram_queue
@@ -204,6 +204,16 @@ class DjangoTelegram(BaseCfgModule):
             return target_parse_mode
         return None
 
+    def _dedupe_settings(self) -> Tuple[bool, int]:
+        """(enabled, window seconds) from ``TelegramConfig``; on with the default window when unreadable."""
+        try:
+            cfg = self.config.telegram
+            if cfg is not None:
+                return bool(cfg.dedupe), int(cfg.dedupe_window_seconds)
+        except Exception:
+            pass
+        return True, _dedupe.DEFAULT_WINDOW_SEC
+
     # ========== CONFIG INFO ==========
 
     def get_config_info(self) -> Dict[str, Any]:
@@ -256,8 +266,14 @@ class DjangoTelegram(BaseCfgModule):
         reply_to_message_id: Optional[int] = None,
         fail_silently: bool = False,
         priority: int = MessagePriority.NORMAL,
+        dedupe: bool = True,
     ) -> bool:
-        """Send a text message to Telegram via global queue (non-blocking, rate-limited)."""
+        """Send a text message to Telegram via global queue (non-blocking, rate-limited).
+
+        The same text to the same chat inside ``TelegramConfig.dedupe_window_seconds``
+        is sent once; repeats are counted and one summary follows. ``dedupe=False``
+        sends every call (use it for one-time codes). A dropped repeat returns True.
+        """
         try:
             effective_token = bot_token or self._custom_bot_token
 
@@ -278,6 +294,27 @@ class DjangoTelegram(BaseCfgModule):
 
             parse_mode_str = self._resolve_parse_mode(parse_mode)
             bot_instance = self._get_bot(effective_token)
+
+            enabled, window = self._dedupe_settings()
+            if dedupe and enabled:
+                original = message
+
+                def _summary(count: int, win: int, head_text: str) -> None:
+                    body = escape_for_parse_mode(
+                        f"\U0001f501 Repeated {count} times in the last {win}s: {head_text}", parse_mode_str
+                    )
+                    self.send_message(
+                        body, chat_id=target_chat_id, bot_token=effective_token, parse_mode=parse_mode_str,
+                        priority=priority, fail_silently=True, dedupe=False,
+                    )
+
+                send_it, carried = _dedupe.gate(target_chat_id, original, window, _summary)
+                if not send_it:
+                    return True
+                if carried:
+                    message = f"{message}\n\n" + escape_for_parse_mode(
+                        f"(repeated {carried} times before)", parse_mode_str
+                    )
 
             def _do_send():
                 prefixed_message = f"{self.prefix_for(parse_mode_str)}{message}"
@@ -517,10 +554,11 @@ class DjangoTelegram(BaseCfgModule):
         error: str,
         context: TelegramContext | None = None,
         links: TelegramLinks | None = None,
+        dedupe: bool = True,
     ) -> None:
         """Send error notification. See shortcuts.send_error for details."""
         from .shortcuts import send_error
-        send_error(error, context, links=links)
+        send_error(error, context, links=links, dedupe=dedupe)
 
     @classmethod
     def send_success(
@@ -528,10 +566,11 @@ class DjangoTelegram(BaseCfgModule):
         message: str,
         details: TelegramContext | None = None,
         links: TelegramLinks | None = None,
+        dedupe: bool = True,
     ) -> None:
         """Send success notification. See shortcuts.send_success for details."""
         from .shortcuts import send_success
-        send_success(message, details, links=links)
+        send_success(message, details, links=links, dedupe=dedupe)
 
     @classmethod
     def send_warning(
@@ -539,10 +578,11 @@ class DjangoTelegram(BaseCfgModule):
         warning: str,
         context: TelegramContext | None = None,
         links: TelegramLinks | None = None,
+        dedupe: bool = True,
     ) -> None:
         """Send warning notification. See shortcuts.send_warning for details."""
         from .shortcuts import send_warning
-        send_warning(warning, context, links=links)
+        send_warning(warning, context, links=links, dedupe=dedupe)
 
     @classmethod
     def send_info(
@@ -550,10 +590,11 @@ class DjangoTelegram(BaseCfgModule):
         message: str,
         data: TelegramContext | None = None,
         links: TelegramLinks | None = None,
+        dedupe: bool = True,
     ) -> None:
         """Send info notification. See shortcuts.send_info for details."""
         from .shortcuts import send_info
-        send_info(message, data, links=links)
+        send_info(message, data, links=links, dedupe=dedupe)
 
     @classmethod
     def send_stats(
@@ -561,10 +602,11 @@ class DjangoTelegram(BaseCfgModule):
         title: str,
         stats: TelegramContext,
         links: TelegramLinks | None = None,
+        dedupe: bool = True,
     ) -> None:
         """Send stats notification. See shortcuts.send_stats for details."""
         from .shortcuts import send_stats
-        send_stats(title, stats, links=links)
+        send_stats(title, stats, links=links, dedupe=dedupe)
 
 
 __all__ = [

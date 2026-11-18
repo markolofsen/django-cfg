@@ -1,434 +1,116 @@
 ---
 title: Docker Setup Overview
-description: Deploy Django-CFG with Docker. Complete guide to containerized Django deployment with Docker Compose, multi-service architecture, and production best practices.
+description: How the django-cfg repository itself is containerized - the compose groups in projects/docker, what each one runs, the ports, the images and the make targets.
 ---
 
-# 🐳 Docker Setup Overview
+# Docker Setup Overview
 
+This guide describes the Docker setup that ships in the django-cfg repository
+(`projects/docker/`). It is the setup that runs the project's own sites, and a
+reasonable pattern to copy for your own project. It is not a generic recipe: where
+your project differs (its own images, host, proxy), your project's deployment notes
+win.
 
 <Callout type="info">
-**Complete Docker Infrastructure**
-Django-CFG provides **production-ready Docker infrastructure** with modular compose files, automated health checks, and integrated task processing for scalable Django applications.
-
+Everything below was read from the compose files and Dockerfiles in
+`projects/docker/`. If a file and this page disagree, the file is right.
 </Callout>
 
-## Quick Navigation
+## What runs
 
-Choose your Docker journey:
-
-### 🚀 Get Started Fast
-- **[Development Setup](./development)** - Local development with Docker Compose
-- **[Production Deployment](./production)** - Production-grade Docker setup
-- **[Configuration Strategy](./configuration)** - YAML + env vars configuration
-
-### 🔧 Advanced Topics
-- **[Build Optimization](./build-optimization)** - Critical lessons for multi-stage builds
-- **[Troubleshooting](./troubleshooting)** - Common issues and quick fixes
-
----
-
-## Overview
-
-Django-CFG's Docker setup provides a complete containerized environment:
+The production layout is one compose file per **group**, all with project name
+`djangocfg`, joined by an orchestrator file:
 
 ```mermaid
 graph TB
-    A[Traefik] --> B[Django API]
-    A --> C[WebSocket RPC]
-    A --> D[Frontend Demo]
-    A --> E[Documentation]
-    B --> F[PostgreSQL + pgvector]
-    B --> G[Redis]
-    C --> G
-    H[Django Django-RQ] --> F
-    H --> G
+    T[Traefik - routes by label] --> A[api - Django, uvicorn]
+    T --> S[storybook]
+    T --> D[demo]
+    A --> P[(shared PostgreSQL)]
+    A --> R[(Redis)]
+    W[rq-worker] --> P
+    W --> R
+    C[rq-scheduler] --> R
+    X[resetter - profile demo-reset] -. docker.sock .-> A
 ```
 
-### Architecture Components
+| Group file | Services | Public host | Container port |
+|---|---|---|---|
+| `docker-compose-prod.django.yaml` | `api`, `rq-worker`, `rq-scheduler` (`grpc` is commented out) | `api.djangocfg.com` | 8000 |
+| `docker-compose-prod.storybook.yaml` | `storybook` | `ui.djangocfg.com` | 3781 |
+| `docker-compose-prod.demo.yaml` | `demo` (Next.js example) | `demo.djangocfg.com` | 3010 |
+| `docker-compose-prod.extras.yaml` | `resetter`, only under the `demo-reset` profile | none | none |
+| `docker-compose-prod.docs.yaml` | `docs` (Nextra site) | `djangocfg.com` | 3778 |
+| `docker-compose-prod.yaml` | orchestrator: `include`s django, extras, storybook and demo (not docs) | | |
 
-#### Infrastructure Layer
-- **Traefik** - Reverse proxy with automatic routing
-- **PostgreSQL + pgvector** - Database with vector extension for AI/embeddings
-- **Redis** - Caching and task queue management
+Facts that are easy to get wrong:
 
-#### Backend Services
-- **Django API** - Main application server (port 8300)
-- **Django ReArq** - Background task workers
-- **WebSocket RPC** - Real-time communication (port 9065)
+- **There is no Traefik, PostgreSQL or Redis service in the production files.**
+  Every group attaches to the external network `dokploy-network`, where the host's
+  Traefik reads the container labels, and the Django container expects a PostgreSQL
+  host (taken from `DATABASE__URL`) and a host named `redis` on that network. The
+  database is a shared one (`make createdb` runs against the container
+  `shared-db-postgres`).
+- **There is no WebSocket service.** No WebSocket transport ships in the package
+  (the Centrifugo integration was removed in 2.3.0).
+- **gRPC is off.** The `grpc` service is kept commented out in the production group;
+  the monolithic `docker-compose.yaml` and the local file still define it.
+- **The worker and scheduler reuse the API image.** Only `api` has a `build:`
+  section; `rq-worker` and `rq-scheduler` use `djangocfg-api:latest` with another
+  `command` (`python manage.py rqworker high default low knowledge` and
+  `python manage.py rqscheduler`).
+- **Django is served by uvicorn** (ASGI, 4 workers) on port 8000, health-checked at
+  `/healthz/ready`.
 
-#### Frontend Services
-- **Demo App** - Next.js demo application (port 3300)
-- **Documentation** - Nuxt.js documentation site (port 3301)
+## Four compose layouts
 
----
+| File | Use |
+|---|---|
+| `docker-compose-prod.*.yaml` | Production, one group at a time or all through `docker-compose-prod.yaml`. See [Production](./production). |
+| `docker-compose.yaml` | The same API services in a single file (API, worker, scheduler, gRPC, resetter). Older monolithic form of the Django group. |
+| `docker-compose-local.yaml` | Local stack with its own Traefik, `pgvector/pgvector:pg15`, Redis 7, Django and gRPC. See [Development](./development). |
+| `docker-compose-local-services.yml` | Only Redis, an RQ worker and an RQ scheduler, for running Django on the host. |
 
-## Quick Start
+## The directory
 
-### Prerequisites
+```
+projects/docker/
+  Makefile                              # every command, `make help`
+  .env.example                          # template for .env.local / .env.prod
+  .env.local  .env.prod                 # env files the compose files read
+  docker-compose*.y*ml                  # see the tables above
+  services/
+    django/Dockerfile, entrypoint.sh    # the API image (api, worker, scheduler, grpc)
+    frontend/Dockerfile                 # docs (build args APP_NAME, APP_DIR, APP_PORT)
+    frontend/Dockerfile.storybook       # storybook
+    frontend/Dockerfile.demo            # demo
+    demo-resetter/                      # db-reset.sh + a docker:27-cli image
+    postgres/init.sql                   # extensions and the mcp_docs database
+```
 
+## Commands
 
-<Callout type="info">
-**System Requirements**
-Before starting, ensure you have:
-- ✅ **Docker Desktop 4.0+** or Docker Engine with Compose V2
-- ✅ **8GB RAM minimum** (16GB recommended for all services)
-- ✅ **20GB free disk space**
-- ✅ **Ports available**: 8300, 3300, 3301, 9065, 380, 743, 8390
-
-</Callout>
-
-### 1. Start All Services
+Run from `projects/docker`. `make help` lists all of them.
 
 ```bash
-cd docker
-docker compose up -d
+make deploy-prod        # createdb, build the django group, start it, wait healthy, migrate
+make deploy-django      # build, start, wait healthy, migrate (no createdb)
+make storybook-deploy   # build + start storybook
+make appdemo-deploy     # build + start the demo
+make docs-deploy        # build + start docs
+make status-all         # status of the services
+make logs-django        # logs of the django group
+make shell              # Django shell in djangocfg-api
 ```
 
-### 2. Check Status
-
-```bash
-docker compose ps
-```
-
-All services should show **healthy** status:
-```
-NAME               STATUS              PORTS
-djangocfg_traefik  Up (healthy)        380/tcp, 743/tcp, 8390/tcp
-djangocfg_postgres Up (healthy)        5432/tcp
-djangocfg_redis    Up (healthy)        6379/tcp
-django             Up (healthy)        8300/tcp
-django-rearq       Up (healthy)        -
-websocket          Up (healthy)        9065/tcp, 9066/tcp
-frontend-demo      Up (healthy)        3300/tcp
-frontend-web       Up (healthy)        3301/tcp
-```
-
-### 3. Access Services
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| Django API | http://api.localhost:380 | Main REST API |
-| Admin Panel | http://api.localhost:380/admin/ | Django admin interface |
-| Demo App | http://demo.localhost:380 | Interactive demo |
-| Documentation | http://localhost:3301 | Full documentation |
-| Traefik Dashboard | http://localhost:8390 | Service monitoring |
-
-
-<Callout type="info">
-**First Time Setup**
-Create a superuser to access the admin panel:
-```bash
-docker exec -it django python manage.py createsuperuser
-```
-
-</Callout>
-
----
-
-## Configuration Approaches
-
-Django-CFG uses a modern hybrid configuration system combining YAML structure with environment variable overrides:
-
-### Universal `__` Notation (Recommended)
-
-**Best for**: All environments - no rebuilds needed for credential changes
-
-```bash
-# docker/.env.secrets (git-ignored!)
-EMAIL__HOST=mail.example.com
-EMAIL__PORT=465
-EMAIL__PASSWORD=your-password-here
-
-# Nested sections
-API_KEYS__OPENAI=sk-proj-your-key-here
-API_KEYS__CLOUDFLARE=your-cloudflare-key
-
-TELEGRAM__BOT_TOKEN=123456789:ABC...
-TELEGRAM__CHAT_ID=-123456
-```
-
-**Benefits:**
-- ✅ No secrets in git
-- ✅ Just restart (no rebuild) to apply changes
-- ✅ Works with any config value
-- ✅ Automatic type conversion
-
-### Configuration Priority
-
-Settings load in this order (highest priority first):
-
-1. **Environment variables** - `SECTION__FIELD` notation (e.g., `EMAIL__HOST`)
-2. **`.env.secrets`** file - Sensitive credentials (git-ignored)
-3. **`config.*.docker.yaml`** - Docker-specific configs (git-ignored)
-4. **`config.*.yaml`** - Base templates (in git)
-5. **Built-in defaults** - Pydantic model defaults
-
-[Learn Complete Configuration Strategy →](./configuration)
-
-### Quick Example: Add New API Key
-
-```bash
-# Add to .env.secrets
-echo "API_KEYS__NEW_SERVICE=your-key-here" >> docker/.env.secrets
-
-# Restart (no rebuild!)
-docker compose restart django
-```
-
-
-<Callout type="info">
-**No Rebuild Needed**
-**Credential changes only require restart!**
-
-```bash
-# Old way (slow): Rebuild entire image
-docker compose build django --no-cache  # ❌ 5+ minutes
-
-# New way (fast): Just restart
-docker compose restart django  # ✅ 10 seconds
-```
-
-</Callout>
-
-
-<Callout type="warning">
-**Security Best Practice**
-**Never commit credentials to git!** Always use:
-- **`.env.secrets`** file for Docker (git-ignored)
-- **`config.*.docker.yaml`** for structure (git-ignored)
-- **Environment variables** from secrets manager (AWS Secrets Manager, Vault)
-
-See [Configuration Security Guide](./configuration#security-best-practices) for details.
-
-</Callout>
-
----
-
-## Docker Compose Structure
-
-```
-docker/
-├── docker-compose.yaml              # Main compose file
-├── .env                            # Base environment variables (in git)
-├── .env.secrets                    # Sensitive credentials (git-ignored!)
-├── .dockerignore                   # Build exclusions (includes poetry.lock)
-├── services/
-│   ├── django/
-│   │   ├── Dockerfile              # Django app image
-│   │   └── entrypoint.sh          # Container startup script
-│   ├── demo/Dockerfile            # Next.js demo
-│   ├── websocket/Dockerfile       # WebSocket RPC
-│   ├── web/Dockerfile             # Documentation site
-│   └── postgres/init.sql          # Database initialization
-├── volumes/                        # Persistent data (git-ignored)
-│   ├── postgres/                  # Database files
-│   ├── django/
-│   │   ├── media/                # User uploads
-│   │   └── logs/                 # Only if DJANGO_CFG_LOG_DIR=/app/logs (default: stdout)
-│   └── .gitkeep
-└── @docs/                          # Docker documentation
-    ├── README.md                   # Complete guide
-    ├── CONFIG_STRATEGY.md         # Universal __ notation + YAML
-    ├── NETWORK_TRAEFIK.md         # Networking & routing
-    ├── CHANGELOG.md               # Recent changes & migration
-    ├── DOCKER_BUILD_LESSONS.md    # Build optimization
-    └── QUICK_REFERENCE.md         # Common commands
-
-projects/django/api/environment/
-├── config.dev.yaml                 # Development template (in git)
-├── config.dev.docker.yaml          # Docker dev config (git-ignored!)
-├── config.prod.yaml                # Production template (in git)
-└── config.prod.docker.yaml         # Docker prod config (git-ignored!)
-```
-
-[Explore Development Setup →](./development)
-
----
-
-## Development Workflow
-
-### Common Tasks
-
-```bash
-# View logs (django-cfg logs to stdout; no log files unless DJANGO_CFG_LOG_DIR is set)
-docker compose logs -f django
-
-# Run migrations
-docker exec django python manage.py migrate
-
-# Create superuser
-docker exec -it django python manage.py createsuperuser
-
-# Django shell
-docker exec -it django python manage.py shell
-
-# Restart service
-docker compose restart django
-
-# Rebuild after changes
-docker compose up -d --build django
-```
-
-[See all commands in Quick Reference →](./troubleshooting#essential-commands)
-
-### Database Operations
-
-```bash
-# Access PostgreSQL
-docker exec -it djangocfg_postgres psql -U postgres -d djangocfg
-
-# Backup database
-docker exec djangocfg_postgres pg_dump -U postgres djangocfg > backup.sql
-
-# Restore database
-docker exec -i djangocfg_postgres psql -U postgres djangocfg < backup.sql
-```
-
----
-
-## Production Deployment
-
-For production-ready deployment with SSL/TLS, health monitoring, and scaling:
-
-**[Complete Production Setup Guide →](./production)**
-
-Key features:
-- ✅ Multi-stage builds for minimal image sizes
-- ✅ Health checks for all services
-- ✅ Automated database initialization
-- ✅ Environment-based configuration
-- ✅ Logging and monitoring
-- ✅ Horizontal scaling support
-
----
-
-## Performance Optimization
-
-### Build Performance
-
-Django-CFG Docker setup uses advanced techniques to minimize build times:
-
-- **`.dockerignore`** - Excludes `node_modules`, `.next`, build artifacts
-- **Multi-stage builds** - Separate dependency installation from runtime
-- **Layer caching** - Optimized layer ordering for maximum cache hits
-- **Turborepo pruning** - Only builds required packages in monorepo
-
-**Before optimization**: 2.13GB context, 380s transfer time ❌
-**After optimization**: 280KB context, 4s transfer time ✅
-
-[Learn Build Optimization Techniques →](./build-optimization)
-
-### Runtime Performance
-
-- **Connection pooling** - PostgreSQL connection reuse
-- **Redis caching** - Multi-tier caching strategy
-- **ReArq workers** - Configurable processes and threads
-- **Nginx/Traefik** - Reverse proxy with load balancing
-
----
-
-## Troubleshooting
-
-### Quick Fixes
-
-**Services won't start?**
-```bash
-docker compose logs service-name
-docker compose ps
-```
-
-**Port conflicts?**
-```bash
-# Find process using port
-lsof -i :8300
-# Kill process
-kill -9 <PID>
-```
-
-**Configuration not loading?**
-```bash
-docker exec django python -c "from api.environment.loader import env; print(env)"
-```
-
-**Database connection issues?**
-```bash
-docker exec djangocfg_postgres pg_isready -U postgres
-```
-
-[Complete Troubleshooting Guide →](./troubleshooting)
-
----
-
-## Learning Paths
-
-### 🎓 Beginner Path
-1. [Docker Development Setup](./development) - Start here
-2. [Configuration Basics](./configuration)
-3. [First Django-CFG Project](/getting-started/first-project)
-
-### 🚀 Production Path
-1. [Production Docker Setup](./production)
-2. [Security Configuration](/deployment/security)
-3. [Monitoring Setup](/deployment/monitoring)
-
-### 🔧 Advanced Path
-1. [Build Optimization](./build-optimization)
-2. [Multi-Database Setup](../multi-database)
-3. [Scaling Strategies](../production-config)
-
----
-
-## See Also
-
-### Docker Guides
-- **[Development Setup](./development)** - Local Docker environment
-- **[Production Setup](./production)** - Production deployment
-- **[Configuration](./configuration)** - YAML + env vars strategy
-- **[Build Optimization](./build-optimization)** - Critical Docker lessons
-- **[Troubleshooting](./troubleshooting)** - Common issues solved
-
-### Deployment
-- **[Deployment Overview](/deployment/overview)** - All deployment options
-- **[Environment Setup](/deployment/environment-setup)** - Environment variables
-- **[Logging Configuration](/deployment/logging)** - Structured logging
-- **[Security Settings](/deployment/security)** - Production security
-
-### Configuration
-- **[Database Configuration](/configuration/database)** - PostgreSQL setup
-- **[Cache Configuration](/configuration/cache)** - Redis caching
-- **[Environment Detection](/configuration/environment)** - Multi-environment
-
-### Integrations
-- **[ReArq Integration](/features/modules/django-rq)** - Background tasks
-- **[Background Task Commands](/features/modules/django-rq)** - Manage workers via CLI
-
----
-
-## Next Steps
-
-Ready to get started? Choose your path:
-
-**[Start Development →](./development)**
-Set up local Docker environment
-
-**[Deploy to Production →](./production)**
-Production-ready Docker setup
-
-**[Learn Configuration →](./configuration)**
-Master YAML + env var strategy
-
-
-<Callout type="info">
-**Need Help?**
-- **Issues?** Check [Troubleshooting Guide](./troubleshooting)
-- **Questions?** See [FAQ](../faq)
-- **Bugs?** Report on [GitHub](https://github.com/markolofsen/django-cfg/issues)
-
-</Callout>
-
----
-
-TAGS: docker, deployment, docker-compose, containerization, production, development
-DEPENDS_ON: [docker, docker-compose, postgresql, redis]
-USED_BY: [deployment, production, development, ci-cd]
-%%PRIORITY:HIGH%%
+`NO_CACHE=1 make build-django` builds without the layer cache. The `demo-*` targets
+(no `app` prefix) belong to an older public-mirror deployment, not to the demo
+described here.
+
+## Continue
+
+- [Development](./development): the local stack.
+- [Production](./production): the groups, the image, startup, health, logging.
+- [Configuration](./configuration): environment variables and env files.
+- [Build Optimization](./build-optimization): how the images are built.
+- [Troubleshooting](./troubleshooting): the failures this setup actually produces.

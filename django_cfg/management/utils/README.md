@@ -283,9 +283,8 @@ class Command(SafeCommand):
 
 These base classes integrate with django_cfg's security system:
 
-1. **commands_security.py** - Analyzes `web_executable`, `requires_input`, `is_destructive` attributes
-2. **commands_service.py** - Filters commands based on safety metadata
-3. **API views** - Blocks unsafe commands from web execution
+1. **apps/api/commands/security.py** - Analyzes `web_executable`, `requires_input`, `is_destructive` attributes
+2. **API views** - Blocks unsafe commands from web execution
 
 When you use these base classes, your commands are automatically categorized and protected.
 
@@ -392,8 +391,7 @@ A: Both approaches work. Refactor gradually as you touch files.
 ## Support
 
 For issues or questions:
-- Check `commands_security.py` for security system details
-- Review `commands_service.py` for filtering logic
+- Check `apps/api/commands/security.py` for security system details
 - See `mixins.py` source code for implementation
 
 ---

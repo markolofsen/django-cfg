@@ -4,7 +4,6 @@ from typing import Any, Dict, Literal, Optional
 
 from pydantic import Field
 
-from ...icons import Icons
 from .base import FieldConfig
 
 

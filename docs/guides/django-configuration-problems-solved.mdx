@@ -58,8 +58,8 @@ class MyConfig(DjangoConfig):
 # Pydantic accepts: 'false', 'False', 'FALSE', '0', 'no', 'off' → False
 # Anything else → ValidationError at startup
 
-# config.yaml
-debug: false  # Type-safe: validated as boolean
+# .env
+DEBUG=false  # your loader passes it on; validated as boolean
 
 # If invalid:
 # ValidationError: Input should be a valid boolean, unable to parse string as a boolean
@@ -112,7 +112,7 @@ class MyConfig(DjangoConfig):
     debug: bool = env.debug  # IDE knows this is bool
     database_url: str = env.database.url  # IDE autocompletes "database"
 
-# In environment.py (Pydantic YAML loader)
+# In environment.py (your pydantic-settings loader)
 class DatabaseEnv(BaseModel):
     url: str
     name: str
@@ -234,10 +234,8 @@ class MyConfig(DjangoConfig):
         # Smart defaults for the rest
     )
 
-    # Built-in apps (2 lines → 40+ lines)
-    enable_accounts: bool = True
-    enable_support: bool = True
-    # Auto-adds to INSTALLED_APPS + MIDDLEWARE
+    # Built-in apps: accounts, OTP, mailer and health are always installed
+    # and add themselves to INSTALLED_APPS + MIDDLEWARE
 
 # settings.py - 2 lines
 config = MyConfig()
@@ -414,21 +412,20 @@ class MyConfig(DjangoConfig):
             engine="django.db.backends.postgresql",
             name=env.database.name,
             host=env.database.host,
-            port=env.database.port,  # Already int from Pydantic YAML
+            port=env.database.port,  # Already int from pydantic-settings
         )
     }
 
-# environment.py - Pydantic YAML loader
+# environment.py - pydantic-settings loader
 class DatabaseEnv(BaseModel):
     name: str
     host: str
     port: int = 5432  # Type enforced!
 
-# config.yaml
-database:
-  name: mydb
-  host: db.example.com
-  port: 5433  # Pydantic validates this is int
+# .env
+DATABASE__NAME=mydb
+DATABASE__HOST=db.example.com
+DATABASE__PORT=5433  # Pydantic validates this is int
 
 # If port is invalid:
 # ValidationError: port - Input should be a valid integer
@@ -725,34 +722,17 @@ OTP_TOTP_ISSUER = 'MyApp'
 from django_cfg import DjangoConfig
 
 class MyConfig(DjangoConfig):
-    # One line enables entire user accounts system:
-    enable_accounts: bool = True
+    pass  # accounts, totp, mailer, health and commands are always installed
 
-    # Auto-adds to INSTALLED_APPS:
-    # - django_cfg.apps.accounts (custom User model)
-    # - django_otp (OTP authentication)
-    # - phonenumber_field (phone validation)
-    # - All dependencies
+# Optional integrations are one config object each:
+from django_cfg import TelegramConfig, DjangoRQConfig
 
-    # Auto-adds to MIDDLEWARE (correct order):
-    # - OTPMiddleware (after AuthenticationMiddleware)
-
-    # Auto-configures settings:
-    # - REST_FRAMEWORK for API
-    # - OTP_TOTP_ISSUER
-    # - Custom User model (AUTH_USER_MODEL)
-
-    # Production-ready user management in 1 line!
-
-# Available built-in apps:
 class MyConfig(DjangoConfig):
-    enable_accounts: bool = True     # User management + OTP
-    enable_support: bool = True      # Support ticket system
-    enable_agents: bool = True       # AI agents framework
-    enable_knowbase: bool = True     # Knowledge base + RAG
-    enable_newsletter: bool = True   # Email marketing
-    # ... 9 built-in apps total
+    telegram: TelegramConfig | None = TelegramConfig(bot_token="...", chat_id=123456)
+    django_rq: DjangoRQConfig | None = DjangoRQConfig(queues=["default"])
 ```
+
+The always-installed apps add to INSTALLED_APPS and MIDDLEWARE (correct order), set `AUTH_USER_MODEL` and configure REST_FRAMEWORK and OTP for you.
 
 **Why it works**:
 - ✅ 1 line → 150+ lines of configuration
@@ -840,7 +820,7 @@ class EnvironmentConfig(BaseModel):
 | **#6: CORS misconfiguration** | 5+ manual settings | ✅ 1 field → 7 settings |
 | **#7: Hard to test configs** | Global state | ✅ Instantiate classes |
 | **#8: No type checking** | Silently wrong | ✅ mypy/pyright verify |
-| **#9: Third-party boilerplate** | 150+ lines | ✅ 1 line built-in apps |
+| **#9: Third-party boilerplate** | 150+ lines | ✅ built-in apps, no setup |
 | **#10: Missing env vars** | Late, cryptic errors | ✅ Clear validation |
 
 ---
@@ -856,7 +836,7 @@ class EnvironmentConfig(BaseModel):
 - **[Django-CFG vs Alternatives](../../getting-started/django-cfg-vs-alternatives)** - Comparison with other solutions
 
 **Configuration Patterns:**
-- **[Configuration Guide](../../getting-started/configuration)** - YAML configuration setup
+- **[Configuration Guide](../../getting-started/configuration)** - Configuration setup
 - **[Environment Detection](../../configuration/environment)** - Multi-environment patterns
 - **[Environment Variables](../../configuration/environment)** - Secure secrets management
 - **[Production Config](./production-config)** - Production best practices
@@ -882,7 +862,7 @@ class EnvironmentConfig(BaseModel):
 - **[User Management](/features/built-in-apps/user-management)** - Accounts and authentication
 
 **Integrations:**
-- **[ReArq Integration](/features/modules/django-rq)** - Background tasks
+- **[Django-RQ Integration](/features/modules/django-rq)** - Background tasks
 - **[Integrations Overview](../../features/integrations/overview)** - All integrations
 
 **Tools:**

@@ -16,8 +16,6 @@ Configuration models:
     - FieldConfig: Field widgets and display options
     - FieldsetConfig: Form organization
     - ActionConfig: Custom admin actions
-    - BackgroundTaskConfig: Background task integration
-    - ResourceConfig: Related resources (docs, links)
 
 Documentation:
     See ./docs_public/ for full documentation:
@@ -28,7 +26,7 @@ Documentation:
     - examples.md - Real-world examples
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeAlias, Union
+from typing import Any, Dict, List, Optional, Type, TypeAlias
 
 from django.db import models
 from pydantic import BaseModel, ConfigDict, Field
@@ -42,11 +40,9 @@ FilterSpec: TypeAlias = str | type | tuple[str, type] | FilterConfig
 DjangoAnnotation: TypeAlias = Any
 
 from .action_config import ActionConfig
-from .background_task_config import BackgroundTaskConfig
 from .documentation import DocumentationConfig
 from .field_config import FieldConfig, FieldConfigType
 from .fieldset_config import FieldsetConfig
-from .resource_config import ResourceConfig
 
 
 class AdminConfig(BaseModel):
@@ -176,16 +172,6 @@ class AdminConfig(BaseModel):
     # Import/Export options
     import_export_enabled: bool = Field(False, description="Enable import/export functionality")
     resource_class: Optional[Type] = Field(None, description="Custom Resource class for import/export")
-    resource_config: Optional[ResourceConfig] = Field(
-        None,
-        description="Declarative resource configuration (alternative to resource_class)"
-    )
-
-    # Background task processing
-    background_task_config: Optional[BackgroundTaskConfig] = Field(
-        None,
-        description="Configuration for background task processing"
-    )
 
     # Documentation
     documentation: Optional[DocumentationConfig] = Field(

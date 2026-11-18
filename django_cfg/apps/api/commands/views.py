@@ -120,7 +120,7 @@ def execute_command_view(request):
             }, status=400)
 
         # Security check - use same filtering as dashboard
-        from django_cfg.apps.api.dashboard.services.commands_security import is_command_allowed
+        from django_cfg.apps.api.commands.security import is_command_allowed
 
         app_name = available_commands.get(command_name)
         if not is_command_allowed(command_name, app_name):
@@ -283,7 +283,8 @@ def _get_command_metadata(command_name: str, app_name: str) -> dict:
     """
     try:
         from django.core.management import load_command_class
-        from django_cfg.apps.api.dashboard.services.commands_security import is_command_allowed, get_command_risk_level
+
+        from django_cfg.apps.api.commands.security import get_command_risk_level, is_command_allowed
 
         command_instance = load_command_class(app_name, command_name)
 

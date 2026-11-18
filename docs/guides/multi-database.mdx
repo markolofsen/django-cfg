@@ -34,33 +34,29 @@ Perfect for small to medium projects with 2-3 databases.
 
 ```python
 # config.py
-from django_cfg import DjangoConfig
-from django_cfg import DatabaseConfig
+import os
+
+from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="main_db",
             user="postgres",
-            password="${DB_PASSWORD}",
+            password=os.environ["DB_PASSWORD"],
             host="localhost",
         ),
         "blog_db": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="blog_db",
             user="postgres",
-            password="${DB_PASSWORD}",
+            password=os.environ["DB_PASSWORD"],
             host="localhost",
+            apps=["blog"],
         ),
     }
 
-    database_routers = ["django_cfg.routing.routers.AppDatabaseRouter"]
-
-    # Routing rules
-    database_routing_rules = {
-        "blog": "blog_db",  # Blog app → blog_db
-    }
 ```
 
 
@@ -81,18 +77,19 @@ For large applications with multiple domains and services.
 
 ```python
 # config.py
-from django_cfg import DjangoConfig
-from django_cfg import DatabaseConfig
+import os
+
+from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         # Core databases
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="main",
-            user="${DB_USER}",
-            password="${DB_PASSWORD}",
-            host="${DB_HOST}",
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            host=os.environ["DB_HOST"],
             conn_max_age=600,  # Connection pooling
         ),
 
@@ -100,39 +97,34 @@ class MyConfig(DjangoConfig):
         "blog_db": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="blog",
-            user="${DB_USER}",
-            password="${DB_PASSWORD}",
-            host="${DB_BLOG_HOST}",
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            host=os.environ["DB_BLOG_HOST"],
             conn_max_age=600,
         ),
 
         "shop_db": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="shop",
-            user="${DB_USER}",
-            password="${DB_PASSWORD}",
-            host="${DB_SHOP_HOST}",
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            host=os.environ["DB_SHOP_HOST"],
             conn_max_age=600,
+            apps=["shop"],
         ),
 
         # Analytics - read-only replica
         "analytics": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="analytics",
-            user="${DB_READONLY_USER}",
-            password="${DB_READONLY_PASSWORD}",
-            host="${DB_ANALYTICS_HOST}",
+            user=os.environ["DB_READONLY_USER"],
+            password=os.environ["DB_READONLY_PASSWORD"],
+            host=os.environ["DB_ANALYTICS_HOST"],
             options={"connect_timeout": 10, "options": "-c default_transaction_read_only=on"},
+            apps=["analytics"],
         ),
     }
 
-    database_routers = ["django_cfg.routing.routers.AppDatabaseRouter"]
-
-    database_routing_rules = {
-        "blog": "blog_db",
-        "shop": "shop_db",
-        "analytics": "analytics",
-    }
 ```
 
 
@@ -153,55 +145,52 @@ Each service has its own database with shared authentication.
 
 ```python
 # config.py
-from django_cfg import DjangoConfig
-from django_cfg import DatabaseConfig
+import os
+
+from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         # Shared auth database
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="auth_service",
-            user="${DB_USER}",
-            password="${DB_PASSWORD}",
-            host="${DB_AUTH_HOST}",
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            host=os.environ["DB_AUTH_HOST"],
         ),
 
         # Blog microservice
         "blog_service": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="blog_service",
-            user="${DB_USER}",
-            password="${DB_PASSWORD}",
-            host="${DB_BLOG_HOST}",
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            host=os.environ["DB_BLOG_HOST"],
+            apps=["blog"],
         ),
 
         # Shop microservice
         "shop_service": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="shop_service",
-            user="${DB_USER}",
-            password="${DB_PASSWORD}",
-            host="${DB_SHOP_HOST}",
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            host=os.environ["DB_SHOP_HOST"],
+            apps=["shop"],
         ),
 
         # Payment microservice
         "payment_service": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="payment_service",
-            user="${DB_USER}",
-            password="${DB_PASSWORD}",
-            host="${DB_PAYMENT_HOST}",
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            host=os.environ["DB_PAYMENT_HOST"],
+            apps=["payments"],
         ),
     }
 
-    database_routers = ["django_cfg.routing.routers.AppDatabaseRouter"]
-
-    database_routing_rules = {
-        "blog": "blog_service",
-        "shop": "shop_service",
-        "payments": "payment_service",
-    }
 ```
 
 
@@ -221,44 +210,44 @@ class MyConfig(DjangoConfig):
 </Callout>
 
 
-## YAML Configuration
+## Environment-Based URLs
 
-```yaml
-# config.yaml
-database:
-  url: "postgresql://user:${DB_PASSWORD}@localhost:5432/main_db"
-  url_blog: "postgresql://user:${DB_PASSWORD}@localhost:5432/blog_db"
-  url_shop: "postgresql://user:${DB_PASSWORD}@localhost:5432/shop_db"
+Keep connection strings in the environment (for example a `.env` file loaded by your own settings class) and pass them to `DatabaseConfig.from_url`:
+
+```bash
+# .env
+DATABASE_URL=postgresql://user:secret@localhost:5432/main_db
+BLOG_DATABASE_URL=postgresql://user:secret@localhost:5432/blog_db
+SHOP_DATABASE_URL=postgresql://user:secret@localhost:5432/shop_db
+```
+
+```python
+# config.py
+import os
+
+from django_cfg import DjangoConfig, DatabaseConfig
+
+class MyConfig(DjangoConfig):
+    databases: dict[str, DatabaseConfig] = {
+        "default": DatabaseConfig.from_url(os.environ["DATABASE_URL"]),
+        "blog_db": DatabaseConfig.from_url(os.environ["BLOG_DATABASE_URL"], apps=["blog"]),
+        "shop_db": DatabaseConfig.from_url(os.environ["SHOP_DATABASE_URL"], apps=["shop"]),
+    }
 ```
 
 ### URL Format Examples
 
-**SQLite (Development):**
-```yaml
-database:
-  url: "sqlite:///db/default.sqlite3"
-  url_blog: "sqlite:///db/blog.sqlite3"
-```
-
-**PostgreSQL (Production):**
-```yaml
-database:
-  url: "postgresql://user:pass@db-main.example.com:5432/main"
-  url_blog: "postgresql://user:pass@db-blog.example.com:5432/blog"
-```
-
-**With SSL:**
-```yaml
-database:
-  url: "postgresql://user:pass@localhost/main?sslmode=require"
-```
+- SQLite, relative to the project: `sqlite:///db/default.sqlite3`
+- SQLite, absolute path: `sqlite:////var/lib/app/default.sqlite3`
+- PostgreSQL: `postgresql://user:pass@db-main.example.com:5432/main`
+- PostgreSQL with SSL: `postgresql://user:pass@localhost/main?sslmode=require`
 
 ## Database Routing
 
-Django-CFG automatically routes database operations based on `DATABASE_ROUTING_RULES`:
+Setting `apps=[...]` on a `DatabaseConfig` makes Django-CFG install its `DatabaseRouter` and generate `DATABASE_ROUTING_RULES` (app label to database alias):
 
 ```python
-# settings.py
+# Generated from apps=[...]; you do not write this yourself
 DATABASE_ROUTING_RULES = {
     'blog': 'blog_db',    # All blog app models → blog_db
     'shop': 'shop_db',    # All shop app models → shop_db
@@ -448,35 +437,26 @@ python manage.py migrator --app blog
 
 ## Complete Production Example
 
-```yaml
-# config.prod.yaml
-database:
-  # Main database
-  url: "postgresql://user:${DB_PASSWORD}@db-main.example.com:5432/main?sslmode=require&connect_timeout=10"
-
-  # Domain databases
-  url_blog: "postgresql://user:${DB_PASSWORD}@db-blog.example.com:5432/blog?sslmode=require"
-  url_shop: "postgresql://user:${DB_PASSWORD}@db-shop.example.com:5432/shop?sslmode=require"
-
-  # Analytics - read-only
-  url_analytics: "postgresql://readonly:${DB_READONLY_PASSWORD}@warehouse.example.com:5432/analytics?sslmode=require"
+```bash
+# .env.production
+DATABASE_URL=postgresql://user:secret@db-main.example.com:5432/main?sslmode=require&connect_timeout=10
+BLOG_DATABASE_URL=postgresql://user:secret@db-blog.example.com:5432/blog?sslmode=require
+SHOP_DATABASE_URL=postgresql://user:secret@db-shop.example.com:5432/shop?sslmode=require
+ANALYTICS_DATABASE_URL=postgresql://readonly:secret@warehouse.example.com:5432/analytics?sslmode=require
 ```
 
 ```python
 # config.py
+import os
+
 from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
     databases: dict[str, DatabaseConfig] = {
-        'default': DatabaseConfig.from_url(env.database.url),
-        'blog_db': DatabaseConfig.from_url(env.database.url_blog),
-        'shop_db': DatabaseConfig.from_url(env.database.url_shop),
-        'analytics': DatabaseConfig.from_url(env.database.url_analytics),
-    }
-    database_routing_rules: dict[str, str] = {
-        'blog': 'blog_db',
-        'shop': 'shop_db',
-        'analytics': 'analytics',
+        "default": DatabaseConfig.from_url(os.environ["DATABASE_URL"]),
+        "blog_db": DatabaseConfig.from_url(os.environ["BLOG_DATABASE_URL"], apps=["blog"]),
+        "shop_db": DatabaseConfig.from_url(os.environ["SHOP_DATABASE_URL"], apps=["shop"]),
+        "analytics": DatabaseConfig.from_url(os.environ["ANALYTICS_DATABASE_URL"], apps=["analytics"]),
     }
 ```
 
@@ -562,6 +542,6 @@ print(user.blog_posts.all())  # QuerySet with post
 - [**Core Commands**](../../cli/commands/core-commands) - Migration and database commands
 
 **Background Processing:**
-- [**ReArq Integration**](/features/modules/django-rq) - Task routing per database
+- [**Django-RQ Integration**](/features/modules/django-rq) - Task routing per database
 
 **Note:** All examples use YAML-based configuration via `env` loader. See [Configuration Guide](../../getting-started/configuration) for setup.

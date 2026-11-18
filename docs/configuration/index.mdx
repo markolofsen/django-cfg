@@ -10,59 +10,32 @@ Django-CFG uses Pydantic v2 models for type-safe, validated configuration.
 
 <Callout type="info">
 **Why Type-Safe Configuration?**
-Type-safe configuration catches errors at **startup** instead of runtime, provides **IDE autocomplete**, and enables **static type checking** with mypy/pyright.
+Type-safe configuration catches errors at **startup** instead of runtime, provides **IDE autocomplete**, and enables **static type checking** with mypy/pyright. `DjangoConfig` forbids unknown fields, so a misspelled option is an error, not a silent no-op.
 
 </Callout>
 
 ## Quick Start
 
-### Python Config
-
 ```python filename="config.py"
-from django_cfg import DjangoConfig
-from pydantic import BaseModel
-
-class DatabaseConfig(BaseModel):
-    url: str = "sqlite:///db/default.sqlite3"
+from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyProjectConfig(DjangoConfig):
-    # Core settings
-    secret_key: str = "your-secret-key-here"
-    debug: bool = True
     project_name: str = "My Project"
+    secret_key: str = "x" * 50      # min 50 characters; read it from the environment in real code
+    debug: bool = True
 
-    # Database
-    database: DatabaseConfig = DatabaseConfig()
+    databases: dict[str, DatabaseConfig] = {
+        "default": DatabaseConfig.from_url(url="sqlite:///db/default.sqlite3"),
+    }
 
-    # Services (optional)
-    # email: EmailConfig = EmailConfig()
-    # telegram: TelegramConfig = TelegramConfig()
-```
+    # Optional services are config sections:
+    # email: EmailConfig = EmailConfig(...)
+    # telegram: TelegramConfig = TelegramConfig(...)
 
-### YAML Config
-
-```yaml filename="config.yaml"
-secret_key: "dev-secret-key"
-debug: true
-project_name: "My Project"
-
-database:
-  url: "sqlite:///db/default.sqlite3"
-
-# Optional services
-# email:
-#   backend: "console"
-# telegram:
-#   bot_token: "your-token"
-```
-
-```python filename="config.py"
-from django_cfg import DjangoConfig
-
-# Instantiate config directly
 config = MyProjectConfig()
 ```
 
+Values come from your own code or an environment loader (pydantic-settings is the recommended one, see [Getting Started: Configuration](/getting-started/configuration)). django-cfg itself does not read YAML files.
 
 ## Configuration Topics
 
@@ -76,13 +49,13 @@ config = MyProjectConfig()
 ### Infrastructure
 
 - [**Database**](./database) - Database configuration
-- [**Cache**](./cache) - ✨ **Auto Redis cache** from `redis_url` (Redis, LocMem, Dummy)
+- [**Cache**](./cache) - Default cache created from `redis_url` (Redis, LocMem, Dummy)
 - [**Media Storage**](./storage) - S3-compatible object storage (Cloudflare R2, MinIO, AWS S3)
 - [**Logging**](../deployment/logging) - Logging configuration
 
 ### Deployment
 
-- [**Docker Configuration**](../guides/docker/configuration) - YAML + environment variables for Docker
+- [**Docker Configuration**](../guides/docker/configuration) - Environment variables and layered config for Docker
 
 ### Services
 
@@ -102,119 +75,47 @@ config = MyProjectConfig()
 
 ### Type Safety
 
-
-<Callout type="info">
-**Automatic Type Validation**
-Pydantic validates all types automatically at instantiation time, preventing runtime errors.
-
-</Callout>
-
 ```python
-# Pydantic validates types automatically
 class MyConfig(DjangoConfig):
     debug: bool = True
-    max_connections: int = 100
-    timeout: float = 30.0
 
-# ✅ This works
-config = MyConfig(debug=True, max_connections=50)
+# This works
+config = MyConfig(project_name="App", secret_key="x" * 50, debug=True)
 
-# ❌ This fails with validation error
-config = MyConfig(debug="yes", max_connections="fifty")
+# This fails with a validation error
+config = MyConfig(project_name="App", secret_key="x" * 50, debug="maybe")
 ```
 
 <details>
   <summary>See validation error output</summary>
 
 ```python
-ValidationError: 2 validation errors for MyConfig
+ValidationError: 1 validation error for MyConfig
 debug
-  Input should be a valid boolean [type=bool_type]
-max_connections
-  Input should be a valid integer [type=int_type]
+  Input should be a valid boolean [type=bool_parsing]
 ```
 
 </details>
 
 ### Environment Variables
 
-### Automatic Loading
+Read them with a pydantic-settings loader and pass the values in:
 
 ```python
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class DatabaseConfig(BaseSettings):
-    url: str = "sqlite:///db/default.sqlite3"
+class EnvironmentConfig(BaseSettings):
+    secret_key: str
+    redis_url: str | None = None
 
-    class Config:
-        env_prefix = "DATABASE_"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-# Automatically reads DATABASE_URL from environment
-config = DatabaseConfig()
+env = EnvironmentConfig()
 ```
-
-### Manual Loading
-
-```python
-import os
-
-class DatabaseConfig(BaseModel):
-    url: str = os.getenv("DATABASE_URL", "sqlite:///db/default.sqlite3")
-```
-
-
 
 <Callout type="warning">
 **Environment Variables in Production**
 Always use environment variables for **secrets** (API keys, passwords) in production. Never commit them to version control.
-
-</Callout>
-
-### YAML Configuration
-
-### Basic YAML
-
-```yaml filename="config.yaml"
-secret_key: "dev-secret-key"
-debug: true
-project_name: "My Project"
-
-database:
-  url: "postgresql://localhost/mydb"
-
-email:
-  backend: "console"
-```
-
-### With Environment Variables
-
-```yaml filename="config.yaml"
-# Use ${VAR_NAME} for environment variable substitution
-# Use ${VAR_NAME:default_value} to provide a fallback
-secret_key: "${SECRET_KEY}"
-debug: false
-project_name: "My Project"
-
-database:
-  url: "${DATABASE_URL:sqlite:///db.sqlite3}"
-
-email:
-  host: "${EMAIL_HOST:localhost}"
-  password: "${EMAIL_PASSWORD}"
-```
-
-
-```python filename="config.py"
-from django_cfg import DjangoConfig
-
-# Instantiate your config class directly
-config = MyProjectConfig()
-```
-
-
-<Callout type="info">
-**YAML Best Practice**
-Keep sensitive values in environment variables and reference them in YAML with `${VAR_NAME}` syntax. Use `${VAR_NAME:default_value}` to provide a fallback when the variable is not set.
 
 </Callout>
 
@@ -224,36 +125,26 @@ Keep sensitive values in environment variables and reference them in YAML with `
 from pydantic import Field, field_validator
 
 class MyConfig(DjangoConfig):
-    secret_key: str = Field(..., min_length=50)
     max_connections: int = Field(default=100, ge=1, le=1000)
 
     @field_validator('secret_key')
+    @classmethod
     def validate_secret_key(cls, v):
-        if v == "changeme":
+        if v.startswith("changeme"):
             raise ValueError("Please change the default secret key")
         return v
 ```
 
-
-<Callout type="info">
-**Pydantic Validators**
-
-Use `field_validator` for custom validation logic. Validators run automatically during configuration instantiation.
-
-</Callout>
+Validators run during instantiation.
 
 ## Configuration Patterns
 
 ### Development vs Production
 
-### Using Properties
+`env_mode` (`development`, `production`, `test`) is a field of `DjangoConfig`; use `is_development`, `is_production` and `is_test` instead of re-deriving it.
 
 ```python filename="config.py"
-from django_cfg import DjangoConfig
-
 class MyConfig(DjangoConfig):
-    debug: bool = False  # Set via env or override in subclass
-
     @property
     def database_url(self) -> str:
         if self.is_production:
@@ -264,77 +155,43 @@ class MyConfig(DjangoConfig):
 ### Separate Configs
 
 ```python filename="config.py"
+import os
+
 class BaseConfig(DjangoConfig):
     project_name: str = "My Project"
 
 class DevConfig(BaseConfig):
     debug: bool = True
-    database_url: str = "sqlite:///dev.db"
 
 class ProdConfig(BaseConfig):
     debug: bool = False
-    database_url: str = "postgresql://prod-db/main"
 
-# Select based on environment
-import os
-config = ProdConfig() if os.getenv("ENV") == "production" else DevConfig()
+config = (ProdConfig if os.getenv("DJANGO_ENV") == "production" else DevConfig)(secret_key=os.environ["SECRET_KEY"])
 ```
-
-
-### Nested Configuration
-
-```python
-class DatabaseConfig(BaseModel):
-    url: str
-    pool_size: int = 5
-
-class CacheConfig(BaseModel):
-    backend: str = "redis"
-    location: str = "redis://localhost:6379/1"
-
-class MyConfig(DjangoConfig):
-    database: DatabaseConfig
-    cache: CacheConfig
-```
-
-
-<Callout type="info">
-**Organize Complex Configs**
-Use nested Pydantic models to organize complex configurations into logical groups.
-
-</Callout>
 
 ### Optional Features
 
-```python
-class MyConfig(DjangoConfig):
-    # Optional email configuration
-    email: Optional[EmailConfig] = None
-
-    # Enable optional features
-    enable_telegram: bool = False
-```
-
-<details>
-  <summary>Example: Conditional Feature Enabling</summary>
+Optional features are `Optional[...]` config sections that are `None` (off) until you set them:
 
 ```python
+from typing import Optional
+from django_cfg import EmailConfig, TelegramConfig
+
 class MyConfig(DjangoConfig):
-    # Enable features based on environment
-    enable_telegram: bool = Field(
-        default_factory=lambda: os.getenv("ENABLE_TELEGRAM", "false") == "true"
+    email: Optional[EmailConfig] = EmailConfig(
+        backend="smtp",
+        host="smtp.example.com",
+        username="apikey",
+        password="...",
+        default_from="noreply@example.com",
     )
+    telegram: Optional[TelegramConfig] = None
 ```
-
-</details>
 
 ## See Also
 
-### Configuration Deep Dive
 - [**Type-Safe Configuration**](../core/type-safety) - Why type safety matters
-- [**Environment**](./environment) - Environment detection and YAML config
+- [**Environment**](./environment) - Environment variables and detection
 - [**Database**](../database) - Database configuration details
-
-### Docker Deployment
 - [**Docker Configuration**](../guides/docker/configuration) - Layered config strategy for Docker
 - [**Docker Overview**](../guides/docker/overview) - Complete Docker deployment guide

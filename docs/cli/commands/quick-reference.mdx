@@ -19,14 +19,12 @@ Fast reference guide for all Django-CFG management commands. Perfect for quick l
 |------|---------|-------------|
 | Create project | `django-cfg create-project my_project` | Initialize new Django-CFG project |
 | Migrate databases | `python manage.py migrate_all` | Run migrations on all databases |
-| Run server | `cli runserver` | Start enhanced development server |
-| Create superuser | `cli superuser --email admin@test.com` | Create admin user |
+| Run server | `python manage.py runserver` | Start enhanced development server |
+| Create superuser | `python manage.py superuser --email admin@test.com` | Create admin user |
 | Check settings | `python manage.py check_settings` | Comprehensive diagnostics |
 | Check endpoints | `python manage.py check_endpoints` | Test all API endpoints |
-| Show URLs | `cli show-urls` | List all registered URLs |
+| Show URLs | `python manage.py show_urls` | List all registered URLs |
 | Test email | `python manage.py test_email --email admin@test.com` | Send test email |
-| Start worker | `rearq main:rearq worker` | Start background task worker |
-| Streamlit admin | `python manage.py run_streamlit` | Start Streamlit admin server |
 | RQ stats | `python manage.py rqstats` | Show queue statistics |
 | LLM balance | `python manage.py check_llm_balance` | Check API credit balance |
 
@@ -56,7 +54,7 @@ python manage.py migrate_all
 python manage.py migrator --auto
 
 # Dry run to preview migrations
-python manage.py migrate_all --dry-run
+python manage.py migrate_all --check
 
 # Migrate specific database
 python manage.py migrator --database analytics_db
@@ -66,17 +64,17 @@ python manage.py migrator --database analytics_db
 
 ```bash
 # Enhanced development server
-cli runserver
+python manage.py runserver
 
 # Custom port and host
-cli runserver --port 3000 --host 0.0.0.0
+python manage.py runserver --port 3000 --host 0.0.0.0
 ```
 
 ## 👤 User Management
 
 ```bash
 # Create superuser (enhanced)
-cli superuser --email admin@example.com
+python manage.py superuser --email admin@example.com
 
 # Standard Django way
 python manage.py createsuperuser
@@ -108,26 +106,19 @@ curl http://localhost:8000/cfg/endpoints/
 python manage.py test_email --email admin@test.com
 
 # Test Telegram
-cli test-telegram --message "Hello!"
+python manage.py test_telegram --message "Hello!"
 ```
 
 ## 🔄 Background Tasks (Django-RQ)
 
 ```bash
 # Start async worker
-rearq main:rearq worker
 
 # Start cron task scheduler
-rearq main:rearq timer
 
 # Start monitoring web interface
-rearq main:rearq server
 
 # Start worker with specific queues
-rearq main:rearq worker --queues default,high,low
-
-# Test task processing
-python manage.py test_tasks
 
 # Start RQ worker
 python manage.py rqworker
@@ -149,16 +140,16 @@ python manage.py rq_cleanup_locks
 
 ```bash
 # Show all URLs (enhanced)
-cli show-urls
+python manage.py show_urls
 
 # Filter URLs
-cli show-urls --pattern "api/"
+python manage.py show_urls --filter "api/"
 
-# Include admin URLs
-cli show-urls --include-admin
+# One namespace
+python manage.py show_urls --namespace cfg_accounts
 
 # List URLs (alternative)
-python manage.py list_urls --output urls.txt
+python manage.py list_urls --api
 ```
 
 ## 🛠️ Development Tools
@@ -170,11 +161,8 @@ python manage.py script my_script.py
 # Show project structure
 python manage.py tree --depth 3
 
-# Generate components
-python manage.py generate model Product name:str price:decimal
-
 # Create API token
-python manage.py create_token username --expires-in 30
+python manage.py create_token --user username --type api --expires 30
 
 # Check settings
 python manage.py check_settings --verbose
@@ -183,37 +171,21 @@ python manage.py check_settings --verbose
 python manage.py clear_constance
 ```
 
-## 🖥️ Streamlit Admin
-
-```bash
-# Scaffold a new Streamlit admin app
-python manage.py create_streamlit_app
-
-# Start Streamlit admin server
-python manage.py run_streamlit
-
-# Generate Streamlit pages from models
-python manage.py gen_streamlit
-```
-
 ## ⚙️ Code Generation
 
 ```bash
 # Generate FastAPI/SQLModel code from Django models
 python manage.py generate_fastapi
 
-# Generate standalone API client
-python manage.py generate_client
+# Generate API clients from generation.py
+python manage.py gen
 ```
 
-## 📊 LLM & Monitoring
+## 📊 LLM Balance
 
 ```bash
 # Check OpenAI/OpenRouter API balance
 python manage.py check_llm_balance
-
-# Clean old monitor events
-python manage.py monitor_cleanup
 ```
 
 ## 🤖 Telegram
@@ -298,11 +270,10 @@ python manage.py runserver
 | **Core** | 7 | Project setup, configuration, validation |
 | **Database** | 3 | Migrations, database management |
 | **Testing** | 4 | Endpoint health, email, telegram, OTP |
-| **Background Tasks** | 9 | Django-RQ workers, scheduler, stats |
-| **Development** | 7 | Server, scripts, testing |
-| **Streamlit** | 3 | Admin panel scaffolding, server |
+| **Background Tasks** | 5 | Django-RQ workers, scheduler, stats |
+| **Development** | 6 | Server, scripts, testing |
 | **Code Generation** | 2 | FastAPI, API client generation |
-| **LLM & Monitoring** | 2 | API balance, event cleanup |
+| **LLM Balance** | 1 | API balance |
 | **Telegram** | 1 | Bot polling mode |
 | **Auth / OTP** | 1 | Throttle reset |
 | **Geo** | 1 | Timezone/geo data |
@@ -313,7 +284,7 @@ python manage.py runserver
 
 ```bash
 # Recommended
-poetry run cli runserver
+poetry run python manage.py runserver
 
 # Also works
 python manage.py runserver
@@ -328,14 +299,14 @@ python manage.py check_settings --verbose
 ### Use Dry Run for Safety
 
 ```bash
-python manage.py migrate_all --dry-run
+python manage.py migrate_all --check
 ```
 
 ### Test Integrations After Configuration
 
 ```bash
 poetry run python manage.py test_email --email admin@test.com
-poetry run cli test-telegram --message "Deploy successful"
+poetry run python manage.py test_telegram --message "Deploy successful"
 ```
 
 ## 🔍 Find More Information

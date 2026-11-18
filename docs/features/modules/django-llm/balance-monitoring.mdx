@@ -34,7 +34,6 @@ Monitor your LLM provider account balances automatically to avoid service interr
 - ✅ **Two-Tier Thresholds** - Warning ($10) and Critical ($5) levels
 - ✅ **Anti-Spam Protection** - One notification per level per 24 hours
 - ✅ **API Error Alerts** - Automatic notifications for invalid keys, quota exceeded
-- ✅ **Dashboard API** - REST endpoint for frontend integration
 - ✅ **Management Command** - Easy testing and cron integration
 
 ## Quick Start
@@ -516,6 +515,8 @@ balance = total_credits - total_usage  # $0.69 (real prepaid balance)
    - Telegram: `send_telegram_message()` → Async queue
 4. **Mark Sent** - Cache for 24 hours to prevent spam
 
+Telegram sends also pass through the Telegram duplicate suppression (same text, same chat, 60s window; see [Django Telegram](/features/modules/django-telegram#duplicate-suppression)).
+
 ### Telegram Async Queue
 
 Telegram notifications use an **asynchronous queue with rate limiting**:
@@ -531,50 +532,6 @@ Telegram notifications use an **asynchronous queue with rate limiting**:
 
 Management commands exit immediately after execution. The 2-second wait in `check_llm_balance` ensures the Telegram worker thread has time to process the queue before the Python process terminates.
 </Callout>
-
-## Dashboard API
-
-The module provides a REST API endpoint for dashboard integration:
-
-```http
-GET /cfg/dashboard/api/metrics/llm-balances/
-```
-
-**Response:**
-```json
-{
-  "name": "LLM Provider Balances",
-  "description": "API key status and account balances for LLM providers",
-  "status": "critical",
-  "items": [
-    {
-      "provider": "openai",
-      "provider_display": "Openai",
-      "balance": null,
-      "currency": "usd",
-      "status": "valid",
-      "status_level": "info",
-      "note": "Balance check not available via API..."
-    },
-    {
-      "provider": "openrouter",
-      "provider_display": "Openrouter",
-      "balance": 0.69,
-      "currency": "usd",
-      "usage": 216.81,
-      "limit": 217.50,
-      "status": null,
-      "status_level": "critical"
-    }
-  ],
-  "summary": {
-    "total_providers": 2,
-    "total_balance": 0.69,
-    "providers_with_errors": 0,
-    "providers_critical": 1
-  }
-}
-```
 
 ## Caching
 

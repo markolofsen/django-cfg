@@ -5,39 +5,25 @@ description: Generated API client examples for TypeScript, Python, Swift, Go, an
 
 # Using Generated Clients
 
-After generating clients with `python manage.py generate_client`, you'll have type-safe TypeScript, Python, Go, and Swift clients ready to use in your applications.
+After generating clients with `python manage.py gen`, you'll have type-safe TypeScript, Python, Go, and Swift clients ready to use in your applications.
 
 ## TypeScript Clients
 
 ### Installation
 
-Generated TypeScript clients are organized by group:
-
-```
-openapi/clients/typescript/{group_name}/
-```
-
-Example:
-- `openapi/clients/typescript/core/` - Core API group
-- `openapi/clients/typescript/shop/` - Shop API group
+A TypeScript target is written into the `path` of its `Target` in `generation.py`. Hey API puts one shared SDK (`sdk.gen.ts`, `types.gen.ts`, `client/`, `core/`) at that root, next to the wrapper layer (`api.ts`, `index.ts`, `helpers/`). The per-group extras (hooks, Zod schemas) go into `_<group>/` subfolders, for example `_core/` and `_shop/`.
 
 
 <Callout type="info">
 **Group Organization**
 
-Each group defined in `OpenAPIConfig.groups` gets its own client directory with all generated files (client, models, enums, fetchers, hooks, schemas).
+Each group listed in the target gets its own `_<group>/` folder with fetchers, hooks and schemas; the SDK types are shared.
 
 </Callout>
 
-#### Copy to Your Project
+#### Put it where the app imports it
 
-```bash
-# Copy specific group
-cp -r openapi/clients/typescript/core src/api/
-
-# Or copy all groups
-cp -r openapi/clients/typescript/* src/api/
-```
+Point `Target.path` at the folder your app imports from (for example `src/api/generated`); `gen` writes there directly, so nothing is copied by hand.
 
 #### Install as NPM Package
 
@@ -212,8 +198,8 @@ SpectacularConfig(
 ```
 
 `python manage.py suggest_enum_overrides` prints a working dictionary for every
-hash-suffixed name. django-cfg pins its own: `SystemHealthStatusEnum` and, since
-2.3.367, `OAuthErrorCodeEnum` (the `error` of the OAuth endpoints).
+hash-suffixed name. django-cfg pins its own: `OAuthErrorCodeEnum` (the `error` of the
+OAuth endpoints, since 2.3.367).
 
 ### Multiple Groups
 
@@ -351,33 +337,22 @@ try {
 
 ### Installation
 
-Generated Python clients are organized by group:
-
-```
-openapi/clients/python/{group_name}/
-```
-
-Example:
-- `openapi/clients/python/core/` - Core API group
-- `openapi/clients/python/trading/` - Trading API group
-
+A Python target is written into the `path` of its `Target` in `generation.py` (the paths below stand for that directory).
 
 <Callout type="info">
 **Group Organization**
 
-Each group defined in `OpenAPIConfig.groups` gets its own Python package with models, subclients, and async support.
+The client is built by `openapi-python-client`: Pydantic models, one subclient per tag, async support.
 
 </Callout>
 
 #### Install Locally
 
 ```bash
-# Install specific group
-pip install -e openapi/clients/python/core
+pip install -e path/to/python/target
 
 # Or add to requirements.txt
-echo "-e openapi/clients/python/core" >> requirements.txt
-echo "-e openapi/clients/python/trading" >> requirements.txt
+echo "-e path/to/python/target" >> requirements.txt
 ```
 
 #### Publish to PyPI
@@ -385,7 +360,7 @@ echo "-e openapi/clients/python/trading" >> requirements.txt
 Package and publish:
 
 ```bash
-cd openapi/clients/python/trading
+cd path/to/python/target
 python -m build
 python -m twine upload dist/*
 ```
@@ -594,11 +569,7 @@ brew install swift-openapi-generator
 
 ### Installation
 
-Generated Swift clients are in:
-
-```
-openapi/clients/swift/{group_name}/
-```
+Generated Swift clients are written into the `path` of the Swift `Target` in `generation.py`.
 
 #### Add to Xcode Project
 
@@ -934,7 +905,7 @@ def fetch_tickets(client):
 
 After modifying your Django REST Framework API, regenerate clients to get updated types:
 ```bash
-python manage.py generate_client
+python manage.py gen
 ```
 
 </Callout>

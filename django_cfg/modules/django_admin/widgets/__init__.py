@@ -10,8 +10,6 @@ from .registry import WidgetRegistry
 __all__ = [
     "WidgetRegistry",
     "JSONEditorWidget",
-    "MoneyFieldWidget",
-    "MoneyFieldFormField",
     # Geo widgets
     "CountrySelectWidget",
     "CitySelectWidget",
@@ -33,12 +31,6 @@ def __getattr__(name):
     if name == "JSONEditorWidget":
         from .json_editor_widget import JSONEditorWidget
         return JSONEditorWidget
-    elif name == "MoneyFieldWidget":
-        from .money.widget import MoneyFieldWidget
-        return MoneyFieldWidget
-    elif name == "MoneyFieldFormField":
-        from .money.form_field import MoneyFieldFormField
-        return MoneyFieldFormField
     elif name == "CountrySelectWidget":
         from .location_widget import CountrySelectWidget
         return CountrySelectWidget

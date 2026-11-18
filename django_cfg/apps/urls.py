@@ -31,7 +31,6 @@ def get_enabled_cfg_apps() -> List[str]:
     enabled_apps.append("django_cfg.apps.system.totp")
 
     # API apps (always enabled)
-    enabled_apps.append("django_cfg.apps.api.dashboard")
     enabled_apps.append("django_cfg.apps.api.health")
     enabled_apps.append("django_cfg.apps.api.commands")
 
@@ -60,8 +59,8 @@ def get_extension_apps() -> List[str]:
         List of extension app paths (e.g., ['extensions.apps.knowbase', ...])
     """
     try:
-        from django_cfg.extensions import get_extension_loader
         from django_cfg.core.state import get_current_config
+        from django_cfg.extensions import get_extension_loader
 
         config = get_current_config()
         if not config:
@@ -113,7 +112,6 @@ urlpatterns = [
     path('cfg/endpoints/', include('django_cfg.apps.api.endpoints.urls')),
     path('cfg/commands/', include('django_cfg.apps.api.commands.urls')),
     path('cfg/openapi/', include('django_cfg.modules.django_generator.urls')),
-    path('cfg/dashboard/', include('django_cfg.apps.api.dashboard.urls')),
     path('cfg/accounts/', include('django_cfg.apps.system.accounts.urls')),
     path('cfg/totp/', include('django_cfg.apps.system.totp.urls')),
 ]

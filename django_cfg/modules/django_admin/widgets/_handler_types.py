@@ -105,16 +105,6 @@ class TextHandlerConfig(TypedDict, total=False):
     is_link: bool
 
 
-class ToonHandlerConfig(TypedDict, total=False):
-    preview_lines: int
-    default_mode: Literal["toon", "json"]
-    collapsible: bool
-    default_open: bool
-    label: Optional[str]
-    max_height: str
-    is_link: bool
-
-
 __all__ = [
     "UserHandlerConfig",
     "MoneyHandlerConfig",
@@ -128,5 +118,4 @@ __all__ = [
     "GeoHandlerConfig",
     "DecimalHandlerConfig",
     "TextHandlerConfig",
-    "ToonHandlerConfig",
 ]

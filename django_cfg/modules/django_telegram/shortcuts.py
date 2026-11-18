@@ -22,6 +22,7 @@ def send_error(
     error: str,
     context: TelegramContext | None = None,
     links: TelegramLinks | None = None,
+    dedupe: bool = True,
 ) -> None:
     """
     Send error notification with HIGH priority.
@@ -30,6 +31,7 @@ def send_error(
         error: Error message
         context: Optional context dict to include
         links: Optional dict of {label: url} clickable links
+        dedupe: False sends every call (default: the same text is sent once per window)
     """
     try:
         from .service import DjangoTelegram
@@ -45,6 +47,7 @@ def send_error(
             parse_mode=TelegramParseMode.HTML,
             priority=MessagePriority.HIGH,
             fail_silently=True,
+            dedupe=dedupe,
         )
     except Exception:
         pass
@@ -54,6 +57,7 @@ def send_success(
     message: str,
     details: TelegramContext | None = None,
     links: TelegramLinks | None = None,
+    dedupe: bool = True,
 ) -> None:
     """
     Send success notification with NORMAL priority.
@@ -62,6 +66,7 @@ def send_success(
         message: Success message
         details: Optional details dict to include
         links: Optional dict of {label: url} clickable links
+        dedupe: False sends every call (default: the same text is sent once per window)
     """
     try:
         from .service import DjangoTelegram
@@ -77,6 +82,7 @@ def send_success(
             parse_mode=TelegramParseMode.HTML,
             priority=MessagePriority.NORMAL,
             fail_silently=True,
+            dedupe=dedupe,
         )
     except Exception:
         pass
@@ -86,6 +92,7 @@ def send_warning(
     warning: str,
     context: TelegramContext | None = None,
     links: TelegramLinks | None = None,
+    dedupe: bool = True,
 ) -> None:
     """
     Send warning notification with HIGH priority.
@@ -94,6 +101,7 @@ def send_warning(
         warning: Warning message
         context: Optional context dict to include
         links: Optional dict of {label: url} clickable links
+        dedupe: False sends every call (default: the same text is sent once per window)
     """
     try:
         from .service import DjangoTelegram
@@ -109,6 +117,7 @@ def send_warning(
             parse_mode=TelegramParseMode.HTML,
             priority=MessagePriority.HIGH,
             fail_silently=True,
+            dedupe=dedupe,
         )
     except Exception:
         pass
@@ -118,6 +127,7 @@ def send_info(
     message: str,
     data: TelegramContext | None = None,
     links: TelegramLinks | None = None,
+    dedupe: bool = True,
 ) -> None:
     """
     Send informational message with NORMAL priority.
@@ -126,6 +136,7 @@ def send_info(
         message: Info message
         data: Optional data dict to include
         links: Optional dict of {label: url} clickable links
+        dedupe: False sends every call (default: the same text is sent once per window)
     """
     try:
         from .service import DjangoTelegram
@@ -141,6 +152,7 @@ def send_info(
             parse_mode=TelegramParseMode.HTML,
             priority=MessagePriority.NORMAL,
             fail_silently=True,
+            dedupe=dedupe,
         )
     except Exception:
         pass
@@ -150,6 +162,7 @@ def send_stats(
     title: str,
     stats: TelegramContext,
     links: TelegramLinks | None = None,
+    dedupe: bool = True,
 ) -> None:
     """
     Send statistics data with LOW priority.
@@ -158,6 +171,7 @@ def send_stats(
         title: Stats title
         stats: Stats dict to format
         links: Optional dict of {label: url} clickable links
+        dedupe: False sends every call (default: the same text is sent once per window)
     """
     try:
         from .service import DjangoTelegram
@@ -172,6 +186,7 @@ def send_stats(
             parse_mode=TelegramParseMode.HTML,
             priority=MessagePriority.LOW,
             fail_silently=True,
+            dedupe=dedupe,
         )
     except Exception:
         pass
@@ -181,6 +196,7 @@ def send_alert(
     message: str,
     context: TelegramContext | None = None,
     links: TelegramLinks | None = None,
+    dedupe: bool = True,
 ) -> None:
     """
     Send critical alert with CRITICAL priority.
@@ -189,6 +205,7 @@ def send_alert(
         message: Alert message
         context: Optional context dict to include
         links: Optional dict of {label: url} clickable links
+        dedupe: False sends every call (default: the same text is sent once per window)
     """
     try:
         from .service import DjangoTelegram
@@ -204,6 +221,7 @@ def send_alert(
             parse_mode=TelegramParseMode.HTML,
             priority=MessagePriority.CRITICAL,
             fail_silently=True,
+            dedupe=dedupe,
         )
     except Exception:
         pass

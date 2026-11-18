@@ -3,96 +3,23 @@ title: Logging System
 description: Django-CFG logging module with zero-configuration setup, environment-aware logging, and structured output.
 ---
 
-# 📝 Logging System
+# Logging in production
 
-Django-CFG includes a built-in `django_logging` module that provides zero-configuration logging with environment-aware defaults.
-
----
-
-## Zero Configuration
-
-The logging module works out of the box—no setup needed:
+Django-CFG generates the whole logging path. A project writes no logging config and keeps calling `logging.getLogger(__name__)`; it gets one stream (JSON off a terminal, short text on one), no duplicate lines, repeated lines collapsed, health-check noise dropped, chatty libraries quiet, secrets masked and a request id on every line. What each rule does and how to tune it: [Django Logging](/features/modules/django-logging).
 
 ```python
-from django_cfg.modules.django_logging import logger
+import logging
 
-# That's it - start logging!
-logger.info("Application started")
-logger.warning("Cache miss detected")
-logger.error("Database connection failed")
+logger = logging.getLogger(__name__)
+logger.warning("Cache miss for %s", key)   # lazy arguments, never an f-string
 ```
 
-**Automatic configuration based on environment:**
+**Defaults by environment:**
 - Development server (`runserver`): short readable lines, `INFO`
 - Everything else (production, tests, `shell`, `migrate`, workers): `WARNING` and above, JSON off a terminal
 - `DEBUG` only when you ask for it (`DJANGO_CFG_LOG_LEVEL=DEBUG`)
 
----
-
-## Basic Usage
-
-### Standard Logging Methods
-
-```python
-from django_cfg.modules.django_logging import logger
-
-# Debug messages (development only)
-logger.debug("Processing user data: %s", user_data)
-
-# Info messages
-logger.info("User %s logged in successfully", username)
-
-# Warnings
-logger.warning("API rate limit approaching: %d/%d", current, limit)
-
-# Errors
-logger.error("Payment processing failed for order %s", order_id)
-
-# Critical errors
-logger.critical("Database connection lost", exc_info=True)
-```
-
-### Django-CFG Specific Methods
-
-```python
-# Configuration logging
-logger.config_built("security")
-logger.config_warning("database", "Using SQLite in production")
-logger.config_error("redis", "Connection failed")
-
-# Application events
-logger.app_added("django_tasks", position="end")
-logger.app_already_installed("corsheaders")
-
-# Success messages
-logger.success("Deployment completed successfully")
-logger.init_complete(init_time_ms=245.5, environment="production")
-
-# Errors with details
-logger.error_with_details(
-    "Payment processing failed",
-    details="Gateway timeout after 3 retries"
-)
-```
-
-### Structured Data Logging
-
-```python
-# Log structured data (auto-formatted as JSON/YAML)
-logger.data({
-    "user_id": 123,
-    "action": "purchase",
-    "amount": 99.99,
-    "currency": "USD"
-}, title="User Action")
-
-# Log configuration details
-logger.config_details("database", {
-    "engine": "postgresql",
-    "host": "localhost",
-    "max_connections": 100
-})
-```
+Find what is noisy with `docker logs <container> 2>&1 | python manage.py log_noise --stdin`.
 
 ---
 
@@ -237,13 +164,12 @@ logger.error("Order failed")
 
 ```python
 # Good - structured data
-logger.data({
-    "event": "api_call",
+logger.info("api_call", extra={
     "endpoint": "/api/users/",
     "method": "GET",
     "status": 200,
-    "duration_ms": 150
-}, title="API Call")
+    "duration_ms": 150,
+})
 
 # Bad - string formatting
 logger.info("GET /api/users/ 200 150ms")
@@ -255,9 +181,9 @@ logger.info("GET /api/users/ 200 150ms")
 # Good - includes traceback
 try:
     process_payment(order)
-except PaymentError as e:
+except PaymentError:
     logger.error("Payment failed for order %s", order.id, exc_info=True)
-    raise
+    return failed_response()   # handled here, logged once; do not log and re-raise
 
 # Bad - loses stack trace
 except PaymentError as e:

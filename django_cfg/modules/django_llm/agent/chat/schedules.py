@@ -8,30 +8,28 @@ Import it from here, not from `ops`: settings are built before the app registry,
 touches no model at import time; the task functions below resolve the thread model by its label when the worker runs them.
 `ops.schedules` is the same function, for code that runs after Django is set up.
 
+The entries are plain dicts with the `RQScheduleConfig` fields (`func`, `interval`, `queue`, `timeout`, `kwargs`, `description`):
+the harness never imports its host, and `RQConfig(schedules=[...])` validates a dict into the entry.
+
 Counts only: a task returns numbers and never reads or logs a title or a message.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from django_cfg.models.django.django_rq import RQScheduleConfig
+from typing import Any
 
 REAP_EVERY_S = 60
 ATTACHMENTS_EVERY_S = 3600
 PRUNE_EVERY_S = 86400
 
 
-def schedules(thread_model, *, stale_after_s: float, prune_days: int | None = None, queue: str = "default") -> list[RQScheduleConfig]:
+def schedules(thread_model, *, stale_after_s: float, prune_days: int | None = None, queue: str = "default") -> list[dict[str, Any]]:
     """The entries for one chat: reap dead answers, reap uploads (when the chat has an attachment table), prune idle sessions.
 
     `thread_model` is the model or its `app_label.Model` label. `stale_after_s` must stay above every kind's `limits.timeout_s`.
     `prune_days=None` keeps threads for ever (no prune entry). `queue` must be one a worker reads. Moving an entry to another
     `queue` or renaming it leaves the old one registered in Redis: cancel it by hand.
     """
-    from django_cfg.models.django.django_rq import RQScheduleConfig
-
     if stale_after_s <= 0:
         raise ValueError("stale_after_s must be positive")
     if prune_days is not None and prune_days < 1:
@@ -41,7 +39,7 @@ def schedules(thread_model, *, stale_after_s: float, prune_days: int | None = No
         raise ValueError(f"thread_model must be an 'app_label.Model' label or a model, got {label!r}")
     here = __name__
     entries = [
-        RQScheduleConfig(
+        dict(
             func=f"{here}.reap", interval=REAP_EVERY_S, queue=queue, timeout=60,
             kwargs={"model": label, "stale_after_s": float(stale_after_s)},
             description=f"chat {label}: close answers left running by a dead worker",
@@ -49,7 +47,7 @@ def schedules(thread_model, *, stale_after_s: float, prune_days: int | None = No
     ]
     if _has_attachments(label):
         entries.append(
-            RQScheduleConfig(
+            dict(
                 func=f"{here}.reap_attachments", interval=ATTACHMENTS_EVERY_S, queue=queue, timeout=300,
                 kwargs={"model": label},
                 description=f"chat {label}: delete unsent uploads and the bytes of files past their retention",
@@ -57,7 +55,7 @@ def schedules(thread_model, *, stale_after_s: float, prune_days: int | None = No
         )
     if prune_days is not None:
         entries.append(
-            RQScheduleConfig(
+            dict(
                 func=f"{here}.prune", interval=PRUNE_EVERY_S, queue=queue, timeout=900,
                 kwargs={"model": label, "days": int(prune_days)},
                 description=f"chat {label}: delete sessions idle for {prune_days} days",

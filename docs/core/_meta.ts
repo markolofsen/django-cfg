@@ -5,7 +5,7 @@ export default {
   'builder-pattern': 'Builder Pattern',
   'generator-pattern': 'Generator Pattern',
   'django-integration': 'Django Integration',
-  'registry': 'Registry',
+  'registry': 'Public API',
   'routing': 'Routing',
   'middleware': 'Middleware',
   'mixins': 'API Mixins',

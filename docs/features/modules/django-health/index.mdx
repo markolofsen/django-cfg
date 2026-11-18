@@ -21,7 +21,7 @@ Django-CFG includes a **health check system** that provides monitoring of your a
 ```python
 # urls.py
 from django.urls import path
-from django_cfg.modules.django_health.service import HealthCheckView, SimpleHealthView
+from django_cfg.modules.django_health import HealthCheckView, SimpleHealthView
 
 urlpatterns = [
     path('healthz', SimpleHealthView.as_view(), name='simple_health'),
@@ -29,13 +29,13 @@ urlpatterns = [
 ]
 
 # Or use the built-in URL patterns
-from django_cfg.modules.django_health.service import get_health_urls
+from django_cfg.modules.django_health import get_health_urls
 
 urlpatterns += get_health_urls()
 ```
 
 <Callout type="info">
-Import views from `django_cfg.modules.django_health.service`, not from the module root. The module `__init__.py` only exports the `DjangoHealth` service class.
+`HealthCheckView`, `SimpleHealthView` and `get_health_urls` are importable from `django_cfg.modules.django_health` (defined in `service.py`, re-exported from the module root).
 </Callout>
 
 ### Response Format
@@ -140,7 +140,7 @@ Comprehensive health check that validates:
 - **Configuration** - Django-CFG settings validation
 
 ```python
-from django_cfg.modules.django_health.service import HealthCheckView
+from django_cfg.modules.django_health import HealthCheckView
 
 # Add to URLconf
 path('healthz/ready', HealthCheckView.as_view(), name='health_check'),
@@ -151,7 +151,7 @@ path('healthz/ready', HealthCheckView.as_view(), name='health_check'),
 Lightweight health check that just returns OK. Useful for load balancer probes.
 
 ```python
-from django_cfg.modules.django_health.service import SimpleHealthView
+from django_cfg.modules.django_health import SimpleHealthView
 
 path('healthz', SimpleHealthView.as_view(), name='simple_health'),
 ```
@@ -161,7 +161,7 @@ path('healthz', SimpleHealthView.as_view(), name='simple_health'),
 Convenience function to get all health check URL patterns:
 
 ```python
-from django_cfg.modules.django_health.service import get_health_urls
+from django_cfg.modules.django_health import get_health_urls
 
 # Returns URL patterns for:
 # - /healthz/ready -> HealthCheckView
@@ -174,7 +174,7 @@ urlpatterns += get_health_urls()
 Create a custom view by subclassing `HealthCheckView`:
 
 ```python
-from django_cfg.modules.django_health.service import HealthCheckView
+from django_cfg.modules.django_health import HealthCheckView
 from django.http import JsonResponse
 
 class CustomHealthView(HealthCheckView):

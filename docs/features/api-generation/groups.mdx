@@ -31,10 +31,10 @@ Configure groups in your Django-CFG configuration:
 
 ```python
 # api/config.py
-from django_cfg import DjangoConfig, OpenAPIConfig, OpenAPIGroupConfig
+from django_cfg import DjangoConfig, OpenAPIClientConfig, OpenAPIGroupConfig
 
 class CryptoConfig(DjangoConfig):
-    openapi: OpenAPIConfig = OpenAPIConfig(
+    openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
         enabled=True,
         groups=[
             OpenAPIGroupConfig(
@@ -52,7 +52,7 @@ class CryptoConfig(DjangoConfig):
 Organize large APIs into logical groups:
 
 ```python
-openapi: OpenAPIConfig = OpenAPIConfig(
+openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
     enabled=True,
     generate_package_files=True,
     generate_zod_schemas=True,
@@ -99,10 +99,11 @@ openapi: OpenAPIConfig = OpenAPIConfig(
 
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
-| `name` | `str` | - | Yes | Unique group identifier. Lowercase, no spaces. Used in URLs (`/schema/{name}/`) and file paths (`openapi/{name}/`) |
+| `name` | `str` | - | Yes | Unique group identifier. Lowercase, no spaces. Used in the schema URL (`/schema/{name}/schema/`) and as the group name in `Target.groups` |
 | `apps` | `List[str]` | - | Yes | Django app labels to include. Supports wildcards (e.g., `"django_cfg.*"`) |
 | `title` | `str` | - | Yes | Human-readable title. Shown in Swagger UI and Redoc |
 | `description` | `str` | `""` | No | Detailed explanation of group purpose |
+| `tags` | `List[str]` | `[]` | No | Explicit OpenAPI tag set; when empty it is derived from `apps` |
 | `version` | `str` | `"v1"` | No | API version (semantic versioning recommended) |
 | `auth_required` | `bool` | `False` | No | Whether authentication is required for this group |
 
@@ -127,61 +128,7 @@ OpenAPIGroupConfig(
 
 ### Output Directory
 
-Each group generates its own directory structure:
-
-```
-openapi/
-├── schemas/                    # OpenAPI schemas
-│   ├── core.yaml
-│   ├── shop.yaml
-│   └── content.yaml
-│
-├── clients/
-│   ├── typescript/
-│   │   ├── core/               # Group: core
-│   │   │   ├── client.ts       # Main client class
-│   │   │   ├── index.ts        # Exports
-│   │   │   ├── enums.ts        # Enum types
-│   │   │   ├── errors.ts       # Error classes
-│   │   │   ├── http.ts         # HTTP layer
-│   │   │   ├── logger.ts       # Logging
-│   │   │   ├── retry.ts        # Retry logic
-│   │   │   ├── storage.ts      # Storage utilities
-│   │   │   ├── api-instance.ts # Singleton instance
-│   │   │   ├── _utils/         # Fetchers, hooks, schemas
-│   │   │   └── core__users/    # Tag-based subfolders
-│   │   │       ├── client.ts
-│   │   │       ├── models.ts
-│   │   │       └── index.ts
-│   │   ├── shop/               # Group: shop
-│   │   └── content/            # Group: content
-│   │
-│   ├── python/
-│   │   ├── core/
-│   │   │   ├── __init__.py
-│   │   │   ├── client.py       # Async client
-│   │   │   ├── sync_client.py  # Sync client
-│   │   │   ├── models.py       # Pydantic models
-│   │   │   └── enums.py        # Enum classes
-│   │   ├── shop/
-│   │   └── content/
-│   │
-│   ├── go/
-│   │   ├── core/
-│   │   │   ├── client.go
-│   │   │   ├── models.go
-│   │   │   └── operations.go
-│   │   ├── shop/
-│   │   └── content/
-│   │
-│   └── swift/                  # When --swift used
-│       ├── core/
-│       ├── shop/
-│       └── content/
-│
-└── archive/                    # Version history (when enabled)
-    └── 20250115_100000/
-```
+The generator writes each client into the `path` of the `Target` in `generation.py`; there is no fixed `openapi/clients/` tree. A target lists the groups it receives, so one group can feed a web app, an SDK and a Go CLI from the same run.
 
 ### OpenAPI Schemas
 
@@ -257,7 +204,7 @@ Split API by client application:
 groups=[
     OpenAPIGroupConfig(
         name="web",
-        apps=["dashboard", "portfolio", "settings"],
+        apps=["overview", "portfolio", "settings"],
         title="Web Application API",
         description="Web trading dashboard"
     ),
@@ -453,7 +400,7 @@ python manage.py show_urls | grep users
 
 **Run schema validation:**
 ```bash
-python manage.py spectacular --format openapi --validate --file openapi.yaml
+python manage.py spectacular --validate --file openapi.yaml
 ```
 
 ### Empty Schema

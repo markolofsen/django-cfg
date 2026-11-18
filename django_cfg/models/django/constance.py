@@ -5,11 +5,23 @@ Type-safe configuration for django-constance with automatic
 Unfold admin integration and smart field grouping.
 """
 
+from importlib.util import find_spec
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
 from django_cfg.models.base import BaseCfgAutoModule
+
+
+def _unfold_installed() -> bool:
+    """True when the django-unfold package can be imported."""
+    return find_spec("unfold") is not None
+
+
+def _without_unfold_widget(config: List[Any]) -> List[Any]:
+    """Drop the Unfold widget from a ``[field_path, kwargs]`` pair."""
+    field_path, kwargs = config
+    return [field_path, {k: v for k, v in kwargs.items() if k != "widget"}]
 
 
 class ConstanceField(BaseModel):
@@ -72,8 +84,16 @@ class ConstanceField(BaseModel):
         """Convert to Constance configuration format."""
         return (self.default, self.help_text)
 
-    def to_constance_field_config(self) -> Dict[str, Any]:
-        """Convert to Constance additional fields configuration."""
+    def to_constance_field_config(self) -> List[Any]:
+        """Convert to Constance additional fields configuration.
+
+        Unfold widgets are used when django-unfold is installed; without it
+        the plain Django form field is returned.
+        """
+        config = self._unfold_field_config()
+        return config if _unfold_installed() else _without_unfold_widget(config)
+
+    def _unfold_field_config(self) -> List[Any]:
         if self.field_type == "choice" and self.choices:
             return [
                 "django.forms.fields.ChoiceField",
@@ -203,10 +223,11 @@ class ConstanceConfig(BaseModel, BaseCfgAutoModule):
 
     def get_additional_fields_dict(self) -> Dict[str, List[Any]]:
         """Generate CONSTANCE_ADDITIONAL_FIELDS dictionary."""
-        # Start with Unfold base fields
-        from unfold.contrib.constance.settings import UNFOLD_CONSTANCE_ADDITIONAL_FIELDS
+        additional_fields: Dict[Any, List[Any]] = {}
+        if _unfold_installed():
+            from unfold.contrib.constance.settings import UNFOLD_CONSTANCE_ADDITIONAL_FIELDS
 
-        additional_fields = dict(UNFOLD_CONSTANCE_ADDITIONAL_FIELDS)
+            additional_fields.update(UNFOLD_CONSTANCE_ADDITIONAL_FIELDS)
 
         # Add custom field configurations
         for field in self.fields:

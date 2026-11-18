@@ -4,11 +4,7 @@ MoneyField Admin Mixin.
 Provides admin integration for MoneyField with currency conversion display.
 """
 
-from decimal import Decimal
-from typing import Any, Dict, List, Optional, Set, Tuple
-
-from django.contrib import admin
-from django.db import models
+from typing import Dict, List
 
 
 class MoneyFieldAdminMixin:
@@ -45,7 +41,7 @@ class MoneyFieldAdminMixin:
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         """Configure MoneyFieldWidget for MoneyField fields."""
         if db_field.__class__.__name__ == "MoneyField":
-            from django_cfg.modules.django_admin.widgets import MoneyFieldWidget
+            from django_cfg.modules.django_currency.widgets import MoneyFieldWidget
 
             # Get target currency from field
             target_currency = getattr(db_field, "target_currency", "USD")

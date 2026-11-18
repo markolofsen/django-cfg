@@ -10,7 +10,7 @@ import sys
 from types import ModuleType
 from typing import Dict, List, Optional
 
-from django.urls import path, include
+from django.urls import include, path
 
 from ..pipeline.config import OpenAPIConfig
 from .detector import GroupDetector

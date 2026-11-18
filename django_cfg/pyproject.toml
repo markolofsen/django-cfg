@@ -10,7 +10,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.3.416"
+version = "2.3.417"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nand 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -67,12 +67,9 @@ dependencies = [
     "click>=8.2.0,<9.0",
     "questionary>=2.1.0,<3.0",
     "rich>=14.0.0,<15.0",
-    "colorlog>=6.9.0,<7.0",
-    "loguru>=0.7.0,<1.0",
     "cachetools>=5.3.0,<7.0",
     # Default log/cache locations (core/utils/runtime_paths.py)
     "platformdirs>=4.0,<5.0",
-    "toml>=0.10.2,<0.11.0",
 
     # Image handling for django_llm vision (resize/encode before upload)
     "pillow>=12.2.0,<13.0",
@@ -80,14 +77,12 @@ dependencies = [
     "coolname>=2.2.0,<3.0",
     "tzlocal>=5.3.1,<6.0",
     "psutil>=7.0.0",
-    "faker>=40.0.0,<41.0",
     
     # django_notion: leads mirrored into Notion (API 2025-09-03, data sources)
     "notion-client>=3.1.0,<4.0",
 
     # Database
     "psycopg[binary,pool]>=3.2.0,<4.0",
-    "dj-database-url>=3.0.0,<4.0",
     "pgvector>=0.4.2,<1.0",
     
     # Django Extensions
@@ -95,7 +90,7 @@ dependencies = [
     "django-cors-headers>=4.7.0,<5.0",
     "django-extensions>=4.1.0,<5.0",
     "django-constance>=4.3.0,<5.0",
-    "django-unfold>=0.73.1",
+    "django-unfold>=0.110,<0.111",
     "django-json-widget>=2.0.0,<3.0",
     "django-import-export>=4.3.0,<5.0",
     "django-admin-rangefilter>=0.13.0,<1.0",
@@ -126,11 +121,12 @@ dependencies = [
     
     # Notifications
     "pyTelegramBotAPI>=4.28.0,<5.0",
-    "pywebpush>=2.0.0,<3.0",
     
     # HTTP & Parsing
     "requests>=2.33.0,<3.0",  # 2.33.0 fixes CVE-2026-25645
     "httpx>=0.28.1,<1.0",
+    # No import in django_cfg itself, kept on purpose: cmdop_django (apps/torrents/semantic/source_text.py)
+    # and reforms (modules/utils/text.py) import bs4 and parse with "lxml" without declaring either.
     "beautifulsoup4>=4.13.0,<5.0",
     "lxml>=6.1.0,<7.0",  # 6.1.0 fixes XXE CVE-2026-41066
     "mistune>=3.2.1,<4.0",  # 3.2.1 fixes link-title ReDoS CVE-2026-33079
@@ -146,16 +142,9 @@ dependencies = [
     "aiohttp>=3.13.4,<4.0",  # async OpenRouter /models fetch (django_llm registry); 3.13.4 fixes CVE-2026-34513/-34520
     "aiometer>=1.0.0,<2.0",  # bounded concurrency for django_llm async fan-out (extract_many): max_at_once + max_per_second
 
-    # Resilience
-    "aiobreaker>=1.2.0,<2.0",
-    
     # Rendering & Formatting
     "jinja2>=3.1.6,<4.0.0",
     "Pygments>=2.20.0,<3.0",  # 2.20.0 fixes ReDoS CVE-2026-4539
-    "json-toon>=1.0.2,<2.0",
-    
-    # Logging
-    "python-json-logger>=3.3.0,<4.0",
 
     # Geographic
     "geopy>=2.4.0,<3.0",
@@ -167,11 +156,6 @@ dependencies = [
     # NOT device_detector — it is LGPL-3.0 *and* 8.9ms/parse (113/sec).
     "ua-parser[regex]>=1.0.0,<2.0",
 
-    # Type Checking
-    "mypy>=1.18.2,<2.0.0",
-    "django-stubs[compatible-mypy]>=5.2.9,<6.0",
-    "djangorestframework-stubs[compatible-mypy]>=3.16.8,<4.0",
-    
     # Python 3.13+ compatibility
     "setuptools>=75.0.0; python_version>='3.13'",
 ]
@@ -278,20 +262,6 @@ rq = [
     "hiredis>=2.0",
 ]
 
-
-tasks = [
-    "redis>=5.0",
-]
-
-geo = [
-    # Geo app dependencies
-    # - geopy already included in main dependencies for distance calculations
-    # - PostGIS support: enabled via Django's GIS backend (no extra Python deps)
-    #   Configure: DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
-    # - Requires: PostgreSQL with PostGIS extension installed
-    # - Django's contrib.gis is included with Django
-]
-
 docs = [
     "mkdocs>=1.5",
     "mkdocs-material>=9.0",
@@ -309,6 +279,7 @@ test = [
     "pytest-xdist>=3.0",
     "factory-boy>=3.0",
     "fakeredis>=2.0",
+    "import-linter>=2.0",  # report-only architecture contracts: make lint-imports
 ]
 
 dev = [
@@ -322,7 +293,9 @@ dev = [
     "black>=23.0",
     "isort>=5.0",
     "flake8>=5.0",
-    "mypy>=1.0",
+    "mypy>=1.18.2,<2.0.0",
+    "django-stubs[compatible-mypy]>=5.2.9,<6.0",
+    "djangorestframework-stubs[compatible-mypy]>=3.16.8,<4.0",
     "pre-commit>=3.0",
     "build>=1.0",
     "twine>=4.0",
@@ -336,28 +309,19 @@ dev = [
     "betterproto2_compiler>=0.9.0,<1.0",
 ]
 
+# What a production image installs. Dev tooling (black, isort, flake8, mypy, pre-commit,
+# build, twine, tomlkit, mkdocs*, pytest-cov, pytest-xdist, factory-boy) is NOT here: it is
+# in the `dev` and `test` extras. The three pytest packages below stay because cmdop, gptkino,
+# reforms and mls run their suites on the pytest that `full` used to bring and declare none
+# of it themselves (cmdop also uses the `mocker` fixture); django_cfg also ships pytest
+# helpers (apps/payments/testing, django_llm/agent/chat/pytest_plugin.py).
 full = [
     "django>=5.2.14,<6.0",  # 5.2.14 floor covers 2026 SQLi/DoS/session-fixation CVEs
     "pytest>=7.0",
     "pytest-django>=4.5",
-    "pytest-cov>=4.0",
     "pytest-mock>=3.0",
-    "pytest-xdist>=3.0",
-    "factory-boy>=3.0",
-    "black>=23.0",
-    "isort>=5.0",
-    "flake8>=5.0",
-    "mypy>=1.0",
-    "pre-commit>=3.0",
-    "build>=1.0",
-    "twine>=4.0",
-    "tomlkit>=0.11",
     "questionary>=2.0",
     "rich>=13.0",
-    "mkdocs>=1.5",
-    "mkdocs-material>=9.0",
-    "mkdocstrings[python]>=0.24",
-    "pymdown-extensions>=10.0",
     "redis>=5.0",
     "django-rq>=4.0.0",
     "rq>=2.7.0",
@@ -512,6 +476,8 @@ select = [
     "UP",
     "N",
     "S",
+    "T201",
+    "G004",
 ]
 ignore = [
     "E501",
@@ -569,9 +535,353 @@ default-groups = ["dev"]
 "tests/*" = [
     "S101",
     "S106",
+    "T201",
+    "G004",
 ]
+"src/**/tests/**" = ["T201", "G004"]
+"**/@archive/**" = ["T201", "G004"]
+"**/@dev/**" = ["T201", "G004"]
+"**/@docs*/**" = ["T201", "G004"]
 "*/migrations/*" = [
     "N806",
+]
+
+# T201 (print) and G004 (f-string in a logging call), smart-logger L5b, 2026-11-18. They bind NEW
+# library code. The entries below are existing debt, listed so the rules can be on without a 900-line
+# churn; shrink this list when a module is touched, never grow it. CLI commands, the generator and the
+# management commands print by design.
+"src/django_cfg/apps/api/**" = ["G004"]
+"src/django_cfg/apps/system/**" = ["G004", "T201"]
+"src/django_cfg/apps/tools/**" = ["G004"]
+"src/django_cfg/core/builders/**" = ["G004"]
+"src/django_cfg/core/debug/**" = ["T201"]
+"src/django_cfg/core/decorators/**" = ["G004"]
+"src/django_cfg/core/generation/**" = ["G004"]
+"src/django_cfg/core/integration/**" = ["T201"]
+"src/django_cfg/core/utils/**" = ["G004"]
+"src/django_cfg/extensions/constance.py" = ["G004"]
+"src/django_cfg/extensions/loader.py" = ["G004", "T201"]
+"src/django_cfg/extensions/module_loader.py" = ["G004"]
+"src/django_cfg/extensions/scanner.py" = ["G004"]
+"src/django_cfg/extensions/schedules.py" = ["G004"]
+"src/django_cfg/extensions/urls.py" = ["G004", "T201"]
+"src/django_cfg/middleware/admin_notifications.py" = ["G004"]
+"src/django_cfg/middleware/authentication.py" = ["G004"]
+"src/django_cfg/middleware/pool_cleanup.py" = ["G004"]
+"src/django_cfg/middleware/public_endpoints.py" = ["G004"]
+"src/django_cfg/middleware/user_activity.py" = ["G004"]
+"src/django_cfg/models/base/**" = ["T201"]
+"src/django_cfg/models/django/**" = ["T201"]
+"src/django_cfg/modules/base.py" = ["G004"]
+"src/django_cfg/modules/django_admin/**" = ["G004", "T201"]
+"src/django_cfg/modules/django_cleanup/**" = ["G004"]
+"src/django_cfg/modules/django_dashboard/**" = ["G004"]
+"src/django_cfg/modules/django_email/**" = ["G004"]
+"src/django_cfg/modules/django_generator/**" = ["G004", "T201"]
+"src/django_cfg/modules/django_llm/**" = ["G004", "T201"]
+"src/django_cfg/modules/django_mcp/**" = ["G004"]
+"src/django_cfg/modules/django_migrator/**" = ["G004"]
+"src/django_cfg/modules/django_rq/**" = ["G004", "T201"]
+"src/django_cfg/modules/django_telegram/**" = ["G004"]
+"src/django_cfg/modules/django_unfold/**" = ["G004"]
+"src/django_cfg/utils/pool_monitor.py" = ["G004"]
+"src/django_cfg/utils/version_check.py" = ["T201"]
+"src/django_cfg/cli/**" = ["T201"]
+"src/django_cfg/management/commands/**" = ["T201"]
+
+# import-linter, report-only. Run: make lint-imports (never part of make test).
+# Each ignore_imports list is the baseline of violations on 2026-11-18. Shrink it, never grow it:
+# a new entry needs a reason in the review. Common ignores (first three of each list): test modules
+# are not part of the architecture, and the root facade `django_cfg/__init__.py` imports everything
+# by design (removed by M1 of the report).
+# unmatched_ignore_imports_alerting = none: other work removes edges, a stale entry must not fail the run.
+[tool.importlinter]
+root_package = "django_cfg"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "django_cfg layers"
+type = "layers"
+layers = [
+    "django_cfg.cli | django_cfg.management",
+    "django_cfg.apps",
+    "django_cfg.modules",
+    "django_cfg.middleware | django_cfg.mixins | django_cfg.templatetags",
+    "django_cfg.core",
+    "django_cfg.models",
+    "django_cfg.utils",
+]
+unmatched_ignore_imports_alerting = "none"
+ignore_imports = [
+    "django_cfg.**.tests.** -> **",
+    "django_cfg.**.tests -> **",
+    "django_cfg -> django_cfg.**",
+    # baseline, reverse edge found by the 2026-11-18 scan; removed by M2/M3 of @dev/research/django-cfg-structure-2026-11-18.md
+    # core -> apps
+    "django_cfg.core.backends.gateway -> django_cfg.apps.system.mailer.signals",
+    # core -> middleware
+    "django_cfg.core.generation.integration_generators.api -> django_cfg.middleware.authentication",
+    # core -> modules
+    "django_cfg.core.base.config_model -> django_cfg.modules.django_dashboard.models",
+    "django_cfg.core.base.config_model -> django_cfg.modules.django_logging.__cfg__",
+    "django_cfg.core.base.config_model -> django_cfg.modules.django_mcp.__cfg__",
+    "django_cfg.core.base.config_model -> django_cfg.modules.django_notion.__cfg__",
+    "django_cfg.core.integration.url_integration -> django_cfg.modules.django_generator.openapi.groups.discovery",
+    "django_cfg.core.integration.url_integration -> django_cfg.modules.django_generator.openapi.groups.manager",
+    "django_cfg.core.integration.url_integration -> django_cfg.modules.django_generator.openapi.pipeline",
+    # extensions -> core
+    "django_cfg.extensions.configs.apps.base.navigation -> django_cfg.core.admin_access",
+    "django_cfg.extensions.configs.apps.base.settings -> django_cfg.core.admin_access",
+    "django_cfg.extensions.constance -> django_cfg.core.state",
+    "django_cfg.extensions.schedules -> django_cfg.core.state",
+    "django_cfg.extensions.urls -> django_cfg.core.state",
+    # extensions -> modules
+    "django_cfg.extensions.configs.apps.base -> django_cfg.modules.django_dashboard.models",
+    "django_cfg.extensions.configs.apps.base.navigation -> django_cfg.modules.django_unfold.models.navigation",
+    "django_cfg.extensions.configs.apps.base.navigation -> django_cfg.modules.django_unfold.utils",
+    # middleware -> modules
+    "django_cfg.middleware.admin_notifications -> django_cfg.modules.django_telegram",
+    "django_cfg.middleware.user_activity -> django_cfg.modules.base",
+    # mixins -> middleware
+    "django_cfg.mixins.admin_api -> django_cfg.middleware.authentication",
+    "django_cfg.mixins.client_api -> django_cfg.middleware.authentication",
+    "django_cfg.mixins.superadmin_api -> django_cfg.middleware.authentication",
+    # models -> apps
+    "django_cfg.models.django.django_rq -> django_cfg.apps.system.accounts.services.cleanup_service",
+    # models -> core
+    "django_cfg.models.api.config -> django_cfg.core.constants",
+    "django_cfg.models.api.drf.config -> django_cfg.core.constants",
+    "django_cfg.models.base.module -> django_cfg.core.config",
+    "django_cfg.models.django.django_rq -> django_cfg.core.state",
+    "django_cfg.models.django.environment -> django_cfg.core.utils.runtime_paths",
+    "django_cfg.models.django.indexnow -> django_cfg.core.site",
+    "django_cfg.models.infrastructure.cache -> django_cfg.core.exceptions",
+    "django_cfg.models.infrastructure.cache -> django_cfg.core.utils.runtime_paths",
+    "django_cfg.models.infrastructure.database.converters -> django_cfg.core.exceptions",
+    "django_cfg.models.infrastructure.database.parsers -> django_cfg.core.exceptions",
+    "django_cfg.models.infrastructure.logging -> django_cfg.core.utils.runtime_paths",
+    "django_cfg.models.services.email -> django_cfg.core.utils.display_name",
+    # models -> modules
+    "django_cfg.models -> django_cfg.modules.django_unfold.models.config",
+    "django_cfg.models.django.chat -> django_cfg.modules.django_generator.openapi.pipeline.config",
+    "django_cfg.models.django.chat -> django_cfg.modules.django_llm.agent.chat.attachments",
+    "django_cfg.models.django.django_rq -> django_cfg.modules.django_rq._deps",
+    "django_cfg.models.django.openapi -> django_cfg.modules.django_generator.openapi.pipeline.config",
+    # modules -> apps
+    "django_cfg.modules.django_admin.base.pydantic_admin.views -> django_cfg.apps.tools.geo.widgets.location_widget",
+    "django_cfg.modules.django_admin.utils.displays.geo.city -> django_cfg.apps.tools.geo.services.database",
+    "django_cfg.modules.django_admin.utils.displays.geo.country -> django_cfg.apps.tools.geo.services.database",
+    "django_cfg.modules.django_admin.widgets.location_widget -> django_cfg.apps.tools.geo.models",
+    "django_cfg.modules.django_admin.widgets.location_widget -> django_cfg.apps.tools.geo.services.database",
+    "django_cfg.modules.django_currency._rate_cache -> django_cfg.apps.tools.currency.models",
+    "django_cfg.modules.django_currency.widgets._rate_utils -> django_cfg.apps.tools.currency.models",
+    "django_cfg.modules.django_dashboard.resolver -> django_cfg.apps.tools.analytics.dashboard",
+    "django_cfg.modules.django_email.service -> django_cfg.apps.system.mailer.locales",
+    "django_cfg.modules.django_email.service -> django_cfg.apps.system.mailer.models",
+    "django_cfg.modules.django_mcp.auth -> django_cfg.apps.system.accounts.models",
+    "django_cfg.modules.django_mcp.oauth -> django_cfg.apps.system.accounts.models",
+    "django_cfg.modules.django_unfold.navigation.manager -> django_cfg.apps.tools.analytics.models",
+    # modules -> management
+    "django_cfg.modules.django_email.management.commands.test_email -> django_cfg.management.utils",
+    "django_cfg.modules.django_migrator.orchestration.extensions -> django_cfg.management.utils.postgresql",
+    "django_cfg.modules.django_monitor.management.commands.monitor_status -> django_cfg.management.utils",
+    "django_cfg.modules.django_monitor.management.commands.monitor_tail -> django_cfg.management.utils",
+    "django_cfg.modules.django_telegram.management.commands.test_telegram -> django_cfg.management.utils",
+    # templatetags -> modules
+    "django_cfg.templatetags.django_cfg -> django_cfg.modules.django_dashboard.resolver",
+    "django_cfg.templatetags.django_cfg_dashboard -> django_cfg.modules.django_dashboard.resolver",
+    # utils -> core
+    "django_cfg.utils.path_resolution -> django_cfg.core.exceptions",
+    "django_cfg.utils.smart_defaults -> django_cfg.core.constants",
+    # utils -> models
+    "django_cfg.utils.smart_defaults -> django_cfg.models.infrastructure.cache",
+    "django_cfg.utils.smart_defaults -> django_cfg.models.services.email",
+    # utils -> modules
+    "django_cfg.utils.smart_defaults -> django_cfg.modules.django_logging.config",
+]
+
+[[tool.importlinter.contracts]]
+name = "feature modules are independent"
+type = "independence"
+modules = [
+    "django_cfg.modules.django_llm",
+    "django_cfg.modules.django_generator",
+    "django_cfg.modules.django_mcp",
+    "django_cfg.modules.django_admin",
+    "django_cfg.modules.django_rq",
+    "django_cfg.modules.django_notion",
+    "django_cfg.modules.django_monitor",
+    "django_cfg.modules.django_sitemap",
+    "django_cfg.modules.django_cleanup",
+]
+unmatched_ignore_imports_alerting = "none"
+ignore_imports = [
+    "django_cfg.**.tests.** -> **",
+    "django_cfg.**.tests -> **",
+    "django_cfg -> django_cfg.**",
+    # baseline, cross-module edge or chain through core; M2/M3 of the same report
+    # apps -> modules
+    "django_cfg.apps.system.accounts.models.user -> django_cfg.modules.django_cleanup",
+    # core -> modules
+    "django_cfg.core.base.config_model -> django_cfg.modules.django_mcp.__cfg__",
+    "django_cfg.core.base.config_model -> django_cfg.modules.django_notion.__cfg__",
+    # models -> modules
+    "django_cfg.models.django.chat -> django_cfg.modules.django_generator.openapi.pipeline.config",
+    "django_cfg.models.django.chat -> django_cfg.modules.django_llm.agent.chat.attachments",
+    "django_cfg.models.django.django_rq -> django_cfg.modules.django_rq._deps",
+    "django_cfg.models.django.openapi -> django_cfg.modules.django_generator.openapi.pipeline.config",
+    # modules -> modules
+    "django_cfg.modules.django_mcp.agent_tools -> django_cfg.modules.django_llm.agent.tools.core._meta",
+    "django_cfg.modules.django_mcp.agents.runner.runner -> django_cfg.modules.django_llm.agent.bus.events",
+    "django_cfg.modules.django_mcp.agents.runner.runner -> django_cfg.modules.django_llm.agent.capabilities",
+    "django_cfg.modules.django_mcp.agents.runner.runner -> django_cfg.modules.django_llm.agent.runtime.history",
+    "django_cfg.modules.django_mcp.agents.runner.runner -> django_cfg.modules.django_llm.agent.runtime.model_builder",
+    "django_cfg.modules.django_mcp.agents.runner.runner -> django_cfg.modules.django_llm.agent.runtime.runner",
+    "django_cfg.modules.django_mcp.agents.runner.runner -> django_cfg.modules.django_llm.agent.runtime.streaming",
+    "django_cfg.modules.django_sitemap.admin -> django_cfg.modules.django_admin",
+    "django_cfg.modules.django_sitemap.admin -> django_cfg.modules.django_admin.base",
+]
+
+[[tool.importlinter.contracts]]
+name = "product apps are independent"
+type = "independence"
+modules = [
+    "django_cfg.apps.tools.geo",
+    "django_cfg.apps.tools.currency",
+    "django_cfg.apps.tools.analytics",
+    "django_cfg.apps.tools.chat",
+    "django_cfg.apps.payments",
+    "django_cfg.apps.system.accounts",
+    "django_cfg.apps.system.mailer",
+    "django_cfg.apps.system.totp",
+]
+unmatched_ignore_imports_alerting = "none"
+ignore_imports = [
+    "django_cfg.**.tests.** -> **",
+    "django_cfg.**.tests -> **",
+    "django_cfg -> django_cfg.**",
+    # baseline, cross-app edge (accounts <-> totp <-> mailer cycles, currency <-> geo via admin widgets); M3
+    # apps -> apps
+    "django_cfg.apps.system.accounts.admin.user_admin -> django_cfg.apps.system.mailer.models",
+    "django_cfg.apps.system.accounts.models.user -> django_cfg.apps.system.totp.services",
+    "django_cfg.apps.system.accounts.services.oauth.login -> django_cfg.apps.system.totp.services",
+    "django_cfg.apps.system.accounts.services.welcome -> django_cfg.apps.system.mailer.locales",
+    "django_cfg.apps.system.accounts.views.otp -> django_cfg.apps.system.totp.services",
+    "django_cfg.apps.system.accounts.views.password -> django_cfg.apps.system.totp.services",
+    "django_cfg.apps.system.mailer.management.commands.load_email_content -> django_cfg.apps.system.accounts.services.welcome",
+    "django_cfg.apps.system.totp.serializers.verify -> django_cfg.apps.system.accounts.serializers",
+    "django_cfg.apps.system.totp.views.verify -> django_cfg.apps.system.accounts.serializers",
+    "django_cfg.apps.system.totp.views.verify -> django_cfg.apps.system.accounts.signals",
+    "django_cfg.apps.tools.analytics.signals -> django_cfg.apps.system.accounts.signals",
+    # models -> apps
+    "django_cfg.models.django.django_rq -> django_cfg.apps.system.accounts.services.cleanup_service",
+    # modules -> apps
+    "django_cfg.modules.django_admin.base.pydantic_admin.views -> django_cfg.apps.tools.geo.widgets.location_widget",
+    "django_cfg.modules.django_admin.utils.displays.geo.city -> django_cfg.apps.tools.geo.services.database",
+    "django_cfg.modules.django_admin.utils.displays.geo.country -> django_cfg.apps.tools.geo.services.database",
+    "django_cfg.modules.django_admin.widgets.location_widget -> django_cfg.apps.tools.geo.models",
+    "django_cfg.modules.django_admin.widgets.location_widget -> django_cfg.apps.tools.geo.services.database",
+    "django_cfg.modules.django_currency._rate_cache -> django_cfg.apps.tools.currency.models",
+    "django_cfg.modules.django_currency.widgets._rate_utils -> django_cfg.apps.tools.currency.models",
+    "django_cfg.modules.django_email.service -> django_cfg.apps.system.mailer.locales",
+    "django_cfg.modules.django_email.service -> django_cfg.apps.system.mailer.models",
+    "django_cfg.modules.django_unfold.navigation.manager -> django_cfg.apps.tools.analytics.models",
+]
+
+[[tool.importlinter.contracts]]
+name = "core and models do not import features"
+type = "forbidden"
+source_modules = [
+    "django_cfg.core",
+    "django_cfg.models",
+]
+forbidden_modules = [
+    "django_cfg.apps",
+    "django_cfg.modules",
+]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "none"
+ignore_imports = [
+    "django_cfg.**.tests.** -> **",
+    "django_cfg.**.tests -> **",
+    "django_cfg -> django_cfg.**",
+    # baseline, core/models import of a feature (config_model.py, gateway.py, django_rq.py, chat.py); M2
+    # core -> apps
+    "django_cfg.core.backends.gateway -> django_cfg.apps.system.mailer.signals",
+    # core -> modules
+    "django_cfg.core.base.config_model -> django_cfg.modules.django_dashboard.models",
+    "django_cfg.core.base.config_model -> django_cfg.modules.django_logging.__cfg__",
+    "django_cfg.core.base.config_model -> django_cfg.modules.django_mcp.__cfg__",
+    "django_cfg.core.base.config_model -> django_cfg.modules.django_notion.__cfg__",
+    "django_cfg.core.integration.url_integration -> django_cfg.modules.django_generator.openapi.groups.discovery",
+    "django_cfg.core.integration.url_integration -> django_cfg.modules.django_generator.openapi.groups.manager",
+    "django_cfg.core.integration.url_integration -> django_cfg.modules.django_generator.openapi.pipeline",
+    # models -> apps
+    "django_cfg.models.django.django_rq -> django_cfg.apps.system.accounts.services.cleanup_service",
+    # models -> modules
+    "django_cfg.models -> django_cfg.modules.django_unfold.models.config",
+    "django_cfg.models.django.chat -> django_cfg.modules.django_generator.openapi.pipeline.config",
+    "django_cfg.models.django.chat -> django_cfg.modules.django_llm.agent.chat.attachments",
+    "django_cfg.models.django.django_rq -> django_cfg.modules.django_rq._deps",
+    "django_cfg.models.django.openapi -> django_cfg.modules.django_generator.openapi.pipeline.config",
+]
+
+[[tool.importlinter.contracts]]
+name = "core and models stay light"
+type = "forbidden"
+source_modules = [
+    "django_cfg.core",
+    "django_cfg.models",
+]
+forbidden_modules = [
+    "openai",
+    "pydantic_ai",
+    "tiktoken",
+    "PIL",
+    "cv2",
+    "telebot",
+    "boto3",
+    "stripe",
+    "jinja2",
+]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "none"
+ignore_imports = [
+    "django_cfg.**.tests.** -> **",
+    "django_cfg.**.tests -> **",
+    "django_cfg -> django_cfg.**",
+    # baseline, heavy third-party package reached from core/models
+    # models -> boto3
+    "django_cfg.models.django.storage_backend -> boto3",
+]
+
+[[tool.importlinter.contracts]]
+name = "optional extras are confined"
+type = "forbidden"
+source_modules = [
+    "django_cfg.apps",
+    "django_cfg.core",
+    "django_cfg.models",
+    "django_cfg.middleware",
+]
+forbidden_modules = [
+    "stripe",
+    "boto3",
+    "pglast",
+    "pydantic_ai",
+    "openai",
+]
+allow_indirect_imports = true
+unmatched_ignore_imports_alerting = "none"
+ignore_imports = [
+    "django_cfg.**.tests.** -> **",
+    "django_cfg.**.tests -> **",
+    "django_cfg -> django_cfg.**",
+    # baseline, optional-extra package outside its owning module
+    # apps -> stripe
+    "django_cfg.apps.payments.providers.stripe -> stripe",
+    # models -> boto3
+    "django_cfg.models.django.storage_backend -> boto3",
 ]
 
 [tool.hatch.metadata]

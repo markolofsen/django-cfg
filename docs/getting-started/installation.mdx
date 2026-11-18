@@ -15,18 +15,23 @@ Or with optional dependency groups:
 
 ```bash
 pip install "django-cfg[rq]"          # Background tasks
-pip install "django-cfg[full]"        # All enterprise features
+pip install "django-cfg[full]"        # Every runtime extra (no dev tooling)
 ```
 
 ## Optional Dependency Groups
 
 | Group | What it adds |
 |-------|-------------|
-| `rq` | Redis Queue tasks (rq, django-rq) |
-| `ai` | Pydantic AI agents |
-| `geo` | Geographic/PostGIS support |
+| `rq` | Redis Queue tasks (rq, django-rq, rq-scheduler, redis) |
+| `ai` | Pydantic AI agents and harness |
+| `gen` | Client generator extras (openapi-python-client) and the FastAPI/SQLModel ORM generator |
+| `payments` | Stripe SDK for the payments engine |
+| `mcp-sql` | `pglast`, the SQL validator behind the MCP `raw_sql` tool |
 | `s3` | S3-compatible [media storage](/configuration/storage) (django-storages, boto3) |
-| `full` | All enterprise features |
+| `full` | All runtime extras above plus `pytest`, `pytest-django` and `pytest-mock`; it does not include linters, type checkers or docs tooling |
+| `dev`, `test`, `docs` | Tooling for working on django-cfg itself |
+
+A project that used `black`, `isort`, `flake8`, `mypy`, `pytest-cov`, `pytest-xdist` or `factory-boy` through the old `full` install must declare them in its own dev group.
 
 <Callout type="tip">
 Start with the base install. You can add optional groups later as your project grows.
@@ -38,8 +43,8 @@ Start with the base install. You can add optional groups later as your project g
 
 | Tool | Version | Note |
 |------|---------|------|
-| Python | 3.12+ | Required |
-| Django | 5.0+ | Installed automatically with django-cfg |
+| Python | 3.12 or 3.13 | Required (`>=3.12,<3.14`) |
+| Django | 5.2 (>=5.2.14,<6) | Not a base dependency: add it yourself or use the `django52` / `full` extra |
 | Node.js | 20+ | For frontend (pnpm will be needed) |
 | Docker | Latest | Optional — for local services (Redis, PostgreSQL) |
 

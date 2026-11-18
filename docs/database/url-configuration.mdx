@@ -37,6 +37,8 @@ url: str = "sqlite:////absolute/path/to/db.sqlite3"
 url: str = "sqlite:///:memory:"
 ```
 
+SQLite URLs follow the SQLAlchemy / dj-database-url rule: after `sqlite://` the first `/` only separates the empty host. So `sqlite:///db/x.sqlite3` is the relative path `db/x.sqlite3` and `sqlite:////abs/x.sqlite3` (four slashes) is the absolute path `/abs/x.sqlite3`. Other schemes take the database name after the single leading `/`.
+
 ### PostgreSQL
 
 ```python
@@ -151,7 +153,7 @@ from django_cfg import DjangoConfig, DatabaseConfig
 from .environment import env
 
 class MyDjangoConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url)
     }
 

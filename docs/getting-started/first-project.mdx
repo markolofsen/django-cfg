@@ -10,7 +10,7 @@ description: Learn first project in Django-CFG. Step-by-step guide to your first
 
 <Callout type="info">
 **What You'll Build**
-A complete multi-tenant SaaS application with type-safe YAML configuration, workspace management, and production-ready setup in **under 15 minutes**.
+A complete multi-tenant SaaS application with type-safe environment configuration, workspace management, and production-ready setup in **under 15 minutes**.
 
 </Callout>
 
@@ -25,12 +25,12 @@ graph TB
     STEP4 --> STEP5[5. Create Django<br/>App]
     STEP5 --> STEP6[6. Run Migrations]
     STEP6 --> STEP7[7. Access<br/>Application]
-    STEP7 --> END[SaaS Platform Ready! 🎉]
+    STEP7 --> END[SaaS Platform Ready]
 ```
 
 ## Goal
 
-Create a Django-based SaaS platform with [type-safe YAML configuration](./configuration) using Django-CFG.
+Create a Django-based SaaS platform with [type-safe environment configuration](./configuration) using Django-CFG.
 
 ## Prerequisites
 
@@ -38,10 +38,10 @@ Create a Django-based SaaS platform with [type-safe YAML configuration](./config
 <Callout type="info">
 **Requirements**
 Before starting, ensure you have:
-- ✅ Python 3.12+ installed ([Installation Guide](./installation))
-- ✅ Basic Django knowledge
-- ✅ Code editor with Python support (VS Code, PyCharm, etc.)
-- ✅ Command line/terminal access
+- Python 3.12+ installed ([Installation Guide](./installation))
+- Basic Django knowledge
+- Code editor with Python support (VS Code, PyCharm, etc.)
+- Command line/terminal access
 
 </Callout>
 
@@ -117,7 +117,7 @@ saas-platform/
 │   ├── environment/          # New directory
 │   │   ├── __init__.py       # New file
 │   │   ├── loader.py         # New file
-│   │   └── config.dev.yaml   # New file
+│   │   └── .env              # New file (gitignored)
 │   ├── config.py             # New file
 │   ├── settings.py
 │   ├── urls.py
@@ -139,8 +139,6 @@ __all__ = ["env"]
 ```python
 """
 Environment configuration with [Pydantic models](../../core/type-safety) and automatic env loading.
-
-Based on django-cfg libs/django_cfg_opensource/sample/django/api/environment/loader.py
 """
 import os
 from pathlib import Path
@@ -289,7 +287,7 @@ class SaaSConfig(DjangoConfig):
     # Security (optional in development, required in production)
     security_domains: list[str] | None = env.security_domains
 
-    # Database from YAML URL (see /core/database for multi-database setup)
+    # Database from the DATABASE__URL variable (see /database for multi-database setup)
     databases: Dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url)
     }
@@ -454,28 +452,24 @@ Login to admin with created superuser credentials.
 
 ## Production Configuration
 
-Create **core/environment/config.prod.yaml:**
+Production reads system environment variables (no `.env` file):
 
-```yaml
-secret_key: ""  # Set via environment variable or secrets manager
-debug: false
+```bash
+SECRET_KEY="<from your secrets manager, 50+ characters>"
+DEBUG=false
+IS_PROD=true
 
-app:
-  name: "SaaS Platform"
-  site_url: "https://platform.example.com"
-  api_url: "https://api.platform.example.com"
+APP__NAME="SaaS Platform"
+APP__SITE_URL="https://platform.example.com"
+APP__API_URL="https://api.platform.example.com"
 
-# REQUIRED in production - Django-CFG auto-normalizes any format
-security_domains:
-  - "platform.example.com"         # ✅ No protocol
-  - "api.platform.example.com"     # ✅ Subdomain
+# REQUIRED in production; any format is normalized
+SECURITY_DOMAINS="platform.example.com,api.platform.example.com"
 
-# SSL/TLS: Assumes reverse proxy (nginx, Cloudflare, etc.) handles HTTPS
-# No ssl_redirect needed - Django-CFG defaults to reverse proxy mode
-
-database:
-  url: "postgresql://user:pass@db.example.com:5432/saas_prod"
+DATABASE__URL="postgresql://user:pass@db.example.com:5432/saas_prod"
 ```
+
+SSL/TLS is assumed to be terminated by a reverse proxy (nginx, Cloudflare, ...), which is django-cfg's default.
 
 Deploy with:
 
@@ -485,17 +479,20 @@ IS_PROD=true python manage.py runserver
 
 ## Adding Features
 
-### Enable Built-in Apps
+### Enable Built-in Features
 
-Edit **core/config.py:**
+Accounts (OTP sign-in, user profiles, 2FA) is installed by default. Optional features are config sections, for example:
 
 ```python
+from django_cfg import CurrencyConfig
+
 class SaaSConfig(DjangoConfig):
     # ... existing config ...
 
-    # Enable built-in features (see /features/built-in-apps/overview for all apps)
-    enable_accounts: bool = True     # Extended user management
+    currency: CurrencyConfig = CurrencyConfig(target_currency="USD")
 ```
+
+See [Built-in Apps](/features/built-in-apps/overview) for the full list.
 
 ### Add Caching
 
@@ -509,12 +506,10 @@ class EnvironmentConfig(BaseSettings):
     redis_url: str | None = None
 ```
 
-Update **core/environment/config.dev.yaml:**
+Update **core/environment/.env:**
 
-```yaml
-# ... existing config ...
-
-redis_url: "redis://localhost:6379/0"
+```bash
+REDIS_URL="redis://localhost:6379/0"
 ```
 
 Update **core/config.py:**
@@ -525,7 +520,7 @@ from django_cfg import DjangoConfig, DatabaseConfig
 class SaaSConfig(DjangoConfig):
     # ... existing config ...
 
-    # ✨ Auto Redis cache - just set redis_url!
+    # Default cache is created from redis_url
     redis_url: str | None = env.redis_url
     # Django-CFG automatically creates CacheConfig if redis_url is set
 ```
@@ -537,19 +532,16 @@ See [Troubleshooting Guide](../../guides/troubleshooting) for complete solutions
 ### Configuration Not Loading
 
 ```bash
-# Check which config file is loaded
+# Check which mode the loader picked
 python manage.py shell
 >>> from core.environment import env
 >>> print(env.env.env_mode)
 development
 ```
 
-### YAML Parse Error
+### Environment Variable Not Picked Up
 
-```bash
-# Validate YAML syntax
-python -c "import yaml; yaml.safe_load(open('core/environment/config.dev.yaml'))"
-```
+Variables use `__` for nesting (`DATABASE__URL`) and are read from the process environment first, then `core/environment/.env`.
 
 ### Pydantic Validation Error
 

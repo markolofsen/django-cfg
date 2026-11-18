@@ -7,6 +7,10 @@ description: Generate production-ready FastAPI/SQLModel code from Django models.
 
 Django-CFG includes a **FastAPI ORM Generator** that automatically converts Django models into production-ready FastAPI/SQLModel code using runtime introspection.
 
+<Callout type="info">
+The generator lives in `django_cfg.modules.django_generator.fastapi`. The separate `django_cfg.modules.django_fastapi` package was an identical copy and was removed on 2026-11-18; `python manage.py generate_fastapi` is unchanged. Projects that imported `django_cfg.modules.django_fastapi` must switch to `django_cfg.modules.django_generator.fastapi`.
+</Callout>
+
 ## Features
 
 | Feature | Description |
@@ -137,7 +141,7 @@ async def create_user(data: UserCreate, session = Depends(get_session)):
 ## Programmatic Usage
 
 ```python
-from django_cfg.modules.django_fastapi import FastAPIConfig, FastAPIOrchestrator
+from django_cfg.modules.django_generator.fastapi import FastAPIConfig, FastAPIOrchestrator
 
 config = FastAPIConfig(
     output_dir="src/orm/",

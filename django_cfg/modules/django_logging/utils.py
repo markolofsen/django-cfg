@@ -6,8 +6,11 @@ Logging is configured by the generated ``LOGGING`` dict (``config.py``), not at
 import time. Default is stdout/stderr; a file is opt-in (``DJANGO_CFG_LOG_DIR``).
 """
 
+import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 
 # Reserved LogRecord attributes that cannot be used in 'extra'
@@ -68,7 +71,6 @@ def clean_old_logs(days: int = 30, logs_dir: Optional[Path] = None) -> Dict[str,
         >>> stats = clean_old_logs(days=7)  # Keep only last 7 days
         >>> print(f"Deleted {stats['deleted']} files, freed {stats['bytes']} bytes")
     """
-    import os
     from datetime import datetime, timedelta
 
     if logs_dir is None:
@@ -94,7 +96,7 @@ def clean_old_logs(days: int = 30, logs_dir: Optional[Path] = None) -> Dict[str,
                     deleted_count += 1
                     deleted_bytes += file_size
             except Exception as e:
-                print(f"[django-cfg] Error deleting {log_file}: {e}")
+                logger.warning("Error deleting %s: %s", log_file, e)
 
     return {
         'deleted': deleted_count,

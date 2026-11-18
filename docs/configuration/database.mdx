@@ -1,6 +1,6 @@
 ---
 title: Database Models
-description: DatabaseConfig and DatabaseRoutingRule configuration models
+description: DatabaseConfig model, URL parsing and per-database app routing
 ---
 
 # Database Models
@@ -44,15 +44,14 @@ Type-safe database connection configuration with validation.
 - **Port range**: 1-65535
 - **Timeout**: ≥1 second
 - **Engine**: Optional — auto-detected from URL scheme when using `from_url()`
-- **Connection string parsing**: Supports `postgresql://`, `mysql://`, `sqlite:///` formats
+- **Connection string parsing**: `DatabaseConfig.from_url()` supports `postgresql://`, `mysql://`, `sqlite:///` formats
 
 ## Usage Examples
 
 ### SQLite Configuration
 
 ```python
-from django_cfg import DjangoConfig
-from django_cfg.models import DatabaseConfig
+from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
     secret_key: str = "your-secret-key"
@@ -72,10 +71,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'db/default.sqlite3',
-        'OPTIONS': {
-            'connect_timeout': 10,
-            'sslmode': 'prefer',
-        }
+        'OPTIONS': {},
+        # plus CONN_MAX_AGE, CONN_HEALTH_CHECKS, DISABLE_SERVER_SIDE_CURSORS
     }
 }
 ```
@@ -174,35 +171,26 @@ class MyConfig(DjangoConfig):
     }
 ```
 
-## DatabaseRoutingRule
+## Routing Apps to a Database
 
-Type-safe database routing configuration for multi-database setups.
+There is no separate routing-rule class. Routing is part of `DatabaseConfig`: the
+`apps`, `operations`, `migrate_to` and `routing_description` fields describe which
+Django apps use that database. django-cfg builds the database router from them.
 
-### Parameters
+| Field | Default | Description |
+|-------|---------|-------------|
+| `apps` | `[]` | App labels routed to this database |
+| `operations` | `["read", "write", "migrate"]` | Declared operations (not enforced by the router; use a read-only DB user for read-only access) |
+| `migrate_to` | `None` | Alias that must exist in `databases` (validated; the router does not use it to move migrations) |
+| `routing_description` | `""` | Human-readable note |
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `apps` | `list[str]` | *required* | List of Django apps for this rule |
-| `database` | `str` | *required* | Target database alias |
-| `operations` | `list[Literal["read", "write", "migrate"]]` | `["read", "write", "migrate"]` | Allowed operations for this rule |
-| `migrate_to` | `str \| None` | `None` | Override database for migrations |
-| `description` | `str` | `""` | Human-readable description of this rule |
-
-### Methods
-
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `matches_app(app_label)` | `bool` | Check if this rule matches the given app |
-| `allows_operation(operation)` | `bool` | Check if this rule allows the given operation |
-| `get_migration_database()` | `str` | Get the database to use for migrations |
-
-## Routing Rules Usage
+Helper methods: `matches_app(app_label)`, `allows_operation(operation)`,
+`get_migration_database()` and `has_routing_rules()`.
 
 ### Basic Routing
 
 ```python
-from django_cfg import DjangoConfig
-from django_cfg.models import DatabaseConfig, DatabaseRoutingRule
+from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
     secret_key: str = "your-secret-key"
@@ -221,17 +209,11 @@ class MyConfig(DjangoConfig):
             name='blog_db',
             user='dbuser',
             password='password',
-            host='localhost'
-        )
-    }
-
-    database_routing: list = [
-        DatabaseRoutingRule(
+            host='localhost',
             apps=['blog'],
-            database='blog_db',
-            description='Route blog app to blog_db'
-        )
-    ]
+            routing_description='Route blog app to blog_db',
+        ),
+    }
 ```
 
 ### Advanced Routing
@@ -249,110 +231,45 @@ class MyConfig(DjangoConfig):
             password='password',
             host='localhost'
         ),
-        'blog_db': DatabaseConfig(
-            engine='django.db.backends.postgresql',
-            name='blog_db',
-            user='dbuser',
-            password='password',
-            host='localhost'
-        ),
         'shop_db': DatabaseConfig(
             engine='django.db.backends.postgresql',
             name='shop_db',
             user='dbuser',
             password='password',
-            host='localhost'
+            host='localhost',
+            apps=['shop', 'payments'],
         ),
+        # Read-only analytics database
         'analytics_db': DatabaseConfig(
             engine='django.db.backends.postgresql',
             name='analytics_db',
             user='readonly',
             password='password',
-            host='analytics-server'
-        )
-    }
-
-    database_routing: list = [
-        # Blog app
-        DatabaseRoutingRule(
-            apps=['blog'],
-            database='blog_db',
-            description='Blog content in blog_db'
-        ),
-
-        # Shop app
-        DatabaseRoutingRule(
-            apps=['shop', 'payments'],
-            database='shop_db',
-            description='E-commerce in shop_db'
-        ),
-
-        # Analytics (read-only)
-        DatabaseRoutingRule(
+            host='analytics-server',
             apps=['analytics'],
-            database='analytics_db',
-            operations=['read'],  # Read-only
-            description='Analytics in analytics_db (read-only)'
+            operations=['read'],
         ),
-
-        # Separate migrations database
-        DatabaseRoutingRule(
-            apps=['legacy'],
-            database='default',
-            migrate_to='legacy_migrations_db',
-            description='Legacy app uses separate migrations DB'
-        )
-    ]
+    }
 ```
+
+See [Multi-Database Routing](/database/routing) for the full routing guide.
 
 ## Environment-Specific Configuration
 
-### Using Properties
+Build the `databases` dict from environment variables, so one config serves every
+environment:
 
 ```python
+import os
+
 class MyConfig(DjangoConfig):
     secret_key: str = "your-secret-key"
 
-    @property
-    def databases(self) -> dict:
-        if self._environment == "production":
-            return {
-                'default': DatabaseConfig(
-                    engine='django.db.backends.postgresql',
-                    name='production_db',
-                    user='prod_user',
-                    password=os.getenv('DB_PASSWORD'),
-                    host='prod-db.example.com',
-                    sslmode='require'
-                )
-            }
-        else:
-            return {
-                'default': DatabaseConfig(
-                    engine='django.db.backends.sqlite3',
-                    name='db/dev.sqlite3'
-                )
-            }
-```
-
-### Using YAML
-
-```yaml
-# config.production.yaml
-databases:
-  default:
-    engine: "django.db.backends.postgresql"
-    name: "production_db"
-    user: "prod_user"
-    password: "${DB_PASSWORD}"
-    host: "prod-db.example.com"
-    sslmode: "require"
-
-# config.development.yaml
-databases:
-  default:
-    engine: "django.db.backends.sqlite3"
-    name: "db/dev.sqlite3"
+    databases: dict = {
+        'default': DatabaseConfig.from_url(
+            os.environ.get('DATABASE_URL', 'sqlite:///db/dev.sqlite3')
+        ),
+    }
 ```
 
 ## Connection String Parsing
@@ -364,10 +281,7 @@ class MyConfig(DjangoConfig):
     secret_key: str = "your-secret-key"
 
     databases: dict = {
-        'default': DatabaseConfig(
-            engine='django.db.backends.postgresql',
-            name='postgresql://user:pass@localhost/dbname'
-        )
+        'default': DatabaseConfig.from_url('postgresql://user:pass@localhost/dbname')
     }
 ```
 
@@ -375,7 +289,7 @@ class MyConfig(DjangoConfig):
 
 - PostgreSQL: `postgresql://user:pass@host:port/dbname`
 - MySQL: `mysql://user:pass@host:port/dbname`
-- SQLite: `sqlite:///path/to/db.sqlite3`
+- SQLite: `sqlite:///relative/db.sqlite3` (relative path) or `sqlite:////abs/path/db.sqlite3` (absolute path, four slashes)
 
 ## Security Best Practices
 

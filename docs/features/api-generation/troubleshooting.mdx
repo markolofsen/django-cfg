@@ -66,7 +66,7 @@ class APIKeyUpdateSerializer(serializers.ModelSerializer):
 
 **Problem:**
 
-Schema generation fails with import errors when running `manage.py generate_client`.
+Schema generation fails with import errors when running `manage.py gen`.
 
 **Root Cause:**
 
@@ -79,7 +79,7 @@ Fixed in Django-CFG Client Generator v1.4+ by using `sys.executable` instead of 
 If using older version, ensure you're running commands with the virtualenv Python:
 
 ```bash
-.venv/bin/python manage.py generate_client
+.venv/bin/python manage.py gen
 ```
 
 ### COMPONENT_SPLIT creates missing type references
@@ -150,7 +150,7 @@ LOGGING = {
 
 ### Check generated schemas
 
-Schemas are saved to `openapi/schemas/{zone_name}.yaml`. Inspect them to verify:
+Each group's schema is served at `/schema/{group}/schema/`, and the OpenAPI spec is saved as `openapi.json` next to a TypeScript target's output. Inspect it to verify:
 - All required components exist
 - References are correct
 - No duplicate definitions
@@ -160,11 +160,8 @@ Schemas are saved to `openapi/schemas/{zone_name}.yaml`. Inspect them to verify:
 If you encounter persistent issues:
 
 ```bash
-# Clean output directories
-rm -rf openapi/clients openapi/schemas
-
-# Regenerate
-python manage.py generate_client
+# Skip the cache and regenerate
+DJANGO_CFG_GEN_NO_CACHE=1 python manage.py gen
 ```
 
 ### Verify TypeScript build

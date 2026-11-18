@@ -50,6 +50,21 @@ def detect_engine_from_url(url: str) -> str:
     )
 
 
+def _database_from_path(scheme: str, path: str) -> "str | None":
+    """Database name from a URL path.
+
+    SQLite URLs keep the SQLAlchemy / dj-database-url meaning: after ``sqlite://`` the
+    first ``/`` only separates the (empty) host, so ``sqlite:///db/x`` is the relative
+    ``db/x`` and ``sqlite:////abs/x`` is the absolute ``/abs/x``. Other schemes name the
+    database after the single leading ``/``.
+    """
+    if not path:
+        return None
+    if scheme.lower().startswith("sqlite"):
+        return path[1:] or None
+    return path.lstrip("/")
+
+
 def parse_connection_string(connection_string: str) -> Dict[str, Any]:
     """
     Parse database connection string into components.
@@ -72,7 +87,7 @@ def parse_connection_string(connection_string: str) -> Dict[str, Any]:
             "password": parsed.password,
             "host": parsed.hostname,
             "port": parsed.port,
-            "database": parsed.path.lstrip("/") if parsed.path else None,
+            "database": _database_from_path(parsed.scheme, parsed.path),
         }
 
         # Parse query parameters as options

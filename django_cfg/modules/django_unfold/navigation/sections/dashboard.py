@@ -1,8 +1,7 @@
 from django.http import HttpRequest
 
-from django_cfg.modules.django_admin.icons import Icons
+from django_cfg.icons import Icons
 from django_cfg.modules.django_unfold.models.navigation import NavigationItem, NavigationSection
-from django_cfg.modules.django_unfold.navigation.builder import NavBuilder
 
 
 def _is_superuser(request: HttpRequest) -> bool:

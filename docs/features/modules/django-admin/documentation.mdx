@@ -12,15 +12,15 @@ Automatically display markdown documentation and management commands in your Dja
 
 The Documentation feature provides:
 
-- **📚 Markdown Documentation**: Auto-discover and render `.md` files from a directory
-- **🪟 Modal Window**: Floating action button (FAB) opens modal with tree navigation
-- **🌲 Tree Navigation**: Left sidebar with hierarchical file structure
-- **🖥️ Management Commands**: Auto-discover Django management commands with arguments
-- **🎨 Beautiful UI**: Modern modal interface with Unfold semantic styling
-- **📂 Flexible Paths**: Support for relative, absolute, and app-relative paths
-- **🌙 Dark Mode**: Full dark mode support with proper contrast
-- **🎨 Mermaid Diagrams**: Built-in support for Mermaid.js diagrams
-- **💡 Syntax Highlighting**: Code blocks with Prism.js highlighting
+- **Markdown Documentation**: Auto-discover and render `.md` files from a directory
+- **Modal Window**: Floating action button (FAB) opens modal with tree navigation
+- **Tree Navigation**: Left sidebar with hierarchical file structure
+- **Management Commands**: Auto-discover Django management commands with arguments
+- **Beautiful UI**: Modern modal interface with Unfold semantic styling
+- **Flexible Paths**: Support for relative, absolute, and app-relative paths
+- **Dark Mode**: Full dark mode support with proper contrast
+- **Mermaid Diagrams**: Built-in support for Mermaid.js diagrams
+- **Syntax Highlighting**: Code blocks with Prism.js highlighting
 
 ## Quick Start
 
@@ -36,7 +36,7 @@ coin_admin_config = AdminConfig(
     # Auto-discover all .md files in docs/ directory
     documentation=DocumentationConfig(
         source_dir="docs",  # Relative to app directory
-        title="📚 Coin Documentation",
+        title="Coin Documentation",
         show_management_commands=True,  # Show commands too!
         enable_plugins=True,  # Enable Mermaid diagrams
     ),
@@ -169,7 +169,7 @@ This becomes the section title!
 ```python
 documentation=DocumentationConfig(
     source_dir="docs",              # Scans apps/crypto/docs/**/*.md
-    title="📚 Crypto Documentation",
+    title="Crypto Documentation",
     sort_sections=True,              # A-Z sorting
     enable_plugins=True,             # Mermaid + syntax highlighting
     show_management_commands=True,   # Commands section
@@ -291,9 +291,9 @@ Renders as interactive diagram with Unfold semantic colors!
 ```markdown
 | Feature | Supported | Notes |
 |---------|-----------|-------|
-| Tables  | ✅        | Full  |
-| Images  | ✅        | Yes   |
-| Links   | ✅        | All   |
+| Tables  | Yes        | Full  |
+| Images  | Yes        | Yes   |
+| Links   | Yes        | All   |
 ```
 
 
@@ -307,8 +307,8 @@ from django_cfg.modules.django_admin import (
     CurrencyField,
     DocumentationConfig,
     FieldsetConfig,
-    Icons,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 from apps.crypto.models import Coin
@@ -357,10 +357,10 @@ coin_admin_config = AdminConfig(
         ),
     ],
 
-    # 📚 Documentation Configuration
+    # Documentation Configuration
     documentation=DocumentationConfig(
         source_dir="docs",              # Auto-discover all .md files
-        title="📚 Coin Documentation",
+        title="Coin Documentation",
         show_on_changelist=True,        # Show FAB on list page
         show_on_changeform=True,        # Show FAB on edit page
         enable_plugins=True,            # Mermaid + syntax highlighting

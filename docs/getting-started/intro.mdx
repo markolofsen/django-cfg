@@ -15,53 +15,13 @@ Django-CFG is a configuration framework for Django that replaces traditional set
 
 ---
 
-## Business Value
+## What You Get
 
-### For Engineering Managers
-
-**Reduce Production Issues:**
-- ✅ **90% reduction** in configuration-related incidents
-- ✅ Configuration errors caught **before deployment**, not in production
-- ✅ **Self-documenting** configuration with type hints
-- ✅ **Faster onboarding** - developers understand config via IDE tooltips
-
-**Save Development Time:**
-- ✅ **50% less time** debugging configuration issues
-- ✅ **Zero-config** built-in apps (user management, background tasks)
-- ✅ **Instant setup** for common integrations (Redis, PostgreSQL, Email)
-- ✅ **90% boilerplate reduction** compared to traditional Django
-
-**Cost Savings:**
-- ✅ Fewer production incidents = less downtime
-- ✅ Faster development = lower costs
-- ✅ Built-in enterprise features = no third-party licenses needed
-- ✅ Type safety = fewer bugs = less QA time
-
-### For Developers
-
-**Better Developer Experience:**
-- ✅ **Full IDE autocomplete** for all configuration
-- ✅ **Type hints everywhere** - catch errors while coding
-- ✅ **Clear error messages** - know exactly what's wrong
-- ✅ **One command setup** - `django-cfg create-project`
-
-**Modern Stack:**
-- ✅ **Pydantic v2** - industry-standard validation
-- ✅ **YAML configuration** - human-readable, version-controlled
-- ✅ **Environment-aware** - automatic dev/staging/prod detection
-- ✅ **Built-in best practices** - security, performance, monitoring
-
-**Real Numbers:**
-```
-Traditional Django Project Setup:  2-3 days
-Django-CFG Project Setup:          15 minutes
-
-Configuration Debugging:           Hours per issue
-With Django-CFG:                   Instant (fails at startup)
-
-Third-party Apps Needed:           8-10 packages
-Django-CFG Built-in:               Production-ready modules
-```
+- **Startup validation:** configuration errors fail before Django loads, not in production
+- **Self-documenting config:** type hints and field descriptions show up in the IDE
+- **Sensible built-ins:** accounts (OTP sign-in), the Unfold admin, health endpoints and the client generator are installed by default; Redis cache, RQ, payments, MCP and others are config sections you switch on
+- **Environment-aware:** development, production and test modes via `env_mode`
+- **Built-in practices:** security domains drive `ALLOWED_HOSTS`, CORS and CSRF; smart logging with request ids
 
 ---
 
@@ -155,13 +115,14 @@ MIDDLEWARE = [
 ```
 
 **Issues:**
-❌ 200+ lines of configuration code
-❌ Manual type conversion everywhere
-❌ String parsing errors go unnoticed
-❌ No validation until runtime
-❌ No IDE autocomplete
-❌ Hard to test different configurations
-❌ Environment variables scattered everywhere
+
+- 200+ lines of configuration code
+- Manual type conversion everywhere
+- String parsing errors go unnoticed
+- No validation until runtime
+- No IDE autocomplete
+- Hard to test different configurations
+- Environment variables scattered everywhere
 
 ### Django-CFG Approach (30 lines)
 
@@ -169,14 +130,14 @@ MIDDLEWARE = [
 # config.py
 from django_cfg import DjangoConfig, DatabaseConfig, CacheConfig, EmailConfig
 from typing import Dict
-from .environment import env  # Type-safe YAML config loader
+from .environment import env  # your own typed environment loader
 
 class MyConfig(DjangoConfig):
     """Complete production configuration with type safety"""
 
     # Security - validated at startup
     project_name: str = "My Project"
-    secret_key: str = env.secret_key  # Type-safe from YAML
+    secret_key: str = env.secret_key  # from your environment loader
     debug: bool = False
 
     # Single field auto-generates: ALLOWED_HOSTS, CORS_*, CSRF_TRUSTED_ORIGINS, SSL settings
@@ -194,7 +155,7 @@ class MyConfig(DjangoConfig):
         )
     }
 
-    # Cache - auto-created from redis_url! ✨
+    # Cache - auto-created from redis_url!
     redis_url: str = f"redis://{env.redis.host}:{env.redis.port}/0"
     # No cache_default needed - Django-CFG creates it automatically!
 
@@ -208,40 +169,20 @@ class MyConfig(DjangoConfig):
         password=env.email.password,
     )
 
-    # Built-in apps - enable with boolean flags
-    enable_accounts: bool = True     # Extended user management
-
 # settings.py - just 2 lines
 config = MyConfig()
 globals().update(config.get_all_settings())
 ```
 
 **Benefits:**
-✅ **85% less code** (30 lines vs 200+)
-✅ **Type-safe** - Pydantic validates at startup
-✅ **IDE autocomplete** - all fields discovered
-✅ **Single security field** - auto-generates 5+ Django settings
-✅ **Validated env** - YAML config with Pydantic models
-✅ **No runtime errors** - fails before Django loads
-✅ **Easy testing** - just instantiate config class
 
-### Lines of Code Reduction
-
-```
-Traditional Django Project:
-├── settings.py:           200+ lines
-├── settings_dev.py:       150+ lines
-├── settings_prod.py:      150+ lines
-├── env parsing:           50+ lines
-└── Total:                 550+ lines
-
-Django-CFG Project:
-├── config.py:             30 lines
-├── environment.py:        20 lines
-└── Total:                 50 lines
-
-Reduction: 90% fewer lines of configuration code
-```
+- **Far less code** than the hand-written equivalent
+- **Type-safe** - Pydantic validates at startup
+- **IDE autocomplete** - all fields discovered
+- **Single security field** - generates `ALLOWED_HOSTS`, CORS, CSRF and SSL settings
+- **Validated env** - typed environment loader with Pydantic models
+- **No runtime errors** - fails before Django loads
+- **Easy testing** - just instantiate config class
 
 ---
 
@@ -251,7 +192,7 @@ Reduction: 90% fewer lines of configuration code
 
 **Challenge:** Product catalog in PostgreSQL, session cache in Redis, order analytics in separate read replica.
 
-**Traditional Django:** 80+ lines of database routing, cache configuration, manual connection management.
+**Traditional Django:** a hand-written database router, cache configuration and manual connection management.
 
 **With Django-CFG:**
 ```python
@@ -271,13 +212,12 @@ class ECommerceConfig(DjangoConfig):
         ),
     }
 
-    # Auto Redis cache - just set redis_url! ✨
+    # Auto Redis cache - just set redis_url!
     redis_url: str = f"redis://{env.redis.host}:6379/0"
 
-    enable_accounts: bool = True  # Extended user management
 ```
 
-**Result:** 15 lines vs 80+ lines. Type-safe. Zero database routing bugs.
+**Result:** one typed block replaces the hand-written router; routing is declared with `apps=[...]` on each database.
 
 ### 2. SaaS Application (Environment-Specific Configuration)
 
@@ -291,41 +231,36 @@ class SaaSConfig(DjangoConfig):
     project_name: str = "MySaaS Platform"
     secret_key: str = env.secret_key
 
-    # Automatically detects environment from ENV variable
-    debug: bool = False  # Auto-overridden in development
+    debug: bool = False
 
-    # SSL auto-enabled in production, disabled in dev
+    # SSL redirect follows the environment (on in production, off in development)
     security_domains: list[str] = ["app.mysaas.com"]
 
-    # Email backend auto-switches based on environment
+    # Pick the email backend per environment
     email: EmailConfig = EmailConfig(
         backend="console" if env.environment == "development" else "smtp",
         host=env.email.host if env.environment != "development" else "localhost",
     )
 
-    # JWT for API authentication
+    # JWT for API authentication (tokens are signed with secret_key)
     jwt: JWTConfig = JWTConfig(
-        signing_key=env.jwt_key,
-        access_token_lifetime=3600,  # 1 hour
-        refresh_token_lifetime=86400,  # 24 hours
+        access_token_lifetime_minutes=60,
+        refresh_token_lifetime_days=30,
     )
 
-    enable_accounts: bool = True  # User management with OTP
 ```
 
-**Result:** One config file for all environments. Automatic environment detection. No settings file sprawl.
+**Result:** one config file for all environments, with environment detection through `env_mode`.
 
 ### 3. Enterprise API Service (Complex Integrations)
 
-**Challenge:** Integrate with Stripe (payments), OpenAI (AI), Redis (cache), PostgreSQL (data).
+**Challenge:** Redis cache, PostgreSQL, SMTP email and generated API docs in one service.
 
-**Traditional Django:** 10+ third-party packages, 150+ lines of configuration, manual credential management, integration complexity.
+**Traditional Django:** several third-party packages, long configuration and manual credential management.
 
 **With Django-CFG:**
 ```python
-from django_cfg import (
-    DjangoConfig, DatabaseConfig, EmailConfig, SpectacularConfig, DjangoRQConfig
-)
+from django_cfg import DjangoConfig, DatabaseConfig, EmailConfig, SpectacularConfig
 from typing import Dict
 
 class APIServiceConfig(DjangoConfig):
@@ -348,9 +283,8 @@ class APIServiceConfig(DjangoConfig):
         use_tls=True,
     )
 
-    # Background tasks for async processing
+    # The default cache is created from redis_url; for task queues add a DjangoRQConfig
     redis_url: str = f"redis://{env.redis.host}:6379/0"
-    # Django-CFG auto-creates cache from redis_url; for task queues use django_rq
 
     # API documentation auto-generated
     spectacular: SpectacularConfig = SpectacularConfig(
@@ -360,13 +294,13 @@ class APIServiceConfig(DjangoConfig):
     )
 ```
 
-**Result:** All integrations type-safe and validated. 40 lines vs 150+. Auto-generated API docs.
+**Result:** integrations are type-safe and validated at startup, with generated API docs.
 
 ### 4. Startup MVP (Rapid Development)
 
-**Challenge:** Build and deploy in 1 day. User auth, email notifications, background tasks.
+**Challenge:** Ship fast: user auth and email notifications.
 
-**Traditional Django:** Install 8-10 packages, configure each one, wire everything together, write custom user model.
+**Traditional Django:** install and configure each package, wire everything together, write a custom user model.
 
 **With Django-CFG:**
 ```python
@@ -384,8 +318,6 @@ class MVPConfig(DjangoConfig):
         )
     }
 
-    # Enable built-in production features
-    enable_accounts: bool = True     # Extended user management with OTP
 
     # Email notifications
     email: EmailConfig = EmailConfig(
@@ -398,7 +330,7 @@ class MVPConfig(DjangoConfig):
     )
 ```
 
-**One command deployment:**
+**Create and run:**
 ```bash
 django-cfg create-project startup_mvp
 cd startup_mvp
@@ -406,18 +338,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-**Result:** Full production features in 20 lines of config. Deploy in hours, not days.
-
-### Success Metrics from Real Projects
-
-| Metric | Before Django-CFG | After Django-CFG | Improvement |
-|--------|-------------------|------------------|-------------|
-| **Setup Time** | 2-3 days | 15 minutes | **99% faster** |
-| **Config Bugs** | 8-10 per year | 0-1 per year | **90% reduction** |
-| **Onboarding Time** | 1 week | 2 hours | **97% faster** |
-| **Config Lines** | 550+ lines | 50 lines | **90% less code** |
-| **Third-Party Deps** | 8-10 packages | 1 package | **Built-in** |
-| **Type Errors** | Caught at runtime | Caught at startup | **Zero downtime** |
+**Result:** accounts, admin, email and the generator are available from a short config.
 
 ---
 
@@ -436,7 +357,7 @@ Django-CFG uses Pydantic BaseModel for all configuration. This means:
 
 ```mermaid
 graph TB
-    A["1. Define config class<br/>(inherits DjangoConfig)"] --> B["2. Instantiate config<br/>(validates fields, loads env vars)"]
+    A["1. Define config class<br/>(inherits DjangoConfig)"] --> B["2. Instantiate config<br/>(validates fields, reads DJANGO_ENV)"]
     B --> C["3. Call get_all_settings()<br/>(generates Django settings dict)"]
     C --> D["4. Django loads with<br/>validated configuration"]
 
@@ -448,31 +369,27 @@ graph TB
 
 ### Environment Configuration Pattern
 
-Django-CFG uses a type-safe environment loader with Pydantic validation:
+Your project loads environment values with a type-safe loader (pydantic-settings here), and Django-CFG validates what you pass in:
 
 ```python
 # environment.py
-from pydantic_yaml import parse_yaml_raw_as
-from pydantic import BaseModel
-from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class DatabaseEnv(BaseModel):
+class DatabaseEnv(BaseSettings):
     name: str
     user: str
     password: str
     host: str
     port: int = 5432
 
-class EnvironmentConfig(BaseModel):
+class EnvironmentConfig(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_nested_delimiter="__")
+
     secret_key: str
     database: DatabaseEnv
 
-# Load and validate environment from YAML
-config_path = Path(__file__).parent / "config.yaml"
-env: EnvironmentConfig = parse_yaml_raw_as(
-    EnvironmentConfig,
-    config_path.read_text()
-)
+# Reads SECRET_KEY and DATABASE__NAME, DATABASE__USER, ... from the environment or .env
+env = EnvironmentConfig()
 ```
 
 ## Basic Example
@@ -509,7 +426,7 @@ class MyConfig(DjangoConfig):
 
     # Cache - auto-created from redis_url (recommended)
     redis_url: str | None = "redis://localhost:6379/0"
-    # Django-CFG automatically creates CacheConfig! ✨
+    # Django-CFG automatically creates CacheConfig!
 
     # Advanced: Manual cache override (optional)
     # cache_default: CacheConfig | None = None  # Only if custom backend needed
@@ -519,10 +436,10 @@ config = MyConfig()
 globals().update(config.get_all_settings())
 ```
 
-<Callout type="success">
-**New in Django-CFG 2.0: Extensions Architecture**
+<Callout type="info">
+**Extensions**
 
-Your `DjangoConfig` can be even simpler with the new **modular extensions system**! Instead of configuring everything in one file, extensions now configure themselves automatically.
+Your `DjangoConfig` can stay small: extensions found in the project's extensions folder configure themselves instead of being listed in one file.
 
 ```python
 # Modern approach - extensions auto-discovered!
@@ -530,10 +447,10 @@ class MyConfig(DjangoConfig):
     project_name: str = "My SaaS"
     databases: Dict[str, DatabaseConfig] = {...}
     project_apps: list[str] = ["core"]  # Only your apps
-    # Extensions like payments, leads, support auto-register! ✨
+    # Extensions found in the extensions folder register themselves
 ```
 
-[Learn about Extensions →](../../extensions) | [Migration Guide →](../../extensions/migration-guide)
+[Learn about Extensions](../../extensions) | [Migration Guide](../../extensions/migration-guide)
 </Callout>
 
 ## Why Use Django-CFG?
@@ -601,7 +518,7 @@ class MyConfig(DjangoConfig):
 - Legacy codebase without resources for refactoring
 - No automated testing or CI/CD
 
-⚠️ **Migration Note:** Moving from settings.py to Django-CFG requires refactoring. Plan for testing time.
+**Migration note:** Moving from settings.py to Django-CFG requires refactoring. Plan for testing time.
 
 ## Quick Start
 
@@ -621,10 +538,11 @@ pip3 install 'django-cfg[full]'
 # config.py
 from django_cfg import DjangoConfig, DatabaseConfig
 from typing import Dict
+from .environment import env
 
 class MyConfig(DjangoConfig):
     project_name: str = "My Project"
-    secret_key: str = "<from-yaml-config>"  # Set via environment/config.yaml  # From environment
+    secret_key: str = env.secret_key  # from your environment loader
     debug: bool = False
 
     # security_domains replaces ALLOWED_HOSTS
@@ -633,10 +551,10 @@ class MyConfig(DjangoConfig):
     databases: Dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
-            name="<from-yaml-config>",  # Set via environment/config.yaml
-            user="<from-yaml-config>",  # Set via environment/config.yaml
-            password="<from-yaml-config>",  # Set via environment/config.yaml
-            host="<from-yaml-config>",  # Set via environment/config.yaml
+            name=env.database.name,
+            user=env.database.user,
+            password=env.database.password,
+            host=env.database.host,
             port=5432,
         )
     }
@@ -654,11 +572,13 @@ globals().update(config.get_all_settings())
 
 ### 4. Set Environment Variables
 
+The names depend on your environment loader; for the loader in [First Project](./first-project):
+
 ```bash
 export SECRET_KEY="your-secret-key-here-min-50-chars-long-or-validation-fails"
-export DB_NAME="myapp"
-export DB_USER="postgres"
-export DB_PASSWORD="password"
+export DATABASE__NAME="myapp"
+export DATABASE__USER="postgres"
+export DATABASE__PASSWORD="password"
 ```
 
 ### 5. Verify Configuration
@@ -676,16 +596,15 @@ Django-CFG includes optional integrations that can be enabled via configuration 
 ### Core Configuration
 - **Environment detection:** Automatically detects development/production/test based on environment variables
 - **Security domains:** Single field that auto-configures ALLOWED_HOSTS, CORS, SSL redirects
-- **Database routing:** Declarative database routing without custom router classes
+- **Database routing:** Declarative routing with `DatabaseConfig(apps=[...])`
 - **Startup validation:** All configuration validated before Django starts
 
 ### Optional Built-in Apps
 
-Enable via boolean flags in your config:
+Accounts (OTP sign-in, 2FA) is always installed. Optional features are config sections (`currency`, `geo`, `payments`, `django_rq`, `mcp`, `notion`, ...) and a few flags:
 
 ```python
 class MyConfig(DjangoConfig):
-    enable_accounts: bool = True     # Extended user management with OTP
     enable_pool_cleanup: bool = False # Database connection pool cleanup
     enable_drf_tailwind: bool = False # Tailwind CSS for DRF views
 ```
@@ -694,7 +613,7 @@ class MyConfig(DjangoConfig):
 
 - **Unfold:** Modern admin interface (replaces default Django admin)
 - **Django-CFG API Client Generation:** API zones with automatic OpenAPI documentation
-- **ReArq:** Background task processing (auto-enabled when needed)
+- **Django-RQ:** Background task processing (`django_rq=DjangoRQConfig(...)`)
 - **Telegram:** Bot integration for notifications
 - **Email:** SMTP or console backend
 
@@ -706,7 +625,7 @@ See [Features documentation](../../features/built-in-apps/overview) for details 
 graph TB
     A[DjangoConfig<br/>Pydantic Model] --> B[Field Validation<br/>Pydantic]
     B --> C[Environment Variable<br/>Substitution]
-    C --> D[Smart Defaults<br/>Application]
+    C --> D[Defaults<br/>Application]
     D --> E[Django Settings<br/>Generation]
     E --> F[settings.py globals]
 
@@ -722,7 +641,7 @@ graph TB
 
 1. **Single source of truth:** Config class defines all settings
 2. **Fail-fast validation:** Errors at instantiation, not during requests
-3. **Immutable config:** Configuration can't be changed after instantiation
+3. **Validated on assignment:** changing a field after instantiation re-runs validation
 4. **Type-safe everywhere:** Full IDE support from config to Django settings
 
 ## Next Steps

@@ -1,74 +1,37 @@
 ---
 title: Unfold Module Updates
-description: Latest features and improvements to Django-CFG Unfold admin module.
+description: What changed in the Django-CFG Unfold admin module, including what was removed in November 2026.
 ---
 
 # What's New in Unfold Module
 
-## 🎨 Next.js Dashboard Integration
+## November 2026: admin slim-down
 
-Modern React-based admin dashboard with real-time capabilities and type-safe API.
+django-unfold stays the admin base and is pinned `django-unfold>=0.110,<0.111`. `PydanticAdmin` / `AdminConfig` stay the main admin classes. What changed around them:
 
-### Features
+- **Dashboard REST API removed.** The Next.js dashboard and its API at `/cfg/dashboard/api/` (`statistics`, `health`, `charts`, `commands`) are gone; nothing was found calling them. The HTML dashboard tabs at `/cfg/admin/dashboard/<slug>/` remain: see [Dashboard](/features/modules/django-dashboard).
+- **`SystemMonitor` removed** from `django_unfold`.
+- **Icons import.** `Icons` is public as `from django_cfg import Icons` (the files live in `django_cfg/icons`). `from django_cfg.modules.django_admin import Icons` no longer works.
+- **Flash messages work.** `templates/admin/base_site.html` extends `admin/base.html`, which carries the messages block, so `self.message_user(...)` and `messages.*` appear once after a redirect.
+- **One `TimezoneMiddleware`.** It was listed twice in the generated `MIDDLEWARE`; it is now listed once.
+- **`sqlite:////abs/path`** in a database URL is an absolute path; `sqlite:///rel/path` is relative.
+- **`/favicon.ico`** is served by django-cfg (a small SVG) after the project's own routes, so a project route wins.
+- **Constance** no longer imports Unfold unconditionally: without Unfold it falls back to plain fields.
+- The System dashboard tab counts tables through Django's introspection, so it works on any database backend.
 
-- **Next.js Dashboard** - Modern React-based admin dashboard served via iframe
-- **REST API Backend** - Complete API at `/cfg/dashboard/api/` for all dashboard data
-- **Service Layer** - Clean service classes for statistics, health, charts, and commands
-- **Type-Safe** - Full TypeScript + Pydantic type safety
+## Navigation Manager
 
-### API Endpoints
-
-Access dashboard data via REST API:
-
-- `/cfg/dashboard/api/statistics/` - User and app statistics
-- `/cfg/dashboard/api/health/` - System health checks
-- `/cfg/dashboard/api/charts/` - Chart data
-- `/cfg/dashboard/api/commands/` - Django management commands
-
-### Configuration
-
-The dashboard is automatically configured and served at `/admin/`. No additional setup required.
+`NavigationManager` builds the sidebar from the enabled django-cfg modules. It always adds **Dashboard** (Overview, Settings, Health Check, Endpoints Status; superusers), **Users & Access** (users, groups, OTP secrets, registration sources and, when GitHub or Google OAuth is enabled, the OAuth tables) and **Mail**. It adds **Currency**, **Geo**, **Payments**, **TOTP** and **Analytics** when that module is enabled (Analytics only after the first site has sent an event). Your own sections come from `UnfoldConfig.navigation`:
 
 ```python
-from django_cfg import DjangoConfig, UnfoldConfig
+from django_cfg import Icons
+from django_cfg.modules.django_unfold.models import (
+    UnfoldConfig,
+    NavigationSection,
+    NavigationItem,
+)
 
-class MyConfig(DjangoConfig):
-    unfold: UnfoldConfig = UnfoldConfig(
-        site_title="My Admin",
-        site_header="Admin Panel",
-        theme='dark',
-    )
-```
-
----
-
-## 🎯 Navigation Manager
-
-Automatic navigation generation based on enabled Django-CFG modules.
-
-### Auto-Generated Sections
-
-The NavigationManager automatically creates sidebar sections for:
-
-- **Dashboard** - Overview, Frontend Admin, Settings, Health Check
-- **Operations** (if enabled) - Background Tasks, Maintenance
-- **Users & Access** (if accounts enabled) - Users, Groups, OTP Secrets
-- **Support** (if enabled) - Tickets, Messages
-- **Newsletter** (if enabled) - Newsletters, Subscriptions, Campaigns
-- **Leads** (if enabled) - Lead management
-- **AI Agents** (if enabled) - Agent Definitions, Executions, Templates
-- **Knowledge Base** (if enabled) - Documents, Chunks, Chat Sessions
-- **Payments** (if enabled) - Payments, Currencies, Balances
-
-### Custom Navigation
-
-Add your own navigation sections:
-
-```python
-from django_cfg.modules.django_unfold import UnfoldConfig, NavigationSection, NavigationItem
-from django_cfg.modules.django_admin.icons import Icons
-
-unfold: UnfoldConfig = UnfoldConfig(
+unfold = UnfoldConfig(
     navigation=[
         NavigationSection(
             title="My App",
@@ -78,69 +41,25 @@ unfold: UnfoldConfig = UnfoldConfig(
                 NavigationItem(
                     title="Products",
                     icon=Icons.SHOPPING_CART,
-                    link="admin:myapp_product_changelist"
+                    link="admin:myapp_product_changelist",
                 ),
-            ]
+            ],
         ),
     ],
 )
 ```
 
----
+## Theme customization
 
-## 🎨 Theme Customization
-
-OKLCH color format for modern, perceptually uniform theming.
-
-### Features
-
-- **OKLCH Colors** - Perceptually uniform color space
-- **Dark/Light Modes** - Automatic theme switching
-- **Custom Colors** - Full color customization
-- **Tailwind Integration** - Seamless Tailwind CSS integration
-
-### Configuration
+The color scheme is OKLCH-based and fixed: `UnfoldConfig.get_color_scheme()` returns it (synchronized with the `@djangocfg/ui-core` CSS variables) and it goes into Unfold's `COLORS`. The `UnfoldConfig.colors` field (`UnfoldColors`) is accepted by the model but is not read when the settings are generated, so it changes nothing today. `theme` (`"light"`, `"dark"` or `None` for the user switcher) does force a mode.
 
 ```python
-from django_cfg.modules.django_unfold import UnfoldConfig, UnfoldColors
+from django_cfg.modules.django_unfold.models import UnfoldConfig
 
-unfold: UnfoldConfig = UnfoldConfig(
-    theme='dark',  # 'dark', 'light', or None for auto
-    colors=UnfoldColors(
-        primary="#3b82f6",  # Brand color
-    ),
-)
+unfold = UnfoldConfig(theme="dark")
 ```
 
----
+## Related
 
-## 📚 Related Documentation
-
-- [Unfold Overview](/features/modules/django-unfold) - Complete module documentation
-- [Configuration Guide](/configuration) - Unfold configuration
-
----
-
-## 🚀 Quick Start
-
-```python
-from django_cfg import DjangoConfig, UnfoldConfig
-
-class MyConfig(DjangoConfig):
-    # Unfold admin interface
-    unfold: UnfoldConfig = UnfoldConfig(
-        site_title="My Admin",
-        theme='dark',
-    )
-```
-
-Access admin at: `http://localhost:8000/admin/`
-
----
-
-## 💡 Tips
-
-- Dashboard automatically adapts to enabled Django-CFG modules
-- Use `NavigationManager` for consistent sidebar across projects
-- OKLCH colors provide better color interpolation than RGB
-- All APIs are documented via OpenAPI/Swagger at `/api/schema/swagger/`
+- [Unfold Overview](/features/modules/django-unfold): complete field reference.
+- [Django Admin](/features/modules/django-admin): `PydanticAdmin` and `AdminConfig`.

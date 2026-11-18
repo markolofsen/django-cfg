@@ -13,6 +13,7 @@ Django-CFG ships a suite of middleware classes covering authentication enhanceme
 |-------|--------|-------------|
 | `JWTAuthenticationWithLastLogin` | `authentication` | Always (JWT auth enabled) |
 | `RealIPMiddleware` | `real_ip` | Always (must be first) |
+| `RequestIdMiddleware` | `django_cfg.modules.django_logging.middleware` | Always (placed right after `RealIPMiddleware`) |
 | `TimezoneMiddleware` | `timezone` | Always |
 | `SiteMiddleware` | `site` | More than one entry in `DjangoConfig.sites` |
 | `UserActivityMiddleware` | `user_activity` | Always (accounts app active) |
@@ -102,6 +103,24 @@ MIDDLEWARE = [
 Without this middleware, all downstream code (django-axes, DRF throttling, rate limiting, audit logging) sees the proxy IP instead of the real client address.
 
 **DRF throttling.** DRF ignores `REMOTE_ADDR` whenever `X-Forwarded-For` is present unless `NUM_PROXIES` is set, and then keys every throttle on the whole header. Django-CFG therefore sets `REST_FRAMEWORK["NUM_PROXIES"] = 0` by default, so throttles use the address this middleware found. A value you set yourself is kept.
+
+---
+
+## RequestIdMiddleware
+
+**Purpose:** Gives every request an id, puts it on each log line written while the request runs, and echoes it back as the `X-Request-ID` response header.
+
+**Active when:** Always. The builder adds it right after `RealIPMiddleware`, so it can trust an incoming `X-Request-ID` header by the real peer address. It works under WSGI and ASGI.
+
+```python
+MIDDLEWARE = [
+    'django_cfg.middleware.real_ip.RealIPMiddleware',
+    'django_cfg.modules.django_logging.middleware.RequestIdMiddleware',
+    # ... rest of middleware
+]
+```
+
+See [Logging](/deployment/logging) for how `request_id` appears on log lines.
 
 ---
 

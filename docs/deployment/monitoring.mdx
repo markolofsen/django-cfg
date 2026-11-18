@@ -3,24 +3,22 @@ title: Monitoring & Logging
 description: Deploy Django-CFG with monitoring. Complete deployment guide for monitoring & logging with Docker, environment configuration, and production best practices.
 ---
 
-# 📊 Monitoring Guide
+# Monitoring Guide
 
-Django-CFG provides built-in monitoring and logging capabilities that work seamlessly in both development and production environments.
+Django-CFG ships health endpoints and a logging module that work in development and production. Metrics export and alerting are left to external tools.
 
 ---
 
 ## Core Principles
 
-### Zero-Configuration Monitoring
-- **Health checks** work out of the box
-- **System metrics** automatically collected
-- **Database monitoring** for all configured databases
-- **Smart logging** with automatic level adjustment
+### What You Get Without Configuration
+- **Health checks** at `/healthz` and `/healthz/ready` (the always-installed `health` app)
+- **Database checks** for every configured database alias
+- **Smart logging** with automatic level adjustment and repeat collapsing
 
 ### Environment-Aware
-- Development: Verbose logging, detailed errors
-- Production: Structured logs, error tracking
-- Docker: Container-aware resource monitoring
+- Development: verbose logging, detailed errors
+- Production: WARNING and above on stdout, text or JSON
 
 ---
 
@@ -51,7 +49,7 @@ GET /healthz
 
 ### Comprehensive Health Check
 
-Detailed system status with metrics:
+Detailed system status with metrics. The overall `status` is `healthy`, `degraded` (a check warns) or `unhealthy` (a check failed):
 
 ```bash
 GET /healthz/ready
@@ -102,7 +100,11 @@ GET /healthz/ready
       "django_cfg": {
         "version": "1.3.13",
         "debug": false,
-        "environment": "production"
+        "environment": "production",
+        "secret_key_length": 64,
+        "project_name": "myapp",
+        "enable_accounts": true,
+        "enable_tasks": true
       }
     }
   }
@@ -113,56 +115,16 @@ GET /healthz/ready
 - ✅ Database connectivity and response times
 - ✅ Cache availability and performance
 - ✅ CPU, memory, disk usage
-- ✅ System uptime and load average
+- ✅ Load average
 - ✅ Configuration validation
 
 ---
 
-## System Monitoring
+## System Metrics
 
-Django-CFG includes a system monitor that tracks real-time metrics.
+The `system` block of `/healthz/ready` (see above) reports CPU, memory, disk and load average through `psutil`. A check turns to `warning` above 80% and the block above 90%.
 
-### Available Metrics
-
-**CPU Metrics:**
-- Usage percentage
-- Core count (physical and logical)
-- Load average (1min, 5min, 15min)
-
-**Memory Metrics:**
-- Usage percentage
-- Total, used, available memory
-- Memory breakdown by category
-
-**Disk Metrics:**
-- Disk usage percentage
-- Total, used, free space
-- I/O statistics
-
-**Database Status:**
-- Connection health per database
-- Response time tracking
-- Error detection
-
-**User Statistics:**
-- Total users
-- Active users (30-day window)
-- Staff and superuser counts
-
-### Admin Dashboard Integration
-
-The system monitor integrates with Django Admin (Unfold):
-
-```python
-# Automatic integration - no configuration needed
-# Access via Django Admin dashboard
-
-# Real-time metrics displayed:
-# - CPU usage graphs
-# - Memory consumption
-# - Database connection status
-# - Active user statistics
-```
+Note that the readiness probe samples the CPU for one second, so give a probe at least a 2 second timeout.
 
 ---
 
@@ -183,6 +145,10 @@ Logging is automatically configured based on environment:
 - stdout/stderr (a log file is opt-in via `DJANGO_CFG_LOG_DIR`)
 - WARNING level and above
 - Text or JSON (`DJANGO_CFG_LOG_FORMAT=json`)
+
+### Smart Logger
+
+One root handler (`CollapsingStreamHandler`) collapses identical lines within 60 seconds ("repeated N times"). ERROR and above are never collapsed. Every line carries `request_id` when `RequestIdMiddleware` is active (it also sets the `X-Request-ID` header). Tune it with `logging.collapse`, `log_levels`, `access_ignore_paths` and `redact_keys`; see **[Logging Configuration](./logging)** for details and `manage.py log_noise --stdin` for finding the noisiest lines.
 
 ### Basic Usage
 
@@ -261,9 +227,6 @@ Configure to check `/healthz` endpoint every 1-5 minutes.
 **Error Tracking:**
 ```python
 # Add Sentry integration (optional)
-# Django-CFG logging integrates with Sentry handlers
-
-INSTALLED_APPS += ['sentry_sdk']
 
 import sentry_sdk
 sentry_sdk.init(
@@ -285,8 +248,8 @@ Send logs to centralized service:
 
 Set up alerts for:
 
-```yaml
-# Example alerting thresholds
+```text
+# Example alerting thresholds (configure in your monitoring system)
 cpu_usage: > 80%
 memory_usage: > 85%
 disk_usage: > 90%
@@ -300,7 +263,7 @@ Export metrics to monitoring systems:
 
 ```python
 # Prometheus metrics endpoint (optional)
-# Django-CFG metrics can be exported via django-prometheus
+# django-cfg ships no Prometheus exporter; use django-prometheus if you need one
 
 INSTALLED_APPS += ['django_prometheus']
 
@@ -320,10 +283,10 @@ Before deploying to production:
 - [ ] Cache availability verified
 
 ### Logging
-- [ ] Log directory exists and is writable
-- [ ] Log rotation configured (10MB files)
-- [ ] Error logs separated from info logs
+- [ ] Logs reach your aggregator (stdout, or `DJANGO_CFG_LOG_DIR` is writable)
+- [ ] Log rotation configured if you write files
 - [ ] Log level set to WARNING or higher
+- [ ] `RequestIdMiddleware` active so lines can be correlated
 
 ### External Monitoring
 - [ ] Uptime monitoring configured

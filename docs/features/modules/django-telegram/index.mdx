@@ -1,6 +1,6 @@
 ---
 title: Telegram Module
-description: Auto-configuring Telegram notification service for sending messages, photos, and documents with rate-limited priority queuing and custom credentials support.
+description: Auto-configuring Telegram notification service for sending messages, photos, and documents with rate-limited priority queuing, custom credentials support, and duplicate suppression with a repeat summary.
 ---
 
 # Telegram Module
@@ -14,6 +14,7 @@ Django-CFG's **Telegram Module** provides an auto-configuring notification servi
 - **Rate Limiting** - Global queue with 20 msg/sec limit
 - **Priority System** - CRITICAL, HIGH, NORMAL, LOW priority levels
 - **Queue Protection** - Auto-drops low priority messages when queue is full
+- **Duplicate Suppression** - The same text to the same chat is sent once per window, followed by one "Repeated N times" summary
 - **Multiple Formats** - Text, HTML, Markdown, MarkdownV2
 - **Media Support** - Photos and documents with captions
 
@@ -25,6 +26,7 @@ django_telegram/
 ├── exceptions.py     # TelegramError, TelegramConfigError, TelegramSendError
 ├── types.py          # TelegramParseMode enum
 ├── queue.py          # TelegramMessageQueue, MessagePriority
+├── dedupe.py         # duplicate suppression (key, window, repeat summary)
 ├── formatters.py     # EMOJI_MAP, format_to_yaml, format_message_with_context
 ├── shortcuts.py      # send_error, send_success, send_warning, etc.
 ├── service.py        # DjangoTelegram class
@@ -36,7 +38,8 @@ django_telegram/
 ### Convenience Functions
 
 ```python
-from django_cfg import send_telegram_message, send_telegram_photo, send_telegram_document
+from django_cfg import send_telegram_message, send_telegram_photo
+from django_cfg.modules.django_telegram import send_telegram_document  # not re-exported from django_cfg
 ```
 
 | Function | Description |
@@ -146,7 +149,7 @@ send_telegram_photo(
 ### Send Document
 
 ```python
-from django_cfg import send_telegram_document
+from django_cfg.modules.django_telegram import send_telegram_document
 
 with open("/path/to/report.pdf", "rb") as f:
     send_telegram_document(
@@ -252,6 +255,47 @@ send_alert(
     context={"ip": "192.168.1.100", "attempts": 50}
 )
 ```
+
+## Duplicate Suppression
+
+A loop, a per-attempt signal or several workers can send the same text many times. The check runs in `DjangoTelegram.send_message`, the one point every text path ends in (the shortcuts above, `send_telegram_message`, `send_admin_notification`, the monitor, RQ alerting, accounts, Notion), so callers do not have to remember it.
+
+- The first message of a key is sent at once.
+- Repeats of the same key inside `dedupe_window_seconds` (default 60) are counted and dropped. `send_message` returns `True` for a dropped repeat: it was handled, not an error.
+- When the window ends, one message follows to the same chat at the same priority: `Repeated N times in the last Ws: <first 160 characters of the text>`. The summary is never deduped itself.
+- If the process that sent the first message is gone before the window ends, the next identical message after the window carries `(repeated N times before)` instead.
+
+The key is the chat id plus the text with markup, spacing, timestamps, clock times, UUIDs and long hex strings (a trace id) folded to `#`. Every other number stays in the key (an amount, an order or user id, a port, an HTTP status), so two payments of different amounts, `HTTP 500` and `HTTP 404`, or two different users, are different keys and each one is sent. A repeat that differs only by its timestamp is the same message. Photos and documents are not deduped.
+
+```python
+from django_cfg.models.services.telegram import TelegramConfig
+
+telegram = TelegramConfig(
+    bot_token="${TELEGRAM_BOT_TOKEN}",
+    chat_id=-1001234567890,
+    dedupe=True,                 # default; False turns it off for the whole project
+    dedupe_window_seconds=120,   # default 60, allowed 1..86400
+)
+```
+
+Per call, every shortcut, the `DjangoTelegram.send_*` class methods, `send_telegram_message` and `send_message` take `dedupe`:
+
+```python
+from django_cfg.modules.django_telegram import send_error
+
+for host in hosts:
+    send_error("Backup failed")   # one message now, one "Repeated N times" summary later
+
+send_error("Backup failed", dedupe=False)  # always sent
+```
+
+The OTP notification of the accounts app passes `dedupe=False`: a one-time code is never held back or put in a summary.
+
+<Callout type="info">
+State lives in the Django cache. With a shared cache (Redis) every process and worker agrees; with a per-process cache (LocMem) each process sends its own first message, so you can get up to one message per worker per window. A cache error never blocks a message: it is sent.
+</Callout>
+
+A real second occurrence inside the window is hidden until the summary appears; use `dedupe=False` where each call must arrive.
 
 ## Configuration
 

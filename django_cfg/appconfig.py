@@ -11,7 +11,6 @@ Each startup concern lives in its own module under django_cfg/startup/:
   drf_patch.py          — JWT-aware DRF authentication patch
   mime_types.py         — Media types a slim container image leaves out
   type_stubs.py         — Auto-install DRF validated_data type stubs (dev only)
-  registry_validation.py — Validate DJANGO_CFG_REGISTRY entries at startup
   command_shadowing.py  — Warn when a project command shares a name with a django-cfg one
   admin_access.py       — Warn about the default /admin/ in production and unwired admin_access
 """
@@ -62,7 +61,6 @@ class DjangoCfgConfig(AppConfig):
         from django_cfg.startup.constance import register_constance_admin
         from django_cfg.startup.drf_patch import patch_drf_authentication
         from django_cfg.startup.mime_types import register_media_types
-        from django_cfg.startup.registry_validation import validate_registry
         from django_cfg.startup.type_stubs import install_type_stubs
 
         # First: django-storages reads `mimetypes` when it uploads, so the
@@ -72,6 +70,5 @@ class DjangoCfgConfig(AppConfig):
             register_constance_admin,
             install_type_stubs,
             patch_drf_authentication,
-            validate_registry,
         ):
             _run_hook(hook)

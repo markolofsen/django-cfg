@@ -57,7 +57,7 @@ from django_cfg.modules.django_generator import Target, Language, TargetType
 
 Target(
     lang=Language.TYPESCRIPT,
-    type=TargetType.ADMIN,
+    type=TargetType.WEB,
     path=Path("frontend/api/generated"),
     groups=["cfg_*", "profiles"],
     post_build="pnpm build",
@@ -136,6 +136,7 @@ Language.PYTHON      # Python with httpx
 Language.GO          # Go
 Language.SWIFT       # Swift (OpenAPI Runtime)
 Language.SWIFT_CODABLE  # Swift Codable (simple)
+Language.PROTO        # Protocol Buffers / gRPC
 ```
 
 ### Platform Methods
@@ -162,7 +163,6 @@ Predefined target types:
 ```python
 from django_cfg.modules.django_generator import TargetType
 
-TargetType.ADMIN       # Admin panel
 TargetType.WEB         # Public web app
 TargetType.PACKAGES    # Shared packages
 TargetType.EXTENSIONS  # Extension modules
@@ -282,11 +282,11 @@ config = Config(
     # OpenAPI clients
     openapi=OpenAPI(
         targets=[
-            # Admin panel
+            # Shared API client
             Target(
                 lang=Language.TYPESCRIPT,
-                type=TargetType.ADMIN,
-                path=FRONTEND / "apps/admin/api/generated",
+                type=TargetType.PACKAGES,
+                path=FRONTEND / "packages/api/generated",
                 groups=["cfg_*", "profiles"],
             ),
             # Public web

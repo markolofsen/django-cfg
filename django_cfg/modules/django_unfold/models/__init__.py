@@ -5,7 +5,6 @@ All Pydantic models for Django Unfold admin interface.
 """
 
 from .config import (
-    UnfoldColors,
     UnfoldConfig,
     UnfoldDashboardConfig,
     UnfoldSidebar,
@@ -19,7 +18,6 @@ __all__ = [
     # Config models
     'UnfoldConfig',
     'UnfoldTheme',
-    'UnfoldColors',
     'UnfoldSidebar',
     'UnfoldThemeConfig',
     'UnfoldDashboardConfig',

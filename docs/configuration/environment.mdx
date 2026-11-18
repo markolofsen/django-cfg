@@ -4,7 +4,7 @@ description: Modern environment configuration with pydantic-settings. Type-safe,
 ---
 
 
-# 🌍 Environment Configuration
+# Environment Configuration
 
 ## Overview
 
@@ -13,7 +13,7 @@ Django-CFG uses **pydantic-settings** for modern, type-safe environment configur
 
 <Callout type="info">
 **Simple & Clean**
-No YAML files, no complex loaders. Just **ENV variables**, **.env files**, and **defaults in code**.
+django-cfg does not read YAML files. Just **ENV variables**, **.env files**, and **defaults in code**.
 
 </Callout>
 
@@ -31,9 +31,9 @@ graph LR
 ```
 
 **Priority order (highest to lowest):**
-1. 🥇 **System environment variables** (Docker, K8s, CI/CD)
-2. 🥈 **.env file** (local development)
-3. 🥉 **Default values in code** (fallback)
+1. **System environment variables** (Docker, K8s, CI/CD)
+2. **.env file** (local development)
+3. **Default values in code** (fallback)
 
 ---
 
@@ -41,35 +41,25 @@ graph LR
 
 ### Setting Environment Mode
 
-Set **ONE** of these environment variables:
+django-cfg resolves the mode from `DjangoConfig.env_mode` (`development`, `production` or `test`, default `production`). While `env_mode` is still the default, these variables are read in order: `DJANGO_ENV`, `ENVIRONMENT`, `ENV`.
 
 ```bash
-# Development (default if nothing set)
-IS_DEV=true
-
-# Production
-IS_PROD=true
-
-# Testing (auto-detected from pytest)
-IS_TEST=true
+DJANGO_ENV=development   # or dev, local
+DJANGO_ENV=production    # or prod
+DJANGO_ENV=test          # or testing
 ```
 
-
-<Callout type="info">
-**Auto-detection**
-If no environment variable is set, **development mode** is used by default.
-
-</Callout>
+The sample loader on this page also reads `IS_DEV`, `IS_PROD` and `IS_TEST`; those are your loader's variables, and your `config.py` passes the result on as `env_mode=env.env.env_mode`.
 
 <Callout type="warning">
 **Production Security: DEBUG Enforcement**
 
-When `IS_PROD=true` is set, Django-CFG **automatically disables DEBUG** even if `DEBUG=true` is in your environment. This is a security feature that prevents:
+When `env_mode` is `production`, Django-CFG **forces `debug=False`** (with a `UserWarning`) even if `DEBUG=true` is set. This prevents:
 - Exposure of sensitive data in error pages
 - Memory leaks from SQL query logging
 - Performance issues in production
 
-**Always set `IS_PROD=true` in production environments** to enable this protection.
+Because the default mode is `production`, a deployment that sets nothing is already protected.
 </Callout>
 
 ### Environment Mode API
@@ -307,7 +297,7 @@ services:
   django:
     environment:
       # Environment mode
-      IS_PROD: "true"
+      DJANGO_ENV: "production"
 
       # Core settings
       DEBUG: "false"
@@ -332,7 +322,7 @@ kind: ConfigMap
 metadata:
   name: django-config
 data:
-  IS_PROD: "true"
+  DJANGO_ENV: "production"
   DEBUG: "false"
   DATABASE__URL: "postgresql://user:pass@postgres:5432/db"
   REDIS_URL: "redis://redis:6379/0"
@@ -432,10 +422,10 @@ EMAIL__HOST="smtp.example.com"
 ```
 
 **Benefits:**
-- ✅ Simpler - one configuration method
-- ✅ 12-factor app compliant
-- ✅ Works everywhere (Docker, K8s, CI/CD)
-- ✅ No file management overhead
+- Simpler - one configuration method
+- 12-factor app compliant
+- Works everywhere (Docker, K8s, CI/CD)
+- No file management overhead
 
 ---
 
@@ -454,7 +444,7 @@ DEBUG=true
 
 ```bash
 # Set in Docker/K8s/CI
-export IS_PROD=true
+export DJANGO_ENV=production
 export SECRET_KEY="prod-secret-from-vault"
 export DATABASE__URL="postgresql://prod-db:5432/db"
 ```
@@ -466,8 +456,8 @@ export DATABASE__URL="postgresql://prod-db:5432/db"
 class EnvironmentConfig(BaseSettings):
     debug: bool = Field(default=True)
     database: DatabaseConfig = Field(
-        default_factory=lambda: DatabaseConfig(
-            url="sqlite:///db/dev.sqlite3"
+        default_factory=lambda: DatabaseConfig.from_url(
+            "sqlite:///db/dev.sqlite3"
         )
     )
 ```

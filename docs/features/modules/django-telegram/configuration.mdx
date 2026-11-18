@@ -45,6 +45,15 @@ from django_cfg.models.services.telegram import TelegramConfig
 | `max_retries` | `int` | `3` | Maximum retry attempts on failure (0–10) |
 | `retry_delay` | `float` | `1.0` | Delay between retries in seconds (0.1–60.0) |
 
+### Duplicate Suppression
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `dedupe` | `bool` | `True` | Send the same text to the same chat once per window; repeats are counted |
+| `dedupe_window_seconds` | `int` | `60` | Window in seconds (1-86400). Repeats inside it are folded into one `Repeated N times` message |
+
+Per call: `dedupe=False` on `send_message`, the shortcuts, `DjangoTelegram.send_*` and `send_telegram_message`. How the key is built and what happens with a per-process cache: [Duplicate Suppression](/features/modules/django-telegram#duplicate-suppression).
+
 ### Webhook (Optional)
 
 | Field | Type | Default | Description |

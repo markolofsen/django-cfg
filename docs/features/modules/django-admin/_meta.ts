@@ -2,7 +2,6 @@ export default {
   index: { display: 'hidden' },
   'quick-start': 'Quick Start',
   'configuration': 'Configuration',
-  'flash-messages': 'Flash Messages',
   'field-types': 'Field Types',
   'filters': 'Filters',
   'examples': 'Examples',

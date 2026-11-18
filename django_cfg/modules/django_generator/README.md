@@ -49,7 +49,7 @@ go install github.com/ogen-go/ogen/cmd/ogen@latest
 brew install bufbuild/buf/buf
 brew install apple/tap/swift-openapi-generator
 brew install swift-protobuf grpc-swift   # for proto-Swift targets
-# Hey API runs via npx — no install step (Node 18+ required)
+# Hey API runs via npx — no install step (Node 20+ required)
 ```
 
 `python manage.py gen --check` probes every CLI and prints install hints

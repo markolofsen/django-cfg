@@ -28,7 +28,7 @@ class AdminConfig(BaseModel):
     list_max_show_all: int = 200
 
     # Display fields (auto-generate display methods)
-    # Accepts List[FieldConfigType] — discriminated union of all 19 field types
+    # Accepts List[FieldConfigType] — discriminated union of all 16 field types
     display_fields: List[FieldConfigType] = []
 
     # Filters and search
@@ -68,6 +68,11 @@ class AdminConfig(BaseModel):
     resource_class: Type | None = None
 
     # Other
+    filter_horizontal: List[str] = []
+    filter_vertical: List[str] = []
+    formfield_overrides: Dict[Any, Dict[str, Any]] = {}
+    documentation: DocumentationConfig | None = None  # see the Documentation page
+    widgets: List[WidgetConfig] = []                   # e.g. JSONWidgetConfig
     save_on_top: bool = False
     save_as: bool = False
     preserve_filters: bool = True
@@ -96,134 +101,45 @@ class MyModelAdmin(PydanticAdmin):
 
 ## Field Types
 
+All field configs are Pydantic models in the discriminated union `FieldConfigType` (16 types), keyed on `ui_widget`. The list below is the real field set; see [Field Types](/features/modules/django-admin/field-types) for usage.
+
 ### FieldConfig (Base)
 
-Base class for all field configurations.
+Fields every field config has:
 
 ```python
 class FieldConfig(BaseModel):
-    name: str                    # Field name (required)
-    title: str | None = None     # Display title
-    ui_widget: str | None = None # Widget name
-    empty_value: str = "—"       # Value when None
-    ordering: str | None = None  # Sort field
-    header: bool = False         # Sticky header column
+    name: str                       # Field name (required)
+    title: str | None = None        # Column title
+    ui_widget: str                  # Fixed per subclass, selects the renderer
+    header: bool = False            # Render as the row header (first cell)
+    ordering: str | None = None     # Sort column / expression
+    empty_value: str = "—"          # Shown when the value is None
+    icon: str | None = None         # Material icon
+    css_class: str | None = None
+    tooltip: str | None = None
 ```
 
-### BadgeField
+### Subclass fields
 
-Badge with conditional colors.
-
-```python
-class BadgeField(FieldConfig):
-    ui_widget: Literal["badge"] = "badge"
-    variant: Literal["primary", "secondary", "success", "danger", "warning", "info"] = "primary"
-    icon: str | None = None
-    label_map: Dict[str, str] | None = None  # value → variant mapping
-```
-
-### BooleanField
-
-Boolean indicator with icons.
-
-```python
-class BooleanField(FieldConfig):
-    ui_widget: Literal["boolean"] = "boolean"
-```
-
-### AvatarField
-
-User avatar with initials badge fallback.
-
-**IMPORTANT:** The `name` parameter must be a **real model field**, not a virtual field or `@property`. Other fields like `name_field`, `initials_field`, `subtitle_field` can be properties or methods.
-
-```python
-class AvatarField(FieldConfig):
-    ui_widget: Literal["avatar"] = "avatar"
-    name: str                                # MUST be a real model field (e.g., "first_name", "username")
-    photo_field: str                         # Model field for photo/avatar image
-    name_field: str                          # Model field/property for display name
-    initials_field: str                      # Field/property for extracting initials
-    subtitle_field: str | None = None        # Optional subtitle (email, user_id) - can be property
-    avatar_size: int = 40                    # Avatar size in pixels
-    show_as_card: bool = False               # Show as user card layout
-    variant_field: str | None = None         # Field to determine badge variant
-    variant_map: dict[str, str] | None = None  # Map field values to badge variants
-    default_variant: str = "secondary"       # Default badge variant
-    initials_max_length: int = 2             # Maximum initials (1-3)
-```
-
-**Example:**
-```python
-# ✅ Correct - name is a real CharField
-AvatarField(
-    name="first_name",  # Real model field
-    photo_field="photo_file",
-    name_field="display_name",  # Can be @property
-    initials_field="first_name",
-)
-
-# ❌ Wrong - name is a virtual field
-AvatarField(
-    name="user_avatar",  # Doesn't exist in model
-    ...
-)
-```
-
-### CurrencyField
-
-Formatted currency.
-
-```python
-class CurrencyField(FieldConfig):
-    ui_widget: Literal["currency"] = "currency"
-    currency: str = "USD"  # Currency code
-    precision: int = 2     # Decimal places
-```
-
-### DateTimeField
-
-Formatted datetime.
-
-```python
-class DateTimeField(FieldConfig):
-    ui_widget: Literal["datetime"] = "datetime"
-    format: str = "%Y-%m-%d %H:%M"  # strftime format
-    show_relative: bool = False      # Show "2 hours ago"
-```
-
-### TextField
-
-Text with optional truncation.
-
-```python
-class TextField(FieldConfig):
-    ui_widget: Literal["text"] = "text"
-    max_length: int | None = None  # Truncate after N chars
-    show_tooltip: bool = False     # Tooltip on hover
-```
-
-### UserField
-
-User with avatar support.
-
-```python
-class UserField(FieldConfig):
-    ui_widget: Literal["user_avatar"] = "user_avatar"
-    # Inherits header=True for sticky column
-```
-
-### ShortUUIDField
-
-Shortened UUID display with tooltip.
-
-```python
-class ShortUUIDField(FieldConfig):
-    ui_widget: Literal["short_uuid"] = "short_uuid"
-    length: int = 8                    # Number of characters to display
-    copy_on_click: bool = True         # Enable click-to-copy
-    show_full_on_hover: bool = True    # Show full UUID in tooltip
-```
+| Class | `ui_widget` | Own fields (defaults) |
+| --- | --- | --- |
+| `BadgeField` | `badge` | `variant` (`None`; `primary`, `secondary`, `success`, `danger`, `warning`, `info`), `label_map` (value to variant) |
+| `BooleanField` | `boolean` | `true_icon` (`"check_circle"`), `false_icon` (`"cancel"`) |
+| `CurrencyField` | `currency` | `currency` (`None`), `currency_field`, `secondary_field`, `secondary_currency` (`"USD"`), `precision` (2), `show_sign` (False), `thousand_separator` (True) |
+| `DateTimeField` | `datetime_relative` | `datetime_format` (`None`), `show_relative` (True), `use_local_tz` (True) |
+| `DecimalField` | `decimal` | `decimal_places` (2), `prefix`, `suffix`, `show_sign`, `thousand_separator` |
+| `ForeignKeyField` | `foreignkey` | `display_field` (required), `link_field` (`"id"`), `link_to_admin` (True), `link_icon`, `link_target` (`"_self"`), `subtitle_field`, `subtitle_fields`, `subtitle_template`, `subtitle_separator`, `show_null_as_empty`, `null_display`, `subtitle_css_class` |
+| `ImageField` | `image` | `width`, `height`, `max_width` (`"200px"`), `max_height`, `border_radius`, `caption`, `caption_field`, `caption_template`, `alt_text` |
+| `ImagePreviewField` | `image_preview` | `thumbnail_max_width` (200), `thumbnail_max_height` (150), `border_radius` (8), `show_info`, `show_filename`, `show_dimensions`, `show_size`, `show_format`, `zoom_enabled`, `zoom_min`, `zoom_max`, `zoom_step`, `pan_enabled`, `caption*`, `alt_text`, `url_method`, `fallback_field`, `condition_field`, `condition_value`, `fallback_text`, `fallback_badge_variant` |
+| `LinkField` | `link` | `link_field` (required), `link_icon` (`"open_in_new"`), `link_target` (`"_blank"`), `static_text`, `subtitle_field`, `subtitle_fields`, `subtitle_template`, `subtitle_separator`, `subtitle_css_class` |
+| `MarkdownField` | `markdown` | `collapsible` (True), `default_open` (False), `max_height` (`"500px"`), `full_width` (True), `source_file`, `source_field`, `enable_plugins` (True), `header_icon` |
+| `MoneyFieldDisplay` | `money_field` | `currency_field`, `default_currency` (`"USD"`), `target_field`, `target_currency` (`"USD"`), `rate_field`, `rate_at_field`, `show_rate` (True), `precision` (2), `compact` (True), `currency_symbols` |
+| `ShortUUIDField` | `short_uuid` | `length` (8), `copy_on_click` (True), `show_full_on_hover` (True), `is_link` (False) |
+| `StackedField` | `stacked` | `rows` (required; `RowItem` or lists of them), `gap`, `inline_gap`, `align` (`left`, `center`, `right`), `min_width`, `max_width` (`"300px"`) |
+| `StatusBadgesField` | `status_badges` | `badge_rules` (required; list of `BadgeRule`), `empty_text`, `empty_variant`, `separator` |
+| `TextField` | `text` | `truncate` (chars, `None`), `monospace`, `nowrap` (True), `max_width` (`"300px"`), `show_tooltip` (True) |
+| `UserField` | `user_avatar` or `user_simple` | `show_email` (True), `show_avatar` (True), `avatar_size` (32) |
 
 ## Configuration Classes
 
@@ -871,7 +787,7 @@ class DateTimeDisplayConfig(BaseModel):
 2234+ Material Design icons with autocomplete.
 
 ```python
-from django_cfg.modules.django_admin import Icons
+from django_cfg import Icons
 
 # Common icons
 Icons.CHECK_CIRCLE
@@ -916,7 +832,7 @@ Icons.SHOPPING_BAG
 Group icons by category for easier discovery.
 
 ```python
-from django_cfg.modules.django_admin import IconCategories
+from django_cfg import IconCategories
 
 IconCategories.ACTIONS      # Common action icons
 IconCategories.CONTENT      # Content-related icons
@@ -967,56 +883,9 @@ class BadgeConfig(BaseModel):
     css_classes: List[str] = []
 ```
 
-### FlashFieldConfig
-
-Pydantic model for declarative `one_time_flash_fields` entries.
-
-```python
-from django_cfg.modules.django_admin import FlashFieldConfig
-
-class FlashFieldConfig(BaseModel):
-    content_attr: str        # Model attribute to read as flash content
-    title: str = ""          # Bold header text
-    message: str = ""        # Subtitle/instruction text
-    style: FlashStyle = "code_warning"  # One of 8 valid style keys
-```
-
-### FlashPayload
-
-Pydantic model for session-stored flash data.
-
-```python
-from django_cfg.modules.django_admin import FlashPayload
-
-class FlashPayload(BaseModel):
-    content: Any
-    title: str = ""
-    message: str = ""
-    style: FlashStyle = "code_warning"
-```
-
-### FlashStyle
-
-Literal type for flash display style.
-
-```python
-from django_cfg.modules.django_admin import FlashStyle
-
-FlashStyle = Literal[
-    "code_warning",   # Code block with warning coloring
-    "code_error",     # Code block with error coloring
-    "code_success",   # Code block with success coloring
-    "info",
-    "warning",
-    "error",
-    "success",
-    "raw",            # Raw HTML, no wrapper styling
-]
-```
-
 ### FieldConfigType
 
-Discriminated union of all 19 field config types. Use for type narrowing in custom code.
+Discriminated union of all 16 field config types. Use for type narrowing in custom code.
 
 ```python
 from django_cfg.modules.django_admin import FieldConfigType
@@ -1027,7 +896,7 @@ from django_cfg.modules.django_admin import FieldConfigType
 display_fields: List[FieldConfigType] = [
     BadgeField(name="status"),
     CurrencyField(name="price"),
-    # ... any of the 19 field config types
+    # ... any of the 16 field config types
 ]
 ```
 
@@ -1128,76 +997,6 @@ FilterType = Literal[
 ]
 ```
 
-## Flash / One-Time Secret Display
-
-### FlashMixin
-
-`FlashMixin` provides secure one-time display of sensitive values (API keys, passwords, tokens) in Django Admin readonly fields. Content is stored in the session, rendered once, then discarded.
-
-#### flash_once()
-
-Store a value for one-time display in a readonly field.
-
-```python
-FlashMixin.flash_once(
-    request: HttpRequest,
-    obj: Model,          # Must have pk set
-    field_name: str,     # Name of the readonly field to inject into
-    content: Any,        # Sensitive content to display
-    title: str = "",     # Bold header text shown above content
-    message: str = "",   # Subtitle/instruction text
-    style: FlashStyle = "code_warning",
-) -> None
-```
-
-**Parameters:**
-
-- `request` — Django `HttpRequest`
-- `obj` — Model instance; must have a `pk` (call after `save()`)
-- `field_name` — str, name of the readonly field that will render the flash content
-- `content` — Any, the sensitive value to display (string, dict, etc.)
-- `title` — str, bold header text rendered above the content block
-- `message` — str, subtitle or instruction shown below the title
-- `style` — `FlashStyle`, controls the visual wrapper; one of 8 keys (`"code_warning"`, `"code_error"`, `"code_success"`, `"info"`, `"warning"`, `"error"`, `"success"`, `"raw"`)
-
-**Example — call after object creation:**
-
-```python
-class MyModelAdmin(FlashMixin, PydanticAdmin):
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        if not change:  # only on creation
-            self.flash_once(
-                request, obj,
-                field_name="api_key_display",
-                content=obj.raw_api_key,
-                title="API Key (shown once)",
-                message="Copy and store it securely — it will not be shown again.",
-                style="code_warning",
-            )
-```
-
-#### one_time_flash_fields
-
-Class attribute for declarative flash-on-create behaviour. After a new object is saved, `FlashMixin` automatically calls `flash_once()` for every entry.
-
-```python
-class MyModelAdmin(FlashMixin, PydanticAdmin):
-    one_time_flash_fields: dict[str, FlashFieldConfig | dict] = {
-        "api_key_display": FlashFieldConfig(
-            content_attr="raw_api_key",
-            title="API Key (shown once)",
-            message="Store it securely — it will not be shown again.",
-            style="code_warning",
-        ),
-    }
-```
-
-- **Type:** `dict[str, FlashFieldConfig | dict]`
-- **Key:** readonly field name that renders the flash content
-- **Value:** `FlashFieldConfig` instance (or equivalent plain `dict`)
-- **Trigger:** fires automatically after object **creation** (not updates)
-
 ## Complete Import Example
 
 ```python
@@ -1213,10 +1012,7 @@ from django_cfg.modules.django_admin import (
 
 # Types and type aliases
 from django_cfg.modules.django_admin import (
-    FlashFieldConfig,    # Pydantic model for one_time_flash_fields entries
-    FlashPayload,        # Pydantic model for session-stored flash data
-    FlashStyle,          # Literal: "code_warning" | "code_error" | ... (8 values)
-    FieldConfigType,     # Discriminated union of all 19 field config types
+    FieldConfigType,     # Discriminated union of all 16 field config types
     DjangoFieldsets,     # TypeAlias: tuple[tuple[str | None, dict[str, Any]], ...]
     FilterSpec,          # TypeAlias: str | type | tuple[str, type] | FilterConfig
     FilterConfig,        # Pydantic model for declarative list_filter entries
@@ -1225,7 +1021,6 @@ from django_cfg.modules.django_admin import (
 
 # Field types
 from django_cfg.modules.django_admin import (
-    AvatarField,
     BadgeField,
     BooleanField,
     CurrencyField,
@@ -1236,7 +1031,7 @@ from django_cfg.modules.django_admin import (
 )
 
 # Icons
-from django_cfg.modules.django_admin import Icons
+from django_cfg import Icons
 
 # Decorators
 from django_cfg.modules.django_admin.utils import (

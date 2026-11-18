@@ -6,8 +6,7 @@ logger initialization and web execution safety metadata.
 
 Security Integration:
     These classes integrate with django_cfg's security system via:
-    - commands_security.py: Analyzes web_executable, requires_input, is_destructive
-    - commands_service.py: Filters commands based on safety metadata
+    - apps/api/commands/security.py: Analyzes web_executable, requires_input, is_destructive
     - API views: Blocks unsafe commands from web execution
 
 Available Classes:

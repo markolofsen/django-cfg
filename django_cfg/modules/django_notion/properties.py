@@ -17,10 +17,26 @@ _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 SOURCES = {"website", "telegram", "referral", "other", "email"}
 
 
+def utf16_pieces(text: str, size: int = CHUNK) -> List[str]:
+    """Cut at ``size`` UTF-16 code units, the way Notion counts a rich_text element: an emoji is two, not one."""
+    out: List[str] = []
+    cur: List[str] = []
+    units = 0
+    for ch in text:
+        n = 2 if ord(ch) > 0xFFFF else 1
+        if units + n > size:
+            out.append("".join(cur))
+            cur, units = [], 0
+        cur.append(ch)
+        units += n
+    if cur:
+        out.append("".join(cur))
+    return out
+
+
 def rich_text(text: str, limit: int = CHUNK) -> List[Dict[str, Any]]:
-    """Notion rich_text value: chunks of <= 2000 characters (the per-item limit); ``limit`` caps the total."""
-    text = text[:limit]
-    return [{"type": "text", "text": {"content": text[i : i + CHUNK]}} for i in range(0, len(text), CHUNK)]
+    """Notion rich_text value: elements of <= 2000 UTF-16 units (the per-item limit); ``limit`` caps the total characters."""
+    return [{"type": "text", "text": {"content": c}} for c in utf16_pieces(text[:limit])]
 
 
 def _iso(dt: datetime) -> str:

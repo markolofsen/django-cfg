@@ -40,7 +40,7 @@ from django_cfg import DjangoConfig, DatabaseConfig
 from .environment import env
 
 class MyConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url)
     }
 

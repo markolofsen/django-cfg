@@ -6,7 +6,7 @@ Target into a pipeline GenerationTarget, and dispatches via
 external CLI: ogen / Hey API / openapi-python-client / swift-openapi).
 
 The legacy `call_command("generate_clients")` path was removed; in-house
-emitters now live under `django_generator/@archive/django_client_old/`
+emitters now live under `@archive/django-cfg-src/modules/django_generator/@archive/django_client_old/` (repo root)
 and are not on the import path. The pipeline writes directly to each
 Target.path — no copy_groups / wildcard expansion needed.
 """
@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ...public.config import OpenAPI
 from ..pipeline.config import (
     GenerationTarget,
     OpenAPIConfig,
@@ -26,7 +27,6 @@ from .utils import (
     fix_go_imports,
     run_post_build,
 )
-from ...public.config import OpenAPI
 
 _LANG_DEFAULT_TOOL: dict[str, str] = {
     "typescript": "hey-api",

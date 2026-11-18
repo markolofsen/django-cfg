@@ -3,14 +3,12 @@ NavigationManager — orchestrates all navigation sections.
 
 Conditional logic lives here; section content lives in sections/.
 """
-import logging
-
 import importlib
+import logging
 import traceback
 from typing import Any, Dict, List
 
 from django_cfg.modules.base import BaseCfgModule
-
 from django_cfg.modules.django_unfold.models.navigation import NavigationSection
 from django_cfg.modules.django_unfold.navigation.sections import (
     build_accounts_section,
@@ -100,7 +98,7 @@ class NavigationManager(BaseCfgModule):
 
     def _get_extension_navigation(self) -> List[NavigationSection]:
         """Load navigation from auto-discovered extensions."""
-        from django_cfg.modules.django_admin.icons import Icons
+        from django_cfg.icons import Icons
         from django_cfg.modules.django_unfold.models.navigation import NavigationItem
 
         sections = []

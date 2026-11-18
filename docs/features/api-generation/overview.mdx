@@ -91,7 +91,7 @@ wallets = await client.wallets.list(currency="BTC")
 orders = await client.orders.list(status="open")
 ```
 
-**Swift Client (iOS) -- `--swift`:**
+**Swift Client (iOS):**
 ```swift
 import OpenAPIClient
 
@@ -106,7 +106,7 @@ let order = try await client.ordersCreate(body: .json(.init(
 )))
 ```
 
-**Swift Codable (iOS) -- `--swift-codable`:**
+**Swift Codable (iOS), `Language.SWIFT_CODABLE`:**
 ```swift
 // Simple Codable structs — no OpenAPIRuntime dependency
 struct Wallet: Codable {
@@ -138,7 +138,7 @@ Manual API client development requires:
 
 ```bash
 # One command to generate everything
-python manage.py generate_client
+python manage.py gen
 ```
 
 **Time investment:** Seconds! 🚀
@@ -210,8 +210,6 @@ backend/api_client/
 ✅ **Pagination** - Built-in pagination support
 ✅ **Validation** - Zod schemas for runtime validation (TypeScript)
 ✅ **React integration** - SWR hooks for data fetching
-✅ **Pre-generation validation** - validate_openapi command
-✅ **Archive system** - Version history for rollback
 
 ## Quick Start
 
@@ -219,10 +217,10 @@ backend/api_client/
 
 ```python
 # api/config.py
-from django_cfg import DjangoConfig, OpenAPIConfig, OpenAPIGroupConfig
+from django_cfg import DjangoConfig, OpenAPIClientConfig, OpenAPIGroupConfig
 
 class CryptoConfig(DjangoConfig):
-    openapi: OpenAPIConfig = OpenAPIConfig(
+    openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
         enabled=True,
         generate_package_files=True,
         generate_zod_schemas=True,
@@ -247,27 +245,47 @@ class CryptoConfig(DjangoConfig):
     )
 ```
 
-### 2. Generate Clients
+### 2. Describe the targets
 
-```bash
-# Generate all clients (TypeScript, Python, Go, Swift)
-python manage.py generate_client
+```python
+# generation.py (next to manage.py)
+from pathlib import Path
+from django_cfg.modules.django_generator import Config, OpenAPI, Target, Language, TargetType
 
-# Generate specific languages only
-python manage.py generate_client --typescript
-python manage.py generate_client --python
-python manage.py generate_client --go
-python manage.py generate_client --swift
-python manage.py generate_client --swift-codable
+FRONTEND = Path(__file__).parent.parent / "frontend"
 
-# Generate for specific groups
-python manage.py generate_client --groups core shop
-
-# Validate before generating
-python manage.py validate_openapi
+config = Config(
+    openapi=OpenAPI(
+        targets=[
+            Target(
+                lang=Language.TYPESCRIPT,
+                type=TargetType.WEB,
+                path=FRONTEND / "src" / "api" / "generated",
+                groups=["core", "trading"],
+            ),
+            Target(
+                lang=Language.PYTHON,
+                type=TargetType.SDK,
+                path=Path("sdk/api_client"),
+                groups=["core"],
+            ),
+        ],
+    ),
+)
 ```
 
-### 3. Use Generated Clients
+### 3. Generate Clients
+
+```bash
+python manage.py gen                    # all targets
+python manage.py gen --ts               # TypeScript only
+python manage.py gen --groups core      # one group
+python manage.py gen --dry-run          # plan only
+```
+
+See [CLI Usage](./cli-usage) for every flag.
+
+### 4. Use Generated Clients
 
 **TypeScript (Next.js Server Component):**
 ```typescript
@@ -294,7 +312,7 @@ async def main():
 Groups allow you to organize large APIs into logical sections. Each group can include multiple Django apps and generates separate clients:
 
 ```python
-openapi: OpenAPIConfig = OpenAPIConfig(
+openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
     enabled=True,
     # ... other settings ...
     groups=[
@@ -325,10 +343,7 @@ openapi: OpenAPIConfig = OpenAPIConfig(
 )
 ```
 
-Each group generates:
-- `/openapi/core/` - Core API clients
-- `/openapi/trading/` - Trading API clients
-- `/openapi/market/` - Market API clients
+Each group is generated into every target that lists it; the output location is the target's `path`.
 
 ## OpenAPIConfig Parameters
 
@@ -344,16 +359,18 @@ Each group generates:
 | `generate_typescript` | `bool` | `True` | Generate TypeScript client |
 | **TypeScript Features** | | | |
 | `generate_package_files` | `bool` | `False` | Generate package.json, tsconfig.json |
-| `generate_zod_schemas` | `bool` | `False` | Generate Zod validation schemas |
-| `generate_fetchers` | `bool` | `False` | Generate typed fetcher functions |
-| `generate_swr_hooks` | `bool` | `False` | Generate SWR hooks for React |
+| `generate_zod_schemas` | `bool` | `True` | Generate Zod validation schemas |
+| `generate_fetchers` | `bool` | `True` | Generate typed fetcher functions |
+| `generate_swr_hooks` | `bool` | `True` | Generate SWR hooks for React |
 | **Client Structure** | | | |
 | `client_structure` | `Literal["flat", "namespaced"]` | `"namespaced"` | `flat`: `client.posts_list()`, `namespaced`: `client.posts.list()` |
 | **API Configuration** | | | |
 | `api_prefix` | `str` | `"apix"` | URL prefix for API endpoints |
-| **Archiving** | | | |
-| `enable_archive` | `bool` | `True` | Enable client version archiving |
-| `archive_retention_days` | `int` | `30` | Days to keep archived clients |
+| **Streams and events** | | | |
+| `generate_sse_streams` | `bool` | `True` | Typed `stream<OperationId>()` per `text/event-stream` operation (nothing is emitted for a group without one) |
+| `generate_events_bridge` | `bool` | `False` | Extra response/error interceptors emitting `cmdop:network-error` events |
+| **Devx** | | | |
+| `mirror_to_tmp` | `bool` | `True` | Copy each generated tree to `<project>/.tmp/generated/<name>/` |
 | **Performance** | | | |
 | `max_workers` | `int` | `1` | Parallel workers (1 is usually enough) |
 
@@ -452,7 +469,7 @@ groups=[
 ### 4. Enable All Type Safety Features
 
 ```python
-OpenAPIConfig(
+OpenAPIClientConfig(
     generate_zod_schemas=True,        # Runtime validation
     generate_package_files=True,      # Proper TypeScript setup
     generate_fetchers=True,           # Universal fetch functions

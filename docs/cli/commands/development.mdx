@@ -53,7 +53,6 @@ python manage.py test_telegram [OPTIONS]
 | Option | Type | Description |
 |--------|------|-------------|
 | `--message` | `TEXT` | Test message to send |
-| `--chat-id` | `TEXT` | Target chat ID (optional) |
 
 **Examples:**
 
@@ -61,8 +60,6 @@ python manage.py test_telegram [OPTIONS]
 # Send test message
 python manage.py test_telegram --message "Hello from Django-CFG!"
 
-# Send to specific chat
-python manage.py test_telegram --message "Test" --chat-id "-1001234567890"
 ```
 
 ---
@@ -95,25 +92,30 @@ python manage.py otp_test --email user@example.com
 Run custom scripts with full Django context.
 
 ```bash
-python manage.py script SCRIPT_PATH [SCRIPT_ARGS]
+python manage.py script [OPTIONS]
 ```
 
-| Argument | Type | Description |
-|----------|------|-------------|
-| `SCRIPT_PATH` | `PATH` | Path to Python script |
-| `SCRIPT_ARGS` | `...` | Arguments to pass to script |
+| Option | Type | Description |
+|--------|------|-------------|
+| `--script` | `TEXT` | Name of the script to run |
+| `--list` | `flag` | List available scripts |
+| `--create` | `TEXT` | Create a new script template with this name |
+| `--shell` | `flag` | Open a Django shell |
+| `--check` | `flag` | Run the Django system check |
+
+Without options it opens an interactive menu.
 
 **Examples:**
 
 ```bash
-# Run Python script with Django context
-python manage.py script my_script.py
+# Run a script with Django context
+python manage.py script --script my_script
 
-# Pass arguments to script
-python manage.py script data_import.py --file data.csv
+# List available scripts
+python manage.py script --list
 
-# Run with specific settings
-python manage.py script --settings myproject.settings.dev cleanup.py
+# Create a script template
+python manage.py script --create my_script
 ```
 
 **Script Example:**
@@ -137,7 +139,7 @@ if __name__ == "__main__":
 
 **Usage:**
 ```bash
-python manage.py script my_script.py admin
+python manage.py script --script my_script
 ```
 
 ---
@@ -154,9 +156,14 @@ python manage.py tree [OPTIONS]
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `--depth` | `INTEGER` | Limit depth |
-| `--include-docs` | `flag` | Include documentation files |
-| `--python-only` | `flag` | Show only Python files |
+| `--depth`, `-L` | `INTEGER` | Limit depth |
+| `--all`, `-a` | `flag` | Include hidden files |
+| `--dirs-only`, `-d` | `flag` | Directories only |
+| `--no-ignore`, `-n` | `flag` | Do not skip `node_modules`, `.git` and similar |
+| `--include-docker` | `flag` | Include Docker configuration and volumes |
+| `--include-logs` | `flag` | Include log files |
+| `--output`, `-o` | `FILE` | Write to a file instead of stdout |
+| `--format` | `tree\|json\|xml` | Output format |
 
 **Examples:**
 
@@ -167,11 +174,11 @@ python manage.py tree
 # Limit depth
 python manage.py tree --depth 3
 
-# Include documentation files
-python manage.py tree --include-docs
+# Directories only
+python manage.py tree --dirs-only
 
-# Show only Python files
-python manage.py tree --python-only
+# Write to a file
+python manage.py tree --output tree.txt
 ```
 
 **Output:**
@@ -195,32 +202,7 @@ python manage.py tree --python-only
 
 ## Code Generation
 
-### `generate`
-
-Generate Django components (models, views, serializers).
-
-```bash
-python manage.py generate TYPE NAME [FIELDS]
-```
-
-| Type | Description |
-|------|-------------|
-| `model` | Generate model |
-| `crud` | Generate complete CRUD |
-| `api` | Generate API views |
-
-**Examples:**
-
-```bash
-# Generate model
-python manage.py generate model Product name:str price:decimal
-
-# Generate complete CRUD
-python manage.py generate crud Product
-
-# Generate API views
-python manage.py generate api Product --viewset
-```
+Generating API clients and FastAPI models has its own commands: `gen` ([Code Generation](./codegen)) and `generate_fastapi`.
 
 ---
 

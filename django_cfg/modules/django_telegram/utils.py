@@ -16,6 +16,7 @@ def send_telegram_message(
     bot_token: Optional[str] = None,
     parse_mode: Optional[TelegramParseMode] = None,
     fail_silently: bool = False,
+    dedupe: bool = True,
 ) -> bool:
     """
     Send a Telegram message using auto-configured service.
@@ -26,6 +27,7 @@ def send_telegram_message(
         bot_token: Custom bot token (uses config default if not provided)
         parse_mode: Message parse mode
         fail_silently: Don't raise exceptions on failure
+        dedupe: False sends every call (default: the same text is sent once per window)
 
     Returns:
         True if message queued successfully
@@ -35,6 +37,7 @@ def send_telegram_message(
         message=message,
         parse_mode=parse_mode,
         fail_silently=fail_silently,
+        dedupe=dedupe,
     )
 
 

@@ -116,9 +116,14 @@ Define specialized field configurations that auto-generate display methods:
 
 ```python
 from django_cfg.modules.django_admin import (
-    BadgeField, BooleanField, CurrencyField,
-    DateTimeField, TextField, UserField, Icons,
+    BadgeField,
+    BooleanField,
+    CurrencyField,
+    DateTimeField,
+    TextField,
+    UserField,
 )
+from django_cfg import Icons
 
 config = AdminConfig(
     model=Payment,
@@ -552,7 +557,7 @@ Changelist actions are buttons that appear **above the listing** and don't requi
 | Feature | Bulk Actions | Changelist Actions |
 |---------|-------------|-------------------|
 | Location | Dropdown menu | Buttons above listing |
-| Selection Required | ✅ Yes | ❌ No |
+| Selection Required | Yes | No |
 | Handler Signature | `(modeladmin, request, queryset)` | `(modeladmin, request)` |
 | Return Value | None | HttpResponse (redirect) |
 | `action_type` | `"bulk"` (default) | `"changelist"` |
@@ -570,7 +575,7 @@ from io import StringIO
 def sync_proxy6(modeladmin, request):
     """Synchronize proxies from Proxy6 provider."""
     try:
-        messages.info(request, "🔄 Syncing proxies from Proxy6...")
+        messages.info(request, "Syncing proxies from Proxy6...")
 
         # Call management command
         out = StringIO()
@@ -582,7 +587,7 @@ def sync_proxy6(modeladmin, request):
             messages.success(request, output)
 
     except Exception as e:
-        messages.error(request, f"❌ Failed to sync Proxy6: {str(e)}")
+        messages.error(request, f"Failed to sync Proxy6: {str(e)}")
 
     # IMPORTANT: Must return redirect for changelist actions
     return redirect(reverse('admin:proxies_proxy_changelist'))
@@ -591,7 +596,7 @@ def sync_proxy6(modeladmin, request):
 def sync_all_providers(modeladmin, request):
     """Synchronize proxies from all providers."""
     try:
-        messages.info(request, "🔄 Syncing all providers...")
+        messages.info(request, "Syncing all providers...")
 
         out = StringIO()
         call_command('sync_proxy_providers', provider='all', stdout=out)
@@ -601,7 +606,7 @@ def sync_all_providers(modeladmin, request):
             messages.success(request, output)
 
     except Exception as e:
-        messages.error(request, f"❌ Failed to sync: {str(e)}")
+        messages.error(request, f"Failed to sync: {str(e)}")
 
     return redirect(reverse('admin:proxies_proxy_changelist'))
 ```
@@ -628,8 +633,8 @@ config = AdminConfig(
         # Changelist actions (buttons above listing, no selection needed)
         ActionConfig(
             name='sync_all_providers',
-            action_type='changelist',  # 🎯 Button above listing!
-            description='🔄 Sync All Providers',
+            action_type='changelist',  # Button above listing!
+            description='Sync All Providers',
             variant='primary',
             icon='sync',
             confirmation=True,
@@ -637,7 +642,7 @@ config = AdminConfig(
         ),
         ActionConfig(
             name='sync_proxy6',
-            action_type='changelist',  # 🎯 Button above listing!
+            action_type='changelist',  # Button above listing!
             description='Sync Proxy6',
             variant='info',
             icon='cloud_sync',
@@ -651,7 +656,7 @@ config = AdminConfig(
 
 ```
 ┌────────────────────────────────────────────────────┐
-│  [🔄 Sync All Providers]  [Sync Proxy6]            │  ← Changelist actions
+│  [Sync All Providers]  [Sync Proxy6]            │  ← Changelist actions
 ├────────────────────────────────────────────────────┤
 │  Actions: [▼ Test selected proxies]                │  ← Bulk actions dropdown
 │                                                     │
@@ -684,13 +689,13 @@ config = AdminConfig(
 **Do NOT use old-style actions with `.short_description` attributes:**
 
 ```python
-# ❌ BAD - Old-style action
+# BAD - Old-style action
 def my_action(self, request, queryset):
     # do stuff
     pass
 my_action.short_description = "My Action"
 
-# ✅ GOOD - Use ActionConfig instead
+# GOOD - Use ActionConfig instead
 ActionConfig(
     name="my_action",
     description="My Action",
@@ -729,7 +734,8 @@ Django Admin provides decorators for custom display methods.
 For custom display logic in list views:
 
 ```python
-from django_cfg.modules.django_admin import computed_field, Icons
+from django_cfg.modules.django_admin import computed_field
+from django_cfg import Icons
 
 @admin.register(User)
 class UserAdmin(PydanticAdmin):
@@ -1014,9 +1020,16 @@ Putting it all together:
 from django.contrib import admin
 from django.db.models import Count
 from django_cfg.modules.django_admin import (
-    AdminConfig, BadgeField, CurrencyField, DateTimeField,
-    FieldsetConfig, Icons, UserField, computed_field, annotated_field,
+    AdminConfig,
+    BadgeField,
+    CurrencyField,
+    DateTimeField,
+    FieldsetConfig,
+    UserField,
+    computed_field,
+    annotated_field,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 from django_cfg.modules.django_admin.utils.displays import MoneyDisplay
 
@@ -1126,12 +1139,12 @@ class PaymentAdmin(PydanticAdmin):
 ### 1. Use Declarative Fields When Possible
 
 ```python
-# ✅ Good - Auto-generated display method
+# Good - Auto-generated display method
 display_fields=[
     CurrencyField(name="amount", currency="USD", precision=2)
 ]
 
-# ⚠️ Only when needed - Manual method
+# Only when needed - Manual method
 @computed_field("Amount")
 def amount_display(self, obj):
     return f"${obj.amount:.2f}"
@@ -1140,7 +1153,7 @@ def amount_display(self, obj):
 ### 2. Use self.html Builder
 
 ```python
-# ✅ Good - Rich HTML builder
+# Good - Rich HTML builder
 def status(self, obj):
     return self.html.badge("Active", variant="success", icon=Icons.CHECK_CIRCLE)
 
@@ -1154,7 +1167,7 @@ def details(self, obj):
 ### 3. Apply Query Optimizations in Config
 
 ```python
-# ✅ Good - Automatic optimization
+# Good - Automatic optimization
 config = AdminConfig(
     model=Order,
     select_related=["user", "product"],
@@ -1167,7 +1180,7 @@ config = AdminConfig(
 ### 4. Use Annotations for Database Aggregations
 
 ```python
-# ✅ Database-level computation (efficient)
+# Good: database-level computation (efficient)
 config = AdminConfig(
     model=User,
     annotations={'order_count': Count('orders')},
@@ -1177,7 +1190,7 @@ config = AdminConfig(
 def order_count_display(self, obj):
     return self.html.badge(f"{obj.order_count} orders", variant="info")
 
-# ⚠️ Python-level computation (creates N+1 queries)
+# Python-level computation (creates N+1 queries)
 @computed_field("Orders")
 def order_count_display(self, obj):
     count = obj.orders.count()  # Extra query per row

@@ -131,7 +131,7 @@ from .environment import env
 
 class MyDjangoConfig(DjangoConfig):
     # Single database (default for most SaaS apps)
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url),
     }
 
@@ -201,7 +201,7 @@ DATABASE__URL_REPLICA="postgresql://readonly:pass@db-replica.example.com/mydb"
 ```python
 # api/config.py
 class MyDjangoConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(url=env.database.url),
     }
 

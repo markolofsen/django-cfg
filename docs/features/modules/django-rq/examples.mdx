@@ -513,8 +513,7 @@ schedules=[
         func="apps.crypto.tasks.import_coins",
         cron="0 3 * * *",
         queue="low",
-        source="api",
-        batch_size=50,
+        kwargs={"source": "api", "batch_size": 50},  # task-specific arguments go in kwargs
         description="Daily coin import from API",
     ),
 ]

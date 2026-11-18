@@ -1,6 +1,7 @@
 """MCP Module Configuration."""
 
 from typing import Dict, List, Optional
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
@@ -720,7 +721,7 @@ class DjangoMCPModuleConfig(BaseModel):
         if count < 1:
             raise ValueError("Rate limit count must be positive")
         if period not in ("second", "minute", "hour", "day"):
-            raise ValueError(f"Period must be one of: second, minute, hour, day")
+            raise ValueError("Period must be one of: second, minute, hour, day")
         return v
 
     def is_model_exposed(self, app_label: str, model_name: str) -> bool:

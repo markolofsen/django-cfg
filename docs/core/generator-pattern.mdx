@@ -85,7 +85,7 @@ Coordinates all specialized generators.
 11. **Session Settings** - SESSION_ENGINE
 12. **Third-Party Settings** - Unfold, Constance, etc.
 13. **API Settings** - DRF, Spectacular, JWT
-14. **Tasks Settings** - ReArq
+14. **Tasks Settings** - Django-RQ
 
 ## Specialized Generators
 
@@ -431,30 +431,22 @@ class CustomSettingsGenerator:
 Complete flow from config to settings:
 
 ```python
-from django_cfg import DjangoConfig
-from django_cfg.models import DatabaseConfig, CacheConfig
+from django_cfg import DjangoConfig, DatabaseConfig, CacheConfig
 
 # 1. Define configuration
-class MyProjectConfig(DjangoConfig):
-    project_name = "My Project"
-    secret_key = "your-secret-key"
-
-    databases = {
+config = DjangoConfig(
+    project_name="My Project",
+    secret_key="x" * 50,  # in real code: env.secret_key
+    databases={
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="mydb",
         )
-    }
+    },
+    cache_default=CacheConfig(redis_url="redis://localhost:6379/1", timeout=300),
+)
 
-    cache_default = CacheConfig(
-        backend="django.core.cache.backends.redis.RedisCache",
-        location="redis://localhost:6379/1",
-    )
-
-# 2. Instantiate configuration
-config = MyProjectConfig()
-
-# 3. Generate settings (happens automatically in get_all_settings)
+# 2. Generate settings (happens automatically in get_all_settings)
 settings = config.get_all_settings()
 
 # Behind the scenes:

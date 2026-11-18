@@ -11,16 +11,15 @@ keywords:
 
 # CLI Tools Introduction
 
-Django-CFG provides a powerful command-line interface built with **Click** for project management, development, and deployment tasks.
+Django-CFG ships a small **Click** command, `django-cfg`, for creating projects and checking the installation. Everything else is a Django management command run with `python manage.py`.
 
 ## Overview
 
 The CLI system includes:
 
-- **Project Creation** - Bootstrap new Django projects with full Django-CFG setup
-- **Information Display** - Check installation status and dependencies
-- **Enhanced Commands** - Improved versions of standard Django management commands
-- **Development Tools** - Utilities for configuration validation and debugging
+- **`django-cfg create-project`** - Bootstrap a new Django project from the latest template
+- **`django-cfg info`** - Check installation status and dependencies
+- **Management commands** - `python manage.py <command>` for settings, URLs, migrations, health checks, RQ, code generation and more
 
 ## Installation
 
@@ -48,11 +47,8 @@ django-cfg create-project "My Awesome Project"
 # Create project in specific location
 django-cfg create-project "My Project" --path ./projects/
 
-# Skip automatic dependency installation
-django-cfg create-project "My Project" --no-deps
-
-# Use pip instead of Poetry
-django-cfg create-project "My Project" --use-pip
+# Overwrite an existing directory
+django-cfg create-project "My Project" --force
 ```
 
 ### Check System Information
@@ -65,35 +61,35 @@ django-cfg info
 django-cfg info --verbose
 ```
 
-## Enhanced Management Commands
+## Management Commands
 
-Django-CFG projects include enhanced versions of standard Django commands:
+Django-CFG adds its own management commands next to the standard ones:
 
 ```bash
 # In your Django-CFG project directory
 cd my_project/
 
 # Enhanced runserver with better output
-poetry run cli runserver --port 8080 --host 0.0.0.0
+poetry run python manage.py runserver 0.0.0.0:8080
 
 # Smart migrator with automatic database detection
-poetry run cli migrator --auto
+poetry run python manage.py migrator --auto
 
 # Check settings and diagnostics
 poetry run python manage.py check_settings --verbose
 
 # Show project URLs in table format
-poetry run cli show-urls --format table
+poetry run python manage.py show_urls --format table
 
-# Enhanced superuser creation
-poetry run cli superuser --email admin@example.com
+# Superuser creation
+poetry run python manage.py superuser --email admin@example.com
 ```
 
 ## Features
 
 ### Rich Output
 
-The CLI uses **Rich** library for beautiful, colored output:
+The commands print colored output with the **Rich** library:
 
 - ✅ **Success indicators** with green checkmarks
 - ⚠️ **Warnings** with yellow alerts  
@@ -108,65 +104,30 @@ The CLI uses **Rich** library for beautiful, colored output:
 - **Environment-aware** configuration loading
 - **Dependency checking** with helpful error messages
 
-### Type Safety
-
-All CLI commands use **Click** with full type hints:
-
-```python
-@click.command()
-@click.argument("project_name", type=str)
-@click.option("--port", type=int, default=8000)
-@click.option("--debug", is_flag=True)
-def runserver(project_name: str, port: int, debug: bool):
-    """Enhanced runserver command."""
-    pass
-```
-
-## Development Mode
-
-When developing Django-CFG itself, additional commands are available:
-
-```bash
-# Create template archive for project creation
-python scripts/template_manager.py create
-
-# Validate all configurations
-python scripts/validate_configs.py
-
-# Run comprehensive tests
-python scripts/test_all.py
-```
-
 ## Command Categories
 
 ### Project Management
 - `create-project` - Create new Django projects
 - `info` - System and installation information
 
-### Development Tools  
-- `runserver` - Enhanced development server
-- `migrator` - Smart database migrations
+### Management commands (`python manage.py ...`)
+- `migrator`, `migrate_all` - Smart database migrations
 - `check_settings` - Configuration validation and diagnostics
-
-### Utilities
-- `show-config` - Display current configuration
-- `show-urls` - List all URL patterns
-- `superuser` - Enhanced superuser creation
-- `test-email` - Test email configuration
-- `test-telegram` - Test Telegram integration
+- `show_config` - Display current configuration
+- `show_urls`, `list_urls` - List URL patterns
+- `superuser` - Superuser creation
+- `test_email`, `test_telegram` - Test email and Telegram integration
+- `gen` - Generate API clients
+- `log_noise` - Rank repeated log lines (`--stdin`)
 
 ## Integration with Django
 
-Django-CFG CLI commands seamlessly integrate with standard Django management:
+Standard Django commands keep working; the commands above are added by the `django_cfg` app:
 
 ```bash
-# Standard Django commands still work
 python manage.py runserver
 python manage.py migrate
-
-# Enhanced CLI commands provide better UX
-poetry run cli runserver    # Better output, more options
-poetry run cli migrator     # Smart database detection
+python manage.py migrator --auto     # smart database detection
 ```
 
 ## Command Reference

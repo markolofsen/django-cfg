@@ -5,20 +5,18 @@ Uses StatusBadgesField, FilterConfig (range_date), ActionConfig, StackedField
 from django_cfg.modules.django_admin for a clean, code-reduced admin.
 """
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.contrib import messages
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
+from django_cfg.icons import Icons
 from django_cfg.modules.django_admin import (
     ActionConfig,
     AdminConfig,
-    BadgeField,
     BadgeRule,
     BooleanField,
     DateTimeField,
     FilterConfig,
-    Icons,
     RowItem,
     StackedField,
     StatusBadgesField,
@@ -31,7 +29,6 @@ from django_cfg.modules.django_admin.base import PydanticAdmin
 # `is_newsletter_enabled()` / `is_support_enabled()`, methods that do not exist.
 # Left in place it would read as "this admin consults feature flags", which is
 # precisely the impression that kept four dead code paths looking intentional.
-
 from ..models import CustomUser
 from .filters import UserStatusFilter
 from .inlines import (
@@ -40,7 +37,6 @@ from .inlines import (
     UserRegistrationSourceInline,
 )
 from .resources import CustomUserResource
-
 
 # ===== Action handlers =====
 

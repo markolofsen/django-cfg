@@ -14,8 +14,8 @@ description: Comprehensive comparison of Django-CFG vs django-environ, python-de
 **Bottom Line**: Choose based on your needs:
 - **Simple projects** (< 10 config values): django-environ or python-decouple
 - **Production applications** (type safety critical): Django-CFG or pydantic-settings
-- **Django-specific features** (built-in apps, Streamlit admin, AI agents): Django-CFG (only option)
-- **Modern admin interfaces** (real-time dashboards): Django-CFG (built-in Streamlit integration)
+- **Django-specific features** (built-in apps, admin, AI agents): Django-CFG (only option)
+- **Modern admin interfaces** (dashboards): Django-CFG (built-in Unfold admin)
 
 TAGS: comparison, alternatives, decision-guide, django-environ, pydantic-settings, python-decouple
 DEPENDS_ON: [django, pydantic, configuration-management]
@@ -32,8 +32,8 @@ USED_BY: [developers, tech-leads, architects]
 | **Startup Validation** | ✅ Yes | ❌ No | ❌ No | ✅ Yes | ❌ No |
 | **Django Integration** | ✅ Native | ⚠️ Partial | ❌ Generic | ❌ Generic | ✅ Native |
 | **Nested Config** | ✅ Models | ❌ Flat | ❌ Flat | ✅ Models | ⚠️ Dicts |
-| **Built-in Apps** | ✅ 9 apps | ❌ None | ❌ None | ❌ None | ❌ None |
-| **Streamlit Admin** | ✅ Built-in | ❌ None | ❌ None | ❌ None | ❌ None |
+| **Built-in Apps** | ✅ Yes | ❌ None | ❌ None | ❌ None | ❌ None |
+| **Modern Admin** | ✅ Unfold built-in | ❌ None | ❌ None | ❌ None | ❌ None |
 | **AI Agents** | ✅ Built-in | ❌ None | ❌ None | ❌ None | ❌ None |
 | **Multi-DB Routing** | ✅ Automatic | ❌ Manual | ❌ Manual | ❌ Manual | ⚠️ Manual |
 | **Lines of Code** | ✅ 30-50 | ⚠️ 150-200 | ⚠️ 150-200 | ⚠️ 100-150 | ❌ 200-500+ |
@@ -51,17 +51,17 @@ USED_BY: [developers, tech-leads, architects]
 **django-environ** is the most popular Django configuration library (8.5K+ GitHub stars). It provides a simple API for reading environment variables with type casting.
 
 **Strengths**:
-- ✅ Simple, minimal API
-- ✅ Well-established (7+ years)
-- ✅ Good documentation
-- ✅ Small footprint
+- Simple, minimal API
+- Well-established (7+ years)
+- Good documentation
+- Small footprint
 
 **Weaknesses**:
-- ❌ No type validation at startup
-- ❌ No IDE autocomplete
-- ❌ Runtime type casting (can fail silently)
-- ❌ Flat configuration only
-- ❌ No built-in features
+- No type validation at startup
+- No IDE autocomplete
+- Runtime type casting (can fail silently)
+- Flat configuration only
+- No built-in features
 
 ---
 
@@ -181,25 +181,25 @@ class MyConfig(DjangoConfig):
 | **Configuration Format** | .env (flat key=value) | YAML (nested) + Python |
 | **Database URL Parsing** | Built-in | Built-in (DatabaseConfig) |
 | **Lines of Code** | ~150 for full app | ~30-50 for full app |
-| **Built-in Apps** | None | 9 production apps |
+| **Built-in Apps** | None | built-in apps |
 
 ---
 
 ### When to Use Each
 
 **Use django-environ when**:
-- ✅ Simple project (< 10 environment variables)
-- ✅ Team doesn't use type hints
-- ✅ Quick prototype or MVP
-- ✅ Minimal dependencies preferred
+- Simple project (< 10 environment variables)
+- Team doesn't use type hints
+- Quick prototype or MVP
+- Minimal dependencies preferred
 
 **Use Django-CFG when**:
-- ✅ Production application
-- ✅ Type safety is critical
-- ✅ Complex configuration (multi-database, caching, etc.)
-- ✅ Want built-in apps (support, accounts, AI agents)
-- ✅ Team uses mypy/pyright
-- ✅ Need IDE autocomplete
+- Production application
+- Type safety is critical
+- Complex configuration (multi-database, caching, etc.)
+- Want built-in apps (support, accounts, AI agents)
+- Team uses mypy/pyright
+- Need IDE autocomplete
 
 ---
 
@@ -230,148 +230,31 @@ class MyConfig(DjangoConfig):
 
 ---
 
-## Built-in Streamlit Admin
+## Built-in Admin
 
-### The Django-CFG Advantage: Modern Admin Out of the Box
+### Modern Admin Out of the Box
 
-One of Django-CFG's **unique features** that no other configuration library provides: **built-in Streamlit admin** that runs as a Django child process.
+Django-CFG ships an Unfold-based admin (Tailwind, dark mode) with a dashboard and `PydanticAdmin` for declarative model admins. It needs no separate process or service.
 
-**What you get**:
-- ⚡ **Auto-Start** - Starts with Django, dies when Django dies
-- 🐳 **No Separate Service** - No extra Docker container or process management
-- 🔐 **JWT Authentication** - Automatic token injection from Django
-- 🎨 **Vercel-Style Dark Theme** - Modern UI out of the box
-- 📊 **Real-Time Updates** - Built-in with Streamlit
-- 🐍 **Python-Only** - No Node.js/npm required
-- 🔌 **Custom Extensions** - Add pages with Python decorators
-
----
-
-### Code Comparison: Admin Setup
-
-**Without Django-CFG** (Manual Setup):
 ```python
-# settings.py - Traditional approach
-INSTALLED_APPS = [
-    'django.contrib.admin',
-    'rest_framework',  # Need to install
-    'rest_framework_simplejwt',  # Need to install
-    # ... manual configuration
-]
-
-# Manual JWT setup
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-}
-
-# Then manually:
-# 1. Set up Streamlit project structure
-# 2. Configure subprocess management
-# 3. Handle process lifecycle
-# 4. Set up authentication flow
-# 5. Configure port discovery
-# 6. Handle hot reload
-
-# Total: Complex subprocess management
-```
-
-**With Django-CFG** (One Line):
-```python
-# config.py
-from django_cfg import DjangoConfig, StreamlitAdminConfig
+from django_cfg import DjangoConfig, UnfoldConfig
 
 config = DjangoConfig(
     project_name="My Project",
-
-    # That's it! Streamlit auto-starts with Django:
-    streamlit_admin=StreamlitAdminConfig(
-        app_path="streamlit",
-        port=8501,
-        auto_start=True,
-    ),
+    secret_key="x" * 50,
+    unfold=UnfoldConfig(site_title="My Admin", theme=None),  # None = theme switcher
 )
-
-# Everything else is automatic:
-# ✅ Starts as Django child process
-# ✅ Auto-finds free port if busy
-# ✅ JWT authentication configured
-# ✅ Dies when Django dies
-# ✅ Works in single Docker container
-
-# Total: 1 config block + zero manual setup
 ```
 
----
-
-### Auto-Start Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Django Process                            │
-│                                                               │
-│  python manage.py runserver                                  │
-│       │                                                       │
-│       └──► Spawns Streamlit as child process                │
-│            │                                                  │
-│            ├── Port 8501 (or next free)                      │
-│            ├── Inherits Django settings                      │
-│            └── Auto-dies when Django stops                   │
-│                                                               │
-│  Console output:                                             │
-│  Streamlit started on port 8501 (PID: 12345)                │
-│  Streamlit admin available at: http://localhost:8501        │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**No separate Docker service needed!**
-
----
-
-### Custom Extensions with Python Decorators
-
-```python
-# streamlit/extensions.py
-from core.registry import page_registry
-import streamlit as st
-
-# Register custom group
-page_registry.register_group("Project", icon="briefcase", order=50)
-
-# Register custom page
-@page_registry.register("Analytics", icon="bar-chart-line", group="Project")
-def render_analytics_page():
-    st.title("Analytics")
-
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total Users", "1,234", "+12%")
-    with col2:
-        st.metric("Active Today", "567", "+5%")
-    with col3:
-        st.metric("Revenue", "$12,345", "+8%")
-```
-
----
-
-### Why This Matters
-
-**Other configuration libraries** focus only on settings management. **Django-CFG** provides a complete modern admin:
+The dashboard is at `/admin/`; its tabs are server-rendered pages at `/cfg/admin/dashboard/<slug>/`.
 
 | Feature | django-environ | pydantic-settings | Django-CFG |
 |---------|----------------|-------------------|------------|
-| **Admin Interface** | Django admin only | Django admin only | Django + Streamlit |
-| **Real-Time Updates** | N/A | N/A | ✅ Built-in |
-| **Process Management** | Manual | Manual | ✅ Automatic |
-| **Docker Complexity** | Multiple services | Multiple services | ✅ Single container |
-| **Setup Time** | Hours | Hours | **1 minute** |
+| **Admin interface** | Django admin only | Django admin only | Unfold admin with dashboard |
+| **Admin classes** | Manual | Manual | `PydanticAdmin` |
+| **Separate services** | n/a | n/a | None |
 
----
-
-### Learn More
-
-See the archived `streamlit-admin` documentation for configuration, custom pages, and theming.
+See [Django Admin](/features/modules/django-admin) for configuration and custom pages.
 
 ---
 
@@ -382,16 +265,16 @@ See the archived `streamlit-admin` documentation for configuration, custom pages
 **python-decouple** is a lightweight library for separating settings from code (2.7K+ GitHub stars). Framework-agnostic (works with Flask, FastAPI, etc.).
 
 **Strengths**:
-- ✅ Very simple API
-- ✅ Framework-agnostic
-- ✅ Multiple file formats (.env, .ini)
-- ✅ Tiny footprint
+- Very simple API
+- Framework-agnostic
+- Multiple file formats (.env, .ini)
+- Tiny footprint
 
 **Weaknesses**:
-- ❌ No Django-specific features
-- ❌ No type validation
-- ❌ No IDE support
-- ❌ Generic, not optimized for Django
+- No Django-specific features
+- No type validation
+- No IDE support
+- Generic, not optimized for Django
 
 ---
 
@@ -463,7 +346,7 @@ class MyConfig(DjangoConfig):
 | **Config Format** | .env, .ini | YAML + Python |
 | **Django Integration** | ❌ Generic | ✅ Native (ORM, admin, etc.) |
 | **Smart Defaults** | ❌ Manual | ✅ Automatic |
-| **Built-in Features** | ❌ None | ✅ 9 apps + AI agents |
+| **Built-in Features** | ❌ None | ✅ built-in apps + AI agents |
 | **Lines of Code** | ~180 for full app | ~30-50 for full app |
 
 ---
@@ -471,16 +354,16 @@ class MyConfig(DjangoConfig):
 ### When to Use Each
 
 **Use python-decouple when**:
-- ✅ Multi-framework project (Django + Flask)
-- ✅ Extremely simple configuration
-- ✅ Want framework-agnostic solution
-- ✅ Need .ini file support
+- Multi-framework project (Django + Flask)
+- Extremely simple configuration
+- Want framework-agnostic solution
+- Need .ini file support
 
 **Use Django-CFG when**:
-- ✅ Django-only project
-- ✅ Want Django-specific optimizations
-- ✅ Need type safety and validation
-- ✅ Building production application
+- Django-only project
+- Want Django-specific optimizations
+- Need type safety and validation
+- Building production application
 
 ---
 
@@ -491,16 +374,16 @@ class MyConfig(DjangoConfig):
 **pydantic-settings** (part of Pydantic ecosystem) provides type-safe settings management using Pydantic BaseSettings.
 
 **Strengths**:
-- ✅ Type-safe (Pydantic v2)
-- ✅ Validation at startup
-- ✅ Part of Pydantic ecosystem
-- ✅ Framework-agnostic
+- Type-safe (Pydantic v2)
+- Validation at startup
+- Part of Pydantic ecosystem
+- Framework-agnostic
 
 **Weaknesses**:
-- ❌ No Django-specific features
-- ❌ Requires manual Django integration
-- ❌ No built-in apps or utilities
-- ❌ Generic settings model (not Django-aware)
+- No Django-specific features
+- Requires manual Django integration
+- No built-in apps or utilities
+- Generic settings model (not Django-aware)
 
 ---
 
@@ -598,7 +481,7 @@ globals().update(config.get_all_settings())
 | **Django Integration** | Manual conversion required | Automatic (`get_all_settings()`) |
 | **Smart Defaults** | None | ✅ MIDDLEWARE, INSTALLED_APPS, etc. |
 | **Security Helpers** | Manual | ✅ `security_domains` auto-config |
-| **Built-in Apps** | None | ✅ 9 production apps |
+| **Built-in Apps** | None | ✅ built-in apps |
 | **Database Models** | Generic fields | ✅ `DatabaseConfig` with routing |
 | **Cache Models** | Generic fields | ✅ `CacheConfig` with backends |
 | **Multi-DB Routing** | Manual router class | ✅ Automatic from config |
@@ -609,17 +492,17 @@ globals().update(config.get_all_settings())
 ### When to Use Each
 
 **Use pydantic-settings when**:
-- ✅ Multi-framework project (Django + FastAPI)
-- ✅ Want generic Pydantic solution
-- ✅ Don't need Django-specific features
-- ✅ Prefer full control over Django integration
+- Multi-framework project (Django + FastAPI)
+- Want generic Pydantic solution
+- Don't need Django-specific features
+- Prefer full control over Django integration
 
 **Use Django-CFG when**:
-- ✅ Django-only project
-- ✅ Want automatic Django settings generation
-- ✅ Need built-in apps (support, accounts, AI agents)
-- ✅ Want minimal configuration code
-- ✅ Need Django-specific helpers (security_domains, multi-DB routing)
+- Django-only project
+- Want automatic Django settings generation
+- Need built-in apps (support, accounts, AI agents)
+- Want minimal configuration code
+- Need Django-specific helpers (security_domains, multi-DB routing)
 
 ---
 
@@ -672,18 +555,18 @@ globals().update(config.get_all_settings())  # Auto-generates DATABASES
 **How Django works by default**: Configuration as Python module with global variables.
 
 **Strengths**:
-- ✅ Native Django approach
-- ✅ No external dependencies
-- ✅ Full control
-- ✅ Well-documented
+- Native Django approach
+- No external dependencies
+- Full control
+- Well-documented
 
 **Weaknesses**:
-- ❌ No type safety
-- ❌ No validation until runtime
-- ❌ Manual environment variable parsing
-- ❌ Hard to test different configurations
-- ❌ Configuration sprawl (multiple settings files)
-- ❌ 200-500+ lines of code
+- No type safety
+- No validation until runtime
+- Manual environment variable parsing
+- Hard to test different configurations
+- Configuration sprawl (multiple settings files)
+- 200-500+ lines of code
 
 ---
 
@@ -793,17 +676,17 @@ globals().update(config.get_all_settings())
 ### When to Use Each
 
 **Use traditional settings.py when**:
-- ✅ Learning Django (tutorial projects)
-- ✅ Very simple app (< 10 settings)
-- ✅ Want zero dependencies
-- ✅ Full control over every detail
+- Learning Django (tutorial projects)
+- Very simple app (< 10 settings)
+- Want zero dependencies
+- Full control over every detail
 
 **Use Django-CFG when**:
-- ✅ Production application
-- ✅ Want type safety and validation
-- ✅ Team size > 3 developers
-- ✅ Complex configuration (multi-DB, caching, etc.)
-- ✅ Need faster onboarding
+- Production application
+- Want type safety and validation
+- Team size > 3 developers
+- Complex configuration (multi-DB, caching, etc.)
+- Need faster onboarding
 
 ---
 
@@ -857,31 +740,31 @@ Q6: Is your team comfortable with Pydantic?
 ### Key Decision Factors
 
 **Choose Django-CFG if you need**:
-- ✅ Type safety (Pydantic v2)
-- ✅ IDE autocomplete
-- ✅ **Streamlit admin integration** (auto-start as Django child process)
-- ✅ Built-in apps (support, accounts, AI agents)
-- ✅ Auto TypeScript generation from Django models
-- ✅ Minimal configuration code
-- ✅ Django-specific optimizations
-- ✅ Automatic security settings
+- Type safety (Pydantic v2)
+- IDE autocomplete
+- Built-in Unfold admin with a dashboard
+- Built-in apps (support, accounts, AI agents)
+- Auto TypeScript generation from Django models
+- Minimal configuration code
+- Django-specific optimizations
+- Automatic security settings
 
 **Choose django-environ if you need**:
-- ✅ Simple, minimal API
-- ✅ Gradual migration from settings.py
-- ✅ Small footprint
-- ✅ Well-established solution
+- Simple, minimal API
+- Gradual migration from settings.py
+- Small footprint
+- Well-established solution
 
 **Choose pydantic-settings if you need**:
-- ✅ Type safety (Pydantic v2)
-- ✅ Multi-framework support
-- ✅ Generic configuration
-- ✅ Part of Pydantic ecosystem
+- Type safety (Pydantic v2)
+- Multi-framework support
+- Generic configuration
+- Part of Pydantic ecosystem
 
 **Choose traditional settings.py if you need**:
-- ✅ Zero dependencies
-- ✅ Learning Django
-- ✅ Full manual control
+- Zero dependencies
+- Learning Django
+- Full manual control
 
 ---
 
@@ -889,17 +772,7 @@ Q6: Is your team comfortable with Pydantic?
 
 ### Does Django-CFG include a modern admin interface?
 
-Yes! Django-CFG is the **only** Django configuration library with **built-in Streamlit admin**:
-
-- **Auto-Start** - Runs as Django child process, no separate service needed
-- **Zero Configuration** - One config block: `streamlit_admin=StreamlitAdminConfig(app_path="streamlit")`
-- **Python-Only** - No Node.js/npm required, just Python
-- **Real-Time** - Built-in real-time updates with Streamlit
-- **Custom Extensions** - Add pages with Python decorators
-
-**Setup time**: 1 minute vs hours of manual setup with other libraries.
-
-See the archived `streamlit-admin` docs for details.
+Yes. It ships an Unfold admin (Tailwind, dark mode) with a dashboard at `/admin/` and `PydanticAdmin` for declarative model admins. No separate process is needed.
 
 ---
 
@@ -932,7 +805,7 @@ globals().update(settings)
 
 ### Which is faster: Django-CFG or alternatives?
 
-**Startup Performance** (measured on Django 5.0):
+**Startup Performance** (measured on Django 5.x):
 
 | Solution | Import Time | Validation Time | Total |
 |----------|-------------|-----------------|-------|

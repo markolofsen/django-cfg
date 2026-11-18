@@ -30,9 +30,12 @@ For Django app extensions in `extensions/apps/`. These are full Django apps with
 |-------|------|---------|-------------|
 | `admin_enabled` | `bool` | `True` | Show in admin interface |
 | `middleware_classes` | `list[str]` | `[]` | Middleware classes to add to MIDDLEWARE |
-| `navigation` | `Optional[NavigationSection]` | `None` | Admin navigation section |
+| `navigation` | `NavigationSection \| list[NavigationSection] \| None` | `None` | Admin navigation section(s) |
 | `constance_fields` | `list[ConstanceField]` | `[]` | Dynamic settings via django-constance |
-| `schedules` | `list[RQScheduleConfig]` | `[]` | RQ scheduled tasks |
+| `schedules` | `list[ExtensionScheduleConfig]` | `[]` | RQ scheduled tasks |
+| `extra_installed_apps` | `list[str]` | `[]` | Extra apps added to `INSTALLED_APPS` after the extension's own (multi-app extensions) |
+| `openapi_groups` | `list[OpenAPIGroupConfig]` | `[]` | OpenAPI groups merged into the project's `openapi_client.groups` |
+| `dashboard_tabs` | `list[DashboardTab]` | `[]` | Admin dashboard tabs merged into `DashboardConfig.tabs` |
 | `url_prefix` | `Optional[str]` | `None` | URL path segment override |
 | `url_namespace` | `Optional[str]` | `None` | Django URL namespace |
 
@@ -361,6 +364,9 @@ The extension's navigation is defined in its base settings (you don't need to co
 
 ```python
 # This is defined in BaseExtensionSettings (you inherit it)
+from django_cfg import Icons
+from django_cfg.extensions.configs.apps.base import NavigationItem, NavigationSection
+
 navigation = NavigationSection(
     title="Payments",
     icon=Icons.PAYMENT,

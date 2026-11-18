@@ -33,7 +33,7 @@ class DateTimeDisplay:
             try:
                 from django.apps import apps
                 if apps.ready:
-                    from ....modules.base import BaseCfgModule
+                    from ....base import BaseCfgModule
                     config = BaseCfgModule.get_config()
                     if config and hasattr(config, 'admin_timezone') and config.admin_timezone:
                         from zoneinfo import ZoneInfo

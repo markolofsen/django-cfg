@@ -1,25 +1,75 @@
 ---
 title: Django Integration
-description: Django integration guide for Django-CFG.
+description: How a DjangoConfig becomes Django settings, URLs and apps, with the three lines that wire it into a project.
 ---
 
 # Django Integration
 
-Documentation coming soon.
+django-cfg plugs into Django at three points: `settings.py`, `urls.py` and `manage.py`/`wsgi.py`.
 
-## Quick Start
+## settings.py
 
-Django-CFG seamlessly integrates with Django's settings system.
+Create the config once, then load its generated settings into the settings module:
 
 ```python
+# myproject/config.py
 from django_cfg import DjangoConfig
 
 class MyConfig(DjangoConfig):
     project_name: str = "My Project"
+    secret_key: str = "change-me-in-env"
     root_urlconf: str = "myproject.urls"
+    wsgi_application: str = "myproject.wsgi.application"
+
+config = MyConfig()
+```
+
+```python
+# myproject/settings.py
+from .config import config
+
+globals().update(config.get_all_settings())
+```
+
+`get_all_settings()` validates the config, registers it as the current config
+(`get_current_config()` returns it) and returns the complete settings dict: `INSTALLED_APPS`,
+`MIDDLEWARE`, `DATABASES`, `CACHES`, `TEMPLATES`, `LOGGING`, `REST_FRAMEWORK`, security and
+email settings. The result is cached on the config instance. Anything you assign after the
+`globals().update(...)` line overrides the generated value.
+
+## urls.py
+
+```python
+from django.urls import include, path
+from django_cfg import add_django_cfg_urls, admin_urlpatterns
+
+urlpatterns = [
+    path("api/", include("api.urls")),
+    *admin_urlpatterns(),
+]
+
+urlpatterns = add_django_cfg_urls(urlpatterns)
+```
+
+See [Routing](./routing) for the URLs that `add_django_cfg_urls` mounts.
+
+## App startup
+
+`django_cfg` is added to `INSTALLED_APPS` by the generator. Its `AppConfig.ready()` runs the
+[startup hooks and system checks](./startup) and prints the startup line.
+
+## Reading the config at runtime
+
+```python
+from django_cfg.core.state import get_current_config
+
+config = get_current_config()
+config.env_mode
 ```
 
 ## See Also
 
 - [**Configuration Guide**](../configuration) - DjangoConfig models
+- [**Builder Pattern**](./builder-pattern) - How `INSTALLED_APPS` and `MIDDLEWARE` are built
+- [**Generator Pattern**](./generator-pattern) - How the settings dict is generated
 - [**Getting Started**](../getting-started/first-project) - First project

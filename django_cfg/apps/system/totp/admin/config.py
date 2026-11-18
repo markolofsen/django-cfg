@@ -1,12 +1,12 @@
 """Admin configuration for TOTP models."""
 
+from django_cfg.icons import Icons
 from django_cfg.modules.django_admin import (
     ActionConfig,
     AdminConfig,
     BadgeField,
     DateTimeField,
     FieldsetConfig,
-    Icons,
     ShortUUIDField,
 )
 

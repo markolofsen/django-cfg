@@ -10,18 +10,18 @@ through an admin edit.
 """
 
 from django.contrib import admin
+
+from django_cfg.apps.payments.models import Payment, PaymentEvent
+from django_cfg.icons import Icons
 from django_cfg.modules.django_admin import (
     AdminConfig,
     BadgeField,
     DateTimeField,
     DocumentationConfig,
     FieldsetConfig,
-    Icons,
     TextField,
 )
 from django_cfg.modules.django_admin.base import PydanticAdmin
-
-from django_cfg.apps.payments.models import Payment, PaymentEvent
 
 
 class PaymentEventInline(admin.TabularInline):

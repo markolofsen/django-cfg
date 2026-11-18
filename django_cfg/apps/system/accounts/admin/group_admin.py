@@ -4,18 +4,16 @@ Group Admin v2.0 - NEW Declarative Pydantic Approach
 Enhanced group management with Material Icons and clean declarative config.
 """
 
-from django.contrib import admin
 from django.contrib.auth.models import Group
 
+from django_cfg.icons import Icons
 from django_cfg.modules.django_admin import (
     AdminConfig,
     BadgeField,
     FieldsetConfig,
-    Icons,
     computed_field,
 )
 from django_cfg.modules.django_admin.base import PydanticAdmin
-
 
 # ===== Group Admin =====
 

@@ -27,7 +27,8 @@ Display values as colored badges with optional icons.
 ### Basic Usage
 
 ```python
-from django_cfg.modules.django_admin import BadgeField, Icons
+from django_cfg.modules.django_admin import BadgeField
+from django_cfg import Icons
 
 # Simple badge
 BadgeField(
@@ -162,8 +163,8 @@ display_fields=[
 <Callout type="info">
 **Automatic Rendering**
 BooleanField automatically renders as:
-- ✅ Green checkmark for `True`
-- ❌ Red cross for `False`
+- Green checkmark for `True`
+- Red cross for `False`
 - "—" for `None`
 
 </Callout>
@@ -299,6 +300,6 @@ max-width: 300px;         /* Configurable width */
 
 ## Next Steps
 
-- [Display Fields](./display-fields) - Learn about AvatarField, UserField, and ImageField
+- [Display Fields](./display-fields) - Learn about UserField, ForeignKeyField, and ImageField
 - [Formatting Fields](./formatting-fields) - Explore CurrencyField, DateTimeField, and ShortUUIDField
-- [Advanced Fields](./advanced-fields) - Discover LinkField, StatusBadgesField, and CounterBadgeField
+- [Advanced Fields](./advanced-fields) - Discover StackedField, StatusBadgesField, and MarkdownField

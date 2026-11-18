@@ -13,12 +13,10 @@ from django_cfg.modules.django_admin import (
     DocumentationConfig,
     FieldsetConfig,
     TextField,
-    Icons,
 )
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 from ..models import City, Country, State
-
 
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║                              COUNTRY                                      ║

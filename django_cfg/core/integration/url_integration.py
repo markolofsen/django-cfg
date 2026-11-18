@@ -49,7 +49,9 @@ def _get_openapi_group_urls() -> List[URLPattern]:
         added_apps: Set[str] = set()
 
         # Import discovery helper lazily to avoid circular imports
-        from django_cfg.modules.django_generator.openapi.groups.discovery import discover_app_url_modules
+        from django_cfg.modules.django_generator.openapi.groups.discovery import (
+            discover_app_url_modules,
+        )
 
         # Get all groups from config
         for group_config in service.config.groups:
@@ -165,12 +167,13 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
     """
     # Add django_cfg API URLs
     # Note: URL prefixes (cfg/, healthz, etc.) are defined in django_cfg.apps.urls
-    from .root_view import root_view
+    from .root_view import favicon_view, root_view
 
     # The root route comes after the project's, so a project's own "" route wins.
     new_patterns = urlpatterns + [
         path("", include("django_cfg.apps.urls")),
         path("", root_view, name="django_cfg_root"),
+        path("favicon.ico", favicon_view, name="django_cfg_favicon"),
     ]
 
     # Automatically add OpenAPI group URLs from config
@@ -211,8 +214,9 @@ def add_django_cfg_urls(urlpatterns: List[URLPattern]) -> List[URLPattern]:
     media_url = getattr(settings, 'MEDIA_URL', None)
 
     if media_root and media_url:
-        from django.urls import re_path
         from urllib.parse import urlparse
+
+        from django.urls import re_path
 
         # Extract path prefix from media_url
         if media_url.startswith(('http://', 'https://', '//')):
@@ -247,7 +251,6 @@ def get_django_cfg_urls_info() -> dict:
         Dictionary with complete URL integration info
     """
     from django_cfg.config import (
-        LIB_SITE_URL,
         LIB_GITHUB_URL,
         LIB_HEALTH_URL,
         LIB_NAME,
@@ -288,7 +291,9 @@ def get_django_cfg_urls_info() -> dict:
 
     # Add Django Client info if available
     try:
-        from django_cfg.modules.django_generator.openapi.pipeline.config.service import DjangoOpenAPI
+        from django_cfg.modules.django_generator.openapi.pipeline.config.service import (
+            DjangoOpenAPI,
+        )
         service = DjangoOpenAPI.instance()
         if service.config and service.config.enabled:
             info["django_client"] = {

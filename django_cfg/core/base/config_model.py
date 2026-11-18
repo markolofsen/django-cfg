@@ -23,10 +23,12 @@ from django_cfg.modules.django_mcp.__cfg__ import DjangoMCPModuleConfig  # noqa:
 from django_cfg.modules.django_notion.__cfg__ import NotionConfig  # noqa: F401
 
 from ...models import (
+    AccountEmailsConfig,
+    AdminAccessConfig,
+    AnalyticsConfig,
     ApiKeys,
     AxesConfig,
     CacheConfig,
-    AnalyticsConfig,
     ChatConfig,
     CurrencyConfig,
     DatabaseConfig,
@@ -34,14 +36,12 @@ from ...models import (
     DRFConfig,
     EmailConfig,
     GeoConfig,
-    IndexNowConfig,
-    AccountEmailsConfig,
-    AdminAccessConfig,
-    PaymentsConfig,
-    SimpleHistoryConfig,
     GitHubOAuthConfig,
     GoogleOAuthConfig,
+    IndexNowConfig,
     LimitsConfig,
+    PaymentsConfig,
+    SimpleHistoryConfig,
     SpectacularConfig,
     StorageConfig,
     TelegramConfig,
@@ -50,10 +50,10 @@ from ...models import (
 )
 from ...modules.django_dashboard.models import DashboardConfig
 from ...modules.django_logging.__cfg__ import DjangoLoggingConfig
-from ..utils.display_name import normalize_display_name, slugify_name
 from ..exceptions import ConfigurationError
 from ..site import SiteConfig, _netloc, check_email, check_locale, check_logo_url, normalize_origin
 from ..types.enums import EnvironmentMode, StartupInfoMode
+from ..utils.display_name import normalize_display_name, slugify_name
 
 # Brand fields a site owns once `sites` is declared: DjangoConfig field -> SiteConfig field.
 _SITE_OWNED_FIELDS = {
@@ -458,7 +458,7 @@ class DjangoConfig(BaseModel):
 
     # Always materialize a SpectacularConfig so its default
     # ``enum_name_overrides`` (pinning django-cfg's own enums like
-    # SystemHealthStatusEnum) reach SPECTACULAR_SETTINGS even when the
+    # OAuthErrorCodeEnum) reach SPECTACULAR_SETTINGS even when the
     # project never explicitly sets `spectacular=...`.
     spectacular: SpectacularConfig = Field(
         default_factory=SpectacularConfig,

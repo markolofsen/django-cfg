@@ -28,109 +28,114 @@ Example:
     ```
 """
 
-# Configure Django app
-default_app_config = "django_cfg.apps.DjangoCfgConfig"
-
 # Version information
-__version__ = "2.3.416"
+__version__ = "2.3.417"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
 from .core.debug import setup_warnings_debug
+
 setup_warnings_debug()
 
 # Start Django startup timer early (at module import time)
 try:
-    from .core.integration.timing import start_django_timer, get_django_timer
+    from .core.integration.timing import get_django_timer, start_django_timer
     if not get_django_timer():
         start_django_timer()
 except ImportError:
     pass
 
 # Library metadata
-from .config import LIB_NAME, LIB_SITE_URL, LIB_HEALTH_URL
+from .config import LIB_HEALTH_URL, LIB_NAME, LIB_SITE_URL
+
 __author__ = LIB_NAME
 
 # ---------------------------------------------------------------------------
 # [GROUP 1] Core configuration & integration
 # ---------------------------------------------------------------------------
-from .core.config import DjangoConfig, StartupInfoMode, set_current_config
-from .core.integration import add_django_cfg_urls, get_django_cfg_urls_info
 from .core.admin_access import admin_urlpatterns
+from .core.config import DjangoConfig, StartupInfoMode, set_current_config
 from .core.exceptions import (
-    DjangoCfgException,
-    ConfigurationError,
-    ValidationError,
-    DatabaseError,
     CacheError,
+    ConfigurationError,
+    DatabaseError,
+    DjangoCfgException,
     EnvironmentError,
+    ValidationError,
 )
-from .core.utils.url_helpers import get_media_url, build_media_url, build_api_url, get_api_url
-
-# ---------------------------------------------------------------------------
-# [GROUP 2] Infrastructure models
-# ---------------------------------------------------------------------------
-from .models.infrastructure.database import DatabaseConfig
-from .models.infrastructure.cache import CacheConfig
-from .models.infrastructure.security import SecurityConfig
-from .models.infrastructure.logging import LoggingConfig
+from .core.integration import add_django_cfg_urls, get_django_cfg_urls_info
+from .core.site import Site, SiteConfig, site_for, site_key, sites
+from .core.utils.url_helpers import build_api_url, build_media_url, get_api_url, get_media_url
+from .icons import IconCategories, Icons
+from .models.api.account_emails import AccountEmailsConfig
 
 # ---------------------------------------------------------------------------
 # [GROUP 3] API models
 # ---------------------------------------------------------------------------
-from .models.api.drf import DRFConfig, SpectacularConfig, SwaggerUISettings, RedocUISettings
+from .models.api.drf import DRFConfig, RedocUISettings, SpectacularConfig, SwaggerUISettings
 from .models.api.jwt import JWTConfig
-from .models.api.oauth import GitHubOAuthConfig, GoogleOAuthConfig, OAuthConfig
-from .models.api.limits import LimitsConfig
 from .models.api.keys import ApiKeys
+from .models.api.limits import LimitsConfig
+from .models.api.oauth import GitHubOAuthConfig, GoogleOAuthConfig, OAuthConfig
 from .models.api.twofactor import TwoFactorConfig
-from .models.api.account_emails import AccountEmailsConfig
+from .models.django.admin_access import AdminAccessConfig
+from .models.django.analytics import AnalyticsConfig
+from .models.django.axes import AxesConfig
+from .models.django.chat import AttachmentsConfig, ChatConfig
+from .models.django.constance import ConstanceConfig, ConstanceField
+from .models.django.currency import CurrencyConfig
+from .models.django.django_rq import DjangoRQConfig, RQQueueConfig, RQScheduleConfig
 
 # ---------------------------------------------------------------------------
 # [GROUP 4] Django models
 # ---------------------------------------------------------------------------
 from .models.django.environment import EnvironmentConfig
-from .models.django.axes import AxesConfig
-from .models.django.django_rq import DjangoRQConfig, RQQueueConfig, RQScheduleConfig
-from .models.django.rq_health import QueueHealthThresholds, RQHealthConfig
-from .modules.django_logging.__cfg__ import DjangoLoggingConfig
-from .models.django.currency import CurrencyConfig
-from .models.django.payments import PaymentsConfig
-from .models.django.admin_access import AdminAccessConfig
 from .models.django.geo import GeoConfig
 from .models.django.indexnow import IndexNowConfig, IndexNowSite
-from .core.site import Site, SiteConfig, site_for, site_key, sites
-from .models.django.analytics import AnalyticsConfig
-from .models.django.chat import AttachmentsConfig, ChatConfig
+from .models.django.openapi import OpenAPIClientConfig
+from .models.django.payments import PaymentsConfig
+from .models.django.rq_health import QueueHealthThresholds, RQHealthConfig
 from .models.django.simple_history import SimpleHistoryConfig
-from .models.django.constance import ConstanceConfig, ConstanceField
 from .models.django.storage import CDNPurgeConfig, FileCleanupConfig, StorageConfig
 from .models.django.storage_backend import S3StorageConfig
-from .models.django.openapi import OpenAPIClientConfig
+from .models.infrastructure.cache import CacheConfig
+
+# ---------------------------------------------------------------------------
+# [GROUP 2] Infrastructure models
+# ---------------------------------------------------------------------------
+from .models.infrastructure.database import DatabaseConfig
+from .models.infrastructure.logging import LoggingConfig
+from .models.infrastructure.security import SecurityConfig
 from .models.services import EmailConfig, TelegramConfig
-from .modules.django_notion import NotionConfig, NotionLead, NotionTarget
 
 # ---------------------------------------------------------------------------
-# [GROUP 5] Middleware & routing
-# These modules require Django settings at import time (DRF reads REST_FRAMEWORK,
-# axes reads AXES_ENABLED). They remain lazy — resolved via __getattr__ below.
+# [GROUP 8] Admin modules
 # ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# [GROUP 6] Utilities & testing
-# ---------------------------------------------------------------------------
-from .testing.runners import SmartTestRunner, FastTestRunner
+from .modules.django_admin import (
+    ActionConfig,
+    AdminConfig,
+    FieldConfig,
+    FieldsetConfig,
+    WidgetRegistry,
+)
 
 # ---------------------------------------------------------------------------
 # [GROUP 7] Services
 # ---------------------------------------------------------------------------
 from .modules.django_email import (
     DjangoEmailService,
-    send_email,
     get_admin_emails,
     send_admin_email,
     send_admin_notification,
+    send_email,
 )
+
+# ---------------------------------------------------------------------------
+# [GROUP 9] OpenAPI client
+# ---------------------------------------------------------------------------
+from .modules.django_generator.openapi.pipeline.config import OpenAPIConfig, OpenAPIGroupConfig
+from .modules.django_logging.__cfg__ import DjangoLoggingConfig
+from .modules.django_notion import NotionConfig, NotionLead, NotionTarget
 from .modules.django_telegram import (
     DjangoTelegram,
     send_telegram_message,
@@ -138,21 +143,14 @@ from .modules.django_telegram import (
 )
 
 # ---------------------------------------------------------------------------
-# [GROUP 8] Admin modules
+# [GROUP 5] Middleware & routing
+# These modules require Django settings at import time (DRF reads REST_FRAMEWORK,
+# axes reads AXES_ENABLED). They remain lazy — resolved via __getattr__ below.
 # ---------------------------------------------------------------------------
-from .modules.django_admin import (
-    AdminConfig,
-    FieldConfig,
-    FieldsetConfig,
-    ActionConfig,
-    WidgetRegistry,
-)
-from .modules.django_admin.icons import Icons, IconCategories
-
 # ---------------------------------------------------------------------------
-# [GROUP 9] OpenAPI client
+# [GROUP 6] Utilities & testing
 # ---------------------------------------------------------------------------
-from .modules.django_generator.openapi.pipeline.config import OpenAPIGroupConfig, OpenAPIConfig
+from .testing.runners import FastTestRunner, SmartTestRunner
 
 # ---------------------------------------------------------------------------
 # [OPTIONAL] Unfold admin  (requires: django-unfold)
@@ -160,23 +158,21 @@ from .modules.django_generator.openapi.pipeline.config import OpenAPIGroupConfig
 try:
     from .modules.django_unfold.models.config import (
         UnfoldConfig,
+        UnfoldDashboardConfig,
+        UnfoldSidebar,
         UnfoldTheme,
         UnfoldThemeConfig,
-        UnfoldColors,
-        UnfoldSidebar,
-        UnfoldDashboardConfig,
-    )
-    from .modules.django_unfold.models.navigation import (
-        NavigationItem,
-        NavigationSection,
-        NavigationItemType,
     )
     from .modules.django_unfold.models.dropdown import SiteDropdownItem
+    from .modules.django_unfold.models.navigation import (
+        NavigationItem,
+        NavigationItemType,
+        NavigationSection,
+    )
 except ImportError:
     UnfoldConfig = None  # type: ignore[assignment]
     UnfoldTheme = None  # type: ignore[assignment]
     UnfoldThemeConfig = None  # type: ignore[assignment]
-    UnfoldColors = None  # type: ignore[assignment]
     UnfoldSidebar = None  # type: ignore[assignment]
     UnfoldDashboardConfig = None  # type: ignore[assignment]
     NavigationItem = None  # type: ignore[assignment]
@@ -200,15 +196,29 @@ from .modules.django_dashboard.models import DashboardConfig, DashboardTab
 # ---------------------------------------------------------------------------
 try:
     from .modules.django_mcp import (
+        ALL_TOOLS as MCP_ALL_TOOLS,
+    )
+    from .modules.django_mcp import (
+        PUBLIC_TOOLS as MCP_PUBLIC_TOOLS,
+    )
+    from .modules.django_mcp import (
+        AppMCPConfig as MCPAppMCPConfig,
+    )
+    from .modules.django_mcp import (
+        CommandMCPConfig as MCPCommandMCPConfig,
+    )
+    from .modules.django_mcp import (
         DjangoMCPModuleConfig,
         MCPConfigBuilder,
         MCPProfile,
-        PUBLIC_TOOLS as MCP_PUBLIC_TOOLS,
-        ALL_TOOLS as MCP_ALL_TOOLS,
+    )
+    from .modules.django_mcp import (
         IntrospectionConfig as MCPIntrospectionConfig,
-        AppMCPConfig as MCPAppMCPConfig,
+    )
+    from .modules.django_mcp import (
         ModelMCPConfig as MCPModelMCPConfig,
-        CommandMCPConfig as MCPCommandMCPConfig,
+    )
+    from .modules.django_mcp import (
         RedactionConfig as MCPRedactionConfig,
     )
 except ImportError:
@@ -297,7 +307,7 @@ __all__ = [
     # openapi client
     "OpenAPIGroupConfig", "OpenAPIConfig",
     # optional: unfold
-    "UnfoldConfig", "UnfoldTheme", "UnfoldThemeConfig", "UnfoldColors",
+    "UnfoldConfig", "UnfoldTheme", "UnfoldThemeConfig",
     "UnfoldSidebar", "UnfoldDashboardConfig",
     "NavigationItem", "NavigationSection", "NavigationItemType", "SiteDropdownItem",
     # dashboard

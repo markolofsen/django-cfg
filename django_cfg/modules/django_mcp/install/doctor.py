@@ -154,7 +154,7 @@ def _check_identity(config: Any) -> list[Finding]:
                 f"bound to {username!r}, which matches no account. A missing "
                 f"account is a rejection, not a downgrade: every request 401s."
                 + hint,
-                f"create the account, or clear MCP__SERVICE_USERNAME (the key "
+                "create the account, or clear MCP__SERVICE_USERNAME (the key "
                 "then acts as a machine caller)",
             )
         ]

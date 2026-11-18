@@ -198,15 +198,15 @@ Simpler Select2-based widgets for basic use cases:
 
 ```python
 from django_cfg.apps.tools.geo.widgets import (
-    CountrySelect2Widget,
-    CitySelect2Widget,
+    CountrySelectWidget,
+    CitySelectWidget,
 )
 
 class SimpleForm(forms.ModelForm):
     class Meta:
         widgets = {
-            'country': CountrySelect2Widget(),
-            'city': CitySelect2Widget(),
+            'country': CountrySelectWidget(),
+            'city': CitySelectWidget(),
         }
 ```
 

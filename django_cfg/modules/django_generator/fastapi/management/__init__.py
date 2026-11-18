@@ -1,1 +1,1 @@
-"""Management commands for django_fastapi module."""
+"""Management commands for django_generator.fastapi."""

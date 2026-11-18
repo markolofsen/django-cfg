@@ -5,7 +5,11 @@ description: Declarative Pydantic-based Django admin configuration with type-saf
 
 # Django Admin Module
 
-Django-CFG includes a **revolutionary Pydantic-based admin system** that transforms how you build Django admin interfaces. Say goodbye to verbose admin classes and hello to clean, declarative, type-safe configurations.
+<Callout type="info">
+**Status (2026-11-18).** `PydanticAdmin` / `AdminConfig` is the main admin class, and django-unfold is the base (pinned `django-unfold>=0.110,<0.111`). The one-time Flash fields (`FlashFieldConfig`, `flash_once`), `ToonField`, `VideoField`, `AvatarField`, `CounterBadgeField`, `ResourceConfig` and `BackgroundTaskConfig` were removed (nothing used them). Ordinary Django messages (`self.message_user`, `messages.*`) work: the admin `base_site.html` extends `admin/base.html`, which renders them.
+</Callout>
+
+Django-CFG includes a Pydantic-based admin layer: you describe an admin class as a typed `AdminConfig` (list columns, display fields, filters, fieldsets, actions) and `PydanticAdmin` builds the Django and Unfold admin from it.
 
 ## Overview
 
@@ -18,7 +22,6 @@ The Django Admin module provides:
 - **Computed Field Decorators** - `@computed_field` for type-safe custom logic
 - **Modern UI** - Seamless Unfold integration with Material Design icons
 - **Query Optimization** - Built-in select_related/prefetch_related support
-- **Flash Messages** - One-time display for sensitive data (API keys, passwords) after object creation
 - **Zero Boilerplate** - Minimal code, maximum functionality
 
 ## Philosophy
@@ -44,9 +47,10 @@ from django.contrib import admin
 from django_cfg.modules.django_admin import (
     AdminConfig, BadgeField, CurrencyField, DateTimeField, UserField,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
-# ✅ Clean, declarative configuration
+# Declarative configuration
 payment_config = AdminConfig(
     model=Payment,
     select_related=["user"],  # Auto-applied to all queries
@@ -96,8 +100,8 @@ config = AdminConfig(
     display_fields=[
         BadgeField(
             name="status",
-            variant="primary",  # ✅ IDE autocomplete + validation
-            icon=Icons.CHECK_CIRCLE  # ✅ 2234+ icons with autocomplete
+            variant="primary",  # IDE autocomplete + validation
+            icon=Icons.CHECK_CIRCLE  # 2234+ icons with autocomplete
         )
     ]
 )
@@ -193,7 +197,8 @@ self.html.empty(text="—")
 For custom display logic in list views, use `@computed_field`:
 
 ```python
-from django_cfg.modules.django_admin import computed_field, Icons
+from django_cfg.modules.django_admin import computed_field
+from django_cfg import Icons
 
 @admin.register(User)
 class UserAdmin(PydanticAdmin):
@@ -253,7 +258,7 @@ class UserAdmin(PydanticAdmin):
 2234+ Material icons with full IDE autocomplete:
 
 ```python
-from django_cfg.modules.django_admin import Icons
+from django_cfg import Icons
 
 Icons.CHECK_CIRCLE       # ✓
 Icons.CANCEL             # ✗
@@ -287,26 +292,6 @@ config = AdminConfig(
 )
 ```
 
-### 8. Flash Messages
-
-For sensitive data that must be shown exactly once (API keys, passwords, tokens) after object creation:
-
-```python
-# Declarative approach — auto-triggers on create
-class ApiKeyAdmin(PydanticAdmin):
-    config = api_key_config
-    one_time_flash_fields = {
-        'plain_key_display': FlashFieldConfig(
-            source='_generated_plain_key',  # transient attr set during save
-            style='code_warning',
-            title='Plain API Key (One-Time Display)',
-            message='Save this key now — it will never be shown again.',
-        )
-    }
-```
-
-The key is displayed once in a styled code block, then permanently removed from session. No template changes needed.
-
 ## Architecture
 
 ```
@@ -333,14 +318,10 @@ The key is displayed once in a styled code block, then permanently removed from 
                  │    ├── @annotated_field → for aggregations
                  │    └── self.html → for readonly fields
                  │
-                 ├──> Widget Registry
-                 │    ├── badge → render_badge()
-                 │    ├── currency → render_currency()
-                 │    └── datetime → render_datetime()
-                 │
-                 └──> Flash Messages
-                      ├── one_time_flash_fields → auto-triggers on create
-                      └── self.flash_once() → imperative API
+                 └──> Widget Registry
+                      ├── badge → render_badge()
+                      ├── currency → render_currency()
+                      └── datetime → render_datetime()
 ```
 
 ## Integration with Unfold
@@ -361,10 +342,10 @@ from django_cfg.modules.django_admin.base import PydanticAdmin
 <Callout type="info">
 **Always Unfold-Ready**
 Every admin class using `PydanticAdmin` automatically gets:
-- ✅ Modern Unfold UI
-- ✅ Material Design icons
-- ✅ Import/Export support (optional)
-- ✅ Responsive layout
+- Modern Unfold UI
+- Material Design icons
+- Import/Export support (optional)
+- Responsive layout
 
 </Callout>
 
@@ -398,9 +379,15 @@ Every admin class using `PydanticAdmin` automatically gets:
 ```python
 from django.contrib import admin
 from django_cfg.modules.django_admin import (
-    AdminConfig, BadgeField, CurrencyField, DateTimeField,
-    FieldsetConfig, Icons, UserField, computed_field,
+    AdminConfig,
+    BadgeField,
+    CurrencyField,
+    DateTimeField,
+    FieldsetConfig,
+    UserField,
+    computed_field,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 # Declarative config
@@ -480,7 +467,6 @@ class PaymentAdmin(PydanticAdmin):
 - **[Configuration](./configuration)** - AdminConfig options, decorators, utilities
 - **[Filters](./filters)** - Complete guide to filters and third-party integrations
 - **[Examples](./examples)** - Real-world examples
-- **[Flash Messages](./flash-messages)** - One-time display for sensitive data
 
 
 <Callout type="info">
@@ -489,6 +475,5 @@ class PaymentAdmin(PydanticAdmin):
 - **@computed_field** decorator for custom list display logic
 - **self.html** utilities for custom readonly fields
 - **Display utilities** (UserDisplay, MoneyDisplay, DateTimeDisplay) for advanced formatting
-- **Flash messages** for sensitive one-time data (API keys, passwords)
 
 </Callout>

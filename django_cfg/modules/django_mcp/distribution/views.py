@@ -17,7 +17,10 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
 from django_cfg.modules.django_mcp.auth import authenticate, presented_credential
-from django_cfg.modules.django_mcp.handlers.initialize import resolve_instructions, resolve_server_name
+from django_cfg.modules.django_mcp.handlers.initialize import (
+    resolve_instructions,
+    resolve_server_name,
+)
 from django_cfg.modules.django_mcp.handlers.tools import tool_registry
 from django_cfg.modules.django_mcp.throttling import MCPRateThrottle
 

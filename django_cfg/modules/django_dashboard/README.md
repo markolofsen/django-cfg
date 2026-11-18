@@ -16,12 +16,15 @@ DjangoConfig.dashboard: DashboardConfig
               ├── icon        → Material icon name
               ├── callback    → dotted path  fn(request) -> dict
               ├── template    → Django template path
-              └── permission  → dotted path  fn(request) -> bool  (default: is_staff)
+              ├── permission  → dotted path  fn(request) -> bool  (default: is_staff)
+              └── superuser_only → bool, tab visible to superusers only
 ```
 
 On request the view:
 1. Resolves `callback` → calls it with `request` → gets a plain `dict`
-2. Renders `template` with that dict as context (+ `current_tab`, `all_tabs`, `dashboard_config`)
+2. Renders `template` with that dict as context (+ `current_tab`, `all_tabs`, `dashboard_config`, `title`, `is_iframe`, `dashboard_base`)
+
+The tab list is merged from `DjangoConfig.dashboard`, built-in app tabs and the `dashboard_tabs` declared by extensions (`resolver.get_dashboard_config()`), so extension tabs appear without any wiring in your config.
 
 ---
 
@@ -121,8 +124,9 @@ class MyConfig(DjangoConfig):
 | `template` | `str` | ✓ or `callback` | Django template path. |
 | `callback` | `str` | ✓ or `template` | Dotted path to `fn(request) -> dict`. |
 | `permission` | `str` | | Dotted path to `fn(request) -> bool`. Default: `request.user.is_staff`. |
+| `superuser_only` | `bool` | | Default `False`. When `True`, only superusers see the tab (takes precedence over `permission`). |
 
-At least one of `template` or `callback` must be set — validated at startup.
+At least one of `template` or `callback` must be set; the model raises `ValueError` otherwise. A callback-only tab renders the built-in `tab_empty.html`.
 
 ## DashboardConfig fields
 
@@ -144,6 +148,8 @@ Every template receives:
 | `all_tabs` | `List[DashboardTab]` | All configured tabs (used by the tab bar). |
 | `dashboard_config` | `DashboardConfig` | The full dashboard config. |
 | `title` | `str` | Same as `current_tab.title`. |
+| `is_iframe` | `bool` | `True` when opened with `?iframe=1`. |
+| `dashboard_base` | `str` | Base template to extend: `base_iframe.html` when `is_iframe`, else `base.html`. |
 | `**callback_result` | `dict` | Everything your callback returned. |
 
 ---
@@ -156,9 +162,10 @@ Built-in base templates:
 |----------|---------|
 | `django_dashboard/base.html` | Full page: extends Unfold `admin/base.html`, renders tab bar, `{% block tab_content %}` |
 | `django_dashboard/tabs_bar.html` | Tab bar snippet only (included by `base.html`) |
+| `django_dashboard/base_iframe.html` | Base used when the tab is opened with `?iframe=1` |
 | `django_dashboard/tab_empty.html` | Fallback when no template is set (callback-only tab) |
 
-Your templates should extend `django_dashboard/base.html` and fill `{% block tab_content %}`.
+Your templates should `{% extends dashboard_base %}` (the variable picks `base.html` or `base_iframe.html`) and fill `{% block tab_content %}`.
 
 ---
 
@@ -184,7 +191,7 @@ The base template injects `<link rel="stylesheet">` automatically when this is s
 | `/cfg/admin/dashboard/` | `django_cfg_dashboard_index` | Redirects to default tab |
 | `/cfg/admin/dashboard/<slug>/` | `django_cfg_dashboard_tab` | Renders a specific tab |
 
-Both require `is_staff`. Per-tab permission callbacks override the default.
+Both are staff-only: a non-staff or anonymous request gets 404 (not a redirect to the login). A staff user who fails a tab's `permission` or `superuser_only` check gets 403. A per-tab `permission` callback replaces the default `is_staff` check for that tab.
 
 ---
 
@@ -207,6 +214,6 @@ Also available via `{% load django_cfg %}` (backward-compat shim).
 ## Adding a new tab (checklist)
 
 - [ ] Create `dashboard/callbacks/mypage.py` with `def callback(request) -> dict`
-- [ ] Create `dashboard/templates/dashboard/mypage.html` extending `django_dashboard/base.html`
+- [ ] Create `dashboard/templates/dashboard/mypage.html` extending `dashboard_base`
 - [ ] Add `DashboardTab(slug="mypage", ...)` to `DashboardConfig.tabs` in `config.py`
 - [ ] Done — no migrations, no URL changes, no admin registration

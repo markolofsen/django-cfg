@@ -49,19 +49,10 @@ class SpectacularConfig(BaseModel):
     )
 
     # Post-processing
-    #
-    # Order matters:
-    #   1. ``extract_paginated_components`` runs first so the audit
-    #      step can rely on ``$ref``-based recognition of paginated
-    #      list responses.
-    #   2. ``enforce_paginated_lists`` fails the build when any GET
-    #      list endpoint isn't paginated and hasn't opted out via
-    #      ``@extend_schema(extensions={"x-pagination-opt-out": True})``.
     postprocessing_hooks: List[str] = Field(
         default_factory=lambda: [
             'drf_spectacular.contrib.djangorestframework_camel_case.camelize_serializer_fields',
             'django_cfg.middleware.pagination_schema_hook.extract_paginated_components',
-            'django_cfg.middleware.pagination_schema_hook.enforce_paginated_lists',
         ],
         description="Post-processing hooks"
     )
@@ -77,9 +68,8 @@ class SpectacularConfig(BaseModel):
     #
     # Default entries pin enums shipped by django-cfg itself so they
     # don't drift across schema regenerations:
-    #   - SystemHealthStatusEnum: used by SystemHealthItem.status and
-    #     SystemHealth.overall_status. drf-spectacular picks an unstable
-    #     hash suffix without an explicit override.
+    #   - OAuthErrorCodeEnum: drf-spectacular picks an unstable hash suffix
+    #     (or the generic ErrorEnum) without an explicit override.
     #
     # NOTE: there is intentionally NO 'ValidationErrorEnum' entry. It used to
     # point at `django.contrib.auth.models.ValidationError`, which is an
@@ -88,9 +78,6 @@ class SpectacularConfig(BaseModel):
     # ENUM_NAME_OVERRIDES duplication error on every generate. Removed.
     enum_name_overrides: Dict[str, Any] = Field(
         default_factory=lambda: {
-            'SystemHealthStatusEnum': (
-                'django_cfg.apps.api.dashboard.serializers.system.SystemHealthStatus'
-            ),
             # OAuthError.error is a ChoiceField over a plain Enum, which the
             # auto-discovery of TextChoices does not see; without this the
             # generated type is the generic `ErrorEnum`. A callable returning

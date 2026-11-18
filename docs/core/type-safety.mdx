@@ -23,7 +23,7 @@ class MyConfig(DjangoConfig):
 **Time to read**: 12 minutes | **Implementation time**: 15 minutes | **ROI**: Immediate
 
 TAGS: type-safety, configuration, pydantic, django, validation, ide-autocomplete, startup-validation
-DEPENDS_ON: [django>=4.2, pydantic>=2.0, python>=3.11]
+DEPENDS_ON: [django>=5.2, pydantic>=2.0, python>=3.12]
 USED_BY: [enterprise-django, saas-applications, production-django]
 
 ---
@@ -126,7 +126,7 @@ Django-CFG replaces traditional `settings.py` with **[Pydantic v2](https://docs.
 # Django-CFG - Type-safe configuration
 from django_cfg import DjangoConfig, DatabaseConfig
 from typing import Dict
-from .environment import env  # Type-safe YAML loader (see /getting-started/configuration)
+from .environment import env  # Type-safe env loader (see /getting-started/configuration)
 
 class MyConfig(DjangoConfig):
     """Production configuration with type validation"""
@@ -140,7 +140,7 @@ class MyConfig(DjangoConfig):
     databases: Dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
-            port=env.database.port,  # Already int from Pydantic YAML loader
+            port=env.database.port,  # Already int from the pydantic-settings loader
         )
     }
     # If port is invalid, Pydantic raises ValidationError with clear message:
@@ -270,14 +270,14 @@ MIDDLEWARE = [
 # config.py
 from django_cfg import DjangoConfig, DatabaseConfig, CacheConfig, EmailConfig
 from typing import Dict
-from .environment import env  # Type-safe YAML config loader
+from .environment import env  # Type-safe env loader
 
 class MyConfig(DjangoConfig):
     """Complete production configuration with type safety"""
 
     # Security - validated at startup
     project_name: str = "My Project"
-    secret_key: str = env.secret_key  # Type-safe from YAML
+    secret_key: str = env.secret_key  # Type-safe from the env loader
     debug: bool = False
 
     # ✅ Single field auto-generates:
@@ -303,7 +303,7 @@ class MyConfig(DjangoConfig):
         )
     }
 
-    # Cache - auto from redis_url! ✨
+    # Cache - auto from redis_url!
     redis_url: str = f"redis://{env.redis.host}:{env.redis.port}/0"
 
     # Email - type-safe with validation
@@ -316,9 +316,6 @@ class MyConfig(DjangoConfig):
         password=env.email.password,
     )
 
-    # Built-in apps - enable with boolean flags (see /features/built-in-apps/overview)
-    enable_support: bool = True      # Support ticket system
-    enable_accounts: bool = True     # Extended user management
 
 # settings.py - just 2 lines
 config = MyConfig()
@@ -326,11 +323,11 @@ globals().update(config.get_all_settings())
 ```
 
 **Benefits**:
-- ✅ **85% less code** (30 lines vs 200+)
+- ✅ **Far less code** than the hand-written equivalent
 - ✅ **Type-safe** - Pydantic validates at startup
 - ✅ **IDE autocomplete** - all fields discovered
-- ✅ **Single security field** - auto-generates 7+ Django settings
-- ✅ **Validated env** - YAML config with Pydantic models
+- ✅ **Single security field** - generates `ALLOWED_HOSTS`, CORS, CSRF and SSL settings
+- ✅ **Validated env** - typed environment loader with Pydantic models
 - ✅ **No runtime errors** - fails before Django loads
 - ✅ **Easy testing** - just instantiate config class
 
@@ -386,21 +383,21 @@ poetry add django-cfg
 
 # Verify installation
 python -c "import django_cfg; print(django_cfg.__version__)"
-# Expected output: 1.1.67 (or later)
+# Expected output: the installed version, for example 2.3.416
 ```
 
 ---
 
 ### Step 2: Create Environment Configuration (5 minutes)
 
-Create type-safe environment loader using [Pydantic](https://docs.pydantic.dev/) (see [Configuration Guide](../getting-started/configuration) for YAML setup):
+Create type-safe environment loader using [Pydantic](https://docs.pydantic.dev/) reading `.env` and environment variables (see [Configuration Guide](../getting-started/configuration) for the full setup):
 
 ```python
 # myproject/environment.py
-from pydantic import BaseModel, Field
-from pydantic_yaml import parse_yaml_raw_as
-from pathlib import Path
 from typing import Optional
+
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class DatabaseEnv(BaseModel):
     """Database connection settings"""
@@ -422,47 +419,39 @@ class EmailEnv(BaseModel):
     username: str = Field(..., description="SMTP username")
     password: str = Field(..., description="SMTP password")
 
-class EnvironmentConfig(BaseModel):
+class EnvironmentConfig(BaseSettings):
     """Complete environment configuration with validation"""
+    model_config = SettingsConfigDict(env_file=".env", env_nested_delimiter="__", extra="ignore")
+
     secret_key: str = Field(..., min_length=50, description="Django secret key (min 50 chars)")
     database: DatabaseEnv
     redis: Optional[RedisEnv] = None
     email: Optional[EmailEnv] = None
 
-# Load and validate environment from YAML
-config_path = Path(__file__).parent / "config.yaml"
-env: EnvironmentConfig = parse_yaml_raw_as(
-    EnvironmentConfig,
-    config_path.read_text()
-)
+# Load and validate environment (.env file and process environment)
+env = EnvironmentConfig()
 ```
 
-Create corresponding YAML file:
+Matching `.env` file (gitignored):
 
-```yaml
-# myproject/config.yaml
-secret_key: "your-secret-key-here-must-be-at-least-50-characters-long-for-security"
-
-database:
-  name: myapp
-  user: postgres
-  password: securepassword123
-  host: localhost
-  port: 5432
-
-redis:
-  host: localhost
-  port: 6379
-
-email:
-  host: smtp.gmail.com
-  port: 587
-  username: myapp@gmail.com
-  password: app-specific-password
+```bash
+# .env
+SECRET_KEY=your-secret-key-here-must-be-at-least-50-characters-long-for-security
+DATABASE__NAME=myapp
+DATABASE__USER=postgres
+DATABASE__PASSWORD=securepassword123
+DATABASE__HOST=localhost
+DATABASE__PORT=5432
+REDIS__HOST=localhost
+EMAIL__HOST=smtp.gmail.com
+EMAIL__USERNAME=myapp@gmail.com
+EMAIL__PASSWORD=app-specific-password
 ```
+
+`pydantic-settings` is the project's own dependency here (`pip install pydantic-settings`), not part of django-cfg.
 
 **Benefits of this approach** (learn more in [Environment Variables](../configuration/environment)):
-- ✅ All secrets in one YAML file (gitignored)
+- ✅ All secrets in one `.env` file (gitignored) or the process environment
 - ✅ Pydantic validates types automatically
 - ✅ IDE autocomplete works: `env.database.port` (knows it's int)
 - ✅ Invalid config fails at import time
@@ -505,7 +494,7 @@ class ProductionConfig(DjangoConfig):
         )
     }
 
-    # Cache configuration (auto-created from redis_url! ✨)
+    # Cache configuration (auto-created from redis_url!)
     redis_url: str | None = f"redis://{env.redis.host}:{env.redis.port}/0" if env.redis else None
     # See /configuration/cache for advanced setup
 
@@ -518,10 +507,6 @@ class ProductionConfig(DjangoConfig):
         username=env.email.username,
         password=env.email.password,
     ) if env.email else None
-
-    # Built-in Django-CFG apps (optional)
-    enable_accounts: bool = True  # User management with OTP
-    enable_support: bool = True   # Support ticket system
 ```
 
 ---
@@ -622,7 +607,7 @@ class MultiDatabaseConfig(DjangoConfig):
             host="db-replica.example.com",
             port=5432,
             # Specify which apps use this database
-            routing_apps=["analytics", "reports"],
+            apps=["analytics", "reports"],
         ),
 
         # Legacy MySQL database
@@ -631,7 +616,7 @@ class MultiDatabaseConfig(DjangoConfig):
             name="legacy_db",
             host="mysql.example.com",
             port=3306,
-            routing_apps=["legacy_orders"],
+            apps=["legacy_orders"],
         ),
     }
 ```
@@ -651,15 +636,16 @@ class MultiDatabaseConfig(DjangoConfig):
 See [Environment Detection](../configuration/environment) for auto-detection patterns.
 
 ```python
-from django_cfg import DjangoConfig, detect_environment
+from django_cfg import DjangoConfig
+from django_cfg.core.environment import EnvironmentDetector
 from typing import Dict
 
 class MyConfig(DjangoConfig):
     """Auto-detects environment and adjusts settings"""
 
-    # Automatically set based on ENV environment variable
+    # Environment comes from DJANGO_ENV / ENVIRONMENT / ENV
     debug: bool = Field(
-        default_factory=lambda: detect_environment() == "development"
+        default_factory=lambda: EnvironmentDetector.detect_environment() == "development"
     )
 
     # Different database per environment
@@ -668,7 +654,7 @@ class MyConfig(DjangoConfig):
             "default": DatabaseConfig(
                 engine="django.db.backends.sqlite3",
                 name="db.sqlite3"
-            ) if detect_environment() == "development" else DatabaseConfig(
+            ) if EnvironmentDetector.detect_environment() == "development" else DatabaseConfig(
                 engine="django.db.backends.postgresql",
                 name=env.database.name,
                 host=env.database.host,
@@ -678,21 +664,21 @@ class MyConfig(DjangoConfig):
 
     # Email backend switches automatically
     email: EmailConfig = EmailConfig(
-        backend="console" if detect_environment() == "development" else "smtp",
-        host=env.email.host if detect_environment() != "development" else "localhost",
+        backend="console" if EnvironmentDetector.detect_environment() == "development" else "smtp",
+        host=env.email.host if EnvironmentDetector.detect_environment() != "development" else "localhost",
     )
 ```
 
 **Usage**:
 ```bash
 # Development (SQLite, console email, DEBUG=True)
-ENV=development python manage.py runserver
+DJANGO_ENV=development python manage.py runserver
 
 # Staging (PostgreSQL, SMTP email, DEBUG=False)
-ENV=staging python manage.py runserver
+DJANGO_ENV=staging python manage.py runserver
 
 # Production (PostgreSQL, SMTP email, DEBUG=False, extra security)
-ENV=production python manage.py runserver
+DJANGO_ENV=production python manage.py runserver
 ```
 
 ---
@@ -723,7 +709,7 @@ debug: bool = False
 | Type validation | Pydantic v2 (compile-time) | Runtime casting |
 | IDE autocomplete | Full support | None |
 | Nested config | Yes (Pydantic models) | No |
-| Built-in apps | 9 production apps | None |
+| Built-in apps | Accounts, mail, payments, more | None |
 | Startup validation | Yes (fail-fast) | No |
 | Multi-database routing | Automatic | Manual |
 | Lines of code | 30-50 lines | 150-200 lines |
@@ -761,38 +747,26 @@ Then gradually move custom settings into config class.
 
 ---
 
-### Does Django-CFG work with Django 5.0?
+### Which Django and Python versions are supported?
 
-Yes! Django-CFG is tested with:
-- ✅ Django 4.2 (LTS)
-- ✅ Django 5.0
-- ✅ Django 5.1
-- ✅ Python 3.11, 3.12, 3.13
+Django 5.2 (`>=5.2.14,<6.0`) and Python 3.12 or 3.13. Django is not a base dependency of django-cfg; install it alongside.
 
 ---
 
 ### What about secrets management?
 
-Django-CFG recommends **YAML + gitignore** approach (see [Environment Variables Guide](../configuration/environment)):
-
-```yaml
-# config.yaml (gitignored)
-secret_key: "actual-secret-key"
-database:
-  password: "actual-password"
-```
+Keep secrets out of the repository: load them from environment variables or a gitignored `.env` file with your own `pydantic-settings` loader (see [Environment Variables Guide](../configuration/environment)).
 
 For production, use:
-- **AWS Secrets Manager** → load into YAML at deploy time
-- **HashiCorp Vault** → inject secrets into config.yaml
-- **Environment variables** → Pydantic can read from env vars too
+- **AWS Secrets Manager** or **HashiCorp Vault** → inject secrets as environment variables at deploy time
+- **Docker / Kubernetes secrets** → mounted or exported as environment variables
 
 ```python
-from pydantic import Field
+import os
+from django_cfg import DjangoConfig
 
 class MyConfig(DjangoConfig):
-    secret_key: str = Field(..., env='DJANGO_SECRET_KEY')
-    # Reads from environment variable DJANGO_SECRET_KEY
+    secret_key: str = os.environ["DJANGO_SECRET_KEY"]
 ```
 
 ---

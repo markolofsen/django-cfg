@@ -12,13 +12,13 @@ theme changes without being touched.
 
 from django.contrib import admin
 
+from django_cfg.icons import Icons
 from django_cfg.modules.django_admin import (
     AdminConfig,
     BadgeField,
     DateTimeField,
     FieldsetConfig,
     FilterConfig,
-    Icons,
 )
 from django_cfg.modules.django_admin.base import PydanticAdmin
 

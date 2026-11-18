@@ -21,9 +21,14 @@ Features: Badges, Currency, DateTime, Custom readonly fields with self.html
 from django.contrib import admin
 from django.utils import timezone
 from django_cfg.modules.django_admin import (
-    AdminConfig, BadgeField, CurrencyField, DateTimeField,
-    FieldsetConfig, Icons, UserField,
+    AdminConfig,
+    BadgeField,
+    CurrencyField,
+    DateTimeField,
+    FieldsetConfig,
+    UserField,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 # Declarative configuration
@@ -201,9 +206,14 @@ Features: @computed_field decorator, Status badges, Annotations
 from django.contrib import admin
 from django.db.models import Count
 from django_cfg.modules.django_admin import (
-    AdminConfig, BadgeField, DateTimeField, Icons,
-    UserField, computed_field, annotated_field,
+    AdminConfig,
+    BadgeField,
+    DateTimeField,
+    UserField,
+    computed_field,
+    annotated_field,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 # Configuration with annotations
@@ -311,9 +321,15 @@ Features: Multi-field display, Aggregations, Related data
 from django.contrib import admin
 from django.db.models import Count, Sum
 from django_cfg.modules.django_admin import (
-    AdminConfig, BadgeField, CurrencyField, DateTimeField,
-    FieldsetConfig, Icons, UserField, annotated_field,
+    AdminConfig,
+    BadgeField,
+    CurrencyField,
+    DateTimeField,
+    FieldsetConfig,
+    UserField,
+    annotated_field,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 order_config = AdminConfig(
@@ -400,7 +416,7 @@ class OrderAdmin(PydanticAdmin):
         from django_cfg.modules.django_admin.models.display_models import MoneyDisplayConfig
 
         total = getattr(obj, 'total_amount', 0) or 0
-        config = MoneyDisplayConfig(currency="USD", precision=2)
+        config = MoneyDisplayConfig(currency="USD", decimal_places=2)
         return MoneyDisplay.amount(total, config)
 
     def order_items_display(self, obj):
@@ -437,9 +453,13 @@ Features: Email tracking, Custom filters, Multiple computed fields
 
 from django.contrib import admin
 from django_cfg.modules.django_admin import (
-    AdminConfig, BadgeField, DateTimeField, Icons,
-    UserField, computed_field,
+    AdminConfig,
+    BadgeField,
+    DateTimeField,
+    UserField,
+    computed_field,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 emaillog_config = AdminConfig(
@@ -533,9 +553,13 @@ Features: Smart decimal places, Large numbers, External links
 
 from django.contrib import admin
 from django_cfg.modules.django_admin import (
-    AdminConfig, BadgeField, BooleanField, CurrencyField,
-    FieldsetConfig, Icons,
+    AdminConfig,
+    BadgeField,
+    BooleanField,
+    CurrencyField,
+    FieldsetConfig,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 exchange_config = AdminConfig(
@@ -633,8 +657,12 @@ Features: UUID shortening, custom avatars, balance displays, SafeString HTML
 from decimal import Decimal
 from django.contrib import admin
 from django_cfg.modules.django_admin import (
-    AdminConfig, DateTimeField, FieldsetConfig, Icons, computed_field,
+    AdminConfig,
+    DateTimeField,
+    FieldsetConfig,
+    computed_field,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 wallet_config = AdminConfig(
@@ -926,9 +954,15 @@ Features: JSON editor with copy button, Read-only schemas, Multiple JSON fields
 
 from django.contrib import admin
 from django_cfg.modules.django_admin import (
-    AdminConfig, BadgeField, BooleanField, DateTimeField,
-    FieldsetConfig, Icons, JSONWidgetConfig, ShortUUIDField,
+    AdminConfig,
+    BadgeField,
+    BooleanField,
+    DateTimeField,
+    FieldsetConfig,
+    JSONWidgetConfig,
+    ShortUUIDField,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 # Model

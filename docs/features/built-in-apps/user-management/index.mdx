@@ -1,111 +1,51 @@
 ---
-title: User Management Extensions
-description: Django-CFG user management extensions - authentication, JWT, OTP, OAuth, and two-factor authentication. Production-ready with type safety and seamless Django integration.
+title: User Management
+description: Django-CFG user management apps - authentication, JWT, OTP, OAuth and two-factor authentication. Always on, no setup beyond configuration.
 ---
 
-# User Management Extensions
+# User Management
 
-User Management extensions handle authentication, user profiles, and two-factor security for your Django-CFG projects.
+Two built-in apps handle sign-in and account security. Both are registered automatically
+(`django_cfg.apps.system.accounts` and `django_cfg.apps.system.totp`), so there is nothing to enable.
 
-<Callout type="info">
-**These are [Extensions](/extensions)**
-Located in `extensions/apps/` folder. Enable/disable via `__cfg__.py` files.
-</Callout>
+## Overview
 
-## Extensions Overview
-
-| Extension | Location | Description |
-|-----------|----------|-------------|
-| **Accounts** | `extensions/apps/accounts/` | User authentication, profiles, JWT, OTP, OAuth |
-| **TOTP** | `extensions/apps/totp/` | Two-factor authentication |
+| App | Module | Description |
+|-----|--------|-------------|
+| **Accounts** | `django_cfg.apps.system.accounts` | OTP login, JWT, OAuth, API keys, profiles, login alerts |
+| **TOTP** | `django_cfg.apps.system.totp` | Two-factor authentication with authenticator apps |
 
 ---
 
-## Accounts Extension
+## Accounts
 
-**Complete user authentication and account management**
+**Authentication and account management**
 
-- **Authentication** - Login, registration, password reset
-- **Social Login** - OAuth integration with major providers
-- **JWT** - Token-based API authentication
-- **OTP** - One-time password support
-- **Profile Management** - User profiles and preferences
-- **Security** - Session management, password policies
+- **Authentication** - Passwordless email OTP, token refresh
+- **Social login** - Google and GitHub OAuth
+- **JWT** - Access and refresh tokens with rotation and blacklist
+- **Profile management** - Profile fields and avatar upload
+- **Security** - Brute-force protection, login alerts, soft delete
 
-### Configuration
-
-```python
-# extensions/apps/accounts/__cfg__.py
-from django_cfg.extensions.configs.apps.base import BaseExtensionSettings
-
-class AccountsSettings(BaseExtensionSettings):
-    name: str = "accounts"
-    oauth_providers: list[str] = ["google", "github"]
-
-settings = AccountsSettings()
-```
-
-### Usage
-
-```python
-# User registration
-from extensions.apps.accounts.services import UserRegistrationService
-
-service = UserRegistrationService()
-user = service.register_user(
-    email="user@example.com",
-    password="secure_password"
-)
-```
+See [Accounts](./accounts) for the endpoints, configuration and the frontend side.
 
 ---
 
-## TOTP Extension
+## TOTP
 
 **Two-factor authentication using time-based one-time passwords**
 
-- **TOTP Setup** - QR code generation for authenticator apps
-- **Verification** - Token validation during login
-- **Recovery Codes** - Backup codes for account recovery
-- **Device Management** - Manage trusted devices
+- **Setup** - QR code for authenticator apps
+- **Verification** - Token check during login
+- **Recovery codes** - Backup codes for account recovery
 
-### Configuration
-
-```python
-# extensions/apps/totp/__cfg__.py
-from django_cfg.extensions.configs.apps.base import BaseExtensionSettings
-
-class TOTPSettings(BaseExtensionSettings):
-    name: str = "totp"
-
-settings = TOTPSettings()
-```
-
----
-
-## Enable/Disable Extensions
-
-Each extension is controlled by its `__cfg__.py` file:
-
-```python
-# To ENABLE - define settings
-settings = AccountsSettings()
-
-# To DISABLE - comment out settings
-# settings = AccountsSettings()
-```
+See [Two-Factor Auth](./accounts/two-factor).
 
 ---
 
 ## See Also
 
-### Extension Documentation
-
 - **[Accounts](./accounts)** - Authentication, profiles, JWT, OTP, OAuth
-
-### Configuration & Setup
-
-- **[Extensions System](/extensions)** - How extensions work
-- **[Backend Extensions](/extensions/backend-extensions)** - Creating custom extensions
+- **[Built-in Apps Overview](/features/built-in-apps/overview)** - Every app django-cfg registers
 - **[Email Configuration](/features/modules/django-email)** - SMTP setup for notifications
 - **[Background Tasks](/features/modules/django-rq)** - Async email processing

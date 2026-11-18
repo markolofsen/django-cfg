@@ -7,7 +7,6 @@ Extracted from original config.py (903 lines) for better maintainability.
 Size: ~220 lines (focused on one task)
 """
 import logging
-
 from typing import TYPE_CHECKING, List
 
 from ..constants import DEFAULT_APPS
@@ -121,7 +120,6 @@ class InstalledAppsBuilder:
             "django_cfg.modules.django_sitemap",  # Universal sitemap source registry + JSON feed
             "django_cfg.apps.api.health",
             "django_cfg.apps.api.commands",
-            "django_cfg.apps.api.dashboard",  # Dashboard API
         ]
 
         # File cleanup (storage=StorageConfig(enabled=False) opts out entirely)

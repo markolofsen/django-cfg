@@ -92,22 +92,10 @@ class LinkWidgetConfig(BaseWidgetConfig, total=False):
     show_icon: bool
 
 
-class AvatarWidgetConfig(BaseWidgetConfig, total=False):
-    size: str
-    shape: Literal["circle", "square"]
-    fallback_initials_field: Optional[str]
-
-
 class ShortUUIDWidgetConfig(BaseWidgetConfig, total=False):
     chars: int
     monospace: bool
     copy_button: bool
-
-
-class VideoWidgetConfig(BaseWidgetConfig, total=False):
-    thumbnail_width: str
-    thumbnail_height: str
-    show_duration: bool
 
 
 class ForeignKeyWidgetConfig(BaseWidgetConfig, total=False):
@@ -117,12 +105,6 @@ class ForeignKeyWidgetConfig(BaseWidgetConfig, total=False):
 
 class StatusBadgesWidgetConfig(BaseWidgetConfig, total=False):
     rules: List[Dict[str, Any]]
-
-
-class CounterBadgeWidgetConfig(BaseWidgetConfig, total=False):
-    label: Optional[str]
-    color: str
-    size: str
 
 
 class MoneyFieldWidgetConfig(BaseWidgetConfig, total=False):
@@ -144,15 +126,6 @@ class StackedWidgetConfig(BaseWidgetConfig, total=False):
     max_width: str
 
 
-class ToonWidgetConfig(BaseWidgetConfig, total=False):
-    collapsible: bool
-    default_open: bool
-    default_mode: Literal["toon", "json"]
-    preview_lines: int
-    label: Optional[str]
-    max_height: str
-
-
 __all__ = [
     "BaseWidgetConfig",
     "BadgeWidgetConfig",
@@ -165,13 +138,9 @@ __all__ = [
     "ImageWidgetConfig",
     "MarkdownWidgetConfig",
     "LinkWidgetConfig",
-    "AvatarWidgetConfig",
     "ShortUUIDWidgetConfig",
-    "VideoWidgetConfig",
     "ForeignKeyWidgetConfig",
     "StatusBadgesWidgetConfig",
-    "CounterBadgeWidgetConfig",
     "MoneyFieldWidgetConfig",
     "StackedWidgetConfig",
-    "ToonWidgetConfig",
 ]

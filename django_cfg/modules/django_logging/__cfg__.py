@@ -6,6 +6,18 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+_LEVEL = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+
+class CollapseConfig(BaseModel):
+    """Repeat collapsing: the first record passes, repeats inside the window are counted (ERROR never)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    enabled: Optional[bool] = Field(default=None, description="None = on, except in the test environment")
+    window_seconds: float = Field(default=60.0, gt=0, description="Repeats of one key inside this window are counted, not printed")
+    max_keys: int = Field(default=1000, ge=1, description="Distinct keys tracked per process (LRU)")
+
 
 class DjangoLoggingConfig(BaseModel):
     """
@@ -63,8 +75,20 @@ class DjangoLoggingConfig(BaseModel):
         default=None, ge=0,
         description="Boot prune deletes rotated django-cfg files older than this. Default 14; 0 = by count and size only (env DJANGO_CFG_LOG_RETAIN_DAYS)",
     )
+    collapse: CollapseConfig = Field(default_factory=CollapseConfig, description="Collapsing of repeated records")
+    log_levels: dict[str, _LEVEL] = Field(
+        default_factory=dict,
+        description="Per-logger levels merged over the built-in third-party table (httpx, httpcore, urllib3, asyncio, rq, ... at WARNING)",
+    )
+    access_ignore_paths: Optional[list[str]] = Field(
+        default=None,
+        description="Health/static path prefixes dropped from access logs when the request succeeded. None = built-in list; [] = keep all",
+    )
+    redact_keys: list[str] = Field(
+        default_factory=list, description="Extra key-name fragments whose values are masked in log fields (on top of password, token, secret, ...)"
+    )
 
 
 settings = DjangoLoggingConfig()
 
-__all__ = ["DjangoLoggingConfig", "settings"]
+__all__ = ["CollapseConfig", "DjangoLoggingConfig", "settings"]

@@ -3,7 +3,7 @@ title: Security Hardening
 description: Deploy Django-CFG with security. Complete deployment guide for security hardening with Docker, environment configuration, and production best practices.
 ---
 
-# 🔒 Security Guide
+# Security Guide
 
 Django-CFG provides automatic security configuration that adapts to your environment—open in development, strict in production.
 
@@ -12,16 +12,16 @@ Django-CFG provides automatic security configuration that adapts to your environ
 ## Core Security Principles
 
 ### Environment-Aware Security
-Django-CFG automatically configures security based on environment mode (`IS_PROD`, `IS_DEV`, `IS_TEST`):
+Django-CFG automatically configures security based on `env_mode` (`development`, `production`, `test`; set it with `DJANGO_ENV`):
 
-**Development Mode (`IS_DEV=true`):**
+**Development Mode (`DJANGO_ENV=development`):**
 - CORS: declared origins plus any `localhost` port via regex
 - CSRF: common local dev ports; CORS allows any localhost port via regex
 - SSL: Disabled (local development)
 - Credentials: Allowed for frontend testing
 - DEBUG: Can be enabled for detailed error pages
 
-**Production Mode (`IS_PROD=true`):**
+**Production Mode (`DJANGO_ENV=production`, the default):**
 - CORS: Strict domain whitelist only
 - CSRF: Production domains only
 - SSL: Enabled with HSTS
@@ -31,7 +31,7 @@ Django-CFG automatically configures security based on environment mode (`IS_PROD
 <Callout type="warning">
 **Production Security Enforcement**
 
-In production mode (`IS_PROD=true`), Django-CFG **automatically disables DEBUG** regardless of the `DEBUG` environment variable. This prevents:
+In production mode, Django-CFG **automatically disables DEBUG** (with a `UserWarning`) even if your loader passes `debug=True`. This prevents:
 - Sensitive data exposure in error pages
 - Memory leaks from SQL query logging
 - Performance degradation
@@ -54,12 +54,13 @@ The foundation of Django-CFG security is `security_domains`—a single list that
 
 ### Basic Configuration
 
-```yaml
-# config.yaml
-security_domains:
-  - example.com
-  - api.example.com
-  - admin.example.com
+```python
+class MyConfig(DjangoConfig):
+    security_domains: list[str] = [
+        "example.com",
+        "api.example.com",
+        "admin.example.com",
+    ]
 ```
 
 **What this configures automatically:**
@@ -71,19 +72,13 @@ security_domains:
 
 Django-CFG accepts domains in any format:
 
-```yaml
-security_domains:
-  # Simple domain (auto-adds https://)
-  - example.com
-
-  # With protocol
-  - https://api.example.com
-
-  # With custom port
-  - http://staging.example.com:8080
-
-  # IP addresses (auto-adds http://)
-  - 192.168.1.10
+```python
+security_domains: list[str] = [
+    "example.com",                      # simple domain (adds https://)
+    "https://api.example.com",          # with protocol
+    "http://staging.example.com:8080",  # with custom port
+    "192.168.1.10",                     # IP address (adds http://)
+]
 ```
 
 **Automatic normalization:**
@@ -198,9 +193,9 @@ Important distinction:
 
 **Most common setup:** SSL handled by reverse proxy
 
-```yaml
-# Default behavior - SSL redirect DISABLED
-ssl_redirect: null  # or omit
+```python
+# Default behavior: SECURE_SSL_REDIRECT stays off
+ssl_redirect: bool | None = None  # or omit
 ```
 
 **Architecture:**
@@ -214,9 +209,8 @@ Django receives plain HTTP from reverse proxy. This is **correct and secure**.
 
 **Only use if Django directly handles SSL:**
 
-```yaml
-# Enable SSL redirect
-ssl_redirect: true
+```python
+ssl_redirect: bool | None = True
 ```
 
 This is rare. Only needed when:
@@ -288,8 +282,8 @@ Django-CFG auto-detects Docker:
 Before deploying, verify:
 
 **Environment:**
-- [ ] `debug = false` in config.yaml
-- [ ] `environment = "production"`
+- [ ] `debug = False`
+- [ ] `DJANGO_ENV=production` (or `env_mode` set to production)
 - [ ] Strong `secret_key` (50+ characters)
 
 **Domains:**
@@ -315,12 +309,12 @@ Before deploying, verify:
 ### Development Best Practices
 
 **Local Development:**
-```yaml
-# config.dev.yaml
-debug: true
-environment: development
-secret_key: "dev-secret-key-at-least-50-chars-long-xxxxxxxxxxxxxxxxx"
-security_domains: []  # Auto-configured for localhost
+```python
+class MyConfig(DjangoConfig):
+    debug: bool = True
+    # env_mode comes from DJANGO_ENV=development
+    secret_key: str = "dev-secret-key-at-least-50-chars-long-xxxxxxxxxxxxxxxxx"
+    security_domains: list[str] = []  # localhost is trusted in development
 ```
 
 **Never commit:**
@@ -335,34 +329,37 @@ security_domains: []  # Auto-configured for localhost
 
 ### Multiple Frontends
 
-```yaml
-# API + multiple frontend apps
-security_domains:
-  - api.example.com        # Backend API
-  - app.example.com        # Main web app
-  - admin.example.com      # Admin panel
-  - mobile.example.com     # Mobile web app
+```python
+class MyConfig(DjangoConfig):
+    security_domains: list[str] = [
+        "api.example.com",  # Backend API
+        "app.example.com",  # Main web app
+        "admin.example.com",  # Admin panel
+        "mobile.example.com",  # Mobile web app
+    ]
 ```
 
 All domains automatically configured for CORS and CSRF.
 
 ### Staging Environment
 
-```yaml
-# Staging with custom port
-security_domains:
-  - staging.example.com
-  - staging-api.example.com:8443
+```python
+class MyConfig(DjangoConfig):
+    security_domains: list[str] = [
+        "staging.example.com",
+        "staging-api.example.com:8443",
+    ]
 ```
 
 ### Multi-Region Setup
 
-```yaml
-# Multiple regions
-security_domains:
-  - api-us.example.com
-  - api-eu.example.com
-  - api-asia.example.com
+```python
+class MyConfig(DjangoConfig):
+    security_domains: list[str] = [
+        "api-us.example.com",
+        "api-eu.example.com",
+        "api-asia.example.com",
+    ]
 ```
 
 ---
@@ -374,11 +371,12 @@ security_domains:
 **Error:** `Access-Control-Allow-Origin header is missing`
 
 **Solution:**
-```yaml
-# Add your frontend domain to security_domains
-security_domains:
-  - example.com
-  - app.example.com  # ← Add frontend domain
+```python
+class MyConfig(DjangoConfig):
+    security_domains: list[str] = [
+        "example.com",
+        "app.example.com",  # ← Add frontend domain
+    ]
 ```
 
 If the origin is already declared and the server log shows only `OPTIONS 200`, see [Reading an opaque CORS error](/configuration/security#reading-an-opaque-cors-error).
@@ -396,10 +394,11 @@ python manage.py shell
 **Error:** `CSRF verification failed`
 
 **Solution:**
-```yaml
-# Ensure frontend domain in security_domains
-security_domains:
-  - app.example.com  # Frontend domain must be here
+```python
+class MyConfig(DjangoConfig):
+    security_domains: list[str] = [
+        "app.example.com",  # Frontend domain must be here
+    ]
 ```
 
 **For API-only (no CSRF needed):**

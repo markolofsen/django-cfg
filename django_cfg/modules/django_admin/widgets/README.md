@@ -1,139 +1,93 @@
-# Django Admin Widgets
+# Django Admin widgets
 
-Custom widgets for django_admin module.
+Form widgets for the `django_admin` module, and the registry that renders the
+`ui_widget` display names. Two different things live here; do not mix them.
 
-## Available Widgets
+| | Controls | Declared in | Code |
+|---|---|---|---|
+| Display widgets | how a value is shown in the changelist and in readonly fields | `display_fields=[BadgeField(...), ...]` (the `ui_widget` of each field class) | `WidgetRegistry` in `registry.py` |
+| Form widgets | the input in the edit form | `AdminConfig(widgets=[JSONWidgetConfig(...)])` | `JSONEditorWidget` and the config models in `config/widget_config.py` |
 
-### JSONEditorWidget
+## JSONEditorWidget (wired)
 
-Rich JSON editor with syntax highlighting, validation, and copy button.
+`JSONEditorWidget` extends django-json-widget with a copy button and Unfold light or
+dark theme switching (template `django_admin/widgets/json_editor.html`, CSS
+`django_admin/css/json_editor_theme.css`). `PydanticAdmin.formfield_for_dbfield`
+applies it **to every editable `JSONField`**, so no configuration is needed. A field
+listed in `readonly_fields` keeps the plain display. The defaults of the auto-applied
+widget are `mode="code"` (modes code, tree, view) and `height="400px"`; the widget
+class itself defaults to `mode="tree"` when you build it by hand.
 
-**Features:**
-- 🎨 Syntax highlighting
-- ✅ JSON validation
-- 📋 Copy to clipboard button
-- 🌙 Automatic dark/light theme (Unfold integration)
-- 🔄 Multiple modes: code, tree, view
+Tune one field with `JSONWidgetConfig`:
 
-**Auto-applied to all JSONField models** - no configuration needed!
-
-**Usage:**
 ```python
-# Automatic - no config needed
-class Bot(models.Model):
-    settings = models.JSONField(default=dict)  # Auto-gets JSONEditorWidget!
-
-# Custom configuration
 from django_cfg.modules.django_admin import AdminConfig, JSONWidgetConfig
 
 config = AdminConfig(
     model=Bot,
     widgets=[
-        JSONWidgetConfig(
-            field="settings",
-            mode="code",  # or "tree", "view"
-            height="400px",
-            show_copy_button=True,
-        ),
+        JSONWidgetConfig(field="settings", mode="tree", height="500px", show_copy_button=True),
     ],
 )
 ```
 
-See: [@docs/JSON_WIDGET.md](../@docs/JSON_WIDGET.md)
+Fields: `mode` (`"tree"`, `"code"`, `"view"`; default `"code"`), `height` (`"400px"`),
+`width` (none), `show_copy_button` (`True`).
 
----
+## What `AdminConfig.widgets` really does
 
-## Widget Architecture
+`PydanticAdmin` reads each entry's `field` and `to_widget_kwargs()` into a per-field
+table, and `formfield_for_dbfield` consults that table **only for `JSONField`s**. So:
 
-### Display vs Form Widgets
+- `JSONWidgetConfig` works as above;
+- `TextWidgetConfig` (`placeholder`, `max_length`, `rows`) and `ImagePreviewWidgetConfig`
+  (thumbnail size, zoom and pan options) validate and are accepted, but nothing
+  applies them to a text or file field today;
+- `ImagePreviewWidget` (a `ClearableFileInput` with a zoom and pan modal, template
+  `django_admin/widgets/image_preview.html`) exists but is not applied automatically.
+  Use it yourself in a form: `widget=ImagePreviewWidget(...)`, importing it from
+  `django_cfg.modules.django_admin.widgets.image_preview_widget`. For the changelist
+  use the `ImagePreviewField` display field instead.
 
-**Important:** Django Admin has two separate concepts:
+A new config class for another field type therefore needs a hook in
+`formfield_for_dbfield` as well; a class on its own changes nothing.
 
-1. **display_fields** - For list_display (table view)
-   - Uses FieldConfig subclasses (BadgeField, DateTimeField, etc.)
-   - Controls HOW data is displayed in tables
-   
-2. **widgets** - For form fields (edit view)
-   - Uses WidgetConfig subclasses (JSONWidgetConfig, TextWidgetConfig, etc.)
-   - Controls form input widgets
+## Geo widgets
 
-```python
-AdminConfig(
-    model=Bot,
-    
-    # For TABLE display (list view)
-    display_fields=[
-        BadgeField(name="status", ...),
-        DateTimeField(name="created_at", ...),
-    ],
-    
-    # For FORM widgets (edit view)
-    widgets=[
-        JSONWidgetConfig(field="settings", ...),
-    ],
-)
-```
+`CountrySelectWidget`, `CitySelectWidget` and `LocationSelectWidget` (Select2-style
+autocomplete selects fed from the geo app, `django_cfg.apps.tools.geo`) are exported
+lazily from `django_cfg.modules.django_admin.widgets`. They depend on libraries that
+read Django settings at import, hence the PEP 562 `__getattr__` in `__init__.py`:
+import them inside functions or after setup, not at the top of `config.py`.
+A model field of class `LocationField` gets `LocationFieldWidget` (map preview) from
+the same hook.
 
-## Creating Custom Widgets
+Money fields use `MoneyFieldWidget` from `django_cfg.modules.django_currency.widgets`,
+through `MoneyFieldAdminMixin`, not from this folder.
 
-### 1. Create Widget Class
+## WidgetRegistry: display handlers
 
-```python
-from django.forms import Widget
-
-class MyCustomWidget(Widget):
-    template_name = "django_admin/widgets/my_widget.html"
-    
-    class Media:
-        css = {'all': ('django_admin/css/my_widget.css',)}
-        js = ('django_admin/js/my_widget.js',)
-    
-    def __init__(self, attrs=None, **kwargs):
-        self.custom_param = kwargs.pop('custom_param', 'default')
-        super().__init__(attrs)
-```
-
-### 2. Create WidgetConfig
+`WidgetRegistry` maps a `ui_widget` name to a render function
+`(obj, field_name, config) -> SafeString`. It is **not** a registry of form widget
+classes. Built-in names include `badge`, `progress`, `counter`, `datetime_relative`,
+`datetime_compact`, `text`, `boolean`, `decimal`, `image`, `image_preview`,
+`json_editor`, `link`, `status_badges`, `short_uuid`, `stacked`, `markdown`,
+`user_avatar`, `user_simple`, `currency`, `money_breakdown`, `money_field`, `country`,
+`city`, `location`.
 
 ```python
-from django_cfg.modules.django_admin.config import WidgetConfig
-from pydantic import Field
+from django_cfg.modules.django_admin import WidgetRegistry
 
-class MyWidgetConfig(WidgetConfig):
-    """Configuration for MyCustomWidget."""
-    
-    custom_param: str = Field("default", description="Custom parameter")
-    
-    def to_widget_kwargs(self) -> dict:
-        return {
-            'custom_param': self.custom_param,
-        }
+def render_phone(obj, field_name, config):
+    from django.utils.html import format_html
+    return format_html("<code>{}</code>", getattr(obj, field_name))
+
+WidgetRegistry.register("phone", render_phone)   # a handler, not a widget class
+handler = WidgetRegistry.get("phone")
 ```
 
-### 3. Use in AdminConfig
+An unknown name logs a warning and falls back to the raw value; a handler that raises
+is logged and falls back the same way. A custom name only helps where something emits
+it as `ui_widget`, so most projects use the built-in field classes instead.
 
-```python
-config = AdminConfig(
-    model=MyModel,
-    widgets=[
-        MyWidgetConfig(
-            field="my_field",
-            custom_param="value",
-        ),
-    ],
-)
-```
-
-## Widget Registry
-
-All widgets are registered in `WidgetRegistry` for centralized management:
-
-```python
-from django_cfg.modules.django_admin.widgets import WidgetRegistry
-
-# Register widget
-WidgetRegistry.register('my_widget', MyCustomWidget)
-
-# Get widget
-widget_class = WidgetRegistry.get('my_widget')
-```
+Authoritative lists: `@docs/field-types.md` (display fields) and `@docs/api-reference.md`.

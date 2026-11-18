@@ -5,7 +5,8 @@ Centralized email and telegram notifications for user account events
 import logging
 
 from django.utils import timezone
-from django.utils.translation import gettext, gettext_noop as _, override
+from django.utils.translation import gettext, override
+from django.utils.translation import gettext_noop as _
 
 from django_cfg.apps.system.mailer.templatetags.email_content import fill_placeholders
 from django_cfg.core.site import Site, site_for
@@ -386,10 +387,11 @@ class AccountNotifications:
                 "timestamp": timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")
             }
 
+            # A one-time code is never deduplicated: each request is its own event.
             if is_new_user:
-                DjangoTelegram.send_success("🆕 New User OTP Request", notification_data)
+                DjangoTelegram.send_success("🆕 New User OTP Request", notification_data, dedupe=False)
             else:
-                DjangoTelegram.send_info("🔑 OTP Login Request", notification_data)
+                DjangoTelegram.send_info("🔑 OTP Login Request", notification_data, dedupe=False)
 
             logger.info(f"OTP telegram notification sent for {user.email}")
 

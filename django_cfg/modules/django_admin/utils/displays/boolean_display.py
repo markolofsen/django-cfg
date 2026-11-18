@@ -18,7 +18,7 @@ class BooleanDisplay:
         false_icon: Optional[str] = None,
     ) -> SafeString:
         """Display boolean as a Material Symbol icon."""
-        from ...icons import Icons  # lazy — avoids AppRegistryNotReady
+        from django_cfg.icons import Icons
 
         if value:
             icon = true_icon or Icons.CHECK_CIRCLE

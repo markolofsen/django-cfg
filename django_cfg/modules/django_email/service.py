@@ -5,13 +5,18 @@ This email service automatically configures itself based on the DjangoConfig ins
 without requiring manual parameter passing.
 """
 import logging
-
 import re
 import socket
 import threading
 from email.utils import formataddr
 from html import unescape
-from smtplib import SMTPAuthenticationError, SMTPDataError, SMTPException, SMTPRecipientsRefused, SMTPSenderRefused
+from smtplib import (
+    SMTPAuthenticationError,
+    SMTPDataError,
+    SMTPException,
+    SMTPRecipientsRefused,
+    SMTPSenderRefused,
+)
 from typing import Any, Dict, List, Optional, Union
 
 from django.conf import settings

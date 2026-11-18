@@ -4,7 +4,7 @@ ORM/FastAPI model generation runner.
 Generates Pydantic/FastAPI models from Django ORM models.
 
 v6.1: Rich logging integration.
-v6.2: Use FastAPIOrchestrator from django_fastapi module.
+v6.2: Use FastAPIOrchestrator from django_generator.fastapi.
 """
 
 from __future__ import annotations
@@ -136,7 +136,7 @@ def _generate_fastapi(
         logger.stats.groups_generated += 1
 
     except ImportError as e:
-        logger.warning(f"django_fastapi module not available: {e}")
+        logger.warning(f"django_generator.fastapi not available: {e}")
         logger.info("  Install: pip install django-cfg[fastapi]")
 
 
@@ -179,7 +179,7 @@ def _generate_pydantic(
         logger.stats.groups_generated += 1
 
     except ImportError as e:
-        logger.warning(f"django_fastapi module not available: {e}")
+        logger.warning(f"django_generator.fastapi not available: {e}")
 
 
 def _generate_sqlalchemy(

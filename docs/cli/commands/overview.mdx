@@ -35,10 +35,10 @@ python manage.py check_endpoints
 python manage.py migrate_all
 
 # Run development server
-cli runserver
+python manage.py runserver
 
 # Create superuser
-cli superuser --email admin@example.com
+python manage.py superuser --email admin@example.com
 
 # Check settings and diagnostics
 python manage.py check_settings
@@ -58,7 +58,7 @@ python manage.py check_endpoints --json
 python manage.py test_email --email admin@test.com
 
 # Test Telegram
-cli test-telegram --message "Hello!"
+python manage.py test_telegram --message "Hello!"
 
 ```
 
@@ -81,10 +81,10 @@ cli test-telegram --message "Hello!"
 
 ```bash
 # Enhanced development server
-cli runserver --port 3000
+python manage.py runserver --port 3000
 
 # List all URLs
-python manage.py list_urls --pattern "api/"
+python manage.py list_urls --filter api
 
 # Show project structure
 python manage.py tree --depth 3
@@ -173,7 +173,7 @@ curl http://localhost:8000/cfg/endpoints/
 <details>
   <summary>
 
-### [🛠️ Development Tools](./development) — 8 commands
+### [🛠️ Development Tools](./development) — 6 commands
 
   </summary>
 
@@ -181,11 +181,10 @@ Development server and productivity tools.
 
 | Command | Description |
 |---------|-------------|
-| `cli runserver` | Enhanced development server |
+| `python manage.py runserver` | Enhanced development server |
 | `script` | Run scripts with Django context |
 | `tree` | Show project structure |
 | `list_urls` | List all URL patterns |
-| `generate` | Generate Django components |
 | `create_token` | Create API tokens |
 | `clear_constance` | Clear Constance cache |
 
@@ -196,7 +195,7 @@ Development server and productivity tools.
 <details>
   <summary>
 
-### 🔄 Background Tasks — Django-RQ — 9 commands
+### 🔄 Background Tasks — Django-RQ — 5 commands
 
   </summary>
 
@@ -204,10 +203,6 @@ Django-RQ worker management, scheduling, and monitoring.
 
 | Command | Description |
 |---------|-------------|
-| `rearq main:rearq worker` | Start background workers |
-| `rearq main:rearq timer` | Start cron task scheduler |
-| `rearq main:rearq server` | Start monitoring server |
-| `test_tasks` | Test task processing |
 | `rqworker` | Start RQ worker process |
 | `rqworker_pool` | Start RQ worker pool (multiple workers) |
 | `rqscheduler` | Start RQ scheduler for cron/interval tasks |
@@ -215,23 +210,6 @@ Django-RQ worker management, scheduling, and monitoring.
 | `rq_cleanup_locks` | Clean stale RQ job locks |
 
 **[Full Documentation →](/features/modules/django-rq)**
-
-</details>
-
-<details>
-  <summary>
-
-### 🖥️ Streamlit Admin — 3 commands
-
-  </summary>
-
-Streamlit-based admin panel scaffolding and management.
-
-| Command | Description |
-|---------|-------------|
-| `create_streamlit_app` | Scaffold a new Streamlit admin app |
-| `run_streamlit` | Start Streamlit admin server |
-| `gen_streamlit` | Generate Streamlit pages from Django models |
 
 </details>
 
@@ -247,23 +225,22 @@ Generate code from Django models for other frameworks.
 | Command | Description |
 |---------|-------------|
 | `generate_fastapi` | Generate FastAPI/SQLModel code from Django models |
-| `generate_client` | Generate standalone API client |
+| `gen` | Generate API clients from `generation.py` (TypeScript, Python, Go, Swift) |
 
 </details>
 
 <details>
   <summary>
 
-### 📊 LLM & Monitoring — 2 commands
+### 📊 LLM Balance — 1 command
 
   </summary>
 
-LLM balance checks and monitoring cleanup.
+LLM provider balance check.
 
 | Command | Description |
 |---------|-------------|
 | `check_llm_balance` | Check OpenAI/OpenRouter API balance |
-| `monitor_cleanup` | Clean old monitor events |
 
 </details>
 
@@ -330,13 +307,13 @@ python manage.py check_settings --verbose
 python manage.py migrate_all
 
 # 4. Create superuser
-cli superuser --email admin@example.com
+python manage.py superuser --email admin@example.com
 
 # 5. Check endpoint health
 python manage.py check_endpoints
 
 # 6. Run server
-cli runserver
+python manage.py runserver
 ```
 
 ### Pre-Deployment Checklist
@@ -389,7 +366,7 @@ Add endpoint health checks to your monitoring:
 
 ```bash
 # Recommended
-poetry run cli runserver
+poetry run python manage.py runserver
 poetry run python manage.py check_endpoints
 
 # Also works but less isolated
@@ -405,7 +382,7 @@ python manage.py runserver
 python manage.py check_settings --verbose
 
 # Before migrations
-python manage.py migrate_all --dry-run
+python manage.py migrate_all --check
 ```
 
 ### Testing
@@ -417,7 +394,7 @@ python manage.py migrate_all --dry-run
 python manage.py test_email --email admin@test.com
 
 # Test messaging
-cli test-telegram --message "Deploy successful"
+python manage.py test_telegram --message "Deploy successful"
 
 # Test endpoints
 python manage.py check_endpoints

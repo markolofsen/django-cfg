@@ -26,9 +26,12 @@ Type-safe cache backend configuration with environment-aware smart defaults.
 | `max_connections` | `int` | `50` | Maximum Redis connections (≥1) |
 | `key_prefix` | `str` | `""` | Cache key prefix |
 | `version` | `int` | `1` | Cache key version (≥1) |
-| `connection_pool_kwargs` | `dict[str, Any]` | `{}` | Redis connection pool parameters |
+| `connection_pool_kwargs` | `dict[str, Any]` | `{}` | Redis connection pool parameters (allowed keys: `retry_on_timeout`, `health_check_interval`, `socket_timeout`, `socket_connect_timeout`, `socket_keepalive`, `socket_keepalive_options`, `encoding`, `encoding_errors`, `decode_responses`; anything else is a validation error) |
 | `compress` | `bool` | `False` | Enable cache value compression (zlib) |
 | `serializer` | `Literal["json", "pickle", "msgpack"]` | `"pickle"` | Cache value serializer |
+| `backend_override` | `str \| None` | `None` | Force a backend class path (for tests) |
+
+The Redis database number in `redis_url` must be 0-15. `key_prefix` may contain letters, digits, `_`, `-` and `:`.
 
 ### Methods
 
@@ -41,9 +44,9 @@ Type-safe cache backend configuration with environment-aware smart defaults.
 | Scenario | Backend | Notes |
 |----------|---------|-------|
 | `redis_url` set | `django_redis.cache.RedisCache` | Production recommended |
-| Development (no Redis) | `LocMemCache` | Fast, in-memory, per-process |
-| Production (no Redis) | `FileBasedCache` | Creates tmp/ directory |
-| Fallback | `DummyCache` | No-op cache |
+| Development or `debug` (no Redis) | `LocMemCache` | Fast, in-memory, per-process |
+| Production (no Redis) | `FileBasedCache` | Under `cache_dir` |
+| `backend_override` set | that backend | e.g. `DummyCache` in tests |
 
 ## Cache Priority
 
@@ -107,10 +110,6 @@ class MyConfig(DjangoConfig):
         timeout=600,
         key_prefix="myapp_prod",
         max_connections=100,
-        connection_pool_kwargs={
-            'ssl_cert_reqs': 'required',
-            'ssl_ca_certs': '/path/to/ca-cert.pem'
-        }
     )
 ```
 
@@ -127,15 +126,9 @@ class MyConfig(DjangoConfig):
     )
 ```
 
-### Dummy (Disabled)
+### No cache in tests
 
-Without `cache_default` or `redis_url`, uses DummyCache (no-op).
-
-```python
-class MyConfig(DjangoConfig):
-    debug: bool = False
-    # No cache_default, no redis_url - DummyCache fallback
-```
+Set `backend_override="django.core.cache.backends.dummy.DummyCache"` to get a no-op cache.
 
 
 ## Multiple Cache Backends
@@ -209,79 +202,20 @@ cache_default: CacheConfig = CacheConfig(
 )
 ```
 
-### Redis Sentinel
-
-```python
-cache_default: CacheConfig = CacheConfig(
-    redis_url="redis://localhost:6379/0",
-    connection_pool_kwargs={
-        'sentinels': [
-            ('sentinel1.example.com', 26379),
-            ('sentinel2.example.com', 26379),
-        ],
-        'service_name': 'mymaster',
-    }
-)
-```
-
-### Redis Cluster
-
-```python
-cache_default: CacheConfig = CacheConfig(
-    redis_url="redis://node1:6379/0",
-    connection_pool_kwargs={
-        'startup_nodes': [
-            {'host': 'node1.example.com', 'port': 6379},
-            {'host': 'node2.example.com', 'port': 6379},
-        ],
-    }
-)
-```
+Sentinel and Cluster topologies are not expressible through `connection_pool_kwargs`; set `CACHES` yourself for those.
 
 ## Environment-Specific Configuration
 
-### Using Properties
+Pick the config from the environment in plain Python:
 
 ```python
 import os
 
 class MyConfig(DjangoConfig):
-    secret_key: str = "your-secret-key"
-
-    @property
-    def cache_default(self) -> Optional[CacheConfig]:
-        if self._environment == "production":
-            return CacheConfig(
-                redis_url=os.getenv('REDIS_URL'),
-                timeout=600,
-                key_prefix="prod",
-                max_connections=200
-            )
-        elif self._environment == "development":
-            return CacheConfig(
-                # No redis_url - uses LocMemCache
-                timeout=60,
-                key_prefix="dev"
-            )
-        return None  # Dummy cache
+    redis_url: str | None = os.getenv("REDIS_URL")
 ```
 
-### Using YAML
-
-```yaml
-# config.production.yaml
-cache_default:
-  redis_url: "redis://prod-cache.example.com:6379/0"
-  timeout: 600
-  key_prefix: "prod"
-  max_connections: 200
-
-# config.development.yaml
-cache_default:
-  timeout: 60
-  key_prefix: "dev"
-  # No redis_url - auto-selects LocMemCache
-```
+With `redis_url=None` the cache falls back per the table above, so development needs no Redis.
 
 ## Cache Key Versioning
 
@@ -367,9 +301,6 @@ class MyConfig(DjangoConfig):
 class MyConfig(DjangoConfig):
     cache_default: CacheConfig = CacheConfig(
         redis_url="rediss://cache.example.com:6380/0",  # SSL
-        connection_pool_kwargs={
-            'ssl_cert_reqs': 'required'
-        }
     )
 ```
 
@@ -402,7 +333,7 @@ class MyConfig(DjangoConfig):
         redis_url="redis://localhost:6379/0",
         connection_pool_kwargs={
             'socket_connect_timeout': 10,
-            'retry_on_timeout': True
+            'retry_on_timeout': True,
         }
     )
 ```

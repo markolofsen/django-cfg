@@ -58,7 +58,7 @@ Here's a production-ready configuration with multiple queues and scheduling:
 ```python
 # api/config.py
 from django_cfg import DjangoConfig
-from django_cfg.models import DjangoRQConfig, RQQueueConfig, RQScheduleConfig
+from django_cfg import DjangoRQConfig, RQQueueConfig, RQScheduleConfig
 
 class MyConfig(DjangoConfig):
     # === Redis Configuration ===

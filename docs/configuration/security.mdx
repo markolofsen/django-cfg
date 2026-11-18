@@ -298,17 +298,21 @@ class DevelopmentConfig(DjangoConfig):
 
 ## Environment-Specific Security
 
-```yaml
-# config.production.yaml
-secret_key: "${SECRET_KEY}"
-debug: false
-site_url: https://myapp.com
-api_url: https://api.myapp.com
-security_domains: []
+Pick the environment with `DJANGO_ENV` (or `env_mode`) and read secrets from the environment, so one config class serves every environment:
 
-# config.development.yaml
-secret_key: "dev-secret-key-minimum-50-chars"
-debug: true
+```python
+import os
+
+class MyConfig(DjangoConfig):
+    secret_key: str = os.environ.get("SECRET_KEY", "dev-secret-key-minimum-50-characters-long-string")
+    site_url: str = "https://myapp.com"
+    api_url: str = "https://api.myapp.com"
+    security_domains: list = []
+```
+
+```bash
+# production
+DJANGO_ENV=production SECRET_KEY=... python manage.py check --deploy
 ```
 
 ## Security Best Practices
@@ -332,17 +336,16 @@ Django-CFG ships JWT auth (via SimpleJWT) configured through `JWTConfig`, with a
 **secure-by-default** posture — you usually don't set anything:
 
 ```python
-from django_cfg import DjangoConfig
-from django_cfg.models.api.jwt import JWTConfig
+from django_cfg import DjangoConfig, JWTConfig
 
 class MyConfig(DjangoConfig):
-    jwt = JWTConfig()  # long sessions: 1-year access and refresh, rotation + blacklist on
+    jwt: JWTConfig = JWTConfig()  # long sessions: 1-year access and refresh, rotation + blacklist on
 ```
 
 | Setting | Default | Why |
 |---------|---------|-----|
 | `access_token_lifetime_minutes` | `None` (1 year) | Long by default. `JWTConfig.short_lived()` gives 30 minutes. |
-| `refresh_token_lifetime_days` | `90` | Long — users "log in once", stay logged in. |
+| `refresh_token_lifetime_days` | `365` | Long — users "log in once", stay logged in. |
 | `rotate_refresh_tokens` | `True` | Each refresh issues a new refresh token. |
 | `blacklist_after_rotation` | `True` | A reused (stolen) refresh token is revoked. |
 

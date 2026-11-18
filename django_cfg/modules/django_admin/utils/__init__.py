@@ -23,9 +23,7 @@ from .decorators import (
 
 # Displays
 from .displays import (
-    AvatarDisplay,
     BooleanDisplay,
-    CounterBadgeDisplay,
     DateTimeDisplay,
     ImageDisplay,
     ImagePreviewDisplay,
@@ -36,9 +34,7 @@ from .displays import (
     StackedDisplay,
     StatusBadgesDisplay,
     TextDisplay,
-    ToonDisplay,
     UserDisplay,
-    VideoDisplay,
 )
 
 # HTML Builders (organized by functionality)
@@ -68,15 +64,11 @@ __all__ = [
     "ImageDisplay",
     "ImagePreviewDisplay",
     "JSONDisplay",
-    "AvatarDisplay",
     "LinkDisplay",
     "StatusBadgesDisplay",
-    "CounterBadgeDisplay",
     "ShortUUIDDisplay",
     "StackedDisplay",
     "TextDisplay",
-    "ToonDisplay",
-    "VideoDisplay",
     # Badge utilities
     "StatusBadge",
     "ProgressBadge",

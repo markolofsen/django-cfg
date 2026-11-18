@@ -6,11 +6,11 @@ Enhanced activity tracking with Material Icons and clean declarative config.
 
 from django.contrib import admin
 
+from django_cfg.icons import Icons
 from django_cfg.modules.django_admin import (
     AdminConfig,
     DateTimeField,
     FieldsetConfig,
-    Icons,
     UserField,
     computed_field,
 )
@@ -18,7 +18,6 @@ from django_cfg.modules.django_admin.base import PydanticAdmin
 
 from ..models import UserActivity
 from .filters import ActivityTypeFilter
-
 
 # ===== UserActivity Admin =====
 

@@ -16,6 +16,8 @@ Django-CFG provides a unified code generation system that produces type-safe API
 
 ## Quick Start
 
+The `make` targets below are a convention: django-cfg itself ships only `manage.py gen`, and your project's Makefile wraps it.
+
 ```bash
 make gen           # generate all targets
 make gen-ts        # TypeScript only
@@ -41,7 +43,7 @@ Place `generation.py` at your Django project root (next to `manage.py`). It expo
 
 ```python
 from pathlib import Path
-from django_cfg.modules.django_codegen import (
+from django_cfg.modules.django_generator import (
     Config, OpenAPI, Target, Language, TargetType,
 )
 
@@ -126,7 +128,7 @@ Wildcard patterns are supported: `"cfg_*"` matches all groups starting with `cfg
 For projects with extension packages, use `ExtensionTarget` to auto-discover them:
 
 ```python
-from django_cfg.modules.django_codegen import ExtensionTarget
+from django_cfg.modules.django_generator import ExtensionTarget
 
 openapi=OpenAPI(
     targets=[...],
@@ -147,7 +149,7 @@ This scans `frontend/extensions/ext-*/` and maps each to the `ext_{name}` API gr
 | Field | Type | Description |
 |-------|------|-------------|
 | `lang` | `Language` / `Platform` | Target language: `TYPESCRIPT`, `PYTHON`, `GO`, `SWIFT_CODABLE` |
-| `type` | `TargetType` / `str` | Target category: `WEB`, `SDK`, `ADMIN`, `PACKAGES`, or custom string like `"mobile"`, `"cli"` |
+| `type` | `TargetType` / `str` | Target category: `WEB`, `PACKAGES`, `EXTENSIONS`, `PARSERS`, `SDK`, or custom string like `"mobile"`, `"cli"` |
 | `path` | `Path` | Absolute output directory |
 | `groups` | `list[str]` | API groups to include. Supports `"cfg_*"` wildcards for OpenAPI |
 | `post_build` | `str \| None` | Optional shell command to run after copy, e.g. `"pnpm build"` |
@@ -168,11 +170,13 @@ This scans `frontend/extensions/ext-*/` and maps each to the `ext_{name}` API gr
 | `--py` | Python targets only |
 | `--go` | Go targets only |
 | `--swift` | Swift targets only |
-| `--target <type>` | Filter by target type (`web`, `sdk`, `admin`, etc.) |
+| `--target <type>` | Filter by target type (`web`, `packages`, `sdk`, `parsers`, `extensions`) |
 | `--groups <g1> <g2>` | Filter to specific groups |
 | `--dry-run` | Preview what would be generated, no files written |
 | `--list-targets` | Print all configured targets and exit |
-| `--verbose` | Verbose output |
+| `--check-stamp` | Generate nothing; fail when a generated client's CFG contract differs from the installed django-cfg |
+| `--config <path>` | Path to `generation.py` (default `./generation.py`) |
+| `--verbose` / `--quiet` | Verbose or quiet output |
 
 ## Real-World Example
 
@@ -180,7 +184,7 @@ Full `generation.py` from a multi-platform project:
 
 ```python
 from pathlib import Path
-from django_cfg.modules.django_codegen import (
+from django_cfg.modules.django_generator import (
     Config, OpenAPI, Target, Language, TargetType,
 )
 

@@ -15,13 +15,13 @@ description: Comprehensive FAQ about Django-CFG type-safe configuration. Install
 
 ### What is Django-CFG?
 
-Django-CFG is a **type-safe configuration framework** for Django that replaces traditional `settings.py` with **Pydantic v2 models**. It validates configuration at startup, provides IDE autocomplete, and includes 9 built-in production apps (user management, AI agents, support tickets, etc.).
+Django-CFG is a **type-safe configuration framework** for Django that replaces traditional `settings.py` with **Pydantic v2 models**. It validates configuration at startup, provides IDE autocomplete, and ships built-in apps for accounts and two-factor sign-in, mail, payments, currency, geo, analytics and chat, plus an LLM client and an MCP server.
 
 **Key Benefits**:
-- ✅ 90% reduction in configuration bugs
-- ✅ Full IDE autocomplete
-- ✅ 85% less configuration code
-- ✅ Built-in production features
+- Errors caught at startup, not in production
+- Full IDE autocomplete
+- Much less configuration code than a hand-written `settings.py`
+- Built-in production features
 
 ---
 
@@ -42,23 +42,17 @@ python -c "import django_cfg; print(django_cfg.__version__)"
 ```
 
 **Minimum Requirements**:
-- Python 3.12+
-- Django 4.2+
+- Python 3.12 or 3.13
+- Django 5.2+
 - Pydantic 2.0+
 
 **Installation time**: 2 minutes
 
 ---
 
-### Is Django-CFG compatible with Django 5.0?
+### Which Django and Python versions are supported?
 
-**Yes!** Django-CFG is tested and fully compatible with:
-- ✅ Django 4.2 (LTS)
-- ✅ Django 5.0
-- ✅ Django 5.1
-- ✅ Python 3.11, 3.12, 3.13
-
-We maintain compatibility with the latest Django versions within 48 hours of release.
+Django 5.2 (`>=5.2.14,<6.0`) and Python 3.12 or 3.13. Django is not a base dependency of django-cfg; install it alongside.
 
 ---
 
@@ -79,13 +73,13 @@ See: [**Migration Guide**](./migration-guide)
 
 ### How long does setup take?
 
-**New project**: 15 minutes (including config.yaml)
+**New project**: about 15 minutes (including the `.env` file)
 **Existing project migration**: 1-2 weeks (gradual)
 
 **Breakdown** (new project):
 - Install: 2 minutes
 - Create config.py: 5 minutes
-- Create config.yaml: 3 minutes
+- Create the `.env` file: 3 minutes
 - Test: 2 minutes
 - Run migrations: 3 minutes
 
@@ -97,59 +91,53 @@ See: [**Migration Guide**](./migration-guide)
 
 ### What are Django-CFG built-in apps?
 
-Django-CFG includes **9 production-ready apps**:
+Django-CFG ships these apps. There is no `enable_*` flag per app: some are always installed, the rest switch on when you set their config section.
 
-| App | Description | Enable Flag |
-|-----|-------------|-------------|
-| **Accounts** | User management with OTP authentication | `enable_accounts` |
-| **Support** | Support ticket system with live chat | `enable_support` |
-| **AI Agents** | AI workflow automation framework | `enable_agents` |
-| **Knowledge Base** | Document processing + semantic search | `enable_knowbase` |
-| **Newsletter** | Email marketing with tracking | `enable_newsletter` |
-| **Leads** | Lead management and CRM | `enable_leads` |
-| **Maintenance** | Multi-site maintenance mode | `enable_maintenance` |
-| **Tasks** | Background job processing (Dramatiq) | `tasks` config |
-| **Operations** | System health and monitoring | Auto-enabled |
+| App | Description | Switched on by |
+|-----|-------------|----------------|
+| **Accounts** | Custom user model, OTP and OAuth sign-in | Always installed |
+| **TOTP** | Two-factor authentication | Always installed |
+| **Mailer** | Mail delivery, per-locale letter copy, send log | Always installed |
+| **Health and commands API** | `/healthz` probes, `/cfg/commands/` | Always installed |
+| **Currency** | Exchange rates | `currency=CurrencyConfig(...)` |
+| **Geo** | Countries, states, cities | `geo=GeoConfig(...)` |
+| **Analytics** | Pageview and session ingest | `analytics=AnalyticsConfig(...)` |
+| **Chat** | Assistant chat threads | `chat=ChatConfig(...)` |
+| **Payments** | Checkout, webhooks, refunds | `payments=PaymentsConfig(...)` |
+| **Django-RQ** | Background jobs | `django_rq=DjangoRQConfig(...)` |
+
+Business apps such as leads or newsletter ship as extensions, not as built-in apps.
 
 **Enable in config**:
 ```python
+from django_cfg import DjangoConfig, GeoConfig, CurrencyConfig
+
 class MyConfig(DjangoConfig):
-    enable_accounts: bool = True
-    enable_support: bool = True
-    # ... one line per app
+    geo: GeoConfig = GeoConfig()
+    currency: CurrencyConfig = CurrencyConfig()
 ```
 
 ---
 
-### Does Django-CFG support AI agents?
+### Does Django-CFG support AI and LLMs?
 
-**Yes!** Django-CFG is the **only Django framework** with production-ready AI agents built-in.
+**Yes.** The `django_llm` module is a multi-provider LLM client with response caching and cost tracking, and the `django_mcp` module exposes a Model Context Protocol server so AI agents can use your Django project.
 
-**Features**:
-- ✅ Type-safe agents (Pydantic AI)
-- ✅ Django ORM integration
-- ✅ Background task execution
-- ✅ Cost tracking and caching
-- ✅ Admin interface
-- ✅ OpenAI, Anthropic, Gemini support
-
-**Example**:
 ```python
-class MyConfig(DjangoConfig):
-    enable_agents: bool = True
-    openai_api_key: str = env.openai_api_key
+from django_cfg.modules.django_llm import LLMClient
 ```
+
+See [Django LLM](/features/modules/django-llm) and [Django MCP](/features/modules/django-mcp).
 
 ---
 
 ### Can I use Django-CFG with PostgreSQL?
 
-**Yes!** Django-CFG supports all Django database backends:
+**Yes!** `DatabaseConfig` builds the entry for PostgreSQL, MySQL/MariaDB and SQLite:
 
-- ✅ PostgreSQL (recommended for production)
-- ✅ MySQL / MariaDB
-- ✅ SQLite (development)
-- ✅ Oracle
+- PostgreSQL (recommended for production)
+- MySQL / MariaDB
+- SQLite (development)
 
 **Example**:
 ```python
@@ -166,7 +154,7 @@ class MyConfig(DjangoConfig):
     }
 ```
 
-**Special feature**: PostgreSQL with **pgvector** for AI embeddings (built-in support).
+Or from a URL: `DatabaseConfig.from_url("postgresql://user:pass@host:5432/db")`.
 
 ---
 
@@ -174,10 +162,10 @@ class MyConfig(DjangoConfig):
 
 **Yes!** Django-CFG is **optimized for Docker**:
 
-- ✅ Environment detection (via `ENV` variable)
-- ✅ Health check endpoints built-in
-- ✅ Docker Compose examples included
-- ✅ Production Dockerfile templates
+- Environment detection (via the `DJANGO_ENV` variable; production is the default)
+- Health check endpoints built in (`/healthz/live`, `/healthz/ready`)
+- Docker Compose examples in the docs
+- Production Dockerfile templates
 
 **Example docker-compose.yml**:
 ```yaml
@@ -185,7 +173,7 @@ services:
   django:
     image: myapp:latest
     environment:
-      - ENV=production
+      - DJANGO_ENV=production
       - SECRET_KEY=${SECRET_KEY}
     # Django-CFG auto-detects production mode
 ```
@@ -237,7 +225,7 @@ debug: bool = False
 |---------|------------|----------------|
 | **Type Safety** | ✅ Pydantic v2 | ❌ Runtime casting |
 | **IDE Autocomplete** | ✅ Full | ❌ None |
-| **Built-in Apps** | ✅ 9 apps | ❌ None |
+| **Built-in Apps** | ✅ Accounts, mail, payments, ... | ❌ None |
 | **Lines of Code** | 30-50 | 150-200 |
 
 See: [**Complete Comparison**](../../getting-started/django-cfg-vs-alternatives)
@@ -288,7 +276,7 @@ globals().update(settings_dict)
 
 **Django-CFG** (Django-specific):
 - ✅ Automatic Django settings generation
-- ✅ Built-in apps (accounts, support, AI agents)
+- ✅ Built-in apps (accounts, mailer, payments, ...)
 - ✅ Django-aware helpers (security_domains, multi-DB routing)
 
 **Recommendation**:
@@ -329,12 +317,11 @@ MY_CUSTOM_SETTING = "value"
 
 **Common causes**:
 
-**1. Missing config.yaml**:
+**1. Missing `.env` file or variable**:
 ```python
-# Check file exists
+# Check the file exists
 from pathlib import Path
-config_path = Path(__file__).parent / "config.yaml"
-print(config_path.exists())  # Should be True
+print((Path(__file__).parent.parent / ".env").exists())  # Should be True
 ```
 
 **2. Pydantic validation error**:
@@ -347,7 +334,7 @@ python manage.py check
 ```
 
 **3. Import error**:
-```python
+```bash
 # Make sure django-cfg is installed
 pip list | grep django-cfg
 
@@ -380,7 +367,7 @@ secret_key
 
 **How to fix**:
 1. **Read error message** - shows field name and expected type
-2. **Check config.yaml** - verify value matches type
+2. **Check your `.env` or environment** - verify the value matches the type
 3. **Use Field() for validation** - add custom validators
 
 ```python
@@ -438,30 +425,25 @@ echo $DATABASE_URL
 export DATABASE_URL="postgresql://..."
 ```
 
-**2. Wrong variable name in config.yaml**:
-```yaml
-# config.yaml
-database:
-  name: mydb  # ← Must match env variable name
-```
+**2. Wrong variable name in your loader**:
+
+django-cfg itself reads only a few variables (`DJANGO_ENV`, `ENVIRONMENT`, `ENV`, `DJANGO_CFG_BANNER`, ...). Every other variable is read by your own `pydantic-settings` loader, so the name must match its fields (`DATABASE__NAME` for `database.name` with `env_nested_delimiter="__"`).
 
 **3. Type mismatch**:
-```yaml
-# ❌ Wrong - port is string
-port: "5432"
+```bash
+# Wrong: not an integer
+DATABASE__PORT=five432
 
-# ✅ Correct - port is int
-port: 5432
+# Correct
+DATABASE__PORT=5432
 ```
 
-**4. Using .env file (not supported by default)**:
+**4. `.env` file not loaded**:
 ```python
-# Use python-dotenv
-from dotenv import load_dotenv
-load_dotenv()  # Load .env file
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Or use pydantic-settings
-from pydantic_settings import BaseSettings
+class Env(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env")
 ```
 
 ---
@@ -514,33 +496,31 @@ def test_production_config():
 
 ### How do I manage secrets with Django-CFG?
 
-**Recommended approach**: YAML + gitignore
-
-```yaml
-# config.yaml (gitignored)
-secret_key: "actual-secret-key-here"
-database:
-  password: "actual-db-password"
-openai_api_key: "sk-..."
-```
+**Recommended approach**: environment variables, or a gitignored `.env` file read by your `pydantic-settings` loader.
 
 ```bash
 # .gitignore
-config.yaml
-*.yaml
+.env
+.env.*
+```
+
+```bash
+# .env (gitignored)
+SECRET_KEY=actual-secret-key-here
+DATABASE__PASSWORD=actual-db-password
+OPENAI_API_KEY=sk-...
 ```
 
 **For production**, use:
-- **AWS Secrets Manager** → load into config.yaml at deploy time
-- **HashiCorp Vault** → inject secrets into config
-- **Environment variables** → Pydantic can read from env vars
+- **AWS Secrets Manager** or **HashiCorp Vault** → inject as environment variables at deploy time
+- **Docker / Kubernetes secrets** → exported as environment variables
 
 ```python
-from pydantic import Field
+import os
+from django_cfg import DjangoConfig
 
 class MyConfig(DjangoConfig):
-    secret_key: str = Field(..., env='DJANGO_SECRET_KEY')
-    # Reads from environment variable DJANGO_SECRET_KEY
+    secret_key: str = os.environ["DJANGO_SECRET_KEY"]
 ```
 
 ---
@@ -549,7 +529,7 @@ class MyConfig(DjangoConfig):
 
 **Yes!** Django-CFG follows security best practices:
 
-✅ **Secrets not in code** - Use config.yaml (gitignored) or env vars
+✅ **Secrets not in code** - Use environment variables or a gitignored `.env`
 ✅ **Validation** - Invalid config fails at startup (not in production)
 ✅ **Type safety** - No string injection vulnerabilities
 ✅ **Smart defaults** - Security headers enabled automatically
@@ -558,26 +538,21 @@ class MyConfig(DjangoConfig):
 **Security features**:
 ```python
 class MyConfig(DjangoConfig):
-    # Auto-generates security settings:
+    # Auto-generates security settings (ALLOWED_HOSTS, CORS, CSRF origins):
     security_domains: list[str] = ["myapp.com"]
-
-    # Auto-enables (in production):
-    # - SECURE_SSL_REDIRECT = True
-    # - SECURE_HSTS_SECONDS = 31536000
-    # - SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    # - SECURE_CONTENT_TYPE_NOSNIFF = True
-    # - X_FRAME_OPTIONS = "DENY"
 ```
+
+See [Security Settings](/configuration/security) for the generated SSL, HSTS and cookie settings.
 
 ---
 
 ### What are Django-CFG best practices?
 
-**1. Use YAML for environment config**:
-```yaml
-# config.yaml (gitignored)
-secret_key: "..."
-database: {...}
+**1. Load environment config with `pydantic-settings`** (`.env` gitignored):
+```bash
+# .env
+SECRET_KEY=...
+DATABASE__NAME=mydb
 ```
 
 **2. Use Pydantic models for structure**:
@@ -603,13 +578,13 @@ class MyConfig(DjangoConfig):
 import os
 
 class MyConfig(DjangoConfig):
-    debug: bool = os.environ.get("ENV", "development") == "development"
+    debug: bool = os.environ.get("DJANGO_ENV", "development") == "development"
 ```
 
-**5. Enable built-in apps for production features**:
+**5. Turn on built-in features through config sections**:
 ```python
-enable_accounts: bool = True  # User management
-enable_support: bool = True   # Support tickets
+payments: PaymentsConfig = PaymentsConfig(...)
+geo: GeoConfig = GeoConfig()
 ```
 
 ---
@@ -630,17 +605,17 @@ class MyConfig(DjangoConfig):
         default_factory=lambda: {
             "default": DatabaseConfig(
                 # SQLite for dev, PostgreSQL for prod
-                engine="django.db.backends.sqlite3" if os.environ.get("ENV") == "development"
+                engine="django.db.backends.sqlite3" if os.environ.get("DJANGO_ENV") == "development"
                     else "django.db.backends.postgresql",
-                name="db.sqlite3" if os.environ.get("ENV") == "development"
+                name="db.sqlite3" if os.environ.get("DJANGO_ENV") == "development"
                     else env.database.name,
             )
         }
     )
 
 # Usage:
-# Development: ENV=development python manage.py runserver
-# Production:  ENV=production python manage.py runserver
+# Development: DJANGO_ENV=development python manage.py runserver
+# Production:  DJANGO_ENV=production python manage.py runserver
 ```
 
 **Or separate config classes**:
@@ -663,7 +638,7 @@ class ProdConfig(BaseConfig):
 from myproject.config import DevConfig, ProdConfig
 import os
 
-config = ProdConfig() if os.environ.get('ENV') == 'production' else DevConfig()
+config = ProdConfig() if os.environ.get('DJANGO_ENV') == 'production' else DevConfig()
 globals().update(config.get_all_settings())
 ```
 
@@ -678,18 +653,8 @@ globals().update(config.get_all_settings())
 - 💬 [**GitHub Discussions**](https://github.com/markolofsen/django-cfg/discussions) - Ask questions
 - 🐛 [**GitHub Issues**](https://github.com/markolofsen/django-cfg/issues) - Report bugs
 
-**Response times**:
-- Issues: 24-48 hours
-- Discussions: 1-3 days
-- Pull requests: 1-5 days
+Open an issue or a discussion on GitHub.
 
-**Enterprise Support**:
-- Custom support packages available
-- Priority issue resolution
-- Dedicated Slack channel
-- Architecture review
-
-Contact: discussions on GitHub
 
 ---
 
@@ -697,16 +662,8 @@ Contact: discussions on GitHub
 
 **Yes!** Django-CFG is actively developed:
 
-- ✅ **Weekly releases** (bug fixes)
-- ✅ **Monthly features** (new functionality)
-- ✅ **Django compatibility** (within 48 hours of new release)
-- ✅ **Python 3.13** support (latest version)
-
-**GitHub Activity**:
-- 500+ commits
-- 50+ releases
-- Active issue tracking
-- Regular documentation updates
+- Frequent releases (see [Updates](/updates))
+- Django 5.2 and Python 3.12 / 3.13 supported
 
 **Roadmap**: [GitHub Projects](https://github.com/markolofsen/django-cfg/issues)
 
@@ -731,39 +688,15 @@ Contact: discussions on GitHub
 
 ### Is Django-CFG fast?
 
-**Yes!** Performance comparison:
+Configuration is validated and the settings dict generated once, at process start. There is no per-request overhead from django-cfg's configuration layer.
 
-| Metric | Traditional Django | Django-CFG | Difference |
-|--------|-------------------|------------|------------|
-| **Import time** | 50ms | 110ms | +60ms |
-| **Validation time** | 0ms (none) | 12ms | +12ms |
-| **Total startup** | 50ms | 122ms | +72ms |
-| **Runtime** | 0ms | 0ms | Same |
-
-**Verdict**: +72ms slower startup, but **zero runtime overhead**.
-
-**Why acceptable**:
-- ✅ Startup happens once
-- ✅ 72ms is negligible (< 0.1 second)
-- ✅ Type safety benefits far outweigh cost
-- ✅ Production servers run continuously
+`import django_cfg` is kept light by a budget test (`tests/test_import_budget.py`: a ceiling on loaded modules and a list of heavy packages that must stay unloaded), and the settings dict is cached on the config instance.
 
 ---
 
 ### Does Django-CFG work at scale?
 
-**Yes!** Production deployments:
-
-- ✅ **10M+ requests/day** (largest deployment)
-- ✅ **50+ developers** (largest team)
-- ✅ **100+ microservices** (Django backends)
-- ✅ **Multi-region** deployments
-
-**Scalability features**:
-- ✅ Configuration loaded once (cached)
-- ✅ No runtime overhead
-- ✅ Thread-safe (immutable config)
-- ✅ Docker/Kubernetes ready
+Yes. The config is read-only after startup, so it is safe across threads and worker processes, and it works the same under gunicorn, uvicorn/daphne, Docker and Kubernetes.
 
 ---
 

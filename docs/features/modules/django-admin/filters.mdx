@@ -328,8 +328,8 @@ from django_cfg.modules.django_admin import (
     DateTimeField,
     FilterConfig,
     UserField,
-    Icons,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 config = AdminConfig(
@@ -390,10 +390,10 @@ class Payment(models.Model):
 **Prefer autocomplete over dropdown for large FK tables:**
 
 ```python
-# ❌ Loads all customers into the dropdown
+# Bad: Loads all customers into the dropdown
 FilterConfig(field='customer', type='related_dropdown')
 
-# ✅ Lazy search — fast even with millions of records
+# Good: Lazy search — fast even with millions of records
 FilterConfig(field='customer', type='autocomplete')
 ```
 

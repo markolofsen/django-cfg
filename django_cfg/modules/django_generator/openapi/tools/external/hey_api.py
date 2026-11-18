@@ -1,4 +1,4 @@
-"""@hey-api/openapi-ts CLI wrapper. Requires Node 18+ + npx on PATH.
+"""@hey-api/openapi-ts CLI wrapper. Requires Node 20+ + npx on PATH.
 
 Uses Hey API's native `operations.strategy: 'byTags'` to group SDK methods
 by OpenAPI tag — emits one container class per tag (`AccountsSdk`,
@@ -16,10 +16,11 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from ...pipeline.postprocess import discriminator_literals
 from ...pipeline.errors import ToolExecutionError, ToolNotInstalledError
+from ...pipeline.postprocess import discriminator_literals
 
-INSTALL_HINT = "ensure node + npx are on PATH (Node 18+)"
+MIN_NODE_MAJOR = 20  # @hey-api/openapi-ts needs Node >= 20; Node 16/18 fail at runtime with an opaque error
+INSTALL_HINT = f"ensure node + npx are on PATH (Node {MIN_NODE_MAJOR}+)"
 
 # `latest`, by owner decision (2026-08-16): the generator tracks upstream rather
 # than being bumped by hand.
@@ -39,8 +40,25 @@ class HeyApiResult:
     files: list[Path]
 
 
+def node_major() -> int | None:
+    """Major version of the ``node`` on PATH, None if it is absent or unreadable."""
+    node = shutil.which("node")
+    if node is None:
+        return None
+    try:
+        out = subprocess.run([node, "--version"], capture_output=True, text=True, timeout=10).stdout.strip()
+        return int(out.lstrip("v").split(".")[0])
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return None
+
+
 def check() -> str | None:
-    return None if shutil.which("npx") else INSTALL_HINT
+    if shutil.which("npx") is None:
+        return INSTALL_HINT
+    major = node_major()
+    if major is not None and major < MIN_NODE_MAJOR:
+        return f"node {major} is too old: {INSTALL_HINT}"
+    return None
 
 
 def generate(
@@ -63,8 +81,9 @@ def generate(
         - single: one class for all ops.
         - flat: tree-shakeable functions (no classes).
     """
-    if shutil.which("npx") is None:
-        raise ToolNotInstalledError(f"npx not found on PATH. {INSTALL_HINT}")
+    problem = check()
+    if problem:
+        raise ToolNotInstalledError(problem)
 
     if out_dir.exists():
         shutil.rmtree(out_dir)

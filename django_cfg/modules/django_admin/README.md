@@ -1,12 +1,18 @@
 # Django Admin — Declarative Configuration
 
+> **Status (2026-11-18).** `PydanticAdmin` / `AdminConfig` is the main admin class and django-unfold is the base (pinned `>=0.110,<0.111`).
+> Removed (nothing used them): Flash messages (`FlashFieldConfig`, `one_time_flash_fields`, `flash_once`), `ToonField`, `VideoField`, `AvatarField`,
+> `CounterBadgeField`, `ResourceConfig`, `BackgroundTaskConfig`. `Icons` and `MoneyFieldWidget` moved out: `from django_cfg import Icons`,
+> `django_cfg.modules.django_currency`.
+
 Type-safe admin configurations using Pydantic v2. **60-80% code reduction** vs traditional Django admin.
 
 ## Quick Start
 
 ```python
 from django.contrib import admin
-from django_cfg.modules.django_admin import AdminConfig, BadgeField, DateTimeField, Icons
+from django_cfg.modules.django_admin import AdminConfig, BadgeField, DateTimeField
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 config = AdminConfig(
@@ -58,6 +64,7 @@ StackedField(
 | Option | Values | Description |
 |--------|--------|-------------|
 | `widget` | `text`, `badge`, `datetime_relative`, `money_field` | Display widget |
+| `show_relative`, `decimal_places`, `icon` | | Per-widget options |
 | `bold`, `muted`, `monospace` | `bool` | Text styling |
 | `prefix`, `suffix` | `str` | Text decoration |
 | `truncate` | `int` | Max character length |
@@ -130,7 +137,7 @@ DecimalField(name='amount', prefix='$', thousand_separator=True)
 
 ```python
 DateTimeField(name='created_at', show_relative=True)  # "2 hours ago"
-DateTimeField(name='updated_at', format='%Y-%m-%d %H:%M')
+DateTimeField(name='updated_at', datetime_format='%Y-%m-%d %H:%M')
 ```
 
 ### ShortUUIDField
@@ -162,13 +169,7 @@ ImagePreviewField(
 ### ImageField
 
 ```python
-ImageField(name='avatar_url', title='Avatar', size=40)
-```
-
-### AvatarField
-
-```python
-AvatarField(name='avatar', size=40, fallback_icon=Icons.PERSON)
+ImageField(name='avatar_url', title='Avatar', max_width='40px', border_radius='50%')
 ```
 
 ### UserField
@@ -208,7 +209,8 @@ LinkField(
 LinkField(
     name='listing_url',
     static_text='Open',
-    target='_blank',
+    link_field='listing_url',
+    link_target='_blank',
 )
 ```
 
@@ -221,65 +223,21 @@ MarkdownField(
     collapsible=True,
     default_open=True,
     max_height='400px',
-    enable_plugins=True,  # Tables, Mermaid diagrams
+    enable_plugins=True,  # Markdown plugins (tables, Mermaid diagrams)
 )
-```
-
-### ToonField
-
-Renders JSON/dict fields as TOON (Token-Oriented Object Notation) with JSON fallback. Mode preference is persisted in `localStorage` across sessions.
-
-```python
-from django_cfg.modules.django_admin import ToonField
-
-# In list_display — compact preview with expand/collapse
-ToonField(name='metadata')
-ToonField(name='settings', preview_lines=5)
-
-# In readonly_fields — full collapsible block with JSON↔TOON toggle
-ToonField(
-    name='raw_data',
-    collapsible=True,
-    default_mode='toon',
-    label='Request payload',
-    max_height='32rem',
-)
-```
-
-**ToonField options:**
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `collapsible` | `True` | Wrap in `<details>/<summary>` on change form |
-| `default_open` | `False` | Open the `<details>` block by default |
-| `default_mode` | `"toon"` | Initial mode — `"toon"` or `"json"` (persisted in localStorage) |
-| `preview_lines` | `3` | Visible lines in `list_display` before expand (1–20) |
-| `label` | `None` | Header label in `<details>` (falls back to `title` → `name`) |
-| `max_height` | `"24rem"` | CSS max-height of the content area |
-
-### VideoField
-
-```python
-VideoField(name='video_url', title='Preview', max_width='320px')
-```
-
-### CounterBadgeField
-
-```python
-CounterBadgeField(name='photos_count', title='Photos', variant='info')
 ```
 
 ### StatusBadgesField
 
-Multiple badges from different fields in one column:
+Multiple badges from different fields in one column. A `BadgeRule` shows its badge when the model field `condition_field` equals `condition_value`:
 
 ```python
 StatusBadgesField(
     name='flags',
-    rules=[
-        BadgeRule(field='status', label_map={'active': 'success', 'banned': 'danger'}),
-        BadgeRule(field='is_verified', true_label='Verified', variant='info'),
-        BadgeRule(field='subscription_tier', label_map={'pro': 'warning', 'free': 'secondary'}),
+    badge_rules=[
+        BadgeRule(condition_field='status', condition_value='banned', label='Banned', variant='danger'),
+        BadgeRule(condition_field='is_verified', condition_value=True, label='Verified', variant='info', icon=Icons.CHECK_CIRCLE),
+        BadgeRule(condition_field='subscription_tier', condition_value='pro', label='Pro', variant='warning'),
     ],
 )
 ```
@@ -309,66 +267,7 @@ class VehicleAdmin(PydanticAdmin):
         return self.html.badge(obj.ownership_type or 'N/A', variant='success')
 ```
 
-**`self.html` methods:** `badge()`, `span()`, `inline()`, `stacked()`, `link()`, `image()`, `empty()`
-
----
-
-## Flash Messages — One-Time Secret Display
-
-Show sensitive data (API keys, passwords, tokens) exactly **once** after object creation, then erase it from the session automatically.
-
-### Declarative
-
-```python
-from django_cfg.modules.django_admin import AdminConfig, FlashFieldConfig, FlashStyle
-from django_cfg.modules.django_admin.base import PydanticAdmin
-
-@admin.register(ApiKey)
-class ApiKeyAdmin(PydanticAdmin):
-    config = api_key_config
-
-    one_time_flash_fields = {
-        'plain_key_display': FlashFieldConfig(
-            source='_generated_plain_key',   # Transient attr set in model.save()
-            style='code_warning',
-            title='Plain API Key (One-Time Display)',
-            message='SAVE THIS KEY NOW — You will not see it again!',
-        )
-    }
-```
-
-The field is automatically injected into `readonly_fields` and prepended to the first fieldset on the change page after creation. On the next page load, it is gone.
-
-### Imperative
-
-Call `flash_once()` directly for conditional or edit-time flashing:
-
-```python
-def save_model(self, request, obj, form, change):
-    super().save_model(request, obj, form, change)
-    if not change and hasattr(obj, '_generated_plain_key'):
-        self.flash_once(
-            request, obj,
-            field_name='plain_key_display',
-            content=obj._generated_plain_key,
-            title='Plain API Key (One-Time Display)',
-            message='SAVE THIS KEY NOW — You will not see it again!',
-            style='code_warning',
-        )
-```
-
-### FlashStyle values
-
-| Style | Appearance | Use Case |
-|-------|-----------|----------|
-| `code_warning` | Yellow box, dark code block | API keys, tokens (**default**) |
-| `code_error` | Red box, dark code block | Destructive credentials |
-| `code_success` | Green box, dark code block | Confirmation codes |
-| `info` | Blue box, plain text | Informational messages |
-| `warning` | Yellow box, plain text | Warnings without code |
-| `error` | Red box, plain text | Error notices |
-| `success` | Green box, plain text | Success confirmations |
-| `raw` | Raw HTML | Custom layouts (trusted content only) |
+**`self.html` methods:** `badge()`, `span()`, `inline()`, `stacked()`, `link()`, `empty()`, and more (see the API reference)
 
 ---
 
@@ -556,17 +455,17 @@ config = AdminConfig(
 
 ## Icons
 
-2234 Material Design Icons via `Icons`:
+2200+ Material Design Icons via `Icons`:
 
 ```python
-from django_cfg.modules.django_admin import Icons
+from django_cfg import Icons
 
 Icons.CHECK_CIRCLE, Icons.ERROR, Icons.WARNING, Icons.INFO
 Icons.LOCATION_ON, Icons.TRENDING_UP, Icons.AUTO_FIX_HIGH
 Icons.KEY, Icons.LOCK, Icons.VISIBILITY, Icons.OPEN_IN_NEW
 ```
 
-See [icons/constants.py](./icons/constants.py) for the full list.
+See `django_cfg/icons/constants.py` for the full list (generated by `scripts/icons/generate_icons.py`).
 
 ---
 
@@ -574,14 +473,13 @@ See [icons/constants.py](./icons/constants.py) for the full list.
 
 | Name | Type | Use Case |
 |------|------|----------|
-| `FieldConfigType` | Discriminated union of all 20 field types | `display_fields` annotation |
+| `FieldConfigType` | Discriminated union of the 16 field configs plus the base `FieldConfig` | `display_fields` annotation |
 | `FilterSpec` | `str \| type \| tuple[str, type] \| FilterConfig` | `list_filter` annotation |
 | `FilterConfig` | Pydantic model | Declarative `list_filter` entry |
 | `FilterType` | `Literal[17 values]` | Valid `FilterConfig.type` keys |
 | `DjangoFieldsets` | `tuple[tuple[str \| None, dict], ...]` | Django admin fieldsets format |
 | `FieldsetTuple` | `tuple[str \| None, dict]` | Single fieldset entry |
 | `FieldsetOptions` | `dict[str, Any]` | Fieldset options dict |
-| `FlashStyle` | `Literal[8 values]` | Flash message style key |
 
 ---
 
@@ -606,21 +504,16 @@ modules/django_admin/
         json_methods.py         # create_jsonfield_display_methods()
         image_methods.py        # create_imagefield_display_methods()
         markdown_methods.py     # create_markdownfield_display_methods()
-        toon_methods.py         # create_toonfield_display_methods()
         fieldsets.py            # apply_replacements_to_fieldsets()
   config/
-    field_config/               # All 20 FieldConfig subclasses
+    field_config/               # All 16 FieldConfig subclasses
     documentation/              # DocumentationConfig (dir/file/content modes)
   utils/
     displays/
       geo/                      # CountryDisplay, CityDisplay, CoordinatesDisplay
       stacked/                  # StackedDisplay + renderers (badge/text/datetime/money)
-      toon_display.py           # ToonDisplay (JSON↔TOON viewer)
   widgets/
-    money/                      # MoneyFieldWidget, MoneyFieldFormField, rate utils
     registry.py                 # WidgetRegistry — maps ui_widget → render handler
-  icons/
-    constants.py                # 2234 Material Design Icons
 ```
 
 ---

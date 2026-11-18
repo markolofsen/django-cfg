@@ -35,3 +35,21 @@ def root_view(request: HttpRequest) -> HttpResponse:
     if target:
         return HttpResponseRedirect(target)
     return HttpResponse("OK\n", content_type="text/plain; charset=utf-8")
+
+
+_FAVICON = (
+    b'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">'
+    b'<rect width="32" height="32" rx="7" fill="#1f2937"/>'
+    b'<path d="M21 11a7 7 0 1 0 0 10" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>'
+    b"</svg>"
+)
+
+
+def favicon_view(request: HttpRequest) -> HttpResponse:
+    """`/favicon.ico` for a backend that has none: a small SVG, so browsers stop logging a 404.
+
+    Added after the project's routes, so a project's own favicon route wins.
+    """
+    response = HttpResponse(_FAVICON, content_type="image/svg+xml")
+    response["Cache-Control"] = "public, max-age=86400"
+    return response

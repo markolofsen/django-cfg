@@ -1,328 +1,155 @@
 ---
 title: AI Integration Guide
-description: Django-CFG ai integration guide. Practical tutorial for ai integration guide with real-world examples, troubleshooting tips, and production patterns.
+description: Wire LLM providers into a Django-CFG project with type-safe API keys and the django_llm client.
 ---
 
 # AI Integration Guide
 
-Integrate AI agents with Django-CFG using type-safe configuration and environment-based secrets.
+Give a Django-CFG project LLM access: keys live in `DjangoConfig.api_keys`, and every model call goes through the `django_llm` module.
 
 ## Configuration Setup
 
-### 1. YAML Configuration
+### 1. API keys
 
-```yaml
-# environment/config.yaml
-api_keys:
-  openai: "${OPENAI_API_KEY}"
-  anthropic: "${ANTHROPIC_API_KEY}"
-
-llm:
-  provider: "openai"
-  model: "gpt-4"
-  temperature: 0.7
-  max_tokens: 2000
-```
-
-### 2. Environment Loader
-
-```python
-# environment/loader.py
-from pydantic import BaseModel
-from pydantic_yaml import parse_yaml_raw_as
-from pathlib import Path
-
-class APIKeysConfig(BaseModel):
-    openai: str
-    anthropic: str | None = None
-
-class LLMSettings(BaseModel):
-    provider: str = "openai"
-    model: str = "gpt-4"
-    temperature: float = 0.7
-    max_tokens: int = 2000
-
-class EnvironmentConfig(BaseModel):
-    api_keys: APIKeysConfig
-    llm: LLMSettings
-
-# Load configuration
-config_path = Path(__file__).parent / "config.yaml"
-env: EnvironmentConfig = parse_yaml_raw_as(
-    EnvironmentConfig,
-    config_path.read_text()
-)
-```
-
-### 3. Django-CFG Integration
-
-```python
-# config.py
-from django_cfg import DjangoConfig
-from .environment import env
-
-class MyProjectConfig(DjangoConfig):
-    # API keys from environment (type-safe!)
-    api_keys: dict[str, str] = {
-        "openai": env.api_keys.openai,
-        "anthropic": env.api_keys.anthropic or "",
-    }
-
-config = MyProjectConfig()
-```
-
-## Using AI Agents
-
-### Basic Agent
-
-```python
-# agents/customer_support.py
-from django_cfg.modules.django_llm import LLMClient
-
-class CustomerSupportAgent:
-    def __init__(self):
-        self.llm = LLMClient(
-            provider="openai",
-            api_key=config.api_keys["openai"],
-            model="gpt-4",
-        )
-
-    def answer_question(self, question: str, context: dict) -> str:
-        prompt = f"""
-        Question: {question}
-        Context: {context}
-
-        Provide a helpful answer.
-        """
-        return self.llm.generate(prompt)
-```
-
-### Knowledge Base Integration
-
-```python
-# Using with knowledge base
-from django_cfg.apps.knowbase.services import KnowledgeBaseService
-
-class SmartSupportAgent:
-    def __init__(self):
-        self.kb = KnowledgeBaseService()
-        self.llm = LLMClient(
-            provider="openai",
-            api_key=config.api_keys["openai"],
-        )
-
-    def answer_with_context(self, question: str):
-        # Search knowledge base
-        docs = self.kb.search(question, limit=3)
-
-        # Generate answer with context
-        context = "\n\n".join(doc.content for doc in docs)
-        prompt = f"""
-        Context from knowledge base:
-        {context}
-
-        User question: {question}
-
-        Answer based on the context above.
-        """
-        return self.llm.generate(prompt)
-```
-
-## Advanced Configuration
-
-### Multiple LLM Providers
-
-```yaml
-# environment/config.yaml
-llm:
-  providers:
-    openai:
-      api_key: "${OPENAI_API_KEY}"
-      model: "gpt-4"
-      temperature: 0.7
-
-    anthropic:
-      api_key: "${ANTHROPIC_API_KEY}"
-      model: "claude-3-sonnet-20240229"
-      temperature: 0.7
-
-  default_provider: "openai"
-```
-
-```python
-# environment/loader.py
-class LLMProviderConfig(BaseModel):
-    api_key: str
-    model: str
-    temperature: float = 0.7
-    max_tokens: int | None = None
-
-class LLMSettings(BaseModel):
-    providers: dict[str, LLMProviderConfig]
-    default_provider: str = "openai"
-
-# config.py
-from .environment import env
-
-class MyProjectConfig(DjangoConfig):
-    # Extract API keys from provider configs
-    api_keys: dict[str, str] = {
-        name: provider.api_key
-        for name, provider in env.llm.providers.items()
-    }
-```
-
-### Custom Tools
-
-```python
-# tools/search.py
-from typing import Any
-
-def search_products(query: str) -> list[dict[str, Any]]:
-    """Search product catalog."""
-    from shop.models import Product
-    return list(
-        Product.objects.filter(name__icontains=query)
-        .values('id', 'name', 'price')
-    )
-
-# agents/shopping_assistant.py
-class ShoppingAssistant:
-    def __init__(self):
-        self.llm = LLMClient(
-            provider="openai",
-            api_key=config.api_keys["openai"],
-            tools=[
-                {
-                    "name": "search_products",
-                    "description": "Search for products in catalog",
-                    "function": search_products,
-                }
-            ]
-        )
-
-    def help_customer(self, message: str):
-        return self.llm.generate(message, use_tools=True)
-```
-
-## Production Best Practices
-
-### 1. Environment Variables
-
-```bash
-# .env.production
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-### 2. Secret Management
+`DjangoConfig.api_keys` is an `ApiKeys` model with two slots, `openai` and `openrouter`. The module reads environment variables first (`DJANGO_LLM_KEYS__OPENAI`, `DJANGO_LLM_KEYS__OPENROUTER`), then this config, so a deployment can redirect a provider without a release.
 
 ```python
 # config.py
 import os
-from django_cfg import DjangoConfig
 
-class ProductionConfig(DjangoConfig):
-    # Fail fast if keys missing
-    api_keys: dict[str, str] = {
-        "openai": os.environ["OPENAI_API_KEY"],  # Will raise if missing
-    }
+from django_cfg import DjangoConfig, ApiKeys
 
-    @property
-    def is_production(self) -> bool:
-        return not self.debug
 
-    def validate_api_keys(self):
-        """Validate API keys at startup."""
-        if self.is_production:
-            required = ["openai"]
-            missing = [k for k in required if not self.api_keys.get(k)]
-            if missing:
-                raise ValueError(f"Missing API keys: {missing}")
+class MyProjectConfig(DjangoConfig):
+    api_keys: ApiKeys | None = ApiKeys(
+        openai=os.environ.get("OPENAI_API_KEY"),
+        openrouter=os.environ.get("OPENROUTER_API_KEY"),
+    )
+
+
+config = MyProjectConfig()
 ```
 
-### 3. Rate Limiting
+### 2. Environment
+
+```bash
+# .env.production
+OPENAI_API_KEY=sk-...
+OPENROUTER_API_KEY=sk-or-v1-...
+```
+
+Never commit these. See [Environment Configuration](../../configuration/environment).
+
+## Using the Client
+
+`LLMClient()` finds its keys through the module's single reader, so you pass none in application code.
 
 ```python
-from django.core.cache import cache
-from time import sleep
+from django_cfg.modules.django_llm import LLMClient
 
-class RateLimitedLLM:
-    def __init__(self, requests_per_minute: int = 60):
-        self.rpm = requests_per_minute
-        self.llm = LLMClient(...)
 
-    def generate(self, prompt: str) -> str:
-        # Simple rate limiting
-        key = "llm_requests"
-        count = cache.get(key, 0)
-        if count >= self.rpm:
-            sleep(60)
-            cache.set(key, 0, 60)
+class CustomerSupportAgent:
+    def __init__(self):
+        self.llm = LLMClient()
 
-        cache.incr(key, 1)
-        return self.llm.generate(prompt)
+    def answer_question(self, question: str, context: dict) -> str:
+        response = self.llm.chat_completion(
+            messages=[
+                {"role": "system", "content": "You are a helpful support agent."},
+                {"role": "user", "content": f"Question: {question}\nContext: {context}"},
+            ],
+            model="openai/gpt-4o-mini",
+        )
+        return response.content
 ```
+
+`chat_completion` returns a `ChatCompletionResponse` with `content`, `tokens_used` and `cost_usd`.
+
+### Structured output
+
+Pass a Pydantic model as `response_format` and the module requests strict JSON schema output, then parses and repairs the reply.
+
+```python
+from pydantic import BaseModel
+
+
+class Ticket(BaseModel):
+    category: str
+    urgent: bool
+
+
+response = LLMClient().chat_completion(
+    messages=[{"role": "user", "content": "Server is down for all users!"}],
+    model="openai/gpt-4o-mini",
+    response_format=Ticket,
+)
+```
+
+## Production Best Practices
+
+### Fail fast on missing keys
+
+```python
+import os
+
+from django_cfg import DjangoConfig, ApiKeys
+
+
+class ProductionConfig(DjangoConfig):
+    api_keys: ApiKeys | None = ApiKeys(
+        openai=os.environ["OPENAI_API_KEY"],  # raises at startup if missing
+    )
+```
+
+### Watch spend
+
+Every response carries `cost_usd`; do not recompute it downstream. The module also has a balance monitor and the `check_llm_balance` management command; see [Cost Tracking](/features/modules/django-llm/cost-tracking) and [Balance Monitoring](/features/modules/django-llm/balance-monitoring).
 
 ## Testing
 
+Patch the client method so tests never call a provider:
+
 ```python
 # tests/test_ai_integration.py
+from unittest.mock import MagicMock, patch
+
 from django.test import TestCase
-from unittest.mock import patch, MagicMock
+
 
 class AIIntegrationTest(TestCase):
-    @patch('django_cfg.modules.django_llm.LLMClient')
-    def test_customer_support_agent(self, mock_llm):
-        mock_llm.return_value.generate.return_value = "Test response"
+    @patch("django_cfg.modules.django_llm.LLMClient.chat_completion")
+    def test_customer_support_agent(self, mock_chat):
+        mock_chat.return_value = MagicMock(content="Test response")
 
         agent = CustomerSupportAgent()
-        response = agent.answer_question(
-            "How do I reset my password?",
-            context={"user_id": 123}
-        )
+        response = agent.answer_question("How do I reset my password?", context={"user_id": 123})
 
         assert response == "Test response"
-        mock_llm.return_value.generate.assert_called_once()
+        mock_chat.assert_called_once()
 ```
 
 ## See Also
 
 ### AI Features & Integration
 
-**LLM Module:**
 - [**LLM Module Overview**](/features/modules/django-llm) - Multi-provider LLM integration
-
-**MCP / AI Agent Integration:**
 - [**AI MCP Getting Started**](./ai-mcp) - Connect AI agents via Model Context Protocol
 - [**MCP Module Docs**](../../features/modules/django-mcp/architecture) - Full django_mcp module reference
 
 ### Configuration & Setup
 
-**Getting Started:**
-- [**Installation**](../../getting-started/installation) - Install Django-CFG with AI features
-- [**Configuration Guide**](../../getting-started/configuration) - YAML configuration setup
-- [**First Project**](../../getting-started/first-project) - Quick start tutorial
-
-**Advanced Configuration:**
+- [**Installation**](../../getting-started/installation) - Install Django-CFG
+- [**Configuration Guide**](../../getting-started/configuration) - Configuration setup
 - [**Environment Variables**](../../configuration/environment) - Secure API key management
-- [**Environment Detection**](../../configuration/environment) - Environment-based AI config
-- [**Type-Safe Configuration**](../../core/type-safety) - AI config validation
+- [**Type-Safe Configuration**](../../core/type-safety) - Config validation
 
-### Background Processing & Tools
+### Background Processing
 
-**Task Processing:**
-- [**ReArq Integration**](/features/modules/django-rq) - Async AI processing
-
-**CLI & Management:**
-- [**CLI Tools**](../../cli/introduction) - Command-line interface
-- [**Troubleshooting**](./troubleshooting) - Common AI integration issues
+- [**Django-RQ Integration**](/features/modules/django-rq) - Async AI processing
+- [**Troubleshooting**](./troubleshooting) - Common issues
 
 ### Production & Deployment
 
-**Production Setup:**
-- [**Production Config**](./production-config) - Production AI configuration
+- [**Production Config**](./production-config) - Production configuration
 - [**Docker Deployment**](./docker/production) - Deploy AI features
-- [**Examples Guide**](./examples) - Production AI patterns
-
-**Note:** This guide uses YAML-based configuration with Pydantic models. See [Configuration Guide](../../getting-started/configuration) for complete setup.
+- [**Examples Guide**](./examples) - Production patterns

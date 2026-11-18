@@ -226,7 +226,7 @@ def _format_report(
         "  picks dotted paths automatically.",
         "",
         "  Alternative — rename at source: define a named `models.TextChoices`",
-        "  subclass (e.g. `class SystemHealthStatus(models.TextChoices): ...`)",
+        "  subclass (e.g. `class OrderStatus(models.TextChoices): ...`)",
         "  per usage. drf-spectacular picks the class name and the hash",
         "  disappears.",
         "",

@@ -1,6 +1,6 @@
 ---
 title: Django Logging
-description: Logging for django_cfg that follows 12-factor. Records go to stdout/stderr by default, a log file is opt-in, importing creates no files, text or JSON format, sanitized extra context.
+description: One configured logging path for Django projects. One handler, one format, repeated lines collapsed, health-check noise dropped, third-party loggers quiet, secrets masked, request ids on every line.
 ---
 
 # Django Logging
@@ -35,6 +35,28 @@ Loggers named under `django_cfg` (every django-cfg module uses `__name__`) get t
 <Callout type="warning">
 **Migration:** `get_logger` (from `django_cfg`, `django_cfg.utils` and `django_cfg.modules.django_logging`) and `DjangoLogger` were removed with no alias. Replace `get_logger(name)` with `logging.getLogger(name)` (or `logging.getLogger(__name__)`) and drop the import. The old helper rewrote short names to `django_cfg.<path>`; a plain name is now used as given.
 </Callout>
+
+## One path, no duplicates, no junk
+
+A project writes no logging config and keeps calling `logging.getLogger(__name__)`. The generated `LOGGING` dict is one complete path:
+
+- **One handler on `root`.** `django.server`, `uvicorn*` and `gunicorn*` lose their own handlers and propagate to it, so one record is one line, in one format, under `runserver`, gunicorn, uvicorn and workers. (`django` keeps Django's `mail_admins` handler; a file handler exists only when you set `logging.dir`.)
+- **Repeats collapse.** The first record of a key always prints; repeats inside 60 s are counted and one line `... (repeated N times in 60s, pid P)` follows. The key is the logger, level, call site and the *formatted* message, so only an identical line repeats: three `Not Found: %s` warnings for three paths are three lines, and a rate-limit warning keeps its address. For a line whose arguments are noise (a retry counter) pass `extra={"collapse_key": "retry"}` to fold them. For a record with an exception the key is the message template, the exception type and the *innermost* traceback frame (where it was raised, not the `try` that caught it), so a new traceback always prints. **ERROR and above are never collapsed**, nor are access-log lines and monitor events; `extra={"no_collapse": True}` opts any record out. State is per process (N workers can print N first lines). Off in the test environment.
+- **Access-log junk dropped.** Successful requests to `/healthz`, `/health`, `/ready`, `/live`, `/ping`, `/static/` and `/favicon.ico` do not reach `uvicorn.access`, `gunicorn.access` or `django.server` output; a failing health check (status 400 or more) still prints. Change the list with `logging.access_ignore_paths` (`[]` keeps everything).
+- **Quiet third parties.** `httpx`, `httpcore`, `urllib3`, `asyncio`, `rq`, `botocore`, `PIL`, `django.db.backends` and `django.request` sit at `WARNING`; override one with `logging.log_levels={"httpx": "INFO"}`.
+- **Secrets masked.** Values of `extra` keys (and monitor events) named `password`, `token`, `secret`, `authorization`, `cookie`, `set-cookie`, `api_key` are written as `***`, recursing into dicts and lists. Whole key segments only: `access_token` is masked, `max_tokens` is not. Add names with `logging.redact_keys`. A secret inside the message text is not found: do not log payloads.
+- **Request id on every line.** `RequestIdMiddleware` (added right after the real-IP middleware) sets `request_id`: the `X-Request-ID` header when the peer is a private or loopback address (a reverse proxy) and the value is well-formed, else a generated id; it is echoed as the `X-Request-ID` response header. An RQ job carries the id of the request that enqueued it (`job.meta["request_id"]`) and logs it, with `job_id`, when it runs. With an active OpenTelemetry span the lines carry `trace_id` / `span_id` and no id is invented. The id is a log label, never an authority.
+
+```python
+logging=DjangoLoggingConfig(
+    collapse=CollapseConfig(window_seconds=60, max_keys=1000),  # enabled=None: on except in tests
+    log_levels={"httpx": "INFO"},
+    access_ignore_paths=["/healthz", "/internal/ping"],
+    redact_keys=["ssn"],
+)
+```
+
+Diagnose a noisy service: `docker logs <container> 2>&1 | python manage.py log_noise --stdin` groups lines by normalised message and prints the top repeats with counts and no raw ids. Counters of the collapse are in `django_cfg.modules.django_logging.collapse.collapse_stats()`.
 
 ## Where logs go
 
@@ -72,6 +94,10 @@ class Config(DjangoConfig):
 | `rotate_mb` | `int` | `10` | `DJANGO_CFG_LOG_ROTATE_MB` | Size at which a django-cfg log file rotates; `0` = never |
 | `backups` | `int` | `5` | `DJANGO_CFG_LOG_BACKUPS` | Rotated files kept per log (`.1` ... `.N`) |
 | `retain_days` | `int` | `14` | `DJANGO_CFG_LOG_RETAIN_DAYS` | Boot prune: rotated files older than this are deleted |
+| `collapse` | `CollapseConfig` | on (off in tests) | | `enabled`, `window_seconds` (60), `max_keys` (1000) |
+| `log_levels` | `dict[str, str]` | `{}` | | Per-logger levels over the third-party table |
+| `access_ignore_paths` | `list[str] \| None` | built-in list | | Health/static prefixes dropped from access logs |
+| `redact_keys` | `list[str]` | `[]` | | Extra key names masked in log fields |
 
 ### Other environment variables
 

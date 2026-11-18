@@ -14,19 +14,16 @@ Django Admin provides specialized field types that automatically handle formatti
 | **BadgeField** | Colored badges with icons | Status, categories, tags | [→ Basic Fields](./basic-fields#badgefield) |
 | **BooleanField** | Boolean indicators | Active/inactive, flags | [→ Basic Fields](./basic-fields#booleanfield) |
 | **TextField** | Text with truncation | Descriptions, content | [→ Basic Fields](./basic-fields#textfield) |
-| **AvatarField** | User avatars with fallback | Profile pictures, user identity | [→ Display Fields](./display-fields#avatarfield) |
 | **UserField** | User display with avatar | Authors, assignees | [→ Display Fields](./display-fields#userfield) |
 | **ForeignKeyField** | Related object display with admin link | Machine, workspace, category | [→ Display Fields](./display-fields#foreignkeyfield) |
 | **LinkField** | Text with external link | Usernames, external resources | [→ Display Fields](./display-fields#linkfield) |
 | **ImageField** | Images with captions | QR codes, photos | [→ Display Fields](./display-fields#imagefield) |
 | **ImagePreviewField** | Image preview with modal | Photos, thumbnails | [→ Display Fields](./display-fields#imagepreviewfield) |
-| **VideoField** | Video thumbnail with platform detection | YouTube, Vimeo | [→ Display Fields](./display-fields#videofield) |
 | **CurrencyField** | Formatted currency | Prices, totals, balances | [→ Formatting Fields](./formatting-fields#currencyfield) |
 | **DateTimeField** | Formatted dates/times | Created, updated, published | [→ Formatting Fields](./formatting-fields#datetimefield) |
 | **ShortUUIDField** | Shortened UUIDs | Primary keys, identifiers | [→ Formatting Fields](./formatting-fields#shortuuidfield) |
 | **StackedField** | Composite column | Combine multiple fields in one column | [→ Advanced Fields](./advanced-fields#stackedfield-composite-column) |
 | **StatusBadgesField** | Multiple conditional badges | User flags, permissions | [→ Advanced Fields](./advanced-fields#statusbadgesfield) |
-| **CounterBadgeField** | Counter badge with link | Message counts, view counts | [→ Advanced Fields](./advanced-fields#counterbadgefield) |
 | **MarkdownField** | Markdown content rendering | Documentation, rich text | [→ Advanced Fields](./advanced-fields#markdownfield) |
 
 ## Categories
@@ -41,17 +38,15 @@ Simple fields for common data types: badges, booleans, and text.
 - **TextField** - Text with optional truncation
 
 ### Display Fields
-Rich display fields for complex UI elements: avatars, users, foreign keys, links, and images.
+Rich display fields for complex UI elements: users, foreign keys, links, and images.
 
 **[→ See Display Fields Documentation](./display-fields)**
 
-- **AvatarField** - User avatars with initials fallback
 - **UserField** - User display with avatar
 - **ForeignKeyField** - Related object display with admin link
 - **LinkField** - Text with clickable link
 - **ImageField** - Images with captions
 - **ImagePreviewField** - Image preview with modal zoom/pan
-- **VideoField** - Video thumbnails (YouTube, Vimeo, direct)
 
 ### Formatting Fields
 Fields that format numbers, dates, and identifiers.
@@ -69,7 +64,6 @@ Complex fields with conditional logic, composite layouts, and special behaviors.
 
 - **StackedField** - Composite column combining multiple fields
 - **StatusBadgesField** - Multiple conditional badges
-- **CounterBadgeField** - Counter badge with optional link
 - **MarkdownField** - Markdown content rendering
 
 ## Choosing the Right Field
@@ -105,15 +99,7 @@ StatusBadgesField(
 
 ### For User Display
 ```python
-# Avatar with initials fallback
-AvatarField(
-    name="first_name",
-    photo_field="photo_file",
-    name_field="display_name",
-    initials_field="first_name"
-)
-
-# Simple user display
+# User display with avatar
 UserField(name="author", header=True)
 ```
 
@@ -121,13 +107,6 @@ UserField(name="author", header=True)
 ```python
 # Money
 CurrencyField(name="price", currency="USD", precision=2)
-
-# Counts with links
-CounterBadgeField(
-    name="messages_badge",
-    count_field="messages_count",
-    link_url_template="/admin/app/message/?user__id={obj.id}"
-)
 ```
 
 ### For Dates
@@ -136,7 +115,7 @@ CounterBadgeField(
 DateTimeField(name="created_at", show_relative=True)
 
 # Custom format
-DateTimeField(name="published_at", format="%B %d, %Y")
+DateTimeField(name="published_at", datetime_format="%B %d, %Y")
 ```
 
 ## Common Patterns
@@ -145,7 +124,6 @@ DateTimeField(name="published_at", format="%B %d, %Y")
 ```python
 from django_cfg.modules.django_admin import (
     AdminConfig,
-    AvatarField,
     BadgeField,
     CurrencyField,
     DateTimeField,
@@ -154,7 +132,7 @@ from django_cfg.modules.django_admin import (
 config = AdminConfig(
     model=Order,
     display_fields=[
-        AvatarField(name="user", ...),  # Customer avatar
+        UserField(name="user", header=True),  # Customer
         CurrencyField(name="total", currency="USD"),  # Order total
         BadgeField(name="status", label_map={...}),  # Order status
         DateTimeField(name="created_at", show_relative=True),  # When ordered
@@ -165,9 +143,8 @@ config = AdminConfig(
 ### User Management Admin
 ```python
 display_fields=[
-    AvatarField(name="first_name", ...),  # User avatar
+    UserField(name="username", header=True),  # User
     StatusBadgesField(name="flags", badge_rules=[...]),  # User flags
-    CounterBadgeField(name="posts", count_field="post_count"),  # Post count
     DateTimeField(name="last_login", show_relative=True),  # Last seen
 ]
 ```
@@ -219,14 +196,14 @@ config = AdminConfig(
 **Field Name Must Be Real**
 The `name` parameter in field configs **MUST** be a real model field, not a virtual field or `@property`.
 
-**❌ Wrong:**
+**Wrong:**
 ```python
-AvatarField(name="user_avatar", ...)  # Virtual field
+UserField(name="user_avatar", ...)  # Virtual field
 ```
 
-**✅ Correct:**
+**Correct:**
 ```python
-AvatarField(name="first_name", ...)  # Real CharField
+UserField(name="username", ...)  # Real CharField
 ```
 
 </Callout>
@@ -234,7 +211,7 @@ AvatarField(name="first_name", ...)  # Real CharField
 
 <Callout type="info">
 **Use select_related**
-For fields that reference related models (UserField, AvatarField with ForeignKey), always use `select_related` to avoid N+1 queries:
+For fields that reference related models (UserField, ForeignKeyField), always use `select_related` to avoid N+1 queries:
 
 ```python
 config = AdminConfig(
@@ -251,8 +228,8 @@ config = AdminConfig(
 ## Next Steps
 
 - **[Basic Fields](./basic-fields)** - BadgeField, BooleanField, TextField
-- **[Display Fields](./display-fields)** - AvatarField, UserField, LinkField, ImageField
+- **[Display Fields](./display-fields)** - UserField, LinkField, ImageField
 - **[Formatting Fields](./formatting-fields)** - CurrencyField, DateTimeField, ShortUUIDField
-- **[Advanced Fields](./advanced-fields)** - StatusBadgesField, CounterBadgeField, MarkdownField
+- **[Advanced Fields](./advanced-fields)** - StackedField, StatusBadgesField, MarkdownField
 - **[Examples](./display-fields)** - Real-world usage examples
 - **[API Reference](../api-reference)** - Complete API documentation

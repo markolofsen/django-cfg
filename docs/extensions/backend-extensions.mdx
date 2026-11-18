@@ -192,9 +192,12 @@ class PaymentsSettings(BaseExtensionSettings):
 |-------|------|-------------|
 | `admin_enabled` | `bool` | Show in admin interface |
 | `middleware_classes` | `list[str]` | Middleware classes to add to MIDDLEWARE |
-| `navigation` | `Optional[NavigationSection]` | Admin navigation section |
+| `navigation` | `NavigationSection \| list[NavigationSection] \| None` | Admin navigation section(s) |
 | `constance_fields` | `list[ConstanceField]` | Dynamic settings via django-constance |
-| `schedules` | `list[RQScheduleConfig]` | RQ scheduled tasks |
+| `schedules` | `list[ExtensionScheduleConfig]` | RQ scheduled tasks |
+| `extra_installed_apps` | `list[str]` | Extra apps added to `INSTALLED_APPS` |
+| `openapi_groups` | `list[OpenAPIGroupConfig]` | OpenAPI groups merged into `openapi_client.groups` |
+| `dashboard_tabs` | `list[DashboardTab]` | Admin dashboard tabs merged into `DashboardConfig.tabs` |
 | `url_prefix` | `Optional[str]` | URL path segment override |
 | `url_namespace` | `Optional[str]` | Django URL namespace |
 

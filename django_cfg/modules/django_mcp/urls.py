@@ -12,10 +12,10 @@ these views resolve to it.
 from django.urls import path
 from django.urls.resolvers import RegexPattern, URLResolver
 
-from .views import MCPView
-from .agents.api.views import MCPAgentChatView, MCPAgentStreamView, MCPAgentHistoryView
-from .info_view import MCPInfoView
+from .agents.api.views import MCPAgentChatView, MCPAgentHistoryView, MCPAgentStreamView
 from .distribution.views import MCPInstallScriptView, MCPSkillView
+from .info_view import MCPInfoView
+from .views import MCPView
 
 urlpatterns = [
     path("", MCPView.as_view(), name="mcp-endpoint"),

@@ -66,31 +66,20 @@ class ProductionConfig(DjangoConfig):
 config = ProductionConfig()
 ```
 
-### Environment YAML
+### Environment Variables
 
-```yaml filename="config.prod.yaml"
-secret_key: "${SECRET_KEY}"  # From environment variable
-debug: false
-
-app:
-  name: "My Production App"
-  version: "1.0.0"
-
-# Security domains - flexible format (Django-CFG auto-normalizes)
-security:
-  domains:
-    - "myapp.com"              # ✅ No protocol
-    - "https://api.myapp.com"  # ✅ With protocol
-    - "admin.myapp.com:8443"   # ✅ With port
-
-database:
-  url: "${DATABASE_URL}"  # From environment variable
+```bash filename=".env.production"
+SECRET_KEY=...            # from your secrets manager
+DJANGO_ENV=production
+DATABASE_URL=...          # from your secrets manager
 ```
+
+The `env` object is your own pydantic-settings loader (see [Environment Setup](/deployment/environment-setup)). django-cfg itself reads only `DJANGO_ENV`, `DJANGO_CFG_BANNER` and the `DJANGO_CFG_LOG_*` variables.
 
 
 <Callout type="warning">
 **Environment Variables**
-Always use environment variables for secrets in production. Never hardcode sensitive values in YAML files.
+Always use environment variables for secrets in production. Never hardcode sensitive values in config files.
 
 </Callout>
 
@@ -115,6 +104,7 @@ from django_cfg import (
     SpectacularConfig,
     TelegramConfig,
     DjangoRQConfig,
+    ApiKeys,
 )
 from .environment import env
 
@@ -137,8 +127,6 @@ class MyProductionConfig(DjangoConfig):
     # ssl_redirect: Optional - not specified (reverse proxy handles SSL)
     security_domains: list[str] = env.security.domains
 
-    # === Built-in Applications ===
-    enable_accounts: bool = True
 
     # === Custom Applications ===
     project_apps: list[str] = [
@@ -159,11 +147,11 @@ class MyProductionConfig(DjangoConfig):
     }
 
     # === Cache Configuration ===
-    # ✨ AUTO-MAGIC: Just set redis_url - cache auto-created!
+    # Just set redis_url: the cache is created from it
     redis_url: str | None = env.redis.url
     # Django-CFG automatically creates CacheConfig with:
     # - timeout=300 (5 minutes)
-    # - key_prefix=project_name.lower()
+    # - key_prefix=project_name.lower() with spaces replaced by _
     # - max_connections=50
     # Override with explicit cache_default if needed
 
@@ -173,10 +161,10 @@ class MyProductionConfig(DjangoConfig):
             backend="django.core.mail.backends.smtp.EmailBackend",
             host=env.email.host,
             port=env.email.port,
-            user=env.email.user,
+            username=env.email.user,
             password=env.email.password,
             use_tls=True,
-            from_email=env.email.from_email,
+            default_from=env.email.from_email,
         )
         if env.email.enabled
         else None
@@ -217,11 +205,10 @@ class MyProductionConfig(DjangoConfig):
     )
 
     # === API Keys (from environment) ===
-    api_keys: dict[str, str] = {
-        "service_a": env.api_keys.service_a or "",
-        "service_b": env.api_keys.service_b or "",
-        # Add your API keys here
-    }
+    api_keys: ApiKeys | None = ApiKeys(
+        openai=env.api_keys.openai,
+        openrouter=env.api_keys.openrouter,
+    )
 
 
 # Create and set configuration
@@ -241,12 +228,9 @@ config = MyProductionConfig()
 .env
 .env.*
 env.production
-config.prod.yaml
-*.secret.yaml
 
 # But keep examples
 !.env.example
-!config.example.yaml
 ```
 
 **Instead:**
@@ -257,57 +241,22 @@ config.prod.yaml
 
 </Callout>
 
-```yaml
-# environment/config.yaml
-app:
-  name: "My Application"
-  slug: "myapp"
-  version: "1.0.0"
-  description: "Production application"
-
-secret_key: "${SECRET_KEY}"
-debug: false
-
-# ssl_redirect: Optional - not needed (reverse proxy handles SSL)
-
-security:
-  domains:
-    - "example.com"
-    - "www.example.com"
-
-database:
-  url: "${DATABASE_URL}"
-
-redis:
-  url: "${REDIS_URL}"
-
-email:
-  enabled: true
-  host: "smtp.example.com"
-  port: 587
-  user: "${EMAIL_USER}"
-  password: "${EMAIL_PASSWORD}"
-  from_email: "noreply@example.com"
-
-telegram:
-  enabled: false
-  bot_token: "${TELEGRAM_BOT_TOKEN}"
-  chat_id: "${TELEGRAM_CHAT_ID}"
-
-tasks:
-  processes: 4
-  threads: 8
-  queues:
-    - default
-    - high
-    - low
-    - emails
-    - reports
-
-api_keys:
-  service_a: "${SERVICE_A_API_KEY}"
-  service_b: "${SERVICE_B_API_KEY}"
+```bash
+# .env.production (never committed; values come from your secrets manager)
+DJANGO_ENV=production
+SECRET_KEY=...
+DATABASE_URL=...
+REDIS_URL=...
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_USER=...
+EMAIL_PASSWORD=...
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_CHAT_ID=...
+OPENAI_API_KEY=...
 ```
+
+Read these in your own pydantic-settings loader (the `env` object in the examples above); django-cfg does not read them directly.
 
 ## Multi-Environment Setup
 
@@ -326,12 +275,10 @@ class DevelopmentConfig(DjangoConfig):
     # security_domains: Optional - not needed in development
     # Django-CFG auto-allows localhost on any port
 
-    # All features enabled for development
-    enable_accounts: bool = True
 
     # SQLite for development
     databases: dict[str, DatabaseConfig] = {
-        "default": DatabaseConfig.from_url("sqlite:///dev.db")
+        "default": DatabaseConfig.from_url("sqlite:///dev.db")  # relative to the project
     }
 ```
 
@@ -366,8 +313,6 @@ class StagingConfig(DjangoConfig):
     debug: bool = False
     security_domains: list[str] = ["staging.myapp.com"]
 
-    # Essential apps only
-    enable_accounts: bool = True
 
     # PostgreSQL from environment
     databases: dict[str, DatabaseConfig] = {
@@ -390,8 +335,6 @@ class ProductionConfig(DjangoConfig):
     debug: bool = False
     security_domains: list[str] = env.security.domains
 
-    # Production apps
-    enable_accounts: bool = True
 
     # Production database with replicas
     databases: dict[str, DatabaseConfig] = {
@@ -408,6 +351,11 @@ class ProductionConfig(DjangoConfig):
     }
 ```
 
+
+<Callout type="warning">
+`operations` and `migrate_to` describe intent; the generated router does not enforce them. Pin a read replica yourself with `.using("read_replica")`, or add your own router.
+
+</Callout>
 
 <Callout type="error">
 **Production Deployment Checklist**
@@ -512,14 +460,13 @@ class SecureConfig(DjangoConfig):
     # Fail fast if missing
     secret_key: str = os.environ["SECRET_KEY"]
 
-    # Validate at startup
-    def __post_init__(self):
+    def model_post_init(self, __context) -> None:
+        super().model_post_init(__context)
         if len(self.secret_key) < 50:
             raise ValueError("SECRET_KEY too short")
-        if self.debug and "production" in self.environment:
-            raise ValueError("DEBUG cannot be True in production")
 ```
 
+In production `debug` is forced to `False` for you (with a `UserWarning`), so you do not need to check it yourself.
 
 <Callout type="warning">
 **Secret Key Length**
@@ -537,10 +484,9 @@ export DATABASE_URL="postgresql://..."
 ```
 
 **❌ Never do this:**
-```yaml
-# DON'T hardcode secrets in YAML
-secret_key: "my-secret-key-123"  # ❌ WRONG
-database_password: "admin123"     # ❌ WRONG
+```python
+# DON'T hardcode secrets in config files
+secret_key: str = "my-secret-key-123"  # ❌ WRONG
 ```
 
 
@@ -556,22 +502,11 @@ Hardcoded secrets in files can be leaked through:
 
 ### Secret Rotation
 
-```python
-# Implement secret rotation
-class SecureConfig(DjangoConfig):
-    secret_key: str = os.environ["SECRET_KEY"]
-
-    # Optional: Support multiple keys for rotation
-    old_secret_keys: list[str] = [
-        os.environ.get("OLD_SECRET_KEY_1", ""),
-        os.environ.get("OLD_SECRET_KEY_2", ""),
-    ]
-```
-
+Rotate secrets by changing the environment value and redeploying. Changing `SECRET_KEY` invalidates existing sessions and signed tokens, so schedule it.
 
 <Callout type="info">
 **Rotation Strategy**
-Rotate secrets regularly (every 90 days) and keep old keys temporarily to avoid session invalidation.
+Rotate secrets regularly (every 90 days) and plan for the session invalidation that a new `SECRET_KEY` causes.
 
 </Callout>
 
@@ -624,7 +559,7 @@ Never log database URLs - they contain credentials. Ensure logging filters strip
 
 <Callout type="info">
 **Security Headers**
-Django-CFG automatically configures security headers when `security_domains` is set. Manual configuration rarely needed.
+Django-CFG configures security headers in production mode. Manual configuration rarely needed.
 
 </Callout>
 
@@ -646,7 +581,7 @@ Do not set `cors_allow_headers` just to add a header: it **replaces** the defaul
 <details>
   <summary>Auto-configured Security Headers</summary>
 
-When `security_domains` is set, Django-CFG automatically enables:
+In production mode (`debug=False`), Django-CFG automatically enables:
 
 - `SECURE_SSL_REDIRECT = False` - Reverse proxy handles redirects
 - `SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` - Trust proxy
@@ -704,7 +639,7 @@ set `DEFAULT_FILE_STORAGE` or `AWS_*` settings by hand.
 from django_cfg import DjangoConfig, StorageConfig, S3StorageConfig
 
 class ProductionConfig(DjangoConfig):
-    storage = StorageConfig(
+    storage: StorageConfig = StorageConfig(
         backend=S3StorageConfig.r2(
             account_id="abc123",
             bucket_name="media",
@@ -767,11 +702,10 @@ Proper configuration of database pooling, caching, and task queues is critical f
 ```python filename="config.py"
 databases: dict[str, DatabaseConfig] = {
     "default": DatabaseConfig(
-        options={
-            "MAX_CONNS": 20,  # Maximum connections
-            "MIN_CONNS": 5,   # Minimum idle connections
-        },
-        connect_timeout=10,  # Connection timeout
+        # ...engine, name, host as usual...
+        conn_max_age=600,         # reuse a connection for up to 10 minutes
+        conn_health_checks=True,  # drop a dead connection before use
+        connect_timeout=10,       # connection timeout, seconds
     )
 }
 ```
@@ -779,16 +713,14 @@ databases: dict[str, DatabaseConfig] = {
 
 <Callout type="info">
 **Connection Pool Sizing**
-**Rule of thumb:** `MAX_CONNS = (CPU cores × 2) + effective spindle count`
-
-For cloud databases, limit connections to avoid quota exhaustion.
+Each worker process holds its own connections, so size the pooler (PgBouncer) or database `max_connections` for processes x `conn_max_age` reuse, not for request count. For cloud databases, limit connections to avoid quota exhaustion.
 
 </Callout>
 
 ### Cache Configuration
 
 ```python filename="config.py"
-# Auto-magic cache from redis_url ✨
+# Cache created from redis_url
 redis_url: str = env.redis.url
 # Django-CFG automatically creates CacheConfig with sensible defaults:
 # - timeout=300 (5 minutes)
@@ -799,7 +731,7 @@ redis_url: str = env.redis.url
 <Callout type="tip">
 **Automatic Cache Creation**
 
-Just set `redis_url` and Django-CFG handles the rest! No need for manual `CacheConfig` setup.
+Set `redis_url` and Django-CFG creates the default cache. Use `cache_default=CacheConfig(...)` only to change the defaults.
 </Callout>
 
 <Callout type="info">
@@ -880,136 +812,47 @@ Production systems require comprehensive logging, monitoring, and alerting to en
 
 ### Logging Configuration
 
+django-cfg generates the whole logging path (one root handler, repeat collapsing, request ids, secret masking). Tune it through the `logging` field and `DJANGO_CFG_LOG_*` variables instead of writing a `LOGGING` dict. See [Logging in production](/deployment/logging).
+
 ```python filename="config.py"
 class MonitoredConfig(DjangoConfig):
-    # Startup information
-    startup_info_mode: str = "SHORT"  # Minimal logs in production
+    # Minimal startup output: a quiet single line unless DJANGO_CFG_BANNER=1
+    startup_banner: bool = False
 
-    # Telegram notifications
     telegram: TelegramConfig = TelegramConfig(
         bot_token=env.telegram.bot_token,
         chat_id=env.telegram.admin_chat,
     )
-
-    # Custom logging
-    @property
-    def logging(self) -> dict:
-        return {
-            "version": 1,
-            "disable_existing_loggers": False,
-            "formatters": {
-                "verbose": {
-                    "format": "{levelname} {asctime} {module} {message}",
-                    "style": "{",
-                },
-            },
-            "handlers": {
-                "file": {
-                    "class": "logging.handlers.RotatingFileHandler",
-                    "filename": "/var/log/myapp/django.log",
-                    "maxBytes": 10485760,  # 10MB
-                    "backupCount": 5,
-                    "formatter": "verbose",
-                },
-                "telegram": {
-                    "class": "myapp.logging.TelegramHandler",
-                    "bot_token": self.telegram.bot_token,
-                    "chat_id": self.telegram.chat_id,
-                    "level": "ERROR",  # Only errors to Telegram
-                },
-            },
-            "loggers": {
-                "django": {
-                    "handlers": ["file", "telegram"],
-                    "level": "INFO",
-                },
-                "django.request": {
-                    "handlers": ["file", "telegram"],
-                    "level": "ERROR",
-                    "propagate": False,
-                },
-            },
-        }
 ```
 
-
-<Callout type="warning">
-**Log Rotation**
-Always use **RotatingFileHandler** or **TimedRotatingFileHandler** in production to prevent disk space exhaustion.
+<Callout type="info">
+Log files are opt-in (`DJANGO_CFG_LOG_DIR`), with rotation built in (`logging.rotate_mb`, `logging.backups`). Production logs go to stdout for your platform to collect.
 
 </Callout>
 
 ### Health Monitoring
 
-```python filename="views.py"
-from django.http import JsonResponse
-from django.db import connection
-from django.core.cache import cache
-
-def health_check(request):
-    """Production health check endpoint."""
-    health = {
-        "status": "healthy",
-        "database": False,
-        "cache": False,
-        "version": settings.PROJECT_VERSION,
-    }
-
-    # Check database
-    try:
-        connection.ensure_connection()
-        health["database"] = True
-    except Exception as e:
-        health["status"] = "unhealthy"
-        health["database_error"] = str(e)
-
-    # Check cache
-    try:
-        cache.set("health_check", "ok", 1)
-        health["cache"] = cache.get("health_check") == "ok"
-    except Exception as e:
-        health["status"] = "unhealthy"
-        health["cache_error"] = str(e)
-
-    status = 200 if health["status"] == "healthy" else 503
-    return JsonResponse(health, status=status)
-```
-
+django-cfg serves `/healthz` (liveness) and `/healthz/ready` (database, cache, system, configuration) from the always-installed `health` app, so you do not write a health view. See [Monitoring](/deployment/monitoring).
 
 <Callout type="info">
 **Health Check Endpoint**
-Expose `/healthz` and `/healthz/ready` endpoints for monitoring systems (Kubernetes, AWS ELB, etc.). Return HTTP 503 for unhealthy state.
+Point Kubernetes, AWS ELB or your uptime monitor at `/healthz`, and use `/healthz/ready` for readiness.
 
 </Callout>
 
 ### Alert Configuration
 
 ```python filename="config.py"
-# Configure Telegram alerts for critical errors
+# Telegram alerts for critical events
 telegram: TelegramConfig = TelegramConfig(
     bot_token=env.telegram.bot_token,
     chat_id=env.telegram.admin_chat,
+    dedupe=True,                # identical messages inside the window are sent once
+    dedupe_window_seconds=60,
 )
-
-# Custom logging handler for Telegram alerts
-class TelegramHandler(logging.Handler):
-    """Send critical errors to Telegram."""
-
-    def __init__(self, bot_token: str, chat_id: str):
-        super().__init__()
-        self.bot_token = bot_token
-        self.chat_id = chat_id
-
-    def emit(self, record):
-        """Send log record to Telegram."""
-        message = self.format(record)
-        # Send via Telegram API
-        send_telegram_message(
-            bot_token=self.bot_token,
-            chat_id=self.chat_id,
-            message=f"🚨 Production Error:\n{message}",
-        )
 ```
+
+Pass `dedupe=False` to a single call to force a repeat. Amounts and ids in a message are not folded, so two different payments are never merged.
 
 
 <Callout type="info">
@@ -1035,7 +878,7 @@ Common alert channels for production:
 - **[Health Monitoring](/features/modules/django-health)** - System health checks
 
 **Configuration:**
-- **[Configuration Guide](../../getting-started/configuration)** - YAML configuration setup
+- **[Configuration Guide](../../getting-started/configuration)** - Configuration setup
 - **[Configuration Models](../../configuration)** - Complete config API
 - **[Environment Detection](../../configuration/environment)** - Auto-detect environments
 - **[Environment Variables](../../configuration/environment)** - Secure credential management
@@ -1070,4 +913,4 @@ Common alert channels for production:
 - **[Migration Guide](./migration-guide)** - Migrate to production
 - **[FAQ](./faq)** - Frequently asked questions
 
-**Note:** All examples use YAML-based configuration. See [Configuration Guide](../../getting-started/configuration) for complete setup.
+**Note:** The `env` object in these examples is your own pydantic-settings loader. See [Configuration Guide](../../getting-started/configuration) for complete setup.

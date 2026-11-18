@@ -1,37 +1,28 @@
 """
-Django Admin - Declarative Configuration with Pydantic 2.x
+Django Admin: declarative configuration with Pydantic.
 
-Type-safe, reusable admin configurations using Pydantic models.
-Provides 60-80% code reduction compared to traditional Django admin.
+Type-safe, reusable admin configurations built on django-unfold. Describe a
+model admin with an AdminConfig (list columns, display fields, filters,
+fieldsets, actions, widgets) and let PydanticAdmin generate the ModelAdmin
+attributes and display methods.
 
-📚 Full Documentation:
-    - README.md (this directory) - Complete examples and usage guide
-    - ../../../docs_public/django_admin/ - Detailed documentation
-    - icons/constants.py - All 2234 available Material Design Icons
+Documentation:
+    - README.md (this directory): usage guide and field reference
+    - @docs/ (this directory): configuration, API reference, architecture, examples
+    - Icons: ``from django_cfg import Icons`` (constants live in django_cfg/icons/constants.py)
 
-🎨 Available Icons (2234 total):
-    Icons.DASHBOARD, Icons.SETTINGS, Icons.PEOPLE, Icons.SYNC, Icons.CHECK_CIRCLE,
-    Icons.ERROR, Icons.WARNING, Icons.INFO, Icons.DELETE, Icons.EDIT, Icons.ADD,
-    Icons.SEARCH, Icons.FILTER, Icons.DOWNLOAD, Icons.UPLOAD, Icons.REFRESH, Icons.CLOSE,
-    Icons.MENU, Icons.NOTIFICATION, Icons.EMAIL, Icons.PHONE, Icons.MESSAGE, Icons.CALENDAR,
-    Icons.CLOCK, Icons.LOCATION, Icons.STAR, Icons.FAVORITE, Icons.SHARE, Icons.VISIBILITY,
-    Icons.LOCK, Icons.ACCOUNT_CIRCLE, Icons.PAYMENT, Icons.SHOPPING_CART, Icons.CREDIT_CARD,
-    Icons.RECEIPT, Icons.BUSINESS, Icons.WORK, Icons.HOME, Icons.SCHOOL, Icons.ATTACH_FILE,
-    Icons.FOLDER, Icons.CLOUD, Icons.STORAGE, Icons.SECURITY, Icons.PLAY_ARROW, Icons.PAUSE,
-    Icons.STOP, Icons.VOLUME_UP, Icons.WIFI, Icons.BLUETOOTH, Icons.BATTERY_FULL, and 2180+ more.
-    See icons/constants.py for the complete list.
-
-Quick Example:
+Quick example:
     ```python
     from django.contrib import admin
-    from django_cfg.modules.django_admin import AdminConfig, ActionConfig, BadgeField, Icons
+    from django_cfg import Icons
+    from django_cfg.modules.django_admin import ActionConfig, AdminConfig, BadgeField
     from django_cfg.modules.django_admin.base import PydanticAdmin
 
     config = AdminConfig(
         model=Payment,
         list_display=["id", "status", "amount"],
         display_fields=[
-            BadgeField(name="status", label_map={"pending": "warning"}),
+            BadgeField(name="status", label_map={"pending": "warning", "paid": "success"}),
         ],
         actions=[
             ActionConfig(
@@ -49,34 +40,30 @@ Quick Example:
         config = config
     ```
 
-For complete examples and documentation, see README.md in this directory.
+PydanticAdmin is not exported here (importing it needs the app registry);
+import it from ``django_cfg.modules.django_admin.base``.
 """
 
 # Core config models
 from .config import (
     ActionConfig,
     AdminConfig,
-    AvatarField,
-    BackgroundTaskConfig,
     BadgeField,
     BadgeRule,
     BooleanField,
-    CounterBadgeField,
     CurrencyField,
     DateTimeField,
     DecimalField,
+    DjangoFieldsets,
     DocumentationConfig,
     FieldConfig,
     FieldConfigType,
     FieldsetConfig,
-    DjangoFieldsets,
     FieldsetOptions,
     FieldsetTuple,
-    FilterSpec,
     FilterConfig,
+    FilterSpec,
     FilterType,
-    FlashFieldConfig,
-    FlashStyle,
     ForeignKeyField,
     ImageField,
     ImagePreviewField,
@@ -85,46 +72,14 @@ from .config import (
     LinkField,
     MarkdownField,
     MoneyFieldDisplay,
-    ResourceConfig,
     RowItem,
     ShortUUIDField,
     StackedField,
     StatusBadgesField,
     TextField,
     TextWidgetConfig,
-    ToonField,
     UserField,
-    VideoField,
     WidgetConfig,
-)
-
-# Widget registry
-from .widgets import WidgetRegistry
-
-# Base admin class - NOT imported here to avoid AppRegistryNotReady
-# Import PydanticAdmin directly in your admin.py files:
-# from django_cfg.modules.django_admin.base import PydanticAdmin
-
-# Icons (optional)
-from .icons import IconCategories, Icons
-
-# Display utilities (for custom widgets)
-from .utils import (
-    CounterBadge,
-    DateTimeDisplay,
-    ImagePreviewDisplay,
-    MarkdownRenderer,
-    MoneyDisplay,
-    ProgressBadge,
-    StatusBadge,
-    UserDisplay,
-    VideoDisplay,
-    ToonDisplay,
-    # Decorators
-    annotated_field,
-    badge_field,
-    computed_field,
-    currency_field,
 )
 
 # Pydantic models (for advanced usage)
@@ -137,6 +92,29 @@ from .models import (
     UserDisplayConfig,
 )
 
+# Base admin class - NOT imported here to avoid AppRegistryNotReady
+# Import PydanticAdmin directly in your admin.py files:
+# from django_cfg.modules.django_admin.base import PydanticAdmin
+# Display utilities (for custom widgets)
+from .utils import (
+    CounterBadge,
+    DateTimeDisplay,
+    ImagePreviewDisplay,
+    MarkdownRenderer,
+    MoneyDisplay,
+    ProgressBadge,
+    StatusBadge,
+    UserDisplay,
+    # Decorators
+    annotated_field,
+    badge_field,
+    computed_field,
+    currency_field,
+)
+
+# Widget registry
+from .widgets import WidgetRegistry
+
 __version__ = "2.0.0"
 
 __all__ = [
@@ -146,15 +124,11 @@ __all__ = [
     "FieldConfig",
     "FieldsetConfig",
     "ActionConfig",
-    "ResourceConfig",
-    "BackgroundTaskConfig",
     "DocumentationConfig",
     # Specialized Field Types (for display_fields in list_display)
-    "AvatarField",
     "BadgeField",
     "BadgeRule",
     "BooleanField",
-    "CounterBadgeField",
     "CurrencyField",
     "DateTimeField",
     "DecimalField",
@@ -169,9 +143,7 @@ __all__ = [
     "StackedField",
     "StatusBadgesField",
     "TextField",
-    "ToonField",
     "UserField",
-    "VideoField",
     # Widget Configs (for AdminConfig.widgets - form fields)
     "WidgetConfig",
     "JSONWidgetConfig",
@@ -185,21 +157,13 @@ __all__ = [
     "DjangoFieldsets",
     "FieldsetOptions",
     "FieldsetTuple",
-    # Flash messages (one-time sensitive data display)
-    "FlashFieldConfig",
-    "FlashStyle",
     # Advanced
     "WidgetRegistry",
-    # Icons
-    "Icons",
-    "IconCategories",
     # Display utilities (for custom widgets)
     "UserDisplay",
     "MoneyDisplay",
     "DateTimeDisplay",
     "ImagePreviewDisplay",
-    "VideoDisplay",
-    "ToonDisplay",
     "StatusBadge",
     "ProgressBadge",
     "CounterBadge",

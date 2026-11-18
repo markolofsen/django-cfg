@@ -8,7 +8,7 @@ NavBuilder methods return URL name strings so they can be stored in NavigationIt
 
 Usage:
     from django_cfg.modules.django_unfold.navigation.builder import NavBuilder
-    from django_cfg.modules.django_admin.icons import Icons
+    from django_cfg.icons import Icons
 
     # Build a changelist URL name string
     url_name = NavBuilder.changelist("django_cfg_accounts", "customuser")

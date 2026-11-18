@@ -4,10 +4,11 @@ CurrencyRate Admin Configuration
 Admin interface for CurrencyRate model using django_cfg.
 """
 
-from django.contrib import admin
-from django.contrib import messages
+from django.contrib import admin, messages
 from unfold.decorators import action as unfold_action
 
+from django_cfg.apps.tools.currency.models import CurrencyRate
+from django_cfg.icons import Icons
 from django_cfg.modules.django_admin import (
     AdminConfig,
     BadgeField,
@@ -15,13 +16,9 @@ from django_cfg.modules.django_admin import (
     DecimalField,
     FieldsetConfig,
     TextField,
-    Icons,
     computed_field,
 )
 from django_cfg.modules.django_admin.base import PydanticAdmin
-
-from django_cfg.apps.tools.currency.models import CurrencyRate
-
 
 # ========== ADMIN CONFIG ==========
 currency_rate_admin_config = AdminConfig(

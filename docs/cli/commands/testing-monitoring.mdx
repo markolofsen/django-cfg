@@ -405,22 +405,19 @@ python manage.py test_email --email admin@example.com --type otp
 Test Telegram bot configuration.
 
 ```bash
-cli test-telegram --message "Hello!" [OPTIONS]
+python manage.py test_telegram --message "Hello!" [OPTIONS]
 ```
 
 | Option | Type | Description |
 |--------|------|-------------|
 | `--message` | `TEXT` | Test message to send (required) |
-| `--chat-id` | `TEXT` | Target chat ID (optional) |
 
 **Examples:**
 
 ```bash
 # Send test message
-cli test-telegram --message "Hello from Django-CFG!"
+python manage.py test_telegram --message "Hello from Django-CFG!"
 
-# Send to specific chat
-cli test-telegram --message "Deploy successful" --chat-id "-1001234567890"
 ```
 
 ## OTP Authentication Testing
@@ -436,6 +433,7 @@ python manage.py otp_test [OPTIONS]
 | Option | Type | Description |
 |--------|------|-------------|
 | `--email` | `TEXT` | Email for OTP test |
+| `--delivery` | `email\|telegram\|both` | Delivery method (default `email`) |
 
 **Examples:**
 

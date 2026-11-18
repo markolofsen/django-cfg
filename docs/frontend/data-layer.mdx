@@ -16,25 +16,26 @@ For Django ViewSet patterns see [App Design Guide — ViewSets](../guides/app-de
 ```
 Django ViewSets
   → drf-spectacular → OpenAPI schema
-    → python manage.py generate_api
+    → python manage.py gen
       → app/_lib/api/generated/<domain>/
 ```
 
-Each generated domain produces:
+A generated target (the `path` of a `Target` in `generation.py`) contains:
 
 ```
-generated/<domain>/
-├── client.ts               # Typed API class with all endpoints
-├── enums.ts                # Python enums → TS enums
-├── schema.json             # OpenAPI source
-├── _utils/
-│   ├── fetchers/           # Plain async functions (SSR-safe)
-│   ├── hooks/              # SWR hooks (client-only)
-│   └── schemas/            # Zod schemas per model
+generated/
+├── sdk.gen.ts              # Hey API SDK, shared by every group
+├── types.gen.ts            # Types for all operations
+├── api.ts, index.ts        # `class API` wrapper and exports
+├── helpers/                # auth, base URL, client headers
+└── _<group>/
+    ├── fetchers/           # Plain async functions (SSR-safe)
+    ├── hooks/              # SWR hooks (client-only)
+    └── schemas/            # Zod schemas per model
 ```
 
 <Callout type="warning">
-Never edit `generated/` manually. Regenerate with `make api`.
+Never edit `generated/` manually. Regenerate with `python manage.py gen`.
 </Callout>
 
 ## BaseClient Singleton
@@ -164,7 +165,7 @@ handles tokens, headers, and refresh. One behavior worth knowing:
 
 ## Rules
 
-1. Never edit `generated/` directories — regenerate with `make api`
+1. Never edit `generated/` directories — regenerate with `python manage.py gen`
 2. Import types from the context's `types.ts`, never from `generated/` directly
 3. Use the dual export pattern (`export const` + `export type`) for enums in `types.ts`
 4. Create one `BaseClient` singleton per domain — use `LocalStorageAdapter` on client, `MemoryStorageAdapter` on server

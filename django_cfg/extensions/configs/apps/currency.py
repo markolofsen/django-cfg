@@ -16,7 +16,7 @@ from typing import List, Literal
 
 from pydantic import Field, computed_field
 
-from django_cfg.modules.django_admin.icons import Icons
+from django_cfg.icons import Icons
 
 from .base import BaseExtensionSettings, ExtensionScheduleConfig, NavigationItem, NavigationSection
 

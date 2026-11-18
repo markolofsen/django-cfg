@@ -15,7 +15,10 @@ _startup_info_shown = False
 #: Opt-in switch that restores the verbose startup block (``1``/``true``/``yes``/``on``).
 ENV_BANNER = "DJANGO_CFG_BANNER"
 
-from django_cfg.core.utils.runtime_paths import DEV_SERVER_COMMANDS, is_dev_server_command  # noqa: E402
+from django_cfg.core.utils.runtime_paths import (  # noqa: E402
+    DEV_SERVER_COMMANDS,
+    is_dev_server_command,
+)
 
 
 def _truthy(value) -> bool:
@@ -78,13 +81,13 @@ def reset_startup_info_flag():
     _startup_info_shown = False
 
 from .commands_collector import get_all_commands, get_command_count, get_commands_with_descriptions
-from .version_checker import get_current_version, get_latest_version, get_version_info
 from .timing import (
     ServerStartupTimer,
-    start_django_timer,
-    get_django_timer,
     get_django_startup_time,
+    get_django_timer,
+    start_django_timer,
 )
+from .version_checker import get_current_version, get_latest_version, get_version_info
 
 __all__ = [
     "add_django_cfg_urls",

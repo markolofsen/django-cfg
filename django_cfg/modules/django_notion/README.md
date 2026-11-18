@@ -8,6 +8,7 @@ general so other mirrors can join later.
 - Wiring: `connect(Model, adapter=..., route=...)`. No hand-written signals.
 - Safety: outbox table + RQ delivery + retries + sweeper. Notion down = rows wait, nothing raises.
 - Also: Telegram and admin-email copy of every lead (`notify_telegram`, `notify_email`, with the Notion link) and a plain-text acknowledgement to the lead's author (`acknowledge`), independent of Notion.
+- Backfill: `manage.py notion_export <app.Model> --to <data source>` moves a model's rows into a data source (one way, dry run by default, re-run safe); built-in preset for the user model. See [Export](#export).
 - Checks: `manage.py notion_doctor` (read-only). Admin: *Notion outbox* with a **Retry** action.
 - Full guide (public docs): `apps/docs/content/features/modules/django-notion/`. Operations: [`@docs/operations.md`](@docs/operations.md).
 
@@ -154,3 +155,17 @@ paragraph; a broken template falls back to itself, never breaks the send. The 24
 ## Tests
 
 `tests/modules/test_django_notion.py` (fake client, no network): `DJANGO_SETTINGS_MODULE=tests.settings PYTHONPATH=. .venv/bin/python -m pytest tests/modules/test_django_notion.py -q`.
+
+## Export
+
+`export/` holds the generic core (`throttle.py`, `mapping.py`, `runner.py`, `registry.py`) and `management/commands/notion_export.py`
+is its command. Public guide: `apps/docs/content/features/modules/django-notion/export.mdx`.
+
+- Layers: `build_plan` (ORM, select only) -> `scan` (key column of the data source) -> `execute` (`pages.create` through a client object, so
+  tests pass a fake). Nothing is updated or deleted; Notion is never read back into Django.
+- Mapping: `ExportMapping(model, key, fields, exclusions, queryset, batch_column, allow_secret)`; `register_export`, `user_export(...)`.
+- Guards (each from the carapis backfill): the join key is always written and read back from the create response (a key not stored
+  stops the run); rich text is cut at 2000 UTF-16 units; a secret-looking field cannot be mapped without `allow_secret`;
+  report and manifest carry counts, primary keys and page ids only. A source named like an action (`delete`, `save`) or a method with `alters_data` is refused; an exclusion rule that raises leaves the row out and the plan goes on; the manifest is appended row by row (`execute(..., manifest_path=)`), so an interrupted run keeps it.
+- Origin: extracted from carapis `apps/leads/services/notion_import.py`. Carapis still runs its own copy until it moves to this release
+  (`@dev/planned/notion-model-export/PLAN.md`, step N2).

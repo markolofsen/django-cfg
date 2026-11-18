@@ -13,7 +13,7 @@ Auto-generated properties:
 """
 
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Optional
 
 from django.db import models
 
@@ -55,8 +55,9 @@ class CurrencyField(models.CharField):
 
 def _register_currency_fake_detector():
     try:
-        from django_cfg.modules.django_migrator import register_fake_detector
         from django.db import migrations as dj_migrations
+
+        from django_cfg.modules.django_migrator import register_fake_detector
 
         def _is_currency_companion(op: object) -> bool:
             if not isinstance(op, dj_migrations.AddField):
@@ -366,7 +367,7 @@ class MoneyField(models.DecimalField):
 
     def formfield(self, **kwargs):
         """Return form field with MoneyFieldWidget."""
-        from django_cfg.modules.django_admin.widgets import MoneyFieldWidget
+        from django_cfg.modules.django_currency.widgets import MoneyFieldWidget
 
         defaults = {
             "widget": MoneyFieldWidget(

@@ -5,7 +5,11 @@ description: Add custom tabbed panels to the Django Unfold admin overview page u
 
 # django_dashboard — Admin Dashboard Tabs
 
-`django_dashboard` adds a tabbed panel system to the Django Unfold admin overview page. Each tab is a standard Django view: a Python callback function returns a `dict`, and a Django template renders it. No Streamlit, no iframes, no special base classes.
+`django_dashboard` adds a tabbed panel system to the Django Unfold admin overview page. Each tab is a standard Django view: a Python callback function returns a `dict`, and a Django template renders it. No Streamlit and no special base classes. The same template can also be shown inside an iframe (see below).
+
+<Callout type="info">
+These HTML tabs (`/cfg/admin/dashboard/<slug>/`) are the only dashboard surface. The REST dashboard API at `/cfg/dashboard/api/` was removed on 2026-11-18. The admin base is django-unfold, pinned `>=0.110,<0.111`. Tabs are protected by staff login only, not by any proxy basic auth in front of `/cfg/admin/`.
+</Callout>
 
 ## How it works
 
@@ -143,6 +147,8 @@ Every tab template receives:
 | `current_tab` | `DashboardTab` | The active tab object. |
 | `all_tabs` | `List[DashboardTab]` | All configured tabs (used by the tab bar). |
 | `dashboard_config` | `DashboardConfig` | The full dashboard config object. |
+| `dashboard_base` | `str` | Template to extend (`base.html` or `base_iframe.html`). |
+| `is_iframe` | `bool` | `True` when opened with `?iframe=1`. |
 | `title` | `str` | Same as `current_tab.title`. |
 | `**callback_result` | `dict` | Everything your callback returned, merged into the context. |
 
@@ -163,7 +169,15 @@ Extend `django_dashboard/base.html` and fill `{% block tab_content %}` in your t
 | `/cfg/admin/dashboard/` | `django_cfg_dashboard_index` | Redirects to the default tab. |
 | `/cfg/admin/dashboard/<slug>/` | `django_cfg_dashboard_tab` | Renders a specific tab. |
 
-Both require `is_staff`. Per-tab `permission` callbacks override the default.
+Both require an active staff user: anyone else gets a plain 404 (not a redirect to the admin login, so a scanner learns nothing about where the admin lives). A staff user who fails a tab's permission check gets 403. Per-tab `permission` callbacks override the default.
+
+## Tab sources
+
+The tab bar and the tab view read the same merged list. In order of precedence (first wins on a slug collision): `DashboardConfig.tabs` of your project, tabs of enabled built-in django-cfg apps (for example the analytics tab), then auto-discovered extension tabs.
+
+## Iframe embedding
+
+Opening a tab with `?iframe=1` (`/cfg/admin/dashboard/<slug>/?iframe=1`) renders it without the admin chrome, for embedding in another page. The views allow same-origin framing (`X-Frame-Options: SAMEORIGIN`). The template context carries `dashboard_base` (`django_dashboard/base.html`, or `django_dashboard/base_iframe.html` in iframe mode) and `is_iframe`; extend `{% extends dashboard_base %}` in a tab template to support both modes. `base_iframe.html` loads the Tailwind Play CDN script; for production point `tailwind_css` at a stylesheet you build yourself.
 
 ## Custom CSS (Tailwind)
 

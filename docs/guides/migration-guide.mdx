@@ -9,7 +9,7 @@ description: Django-CFG migration guide guide. Practical tutorial for migration 
 
 Migrate your existing Django project to Django-CFG and unlock type-safe configuration, modern admin interface, and powerful built-in features.
 
-> **⚠️ Note:** This guide uses simplified examples. For production, use YAML-based configuration as shown in [Configuration Guide](../../getting-started/configuration) and [First Project](../../getting-started/first-project).
+> **Note:** This guide uses simplified examples. For production, read secrets from the environment as shown in [Configuration Guide](../../getting-started/configuration) and [First Project](../../getting-started/first-project).
 
 ## Migration Strategies
 
@@ -91,11 +91,13 @@ cp -r /path/to/old/project/anotherapp ./
 
 ```python
 # config.py in new project
+import os
+
 from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
     project_name: str = "My Migrated Project"
-    secret_key: str = "<from-yaml-config>"  # Set via environment/config.yaml
+    secret_key: str = os.environ["SECRET_KEY"]
     debug: bool = False
     
     # Add your custom apps
@@ -108,10 +110,10 @@ class MyConfig(DjangoConfig):
     databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
-            name="<from-yaml-config>"  # Set via environment/config.yaml,
-            user="<from-yaml-config>"  # Set via environment/config.yaml,
-            password="<from-yaml-config>"  # Set via environment/config.yaml,
-            host="<from-yaml-config>"  # Set via environment/config.yaml,
+            name=os.environ["DB_NAME"],
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            host=os.environ["DB_HOST"],
             port=5432,
         )
     }
@@ -134,7 +136,7 @@ python manage.py loaddata myapp_data.json
 
 ```bash
 # Validate configuration
-python manage.py validate_config
+python manage.py check_settings
 
 # Test your app
 python manage.py runserver
@@ -221,7 +223,7 @@ Enable Django-CFG features one by one:
 
 ```python
 # config.py - Add features gradually
-from django_cfg import DjangoConfig, UnfoldConfig, SpectacularConfig
+from django_cfg import DjangoConfig, UnfoldConfig, SpectacularConfig, TelegramConfig, DjangoRQConfig
 
 class MyConfig(DjangoConfig):
     # ... existing settings ...
@@ -232,13 +234,11 @@ class MyConfig(DjangoConfig):
     # Week 2: Enable API documentation
     spectacular: SpectacularConfig | None = SpectacularConfig()
 
-    # Week 3: Enable built-in modules
-    enable_support: bool = True
-    enable_accounts: bool = True
+    # Week 3: Add integrations, each one a config object
+    telegram: TelegramConfig | None = TelegramConfig(bot_token="...", chat_id=123456)
+    django_rq: DjangoRQConfig | None = DjangoRQConfig(queues=["default"])
 
-    # Week 4: Enable advanced features
-    enable_newsletter: bool = True
-    enable_leads: bool = True
+    # Accounts, OTP sign-in, mailer and health are always installed
 ```
 
 ### Step 7: Clean Up Old Settings
@@ -284,11 +284,11 @@ DATABASES = {
 # New config.py (50 lines)
 class MyConfig(DjangoConfig):
     debug: bool = True
-    secret_key: str = "<from-yaml-config>"  # Set via environment/config.yaml
+    secret_key: str = os.environ["SECRET_KEY"]
     databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
-            name="<from-yaml-config>"  # Set via environment/config.yaml,
+            name=os.environ["DB_NAME"],
             # ... type-safe configuration
         )
     }
@@ -307,8 +307,8 @@ python manage.py runserver
 # Visit http://localhost:8000/api/docs/
 
 # Test CLI commands
-python manage.py info
-python manage.py validate_config
+python manage.py show_config
+python manage.py check_settings
 ```
 
 ### Step 4: Plan Migration
@@ -352,12 +352,14 @@ SECRET_KEY = env('SECRET_KEY')
 DATABASE_URL = env('DATABASE_URL')
 
 # New (Django-CFG)
-from django_cfg import DjangoConfig
+import os
+
+from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
     debug: bool = False
-    secret_key: str = "<from-yaml-config>"  # Set via environment/config.yaml
-    database_url: str = "<from-yaml-config>"  # Set via environment/config.yaml
+    secret_key: str = os.environ["SECRET_KEY"]
+    # database_url is not a field: pass DatabaseConfig.from_url(os.environ["DATABASE_URL"]) in databases
 ```
 
 ### From python-decouple
@@ -370,11 +372,13 @@ SECRET_KEY = config('SECRET_KEY')
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=lambda v: [s.strip() for s in v.split(',')])
 
 # New (Django-CFG)
+import os
+
 from django_cfg import DjangoConfig
 
 class MyConfig(DjangoConfig):
     debug: bool = False
-    secret_key: str = "<from-yaml-config>"  # Set via environment/config.yaml
+    secret_key: str = os.environ["SECRET_KEY"]
     security_domains: list[str] = ["myapp.com"]  # Auto-generates ALLOWED_HOSTS, CORS, SSL
 ```
 
@@ -395,7 +399,7 @@ from .environment import env
 
 class MyConfig(DjangoConfig):
     debug: bool = True
-    secret_key: str = env.secret_key  # Loaded from config.yaml
+    secret_key: str = env.secret_key  # your pydantic-settings loader
 ```
 
 ### Complex Database Configuration
@@ -425,33 +429,34 @@ DATABASES = {
 }
 
 # New config.py
-from django_cfg import DjangoConfig
-from django_cfg import DatabaseConfig
+import os
+
+from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
     databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
-            name="<from-yaml-config>"  # Set via environment/config.yaml,
-            user="<from-yaml-config>"  # Set via environment/config.yaml,
-            password="<from-yaml-config>"  # Set via environment/config.yaml,
-            host="${DB_HOST:localhost}",
+            name=os.environ["DB_NAME"],
+            user=os.environ["DB_USER"],
+            password=os.environ["DB_PASSWORD"],
+            host=os.environ.get("DB_HOST", "localhost"),
             port=5432,
             sslmode="require",
         ),
         "analytics": DatabaseConfig(
             engine="django.db.backends.postgresql",
-            name="<from-yaml-config>"  # Set via environment/config.yaml,
-            user="<from-yaml-config>"  # Set via environment/config.yaml,
-            password="<from-yaml-config>"  # Set via environment/config.yaml,
-            host="<from-yaml-config>"  # Set via environment/config.yaml,
+            name=os.environ["ANALYTICS_DB_NAME"],
+            user=os.environ["ANALYTICS_DB_USER"],
+            password=os.environ["ANALYTICS_DB_PASSWORD"],
+            host=os.environ["ANALYTICS_DB_HOST"],
             port=5432,
-            routing_apps=["analytics", "reports"],
+            apps=["analytics", "reports"],
         ),
     }
 ```
 
-## ⚠️ Migration Gotchas
+## Migration Gotchas
 
 ### 1. Custom Middleware Order
 
@@ -538,7 +543,7 @@ class MigrationTest(TestCase):
 
 ```bash
 # ✅ Configuration validation
-python manage.py validate_config
+python manage.py check_settings
 
 # ✅ Database connectivity
 python manage.py dbshell
@@ -582,7 +587,7 @@ After migration, you'll have:
 
 ```bash
 # Show team the new features
-python manage.py info
+python manage.py show_config
 python manage.py --help
 
 # Demo the admin interface
@@ -611,22 +616,22 @@ Update your project documentation to reflect Django-CFG patterns:
 ```yaml
 # .github/workflows/django.yml
 - name: Validate Configuration
-  run: python manage.py validate_config --strict
+  run: python manage.py check_settings
 
 - name: Run Enhanced Tests
   run: |
+    python manage.py check
     python manage.py test
-    python manage.py check_settings
 ```
 
-## 🆘 Troubleshooting
+## Troubleshooting
 
 ### Configuration Errors
 
 ```bash
 # Debug configuration issues
-python manage.py show_config --debug
-python manage.py validate_config --verbose
+python manage.py show_config
+python manage.py check_settings
 ```
 
 ### Import Errors
@@ -642,7 +647,7 @@ sys.path.insert(0, '/path/to/your/project')
 ```bash
 # Check database configuration
 python manage.py dbshell
-python manage.py migrate --dry-run
+python manage.py migrate_all --check
 ```
 
 ## See Also
@@ -677,10 +682,10 @@ python manage.py migrate --dry-run
 
 **Built-in Apps:**
 - **[Built-in Apps Overview](../../features/built-in-apps/overview)** - Enable production apps
-- **[User Management](/features/built-in-apps/user-management)** - Accounts, Support
+- **[User Management](/features/built-in-apps/user-management)** - Accounts
 
 **Integrations:**
-- **[ReArq Integration](/features/modules/django-rq)** - Background tasks
+- **[Django-RQ Integration](/features/modules/django-rq)** - Background tasks
 - **[Email Module](/features/modules/django-email)** - Email configuration
 
 ### Tools & Deployment
@@ -694,7 +699,7 @@ python manage.py migrate --dry-run
 - **[Docker Deployment](./docker/production)** - Containerized deployment
 - **[Logging Configuration](../../deployment/logging)** - Production logging
 
-Transform your Django project with Django-CFG! 🎯
+Transform your Django project with Django-CFG.
 
 TAGS: migration, upgrade, existing-project, gradual-migration, fresh-start
 DEPENDS_ON: [installation, configuration]

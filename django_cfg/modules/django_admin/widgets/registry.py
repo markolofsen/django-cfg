@@ -19,10 +19,8 @@ from ..models import (
     UserDisplayConfig,
 )
 from ..utils import (
-    AvatarDisplay,
     BooleanDisplay,
     CounterBadge,
-    CounterBadgeDisplay,
     DateTimeDisplay,
     ImageDisplay,
     ImagePreviewDisplay,
@@ -132,7 +130,7 @@ def _render_money_field(obj: Any, field: str, cfg: Optional[Dict[str, Any]]) -> 
     Uses MoneyFieldWidget.format_readonly() for consistent display
     in list view and readonly forms.
     """
-    from .money.widget import MoneyFieldWidget
+    from django_cfg.modules.django_currency.widgets import MoneyFieldWidget
 
     field_names = cfg.get('field_names', {}) if cfg else {}
     target_currency = cfg.get('target_currency', 'USD') if cfg else 'USD'
@@ -247,11 +245,6 @@ WidgetRegistry.register(
 )
 
 WidgetRegistry.register(
-    "avatar",
-    lambda obj, field, cfg: AvatarDisplay.from_field(obj, field, cfg)
-)
-
-WidgetRegistry.register(
     "link",
     lambda obj, field, cfg: LinkDisplay.from_field(obj, field, cfg)
 )
@@ -259,11 +252,6 @@ WidgetRegistry.register(
 WidgetRegistry.register(
     "status_badges",
     lambda obj, field, cfg: StatusBadgesDisplay.from_field(obj, field, cfg)
-)
-
-WidgetRegistry.register(
-    "counter_badge",
-    lambda obj, field, cfg: CounterBadgeDisplay.from_field(obj, field, cfg)
 )
 
 WidgetRegistry.register(
@@ -279,14 +267,6 @@ WidgetRegistry.register(
 WidgetRegistry.register(
     "image_preview",
     lambda obj, field, cfg: ImagePreviewDisplay.from_field(obj, field, cfg)
-)
-
-# Video widget
-from ..utils.displays import VideoDisplay
-
-WidgetRegistry.register(
-    "video",
-    lambda obj, field, cfg: VideoDisplay.from_field(obj, field, cfg)
 )
 
 # Markdown widget
@@ -340,11 +320,3 @@ def _render_location_field(obj: Any, field: str, cfg: Optional[Dict[str, Any]]) 
 WidgetRegistry.register("country", _render_country_field)
 WidgetRegistry.register("city", _render_city_field)
 WidgetRegistry.register("location", _render_location_field)
-
-# TOON/JSON viewer widget
-from ..utils.displays import ToonDisplay
-
-WidgetRegistry.register(
-    "toon_viewer",
-    lambda obj, field, cfg: ToonDisplay.from_field(obj, field, cfg)
-)

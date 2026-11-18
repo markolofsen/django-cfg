@@ -7,7 +7,6 @@ Extracted from original config.py for better maintainability.
 Size: ~120 lines (focused on middleware logic)
 """
 import logging
-
 from typing import TYPE_CHECKING, List
 
 from ..constants import DEFAULT_MIDDLEWARE
@@ -18,6 +17,7 @@ if TYPE_CHECKING:
 REAL_IP_MIDDLEWARE = 'django_cfg.middleware.real_ip.RealIPMiddleware'
 NOINDEX_MIDDLEWARE = 'django_cfg.core.middleware.noindex.NoIndexMiddleware'
 ADMIN_ACCESS_MIDDLEWARE = 'django_cfg.middleware.admin_access.AdminAccessMiddleware'
+REQUEST_ID_MIDDLEWARE = 'django_cfg.modules.django_logging.middleware.RequestIdMiddleware'
 
 
 class MiddlewareBuilder:
@@ -74,6 +74,9 @@ class MiddlewareBuilder:
         access = self.config.admin_access
         if not access.enabled or access.allowed_networks:
             middleware.append(ADMIN_ACCESS_MIDDLEWARE)
+
+        # After Real IP (it trusts X-Request-ID by the real peer); every later log line carries the id
+        middleware.append(REQUEST_ID_MIDDLEWARE)
 
         # Default middleware (includes CorsMiddleware)
         middleware.extend(DEFAULT_MIDDLEWARE)

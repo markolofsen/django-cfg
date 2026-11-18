@@ -252,7 +252,8 @@ class MyExtensionConfig(AppConfig):
 **From the core module** (when modifying `django_mcp` itself), add to `handlers/tools.py`:
 
 ```python
-from django_cfg.modules.django_mcp.tools.my_module import my_custom_tool
+# a new module under django_mcp/tools/ (here: tools/my_module.py, which you create)
+from django_cfg.modules.django_mcp.tools.my_module import my_custom_tool  # noqa: placeholder name
 tool_registry.register(my_custom_tool)
 ```
 

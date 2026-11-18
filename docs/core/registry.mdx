@@ -1,322 +1,110 @@
 ---
-title: Registry System - Lazy Import Management
-description: Django-CFG registry for efficient lazy loading of components. Organized import system with zero startup cost.
+title: Public API and Lazy Imports
+description: How the django_cfg package exposes its public names, which ones load lazily, and the tests that keep the API stable.
 ---
 
-# Registry System - Lazy Import Management
+# Public API and Lazy Imports
 
-The **Registry System** is Django-CFG's centralized import management system. It provides organized lazy loading of all components, minimizing startup time and memory usage.
-
-## Overview
-
-The Registry System provides:
-
-- **📦 Lazy Loading** - Import components only when first accessed
-- **🏗️ Organized Structure** - Components grouped by functionality
-- **⚡ Zero Startup Cost** - No imports until actually needed
-- **🛡️ Type Safety** - Full type hints and IDE autocomplete support
+`django_cfg` has no separate registry module. Its public API is the explicit facade in
+`django_cfg/__init__.py`: a list of imports grouped by area, an `__all__`, and a small
+module-level `__getattr__` for the few names that cannot be imported eagerly.
 
 ## How It Works
 
-Django-CFG uses Python's `__getattr__` mechanism for lazy imports:
+Most public names are plain imports at the top of `django_cfg/__init__.py`:
 
 ```python
-# django_cfg/__init__.py
-from .registry import DJANGO_CFG_REGISTRY
+from django_cfg import DjangoConfig, DatabaseConfig, CacheConfig
+from django_cfg import DjangoEmailService, send_email, send_telegram_message
+from django_cfg import ConfigurationError, ValidationError
+```
+
+Names that read Django settings at import time are resolved lazily on first access:
+
+```python
+# django_cfg/__init__.py (shape)
+_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "DefaultPagination": ("django_cfg.middleware.pagination", "DefaultPagination"),
+    "ImportExportModelAdmin": ("django_cfg.modules.django_import_export", "ImportExportModelAdmin"),
+    "check_python_version": ("django_cfg.utils.version_check", "check_python_version"),
+    # ...
+}
 
 def __getattr__(name: str):
-    """Lazy import mechanism using registry pattern."""
-    if name in DJANGO_CFG_REGISTRY:
-        module_path, class_name = DJANGO_CFG_REGISTRY[name]
+    if name in _LAZY_IMPORTS:
+        module_path, class_name = _LAZY_IMPORTS[name]
         import importlib
-        module = importlib.import_module(module_path)
-        return getattr(module, class_name)
-    raise AttributeError(f"module 'django_cfg' has no attribute '{name}'")
+        return getattr(importlib.import_module(module_path), class_name)
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 ```
 
-This means:
-- **No import until use**: `from django_cfg import DjangoConfig` doesn't load the module
-- **First access loads**: Only when you instantiate `DjangoConfig()` is it imported
-- **Subsequent accesses cached**: Python caches the import after first load
+The lazy set is: the DRF pagination classes (`DefaultPagination`, `LargePagination`,
+`SmallPagination`, `NoPagination`), the `django_import_export` classes (`ImportForm`,
+`ExportForm`, `SelectableFieldsExportForm`, `ImportExportMixin`, `ImportExportModelAdmin`,
+`ExportMixin`, `ImportMixin`, `BaseResource`) and `check_python_version`. They import Django
+models or read `REST_FRAMEWORK`, which fails before `django.setup()`.
 
-## Registry Structure
+## Public Names by Area
 
-Django-CFG uses multiple specialized registries combined into one:
+| Area | Names |
+|------|-------|
+| Core | `DjangoConfig`, `StartupInfoMode`, `set_current_config`, `add_django_cfg_urls`, `get_django_cfg_urls_info`, `admin_urlpatterns` |
+| Exceptions | `DjangoCfgException`, `ConfigurationError`, `ValidationError`, `DatabaseError`, `CacheError`, `EnvironmentError` |
+| Infrastructure | `DatabaseConfig`, `CacheConfig`, `SecurityConfig`, `LoggingConfig` |
+| API | `DRFConfig`, `SpectacularConfig`, `JWTConfig`, `OAuthConfig`, `GitHubOAuthConfig`, `GoogleOAuthConfig`, `LimitsConfig`, `ApiKeys`, `TwoFactorConfig`, `AccountEmailsConfig` |
+| Django models | `EnvironmentConfig`, `AxesConfig`, `DjangoRQConfig`, `RQQueueConfig`, `RQScheduleConfig`, `CurrencyConfig`, `PaymentsConfig`, `GeoConfig`, `StorageConfig`, `S3StorageConfig`, `ConstanceConfig`, `OpenAPIClientConfig`, `Site`, `SiteConfig` and others |
+| Services | `EmailConfig`, `TelegramConfig`, `NotionConfig`, `DjangoEmailService`, `send_email`, `DjangoTelegram`, `send_telegram_message`, `send_telegram_photo` |
+| Admin | `AdminConfig`, `FieldConfig`, `FieldsetConfig`, `ActionConfig`, `WidgetRegistry`, `Icons`, `IconCategories` |
+| Unfold (needs `django-unfold`) | `UnfoldConfig`, `UnfoldTheme`, `UnfoldColors`, `UnfoldSidebar`, `NavigationItem`, `NavigationSection`, `SiteDropdownItem` |
+| MCP | `DjangoMCPModuleConfig`, `MCPConfigBuilder`, `MCPProfile` and the `MCP_*` helpers |
+| Testing | `SmartTestRunner`, `FastTestRunner` |
 
-```python
-DJANGO_CFG_REGISTRY = {
-    **CORE_REGISTRY,        # Core components (config, exceptions, etc.)
-    **SERVICES_REGISTRY,    # Service integrations (email, telegram, logging)
-    **THIRD_PARTY_REGISTRY, # Third-party integrations (unfold, DRF, etc.)
-    **MODULES_REGISTRY,     # Utility modules and functions
-    **EXCEPTIONS_REGISTRY,  # Exception classes
-}
-```
-
-## Registry Categories
-
-### 1. Core Registry (`CORE_REGISTRY`)
-
-Essential Django-CFG components:
-
-```python
-CORE_REGISTRY = {
-    # Core configuration
-    "DjangoConfig": ("django_cfg.core.config", "DjangoConfig"),
-    "StartupInfoMode": ("django_cfg.core.config", "StartupInfoMode"),
-
-    # Core exceptions
-    "ConfigurationError": ("django_cfg.core.exceptions", "ConfigurationError"),
-    "ValidationError": ("django_cfg.core.exceptions", "ValidationError"),
-    "DatabaseError": ("django_cfg.core.exceptions", "DatabaseError"),
-    "CacheError": ("django_cfg.core.exceptions", "CacheError"),
-    "EnvironmentError": ("django_cfg.core.exceptions", "EnvironmentError"),
-
-    # Infrastructure models
-    "DatabaseConfig": ("django_cfg.models.infrastructure.database", "DatabaseConfig"),
-    "CacheConfig": ("django_cfg.models.infrastructure.cache", "CacheConfig"),
-    "SecurityConfig": ("django_cfg.models.infrastructure.security", "SecurityConfig"),
-    "LoggingConfig": ("django_cfg.models.infrastructure.logging", "LoggingConfig"),
-
-    # Security
-    "AxesConfig": ("django_cfg.models.django.axes", "AxesConfig"),
-
-    # API
-    "LimitsConfig": ("django_cfg.models.api.limits", "LimitsConfig"),
-    "ApiKeys": ("django_cfg.models.api.keys", "ApiKeys"),
-    "JWTConfig": ("django_cfg.models.api.jwt", "JWTConfig"),
-    "GitHubOAuthConfig": ("django_cfg.models.api.oauth", "GitHubOAuthConfig"),
-    "GoogleOAuthConfig": ("django_cfg.models.api.oauth", "GoogleOAuthConfig"),
-    "TwoFactorConfig": ("django_cfg.models.api.twofactor", "TwoFactorConfig"),
-
-    # Background tasks
-    "DjangoRQConfig": ("django_cfg.models.django.django_rq", "DjangoRQConfig"),
-    "RQQueueConfig": ("django_cfg.models.django.django_rq", "RQQueueConfig"),
-
-    # Pagination
-    "DefaultPagination": ("django_cfg.middleware.pagination", "DefaultPagination"),
-    "LargePagination": ("django_cfg.middleware.pagination", "LargePagination"),
-    "SmallPagination": ("django_cfg.middleware.pagination", "SmallPagination"),
-    "NoPagination": ("django_cfg.middleware.pagination", "NoPagination"),
-
-    # Routing & Testing
-    "DynamicRouter": ("django_cfg.routing.routers", "DynamicRouter"),
-    "SmartTestRunner": ("django_cfg.testing.runners", "SmartTestRunner"),
-    "FastTestRunner": ("django_cfg.testing.runners", "FastTestRunner"),
-
-    # Utils
-    "HealthService": ("django_cfg.modules.django_health", "HealthService"),
-}
-```
-
-### 2. Services Registry (`SERVICES_REGISTRY`)
-
-Service integrations and modules:
-
-```python
-SERVICES_REGISTRY = {
-    # Email services
-    "EmailConfig": ("django_cfg.models.services", "EmailConfig"),
-    "DjangoEmailService": ("django_cfg.modules.django_email", "DjangoEmailService"),
-    "send_email": ("django_cfg.modules.django_email", "send_email"),
-    "send_admin_email": ("django_cfg.modules.django_email", "send_admin_email"),
-    "send_admin_notification": ("django_cfg.modules.django_email", "send_admin_notification"),
-
-    # Telegram services
-    "TelegramConfig": ("django_cfg.models.services", "TelegramConfig"),
-    "DjangoTelegram": ("django_cfg.modules.django_telegram", "DjangoTelegram"),
-    "send_telegram_message": ("django_cfg.modules.django_telegram", "send_telegram_message"),
-    "send_telegram_photo": ("django_cfg.modules.django_telegram", "send_telegram_photo"),
-
-    # Database Backup
-}
-```
-
-### 3. Third-Party Registry (`THIRD_PARTY_REGISTRY`)
-
-External integrations:
-
-```python
-THIRD_PARTY_REGISTRY = {
-    # OpenAPI Client Generation
-    "OpenAPIClientConfig": ("django_cfg.models.django.openapi", "OpenAPIClientConfig"),
-    "OpenAPIGroupConfig": ("django_cfg.modules.django_client.core.config", "OpenAPIGroupConfig"),
-
-    # Unfold Admin
-    "UnfoldConfig": ("django_cfg.modules.django_unfold.models.config", "UnfoldConfig"),
-    "UnfoldTheme": ("django_cfg.modules.django_unfold.models.config", "UnfoldTheme"),
-    "UnfoldThemeConfig": ("django_cfg.modules.django_unfold.models.config", "UnfoldThemeConfig"),
-    "UnfoldColors": ("django_cfg.modules.django_unfold.models.config", "UnfoldColors"),
-    "NavigationItem": ("django_cfg.modules.django_unfold.models.navigation", "NavigationItem"),
-    "NavigationSection": ("django_cfg.modules.django_unfold.models.navigation", "NavigationSection"),
-    "SiteDropdownItem": ("django_cfg.modules.django_unfold.models.dropdown", "SiteDropdownItem"),
-
-    # Django REST Framework
-    "DRFConfig": ("django_cfg.models.api.drf", "DRFConfig"),
-    "SpectacularConfig": ("django_cfg.models.api.drf", "SpectacularConfig"),
-    "SwaggerUISettings": ("django_cfg.models.api.drf", "SwaggerUISettings"),
-    "RedocUISettings": ("django_cfg.models.api.drf", "RedocUISettings"),
-
-    # Constance
-    "ConstanceConfig": ("django_cfg.models.django.constance", "ConstanceConfig"),
-    "ConstanceField": ("django_cfg.models.django.constance", "ConstanceField"),
-
-    # Material Icons
-    "Icons": ("django_cfg.modules.django_admin.icons", "Icons"),
-    "IconCategories": ("django_cfg.modules.django_admin.icons", "IconCategories"),
-}
-```
-
-### 4. Modules Registry (`MODULES_REGISTRY`)
-
-Utility modules and integrations:
-
-```python
-MODULES_REGISTRY = {
-    # URL integration
-    "add_django_cfg_urls": ("django_cfg.core.integration", "add_django_cfg_urls"),
-    "get_django_cfg_urls_info": ("django_cfg.core.integration", "get_django_cfg_urls_info"),
-    "set_current_config": ("django_cfg.core.config", "set_current_config"),
-
-    # Streamlit Admin
-    "StreamlitAdminConfig": ("django_cfg.modules.streamlit_admin", "StreamlitAdminConfig"),
-
-    # Import/Export
-    "ImportForm": ("django_cfg.modules.django_import_export", "ImportForm"),
-    "ExportForm": ("django_cfg.modules.django_import_export", "ExportForm"),
-    "ImportExportMixin": ("django_cfg.modules.django_import_export", "ImportExportMixin"),
-    "ImportExportModelAdmin": ("django_cfg.modules.django_import_export", "ImportExportModelAdmin"),
-
-    # Django Admin configuration
-    "AdminConfig": ("django_cfg.modules.django_admin", "AdminConfig"),
-    "FieldConfig": ("django_cfg.modules.django_admin", "FieldConfig"),
-    "FieldsetConfig": ("django_cfg.modules.django_admin", "FieldsetConfig"),
-}
-```
-
-### 5. Exceptions Registry (`EXCEPTIONS_REGISTRY`)
-
-Exception classes:
-
-```python
-EXCEPTIONS_REGISTRY = {
-    "DjangoCfgException": ("django_cfg.core.exceptions", "DjangoCfgException"),
-    "ConfigurationError": ("django_cfg.core.exceptions", "ConfigurationError"),
-    "ValidationError": ("django_cfg.core.exceptions", "ValidationError"),
-    "EnvironmentError": ("django_cfg.core.exceptions", "EnvironmentError"),
-}
-```
-
-## Usage
-
-### Importing Components
-
-All registered components can be imported directly from `django_cfg`:
-
-```python
-# Import configuration classes
-from django_cfg import DjangoConfig, DatabaseConfig, CacheConfig
-
-# Import service modules
-from django_cfg import DjangoEmailService, send_email, send_telegram_message
-
-# Import exceptions
-from django_cfg import ConfigurationError, ValidationError
-
-# Import utilities
-from django_cfg import DynamicRouter, HealthService
-```
-
-### Lazy Loading Benefit
-
-The lazy loading system means your app only imports what it uses:
-
-```python
-# This import is instant - no modules loaded yet
-from django_cfg import DjangoConfig, EmailConfig, TelegramConfig
-
-# Only when you USE a component does it get loaded
-config = DjangoConfig(...)  # Now DjangoConfig module is loaded
-
-# EmailConfig and TelegramConfig are still not loaded
-# until you actually use them
-```
-
-### Checking Available Components
-
-You can see all available components in `__all__`:
+The complete list is `django_cfg.__all__`:
 
 ```python
 import django_cfg
 print(django_cfg.__all__)
-# ['DjangoConfig', 'DatabaseConfig', 'EmailConfig', 'send_email', ...]
 ```
+
+## Guarding the API
+
+- `tests/test_public_api.py` compares `django_cfg.__all__` with `tests/public_api_snapshot.json`, so a removed name fails the test.
+- `tests/test_import_budget.py` measures `import django_cfg` in a clean subprocess: a ceiling on loaded `django_cfg` modules, and heavy packages (`openai`, `boto3`, `pandas`, ...) that must stay unloaded.
+
+See [System Architecture](./architecture#import-contracts-and-public-api) for the layering contracts.
 
 ## Best Practices
 
-### 1. Import What You Need
-
-Only import the components you actually use:
+### Import what you need
 
 ```python
-# Good: Import only what you need
-from django_cfg import DjangoConfig, DatabaseConfig
+from django_cfg import DjangoConfig, DatabaseConfig   # good
 
-# Avoid: Don't import everything
-from django_cfg import *  # Loads all components
+from django_cfg import *                              # avoid: pulls the whole facade
 ```
 
-### 2. Use Type Hints
+### Optional dependencies
 
-All registry components have full type hints:
+Unfold and MCP names are `None` when their optional dependency is missing:
 
 ```python
-from django_cfg import DjangoConfig, DatabaseConfig, EmailConfig
-from typing import Optional
+from django_cfg import UnfoldConfig
 
-class MyConfig(DjangoConfig):
-    project_name: str = "My Project"
-    email: Optional[EmailConfig] = None
+if UnfoldConfig is None:
+    ...  # django-unfold is not installed
 ```
 
-### 3. Handle Import Errors
+### Import modules by their own path when a name is not in the facade
 
-Components may have optional dependencies:
-
-```python
-try:
-    from django_cfg import UnfoldConfig
-except ImportError:
-    UnfoldConfig = None  # django-unfold not installed
-```
-
-## Extending the Registry
-
-To add custom components to your project, you can create your own registry pattern:
+Not every class is re-exported. Import it from its module:
 
 ```python
-# myapp/registry.py
-MY_APP_REGISTRY = {
-    "MyService": ("myapp.services", "MyService"),
-    "MyConfig": ("myapp.config", "MyConfig"),
-}
-
-# myapp/__init__.py
-from .registry import MY_APP_REGISTRY
-
-def __getattr__(name: str):
-    if name in MY_APP_REGISTRY:
-        module_path, class_name = MY_APP_REGISTRY[name]
-        import importlib
-        module = importlib.import_module(module_path)
-        return getattr(module, class_name)
-    raise AttributeError(f"module 'myapp' has no attribute '{name}'")
-
-__all__ = list(MY_APP_REGISTRY.keys())
+from django_cfg.modules.django_admin.base import PydanticAdmin
+from django_cfg.modules.django_currency.widgets import MoneyFieldWidget
 ```
 
 ## Related Documentation
 
 - [**Configuration Guide**](../configuration) - Configure Django-CFG
-- [**Modules System**](../features/modules/overview) - Use registered modules
-- [**Exceptions**](/core/utilities) - Error handling patterns
+- [**Modules System**](/features/modules/overview) - Feature modules
+- [**Utilities**](./utilities) - Environment detection and defaults

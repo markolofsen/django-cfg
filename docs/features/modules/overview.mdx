@@ -91,24 +91,21 @@ email.send_template(
     subject="Welcome to our platform!"
 )
 
-# Bulk email
-email.send_bulk(
-    recipients=[
-        {"email": "user1@example.com", "name": "User 1"},
-        {"email": "user2@example.com", "name": "User 2"}
-    ],
-    subject="Newsletter",
-    message="Hello!"
+# Attachments
+email.send_with_attachments(
+    subject="Report",
+    message="See attached",
+    recipient_list=["user@example.com"],
+    attachments=[...],
 )
 ```
 
 **Features:**
 - ✅ Multiple backends (SMTP, etc.)
 - ✅ Template rendering with Django templates
-- ✅ Bulk email support
 - ✅ Attachment handling
 - ✅ HTML/text alternatives
-- ✅ Error handling and retries
+- ✅ Sent on a background thread
 
 ---
 
@@ -124,13 +121,13 @@ telegram = DjangoTelegram()
 # Send notifications
 telegram.send_message(
     chat_id="-1001234567890",
-    text="🚀 Deployment completed successfully!"
+    message="Deployment completed successfully!"
 )
 
 # Send with formatting
 telegram.send_message(
     chat_id="@my_channel",
-    text="*Error Alert*\n`Database connection failed`",
+    message="*Error Alert*\n`Database connection failed`",
     parse_mode="Markdown"
 )
 
@@ -142,7 +139,7 @@ telegram.send_document(
 )
 ```
 
-**Features:** Message sending and formatting, file and media uploads, bot command handling, webhook integration, channel/group management, and error notifications.
+**Features:** Message sending and formatting, file and photo uploads, a rate-limited queue, and repeat-message dedupe (`TelegramConfig.dedupe`, 60s window; see [Django Telegram](/features/modules/django-telegram)).
 
 ### ⚙️ Operations
 
@@ -184,36 +181,6 @@ logger.info("User login", extra={"user_id": 123})
 - ✅ JSON off a terminal
 - ✅ Size rotation and boot-time pruning
 - ✅ Monitor events through the same pipeline
-
----
-
-### Tasks Module (`DjangoTasks`)
-
-Background task processing with Django-RQ:
-
-```python
-from django_cfg.modules.django_tasks import DjangoTasks
-
-tasks = DjangoTasks()
-
-# Simple task
-@tasks.task
-def send_welcome_email(user_id):
-    user = User.objects.get(id=user_id)
-    return f"Email sent to {user.email}"
-
-# Schedule task
-task_id = tasks.enqueue(send_welcome_email, user_id=123)
-
-# Periodic task
-tasks.schedule_periodic(
-    "cleanup_old_files",
-    cron="0 2 * * *",  # Daily at 2 AM
-    func=cleanup_old_files
-)
-```
-
-**Features:** Async task execution, scheduled/delayed tasks, periodic/cron tasks, task monitoring and retries, priority queues, and dead letter queues.
 
 ---
 
@@ -260,17 +227,14 @@ django_rq = DjangoRQConfig(
 Multi-currency support with real-time rates and crypto:
 
 ```python
-from django_cfg.modules.django_currency import convert_currency, CurrencyConverter
+from django_cfg.apps.tools.currency.services.converter import get_converter
 
-# Quick conversions
-usd_amount = convert_currency(100, "EUR", "USD")
-btc_amount = convert_currency(50000, "USD", "BTC")
-
-# Detailed conversion
-converter = CurrencyConverter()
+converter = get_converter()
 result = converter.convert(100, "USD", "EUR")
-print(f"Rate: {result.rate.rate}, Source: {result.rate.source}")
+print(f"{result.result} EUR, rate {result.rate.rate}, source {result.rate.source}")
 ```
+
+For model fields (`MoneyField`) and price formatting see `django_cfg.modules.django_currency`.
 
 ---
 
@@ -279,7 +243,7 @@ print(f"Rate: {result.rate.rate}, Source: {result.rate.source}")
 AI/LLM integration with multiple providers:
 
 ```python
-from django_cfg.modules.django_llm.llm.client import LLMClient
+from django_cfg.modules.django_llm import LLMClient
 
 client = LLMClient()
 

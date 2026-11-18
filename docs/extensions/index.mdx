@@ -22,8 +22,8 @@ Extensions are **modular Django applications** that configure and register thems
 class MyProjectConfig(DjangoConfig):
     # Payment processing config
     payments: PaymentsConfig = PaymentsConfig(
-        crypto_api_key="...",
-        crypto_webhook_secret="...",
+        stripe_secret_key="...",
+        stripe_webhook_secret="...",
         enabled=True
     )
 

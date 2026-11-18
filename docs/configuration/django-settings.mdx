@@ -349,9 +349,59 @@ class DjangoConfig(BaseModel):
     #                       INTEGRATIONS
     # ══════════════════════════════════════════════════════════════
 
-    streamlit_admin: Optional[StreamlitAdminConfig] = Field(
+    mcp: Optional["DjangoMCPModuleConfig"] = Field(
         default=None,
-        description="Streamlit admin panel (auto-starts with Django)",
+        description="Model Context Protocol (MCP) integration for AI agents",
+    )
+
+    notion: Optional["NotionConfig"] = Field(
+        default=None,
+        description="Mirror leads into a Notion database (django_notion)",
+    )
+
+    payments: Optional[PaymentsConfig] = Field(
+        default=None,
+        description="Payments engine: provider-agnostic checkout, webhooks, refunds (Stripe-first)",
+    )
+
+    chat: Optional[ChatConfig] = Field(
+        default=None,
+        description="Ready assistant chat: Thread/Message tables, API at /cfg/chat/, admin, schedules",
+    )
+
+    simple_history: Optional[SimpleHistoryConfig] = Field(
+        default=None,
+        description="django-simple-history audit log with admin integration",
+    )
+
+    dashboard: Optional[DashboardConfig] = Field(
+        default=None,
+        description="Custom admin dashboard tabs configuration",
+    )
+
+    admin_access: AdminAccessConfig = Field(
+        default_factory=AdminAccessConfig,
+        description="Django admin availability, URL prefix and optional CIDR allowlist",
+    )
+
+    logging: Optional[DjangoLoggingConfig] = Field(
+        default=None,
+        description="django-cfg logging: dir, level, format, rotation, collapse, noise controls",
+    )
+
+    cache_dir: Optional[str] = Field(
+        default=None,
+        description="Root for django-cfg file caches (env DJANGO_CFG_CACHE_DIR)",
+    )
+
+    accept_subdomains: bool = Field(
+        default=True,
+        description="Accept every subdomain of each declared site/API domain in ALLOWED_HOSTS, CORS and CSRF",
+    )
+
+    search_indexing: bool = Field(
+        default=False,
+        description="Let search engines index this backend (off: X-Robots-Tag noindex on every response)",
     )
 
     # ══════════════════════════════════════════════════════════════
@@ -388,9 +438,13 @@ class DjangoConfig(BaseModel):
     #                     DJANGO-CFG SETTINGS
     # ══════════════════════════════════════════════════════════════
 
+    startup_banner: bool = Field(
+        default=False,
+        description="Print the verbose startup block on a dev server (env DJANGO_CFG_BANNER=1)",
+    )
     startup_info_mode: StartupInfoMode = Field(
         default=StartupInfoMode.FULL,
-        description="Startup info: NONE, SHORT, or FULL",
+        description="Shape of the verbose startup block: NONE, SHORT, or FULL",
     )
     show_ai_hints: bool = Field(
         default=True,
@@ -523,25 +577,27 @@ def enforce_production_security(self) -> "DjangoConfig":
 
 ## Environment Detection
 
-Environment is auto-detected from environment variables during initialization:
+`env_mode` defaults to production. While it is still the default, `DJANGO_ENV`, `ENVIRONMENT` and `ENV` (checked in that order, first non-empty wins) override it during initialization:
 
 ```python
 def model_post_init(self, _context: Any) -> None:
-    """Initialize configuration after Pydantic validation."""
-    # Auto-detect environment from env variables
-    env_vars = ['DJANGO_ENV', 'ENVIRONMENT', 'ENV']
-    for env_var in env_vars:
-        env_value = os.environ.get(env_var)
-        if env_value:
-            env_normalized = env_value.lower().strip()
-            if env_normalized in ('dev', 'devel', 'develop', 'development', 'local'):
-                self.env_mode = EnvironmentMode.DEVELOPMENT
-            elif env_normalized in ('prod', 'production'):
-                self.env_mode = EnvironmentMode.PRODUCTION
-            elif env_normalized in ('test', 'testing'):
-                self.env_mode = EnvironmentMode.TEST
-            break
+    if self.env_mode == EnvironmentMode.PRODUCTION:   # still the default
+        for env_var in ('DJANGO_ENV', 'ENVIRONMENT', 'ENV'):
+            env_value = os.environ.get(env_var)
+            if env_value:
+                env_normalized = env_value.lower().strip()
+                if env_normalized in ('dev', 'devel', 'develop', 'development', 'local'):
+                    self.env_mode = EnvironmentMode.DEVELOPMENT
+                    break
+                elif env_normalized in ('prod', 'production'):
+                    self.env_mode = EnvironmentMode.PRODUCTION
+                    break
+                elif env_normalized in ('test', 'testing'):
+                    self.env_mode = EnvironmentMode.TEST
+                    break
 ```
+
+An explicit `env_mode=...` in the config is therefore never overridden by the environment.
 
 **Recognized environment values:**
 - Development: `dev`, `devel`, `develop`, `development`, `local`
@@ -609,9 +665,9 @@ def get_all_settings(self) -> Dict[str, Any]:
 from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
-    project_name = "My Project"
-    secret_key = "your-50-character-minimum-secret-key-here-for-security"
-    databases = {
+    project_name: str = "My Project"
+    secret_key: str = "your-50-character-minimum-secret-key-here-for-security"
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="mydb",
@@ -778,18 +834,18 @@ from django_cfg.core.types.enums import EnvironmentMode
 class MyConfig(DjangoConfig):
     project_name: str = "My Project"
     secret_key: str = "your-secret-key-here-minimum-50-characters-long-string"
-    env_mode = EnvironmentMode.DEVELOPMENT
+    env_mode: EnvironmentMode = EnvironmentMode.DEVELOPMENT
     debug: bool = True
     project_apps: list = ["apps.blog", "apps.shop"]
 
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="mydb",
             user="postgres",
             password="password",
             host="localhost",
-            port="5432",
+            port=5432,
         )
     }
 ```
@@ -803,7 +859,7 @@ class MyConfig(DjangoConfig):
     project_name: str = "My Project"
     secret_key: str = "your-secret-key-here-minimum-50-characters-long-string"
 
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="mydb",
@@ -830,7 +886,7 @@ class MyConfig(DjangoConfig):
     project_name: str = "My Project"
     secret_key: str = "your-secret-key-here-minimum-50-characters-long-string"
 
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="mydb",
@@ -838,7 +894,7 @@ class MyConfig(DjangoConfig):
     }
 
     # Email service
-    email = EmailConfig(
+    email: EmailConfig = EmailConfig(
         backend="smtp",
         host="smtp.gmail.com",
         port=587,
@@ -847,16 +903,16 @@ class MyConfig(DjangoConfig):
     )
 
     # Telegram notifications
-    telegram = TelegramConfig(
+    telegram: TelegramConfig = TelegramConfig(
         bot_token="your-bot-token",
         chat_id="your-chat-id",
     )
 
     # Admin notifications
-    admin_emails = ["admin@example.com"]
+    admin_emails: list[str] = ["admin@example.com"]
 
     # Redis cache (auto-creates cache backend)
-    redis_url = "redis://localhost:6379/0"
+    redis_url: str = "redis://localhost:6379/0"
 ```
 
 ### With Integrations
@@ -868,7 +924,7 @@ class MyConfig(DjangoConfig):
     project_name: str = "My Project"
     secret_key: str = "your-secret-key-here-minimum-50-characters-long-string"
 
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.postgresql",
             name="mydb",
@@ -876,13 +932,12 @@ class MyConfig(DjangoConfig):
     }
 
     # Django REST Framework
-    drf = DRFConfig(
+    drf: DRFConfig = DRFConfig(
         page_size=20,
-        max_page_size=100,
     )
 
     # Unfold admin interface
-    unfold = UnfoldConfig(
+    unfold: UnfoldConfig = UnfoldConfig(
         site_title="My Admin",
     )
 ```
@@ -895,7 +950,7 @@ The `model_config` dict controls Pydantic behavior:
 model_config = {
     "validate_assignment": True,   # Validate on attribute assignment
     "extra": "forbid",             # Forbid extra fields for type safety
-    "env_prefix": "DJANGO_",       # Environment variable prefix
+    "env_prefix": "DJANGO_",       # declared, but inert on a BaseModel
     "populate_by_name": True,      # Allow field name or alias
     "validate_default": True,      # Validate default values
     "str_strip_whitespace": True,  # Strip whitespace from strings
@@ -904,12 +959,14 @@ model_config = {
 
 ### Environment Variables
 
-With `env_prefix="DJANGO_"`, you can override fields via environment variables:
+`DjangoConfig` is a plain Pydantic `BaseModel`, so `env_prefix` does not make it read environment variables by itself. The only variables django-cfg reads directly are `DJANGO_ENV` / `ENVIRONMENT` / `ENV` (environment mode), `DJANGO_CFG_BANNER`, `DJANGO_CFG_CACHE_DIR`, `DJANGO_CFG_LOG_*` and a few others documented on their pages. Everything else you read from the environment yourself, for example with a `pydantic-settings` loader, and pass into the config:
 
-```bash
-export DJANGO_SECRET_KEY="your-production-secret-key-at-least-50-chars"
-export DJANGO_DEBUG=false
-export DJANGO_PROJECT_NAME="My App"
+```python
+import os
+
+class MyConfig(DjangoConfig):
+    secret_key: str = os.environ["DJANGO_SECRET_KEY"]
+    debug: bool = os.environ.get("DJANGO_DEBUG", "false") == "true"
 ```
 
 ### Type Safety

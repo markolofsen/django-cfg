@@ -424,7 +424,7 @@ Override test database names if needed:
 from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig.from_url(
             url=env.database.url,
         )

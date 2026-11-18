@@ -44,8 +44,8 @@ config = Config(
         targets=[
             Target(
                 lang=Language.TYPESCRIPT,
-                type=TargetType.ADMIN,
-                path=FRONTEND / "apps" / "admin" / "app" / "_lib" / "api" / "generated",
+                type=TargetType.WEB,
+                path=FRONTEND / "apps" / "web" / "app" / "_lib" / "api" / "generated",
                 groups=["cfg_*", "profiles"],
             ),
         ],
@@ -107,6 +107,7 @@ Supported generation platforms:
 | `GO` | Go clients |
 | `SWIFT` | Swift clients (OpenAPI Runtime) |
 | `SWIFT_CODABLE` | Swift Codable types (simple) |
+| `PROTO` | Protocol Buffers / gRPC |
 
 ### TargetType
 
@@ -114,7 +115,6 @@ Predefined target types:
 
 | Type | Description |
 |------|-------------|
-| `ADMIN` | Admin panel clients |
 | `WEB` | Public web app clients |
 | `PACKAGES` | Shared package clients |
 | `EXTENSIONS` | Extension module clients |
@@ -128,7 +128,7 @@ Single generation target configuration:
 ```python
 Target(
     lang=Language.TYPESCRIPT,      # Platform
-    type=TargetType.ADMIN,         # Target type
+    type=TargetType.WEB,         # Target type
     path=Path("frontend/api"),     # Output path
     groups=["cfg_*", "profiles"],  # API groups to include
     post_build="pnpm build",       # Optional post-build command
@@ -177,11 +177,11 @@ groups=["cfg_*", "profiles", "catalog"]  # Mixed
 config = Config(
     openapi=OpenAPI(
         targets=[
-            # Admin panel - all cfg_* groups + profiles
+            # Shared API client - all cfg_* groups + profiles
             Target(
                 lang=Language.TYPESCRIPT,
-                type=TargetType.ADMIN,
-                path=FRONTEND / "apps/admin/api/generated",
+                type=TargetType.PACKAGES,
+                path=FRONTEND / "packages/api/generated",
                 groups=["cfg_*", "profiles"],
             ),
 

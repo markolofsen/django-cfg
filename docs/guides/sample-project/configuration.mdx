@@ -31,7 +31,6 @@ from django_cfg import (
     EmailConfig,
     TelegramConfig,
     UnfoldConfig,
-    UnfoldColors,
     UnfoldSidebar,
     NavigationSection,
     NavigationItem,
@@ -90,7 +89,6 @@ class DjangoCfgConfig(DjangoConfig):
     unfold: UnfoldConfig = UnfoldConfig(
         site_title="Django-CFG Sample Admin",
         site_header="Django-CFG Sample",
-        colors=UnfoldColors(primary="#4F46E5"),
         sidebar=UnfoldSidebar(
             show_search=True,
             show_all_applications=True,
@@ -232,7 +230,6 @@ Unfold theme customization with typed config objects:
 ```python
 unfold: UnfoldConfig = UnfoldConfig(
     site_title="Django-CFG Sample Admin",
-    colors=UnfoldColors(primary="#4F46E5"),
     navigation=[...],
 )
 ```

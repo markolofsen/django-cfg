@@ -9,7 +9,6 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-
 # =============================================================================
 # Enums
 # =============================================================================
@@ -52,7 +51,6 @@ class TargetType(str, Enum):
     Projects can use these or define custom strings.
     """
 
-    ADMIN = "admin"
     WEB = "web"
     PACKAGES = "packages"
     EXTENSIONS = "extensions"
@@ -72,8 +70,8 @@ class Target(BaseModel):
     Example:
         Target(
             lang=Language.TYPESCRIPT,
-            type=TargetType.ADMIN,
-            path=Path("frontend/apps/admin/api/generated"),
+            type=TargetType.WEB,
+            path=Path("frontend/apps/web/api/generated"),
             groups=["cfg_*", "profiles"],
         )
     """
@@ -187,7 +185,7 @@ class OpenAPI(BaseModel):
     Example:
         OpenAPI(
             targets=[
-                Target(lang=Language.TYPESCRIPT, type=TargetType.ADMIN, path=..., groups=["cfg_*"]),
+                Target(lang=Language.TYPESCRIPT, type=TargetType.WEB, path=..., groups=["cfg_*"]),
                 Target(lang=Language.PYTHON, type=TargetType.PARSERS, path=..., groups=["normalizer"]),
             ],
         )
@@ -404,8 +402,8 @@ class Config(BaseModel):
                 targets=[
                     Target(
                         lang=Language.TYPESCRIPT,
-                        type=TargetType.ADMIN,
-                        path=FRONTEND / "apps/admin/api/generated",
+                        type=TargetType.WEB,
+                        path=FRONTEND / "apps/web/api/generated",
                         groups=["cfg_*", "profiles"],
                     ),
                 ],

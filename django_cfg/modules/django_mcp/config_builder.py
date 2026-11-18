@@ -4,28 +4,27 @@ MCP Configuration Builder
 Simple declarative API for configuring agent access in ONE place.
 """
 
-from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass, field
 from functools import wraps
+from typing import Any, Callable, Dict, List, Optional
 
 from django_cfg.modules.django_mcp import (
     ALL_TOOLS,
     ANONYMOUS_REMOVED,
     PUBLIC_TOOLS,
+    AppMCPConfig,
+    CommandMCPConfig,
     DjangoMCPModuleConfig,
     IntrospectionConfig,
-    AppMCPConfig,
-    ModelMCPConfig,
-    CommandMCPConfig,
     MCPExtraKey,
     MCPOAuthConfig,
     MCPProfile,
     MCPSkillConfig,
     MCPTargetConfig,
+    ModelMCPConfig,
 )
-from django_cfg.modules.django_mcp.tools.base import MCPTool, tool_registry
 from django_cfg.modules.django_mcp.services.context import MCPContext
-
+from django_cfg.modules.django_mcp.tools.base import MCPTool, tool_registry
 
 #: Where the operator surface lives. Read from the model so the builder and the
 #: config cannot disagree about the default.

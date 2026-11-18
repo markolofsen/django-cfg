@@ -34,7 +34,7 @@ No databases defined in configuration.
 from django_cfg import DjangoConfig, DatabaseConfig
 
 class MyConfig(DjangoConfig):
-    databases = {
+    databases: dict[str, DatabaseConfig] = {
         "default": DatabaseConfig(
             engine="django.db.backends.sqlite3",
             name="db.sqlite3",
@@ -123,7 +123,7 @@ Using invalid or non-existent field name in configuration.
 ```python
 # Ensure you only use valid DjangoConfig fields
 class MyConfig(DjangoConfig):
-    security_domains = [...]  # ✅ Valid field
+    security_domains: list[str] = [...]  # ✅ Valid field
     # Check documentation for all available fields
 ```
 
@@ -550,27 +550,27 @@ Worker not running.
 
 **Solution:**
 ```bash
-# Start ReArq worker
-rearq main:rearq worker
+# Start a Django-RQ worker
+python manage.py rqworker default
 
-# Or with specific queues
-rearq main:rearq worker --queues default high_priority
+# Or with specific queues (strict priority: first listed is served first)
+python manage.py rqworker high default low
 
-# Check worker status
-rearq main:rearq info
+# Check queues and workers
+python manage.py rqstats
 ```
 
 
 <Callout type="warning">
 **Worker Must Be Running**
-ReArq requires a **separate worker process** to execute tasks:
+Django-RQ requires a **separate worker process** to execute tasks:
 - ❌ **Common mistake**: Enqueueing tasks without running worker
-- ✅ **Development**: Run `rearq main:rearq worker` in separate terminal
+- ✅ **Development**: Run `python manage.py rqworker` in a separate terminal
 - ✅ **Production**: Use process manager (systemd, supervisor, Docker)
 
 **Check if worker is running:**
 ```bash
-ps aux | grep rearq_worker  # Should show running process
+ps aux | grep rqworker  # Should show running process
 ```
 
 </Callout>
@@ -630,11 +630,11 @@ Tasks enqueued but status shows "pending" forever.
 
 **Solution:**
 ```bash
-# Check worker logs
-rearq main:rearq worker --verbose
+# Check queues, workers and failed jobs
+python manage.py rqstats
 
-# Clear stuck tasks
-rearq main:rearq flush
+# Clear stale job locks
+python manage.py rq_cleanup_locks
 
 # Restart worker
 # Kill existing worker and start fresh
@@ -652,13 +652,12 @@ rearq main:rearq flush
 **Debug steps:**
 ```bash
 # 1. Check worker is processing
-rearq main:rearq worker --verbose  # Watch logs
+python manage.py rqstats
 
 # 2. Check Redis has messages
-redis-cli LLEN "arq:queue:default"  # Queue length
+redis-cli LLEN "rq:queue:default"  # Queue length
 
-# 3. Manually retry task
-rearq main:rearq retry <task_id>
+# 3. Failed jobs can be requeued from the Django-RQ admin
 ```
 
 </Callout>
@@ -734,8 +733,8 @@ email = EmailConfig(
     host="smtp.gmail.com",
     port=587,
     use_tls=True,
-    user="${EMAIL_USER}",  # Check this
-    password="${EMAIL_PASSWORD}",  # Check this
+    username=os.environ["EMAIL_USER"],  # Check this
+    password=os.environ["EMAIL_PASSWORD"],  # Check this
 )
 
 # For Gmail, use App Password (not regular password)
@@ -771,7 +770,7 @@ email = EmailConfig(
     host="smtp.example.com",
     port=587,
     use_tls=True,
-    user="your-username",
+    username="your-username",
     password="your-password",
 )
 ```

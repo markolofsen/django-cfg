@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from django_cfg.modules.django_admin.icons import Icons
+from django_cfg.icons import Icons
 
 from .dropdown import SiteDropdownItem
 from .navigation import NavigationSection
@@ -17,17 +17,6 @@ from .navigation import NavigationSection
 logger = logging.getLogger(__name__)
 
 
-
-
-class UnfoldColors(BaseModel):
-    """Unfold color theme configuration."""
-    model_config = ConfigDict(validate_assignment=True, extra="forbid")
-
-    primary: Optional[str] = Field(None, description="Primary color")
-    success: Optional[str] = Field(None, description="Success color")
-    warning: Optional[str] = Field(None, description="Warning color")
-    danger: Optional[str] = Field(None, description="Danger color")
-    info: Optional[str] = Field(None, description="Info color")
 
 
 class UnfoldSidebar(BaseModel):
@@ -56,7 +45,6 @@ class UnfoldTheme(BaseModel):
 
     # Theme and appearance
     theme: Optional[str] = Field(None, description="Theme: light, dark, or None for switcher")
-    colors: UnfoldColors = Field(default_factory=UnfoldColors, description="Color theme")
     sidebar: UnfoldSidebar = Field(default_factory=UnfoldSidebar, description="Sidebar config")
 
     # Dashboard
@@ -243,12 +231,6 @@ class UnfoldConfig(BaseModel):
     show_languages: bool = Field(
         default=False,
         description="Show language switcher"
-    )
-
-    # Colors configuration
-    colors: Optional[UnfoldColors] = Field(
-        default=None,
-        description="Color theme configuration"
     )
 
     # Sidebar configuration
@@ -471,7 +453,6 @@ class UnfoldConfig(BaseModel):
             # Add custom navigation from project (if defined) - appears after default
             if self.navigation:
                 # Now it's safe to call to_dict() - Django URLs are ready
-                from django.urls import reverse
                 for group in self.navigation:
                     # Convert NavigationSection to dict, resolving URL names
                     group_dict = {

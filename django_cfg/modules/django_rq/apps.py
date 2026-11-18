@@ -10,3 +10,9 @@ class DjangoRQMetricsConfig(AppConfig):
     label = "django_rq_metrics"
     verbose_name = "RQ"
     default_auto_field = "django.db.models.BigAutoField"
+
+    def ready(self) -> None:
+        # Request id from the enqueuing request into the job's log lines.
+        from django_cfg.modules.django_logging.rq_hooks import install
+
+        install()

@@ -11,7 +11,10 @@ from typing import Any, Dict, Optional
 
 from pydantic import Field
 
-from django_cfg.modules.django_generator.openapi.pipeline.config import OpenAPIConfig, OpenAPIGroupConfig
+from django_cfg.modules.django_generator.openapi.pipeline.config import (
+    OpenAPIConfig,
+    OpenAPIGroupConfig,
+)
 
 
 class OpenAPIClientConfig(OpenAPIConfig):
@@ -117,7 +120,7 @@ class OpenAPIClientConfig(OpenAPIConfig):
 
         Automatically creates:
         - Combined "cfg" group with ALL django_cfg.apps.* modules
-        - Individual groups for each django_cfg.apps.* module (cfg_dashboard, cfg_accounts, etc.)
+        - Individual groups for each django_cfg.apps.* module (cfg_accounts, cfg_totp, etc.)
         - Individual groups for each extensions.apps.* app (ext_knowbase, ext_support, etc.)
 
         Returns:

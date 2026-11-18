@@ -1,8 +1,8 @@
 """
 Timing utilities for tracking server startup and initialization times.
 
-This module provides utilities to track timing information for Django and gRPC
-server startup processes.
+This module provides utilities to track timing information for the Django
+server startup process.
 """
 
 import time
@@ -67,8 +67,6 @@ class ServerStartupTimer:
 
 # Global startup timer for Django server
 _django_startup_timer: Optional[ServerStartupTimer] = None
-
-# Global startup timer for gRPC server
 
 
 def start_django_timer() -> ServerStartupTimer:

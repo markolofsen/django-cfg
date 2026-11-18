@@ -10,7 +10,7 @@ Get your first declarative admin up and running in 5 minutes.
 
 ## Installation
 
-Django Admin module is included with Django-CFG by default. No additional installation required.
+Django Admin module is included with Django-CFG by default. No additional installation required. It sits on django-unfold, a base dependency pinned `>=0.110,<0.111`; django-cfg adds `unfold` to `INSTALLED_APPS` before `django.contrib.admin` for you. `PydanticAdmin` is the main admin class: it subclasses Unfold's `ModelAdmin`, so plain Unfold options and `@action` / `@display` still work on it.
 
 
 <Callout type="info">
@@ -34,10 +34,10 @@ from django_cfg.modules.django_admin.base import PydanticAdmin
 **Import Path**
 **Always import `PydanticAdmin` from `.base`:**
 ```python
-# ✅ Correct
+# Correct
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
-# ❌ Wrong
+# Wrong
 from django_cfg.modules.django_admin import PydanticAdmin  # Won't work!
 ```
 
@@ -148,8 +148,8 @@ Make your admin more visual with badges and icons:
 from django_cfg.modules.django_admin import (
     AdminConfig,
     BadgeField,
-    Icons,
 )
+from django_cfg import Icons
 from django_cfg.modules.django_admin.base import PydanticAdmin
 
 config = AdminConfig(
@@ -309,9 +309,9 @@ from django_cfg.modules.django_admin import (
     BadgeField,
     BooleanField,
     DateTimeField,
-    Icons,
     UserField,
 )
+from django_cfg import Icons
 
 config = AdminConfig(
     model=User,
@@ -407,14 +407,14 @@ config = AdminConfig(
 
 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
 
-### 📚 Learn More
+### Learn More
 
 - [Field Types Reference](./field-types) - All available field types
 - [Configuration Guide](./configuration) - AdminConfig options
 - [Filters Guide](./filters) - Simple and custom filters
 - [Examples](./examples) - Real-world examples
 
-### 🚀 Advanced Features
+### Advanced Features
 
 - Custom actions and bulk operations
 - Import/Export integration

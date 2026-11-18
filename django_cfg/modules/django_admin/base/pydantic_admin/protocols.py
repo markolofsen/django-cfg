@@ -1,7 +1,7 @@
 """
 Protocol definitions for ModelAdmin mixin compatibility.
 
-Defines the contracts that mixins (ViewMixin, FlashMixin, PydanticAdminMixin)
+Defines the contracts that mixins (ViewMixin, PydanticAdminMixin)
 expect from Django's ModelAdmin at runtime, enabling type checking and IDE support.
 """
 
@@ -23,7 +23,6 @@ class ModelAdminProtocol(Protocol):
 
     model: type[models.Model]
     readonly_fields: list[str]
-    _current_request: Optional[HttpRequest]
 
     def get_object(
         self,
@@ -64,28 +63,3 @@ class ModelAdminProtocol(Protocol):
         request: HttpRequest,
         **kwargs: Any,
     ) -> Any: ...
-
-
-@runtime_checkable
-class FlashMixinProtocol(Protocol):
-    """
-    Declares flash session methods expected by flash display methods.
-
-    Ensures that any class using `create_flash_display_method()` has the
-    required session management methods available.
-    """
-
-    def _flash_session_key(self, obj: models.Model, field_name: str) -> str: ...
-
-    def _get_pending_flash_fields(
-        self,
-        request: HttpRequest,
-        obj: models.Model,
-    ) -> dict[str, dict[str, Any]]: ...
-
-    def _consume_flash(
-        self,
-        request: HttpRequest,
-        obj: models.Model,
-        field_name: str,
-    ) -> Optional[dict[str, Any]]: ...
