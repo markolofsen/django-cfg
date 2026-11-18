@@ -22,6 +22,10 @@ django-cfg schedules on RQ's native cron (``rq.cron`` / django-rq ``DjangoCronSc
    (per-queue locks, so it coexists with any worker ``--with-scheduler``):
    ``enqueue_in/at``, ``Retry(interval=...)`` and one-off ``scheduled_time``
    entries are moved into their queues.
+7. **Alive file.** Every loop touches :data:`DEFAULT_ALIVE_FILE` (env
+   ``RQCRON_ALIVE_FILE``), so a container healthcheck reads one file's age with
+   plain Python instead of booting Django (``rq_cron_status`` took 10-30 s on a
+   busy host, longer than a healthcheck timeout). See :data:`HEALTHCHECK_CMD`.
 """
 
 from __future__ import annotations
@@ -29,7 +33,9 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 from collections.abc import Iterable
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
@@ -59,6 +65,21 @@ ONE_OFF_MARKER_TTL_SEC = 400 * 86400
 # (rq refreshes it every job_monitoring_interval, 30 s by default).
 RUNNING_HEARTBEAT_FRESH_SEC = 120
 DEFAULT_POLL_SEC = 1.0
+
+# Touched on every loop (leader and standby alike). A missing or stale file means
+# the loop stopped: the process hangs, lost Redis, or never started.
+DEFAULT_ALIVE_FILE = "/tmp/rqcron.alive"
+ALIVE_FILE_ENV = "RQCRON_ALIVE_FILE"
+# The compose healthcheck: plain Python, no Django, well under a second. 90 s is
+# many missed loops at the default 1 s poll, and never a slow tick.
+HEALTHCHECK_CMD = (
+    "python -c \"import os,sys,time; "
+    "sys.exit(time.time() - os.stat(os.environ.get('RQCRON_ALIVE_FILE', '/tmp/rqcron.alive')).st_mtime > 90)\""
+)
+
+
+def alive_file_path() -> Path:
+    return Path(os.environ.get(ALIVE_FILE_ENV) or DEFAULT_ALIVE_FILE)
 
 # rq-scheduler's keys, read once at start to remove what this project left there.
 _OLD_SCHEDULED_JOBS_KEY = "rq:scheduler:scheduled_jobs"
@@ -203,9 +224,12 @@ class DjangoCfgCronScheduler(DjangoCronScheduler):
     """RQ cron scheduler for the schedules of one django-cfg project."""
 
     def __init__(self, connection: Redis, *, poll_interval: float = DEFAULT_POLL_SEC,
-                 delayed_queues: Iterable[str] = (), name: str = "", logging_level: int = logging.INFO):
+                 delayed_queues: Iterable[str] = (), name: str = "", logging_level: int = logging.INFO,
+                 alive_file: Path | str | None = None):
         super().__init__(connection=connection, logging_level=logging_level, name=name)
         self.poll_interval = poll_interval
+        self.alive_file = Path(alive_file) if alive_file else alive_file_path()
+        self._alive_warned = False
         self.one_offs: list[RQScheduleConfig] = []
         self.skipped: list[tuple[str, str]] = []  # (func, reason) of entries that could not be registered
         self.is_leader = False
@@ -300,8 +324,20 @@ class DjangoCfgCronScheduler(DjangoCronScheduler):
 
     # --- the loop -----------------------------------------------------------
 
+    def touch_alive(self) -> None:
+        """Mark this loop as alive for the healthcheck; a write failure is logged once, never raised."""
+        try:
+            self.alive_file.touch()
+        except OSError as e:
+            if not self._alive_warned:
+                self._alive_warned = True
+                logger.warning("rq cron: cannot touch alive file %s (%s); a file healthcheck will fail",
+                               self.alive_file, e)
+
     def enqueue_jobs(self) -> list[CronJob]:
-        if not self._lead():
+        leading = self._lead()  # raises when Redis is gone, so the file is touched only after Redis answered
+        self.touch_alive()  # a standby is alive too
+        if not leading:
             return []
         self._move_delayed()
         # As upstream, but one failing schedule (a broken import at run time, a bad argument) does not stop the others.

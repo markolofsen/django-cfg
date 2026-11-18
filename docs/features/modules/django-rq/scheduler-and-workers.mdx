@@ -213,15 +213,24 @@ rq-cron:        # exactly one per project
   command: ["python", "manage.py", "rqcron"]
   stop_grace_period: 20s
   healthcheck:
-    test: ["CMD-SHELL", "python manage.py rq_cron_status --queue high --queue default --max-wait 60 > /dev/null 2>&1"]
+    test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(time.time() - os.stat(os.environ.get('RQCRON_ALIVE_FILE', '/tmp/rqcron.alive')).st_mtime > 90)"]
     interval: 60s
-    timeout: 30s
+    timeout: 10s
     retries: 3
     start_period: 120s
 ```
 
 `rqcron` loops every second (`--poll`), so an `interval` below a minute and a
 delayed job are on time.
+
+Every loop, leader and standby alike, `rqcron` touches an alive file once Redis
+has answered: `/tmp/rqcron.alive`, or env `RQCRON_ALIVE_FILE`, or `--alive-file`.
+The healthcheck above fails when that file is older than 90 s. It is plain Python
+with no Django boot and takes well under a second; the same string is
+`django_cfg.modules.django_rq.cron.HEALTHCHECK_CMD`. Do not use `rq_cron_status`
+as the healthcheck: it boots Django, which took 10-30 s on the production host,
+longer than the healthcheck timeout, so the container went unhealthy while the
+scheduler worked. Keep it for the diagnosis above.
 
 ---
 

@@ -26,9 +26,11 @@ the Django group and how it is deployed.
 - `rq-worker` and `rq-scheduler` wait for `api` to be healthy
   (`depends_on: condition: service_healthy`).
 - `api` is healthy when `curl -f http://localhost:8000/healthz/ready` succeeds (every
-  30 s, 40 s start period). The worker uses a `pgrep -f rqworker` check; the
-  scheduler uses `python manage.py rq_cron_status --queue <q> ... > /dev/null 2>&1`,
-  which exits 1 when `rqcron` is dead or a queue is starved.
+  30 s, 40 s start period). The worker uses a `pgrep -f rqworker` check. The
+  scheduler's check is the age of the alive file `rqcron` touches every loop:
+  `["CMD", "python", "-c", "import os,sys,time; sys.exit(time.time() - os.stat(os.environ.get('RQCRON_ALIVE_FILE', '/tmp/rqcron.alive')).st_mtime > 90)"]`,
+  plain Python, no Django boot. `python manage.py rq_cron_status` (dead `rqcron`
+  or starved queue) boots Django and is run by hand, not as the healthcheck.
 - Environment set in the file: `DJANGO_SETTINGS_MODULE=api.settings`, `IS_PROD=true`,
   `DEBUG=false`, and on `api` `DJANGO_CREATE_ADMIN=false` (create the admin by hand).
 - The Django code is bind-mounted from `../solution/django` over `/app`, and

@@ -31,6 +31,9 @@ class Command(BaseCommand):
         parser.add_argument("--poll", type=float, default=None,
                             help="Seconds between loops (default 1): the delay of a delayed job, at most")
         parser.add_argument("--list", action="store_true", help="Print the registered schedules as JSON and exit")
+        parser.add_argument("--alive-file", default=None,
+                            help="File touched every loop for the healthcheck (default: $RQCRON_ALIVE_FILE "
+                                 "or /tmp/rqcron.alive)")
 
     def handle(self, *args, **options):
         from django_cfg.modules.django_rq.cron import DEFAULT_POLL_SEC, DjangoCfgCronScheduler
@@ -43,6 +46,7 @@ class Command(BaseCommand):
             rq_config,
             poll_interval=options["poll"] or DEFAULT_POLL_SEC,
             logging_level=getattr(logging, options["logging_level"]),
+            alive_file=options["alive_file"],
         )
         if options["list"]:
             rows = scheduler.describe()

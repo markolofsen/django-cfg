@@ -101,8 +101,10 @@ def capture_frontend_events(events: list[dict]) -> None:
         from .capture.notify import notify_server_event
         from .limits import worth_logging
 
+        records = []
         for ev in events:
             record = _event_to_dict(ev)
+            records.append(record)
             if worth_logging(record):
                 _write("frontend", record)
             # Error-level browser events join the same Telegram batch.
@@ -114,6 +116,17 @@ def capture_frontend_events(events: list[dict]) -> None:
                     fingerprint=record.get("fingerprint", ""),
                     api_url=record.get("url", ""),
                 )
+        _store_frontend_events(records)
+    except Exception:
+        pass
+
+
+def _store_frontend_events(records: list[dict]) -> None:
+    """Hand the batch to ``django_frontend_errors`` when ``DjangoConfig.frontend_errors`` is enabled."""
+    try:
+        from django_cfg.modules.django_frontend_errors.store import record_from_monitor
+
+        record_from_monitor(records)
     except Exception:
         pass
 

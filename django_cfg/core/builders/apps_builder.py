@@ -153,6 +153,10 @@ class InstalledAppsBuilder:
         # Capture hooks self-disable under test runners; see capture/__init__.py.
         apps.append("django_cfg.modules.django_monitor")
 
+        # Browser errors stored one row per signature (opt-in)
+        if self.config.frontend_errors and self.config.frontend_errors.enabled:
+            apps.append("django_cfg.modules.django_frontend_errors")
+
         # MCP module (AI agent integration)
         if self.config.mcp and self.config.mcp.enabled:
             apps.append("django_cfg.modules.django_mcp")

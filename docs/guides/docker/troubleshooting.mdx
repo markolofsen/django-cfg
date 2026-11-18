@@ -47,6 +47,8 @@ is not: `docker logs djangocfg-rq-worker`, then check the queue names against th
 project (`python manage.py rqworker high default low knowledge` fails on a queue the
 project does not declare), and `docker exec djangocfg-rq-worker pgrep -af rqworker`.
 `python manage.py rq_cron_status` tells a dead `rqcron` from a starved queue.
+An unhealthy scheduler container means its alive file (`/tmp/rqcron.alive`) is
+older than 90 s or missing: `docker exec djangocfg-rq-scheduler ls -l /tmp/rqcron.alive`.
 
 ## Database
 

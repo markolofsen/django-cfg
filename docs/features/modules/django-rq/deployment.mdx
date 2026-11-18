@@ -187,7 +187,8 @@ services:
       - redis
       - django
     healthcheck:
-      test: ["CMD-SHELL", "python manage.py rq_cron_status --queue high --queue default > /dev/null 2>&1"]
+      # age of the alive file rqcron touches every loop; no Django boot
+      test: ["CMD", "python", "-c", "import os,sys,time; sys.exit(time.time() - os.stat(os.environ.get('RQCRON_ALIVE_FILE', '/tmp/rqcron.alive')).st_mtime > 90)"]
       interval: 60s
     deploy:
       resources:

@@ -2,7 +2,7 @@
 
 Error capture and Telegram alerting for django-cfg. Captures unhandled exceptions, ERROR-level log records, slow queries, RQ job failures, and browser events.
 
-**No persistence.** There are no models, no migrations, no external database. Every captured event becomes a flat JSON log line (stdout; `<log dir>/djangocfg/monitor.log` when `DJANGO_CFG_LOG_DIR` is set) and — when Telegram is configured — joins a batched Telegram alert. That is the whole storage story: events are **not stored and not queryable**.
+**No persistence.** There are no models, no migrations, no external database. Every captured event becomes a flat JSON log line (stdout; `<log dir>/djangocfg/monitor.log` when `DJANGO_CFG_LOG_DIR` is set) and — when Telegram is configured — joins a batched Telegram alert. That is the whole storage story: events are **not stored and not queryable** here. Browser errors can be stored by the opt-in app [`django_frontend_errors`](../django_frontend_errors/README.md) (`DjangoConfig.frontend_errors`): one row per signature, admin, MCP tools.
 
 ## Module Structure
 

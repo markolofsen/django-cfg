@@ -29,7 +29,7 @@ Example:
 """
 
 # Version information
-__version__ = "2.4.0"
+__version__ = "2.4.1"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -136,6 +136,7 @@ from .modules.django_email import (
 from .modules.django_generator.openapi.pipeline.config import OpenAPIConfig, OpenAPIGroupConfig
 from .modules.django_logging.__cfg__ import DjangoLoggingConfig
 from .modules.django_notion import NotionConfig, NotionLead, NotionTarget
+from .core.base.config_model import FrontendErrorsConfig
 from .modules.django_telegram import (
     DjangoTelegram,
     send_telegram_message,
@@ -275,7 +276,7 @@ __all__ = [
     "DjangoLoggingConfig",
     "CurrencyConfig", "PaymentsConfig", "AdminAccessConfig", "GeoConfig", "IndexNowConfig", "IndexNowSite", "Site", "SiteConfig", "site_for", "site_key", "sites", "AnalyticsConfig", "AttachmentsConfig", "ChatConfig", "SimpleHistoryConfig",
     "ConstanceConfig", "ConstanceField", "StorageConfig", "FileCleanupConfig", "CDNPurgeConfig", "S3StorageConfig", "OpenAPIClientConfig",
-    "EmailConfig", "TelegramConfig", "NotionConfig", "NotionTarget", "NotionLead",
+    "EmailConfig", "TelegramConfig", "NotionConfig", "NotionTarget", "NotionLead", "FrontendErrorsConfig",
     # middleware (lazy — DRF reads settings at import time)
     "DefaultPagination", "LargePagination", "SmallPagination", "NoPagination",
     # utils & testing

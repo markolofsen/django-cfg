@@ -227,7 +227,10 @@ def resolve_monitor_log_dir() -> Optional[Path]:
     warn_once(
         "monitor-dir-none",
         f"django-cfg found no writable directory for the monitor event log (tried {SYSTEM_LOG_ROOT / app} and "
-        f"{user_state_log_dir()}); monitor events go to stdout only. Set {ENV_LOG_DIR} or logging.dir.",
+        f"{user_state_log_dir()}); monitor events go to stdout only. Set {ENV_LOG_DIR} or logging.dir to a directory "
+        f"outside the project tree. In Docker, mount a named volume there so the file survives a recreated "
+        f"container: {ENV_LOG_DIR}=/var/log/app with `volumes: [app-logs:/var/log/app]`, the directory owned by "
+        f"the app user. Browser errors stay queryable without a file: DjangoConfig.frontend_errors.",
     )
     return None
 

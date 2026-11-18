@@ -80,6 +80,21 @@ class DjangoMCPConfig(AppConfig):
             logger.info(f"✅ {len(global_registry._tools)} default MCP tools registered")
         except Exception as e:
             logger.warning(f"⚠️ Failed to register default MCP tools: {e}")
+        self._register_frontend_errors_tools()
+
+    def _register_frontend_errors_tools(self):
+        """``frontend_errors_top`` / ``frontend_errors_recent``, when the store is enabled."""
+        try:
+            from django_cfg.core.state import get_current_config
+
+            config = get_current_config()
+            cfg = getattr(config, "frontend_errors", None) if config else None
+            if cfg is not None and cfg.enabled:
+                from django_cfg.modules.django_frontend_errors.tools import register
+
+                register()
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to register frontend_errors MCP tools: {e}")
 
     def _discover_project_tools(self) -> int:
         """

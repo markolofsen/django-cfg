@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, PrivateAttr, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
 if TYPE_CHECKING:
     from django_cfg.modules.django_mcp.__cfg__ import DjangoMCPModuleConfig
@@ -62,6 +62,16 @@ _SITE_OWNED_FIELDS = {
     "logo_url": "logo_url",
     "default_locale": "locale",
 }
+
+
+class FrontendErrorsConfig(BaseModel):
+    """Store browser errors received by ``/cfg/monitor/ingest/`` (on by default; ``enabled=False`` opts out)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = Field(default=True, description="Add the app (table, admin, MCP tools) and store events")
+    retention_days: int = Field(default=30, ge=1, le=365, description="Rows not seen for this many days are deleted")
+    store_warnings: bool = Field(default=True, description="Also store level=warning events (errors are always stored)")
 
 
 class DjangoConfig(BaseModel):
@@ -553,6 +563,11 @@ class DjangoConfig(BaseModel):
     mcp: Optional["DjangoMCPModuleConfig"] = Field(
         default=None,
         description="Model Context Protocol (MCP) integration for AI agents",
+    )
+
+    frontend_errors: Optional["FrontendErrorsConfig"] = Field(
+        default_factory=lambda: FrontendErrorsConfig(),
+        description="Store browser errors received by the monitor ingest, grouped by signature (django_frontend_errors)",
     )
 
     notion: Optional["NotionConfig"] = Field(

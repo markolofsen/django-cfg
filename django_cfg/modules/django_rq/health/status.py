@@ -1,5 +1,5 @@
 """
-Cron-vs-worker status for healthchecks.
+Cron-vs-worker status (a diagnostic, not the container healthcheck).
 
 One read of Redis that answers "why is my scheduled job late?":
 
@@ -9,8 +9,9 @@ One read of Redis that answers "why is my scheduled job late?":
   ``max_wait``; ``busy`` names what the workers are running instead.
 - ``ok`` otherwise.
 
-``python manage.py rq_cron_status`` prints it and exits 1 when not ok, so a
-compose healthcheck can use it directly.
+``python manage.py rq_cron_status`` prints it and exits 1 when not ok. It boots
+Django, so run it by hand or from monitoring; the compose healthcheck of the
+``rqcron`` service reads the alive file instead (``cron.HEALTHCHECK_CMD``).
 """
 
 from __future__ import annotations

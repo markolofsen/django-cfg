@@ -245,7 +245,7 @@ rate(rq_job_duration_seconds_sum[5m]) / rate(rq_job_duration_seconds_count[5m])
 
 ### rq_cron_status
 
-Tells a dead `rqcron` (`cron_dead`: no heartbeat within `--max-heartbeat-age`, default 120 s) from a busy worker (`starved`: a queued job waited longer than `--max-wait`, default 120 s), with per-queue wait age, the leading `rqcron` and the job each busy worker runs; exits 1 when not `ok`, so it serves as the compose healthcheck of the `rqcron` service. See [Scheduler and Workers](./scheduler-and-workers).
+Tells a dead `rqcron` (`cron_dead`: no heartbeat within `--max-heartbeat-age`, default 120 s) from a busy worker (`starved`: a queued job waited longer than `--max-wait`, default 120 s), with per-queue wait age, the leading `rqcron` and the job each busy worker runs; exits 1 when not `ok`. Run it by hand or from monitoring: it boots Django (10-30 s on a busy host), so it is not the container healthcheck. The `rqcron` healthcheck reads the alive file `/tmp/rqcron.alive` instead. See [Scheduler and Workers](./scheduler-and-workers).
 
 ```bash
 python manage.py rq_cron_status --queue high --max-wait 60

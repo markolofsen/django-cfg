@@ -48,7 +48,9 @@ Schedules:
     ``python manage.py rqcron`` per project. It registers every entry on RQ's
     ``CronScheduler``, never pushes a copy while the previous one is queued or
     running, and also moves delayed jobs (``enqueue_in/at``, ``Retry(interval)``).
-    Health: ``python manage.py rq_cron_status``.
+    Healthcheck: the alive file ``rqcron`` touches every loop
+    (``django_cfg.modules.django_rq.cron.HEALTHCHECK_CMD``). Diagnostic, by hand:
+    ``python manage.py rq_cron_status``.
 """
 
 from typing import TYPE_CHECKING, Any, Dict, List, Optional

@@ -1,5 +1,7 @@
 """
-Cron-vs-worker status; exits 1 when not ok (usable as a compose healthcheck).
+Cron-vs-worker status; exits 1 when not ok. A diagnostic, not a healthcheck: it boots
+Django (10-30 s on a busy host). The compose healthcheck of the rqcron service reads
+the alive file instead (``django_cfg.modules.django_rq.cron.HEALTHCHECK_CMD``).
 
 Example:
     python manage.py rq_cron_status
@@ -14,6 +16,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 class Command(BaseCommand):
     help = "Tell 'rqcron dead' from 'worker busy/starved'; exit 1 when not ok"
+    requires_system_checks = []  # a status read; the full check run only slows it down
 
     def add_arguments(self, parser):
         parser.add_argument("--queue", action="append", dest="queues",
