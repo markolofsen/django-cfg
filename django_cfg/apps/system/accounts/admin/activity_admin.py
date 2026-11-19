@@ -32,6 +32,7 @@ useractivity_config = AdminConfig(
         "user",
         "activity_type",
         "description",
+        "location",
         "ip_address",
         "created_at"
     ],
@@ -51,7 +52,7 @@ useractivity_config = AdminConfig(
     ],
 
     # Filters and search
-    list_filter=[ActivityTypeFilter, "activity_type", "created_at"],
+    list_filter=[ActivityTypeFilter, "activity_type", "country", "edge_trusted", "created_at"],
     search_fields=["user__username", "user__email", "description", "ip_address"],
 
     # Readonly fields
@@ -74,7 +75,7 @@ useractivity_config = AdminConfig(
         ),
         FieldsetConfig(
             title="Request Info",
-            fields=["ip_address", "user_agent"],
+            fields=["ip_address", "user_agent", "country", "region_code", "city", "timezone", "edge_trusted"],
             collapsed=True
         ),
         FieldsetConfig(
@@ -159,3 +160,13 @@ class UserActivityAdmin(PydanticAdmin):
             variant="secondary",
             icon=Icons.PUBLIC
         )
+
+    @computed_field("Location")
+    def location(self, obj):
+        """City and country from request.geo at the time; blank when the edge did not know."""
+        from django_cfg.modules.django_visitor_geo.countries import country_name
+
+        place = ", ".join(part for part in (obj.city, country_name(obj.country) or obj.country) if part)
+        if not place:
+            return None
+        return self.html.badge(place, variant="secondary", icon=Icons.PUBLIC)

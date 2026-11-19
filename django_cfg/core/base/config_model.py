@@ -25,6 +25,8 @@ from django_cfg.modules.django_notion.__cfg__ import NotionConfig  # noqa: F401
 from ...models import (
     AccountEmailsConfig,
     AdminAccessConfig,
+    EdgeConfig,
+    VisitorGeoConfig,
     AdminSiteConfig,
     AnalyticsConfig,
     ApiKeys,
@@ -327,6 +329,17 @@ class DjangoConfig(BaseModel):
     admin_access: AdminAccessConfig = Field(
         default_factory=AdminAccessConfig,
         description="Django admin availability, URL prefix and optional CIDR allowlist",
+    )
+
+    # Instances, not None: env (EDGE__*, VISITOR_GEO__*) must work for a project that never mentions them.
+    edge: EdgeConfig = Field(
+        default_factory=EdgeConfig,
+        description="Which proxies are trusted and how a request proves it came through Cloudflare (client IP, CF-* headers)",
+    )
+
+    visitor_geo: VisitorGeoConfig = Field(
+        default_factory=VisitorGeoConfig,
+        description="request.geo: visitor country by default; region/city/ASN opt-in",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

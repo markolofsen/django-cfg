@@ -18,6 +18,7 @@ REAL_IP_MIDDLEWARE = 'django_cfg.middleware.real_ip.RealIPMiddleware'
 NOINDEX_MIDDLEWARE = 'django_cfg.core.middleware.noindex.NoIndexMiddleware'
 ADMIN_ACCESS_MIDDLEWARE = 'django_cfg.middleware.admin_access.AdminAccessMiddleware'
 REQUEST_ID_MIDDLEWARE = 'django_cfg.modules.django_logging.middleware.RequestIdMiddleware'
+VISITOR_GEO_MIDDLEWARE = 'django_cfg.modules.django_visitor_geo.middleware.VisitorGeoMiddleware'
 
 
 class MiddlewareBuilder:
@@ -77,6 +78,10 @@ class MiddlewareBuilder:
 
         # After Real IP (it trusts X-Request-ID by the real peer); every later log line carries the id
         middleware.append(REQUEST_ID_MIDDLEWARE)
+
+        # request.geo (lazy, parses nothing until read). Needs the edge Real IP resolved.
+        if self.config.visitor_geo.level != "off":
+            middleware.append(VISITOR_GEO_MIDDLEWARE)
 
         # Default middleware (includes CorsMiddleware)
         middleware.extend(DEFAULT_MIDDLEWARE)

@@ -85,18 +85,16 @@ class AxesConfig(BaseModel):
 
     # === Proxy/Cloudflare Support ===
     ipware_proxy_count: int = Field(
-        default=1,
-        description="Number of proxies between client and server"
+        default=0,
+        description="Proxies ipware skips. 0: REMOTE_ADDR is already the client (RealIPMiddleware, core/edge.py)"
     )
 
     ipware_meta_precedence_order: List[str] = Field(
-        default_factory=lambda: [
-            'HTTP_CF_CONNECTING_IP',   # Cloudflare (most trusted)
-            'HTTP_X_FORWARDED_FOR',    # Standard proxy header
-            'HTTP_X_REAL_IP',          # Alternative proxy header
-            'REMOTE_ADDR',             # Direct connection fallback
-        ],
-        description="Order of headers to extract real IP. Cloudflare header is checked first for accurate IP behind CF proxy."
+        default_factory=lambda: ['REMOTE_ADDR'],
+        description=(
+            "Where Axes reads the client IP. RealIPMiddleware sets REMOTE_ADDR to the client the edge rules accept "
+            "(core/edge.py); a raw CF-Connecting-IP or X-Forwarded-For can be forged by a client that reaches the origin."
+        )
     )
 
     # === Whitelist/Blacklist ===

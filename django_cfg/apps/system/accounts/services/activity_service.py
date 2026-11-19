@@ -12,6 +12,23 @@ from ..models import CustomUser, UserActivity
 logger = logging.getLogger(__name__)
 
 
+def _geo_columns(geo, edge_trusted) -> dict:
+    columns = {} if geo is None else {
+        "country": geo.country,
+        "region_code": geo.region_code,
+        "city": geo.city,
+        "timezone": geo.timezone,
+    }
+    if edge_trusted is not None:
+        columns["edge_trusted"] = edge_trusted
+    return columns
+
+
+def cleanup_user_activity(days: int = 90) -> int:
+    """Scheduled retention (django_rq auto-cleanup): activity rows, and the IPs on them, older than `days` go."""
+    return ActivityService.cleanup_old_activities(days=days)
+
+
 class ActivityService:
     """Service for logging user activities."""
 
@@ -24,6 +41,8 @@ class ActivityService:
         user_agent: Optional[str] = None,
         object_id: Optional[int] = None,
         object_type: Optional[str] = None,
+        geo=None,
+        edge_trusted: Optional[bool] = None,
     ) -> Optional[UserActivity]:
         """
         Log a user activity.
@@ -36,6 +55,8 @@ class ActivityService:
             user_agent: User agent string
             object_id: ID of related object (optional)
             object_type: Type of related object (optional)
+            geo: request geography (django_visitor_geo.Geo); fills country/region/city/timezone
+            edge_trusted: the request came through the trusted edge (`request.edge.trusted`, core/edge.py)
             
         Returns:
             Created UserActivity instance or None if failed
@@ -49,6 +70,7 @@ class ActivityService:
                 user_agent=user_agent,
                 object_id=object_id,
                 object_type=object_type,
+                **_geo_columns(geo, edge_trusted),
             )
 
             logger.debug(f"Logged activity '{activity_type}' for user {user.email}")

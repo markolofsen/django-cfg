@@ -7,7 +7,7 @@ unauthorized access. The sign-in is always logged for dedup and audit.
 Suppresses noise with smart rules:
 
 - No alert on first login after registration (grace period)
-- No alert if same IP + same browser within 24h
+- No alert if same country + same browser within 24h (a new country always alerts; a mobile IP change does not)
 - No alert for test accounts
 - Background sending (never blocks the auth response)
 """
@@ -52,19 +52,28 @@ class LoginContext:
     os: str
     device_type: str
     login_time: str  # formatted for display
-    fingerprint: str  # hash of ip + browser + os for dedup
+    fingerprint: str  # hash of country (IP when unknown) + browser + os for dedup
+    location: str = ""  # "Tbilisi, Georgia" / "Georgia" / "" (request.geo)
+    edge_trusted: bool = False  # request.edge.trusted (core/edge.py)
+    geo: object = None  # django_visitor_geo.Geo
 
 
 def _build_login_context(request: HttpRequest) -> LoginContext:
     """Extract and parse login metadata from the request."""
     from django_cfg.modules.django_monitor.utils import parse_user_agent
 
+    from django_cfg.core.edge import get_edge
+    from django_cfg.modules.django_visitor_geo import get_geo
+
     ip = _get_client_ip(request)
+    geo = get_geo(request)
     ua = request.META.get("HTTP_USER_AGENT", "")
     browser, os_name, device_type = parse_user_agent(ua)
 
-    # Fingerprint = hash(ip + browser + os) — same combo within dedup window = skip
-    raw = f"{ip}:{browser}:{os_name}"
+    # Fingerprint = hash(place + browser + os). The place is the country when the edge knows it: a phone changes IP
+    # all day, a new country is what a stolen session looks like. Without a country, the IP stands in.
+    place = f"country:{geo.country}" if geo.country else ip
+    raw = f"{place}:{browser}:{os_name}"
     fingerprint = hashlib.sha256(raw.encode()).hexdigest()[:16]
 
     now = timezone.now()
@@ -72,21 +81,23 @@ def _build_login_context(request: HttpRequest) -> LoginContext:
 
     return LoginContext(
         ip_address=ip,
+        location=str(geo),
+        edge_trusted=get_edge(request).trusted,
         user_agent=ua,
         browser=browser or "Unknown browser",
         os=os_name or "Unknown OS",
         device_type=device_type or "desktop",
         login_time=login_time,
         fingerprint=fingerprint,
+        geo=geo,
     )
 
 
 def _get_client_ip(request: HttpRequest) -> str:
-    """Get client IP from request, handling proxies."""
-    x_forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if x_forwarded:
-        return x_forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "Unknown")
+    """Client IP as resolved by the edge rules (core/edge.py)."""
+    from django_cfg.core.edge import get_client_ip
+
+    return get_client_ip(request) or "Unknown"
 
 
 def _is_within_grace_period(user: CustomUser) -> bool:
@@ -135,7 +146,7 @@ def _send_alert_email(user: CustomUser, ctx: LoginContext, site_key: Optional[st
         locale,
         site.as_context(),
     )
-    logger.info("Login alert email sending to %s (%s, IP %s)", user.email, device_label, ctx.ip_address)
+    logger.info("Login alert email sending to user %s (%s)", user.pk, device_label)
 
     email_service = DjangoEmailService()
     email_service.send_template(
@@ -145,6 +156,7 @@ def _send_alert_email(user: CustomUser, ctx: LoginContext, site_key: Optional[st
             "user": user,
             "device": device_label,
             "ip_address": ctx.ip_address,
+            "location": ctx.location,
             "login_time": ctx.login_time,
             "button_url": site.site_url,
         },
@@ -167,6 +179,8 @@ def _log_activity(user: CustomUser, ctx: LoginContext) -> None:
         ip_address=ctx.ip_address,
         user_agent=ctx.user_agent,
         object_type="",
+        geo=ctx.geo,
+        edge_trusted=ctx.edge_trusted,
     )
 
 
@@ -194,7 +208,7 @@ def _do_login_alert(user: CustomUser, ctx: LoginContext, site_key: Optional[str]
             logger.debug("Login alert suppressed: registration grace period for %s", user.email)
             should_send = False
 
-        # 3. Same IP + browser recently — already alerted
+        # 3. Same place + browser recently — already alerted
         elif _was_recently_seen(user, ctx.fingerprint):
             logger.debug("Login alert suppressed: recent same-device login for %s", user.email)
             should_send = False

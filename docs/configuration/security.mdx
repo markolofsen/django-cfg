@@ -492,6 +492,35 @@ csp: {
 - **Per-directive arrays** (`scriptSrc`, `connectSrc`, …) are additive escape
   hatches for origins no preset covers.
 
+## Edge trust and client IP
+
+django-cfg decides once per request whether it came through your edge (Cloudflare), and who the client is. `RealIPMiddleware` writes that client into `REMOTE_ADDR`, so Django, Axes, DRF throttles, rate limits, the admin allow-list, sign-in records and analytics all see the same address. A proxy header is never believed for its own sake: a client that reaches the origin directly cannot pick its IP with `CF-Connecting-IP` or `X-Forwarded-For`, nor its country with `CF-IPCountry`.
+
+```python
+from django_cfg import DjangoConfig, EdgeConfig
+
+class MyConfig(DjangoConfig):
+    edge = EdgeConfig(
+        trust="cloudflare",                # cloudflare | secret | proxies | none
+        # trusted_proxies=[...],           # default: loopback, RFC 1918, 100.64/10, link-local, ULA
+    )
+```
+
+| `trust` | Use when |
+|---|---|
+| `cloudflare` (default) | Cloudflare in front of your own proxies on private networks. The first hop past `trusted_proxies` must be a Cloudflare address |
+| `secret` | Another proxy in front of Cloudflare, or Cloudflare Tunnel. A Transform Rule adds `X-Edge-Auth: <secret>` (`EDGE__SECRET`) |
+| `proxies` | No Cloudflare. The client is the first hop that is not in `trusted_proxies` |
+| `none` | No proxy. The socket peer is the client |
+
+Env: `EDGE__TRUST`, `EDGE__TRUSTED_PROXIES` (comma-separated or JSON), `EDGE__SECRET`.
+
+- A proxy of yours on a **public** address must be in `trusted_proxies`, or every request appears to come from it.
+- Keep the origin locked to Cloudflare's ranges as well; the hop check is the second layer.
+- `manage.py cfg_edge_ranges --refresh` updates the bundled Cloudflare ranges; checks W040 and W041 warn about a missing secret and stale ranges.
+
+The hop walk, `request.edge`, `get_client_ip()` and the Cloudflare zone setup are on [Visitor Geo](/features/modules/django-visitor-geo#edge-trust).
+
 ## Django-Axes: Brute-Force Protection
 
 Automatic brute-force protection with environment-aware defaults. No configuration required.
@@ -535,24 +564,18 @@ axes: AxesConfig = AxesConfig(
 | `allowed_ips` | `list[str]` | `[]` | IP addresses that bypass axes protection |
 | `denied_ips` | `list[str]` | `[]` | IP addresses that are always blocked |
 | **Proxy Settings** | | | |
-| `ipware_proxy_count` | `int` | `1` | Number of proxies between client and server |
-| `ipware_meta_precedence_order` | `list[str]` | `["HTTP_X_FORWARDED_FOR", ...]` | Order of headers to extract real IP |
+| `ipware_proxy_count` | `int` | `0` | Proxies ipware skips. `0`: `REMOTE_ADDR` is already the client |
+| `ipware_meta_precedence_order` | `list[str]` | `["REMOTE_ADDR"]` | Where Axes reads the client IP |
 | `cache_name` | `str` | `"default"` | Cache backend to use |
 | `username_form_field` | `str` | `"username"` | Form field to track (e.g., `"email"`) |
 
 ### Proxy Configuration
 
-```python
-axes = AxesConfig(
-    ipware_proxy_count=2,  # Number of proxies (1 for Cloudflare, 2 for Cloudflare+nginx)
-    ipware_meta_precedence_order=[
-        'HTTP_CF_CONNECTING_IP',  # Cloudflare
-        'HTTP_X_FORWARDED_FOR',   # nginx/traefik
-        'HTTP_X_REAL_IP',
-        'REMOTE_ADDR',
-    ],
-)
-```
+Do not configure proxies in Axes. Axes reads only `REMOTE_ADDR`, which `RealIPMiddleware` has already resolved by the [edge trust](#edge-trust-and-client-ip) rules. Configure `edge` (for example `trusted_proxies`) instead.
+
+<Callout type="warning">
+Do not put `HTTP_CF_CONNECTING_IP` or `HTTP_X_FORWARDED_FOR` back into `ipware_meta_precedence_order`. Axes would read them raw, and a client that reaches the origin directly could pick any address and dodge its lockout. Up to django-cfg 2.4.100 the default order led with `HTTP_X_FORWARDED_FOR`, which behind Traefik and Cloudflare was the Cloudflare edge, not the visitor.
+</Callout>
 
 ### Custom Lockout
 
@@ -582,7 +605,7 @@ axes = AxesConfig(failure_limit=5, allowed_ips=['192.168.1.0/24'])
 | Problem | Solution |
 |---------|----------|
 | False lockouts | Increase `failure_limit` or add `allowed_ips` |
-| All requests from proxy IP | Configure `ipware_proxy_count` and `ipware_meta_precedence_order` |
+| All requests from proxy IP | Add your proxy's network to `edge.trusted_proxies` ([edge trust](#edge-trust-and-client-ip)) |
 | Unlock user | `python manage.py axes_reset username admin` or delete in Admin |
 
 ## See Also
@@ -590,3 +613,4 @@ axes = AxesConfig(failure_limit=5, allowed_ips=['192.168.1.0/24'])
 - [**DjangoConfig**](./django-settings) - Base configuration class
 - [**Configuration Overview**](./) - Configuration system overview
 - [**Environment**](./environment) - Environment detection
+- [**Visitor Geo**](/features/modules/django-visitor-geo) - `request.geo`, edge trust, Cloudflare setup

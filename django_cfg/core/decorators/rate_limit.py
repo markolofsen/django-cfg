@@ -157,10 +157,9 @@ def _get_client_ip(request_or_conn: Any) -> str:
     """Extract client IP from request or connection."""
     # Django HttpRequest
     if hasattr(request_or_conn, 'META'):
-        x_forwarded_for = request_or_conn.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            return x_forwarded_for.split(',')[0].strip()
-        return request_or_conn.META.get('REMOTE_ADDR', 'unknown')
+        from django_cfg.core.edge import get_client_ip
+
+        return get_client_ip(request_or_conn) or 'unknown'
 
     # WebSocket connection
     if hasattr(request_or_conn, 'client_ip'):

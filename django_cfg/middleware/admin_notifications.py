@@ -25,8 +25,10 @@ logger = logging.getLogger(__name__)
 
 
 def get_client_ip(request):
-    """Get client IP — REMOTE_ADDR is already fixed by RealIPMiddleware."""
-    return request.META.get('REMOTE_ADDR', 'Unknown')
+    """Client IP as resolved by the edge rules (core/edge.py)."""
+    from django_cfg.core.edge import get_client_ip as resolve
+
+    return resolve(request) or 'Unknown'
 
 
 # === SUCCESSFUL ADMIN LOGINS ===

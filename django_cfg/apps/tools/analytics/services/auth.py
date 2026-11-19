@@ -29,8 +29,9 @@ def record_successful_login(*, user: Any, request: Any) -> int:
     if site is None:
         return 0
 
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    ip = forwarded.split(",")[0].strip() if forwarded else request.META.get("REMOTE_ADDR", "")
+    from django_cfg.core.edge import get_client_ip
+
+    ip = get_client_ip(request)
 
     return ingest_batch(
         site=site,

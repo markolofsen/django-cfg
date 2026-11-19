@@ -270,13 +270,9 @@ The module uses **Django signals** (not traditional middleware):
 
 ### 🌐 Proxy Support
 
-Automatically extracts real client IP through proxies:
-
-**Header precedence** (matches AxesConfig):
-1. `HTTP_CF_CONNECTING_IP` - Cloudflare real IP
-2. `HTTP_X_FORWARDED_FOR` - Nginx/Traefik proxy
-3. `HTTP_X_REAL_IP` - Alternative proxy header
-4. `REMOTE_ADDR` - Direct connection
+The client IP is `REMOTE_ADDR`, set by `RealIPMiddleware` from `core/edge.py`. `CF-Connecting-IP` is believed only
+when the hop before our own proxy is a Cloudflare address (`DjangoConfig.edge`); a client that reaches the origin
+directly cannot name its address.
 
 **Example with Cloudflare:**
 ```
@@ -498,18 +494,8 @@ docker logs -f <container> 2>&1 | grep admin_notifications
 
 **Problem: Wrong IP address**
 
-Configure proxy settings:
-```python
-# config.py
-axes: AxesConfig = AxesConfig(
-    ipware_proxy_count=1,  # Adjust based on proxy layers
-    ipware_meta_precedence_order=[
-        'HTTP_CF_CONNECTING_IP',  # Add your proxy header
-        'HTTP_X_FORWARDED_FOR',
-        'REMOTE_ADDR',
-    ],
-)
-```
+Check the edge rules, not Axes: `python manage.py cfg_edge_ranges`, and `DjangoConfig.edge.trusted_proxies` must
+cover every proxy of yours between Cloudflare and Django.
 
 **Problem: Too many notifications**
 

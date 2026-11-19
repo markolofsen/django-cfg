@@ -739,12 +739,9 @@ class SecurityBuilder:
                 'AXES_LOCKOUT_URL': None,  # No custom lockout URL
                 'AXES_VERBOSE': True,  # Log lockout events in dev
                 'AXES_ENABLE_ACCESS_FAILURE_LOG': True,
-                'AXES_IPWARE_PROXY_COUNT': 1,
-                'AXES_IPWARE_META_PRECEDENCE_ORDER': [
-                    'HTTP_X_FORWARDED_FOR',
-                    'HTTP_X_REAL_IP',
-                    'REMOTE_ADDR',
-                ],
+                # RealIPMiddleware has resolved REMOTE_ADDR (core/edge.py); a raw X-Forwarded-For[0] is the Cloudflare edge.
+                'AXES_IPWARE_PROXY_COUNT': 0,
+                'AXES_IPWARE_META_PRECEDENCE_ORDER': ['REMOTE_ADDR'],
             }
         else:
             return {
@@ -758,13 +755,9 @@ class SecurityBuilder:
                 'AXES_LOCKOUT_URL': None,  # No custom lockout URL
                 'AXES_VERBOSE': False,  # Less verbose logging in production
                 'AXES_ENABLE_ACCESS_FAILURE_LOG': True,  # Log failures for security audit
-                # Proxy/Cloudflare support - get real IP from X-Forwarded-For
-                'AXES_IPWARE_PROXY_COUNT': 1,  # Number of proxies between client and server
-                'AXES_IPWARE_META_PRECEDENCE_ORDER': [
-                    'HTTP_X_FORWARDED_FOR',  # Cloudflare, nginx, traefik
-                    'HTTP_X_REAL_IP',        # Alternative proxy header
-                    'REMOTE_ADDR',           # Fallback to direct connection
-                ],
+                # RealIPMiddleware has resolved REMOTE_ADDR (core/edge.py); a raw X-Forwarded-For[0] is the Cloudflare edge.
+                'AXES_IPWARE_PROXY_COUNT': 0,
+                'AXES_IPWARE_META_PRECEDENCE_ORDER': ['REMOTE_ADDR'],
             }
 
 

@@ -1,6 +1,6 @@
 ---
 title: Middleware System
-description: Complete reference for all Django-CFG middleware classes covering authentication, real IP, timezone, pagination, activity tracking, and debug utilities.
+description: Complete reference for all Django-CFG middleware classes covering authentication, real IP, visitor geo, timezone, pagination, activity tracking, and debug utilities.
 ---
 
 # Middleware System
@@ -14,6 +14,7 @@ Django-CFG ships a suite of middleware classes covering authentication enhanceme
 | `JWTAuthenticationWithLastLogin` | `authentication` | Always (JWT auth enabled) |
 | `RealIPMiddleware` | `real_ip` | Always (must be first) |
 | `RequestIdMiddleware` | `django_cfg.modules.django_logging.middleware` | Always (placed right after `RealIPMiddleware`) |
+| `VisitorGeoMiddleware` | `django_cfg.modules.django_visitor_geo.middleware` | `visitor_geo.level` is not `"off"` (after `RequestIdMiddleware`) |
 | `TimezoneMiddleware` | `timezone` | Always |
 | `SiteMiddleware` | `site` | More than one entry in `DjangoConfig.sites` |
 | `UserActivityMiddleware` | `user_activity` | Always (accounts app active) |
@@ -78,19 +79,17 @@ stats = JWTAuthenticationWithLastLogin.get_cache_stats()
 
 ## RealIPMiddleware
 
-**Purpose:** Overwrites `REMOTE_ADDR` with the real client IP extracted from proxy headers so that all downstream code sees the correct IP.
+**Purpose:** Overwrites `REMOTE_ADDR` with the client IP that the [edge trust](/features/modules/django-visitor-geo#edge-trust) rules accept, so Django, Axes, DRF throttles, rate limits and the admin allow-list see the client and not your proxy.
 
-**Active when:** Always. Must be placed **first** in `MIDDLEWARE`, before any security or auth middleware.
+**Active when:** Always. Must be **first** in `MIDDLEWARE`.
 
-Headers are checked in priority order:
+Proxy headers are not believed for their own sake. By default (`edge.trust="cloudflare"`) the middleware walks from the socket peer leftwards through `X-Forwarded-For`, skipping your own proxies (`edge.trusted_proxies`: loopback and private networks). Only when the next hop is a Cloudflare address does it take `CF-Connecting-IP`. Otherwise the client is that first hop you do not run. A client that reaches the origin directly cannot name its own address with `CF-Connecting-IP` or `X-Forwarded-For`. `X-Real-IP` is not read.
 
-| Priority | Header | Proxy |
-|----------|--------|-------|
-| 1 | `CF-Connecting-IP` | Cloudflare |
-| 2 | `X-Forwarded-For` | nginx, traefik, AWS ALB |
-| 3 | `X-Real-IP` | nginx alternative |
+It also:
 
-For `X-Forwarded-For` with a chain of IPs (`client, proxy1, proxy2`), the first IP (original client) is used.
+- keeps the address that really connected in `request.META["DJANGO_CFG_PEER_ADDR"]`;
+- sets `request.edge` (`trusted`, `client_ip`, `peer`, `via`);
+- removes the `X-Edge-Auth` secret header (for `trust="secret"`) from `request.META`.
 
 ```python
 MIDDLEWARE = [
@@ -100,7 +99,11 @@ MIDDLEWARE = [
 ]
 ```
 
-Without this middleware, all downstream code (django-axes, DRF throttling, rate limiting, audit logging) sees the proxy IP instead of the real client address.
+Elsewhere, read the client with `django_cfg.core.edge.get_client_ip(request)`. Trust modes, `trusted_proxies` and the `EDGE__*` env vars: [Visitor Geo, edge trust](/features/modules/django-visitor-geo#edge-trust).
+
+<Callout type="warning">
+Up to django-cfg 2.4.100 the middleware took `CF-Connecting-IP`, then `X-Forwarded-For[0]`, then `X-Real-IP`, from any sender. If your own proxy sits on a **public** address, add it to `edge.trusted_proxies` (`EDGE__TRUSTED_PROXIES`); otherwise every request appears to come from that proxy.
+</Callout>
 
 **DRF throttling.** DRF ignores `REMOTE_ADDR` whenever `X-Forwarded-For` is present unless `NUM_PROXIES` is set, and then keys every throttle on the whole header. Django-CFG therefore sets `REST_FRAMEWORK["NUM_PROXIES"] = 0` by default, so throttles use the address this middleware found. A value you set yourself is kept.
 
@@ -121,6 +124,16 @@ MIDDLEWARE = [
 ```
 
 See [Logging](/deployment/logging) for how `request_id` appears on log lines.
+
+---
+
+## VisitorGeoMiddleware
+
+**Purpose:** Sets `request.geo`, the visitor's country (and, opt-in, region and city) from Cloudflare's headers when the edge is trusted. It is lazy: nothing is parsed until a view reads `request.geo`.
+
+**Active when:** `visitor_geo.level` is not `"off"` (the default is `"country"`). The builder adds it right after `RequestIdMiddleware`, because it needs the edge resolved by `RealIPMiddleware`.
+
+See [Visitor Geo](/features/modules/django-visitor-geo).
 
 ---
 
@@ -418,7 +431,7 @@ This module registers Django signal receivers rather than a middleware class:
 django-axes is an optional dependency. If it is not installed, failed login and lockout notifications are silently skipped.
 </Callout>
 
-The `get_client_ip()` helper reads `REMOTE_ADDR`, which is already corrected by `RealIPMiddleware` — always place `RealIPMiddleware` first.
+The IP in these notifications comes from `django_cfg.core.edge.get_client_ip()`, the same [edge-trusted](/features/modules/django-visitor-geo#edge-trust) client address `RealIPMiddleware` puts in `REMOTE_ADDR`.
 
 Notifications fire only for `/admin/` paths and only for staff or superuser accounts. Errors in the notification path are caught and logged without interrupting the login flow.
 
@@ -430,6 +443,8 @@ Notifications fire only for `/admin/` paths and only for staff or superuser acco
 MIDDLEWARE = [
     # 1. Real IP — must be first so all middleware below see the correct IP
     'django_cfg.middleware.real_ip.RealIPMiddleware',
+    'django_cfg.modules.django_logging.middleware.RequestIdMiddleware',
+    'django_cfg.modules.django_visitor_geo.middleware.VisitorGeoMiddleware',  # request.geo (unless level="off")
 
     # 2. Standard Django security
     'django.middleware.security.SecurityMiddleware',

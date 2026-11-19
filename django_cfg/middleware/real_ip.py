@@ -1,39 +1,27 @@
-"""Real IP middleware — fixes REMOTE_ADDR behind proxies.
+"""Real IP middleware: `REMOTE_ADDR` becomes the client, resolved by `core/edge.py`.
 
-Overwrites REMOTE_ADDR with the real client IP from proxy headers
-(Cloudflare, nginx, traefik). Code that reads REMOTE_ADDR (Django, Axes,
-ratelimit) sees the client IP. DRF throttles prefer X-Forwarded-For unless
-NUM_PROXIES=0; django-cfg defaults REST_FRAMEWORK["NUM_PROXIES"] to 0 while
-this middleware is installed.
+Proxy headers are believed only as far as `edge` config allows (Cloudflare hop check by default), so a client that
+reaches the origin directly cannot name its own address. Code that reads `REMOTE_ADDR` (Django, Axes, DRF throttles
+with NUM_PROXIES=0, the admin allow-list) sees the resolved client. The socket peer stays in
+`META["DJANGO_CFG_PEER_ADDR"]`; `request.edge` carries the whole result.
 
-Must be placed early in MIDDLEWARE — before any security/auth middleware.
+Must be first in MIDDLEWARE.
 """
+
+from django_cfg.core.edge import PEER_META, get_edge, strip_secret_header
 
 
 class RealIPMiddleware:
-    """Overwrite REMOTE_ADDR with real client IP from proxy headers."""
-
-    # Header precedence (most trusted first)
-    HEADERS = [
-        'HTTP_CF_CONNECTING_IP',     # Cloudflare
-        'HTTP_X_FORWARDED_FOR',      # nginx, traefik, AWS ALB
-        'HTTP_X_REAL_IP',            # nginx alternative
-    ]
+    """Overwrite REMOTE_ADDR with the client IP the edge rules accept."""
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        # Keep the socket peer: the headers below are client-supplied, and code that must
-        # not trust them (the monitor ingest limits) needs the address that really connected.
-        request.META.setdefault('DJANGO_CFG_PEER_ADDR', request.META.get('REMOTE_ADDR', ''))
-        for header in self.HEADERS:
-            value = request.META.get(header)
-            if value:
-                # X-Forwarded-For: client, proxy1, proxy2 — take first
-                real_ip = value.split(',')[0].strip()
-                if real_ip:
-                    request.META['REMOTE_ADDR'] = real_ip
-                    break
-
+        request.META.setdefault(PEER_META, request.META.get("REMOTE_ADDR", ""))
+        edge = get_edge(request)
+        strip_secret_header(request.META)
+        request.edge = edge
+        if edge.client_ip:
+            request.META["REMOTE_ADDR"] = edge.client_ip
         return self.get_response(request)

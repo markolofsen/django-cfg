@@ -460,7 +460,16 @@ class DjangoRQConfig(BaseModel):
                 description="Clean up orphaned RQ job keys (weekly)",
             )
 
-            all_schedules.extend([cleanup_jobs_schedule, cleanup_orphaned_schedule])
+            # Daily retention of account activity rows (they carry the sign-in IP): 90 days
+            activity_retention_schedule = RQScheduleConfig(
+                func="django_cfg.apps.system.accounts.services.activity_service.cleanup_user_activity",
+                interval=86400,
+                queue="default",
+                kwargs={"days": 90},
+                description="Delete account activity (sign-in IPs) older than 90 days (daily)",
+            )
+
+            all_schedules.extend([cleanup_jobs_schedule, cleanup_orphaned_schedule, activity_retention_schedule])
 
         # Add RQ queue-health monitor (enabled by default)
         if self.health.enabled:

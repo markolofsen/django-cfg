@@ -54,6 +54,10 @@ class DjangoCfgConfig(AppConfig):
         except Exception as exc:  # noqa: BLE001
             logger.warning("django_cfg admin_access check not registered: %s", exc)
         try:
+            from django_cfg.startup import edge  # noqa: F401  (registers the check)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("django_cfg edge check not registered: %s", exc)
+        try:
             from django_cfg.startup import sites  # noqa: F401  (registers the check)
         except Exception as exc:  # noqa: BLE001
             logger.warning("django_cfg sites check not registered: %s", exc)

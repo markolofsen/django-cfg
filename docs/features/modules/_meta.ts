@@ -6,6 +6,7 @@ export default {
   'django-monitor': 'Monitor',
   'django-frontend-errors': 'Frontend Errors',
   'django-logging': 'Logging',
+  'django-visitor-geo': 'Visitor Geo',
   'django-health': 'Health Checks',
 
   // ── Communication ────────────────────────────────────────────

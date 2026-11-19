@@ -1,0 +1,297 @@
+---
+title: Visitor Geo (request.geo)
+description: Where a visitor is, from Cloudflare's headers, believed only when the request really came through Cloudflare. Country by default; region, city and ASN are opt-in. No IP is ever kept.
+---
+
+# Visitor Geo — `request.geo`
+
+`request.geo` tells a view where the visitor is. The data comes from Cloudflare's `CF-*` headers, and those headers are believed only when the request came through Cloudflare: the [edge trust](#edge-trust) check decides that, not the header. The default level is the country. Region, city, coordinates and ASN are opt-in.
+
+`geo` and `visitor_geo` are different things. `DjangoConfig.geo` is the [country/city reference database](/features/tools/geo). `DjangoConfig.visitor_geo` configures this module. `request.geo` works without the reference app, a database or a network.
+
+## Features
+
+- **Nothing to install.** The middleware is added right after `RealIPMiddleware`. It is lazy: a page that never reads `request.geo` parses nothing.
+- **Spoof-proof.** A `CF-IPCountry` sent straight to the origin is ignored.
+- **Country by default.** A field above `level` stays empty even when Cloudflare sends it, so turning on a zone transform never widens what an app collects.
+- **No IP in `Geo`.** The module logs no visitor data and stores nothing itself.
+- **Tests name the geography** with `override_geo`. Local development can use a fixed `dev_override`.
+- **`bump_daily`** counts visits by day and country in one atomic statement.
+- **Optional geoip2 fallback** for servers that are not behind Cloudflare.
+
+## Quick start
+
+Nothing to configure. Behind Cloudflare with IP Geolocation on (the default on every plan):
+
+```python
+def pricing(request):
+    geo = request.geo
+    geo.country        # "GE"; "" when unknown
+    geo.country_name   # "Georgia"
+    geo.is_eu          # False
+    geo.continent      # "AS"
+    geo.trusted        # True: the edge vouched for the request
+    if geo:            # True when the country is known
+        ...
+```
+
+Code that gets a request without the middleware (`RequestFactory`, a DRF wrapper) uses `get_geo`:
+
+```python
+from django_cfg.modules.django_visitor_geo import get_geo
+
+get_geo(request).country
+```
+
+### Where a value comes from
+
+The first source that answers wins:
+
+1. `override_geo` (tests).
+2. Cloudflare headers, when `request.edge.trusted` is true and `CF-IPCountry` is present.
+3. The geoip2 database, when `fallback="geoip2"`.
+4. `visitor_geo.dev_override`, when the request is untrusted and `DEBUG` is on.
+5. Otherwise an empty `Geo`: every string is `""`.
+
+`geo.source` says which one answered: `override`, `cloudflare`, `geoip2`, `dev` or `none`.
+
+### Fields
+
+| Field | Level | From |
+|---|---|---|
+| `country` | country | `CF-IPCountry`, ISO 3166-1 alpha-2, upper case. `XX` (no data) and `T1` (Tor) become `""` |
+| `is_tor` | country | `CF-IPCountry: T1` |
+| `continent` | country | `CF-IPContinent`, else derived from the country (`AF AN AS EU NA OC SA`) |
+| `colo` | country | the Cloudflare data centre, from the `CF-Ray` suffix |
+| `is_eu`, `country_name` | country | the bundled country table, not a header |
+| `region`, `region_code`, `timezone` | region | location transform |
+| `city`, `postal_code`, `metro_code` | city | location transform |
+| `latitude`, `longitude` | city | location transform, rounded to `coords_precision` |
+| `asn` | `asn=True` | your `X-Edge-ASN` Transform Rule |
+| `bot_score`, `verified_bot` | `bot=True` | Cloudflare Bot Management (Enterprise) |
+| `source`, `trusted` | | see above |
+
+City names are accepted raw in UTF-8 or percent-encoded. Coordinates, `asn` and `bot_score` are `None` when unknown; every other field has an empty default.
+
+Helpers:
+
+- `str(geo)` gives `"Tbilisi, Georgia"`, `"Georgia"` or `""`, for emails and the admin.
+- `geo.as_dict()` gives a serialisable dict with `is_eu` and `country_name` added.
+- `geo.bucket(level)` gives the key to count by: `(country,)`, `(country, region_code)` or `(country, region_code, city)`.
+- `geo.country_record()` gives the reference app's `Country` row when that app is installed, otherwise `None`.
+
+## Levels and privacy
+
+```python
+from django_cfg import DjangoConfig, VisitorGeoConfig
+
+class MyConfig(DjangoConfig):
+    visitor_geo = VisitorGeoConfig(level="country")  # off | country | region | city
+```
+
+| Level | You get |
+|---|---|
+| `off` | No middleware, `request.geo` is not set, `get_geo` returns an empty `Geo` |
+| `country` (default) | country, continent, Tor flag, data centre, EU flag |
+| `region` | plus region, region code, time zone |
+| `city` | plus city, postcode, metro code, coordinates |
+
+<Callout type="warning">
+**GDPR.** An IP address is personal data. A country derived from it, with the IP thrown away, is generally treated as non-identifying, which is why `country` is the default. City, postcode and coordinates, joined with a timestamp and a user agent, are personal data: opt in only when the product needs them, and say so in your privacy notice. `Geo` never holds an IP. The module logs no IP, city or coordinates. It persists nothing: counters are your app's tables, and the sign-in history is the accounts app's, with a [90-day retention](/features/built-in-apps/user-management/accounts/login-alerts#sign-in-history).
+</Callout>
+
+Coordinates are rounded to `coords_precision` decimals: `1` (default) is about 11 km, `2` is about 1 km. ASN and bot signals are separate opt-ins (`asn=True`, `bot=True`) at any level.
+
+## Cloudflare setup, per zone
+
+| You want | Turn on in the zone |
+|---|---|
+| Country (default level) | The **IP Geolocation** setting (Network). On every plan; it sends `CF-IPCountry` |
+| Region and city | The Managed Transform **"Add visitor location headers"** (Rules, Transform Rules) |
+| ASN | A Request Header Transform Rule: set `X-Edge-ASN` to the expression `to_string(ip.src.asnum)`, then `visitor_geo.asn=True` |
+| Topology-proof trust | A Request Header Transform Rule: set `X-Edge-Auth` to a static secret, then `trust="secret"` (see [below](#edge-trust)) |
+
+- **Free plan.** Whether the location Managed Transform is available on the Free plan is **unverified**: Cloudflare's documentation does not say. Without it, levels above `country` stay empty; use the geoip2 fallback or a paid zone.
+- **Country needs the transform?** Cloudflare's pages disagree on whether IP Geolocation alone sends `CF-IPCountry`. If `request.geo.country` stays empty on a trusted request, turn the location transform on too.
+- **Custom rules.** Each custom Transform Rule counts against the zone's limit (Free: 10).
+- **Bots.** `cf-bot-score` and `cf-verified-bot` exist only with Enterprise Bot Management.
+- **Caching.** None of these rules touch the cache key, so edge-cached HTML is unaffected. A page cached for everyone must not render per-country content.
+
+## Edge trust
+
+Every header Cloudflare adds is a header anyone can send. If the origin is reachable directly, a client can send `CF-IPCountry: US` and `CF-Connecting-IP: 1.2.3.4`. So django-cfg first decides whether the request came through the edge. The same decision gives the client IP for the whole framework: `REMOTE_ADDR` after `RealIPMiddleware`, rate limits, Axes, sign-in records, analytics and `request.geo`.
+
+```python
+from django_cfg import DjangoConfig, EdgeConfig
+
+class MyConfig(DjangoConfig):
+    edge = EdgeConfig(trust="cloudflare")  # the default
+```
+
+| `trust` | How a request is trusted | Client IP |
+|---|---|---|
+| `cloudflare` (default) | The hop walk (below) reaches a Cloudflare address | `CF-Connecting-IP` when trusted, else the first hop you do not run |
+| `secret` | The request carries `X-Edge-Auth` equal to `edge.secret` (constant-time compare) | `CF-Connecting-IP` when trusted, else the first hop you do not run |
+| `proxies` | Never: no Cloudflare. Geo comes only from geoip2 | The first hop you do not run |
+| `none` | Never | The socket peer |
+
+**The hop walk.** Start at the socket peer and walk left through `X-Forwarded-For`, skipping every address in `trusted_proxies` (your own Traefik or nginx). The first address you do not run must be inside Cloudflare's published ranges. Only then are the `CF-*` headers believed. Otherwise the request is untrusted, its client is that address, and every `CF-*` header is ignored. A forged `X-Forwarded-For` does not help: entries left of the real hop are never read.
+
+- **`trusted_proxies`** defaults to loopback, RFC 1918 (`10/8`, `172.16/12`, `192.168/16`), carrier-grade NAT `100.64/10` (Tailscale), link-local and IPv6 ULA `fc00::/7`. A client inside one of these networks may name any address, so keep the list to networks you run. A proxy of yours on a public address must be added, or it becomes "the client".
+- **`secret` mode** works where the hop chain is unreliable: another proxy in front of Cloudflare, or Cloudflare Tunnel. The header is removed from `request.META` before any view, log or error report sees it.
+- **Lock the origin too.** The hop check is defence in depth. Still allow only Cloudflare's ranges at the firewall or the proxy.
+
+`request.edge` holds the result: `trusted`, `client_ip`, `peer` (the address that really connected) and `via` (`cloudflare`, `secret`, `proxy` or `direct`). The peer is also kept in `request.META["DJANGO_CFG_PEER_ADDR"]`. Elsewhere, call `get_client_ip(request)`; it accepts Django and DRF requests:
+
+```python
+from django_cfg.core.edge import get_client_ip
+
+ip = get_client_ip(request)  # "" when unknown
+```
+
+### Environment
+
+| Variable | Example |
+|---|---|
+| `EDGE__TRUST` | `cloudflare`, `secret`, `proxies`, `none` |
+| `EDGE__TRUSTED_PROXIES` | `10.0.0.0/8,172.16.0.0/12` or a JSON list. Replaces the default list |
+| `EDGE__SECRET` | the value your Transform Rule writes into `X-Edge-Auth` |
+| `EDGE__SECRET_HEADER` | default `X-Edge-Auth` |
+
+## Local development
+
+Behind no Cloudflare, `localhost` is untrusted and `request.geo` is empty. To render as if from a country while `debug=True`:
+
+```python
+from django_cfg import GeoOverride, VisitorGeoConfig
+
+visitor_geo = VisitorGeoConfig(dev_override=GeoOverride(country="GE"))
+```
+
+The override applies only to untrusted requests and only while `DEBUG` is on. It is cut to `level` like any other source.
+
+## Tests
+
+A test client sends from `127.0.0.1`, which is not a Cloudflare address. So this does **not** give a country:
+
+```python
+self.client.get("/pricing/", HTTP_CF_IPCOUNTRY="GE")  # untrusted: request.geo.country == ""
+```
+
+`HTTP_CF_CONNECTING_IP` is ignored for the same reason. Name the geography with `override_geo` instead. It works as a context manager and a decorator, on sync and async tests:
+
+```python
+from django_cfg.modules.django_visitor_geo.testing import override_geo
+
+def test_pricing_in_georgia(client):
+    with override_geo(country="GE"):
+        response = client.get("/pricing/")
+    assert "GEL" in response.content.decode()
+
+@override_geo(country="DE", region_code="BE", city="Berlin")
+def test_eu_banner(client):
+    ...
+```
+
+An unknown field name raises `TypeError`. The result is still cut to the configured `level`: with the default `country` level, `city="Berlin"` stays empty. Set `visitor_geo.level` in the test settings if a test needs a city.
+
+## Counting by country: `bump_daily`
+
+Count visits by day and geography without storing anyone's address:
+
+```python
+from django.db import models
+from django.utils import timezone
+from django_cfg.modules.django_visitor_geo import bump_daily
+
+
+class RegionDay(models.Model):
+    day = models.DateField()
+    country = models.CharField(max_length=2, blank=True)
+    count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["day", "country"], name="region_day_unique")]
+
+
+def play(request):
+    bump_daily(RegionDay, day=timezone.now().date(), country=request.geo.country)
+    ...
+```
+
+- On PostgreSQL and SQLite it is one `INSERT ... ON CONFLICT DO UPDATE`, so concurrent requests never lose a count.
+- The table needs a unique constraint over exactly the fields you pass.
+- `field="count"` and `by=1` are the defaults.
+- Other backends fall back to an ORM update-or-create, which is correct but can race on the first insert.
+
+## Fallback without Cloudflare: geoip2
+
+For a server that is not behind Cloudflare, look the client IP up in a local `.mmdb` file. The lookup is local; nothing leaves the server.
+
+```bash
+pip install "django-cfg[geoip]"
+```
+
+```python
+visitor_geo = VisitorGeoConfig(fallback="geoip2", geoip_path="/var/lib/geoip")  # a directory or a .mmdb file
+```
+
+- It runs only when edge headers are absent or untrusted, on the client IP from [edge trust](#edge-trust) (set `trust="proxies"` behind your own proxy).
+- At `level="region"` or above it reads the City database; at `country` it reads the Country database.
+- A directory is read with Django's `GeoIP2` file names (`GeoLite2-City.mmdb`, `GeoLite2-Country.mmdb`). For a file with another name (DB-IP), point `geoip_path` at the file.
+- A missing package or database logs one warning and leaves `request.geo` empty. A private or unknown address gives an empty `Geo`.
+- django-cfg does not download the database. You fetch and update it.
+
+<Callout type="warning">
+**MaxMind GeoLite2 licence.** The [EULA](https://www.maxmind.com/en/geolite2/eula) requires a free account and licence key, attribution, moving to each new release within 30 days, no sharing with third parties, and no locating of individuals or households. **DB-IP Lite** (CC BY 4.0) needs only attribution and no account; its `.mmdb` files work the same way.
+</Callout>
+
+## Cloudflare ranges: `cfg_edge_ranges`
+
+Cloudflare's published ranges ship inside django-cfg. The runtime never fetches them.
+
+```bash
+python manage.py cfg_edge_ranges            # count, source (bundled date or refreshed file) and every range
+python manage.py cfg_edge_ranges --refresh  # fetch api.cloudflare.com/client/v4/ips into the cache dir
+```
+
+`--refresh` refuses a list shorter than 10 ranges. A refreshed copy wins over the bundled one. Restart the app processes to pick it up. Cloudflare changes its ranges rarely and announces changes first; a range missing from your copy makes real traffic untrusted (geo goes empty, nothing breaks).
+
+## System checks
+
+| Code | When |
+|---|---|
+| `django_cfg.W040` | `edge.trust="secret"` with no `edge.secret`: no request is ever trusted |
+| `django_cfg.W041` | `edge.trust="cloudflare"`, the bundled ranges are older than 180 days and no refreshed copy exists. Run `cfg_edge_ranges --refresh` or update django-cfg |
+| `django_cfg.W042` | `visitor_geo.level="city"` with `coords_precision=2` (about 1 km, close to an address) |
+
+## Configuration reference
+
+`VisitorGeoConfig` (`DjangoConfig.visitor_geo`). Every field can come from the environment as `VISITOR_GEO__<FIELD>`, for example `VISITOR_GEO__LEVEL=region`.
+
+| Field | Default | Description |
+|---|---|---|
+| `level` | `"country"` | `off`, `country`, `region`, `city` |
+| `asn` | `False` | Read the network number from `asn_header` |
+| `asn_header` | `"X-Edge-ASN"` | Header your ASN Transform Rule writes |
+| `bot` | `False` | Read `cf-bot-score` / `cf-verified-bot` (Enterprise) |
+| `coords_precision` | `1` | Decimals kept on coordinates, 0 to 2 |
+| `fallback` | `"none"` | `none` or `geoip2` |
+| `geoip_path` | `None` | Directory or file of the `.mmdb` database |
+| `dev_override` | `None` | `GeoOverride(...)` for untrusted requests while `DEBUG` |
+
+`EdgeConfig` (`DjangoConfig.edge`):
+
+| Field | Default | Description |
+|---|---|---|
+| `trust` | `"cloudflare"` | `cloudflare`, `secret`, `proxies`, `none` |
+| `trusted_proxies` | loopback, private, CGNAT, link-local, ULA | CIDRs of your own proxies |
+| `secret` | `None` | Value of `X-Edge-Auth` for `trust="secret"` |
+| `secret_header` | `"X-Edge-Auth"` | Header that carries the secret |
+
+## See also
+
+- [Middleware](/core/middleware#realipmiddleware): `RealIPMiddleware` and `VisitorGeoMiddleware` in the stack
+- [Security settings](/configuration/security#edge-trust-and-client-ip): edge trust, Axes
+- [Login alerts](/features/built-in-apps/user-management/accounts/login-alerts): the sign-in location and history
+- [Geo reference data](/features/tools/geo): countries, states and cities as database rows

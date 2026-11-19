@@ -22,7 +22,7 @@ How the flow is protected, so you know what you do not have to build and what is
 ## What stays with you
 
 - `code` and `state` sit in the `/auth` URL for a moment; the frontend removes them from the address bar before the exchange. Never log them.
-- Rate limits need a shared cache (Redis) and the real client IP (`RealIPMiddleware` behind a proxy); `manage.py check` warns with W034 and W035.
+- Rate limits need a shared cache (Redis) and the real client IP (`RealIPMiddleware`, plus `edge.trusted_proxies` when your proxy is on a public address: [edge trust](/configuration/security#edge-trust-and-client-ip)); `manage.py check` warns with W034 and W035.
 - Keep the client secret in the environment, not in the repository.
 - A custom-domain address whose domain changed hands can inherit the account of the previous owner; Gmail addresses are not recycled. Staff are excluded by design.
 

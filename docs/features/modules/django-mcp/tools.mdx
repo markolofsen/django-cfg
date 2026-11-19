@@ -178,7 +178,7 @@ mcp.call profile=public tool=catalog_search ip=198.51.100.7 args=limit,query ms=
 |-------|---------|
 | `profile` | Name of the profile that answered, or `-` |
 | `tool` | Requested tool name |
-| `ip` | First `X-Forwarded-For` entry, else `REMOTE_ADDR`, else `-` |
+| `ip` | Client IP from `get_client_ip()` ([edge trust](/features/modules/django-visitor-geo#edge-trust)), else `-` |
 | `args` | Argument **names**, sorted and comma-joined, or `-` |
 | `ms` | Wall-clock execution time |
 | `bytes` | Length of the returned string (`outcome=ok` only) |
@@ -194,7 +194,7 @@ Three outcomes:
 - `outcome=error` at `WARNING`, carrying `error=<ExceptionClassName>` — the class name only, not the message, which may quote the arguments.
 - `outcome=refused` at `INFO`, when the profile does not serve the requested tool. These are the lines worth reading: an `operator_*` name posted at the public endpoint is the signal. A refusal is logged before execution, so it carries no `args`, `ms`, or `bytes`.
 
-`X-Forwarded-For` is preferred over `REMOTE_ADDR` because behind a proxy the latter would make every caller look like one address. It is a **log field, never an auth input**.
+The address is the one the edge trust rules accept: behind Cloudflare the visitor, never your proxy or a value the caller put in `X-Forwarded-For`. It is a **log field, never an auth input**.
 
 This is independent of `enable_audit_log` / `MCPAuditLog`, which records MCP operations to the database.
 

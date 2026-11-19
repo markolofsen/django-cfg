@@ -56,15 +56,11 @@ class PlainTextJSONParser(JSONParser):
 
 
 def _client_ip(request) -> str:
-    """Peer address, honouring X-Forwarded-For.
+    """Client address as resolved by the edge rules (core/edge.py). Used solely as hash input for the visitor id and
+    never stored. Before 2.4.x it was X-Forwarded-For[0], which behind Traefik was the Cloudflare edge."""
+    from django_cfg.core.edge import get_client_ip
 
-    NOTE: this is only trustworthy if a proxy you control sets the header. The IP
-    is used solely as hash input for the visitor id and is never stored.
-    """
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "") or ""
+    return get_client_ip(request)
 
 
 class CollectView(APIView):

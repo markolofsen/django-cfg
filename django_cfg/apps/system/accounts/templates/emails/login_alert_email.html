@@ -103,6 +103,12 @@
             <td class="detail-label" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;" width="120">Device</td>
             <td class="detail-value" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;">{{ device }}</td>
           </tr>
+          {% if location %}
+          <tr>
+            <td class="detail-label" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;">Location</td>
+            <td class="detail-value" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;">{{ location }}</td>
+          </tr>
+          {% endif %}
           <tr>
             <td class="detail-label" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;">IP address</td>
             <td class="detail-value" style="padding: 14px 0; border-bottom: 1px solid #d2d2d7;">{{ ip_address }}</td>

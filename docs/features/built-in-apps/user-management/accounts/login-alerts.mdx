@@ -1,6 +1,6 @@
 ---
 title: Login Alerts
-description: Apple-style login notification emails with device detection, IP tracking, and intelligent suppression rules.
+description: Apple-style login notification emails with device detection, sign-in location, and intelligent suppression rules. Every sign-in is recorded with its country and kept 90 days.
 ---
 
 import { Callout } from 'nextra/components'
@@ -18,12 +18,13 @@ class MyConfig(DjangoConfig):
     account_emails = AccountEmailsConfig(new_sign_in_email=True)  # default False
 ```
 
-Apple-style login notification emails sent when users log in from new devices or IPs. Detects potentially unauthorized access while suppressing false alarms with intelligent deduplication.
+Apple-style login notification emails sent when users sign in from a new device or a new country. Detects potentially unauthorized access while suppressing false alarms with intelligent deduplication.
 
 ## Features
 
 - **Device detection** — browser, OS, and device type parsed from User-Agent
-- **IP tracking** — real client IP via RealIPMiddleware
+- **Location** — country (city only at `visitor_geo.level="city"`) from [`request.geo`](/features/modules/django-visitor-geo)
+- **Real client IP** — resolved by the [edge trust](/features/modules/django-visitor-geo#edge-trust) rules, not taken from `X-Forwarded-For`
 - **Non-blocking** — all work deferred to background thread
 - **Smart suppression** — avoids alert fatigue with dedup rules
 - **Telegram integration** — optional admin notifications for staff logins
@@ -55,14 +56,16 @@ Alerts are suppressed in these cases (applied in order):
 | **Switch off** | `account_emails.new_sign_in_email` is `False` (the default); the sign-in is still logged |
 | **Test accounts** | `user.is_test_account=True` — never alerted |
 | **Registration grace** | First 24h after signup (OTP or OAuth) — a brand-new account never gets one |
-| **Recent same-device** | Same IP + browser fingerprint seen in past 24h — no repeat |
+| **Recent same-device** | Same country + browser + OS seen in the past 24h — no repeat. When the country is unknown, the IP stands in for it |
 
 ## Configuration
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Registration grace period | 24 hours | Suppress alerts for new users |
-| Dedup window | 24 hours | Same IP+browser won't trigger repeat alerts |
+| Dedup window | 24 hours | Same country + browser + OS won't trigger a repeat alert |
+
+A phone changes IP all day; a new country is what a stolen session looks like. So an IP change inside one country does not alert again within 24 hours, and a sign-in from a new country always does. Behind Cloudflare the country comes from the edge; elsewhere it is empty unless you set up the [geoip2 fallback](/features/modules/django-visitor-geo#fallback-without-cloudflare-geoip2), and dedup falls back to the IP.
 
 ## Email Template
 
@@ -74,7 +77,8 @@ Context variables:
 |----------|-------------|
 | `user` | CustomUser instance |
 | `device` | Friendly label (e.g., "Chrome on Windows (mobile)") |
-| `ip_address` | Client IP address |
+| `location` | `"Tbilisi, Georgia"`, `"Georgia"` or `""`; the Location row is shown only when it is set |
+| `ip_address` | Client IP address (`"Unknown"` when none was resolved) |
 | `login_time` | Formatted timestamp ("April 03, 2026 at 14:32 UTC") |
 | `project_name` | `DjangoConfig.project_name` |
 | `site_name`, `site_url`, `support_email`, `logo_url` | From the user's [site](/configuration/sites); templates read `site_name` |
@@ -88,8 +92,27 @@ The sibling letter "Security Alert: Profile Updated" is also opt-in: `AccountEma
 
 ## How It Works
 
-1. `send_login_alert(user, request)` builds a `LoginContext` from the request (IP, User-Agent, fingerprint)
+1. `send_login_alert(user, request)` builds a `LoginContext` from the request (IP, location, User-Agent, fingerprint)
 2. Suppression rules are evaluated in order
 3. If not suppressed, an email is sent via `DjangoEmailService`
-4. Login activity is recorded with fingerprint for future dedup
+4. Login activity is recorded with the fingerprint and the location columns, for future dedup
 5. All steps run in a background thread — auth response is never delayed
+
+## Sign-in history
+
+Every sign-in is a `UserActivity` row (`activity_type="login"`), written whether or not an email is sent. Besides `ip_address` and `user_agent` it has location columns, filled from `request.geo` at the time:
+
+| Column | Holds |
+|---|---|
+| `country` | ISO 3166-1 alpha-2, indexed; `""` when unknown |
+| `region_code` | Region code, at `visitor_geo.level="region"` or above |
+| `city` | City, only at `visitor_geo.level="city"` |
+| `timezone` | IANA time zone, at `region` or above |
+| `edge_trusted` | The request came through the trusted edge, so the IP and country are real |
+
+They are columns, so "sign-ins from GE" is a plain filter: `UserActivity.objects.filter(country="GE")`. The admin's activity list has a Location column and filters for country and `edge_trusted`. The columns come with migration `django_cfg_accounts 0029_user_activity_geo`; run `migrate`.
+
+**Retention.** A daily RQ job, `cleanup_user_activity`, deletes activity rows (and the IPs on them) older than 90 days. It is part of the RQ auto-cleanup schedules (`DjangoRQConfig.enable_auto_cleanup`, on by default), so it runs where `rqcron` runs.
+
+Rows written before this release hold whatever `X-Forwarded-For[0]` was. Behind Traefik and Cloudflare that was a Cloudflare edge address, not the user's; they age out with the retention.
+

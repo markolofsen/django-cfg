@@ -17,6 +17,8 @@ They are inputs to a one-way hash and are then discarded. There is no column hol
 visitor_id = uuid5(sha256(f"{site_id}|{ip}|{user_agent}|{salt}"))
 ```
 
+`ip` is the client address resolved by the [edge trust](/features/modules/django-visitor-geo#edge-trust) rules. Up to django-cfg 2.4.100 it was `X-Forwarded-For[0]`, which behind Traefik and Cloudflare was the Cloudflare edge, so visitor ids change once when a project upgrades.
+
 The `salt` is derived from `SECRET_KEY` and **rotates daily**. After rotation, the same person is a new visitor — which bounds how long any pseudonym can be correlated.
 
 This is a deliberately stronger posture than the common implementations:

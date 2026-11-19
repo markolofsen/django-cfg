@@ -34,9 +34,11 @@ def _is_ip_limited(request, group: str, rate: str) -> bool:
 
 
 def _consent_jurisdiction_hint(request) -> str:
-    """Normalized CF-IPCountry header (strip/upper, 2-8 chars) or ''."""
-    raw = (request.headers.get("CF-IPCountry") or "").strip().upper()
-    return raw if 2 <= len(raw) <= 8 else ""
+    """The visitor's ISO-2 country from `request.geo` (Cloudflare's CF-IPCountry, believed only through the trusted
+    edge, core/edge.py), or '' when unknown. A client reaching the origin directly cannot pick its jurisdiction."""
+    from django_cfg.modules.django_visitor_geo import get_geo
+
+    return get_geo(request).country
 
 
 # Jurisdictions where a pre-ticked marketing checkbox is not valid consent

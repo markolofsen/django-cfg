@@ -35,16 +35,14 @@ def _caller_ip(context) -> str:
 
     A shared key or a machine account does not identify the caller, so the address
     is the only thing distinguishing one caller from another when reading the log after the
-    fact. ``X-Forwarded-For`` is trusted here only because this endpoint sits
-    behind the deployment's own proxy; it is a log field, never an auth input.
+    fact. Resolved by the edge rules (core/edge.py); a log field, never an auth input.
     """
     request = getattr(context, "request", None)
     if request is None:
         return "-"
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR") or "-"
+    from django_cfg.core.edge import get_client_ip
+
+    return get_client_ip(request) or "-"
 
 # Register introspection tools
 tool_registry.register(list_apps_tool)

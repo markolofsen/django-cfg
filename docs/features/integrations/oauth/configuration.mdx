@@ -83,7 +83,7 @@ The same findings run as Django system checks (`manage.py check`, `runserver`, `
 | `django_cfg.W032` | the single-site `site_url` host is missing from `security_domains` (declared sites are allowed automatically) |
 | `django_cfg.W033` | the Google client id does not end with `.apps.googleusercontent.com` |
 | `django_cfg.W034` | in production, the default cache is not Redis: sign-in rate limits are not shared between workers |
-| `django_cfg.W035` | in production, `RealIPMiddleware` is not installed: behind a proxy every client shares one IP and the rate limit trips for all |
+| `django_cfg.W035` | in production, `RealIPMiddleware` is not installed: behind a proxy every client shares one IP and the rate limit trips for all (see [edge trust](/configuration/security#edge-trust-and-client-ip)) |
 
 W031 to W035 only apply when at least one provider is enabled.
 

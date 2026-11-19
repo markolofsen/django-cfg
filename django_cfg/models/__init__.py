@@ -41,6 +41,8 @@ from .django.constance import ConstanceConfig, ConstanceField
 from .django.currency import CurrencyConfig
 from .django.payments import PaymentsConfig
 from .django.admin_access import AdminAccessConfig
+from .django.edge import EdgeConfig
+from .django.visitor_geo import GeoOverride, VisitorGeoConfig
 from .django.django_rq import DjangoRQConfig, RQQueueConfig
 from .django.storage import FileCleanupConfig, StorageConfig
 from .django.storage_backend import S3StorageConfig
@@ -91,6 +93,9 @@ __all__ = [
     "CurrencyConfig",
     "PaymentsConfig",
     "AdminAccessConfig",
+    "EdgeConfig",
+    "GeoOverride",
+    "VisitorGeoConfig",
     "DjangoRQConfig",
     "RQQueueConfig",
     "GeoConfig",
