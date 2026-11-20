@@ -106,6 +106,8 @@ def ts_extras_list(config: OpenAPIConfig) -> list[str]:
         extras.append("events")
     if config.generate_sse_streams:
         extras.append("streams")
+    if config.generate_realtime:
+        extras.append("realtime")
     return extras
 
 

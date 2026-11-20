@@ -1,0 +1,135 @@
+---
+title: Deploying Realtime
+description: Run django-cfg realtime in production — uvicorn flags, Docker stop_grace_period, Traefik, Cloudflare idle timeouts, Redis requirements, epochs and recovery, a separate /ws container, the configuration reference and system checks.
+---
+
+# Deployment
+
+The socket is served by the uvicorn process that already serves Django. Production needs four things right: the uvicorn flags, a shutdown grace period, a proxy that keeps idle sockets open, and Redis.
+
+## uvicorn
+
+```bash
+pip install 'django-cfg[realtime]'      # uvicorn>=0.53, websockets
+
+uvicorn api.asgi:application --workers 4 \
+  --ws-max-size 64000 \
+  --ws-per-message-deflate false \
+  --timeout-graceful-shutdown 25
+```
+
+| Flag | Why |
+|---|---|
+| `--ws-max-size` = `max_frame_bytes` | uvicorn buffers a whole frame (16 MiB by default) before the app can refuse it. Nothing syncs the two values; set both |
+| `--ws-per-message-deflate false` | About 50 KiB less memory per idle socket; hint frames gain nothing from compression |
+| `--timeout-graceful-shutdown` | Unset, uvicorn waits forever for open sockets on shutdown. On SIGTERM uvicorn closes every open socket with 1012 (tested with both `websockets` implementations), then runs the lifespan shutdown; clients reconnect, spread over 0–5 s. A `kill -9`, or a parent process killed before uvicorn, drops sockets without a close frame: the browser reports 1006 |
+| `--ws-ping-interval` / `--ws-ping-timeout` | Keep the defaults (20 s / 20 s). This is server-side liveness: an unanswered protocol ping closes 1011 |
+
+uvicorn 0.53 is the floor: below it there is no write flow control for slow clients and a keep-alive timer that drops upgraded sockets (system check `W050`).
+
+## Docker
+
+Give the container a `stop_grace_period` of the graceful-shutdown timeout plus 5 s. Docker's default of 10 s sends SIGKILL before uvicorn has closed its sockets.
+
+```yaml
+services:
+  api:
+    command: uvicorn api.asgi:application --workers 4 --ws-max-size 64000
+             --ws-per-message-deflate false --timeout-graceful-shutdown 25
+    stop_grace_period: 30s
+```
+
+A Django restart drops every socket. Clients come back on their own (1012, then a jittered reconnect and replay with `since`); there is nothing to drain by hand.
+
+## A separate `/ws` container
+
+`--limit-max-requests` recycles a worker after N HTTP requests, and every socket on that worker goes with it (WebSocket upgrades do not count toward the limit). A project that recycles workers, or wants HTTP deploys to leave sockets alone, runs **the same image** as a second container for `/ws`:
+
+```yaml
+services:
+  ws:
+    image: myproject-api:latest           # the same image and env as api
+    command: uvicorn api.asgi:application --workers 2 --ws-max-size 64000
+             --ws-per-message-deflate false --timeout-graceful-shutdown 25   # no --limit-max-requests
+    stop_grace_period: 30s
+    labels:                               # plus your usual entrypoint, TLS and service labels
+      - traefik.http.routers.myproject-ws.rule=Host(`api.example.com`) && PathPrefix(`/ws`)
+      - traefik.http.routers.myproject-ws.priority=100
+```
+
+Both containers run the same settings with `realtime.enabled`. A publish from the API container, an RQ worker or a management command reaches the `/ws` container through Redis. There is no separate server command and no second code base.
+
+## Traefik
+
+WebSockets pass through a plain HTTP router; no middleware is needed. Check the entrypoint timeouts against a socket that stays idle except for the client's ping: hold one open for 5 minutes through the real proxy. If it dies at a fixed interval, raise that entrypoint timeout above it.
+
+## Cloudflare
+
+- WebSockets are proxied on every plan.
+- Cloudflare closes a socket that carries no data for a while and publishes no figure for it; around 100 s is commonly reported. The client sends an app-level `ping` every `ping_interval` (25 s), which keeps data flowing. Keep `ping_interval` well under the idle limit.
+- Cloudflare sees only the handshake as an HTTP request: WAF and rate-limit rules never see frames. Frame size, frame rate and subscription limits are the module's own (`max_frame_bytes`, `max_frames_per_second`, `max_subscriptions`). A rate rule on `/ws` handshakes per IP must allow a reconnect wave after a deploy from users behind one NAT.
+- Argo is not compatible with WebSockets; keep it off on realtime zones.
+- Cloudflare restarts edges during its own releases, which drops sockets. Reconnect is part of the protocol, not an edge case.
+
+## Redis
+
+`DjangoConfig.redis_url` selects the Redis Streams backend (`backend="auto"`). Without it every process has its own memory backend, and a publish from another worker or an RQ job never reaches the sockets: `E050` outside DEBUG.
+
+- **Streams and Lua.** One Lua script assigns the offset and writes the topic's history and the shared bus together, so its keys must live on one Redis: a single instance (with replicas if you like), not Redis Cluster.
+- **Keys.** `rt:bus` (every publication and kick, capped near 10 000 entries), `rt:m:<topic>` (epoch and sequence, expires `meta_ttl` after the last publish), `rt:h:<topic>` (replay history, `history` entries, expires `history_ttl` after the last publish).
+- **Connections.** Each process holds one connection blocked on the bus (socket timeout above the 5 s block, TCP keepalive) and a blocking pool of `redis_pool_size` (20) for subscribes and replays: a burst larger than the pool waits up to `redis_pool_timeout` for a connection instead of failing. `publish()` uses a sync client.
+
+### Epochs and `recovered`
+
+Offsets are `"<epoch>:<seq>"`. The epoch is chosen when a topic's metadata is created and changes only when that metadata was lost: it expired after `meta_ttl`, or Redis lost data (a restart without persistence, an eviction, a flush). A new epoch means history is gone, never "nothing new".
+
+A subscriber that reconnects with `since` gets `recovered: true` and the missed messages only when the epoch matches, `since` is not ahead of the head, and the history still holds the message right after `since`. Otherwise it gets `recovered: false` and no messages, and the client refetches over REST. So losing Redis data is safe: clients see a gap and refetch; nothing is replayed wrongly. A live subscription that observes a new epoch gets a second `sub_ok` with `recovered: false`, then the message that revealed it. Metadata created by a read (a subscribe before any publish) lives `history_ttl` and discards any history a lost epoch left behind; the first publish extends it to `meta_ttl`.
+
+If the bus is trimmed past a process's reader (Redis was away longer than the bus holds), every local subscription recovers through the same rule, eight at a time; a recovery that fails answers `recovered: false`. A bus record that cannot be parsed is logged and skipped, and the reader moves on.
+
+## Database pool
+
+`authenticate` and every `allow` run in a pool of `db_threads` (4) threads per process, never on the event loop. That is also the realtime share of the database pool: size the pool for the HTTP threads plus `db_threads`. During a reconnect wave the pool queues work instead of opening hundreds of connections; `hook_timeout` bounds each call.
+
+## Configuration reference
+
+`DjangoConfig.realtime: RealtimeConfig`; every field also reads `REALTIME__<FIELD>`.
+
+| Field | Default | |
+|---|---|---|
+| `enabled` | `False` | Serve the endpoint, install the module app and `RealtimeCidMiddleware`. Off, `publish()` still validates and appends |
+| `path` | `/ws` | An absolute path |
+| `ping_interval` | 25 | Seconds between the client's `ping`, sent in `hello` (5–300) |
+| `auth_timeout` | 5 | Seconds the server waits for the first frame |
+| `default_history` | 100 | Messages kept per topic when the topic sets no `history`. At most `send_queue` − 8, so a full replay fits the queue |
+| `history_ttl` | 300 | Seconds a topic's history lives after its last publish |
+| `meta_ttl` | 86400 | Seconds a topic's epoch and offset live after its last publish. At least `history_ttl` |
+| `max_connections_per_user` | 10 | Per process; anonymous sockets count per client IP. Then 4429 |
+| `max_subscriptions` | 100 | Per socket. Then `sub_err limit` |
+| `max_frame_bytes` | 64000 | Largest inbound frame; also pass it to `--ws-max-size` |
+| `max_frames_per_second` | 20 | Inbound, per socket. Then 4429 |
+| `send_queue` | 256 | Outbound frames buffered per socket. Then 1013 |
+| `db_threads` | 4 | Hook threads per process |
+| `hook_timeout` | 5.0 | Seconds an auth or `allow` hook may take. Then 4500 (auth) or `sub_err timeout` |
+| `reauth_interval` | 900 | Seconds between credential re-checks; `0` turns it off |
+| `allowed_origins` | `[]` | Origins on top of the same origin and `CSRF_TRUSTED_ORIGINS`. Comma-separated or a JSON list in env |
+| `redis_pool_size` | 20 | Redis connections per worker for subscribes and replays |
+| `redis_pool_timeout` | 5.0 | Seconds a subscribe waits for a free Redis connection |
+| `backend` | `auto` | `auto`: Redis when `redis_url` is set, else memory. `redis`, `memory` |
+
+## System checks
+
+| Code | When |
+|---|---|
+| `django_cfg.E050` | Realtime is enabled outside DEBUG without Redis: publishes from other processes never reach the sockets |
+| `django_cfg.E051` | `backend="redis"` without `DjangoConfig.redis_url` |
+| `django_cfg.W050` | uvicorn older than 0.53 |
+| `django_cfg.W051` | uvicorn installed without `websockets` or `wsproto`: every handshake fails |
+| `django_cfg.W052` | An `invalidated_by` topic whose name has neither `:` nor `.`: no client cache key can carry it |
+
+## Watching it
+
+- Each socket logs one line when it opens and one when it closes: `realtime: closed cid=… user=… code=… duration=…s in=… out=… peak_subs=…`. The close code tells you why (see [close codes](./protocol#close-codes)).
+- `python manage.py realtime tail <topic> …` prints what subscribers receive, live.
+- `python manage.py realtime topics` shows the backend, path and every declared topic.
+- In the browser, `RealtimePanel` shows the socket, the topics with their offsets and the last frames ([Frontend](./frontend#debug-panel)).

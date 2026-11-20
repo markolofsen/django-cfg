@@ -42,7 +42,30 @@ class CustomTokenBlacklistView(TokenBlacklistView):
     Blacklists the posted refresh token so it can never mint another access
     token. Called best-effort by the client's logout — without it, "logout"
     is purely client-side and a stolen refresh token survives until expiry.
+    Then ``user_sessions_revoked`` closes the user's realtime sockets: the
+    other devices refresh their own tokens and reconnect, this one stays out.
     """
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            _announce_logout(request.data.get("refresh"))
+        return response
+
+
+def _announce_logout(raw) -> None:
+    from rest_framework_simplejwt.exceptions import TokenError
+    from rest_framework_simplejwt.settings import api_settings as jwt_settings
+    from rest_framework_simplejwt.tokens import RefreshToken
+
+    from .signals import user_sessions_revoked
+
+    try:
+        user_id = RefreshToken(raw, verify=False).get(jwt_settings.USER_ID_CLAIM)
+    except (TokenError, TypeError):
+        return
+    if user_id is not None:
+        user_sessions_revoked.send(sender=CustomTokenBlacklistView, user_ids=[user_id])
 
 
 token_patterns = [

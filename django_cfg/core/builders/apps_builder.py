@@ -165,6 +165,10 @@ class InstalledAppsBuilder:
         if self.config.notion and self.config.notion.enabled:
             apps.append("django_cfg.modules.django_notion")
 
+        # WebSocket topics: topic autodiscovery (`realtime.py`) and the `realtime` command
+        if self.config.realtime and self.config.realtime.enabled:
+            apps.append("django_cfg.modules.django_realtime")
+
         return apps
 
     def _get_extension_apps(self) -> List[str]:

@@ -1,0 +1,121 @@
+---
+title: Publishing Realtime Events
+description: publish() after the transaction commits, model hints with broadcasts(), touch() for writes that send no signal, suppress() for imports, and X-Realtime-Cid so a sender is not echoed.
+---
+
+# Publishing
+
+Everything here is sync and works from any Django code: a view, a signal receiver, an admin action, an RQ job, a management command.
+
+```python
+from django_cfg.modules.django_realtime import broadcasts, publish, suppress, touch
+```
+
+## `publish()`
+
+```python
+publish(target, event=None, *, on_commit=True, using=None, exclude_sender=True) -> str | None
+```
+
+| Argument | |
+|---|---|
+| `target` | A concrete name (`"orders:42"`), a bound topic (`orders(order_id=42)`) or a parameterless topic (`ping`) |
+| `event` | An instance of the topic's model, a dict validated against it, or `None` (an empty dict) |
+| `on_commit` | Inside an atomic block, append after the commit (default) |
+| `using` | The database alias whose transaction to wait for |
+| `exclude_sender` | Skip the socket of the request that caused the publish (see [No echo](#no-echo-x-realtime-cid)) |
+
+It raises at call time, never later:
+
+- `UnknownTopic`: no declared topic matches, or a topic with parameters was passed uncalled;
+- `InvalidEvent`: the event does not validate.
+
+Both subclass `RealtimeError`, exported from the module.
+
+**When it appends.** Inside an atomic block (with `on_commit=True`) the append is registered with `transaction.on_commit(..., robust=True)`: a rollback sends nothing, the offset is not known yet and the call returns `None`, and a backend failure after the commit is logged by Django instead of raised. Outside a transaction, or with `on_commit=False`, it appends now, returns the offset (`"<epoch>:<seq>"`) and raises on a backend failure.
+
+```python
+from django.db import transaction
+
+with transaction.atomic():
+    order.status = "paid"
+    order.save()
+    publish(orders(order_id=order.pk), OrderEvent(kind="paid"))  # sent after the commit
+```
+
+Publish facts the subscriber may read, nothing more. A hint (`Hint`, the default event) plus a REST refetch is the safest shape: the REST endpoint applies its own permissions again.
+
+## Model hints: `broadcasts()`
+
+```python
+broadcasts(model, topic, *, params=None, event=None, on=("save", "delete")) -> Broadcast
+```
+
+Connects `post_save` and `post_delete` of `model` and sends a hint on `topic` after each committed change. Declare it in the same `realtime.py`:
+
+```python
+# apps/orders/realtime.py
+order = topic("orders:{order_id:int}", allow=owns_order)
+orders_all = topic("orders.all", allow=lambda user: user.is_staff)
+
+broadcasts(Order, order, params=lambda o: {"order_id": o.pk})
+broadcasts(Order, orders_all)
+broadcasts("orders.Line", lambda line: order(order_id=line.order_id))  # a topic function
+```
+
+- `model` is a model class or `"app_label.ModelName"`.
+- `topic` is a `Topic` or a function `instance -> topic name or bound topic`.
+- Parameters of a `Topic` come from `params(instance)`; without it, from the model fields of the same names (`order_id` on a model with an `order_id` field); a single parameter with no such field falls back to the pk. Otherwise the declaration raises.
+- `event(instance, action)` builds the payload, `action` being `"save"` or `"delete"`. It is required when the topic's event model has required fields.
+- `on` limits the signals: `("save",)` or `("delete",)`.
+- Saves from `loaddata` (`raw=True`) send nothing.
+- `Broadcast.disconnect()` removes the receivers.
+
+**One message per topic per transaction.** Inside a transaction every change to the same concrete topic folds into one pending message, appended after the commit; the last event wins. A rolled-back savepoint takes its own hints with it. A bulk import of 500 rows in one transaction sends one hint, not 500. Outside a transaction each change appends at once.
+
+## Writes that send no signal: `touch()`
+
+`QuerySet.update()`, `bulk_create`, `bulk_update`, database-level cascades and raw SQL send no `post_save`. Announce them yourself:
+
+```python
+with transaction.atomic():
+    Order.objects.filter(customer=customer).update(status="archived")
+    touch(orders_all)            # folds with the transaction's other hints on orders.all
+```
+
+```python
+touch(target, event=None, *, using=None) -> str | None
+```
+
+`touch()` folds exactly like `broadcasts()`: one message per topic per transaction. It returns the offset when it appended at once (no transaction), else `None`.
+
+## Muting receivers: `suppress()`
+
+```python
+with transaction.atomic(), suppress():
+    import_orders(rows)          # thousands of saves, no per-row receivers
+    touch(orders_all)            # one hint for the whole import
+```
+
+`suppress()` mutes every `broadcasts()` receiver in the current thread or task, and nests. It does not mute `touch()` or `publish()`.
+
+## No echo: `X-Realtime-Cid`
+
+Each socket gets a connection id in its `hello` frame (`cid`). A write request that carries it back as `X-Realtime-Cid` is the sender: its own socket does not receive the resulting message, so the tab that saved does not refetch what it already has. Other tabs of the same user still do.
+
+- `RealtimeCidMiddleware` (installed when `realtime.enabled`) keeps the header as a claim for the request. The claim is checked when the publish reads it, after DRF authenticated the request: the id must verify for that request's user (or, for a visitor, its client IP), because `hello.cid` carries an HMAC of the socket's owner. Anything else is ignored, so one user cannot mute another user's socket by sending its id.
+- `x-realtime-cid` is in django-cfg's CORS allowed headers.
+- `publish()` skips the sender unless `exclude_sender=False`. `broadcasts()` and `touch()` always skip it; when two senders' changes fold into one message, neither is skipped.
+- Every other subscriber gets the message with `origin_cid` set, so a client can tell its own changes from others'.
+
+The generated client sends the header on POST, PUT, PATCH and DELETE once a provider is installed; see [Frontend](./frontend#no-echo-for-your-own-writes).
+
+## From the command line
+
+```bash
+python manage.py realtime topics                       # patterns, event model, access, history, group, backend
+python manage.py realtime publish orders:42 '{"kind": "paid"}'   # validate and append now, print the offset
+python manage.py realtime tail orders:42 demo.ping      # print new messages until Ctrl-C (--count N to stop)
+```
+
+`publish` uses `on_commit=False` and raises a `CommandError` on an unknown topic or an invalid event. `tail` reads the delivery bus, so it shows what a subscriber would receive, with each message's offset and `origin_cid`.

@@ -17,6 +17,7 @@ Django-CFG ships a suite of middleware classes covering authentication enhanceme
 | `VisitorGeoMiddleware` | `django_cfg.modules.django_visitor_geo.middleware` | `visitor_geo.level` is not `"off"` (after `RequestIdMiddleware`) |
 | `TimezoneMiddleware` | `timezone` | Always |
 | `SiteMiddleware` | `site` | More than one entry in `DjangoConfig.sites` |
+| `RealtimeCidMiddleware` | `django_cfg.modules.django_realtime.middleware` | `realtime.enabled` |
 | `UserActivityMiddleware` | `user_activity` | Always (accounts app active) |
 | `PublicEndpointsMiddleware` | `public_endpoints` | Always |
 | `ConnectionPoolCleanupMiddleware` | `pool_cleanup` | Always (must be last, WSGI) |
@@ -190,6 +191,14 @@ Added only when `DjangoConfig.sites` declares more than one site. The value is l
 def my_view(request):
     return JsonResponse({"site": request.site.key})
 ```
+
+---
+
+## RealtimeCidMiddleware
+
+**Purpose:** reads `X-Realtime-Cid` (the realtime connection id a tab got in its `hello` frame) into a context variable for the request, so a `publish()` caused by the request skips that tab's own socket.
+
+**Active when:** `realtime.enabled`. The builder adds `django_cfg.modules.django_realtime.middleware.RealtimeCidMiddleware` before `UserActivityMiddleware`. A value that is not a connection id is ignored; `x-realtime-cid` is in the CORS allowed headers. See [Realtime: no echo](/features/modules/django-realtime/publishing#no-echo-x-realtime-cid).
 
 ---
 

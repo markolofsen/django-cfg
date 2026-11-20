@@ -1,0 +1,80 @@
+---
+title: Realtime Wire Protocol v1
+description: Reference for the django-cfg realtime wire protocol v1 — client and server frames, the auth window, ordering, offsets and recovery, error and close codes.
+---
+
+# Wire protocol v1
+
+The contract between `django_realtime` and `@djangocfg/realtime`. You need it only to write another client, or to read frames in the debug panel. The server defines it in `django_realtime/protocol.py`; `hello.v` is `1`.
+
+JSON text frames, each an object with a string `op`. Unknown fields are ignored. Binary frames are answered with `error bad_frame`.
+
+## Client → server
+
+| `op` | Fields | |
+|---|---|---|
+| `auth` | `token?` (1–8192 chars) | First frame only. With `token`, authenticates as `Authorization: Bearer <token>`. Without, the handshake's cookies and headers decide at once |
+| `sub` | `id` (int, client-chosen), `topic` (≤ 512), `since?` (an offset, ≤ 128) | Subscribe. With `since`, replay everything after it. A repeated `sub` for the same topic replaces the earlier one |
+| `unsub` | `topic` | Unsubscribe. Idempotent |
+| `ping` | | Every `hello.ping` seconds; answered with `pong` |
+
+## Server → client
+
+| `op` | Fields | |
+|---|---|---|
+| `hello` | `v`, `user` (id or `null`), `ping` (seconds), `cid` | Auth resolved. `cid` is this connection's id, bound to its user (or, for a visitor, its IP): send it as `X-Realtime-Cid` on writes |
+| `sub_ok` | `id`, `topic`, `offset`, `recovered?` | Subscribed; `offset` is the topic's head. `recovered` is present only when the `sub` carried `since` |
+| `sub_err` | `id`, `topic`, `code` | Refused: `forbidden`, `unknown_topic`, `invalid`, `limit`, `timeout`. Retry only `timeout`. Also sent for a live subscription the periodic re-check no longer allows (`forbidden`): it is dropped |
+| `msg` | `topic`, `offset`, `data`, `origin_cid?` | A publication. `origin_cid` is set when the publishing request carried `X-Realtime-Cid` |
+| `pong` | | Reply to `ping` |
+| `error` | `code`, `detail?` | `bad_json`, `bad_frame`, `unknown_op`, `too_large`, `auth_late`. The socket stays open |
+
+`recovered`, `detail` and `origin_cid` are left out when unset; `user: null` is sent. The server never sends `ping` frames: liveness of the client is uvicorn's protocol-level ping.
+
+## Names
+
+- A topic name matches `^[a-z0-9_.-]+(:[A-Za-z0-9_.-]+)*$` (`orders:42`, `demo.ping`). A `sub` for anything else is `sub_err invalid`; a valid name no topic declares is `sub_err unknown_topic`.
+- A connection id matches `^[A-Za-z0-9]{8,32}$`; the server issues 32 hex characters (a random half and an HMAC of it with the socket's user or visitor IP). A request's `X-Realtime-Cid` counts only when it verifies for that request's own user or IP.
+
+## The auth window
+
+1. The server accepts the handshake, then checks `Origin` (refused: close 4403). From here on the socket receives kicks; one that arrives during the handshake is applied as soon as the identity is known.
+2. It waits up to `auth_timeout` (5 s) for the first frame. Clients always send `auth` first. Authentication starts only then.
+   - `auth` with a token: authenticate with it.
+   - `auth` without a token, or any other first frame (a `sub`): settle on the handshake's credentials. A first `sub` is processed right after `hello`.
+   - No first frame: `hello` follows when the handshake identified a user or some topic admits visitors; otherwise close 4408.
+3. A credential that was presented and refused (a bad or expired token in `auth`, a stale JWT cookie) closes 4419. A visitor with no credential, when no declared topic admits visitors, is closed with 4401.
+4. `hello`. A later `auth` is `error auth_late`.
+
+An auth hook slower than `hook_timeout` closes 4500.
+
+## Order per subscription
+
+`sub_ok`, then the replayed `msg`s (when recovered), then live `msg`s. Messages published while the subscription was being set up are held and delivered after the replay, without duplicates.
+
+## Offsets and recovery
+
+Offsets are `"<epoch>:<seq>"`, opaque to the client: store the last one per topic and send it back as `since`.
+
+- Within one epoch `seq` grows by one per publish.
+- A new epoch means the topic's history was lost (its metadata expired after `meta_ttl`, or Redis lost data). It never means "nothing new".
+- `recovered: true` only when the epoch matches, `since` is not ahead of the head, and the history still holds the message right after `since` (or `since` is the head). Otherwise `recovered: false` and no replay: **refetch over REST**.
+- A replay that would not fit the socket's send queue (less a small margin) is not sent: `recovered: false`. So is a replay the server could not read (Redis away).
+- `sub_ok` can arrive again for a live subscription, with `recovered: false`, when the server saw a new epoch or lost bus records while the subscription was open. Treat it as a gap: adopt the offset and refetch. On a new epoch the message that revealed it follows right after, as the first of the new epoch.
+- A publication that came from this connection (`origin_cid` = own `cid`) is not delivered, but the subscription's offset advances past it, so a later replay does not resend it.
+
+## Close codes
+
+| Code | Meaning | Client |
+|---|---|---|
+| 4401 | No credential, and no topic admits visitors | Stop until the auth state changes (login) |
+| 4403 | Origin refused | Stop |
+| 4408 | No first frame within `auth_timeout` | Reconnect |
+| 4419 | A credential was presented and refused (expired or invalid token), or it was revoked (logout, refresh-token logout, `logout_all`, a new `tokens_valid_after`, password change, deactivation, failed re-check) | Refresh the token over HTTP, reconnect at once; stop if no session is left |
+| 4429 | Connection limit, or more than `max_frames_per_second` inbound | Retry with a long backoff (30 s floor): another tab may free a slot |
+| 4500 | Server error | Reconnect |
+| 1011 | Keepalive timeout (sent by uvicorn) | Reconnect, first retry after a random 0–5 s |
+| 1012 | Server restart | Reconnect, first retry after a random 0–5 s |
+| 1013 | The client fell behind: its send queue overflowed | Reconnect, first retry after a random 0–5 s, replay with `since` |
+
+A WebSocket scope on another path, or with realtime disabled, is refused before the handshake completes: the app closes with 1008 before accepting, and uvicorn answers the upgrade with HTTP 403. The client sees a failed connection with no close code and retries with backoff. A failed handshake never counts toward giving up.

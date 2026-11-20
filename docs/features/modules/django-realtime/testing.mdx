@@ -1,0 +1,105 @@
+---
+title: Testing Realtime
+description: Test realtime code without a server or Redis — realtime_outbox like mail.outbox, allow() as a plain function, WebSocketDriver over the raw ASGI app with inline hooks, and the frontend mock server.
+---
+
+# Testing
+
+Realtime code is tested in three layers, cheapest first: what was published, who may subscribe, and the socket itself. None of them needs a running server, Redis or Channels.
+
+```python
+from django_cfg.modules.django_realtime.testing import WebSocketDriver, realtime_outbox
+```
+
+## What was published: `realtime_outbox`
+
+```python
+def test_paid_order_notifies(order, django_capture_on_commit_callbacks):
+    with realtime_outbox() as outbox, django_capture_on_commit_callbacks(execute=True):
+        pay(order)                                   # calls publish(...) or saves a broadcast model
+    assert outbox == [(f"orders:{order.pk}", OrderEvent(kind="paid"))]
+```
+
+- The block gets a fresh in-memory backend; every **appended** publish is recorded in order as `Published(topic, event)`, a named tuple, so it compares equal to `(name, event)`.
+- `outbox.topics()` lists the names, `outbox.clear()` empties it, `len(outbox)` and indexing work.
+- **Inside a `TestCase` or a `django_db` test, the publish waits for a commit that never comes.** Wrap the code in `self.captureOnCommitCallbacks(execute=True)` (pytest-django: `django_capture_on_commit_callbacks`). Without it the outbox stays empty.
+- `broadcasts()` folding shows here too: ten saves in one transaction record one message.
+
+## Who may subscribe: `allow`
+
+`allow(user, **params)` is a plain sync function. Test it with the ORM, no socket:
+
+```python
+def test_only_the_owner_may_subscribe(order, other_user):
+    assert orders.is_allowed(order.owner, {"order_id": order.pk})
+    assert not orders.is_allowed(other_user, {"order_id": order.pk})
+    assert not orders.is_allowed(AnonymousUser(), {"order_id": order.pk})   # not an anonymous topic
+```
+
+`Topic.is_allowed(user, params)` is what the socket runs: the anonymous rule first, then your `allow`.
+
+## The socket: `WebSocketDriver`
+
+`WebSocketDriver` speaks ASGI to the realtime handler directly: no server, no Channels, no `WebsocketCommunicator`.
+
+```python
+from asgiref.sync import async_to_sync
+
+
+def test_owner_gets_events(order, token):
+    async def scenario():
+        with realtime_outbox():                        # one memory backend for the socket and publish()
+            async with WebSocketDriver() as ws:
+                await ws.send({"op": "auth", "token": token})
+                assert (await ws.receive())["op"] == "hello"
+                await ws.send({"op": "sub", "id": 1, "topic": f"orders:{order.pk}"})
+                assert (await ws.receive())["op"] == "sub_ok"
+                publish(orders(order_id=order.pk), OrderEvent(kind="paid"), on_commit=False)
+                assert (await ws.receive_until("msg"))["data"] == {"kind": "paid"}
+
+    async_to_sync(scenario)()
+```
+
+| Member | |
+|---|---|
+| `WebSocketDriver(app=None, *, path="/ws", headers=(), client=("127.0.0.1", 50000), config=None, registry=None, hub=None, inline=True)` | Without `app`, a bare realtime handler; pass your `realtime_asgi(...)` application to test routing too |
+| `send(frame)`, `send_bytes(data)` | A dict is sent as JSON; a string as is |
+| `receive(timeout=2.0)` | The next frame as a dict; raises `Closed` (with `.code`) when the server closes |
+| `receive_until(op)` | Skips frames until one with that `op` |
+| `expect_close()` | Reads until the server closes; returns the code |
+| `assert_silent(timeout=0.2)` | Fails if any frame arrives |
+| `disconnect(code=1000)` | Sends `websocket.disconnect` and waits for the handler to return |
+
+- Pass `headers={"origin": "http://testserver", "cookie": "sessionid=..."}` to test cookie auth; a cookie with no `Origin` is refused (4403), as in production.
+- Inside `realtime_outbox()` the socket and `publish()` share the block's memory backend, so a publish in the test reaches the driver.
+
+## Inline hooks
+
+The driver's own handler runs hooks (`authenticate`, `allow`) **inline**: it gives the connection an `InlineHookRunner` (`django_realtime.connection`), so, driven from a sync test through `async_to_sync`, they run on the test's own thread, inside its transaction, and see its `TestCase` data. This is what avoids Django ticket #32409 (ORM calls on another thread cannot see the test's rows). The runner is injected per connection, nothing global is switched.
+
+Pass `inline=False` to the driver to exercise the real thread pool (then the test needs committed data, `transaction=True`). A driver given an `app` runs that app's hooks: `realtime_asgi(app, hooks=InlineHookRunner())` makes a routed app inline too.
+
+**Never touch the ORM from the async test body itself.** Create data in the sync part of the test or a fixture; the async scenario only sends and receives frames.
+
+## Frontend: the mock server
+
+`@djangocfg/realtime/testing` implements protocol v1 in memory, for unit tests and stories:
+
+```ts
+import { createRealtimeClient } from '@djangocfg/realtime';
+import { createMockServer } from '@djangocfg/realtime/testing';
+
+const server = createMockServer();
+const client = createRealtimeClient({ url: server.url, WebSocket: server.WebSocket });
+
+server.publish('orders:42', { status: 'paid' });
+server.drop();                    // network loss: backoff, then replay with since
+server.trim('orders:42', 1);      // history no longer reaches since: recovered:false
+server.bumpEpoch('orders:42');    // history lost: recovered:false
+server.restart();                 // every socket gets 1012 ({ loseHistory: true } also starts new epochs)
+server.closeAll(4401);            // any close code
+server.refuse(4429);              // refuse new handshakes with this code; refuse(null) accepts again
+server.answerPings(false);        // a half-dead link: the client's pong timeout fires
+```
+
+It also exposes `head(topic)`, `subscribers(topic)`, `received` (every client frame), `cids`, `connections` and `setCookieUser(user)`, and takes options (`authenticate`, `cookieUser`, `requireUser`, `authorize`, `history`, `ping`). The `Packages/Realtime` stories (Live feed, Reconnect and replay, Gap refetch) run on it.

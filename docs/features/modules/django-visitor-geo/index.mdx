@@ -222,6 +222,8 @@ def play(request):
 - On PostgreSQL and SQLite it is one `INSERT ... ON CONFLICT DO UPDATE`, so concurrent requests never lose a count.
 - The table needs a unique constraint over exactly the fields you pass.
 - `field="count"` and `by=1` are the defaults.
+- A table with several counters bumps one per call (`field="started"`, `field="failed"`). The first insert of a row fills every other column the way `create()` would: its `default` (so a sibling counter with `default=0` starts at 0), `auto_now` / `auto_now_add` with the current time, NULL when nullable.
+- A NOT NULL column with no default raises `ValueError` before any SQL runs, so a misconfigured table fails in your tests instead of silently counting nothing. Do not wrap the call in a bare `except` that hides it.
 - Other backends fall back to an ORM update-or-create, which is correct but can race on the first insert.
 
 ## Fallback without Cloudflare: geoip2

@@ -32,6 +32,12 @@ user_authenticated = Signal()
 user_email_verified = Signal()
 
 
+# The one notice that a user's credentials were revoked. Fired by `manage.py logout_all` (QuerySet.update sends
+# no post_save), by `CustomUser.save()` when `tokens_valid_after` changes, and by the refresh-token blacklist view
+# (logout). Provides: user_ids — a list of user pks, or None for every user. Realtime closes their sockets (4419).
+user_sessions_revoked = Signal()
+
+
 # Fired synchronously while an account-deletion transaction is open, after the
 # user has been soft-deleted. Product applications use this to apply their own
 # deletion policy for records whose database ``on_delete`` action would only run

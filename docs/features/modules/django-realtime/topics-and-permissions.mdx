@@ -1,0 +1,132 @@
+---
+title: Realtime Topics & Permissions
+description: Declare realtime topics with a pattern, a pydantic event model and an allow() function; anonymous topics, history, limits, handshake identity and the origin allow-list.
+---
+
+# Topics & permissions
+
+A topic is declared once, in an app's `realtime.py`, which is imported automatically like `admin.py`. The declaration is the whole contract: the name clients subscribe to, the event model `publish()` validates against, and who may subscribe.
+
+```python
+# apps/orders/realtime.py
+from pydantic import BaseModel
+from django_cfg.modules.django_realtime import topic
+
+from .models import Order
+
+
+class OrderEvent(BaseModel):
+    kind: str
+
+
+def owns_order(user, order_id: int) -> bool:
+    return Order.objects.filter(pk=order_id, owner=user).exists()
+
+
+orders = topic("orders:{order_id:int}", event=OrderEvent, allow=owns_order,
+               description="Order status changes.")
+orders_all = topic("orders.all", allow=lambda user: user.is_staff)
+ping = topic("demo.ping", anonymous=True)
+```
+
+`topic()` returns a `Topic`. Call it with its parameters to get a concrete name (a `BoundTopic`): `orders(order_id=42)` is `orders:42`. A parameterless topic is usable as is.
+
+## Patterns
+
+A pattern is a literal base and `:`-separated segments:
+
+- the base matches `[a-z0-9_.-]+` (`orders`, `demo.ping`, `orders.changed`);
+- a segment is a literal (`[A-Za-z0-9_.-]+`) or a parameter: `{name}` (a string) or `{name:int}`.
+
+A concrete name matches `[a-z0-9_.-]+(:[A-Za-z0-9_.-]+)*`: `orders:42`, `demo.user:7`, `orders:42:items`. A parameter value that does not fit its kind raises `ValueError` when you build the name.
+
+Declaration errors are raised at import (`TopicDeclarationError`, a `TypeError`), so a broken topic stops the process instead of failing a subscription:
+
+- a base or segment outside the syntax, or a parameter named twice;
+- two topics of the same shape (`orders:{id}` and `orders:{order_id:int}` would shadow each other);
+- `event` that is not a pydantic model class, `history < 1`, or a `history` above `send_queue` − 8 (a full replay must fit the send queue);
+- an `allow` that is `async`, or whose signature does not accept `(user, <every parameter>)`.
+
+## Options
+
+| Option | Default | Meaning |
+|---|---|---|
+| `event` | `Hint` (empty) | Pydantic model of `msg.data`. `publish()` validates against it |
+| `allow` | signed-in users | `allow(user, **params) -> bool`. Sync, may use the ORM |
+| `anonymous` | `False` | Visitors may subscribe too |
+| `history` | `default_history` (100) | Messages kept for replay |
+| `description` | `""` | Shown in `realtime.ts` and the OpenAPI document |
+| `group` | the declaring app's short name | The OpenAPI tag the topic is generated under |
+
+## Event models
+
+The default event, `Hint`, has no fields: the client refetches over REST. Prefer it. A payload is worth adding when the page can apply it without a refetch, and it must never carry more than the subscriber may read through REST.
+
+An event model with fields:
+
+- is validated by `publish()` (a dict is validated, a model instance must be that model, anything else is `InvalidEvent`);
+- becomes an ordinary OpenAPI component (`components.schemas`), so the generator emits a zod schema and a TypeScript type for it. Two different schemas under one name stop generation; rename one model.
+
+`model_config = ConfigDict(title="...")` sets the schema name when the title is a valid identifier.
+
+## `allow`
+
+`allow(user, **params)` is a plain sync function. It runs in the module's hook pool (`db_threads` threads), between two `close_old_connections()` calls, never on the event loop, so it may query freely. Test it as a plain function, no socket needed.
+
+- It runs on every `sub`. It is not re-run per message.
+- An exception denies (`sub_err forbidden`) and is logged once.
+- Slower than `hook_timeout` (5 s) answers `sub_err timeout`; the client retries that one with backoff.
+- Parameters arrive converted: `{order_id:int}` gives an `int`.
+
+**Without `allow`, every signed-in user may subscribe.** That is the right default only for a topic whose events say nothing private. A per-user or per-object topic needs an `allow`.
+
+## Anonymous topics
+
+`anonymous=True` admits visitors. `allow`, if given, still runs, with `AnonymousUser`:
+
+```python
+ping = topic("demo.ping", anonymous=True)  # anyone, signed in or not
+```
+
+A socket without a user is accepted only when at least one declared topic is anonymous. With none, a visitor is closed with 4401 (or 4408 when it sent nothing within `auth_timeout`).
+
+## History and limits
+
+- **History.** Each topic keeps its last `history` messages (`default_history`, 100) for replay. The history lives `history_ttl` (300 s) after the last publish; recovery is for short gaps, and a longer gap answers `recovered: false`. The topic's epoch and offset live `meta_ttl` (86 400 s); after that the next publish starts a new epoch. See [offsets and recovery](./protocol#offsets-and-recovery).
+- **Per socket:** `max_subscriptions` (100, then `sub_err limit`), `max_frame_bytes` (64 000), `max_frames_per_second` (20, then close 4429), `send_queue` (256 outbound frames, then close 1013).
+- **Per user, per process:** `max_connections_per_user` (10; anonymous sockets count per client IP), then close 4429.
+
+## Who the user is
+
+The handshake builds an `HttpRequest` from the ASGI scope (headers, cookies, client address through the edge rules of `django_cfg.core.edge`) and runs the project's own `REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"]`. Session, JWT cookie and API keys work as over HTTP; there is no realtime token.
+
+- The first frame is `auth`. With `token`, it is presented as `Authorization: Bearer <token>` through the same authenticators. A token that does not authenticate closes 4419 (refresh it and reconnect).
+- Without a token (or with any other first frame), the handshake's own cookies and headers decide at once. A JWT cookie that is refused closes 4419 too; 4401 is only "no credential, and no topic admits visitors".
+- The credential is re-checked every `reauth_interval` (900 s; `0` turns it off) through the same authenticators. A refusal or a different user closes 4419. This catches revocations no signal reports: an API key deleted, a session expired in its store. The same re-check runs every live subscription's `allow` again with the fresh user; one it now refuses is dropped with `sub_err forbidden`, the socket stays.
+
+## Revocation
+
+These close the user's sockets in every process with 4419, after the commit, with no code of yours:
+
+| Event | Sockets closed |
+|---|---|
+| `user_logged_out` (session logout) | that session's |
+| `manage.py logout_all` (`user_sessions_revoked`) | the listed users', or every signed-in socket |
+| refresh-token logout (`POST /cfg/accounts/token/blacklist/`) | the user's (other devices refresh and reconnect) |
+| a changed `tokens_valid_after`, by any `save()` | the user's |
+| a password set on an existing user | the user's |
+| a save with `is_active=False` | the user's |
+
+The client refreshes its token over HTTP and reconnects at once, or stays stopped when no session is left.
+
+## Origin
+
+Browsers always send `Origin` on a WebSocket handshake, and a cookie-authenticated socket opened from a foreign page is cross-site WebSocket hijacking. The origin must be one of:
+
+- the same origin as the `Host` header, when that host passes `ALLOWED_HOSTS`;
+- a `CSRF_TRUSTED_ORIGINS` entry (`https://*.example.com` covers subdomains);
+- a `RealtimeConfig.allowed_origins` entry (`REALTIME__ALLOWED_ORIGINS=https://a.com,https://b.com`).
+
+A host that `ALLOWED_HOSTS` lists is not a trusted origin by itself: a frontend on another host (the demo app on `:3300` beside the API on `:8000`) goes in `allowed_origins`.
+
+Anything else closes 4403. `Origin: null` is refused. A handshake with no `Origin` is a non-browser client and is accepted only when it carries no cookie.

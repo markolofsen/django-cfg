@@ -91,6 +91,9 @@ class OpenAPIConfig(BaseModel):
     # operation (frame union, no retry, typed StreamHttpError). Emits nothing for a
     # group without such an operation, so it is on by default.
     generate_sse_streams: bool = True
+    # `_<group>/realtime.ts`: typed topic builders and event schemas from `x-realtime` (django_realtime).
+    # Emits nothing for a group without topics, so it is on by default.
+    generate_realtime: bool = True
 
     client_structure: Literal["flat", "namespaced"] = "namespaced"
 

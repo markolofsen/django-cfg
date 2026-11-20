@@ -7,6 +7,10 @@ description: Django Channels setup — ASGI configuration, AsyncWebsocketConsume
 
 Django Channels extends Django with WebSocket support and long-lived connections via the ASGI protocol.
 
+<Callout type="info">
+For push updates in a django-cfg project, use the built-in [realtime module](/features/modules/django-realtime) instead: one WebSocket per tab, typed topics, `publish()` from sync code, Django auth, Redis Streams replay, and tests without Channels. This page describes Channels itself.
+</Callout>
+
 ## ASGI Application Setup
 
 The `asgi.py` file routes HTTP and WebSocket traffic to the appropriate handler:

@@ -91,10 +91,11 @@ def generate(
 ) -> TsExtrasResult:
     """Generate the requested extras into `out_dir`.
 
-    `extras` selects which sub-generators run: {"zod", "hooks", "events", "streams"}.
-    Order is fixed: zod → hooks → events → streams (the last two are purely
-    additive, no cross-deps). ``streams`` writes ``streams.ts`` only for a spec
-    with a ``text/event-stream`` operation.
+    `extras` selects which sub-generators run: {"zod", "hooks", "events", "streams", "realtime"}.
+    Order is fixed: zod → hooks → events → streams → realtime (the last three are
+    purely additive). ``streams`` writes ``streams.ts`` only for a spec with a
+    ``text/event-stream`` operation; ``realtime`` writes ``realtime.ts`` only for
+    a spec whose ``x-realtime`` has topics (it imports the zod schemas).
 
     `enum_prefix` — when provided (typically the group/tag name, e.g.
     ``"crm"``), all hash-suffixed enum names produced by drf-spectacular
@@ -130,6 +131,10 @@ def generate(
         files.extend(generate_events(out_dir))
     if "streams" in extras:
         files.extend(generate_streams(ir, out_dir, sdk_import_prefix="." if flat else ".."))
+    if "realtime" in extras:
+        from .realtime.generator import generate_realtime  # lazy: `import django_cfg` reaches this module
+
+        files.extend(generate_realtime(spec.get("x-realtime"), out_dir, with_zod="zod" in extras))
     # FLAT layout: the real hey-api SDK already sits at out_dir/sdk.gen.ts —
     # writing the up-pointing shim would clobber it AND dangle (nothing one
     # dir above target_root). Only the per-group layout needs the shim.

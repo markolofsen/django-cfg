@@ -1,7 +1,9 @@
 """
 Rate Limiting Decorators.
 
-Universal rate limiting for Django views, DRF endpoints, and async RPC handlers.
+Universal rate limiting for Django views, DRF endpoints, and async handlers that take a connection-like object
+(anything with `user_id` / `client_ip`). The realtime WebSocket (`django_realtime`) has no RPC: commands are REST
+POSTs, limited here like any view; the socket's own frame limits live in `RealtimeConfig`.
 Uses Redis for distributed rate limiting across multiple workers.
 
 Example usage:
@@ -16,10 +18,9 @@ Example usage:
     def update_metrics(self, request, pk=None):
         ...
 
-    # Async WebSocket RPC handler
-    @websocket_rpc("ai_chat.send_message")
+    # Async handler on a connection-like object (user_id / client_ip attributes)
     @rate_limit(key='user', rate='20/minute')
-    async def ai_chat_send_message(conn, params):
+    async def handle_message(conn, params):
         ...
 """
 
@@ -114,7 +115,7 @@ def _get_cache_key(
 
     Args:
         key_type: Type of key to use (ip, user, user_or_ip, custom)
-        request_or_conn: Django request or WebSocket connection
+        request_or_conn: Django request, or a connection-like object with `user_id` / `client_ip`
         method_name: Name of the method being rate limited
         custom_key: Custom key value (required if key_type is 'custom')
 
@@ -161,7 +162,7 @@ def _get_client_ip(request_or_conn: Any) -> str:
 
         return get_client_ip(request_or_conn) or 'unknown'
 
-    # WebSocket connection
+    # Connection-like object
     if hasattr(request_or_conn, 'client_ip'):
         return request_or_conn.client_ip or 'unknown'
 
@@ -174,7 +175,7 @@ def _get_client_ip(request_or_conn: Any) -> str:
 
 def _get_user_id(request_or_conn: Any) -> Optional[str]:
     """Extract user ID from request or connection."""
-    # WebSocket connection - has user_id directly
+    # Connection-like object - has user_id directly
     if hasattr(request_or_conn, 'user_id'):
         return str(request_or_conn.user_id) if request_or_conn.user_id else None
 
@@ -357,7 +358,7 @@ def rate_limit(
     - Django function-based views
     - Django class-based views
     - DRF ViewSet actions
-    - Async WebSocket RPC handlers
+    - Async handlers on a connection-like object
 
     Args:
         key: Type of key to use for rate limiting:

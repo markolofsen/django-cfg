@@ -53,6 +53,8 @@ class IROperation:
     has_2xx_response: bool = True
     response_media_types: list[str] = field(default_factory=list)
     has_error_responses: bool = False  # any non-2xx response (hey-api then emits ``<Op>Errors``)
+    # ``x-realtime-invalidates``: topic patterns whose messages make this read stale (django_realtime).
+    realtime_invalidates: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -176,6 +178,9 @@ def build_ir(spec: dict[str, Any]) -> IR:
                     has_2xx_response=has_2xx,
                     response_media_types=media_types,
                     has_error_responses=_has_error_responses(op.get("responses")),
+                    realtime_invalidates=[
+                        p for p in (op.get("x-realtime-invalidates") or []) if isinstance(p, str)
+                    ],
                 )
             )
 

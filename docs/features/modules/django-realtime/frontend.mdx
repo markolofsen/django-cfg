@@ -1,0 +1,163 @@
+---
+title: Realtime in the Frontend
+description: "@djangocfg/realtime: BaseApp mounts one lazy WebSocket per tab; useTopic with generated typed topics, useRealtimeState, zero-code SWR refresh, gap handling and the RealtimePanel."
+---
+
+# Frontend: `@djangocfg/realtime`
+
+The browser half: one WebSocket per tab, opened lazily, reference-counted topics, replay after a reconnect, and a refetch when history no longer reaches the last offset. It implements [protocol v1](./protocol).
+
+| Import | Holds |
+|---|---|
+| `@djangocfg/realtime` | `createRealtimeClient`, `watchTopics`, the protocol types and close codes, the store, `RealtimeTopic<E>`. No React, no DOM |
+| `@djangocfg/realtime/react` | `RealtimeProvider`, `RealtimeClientProvider`, `useTopic`, `useTopicRefresh`, `useRealtimeState`, `useRealtimeClient`, `isKeyForTopic`, `topicsInKey` |
+| `@djangocfg/realtime/debug` | `RealtimePanel` |
+| `@djangocfg/realtime/testing` | `createMockServer()` |
+| `@djangocfg/realtime/styles` | `@source` for the panel's classes |
+
+## `BaseApp` mounts it
+
+`BaseApp` from `@djangocfg/layouts` mounts the provider inside `AuthProvider` and the SWR config. **Do not mount a second `RealtimeProvider`.** It opens nothing by itself: the first `useTopic` connects, and an app whose pages never subscribe never opens a socket.
+
+```tsx
+<BaseApp project="shop" auth={{ apiUrl }} realtime={{ path: '/ws' }}>
+  {children}
+</BaseApp>
+```
+
+| `realtime` | |
+|---|---|
+| omitted / `{}` | On, with defaults |
+| `url` | The full socket URL; overrides the rest |
+| `apiUrl` | The API origin the URL is derived from |
+| `path` | Default `/ws` |
+| `onGap` | Your own refetch for a topic whose history no longer reaches the client's offset |
+| `onIssue` | An extra sink for [issues](#issues); they go to `@djangocfg/devtools` either way |
+| `false` | Off: no provider, no SWR middleware |
+
+Without `url`, the socket URL is the API origin (`realtime.apiUrl`, else `apiUrl`, else `auth.apiUrl`, else `NEXT_PUBLIC_API_URL`, else the page's own origin) plus `path`, with `ws:` for `http:` and `wss:` for `https:`.
+
+## `useTopic`
+
+```tsx
+'use client';
+import { useTopic } from '@djangocfg/realtime/react';
+import { ordersTopic } from '@/api/generated/_orders/realtime';
+
+function OrderBadge({ id }: { id: number }) {
+  const { data, mutate } = useOrder(id);
+  const state = useTopic(ordersTopic({ orderId: id }), (event) => {
+    if (event.kind === 'paid') void mutate();   // `event` is typed OrderEvent
+  });
+  return <Badge>{data?.status}{state?.status === 'live' ? '' : ' …'}</Badge>;
+}
+```
+
+```ts
+useTopic<E>(topic: string | RealtimeTopic<E> | null, onEvent: (data: E, meta: EventMeta) => void,
+            options?: { onGap?: (topic) => void; onRefused?: (code, topic) => void }): TopicState | undefined
+```
+
+- **Typed topics.** Pass a builder from the generated [`realtime.ts`](./codegen): `event` is typed by the topic's event model, and in development every payload is checked against its zod schema; a mismatch is logged and not delivered. A plain string works too, untyped.
+- `null` subscribes to nothing (a topic that depends on data not loaded yet).
+- Handlers may change identity on every render; only a new topic **name** resubscribes. Calling the builder inline is fine.
+- `meta` is `{ topic, offset, originCid }`. `originCid` names the connection whose request caused the publication.
+- The return value is the topic's `TopicState`: `status` (`pending`, `live`, `refused`, `leaving`), `offset`, `subscribers`, `refusal`, `received`, `gaps`. It is `undefined` before the first subscription and outside a provider.
+- `onRefused(code)` reports a `sub_err` (`forbidden`, `unknown_topic`, `invalid`, `limit`, `timeout`). A refusal is not retried until the auth state changes, except `timeout`.
+
+## Zero-code refresh with SWR
+
+`BaseApp` registers an SWR middleware: every `useSWR` whose key is **tagged** with a topic watches that topic while mounted and revalidates on each publication and on each gap, at most once per ~250 ms. Untagged keys cost nothing.
+
+A key is tagged when it is the topic string, or an array holding it:
+
+```ts
+useSWR(['orders:42', id], fetcher);      // tagged with orders:42
+useSWR(['orders', 'me'], fetcher);       // not tagged: no part has ':' or '.'
+```
+
+**Only a string with `:` or `.` that is a valid topic name counts as a tag.** A bare word (`'list'`, `'me'`) is a common key part; reading it as a topic would open a socket on every page that caches anything.
+
+You rarely write these keys by hand: [`@invalidated_by`](./codegen#tagged-swr-keys) makes the generated SWR hooks tag their own keys, so the page needs no realtime code at all.
+
+It also revalidates once when a fresh subscription is first confirmed, so a publication that landed between the fetch and the subscription is not missed. A resubscribe after a reconnect replays with `since` instead.
+
+Outside `BaseApp`, with any cache: `useTopicRefresh(key, refetch)` applies the same rule to one key.
+
+## Gaps
+
+A gap means the server could not replay what the client missed: `sub_ok` with `recovered: false` after a reconnect with `since`, or a repeated `sub_ok{recovered:false}` on a live subscription (a new epoch, or the bus was trimmed past the server's reader). The client adopts the new offset and calls `onGap`, jittered 0–2 s so a deploy does not refetch every page at once.
+
+- With `onGap` on the `useTopic` call: that runs.
+- Else the provider's `onGap` (the `BaseApp` `realtime.onGap`).
+- Else `BaseApp` revalidates every SWR key tagged with the topic.
+
+A reconnect that replays everything is not a gap. A message that follows the gap carrying the offset it announced is delivered, not dropped as a duplicate. Never treat events as the only copy of the data: refetch on a gap.
+
+## Connection state
+
+```tsx
+import { useRealtimeState } from '@djangocfg/realtime/react';
+
+const connection = useRealtimeState();                          // { phase, attempt, retryAt, user, cid, lastClose }
+const topic = useRealtimeState((s) => s.topics['orders:42']);   // one slice
+```
+
+`phase` is `idle`, `connecting`, `live`, `reconnecting` or `stopped`. A selector must return a value already in the snapshot, never a new object or array: the snapshot shares structure, and a fresh object re-renders on every frame.
+
+## Behaviour
+
+- **Lazy.** No socket until the first subscription; closed 30 s after the last one leaves. A topic is unsubscribed 1.5 s after its last subscriber, so a StrictMode remount or a route change costs nothing.
+- **Reconnect.** Full-jitter backoff from the first retry (a random wait under 1 s, 2 s, 4 s … up to 30 s), and at once on `online` or when the page becomes visible. The attempt counter resets only after 10 s live, so a server that accepts and drops at once still backs off. After 1011, 1012 or 1013 the first retry waits a random 0–5 s. 4429 retries after 30 s plus jitter. Topics resubscribe with `since` = their last offset.
+- **Keepalive.** A `ping` every `hello.ping` seconds; no `pong` within 10 s means the path is dead and the client reconnects.
+- **Auth.** The cookie goes with the handshake; the first frame is always `auth`, with the token from `useAuth().getToken()` when there is one. Login or logout reconnects with the new identity. 4419 refreshes the token through `useAuth().refreshToken()` and reconnects at once (stopped when no session is left). Only 4401 and 4403 stop, until the auth state changes.
+
+## Issues
+
+The client reports what a person has to fix, never normal weather. `BaseApp` sends each issue to `@djangocfg/devtools` (`EventType.ERROR`; level `warning` for 4401, `unreachable` and `forbidden`, `error` for the rest) and then to `realtime.onIssue` if you pass one. Outside `BaseApp`, `createRealtimeClient({ onIssue })`; without it the client calls `console.warn`.
+
+| `kind` | When |
+|---|---|
+| `closed` | 4401, 4403, 4500, or a stop the client decided (code 0: no WebSocket, a bad URL, another protocol version) |
+| `unreachable` | 5 attempts in a row ended without `hello`; once per streak |
+| `refused` | `sub_err` `forbidden`, `invalid` or `unknown_topic`, with the topic |
+| `protocol` | an `error` frame, or a frame that could not be parsed |
+| `invalid_event` | a typed topic's event failed its schema (development only) |
+
+Every issue carries `cid`, the live connection's id or `null`; none carries a token. Never reported: 1006, 1011, 1012, 1013 or 4408 drops, a 4419 refresh, `sub_err` `limit` or `timeout`.
+
+## No echo for your own writes
+
+Every generated client exports `setRealtimeCidProvider(provider)` from its root (it lives in `helpers/auth.ts`). Once a provider returns the socket's id, every POST, PUT, PATCH and DELETE of that client carries `X-Realtime-Cid`, and the server skips this tab's socket when the write publishes ([details](./publishing#no-echo-x-realtime-cid)).
+
+`BaseApp` installs it once. The provider lives in one slot per page (`globalThis[Symbol.for('djangocfg.realtime.cid')]`), not per client, so the install reaches every generated client in the bundle: `@djangocfg/api` and your project's own `make gen` output alike. Nothing to wire per client.
+
+`client.getCid()` is `null` while no socket is live; then no header is sent.
+
+## Debug panel
+
+```tsx
+import { RealtimePanel } from '@djangocfg/realtime/debug';
+
+<RealtimePanel />
+```
+
+```css
+@import "@djangocfg/ui-core/styles/full";
+@import "@djangocfg/realtime/styles";   /* after ui-core */
+```
+
+It shows the connection (phase, user, connection id, attempt, next retry, last close, and a "Retry now" button while reconnecting), every topic with its status and offset, and the last 50 frames, with any `auth` token redacted. Frames are recorded only while a panel is mounted. It accepts `isActive`, so it fits a `@djangocfg/devtools` custom tab (`CustomDebugTab.panel`).
+
+## Outside React
+
+```ts
+import { createRealtimeClient } from '@djangocfg/realtime';
+
+const client = createRealtimeClient({ url: 'wss://api.example.com/ws', getToken });
+const release = client.subscribe('demo.ping', (data, meta) => console.log(meta.offset, data));
+// later
+release();
+```
+
+`subscribe` also takes a typed topic and a handler object `{ onEvent, onGap?, onRefused? }`.

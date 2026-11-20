@@ -43,6 +43,7 @@ from .django.payments import PaymentsConfig
 from .django.admin_access import AdminAccessConfig
 from .django.edge import EdgeConfig
 from .django.visitor_geo import GeoOverride, VisitorGeoConfig
+from .django.realtime import RealtimeConfig
 from .django.django_rq import DjangoRQConfig, RQQueueConfig
 from .django.storage import FileCleanupConfig, StorageConfig
 from .django.storage_backend import S3StorageConfig
@@ -96,6 +97,7 @@ __all__ = [
     "EdgeConfig",
     "GeoOverride",
     "VisitorGeoConfig",
+    "RealtimeConfig",
     "DjangoRQConfig",
     "RQQueueConfig",
     "GeoConfig",

@@ -53,18 +53,21 @@ def render_infinite_query(op: IROperation, hook: str, *, sdk_import_prefix: str 
         f'{{ query?: Omit<NonNullable<{data_t}["query"]>, "page"> }}'
     )
 
+    # Topic tags sit before the page number, which stays the key's last element.
+    from .realtime_tags import tag_suffix  # lazy: `import django_cfg` loads this package (import budget)
+    tags = tag_suffix(op, warn=False)  # the page-based hook of the same operation already warned
     if required:
         args_sig = f"args: {args_type},"
         key_fn_base = (
             f"(pageIndex: number) => "
-            f'["{op.operation_id}_infinite", args, pageIndex + 1] as const'
+            f'["{op.operation_id}_infinite", args{tags}, pageIndex + 1] as const'
         )
         sdk_args_spread = "...args, query: { ...(args.query ?? {}), page }"
     else:
         args_sig = f"args?: {args_type},"
         key_fn_base = (
             f"(pageIndex: number) => args !== undefined\n"
-            f'    ? ["{op.operation_id}_infinite", args, pageIndex + 1] as const\n'
+            f'    ? ["{op.operation_id}_infinite", args{tags}, pageIndex + 1] as const\n'
             f"    : null"
         )
         sdk_args_spread = "...(args ?? {}), query: { ...(args?.query ?? {}), page }"

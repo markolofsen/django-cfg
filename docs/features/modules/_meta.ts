@@ -13,6 +13,7 @@ export default {
   'django-rq': 'Background Tasks (RQ)',
   'django-email': 'Email',
   'django-telegram': 'Telegram Bot',
+  'django-realtime': 'Realtime (WebSocket)',
 
   'django-notion': 'Notion Leads',
 

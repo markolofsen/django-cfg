@@ -8,7 +8,7 @@ with NUM_PROXIES=0, the admin allow-list) sees the resolved client. The socket p
 Must be first in MIDDLEWARE.
 """
 
-from django_cfg.core.edge import PEER_META, get_edge, strip_secret_header
+from django_cfg.core.edge import bind_edge
 
 
 class RealIPMiddleware:
@@ -18,10 +18,5 @@ class RealIPMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        request.META.setdefault(PEER_META, request.META.get("REMOTE_ADDR", ""))
-        edge = get_edge(request)
-        strip_secret_header(request.META)
-        request.edge = edge
-        if edge.client_ip:
-            request.META["REMOTE_ADDR"] = edge.client_ip
+        bind_edge(request)
         return self.get_response(request)

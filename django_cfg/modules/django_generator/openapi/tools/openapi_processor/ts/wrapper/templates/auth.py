@@ -176,6 +176,37 @@ function pushClientConfig(): void {
 }
 '''
 
+# The realtime socket id of this tab, for `X-Realtime-Cid` on writes: the server then skips the sender's own
+# socket when the write publishes. A provider, not a value, so this module never imports the realtime client.
+_REALTIME_CID_TS = '''\
+// ── Realtime sender id ─────────────────────────────────────────────────────
+/** Returns the open realtime socket's `cid` (from its `hello`), or null when none is open. */
+export type RealtimeCidProvider = () => string | null;
+
+// One slot per page, not per generated client: every client in the bundle (`@djangocfg/api`, an app's own
+// `_lib/api/generated`, ...) reads the provider the realtime host installed once.
+const REALTIME_CID_SLOT = Symbol.for('djangocfg.realtime.cid');
+type CidSlotHolder = { [REALTIME_CID_SLOT]?: RealtimeCidProvider | null };
+
+/**
+ * Install (or clear, with null) the source of `X-Realtime-Cid` for every generated client in the page. Sent on
+ * POST/PUT/PATCH/DELETE only, so the write's own realtime message is not echoed to this tab. The realtime host
+ * calls it once at mount.
+ */
+export function setRealtimeCidProvider(provider: RealtimeCidProvider | null): void {
+  (globalThis as CidSlotHolder)[REALTIME_CID_SLOT] = provider;
+}
+
+function currentRealtimeCid(): string | null {
+  try {
+    const provider = (globalThis as CidSlotHolder)[REALTIME_CID_SLOT];
+    return provider ? provider() : null;
+  } catch {
+    return null;
+  }
+}
+'''
+
 # Locale / API-key / timezone / client-time header wiring — the part of the
 # request interceptor common to both modes (indented for the interceptor body).
 _COMMON_REQUEST_HEADERS_TS = '''\
@@ -194,6 +225,11 @@ _COMMON_REQUEST_HEADERS_TS = '''\
     // Per-browser id, always sent. A per-request X-Client-Id wins.
     const clientId = auth.getClientId();
     if (clientId && !request.headers.has('X-Client-Id')) request.headers.set('X-Client-Id', clientId);
+
+    if (request.method !== 'GET' && request.method !== 'HEAD' && request.method !== 'OPTIONS') {
+      const cid = currentRealtimeCid();
+      if (cid && !request.headers.has('X-Realtime-Cid')) request.headers.set('X-Realtime-Cid', cid);
+    }
 '''
 
 # Wrap raw JSON error objects (thrown by hey-api on non-2xx responses) into
@@ -399,6 +435,7 @@ function adoptLegacySession(): void {{
 adoptLegacySession();
 
 {_ENV_HELPERS_TS}
+{_REALTIME_CID_TS}
 // ── In-memory overrides (win over storage / env) ───────────────────────────
 let _localeOverride: string | null = null;
 let _timezoneOverride: string | null = null;
@@ -1004,6 +1041,7 @@ import {{ CFG_KEYS, cfgStorage }} from './keys';
 export type StorageMode = 'localStorage' | 'cookie';
 
 {_ENV_HELPERS_TS}
+{_REALTIME_CID_TS}
 // ── In-memory overrides (win over env) ─────────────────────────────────────
 let _localeOverride: string | null = null;
 let _timezoneOverride: string | null = null;

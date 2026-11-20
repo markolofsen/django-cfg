@@ -150,7 +150,7 @@ def _run_target(
                         target, [group_name], global_spec, config
                     )
 
-                    if not group_sliced.get("paths"):
+                    if not group_sliced.get("paths") and not (group_sliced.get("x-realtime") or {}).get("topics"):
                         sep = "=" * 64
                         print(
                             f"\n{sep}\n"
@@ -361,6 +361,8 @@ def _resolve_and_slice(
         # in *all* endpoints.
         empty = dict(global_spec)
         empty["paths"] = {}
+        if isinstance(empty.get("x-realtime"), dict):
+            empty["x-realtime"] = {**empty["x-realtime"], "topics": []}
         return empty
     return slice_by_tags(global_spec, allowed)
 

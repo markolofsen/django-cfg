@@ -1,21 +1,26 @@
 ---
 title: Django Runtime Guide
-description: Django-specific runtime patterns. Async ORM, Channels WebSocket, ASGI configuration, Django testing, and production quality gates.
+description: Django-specific runtime patterns. Async ORM, ASGI configuration, Django testing, and production quality gates. WebSockets in django-cfg are django-realtime.
 ---
 
 # Django Runtime Guide
 
-Runtime patterns specific to Django — async ORM, Channels, ASGI, and production quality standards. For generic Python patterns see [Module Design Guide](../../guides/module-design), for Django app structure see [App Design Guide](../app-design).
+Runtime patterns specific to Django — async ORM, ASGI, and production quality standards. For generic Python patterns see [Module Design Guide](../../guides/module-design), for Django app structure see [App Design Guide](../app-design).
+
+**WebSockets: use [django-realtime](/features/modules/django-realtime)**, django-cfg's own WebSocket layer (typed topics, `publish()`, Django auth, Redis Streams, served by the same uvicorn process). django-cfg does not use Django Channels; the Channels page below is background for projects that already run Channels.
 
 <Cards>
   <Card title="Async ORM" href="/guides/django-runtime/async-orm">
     Django async ORM with a-prefixed methods, async for iteration, sync_to_async bridges, and common pitfalls
   </Card>
+  <Card title="Realtime (WebSocket)" href="/features/modules/django-realtime">
+    The django-cfg WebSocket path: topics, publish(), auth, replay, deployment
+  </Card>
   <Card title="Channels & ASGI" href="/guides/django-runtime/channels-asgi">
-    ASGI setup, AsyncWebsocketConsumer lifecycle, channel groups, authentication, and URL routing
+    Background only (django-cfg does not use Channels): ASGI setup and AsyncWebsocketConsumer for existing Channels projects
   </Card>
   <Card title="Django Testing" href="/guides/django-runtime/django-testing">
-    pytest.mark.django_db for async, AsyncClient, WebsocketCommunicator, and sync_to_async test patterns
+    pytest.mark.django_db for async, AsyncClient, and sync_to_async test patterns (realtime sockets: WebSocketDriver)
   </Card>
   <Card title="Quality Gates" href="/guides/django-runtime/quality-gates">
     Foundation, Production, and Enterprise quality levels with Django-specific checks and Prometheus monitoring

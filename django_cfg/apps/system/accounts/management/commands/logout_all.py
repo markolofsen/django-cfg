@@ -13,6 +13,8 @@ from django.contrib.sessions.models import Session
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from ...signals import user_sessions_revoked
+
 
 class Command(BaseCommand):
     help = "Log users out everywhere: blacklist refresh tokens, cut off older access tokens, clear sessions."
@@ -38,6 +40,8 @@ class Command(BaseCommand):
             return
         BlacklistedToken.objects.bulk_create([BlacklistedToken(token=t) for t in tokens], ignore_conflicts=True)
         # A second of margin: tokens minted in the same second as the cutoff must not survive.
+        user_ids = list(users.values_list("pk", flat=True)) if email else None
         users.update(tokens_valid_after=timezone.now())
         sessions.delete()
+        user_sessions_revoked.send(sender=self.__class__, user_ids=user_ids)
         self.stdout.write(self.style.SUCCESS("done"))

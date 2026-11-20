@@ -14,6 +14,8 @@ from django_cfg.modules.django_cleanup import delete_file
 from ..managers.user_manager import UserManager
 from .base import user_avatar_path
 
+_UNSET = object()
+
 
 class CustomUser(AbstractUser):
     """Simplified user model for OTP-only authentication."""
@@ -109,15 +111,39 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.email
 
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._tokens_valid_after_loaded = instance.__dict__.get('tokens_valid_after', _UNSET)
+        return instance
+
     def save(self, *args, **kwargs):
-        """Ensure username is generated if empty and ``email_key`` follows ``email``."""
+        """Ensure username is generated if empty and ``email_key`` follows ``email``.
+
+        A changed ``tokens_valid_after`` sends ``user_sessions_revoked`` (realtime closes the user's sockets), so a
+        sign-out cutoff set by any save is enforced at once, not at the next credential re-check.
+        """
         if not self.username:
             self.username = self.__class__.objects._generate_unique_username()
         self.email_key = self.__class__.objects.canonical_email(self.email)
         update_fields = kwargs.get('update_fields')
         if update_fields is not None and 'email' in update_fields and 'email_key' not in update_fields:
             kwargs['update_fields'] = [*update_fields, 'email_key']
+        adding = self._state.adding
+        before = self.__dict__.get('_tokens_valid_after_loaded', _UNSET)
         super().save(*args, **kwargs)
+        after = self.tokens_valid_after
+        self._tokens_valid_after_loaded = after
+        if adding or after is None:
+            return
+        if before is _UNSET:  # never loaded: trust only an explicit update of the field
+            changed = update_fields is not None and 'tokens_valid_after' in update_fields
+        else:
+            changed = after != before
+        if changed:
+            from ..signals import user_sessions_revoked
+
+            user_sessions_revoked.send(sender=self.__class__, user_ids=[self.pk])
 
     @property
     def is_admin(self) -> bool:

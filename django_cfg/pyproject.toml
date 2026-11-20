@@ -10,7 +10,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "django-cfg"
-version = "2.4.101"
+version = "2.4.102"
 description = "Modern Django framework with type-safe Pydantic v2 configuration, Next.js admin integration,\nand 8 enterprise apps. Replace settings.py with validated models, \n90% less code. Production-ready with AI agents, auto-generated TypeScript clients, \nand zero-config features.\n"
 readme = "README.md"
 keywords = [
@@ -266,6 +266,13 @@ s3 = [
     "boto3>=1.34,<2.0",
 ]
 
+# django_realtime: the WebSocket endpoint under uvicorn. 0.53 floor: sansio write flow control (0.52.1) and the
+# keep-alive timer that dropped upgraded sockets (0.53.0). Without a WebSocket library every handshake fails.
+realtime = [
+    "uvicorn>=0.53,<1.0",
+    "websockets>=13,<17",
+]
+
 rq = [
     "django-rq>=4.2.0",  # 4.2: cron job name + cron admin pages; schedules run on rq's native cron (rqcron)
     "rq>=3.0.0,<4.0",  # rq 3 changed Worker.perform_job (rq_hooks.py forwards *args); a 4.x gets tested first
@@ -361,6 +368,9 @@ full = [
     # s3 (StorageConfig.backend — S3/R2/MinIO media storage)
     "django-storages>=1.14,<2.0",
     "boto3>=1.34,<2.0",
+    # realtime (django_realtime WebSocket endpoint)
+    "uvicorn>=0.53,<1.0",
+    "websockets>=13,<17",
     # gen (django_generator)
     "openapi-python-client>=0.21,<1",
     "sqlmodel>=0.0.16,<1.0",
@@ -722,6 +732,7 @@ modules = [
     "django_cfg.modules.django_monitor",
     "django_cfg.modules.django_sitemap",
     "django_cfg.modules.django_cleanup",
+    "django_cfg.modules.django_realtime",
 ]
 unmatched_ignore_imports_alerting = "none"
 ignore_imports = [

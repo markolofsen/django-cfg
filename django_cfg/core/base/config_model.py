@@ -26,6 +26,7 @@ from ...models import (
     AccountEmailsConfig,
     AdminAccessConfig,
     EdgeConfig,
+    RealtimeConfig,
     VisitorGeoConfig,
     AdminSiteConfig,
     AnalyticsConfig,
@@ -215,6 +216,7 @@ class DjangoConfig(BaseModel):
             "x-timezone",    # IANA timezone string, e.g. "Europe/Moscow"
             "x-client-time", # ISO-8601 timestamp at request origin, e.g. "2026-05-05T12:00:00.000Z"
             "x-client-id",   # per-browser random id (browser only; absent on SSR), see ClientIdMiddleware
+            "x-realtime-cid",  # the sender's realtime connection id: its own publish is not echoed back
 
             # File transfer / chunked upload headers
             # For the django_client module, the typescript generator will add the following headers to the request.
@@ -340,6 +342,11 @@ class DjangoConfig(BaseModel):
     visitor_geo: VisitorGeoConfig = Field(
         default_factory=VisitorGeoConfig,
         description="request.geo: visitor country by default; region/city/ASN opt-in",
+    )
+
+    realtime: RealtimeConfig = Field(
+        default_factory=RealtimeConfig,
+        description="WebSocket topic pub/sub (REALTIME__*): endpoint, limits, Redis Streams backplane",
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗

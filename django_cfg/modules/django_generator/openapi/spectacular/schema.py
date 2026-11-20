@@ -53,3 +53,26 @@ class PathBasedAutoSchema(AutoSchema):
 
         return super().get_tags()
 
+    def get_extensions(self):
+        """Operation extensions, plus `x-realtime-invalidates` from `django_realtime.invalidated_by` markers.
+
+        Markers on the class and on the action handler add up. The names match django_realtime.openapi
+        (INVALIDATES, MARKER_ATTR); this module may not import that one.
+        """
+        extensions = dict(super().get_extensions() or {})
+        patterns = list(extensions.get(_INVALIDATES) or ())
+        view = getattr(self, "view", None)
+        if view is not None:
+            action = getattr(view, "action", None) or getattr(self, "method", "").lower()
+            handler = getattr(view, action, None) if action else None
+            for source in (type(view), handler):
+                for pattern in getattr(source, _MARKER_ATTR, ()) or ():
+                    if pattern not in patterns:
+                        patterns.append(pattern)
+        if patterns:
+            extensions[_INVALIDATES] = patterns
+        return extensions
+
+
+_INVALIDATES = "x-realtime-invalidates"
+_MARKER_ATTR = "realtime_invalidates"

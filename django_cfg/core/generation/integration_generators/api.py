@@ -218,6 +218,9 @@ class APIFrameworksGenerator:
                     # runtime zod check in the generated SWR hooks is
                     # what guards drift between schema and wire.
                     "django_cfg.middleware.pagination_schema_hook.extract_paginated_components",
+                    # Declared realtime topics as `x-realtime`, their events as components
+                    # (the generator's realtime.ts reads both).
+                    "django_cfg.modules.django_realtime.openapi.postprocess_realtime",
                 ],
             }
 

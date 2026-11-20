@@ -12,6 +12,7 @@ Each startup concern lives in its own module under django_cfg/startup/:
   type_stubs.py         — Auto-install DRF validated_data type stubs (dev only)
   command_shadowing.py  — Warn when a project command shares a name with a django-cfg one
   admin_access.py       — Warn about the default /admin/ in production and unwired admin_access
+  realtime.py           — Realtime without Redis in production, uvicorn too old or without WebSockets
 """
 
 import logging
@@ -61,6 +62,10 @@ class DjangoCfgConfig(AppConfig):
             from django_cfg.startup import sites  # noqa: F401  (registers the check)
         except Exception as exc:  # noqa: BLE001
             logger.warning("django_cfg sites check not registered: %s", exc)
+        try:
+            from django_cfg.startup import realtime  # noqa: F401  (registers the check)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("django_cfg realtime check not registered: %s", exc)
         from django_cfg.startup.drf_patch import patch_drf_authentication
         from django_cfg.startup.mime_types import register_media_types
         from django_cfg.startup.type_stubs import install_type_stubs

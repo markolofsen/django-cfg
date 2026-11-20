@@ -32,13 +32,16 @@ def render_query(op: IROperation, hook: str, *, sdk_import_prefix: str = "../.."
     # We omit `url` (SDK adds it) and `body` (GET hooks don't send a body).
     args_type = f'Omit<{data_t}, "url" | "body">'
 
+    # Realtime topics that invalidate this read ride in the key (see realtime_tags).
+    from .realtime_tags import tag_suffix  # lazy: `import django_cfg` loads this package (import budget)
+    tags = tag_suffix(op)
     if required:
         args_sig = f"args: {args_type},"
-        key_expr = f'["{op.operation_id}", args] as const'
+        key_expr = f'["{op.operation_id}", args{tags}] as const'
         sdk_arg = "args"
     else:
         args_sig = f"args?: {args_type},"
-        key_expr = f'["{op.operation_id}", args ?? {{}}] as const'
+        key_expr = f'["{op.operation_id}", args ?? {{}}{tags}] as const'
         sdk_arg = "(args ?? {})"
 
     validation = runtime_validation_block(op)

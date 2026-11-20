@@ -125,6 +125,10 @@ class MiddlewareBuilder:
         if self.config.notion and self.config.notion.enabled:
             middleware.append("django_cfg.modules.django_notion.context.RequestContextMiddleware")
 
+        # X-Realtime-Cid -> the publishing connection, so a socket is not sent its own change
+        if self.config.realtime.enabled:
+            middleware.append("django_cfg.modules.django_realtime.middleware.RealtimeCidMiddleware")
+
         # Accounts middleware (user activity tracking)
         # accounts is always enabled - core django-cfg functionality
         middleware.append("django_cfg.middleware.UserActivityMiddleware")

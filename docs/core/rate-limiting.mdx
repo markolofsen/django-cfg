@@ -1,17 +1,19 @@
 ---
 title: Rate Limiting
-description: Django-CFG rate limiting for API protection. Universal decorators for Django views, DRF endpoints, and async WebSocket handlers with Redis-backed distributed limiting.
+description: Django-CFG rate limiting for API protection. Universal decorators for Django views, DRF endpoints, and async handlers with Redis-backed distributed limiting.
 ---
 
 # Rate Limiting
 
-Django-CFG provides **universal rate limiting** that works across Django views, DRF endpoints, and async WebSocket handlers with Redis-backed distributed limiting.
+Django-CFG provides **universal rate limiting** that works across Django views, DRF endpoints, and async handlers with Redis-backed distributed limiting.
+
+The realtime WebSocket ([django-realtime](/features/modules/django-realtime)) carries no RPC: a client's commands are REST POSTs, limited with this decorator like any view. The socket itself has its own limits (`max_frames_per_second`, `max_connections_per_user`, close 4429) in `RealtimeConfig`.
 
 ## Concept
 
 Rate limiting protects your API from abuse by restricting the number of requests a client can make within a time window. Django-CFG's implementation:
 
-- **Universal** - One decorator works everywhere (Django, DRF, WebSocket)
+- **Universal** - One decorator works everywhere (Django, DRF, async handlers)
 - **Distributed** - Redis backend for multi-worker/multi-server deployments
 - **Flexible** - Multiple key strategies (IP, user, custom)
 - **Observable** - Standard rate limit headers in responses
@@ -68,10 +70,9 @@ def my_view(request):
 def update_metrics(self, request, pk=None):
     ...
 
-# Async WebSocket handler
-@websocket_rpc("ai_chat.send_message")
+# Async handler on a connection-like object (has user_id / client_ip)
 @rate_limit(key='user', rate='20/minute')
-async def ai_chat_send_message(conn, params):
+async def handle_message(conn, params):
     ...
 ```
 
@@ -231,25 +232,19 @@ async def ai_chat(request):
     return Response({'response': response})
 ```
 
-### WebSocket RPC
+### Async handlers
 
-Rate limit real-time operations:
+Any async callable whose first argument has `user_id` (and optionally `client_ip`) is limited per user, falling back to IP:
 
 ```python
 from django_cfg.core.decorators import rate_limit, RateLimitExceeded
 
-@websocket_rpc("game.action")
 @rate_limit(key='user', rate='10/second')
 async def game_action(conn, params):
-    try:
-        # Process game action
-        return {"success": True}
-    except RateLimitExceeded as e:
-        return {
-            "error": "rate_limited",
-            "retry_after": e.reset_in,
-        }
+    ...
 ```
+
+Calling it past the limit raises `RateLimitExceeded` (`reset_in`, `limit`) for the caller to handle.
 
 ### Non-Blocking Mode
 
@@ -418,31 +413,13 @@ config = RateLimitConfig(include_headers=True)
 
 For custom responses, headers are added automatically if response supports `__setitem__`.
 
-### WebSocket rate limit not working
-
-Ensure the decorator is **after** the RPC decorator:
-
-```python
-# CORRECT
-@websocket_rpc("method")
-@rate_limit(key='user', rate='10/minute')
-async def handler(conn, params):
-    ...
-
-# INCORRECT - rate_limit won't see connection
-@rate_limit(key='user', rate='10/minute')
-@websocket_rpc("method")
-async def handler(conn, params):
-    ...
-```
-
 ### User ID not detected
 
 For user-based rate limiting, ensure:
 
 1. **Django views:** Request has authenticated user
 2. **DRF:** Authentication classes are configured
-3. **WebSocket:** Connection has `user_id` attribute
+3. **Async handlers:** the first argument has a `user_id` attribute
 
 If user not detected, falls back to IP-based limiting.
 
@@ -518,7 +495,6 @@ For async handlers, catch the exception:
 ```python
 from django_cfg.core.decorators import rate_limit, RateLimitExceeded
 
-@websocket_rpc("api.call")
 @rate_limit(key='user', rate='10/minute')
 async def api_call(conn, params):
     try:
@@ -539,4 +515,4 @@ async def api_call(conn, params):
 
 TAGS: rate-limiting, throttling, api-protection, redis, security
 DEPENDS_ON: [django-redis, rest-framework]
-USED_BY: [api-endpoints, websocket-handlers, authentication]
+USED_BY: [api-endpoints, async-handlers, authentication]

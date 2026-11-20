@@ -185,4 +185,57 @@ def strip_secret_header(meta, config: Optional["EdgeConfig"] = None) -> None:
     meta.pop("HTTP_" + config.secret_header.upper().replace("-", "_"), None)
 
 
-__all__ = ["Edge", "PEER_META", "cloudflare_networks", "get_client_ip", "get_edge", "parse_ip", "resolve_edge"]
+def bind_edge(request: "HttpRequest") -> Edge:
+    """Resolve the edge once and make `REMOTE_ADDR` the client; the socket peer stays in `META[PEER_META]`.
+
+    The one implementation behind `RealIPMiddleware` and the WebSocket handshake.
+    """
+    request.META.setdefault(PEER_META, request.META.get("REMOTE_ADDR", ""))
+    edge = get_edge(request)
+    strip_secret_header(request.META)
+    request.edge = edge
+    if edge.client_ip:
+        request.META["REMOTE_ADDR"] = edge.client_ip
+    return edge
+
+
+def meta_from_scope(scope) -> dict:
+    """A Django `META` dict from an ASGI scope (http or websocket), built like `ASGIRequest` builds it.
+
+    Edge resolution is not applied here: pass the result through `bind_edge` (or `resolve_edge`) as HTTP does.
+    """
+    client = scope.get("client") or ("", 0)
+    server = scope.get("server") or ("", 0)
+    meta = {
+        "REQUEST_METHOD": scope.get("method", "GET"),
+        "PATH_INFO": scope.get("path", "/"),
+        "SCRIPT_NAME": scope.get("root_path", ""),
+        "QUERY_STRING": (scope.get("query_string") or b"").decode("latin-1"),
+        "REMOTE_ADDR": client[0] or "",
+        "REMOTE_HOST": client[0] or "",
+        "REMOTE_PORT": client[1] if len(client) > 1 else 0,
+        "SERVER_NAME": server[0] or "",
+        "SERVER_PORT": str(server[1]) if len(server) > 1 and server[1] is not None else "",
+        "wsgi.url_scheme": "https" if scope.get("scheme") in ("https", "wss") else "http",
+    }
+    for raw_name, raw_value in scope.get("headers") or ():
+        name = raw_name.decode("latin-1").upper().replace("-", "_")
+        if name == "CONTENT_LENGTH":
+            key = "CONTENT_LENGTH"
+        elif name == "CONTENT_TYPE":
+            key = "CONTENT_TYPE"
+        else:
+            key = "HTTP_" + name
+        value = raw_value.decode("latin-1")
+        if key == "HTTP_COOKIE":
+            value = value.rstrip("; ")
+            meta[key] = meta[key] + "; " + value if key in meta else value
+        else:
+            meta[key] = meta[key] + "," + value if key in meta else value
+    return meta
+
+
+__all__ = [
+    "Edge", "PEER_META", "bind_edge", "cloudflare_networks", "get_client_ip", "get_edge", "meta_from_scope",
+    "parse_ip", "resolve_edge",
+]

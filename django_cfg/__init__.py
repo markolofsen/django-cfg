@@ -29,7 +29,7 @@ Example:
 """
 
 # Version information
-__version__ = "2.4.101"
+__version__ = "2.4.102"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)
@@ -81,6 +81,7 @@ from .models.api.twofactor import TwoFactorConfig
 from .models.django.admin_access import AdminAccessConfig
 from .models.django.edge import EdgeConfig
 from .models.django.visitor_geo import GeoOverride, VisitorGeoConfig
+from .models.django.realtime import RealtimeConfig
 from .models.django.analytics import AnalyticsConfig
 from .models.django.axes import AxesConfig
 from .models.django.chat import AttachmentsConfig, ChatConfig
@@ -276,7 +277,7 @@ __all__ = [
     "DjangoRQConfig", "RQQueueConfig", "RQScheduleConfig",
     "RQHealthConfig", "QueueHealthThresholds",
     "DjangoLoggingConfig",
-    "CurrencyConfig", "PaymentsConfig", "AdminAccessConfig", "EdgeConfig", "VisitorGeoConfig", "GeoOverride", "GeoConfig", "IndexNowConfig", "IndexNowSite", "Site", "SiteConfig", "site_for", "site_key", "sites", "AnalyticsConfig", "AttachmentsConfig", "ChatConfig", "SimpleHistoryConfig",
+    "CurrencyConfig", "PaymentsConfig", "AdminAccessConfig", "EdgeConfig", "VisitorGeoConfig", "GeoOverride", "RealtimeConfig", "GeoConfig", "IndexNowConfig", "IndexNowSite", "Site", "SiteConfig", "site_for", "site_key", "sites", "AnalyticsConfig", "AttachmentsConfig", "ChatConfig", "SimpleHistoryConfig",
     "ConstanceConfig", "ConstanceField", "StorageConfig", "FileCleanupConfig", "CDNPurgeConfig", "S3StorageConfig", "OpenAPIClientConfig",
     "EmailConfig", "TelegramConfig", "NotionConfig", "NotionTarget", "NotionLead", "FrontendErrorsConfig",
     # middleware (lazy — DRF reads settings at import time)

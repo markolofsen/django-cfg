@@ -8,6 +8,7 @@ Rules:
   2. Walk kept operations, collect transitive `$ref` closure.
   3. Drop `components.schemas.X` not in the closure.
   4. Empty `allowed` → pass-through (return spec unchanged).
+  5. `x-realtime` topics are kept by the same tag rule, and their event `$ref`s seed the closure too.
 """
 
 from __future__ import annotations
@@ -58,9 +59,16 @@ def slice_by_tags(spec: dict[str, Any], allowed_tags: set[str]) -> dict[str, Any
         if not any(m.lower() in _HTTP_METHODS for m in item):
             del paths[path]
 
+    realtime = sliced.get("x-realtime")
+    if isinstance(realtime, dict):
+        realtime["topics"] = [
+            t for t in realtime.get("topics") or []
+            if {_normalize_tag(tag) for tag in t.get("tags") or []} & norm_allowed
+        ]
+
     schemas: dict[str, Any] = sliced.get("components", {}).get("schemas", {})
     if schemas:
-        kept = _closure(paths, schemas)
+        kept = _closure({"paths": paths, "x-realtime": realtime}, schemas)
         for name in list(schemas.keys()):
             if name not in kept:
                 del schemas[name]

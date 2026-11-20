@@ -1,0 +1,116 @@
+---
+title: Realtime Quick Start
+description: Serve /ws from your uvicorn process, declare a topic, publish to it after a commit, and receive it in React with useTopic.
+---
+
+# Quick start
+
+Five steps from nothing to a live update in the browser.
+
+## 1. Install the extra
+
+```bash
+pip install 'django-cfg[realtime]'   # uvicorn>=0.53 and websockets; also part of `full`
+```
+
+Without a WebSocket library uvicorn fails every handshake (system check `django_cfg.W051`).
+
+## 2. Turn it on
+
+```python
+# api/config.py
+from django_cfg import DjangoConfig, RealtimeConfig
+
+class MyConfig(DjangoConfig):
+    redis_url: str = "redis://redis:6379/0"
+    realtime: RealtimeConfig = RealtimeConfig(enabled=True)
+```
+
+Every field also reads from the environment as `REALTIME__<FIELD>` (`REALTIME__ENABLED=true`). With `redis_url` set the backend is Redis Streams; without it, an in-process memory backend that only works for a single process (DEBUG and tests). Enabled outside DEBUG without Redis is the system check error `django_cfg.E050`.
+
+`enabled=True` installs the module app (topic autodiscovery, `manage.py realtime`) and `RealtimeCidMiddleware`, and serves the endpoint.
+
+## 3. Wrap the ASGI application
+
+```python
+# api/asgi.py
+from django.core.asgi import get_asgi_application
+from django_cfg.modules.django_realtime import realtime_asgi
+
+application = realtime_asgi(get_asgi_application())
+```
+
+WebSocket scopes on `/ws` go to the realtime handler, everything else to Django. Run it as usual: `uvicorn api.asgi:application` (production flags on [Deployment](./deployment)).
+
+## 4. Declare a topic
+
+```python
+# apps/orders/realtime.py — imported automatically, like admin.py
+from pydantic import BaseModel
+from django_cfg.modules.django_realtime import topic
+
+from .models import Order
+
+
+class OrderEvent(BaseModel):
+    kind: str  # "paid", "shipped"
+
+
+orders = topic(
+    "orders:{order_id:int}",
+    event=OrderEvent,
+    allow=lambda user, order_id: Order.objects.filter(pk=order_id, owner=user).exists(),
+)
+```
+
+Check it: `python manage.py realtime topics` lists every declared pattern with its event model, access and history.
+
+## 5. Publish, and receive it
+
+```python
+# anywhere sync: a view, a signal, an RQ job
+from django_cfg.modules.django_realtime import publish
+from apps.orders.realtime import OrderEvent, orders
+
+publish(orders(order_id=order.pk), OrderEvent(kind="paid"))
+```
+
+Inside a transaction the append waits for the commit. Or let the model announce itself, with no call in your views:
+
+```python
+# apps/orders/realtime.py
+from django_cfg.modules.django_realtime import broadcasts
+
+order_changed = topic(
+    "orders.changed:{order_id:int}",  # the default event: an empty hint
+    allow=lambda user, order_id: Order.objects.filter(pk=order_id, owner=user).exists(),
+)
+broadcasts(Order, order_changed, params=lambda o: {"order_id": o.pk})
+```
+
+Run `make gen`. The group's generated `realtime.ts` now has `ordersTopic({ orderId })`, typed with `OrderEvent`. In any client component under `BaseApp`:
+
+```tsx
+'use client';
+import { useTopic } from '@djangocfg/realtime/react';
+import { ordersTopic } from '@/api/generated/_orders/realtime'; // your group's generated folder
+
+function OrderStatus({ id }: { id: number }) {
+  const { data, mutate } = useOrder(id);                          // the REST read stays the source of truth
+  useTopic(ordersTopic({ orderId: id }), () => void mutate());    // a push says "this changed"
+  return <span>{data?.status}</span>;
+}
+```
+
+Try it from a shell, without the app:
+
+```bash
+python manage.py realtime publish orders:42 '{"kind": "paid"}'   # validates, appends now, prints the offset
+python manage.py realtime tail orders:42                          # prints new messages until Ctrl-C
+```
+
+## Next
+
+- No code at all on the page: tag the read with [`@invalidated_by`](./codegen#tagged-swr-keys) and the generated SWR hook revalidates itself.
+- Who may subscribe: [Topics & Permissions](./topics-and-permissions).
+- Tests: [Testing](./testing).

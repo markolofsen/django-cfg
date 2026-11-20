@@ -124,6 +124,7 @@ def _collect_cfg_tags(global_spec: dict[str, Any], *, sub_glob: str) -> set[str]
 
 
 def _iter_ops(global_spec: dict[str, Any]):
+    """Operations, then `x-realtime` topics: a topic's tags claim it for a group exactly like an operation's."""
     paths: dict[str, Any] = global_spec.get("paths", {})
     for _path, item in list(paths.items()):
         if not isinstance(item, dict):
@@ -131,6 +132,11 @@ def _iter_ops(global_spec: dict[str, Any]):
         for method, op in list(item.items()):
             if method.lower() in _HTTP_METHODS and isinstance(op, dict):
                 yield op
+    realtime = global_spec.get("x-realtime")
+    if isinstance(realtime, dict):
+        for topic in realtime.get("topics") or []:
+            if isinstance(topic, dict):
+                yield topic
 
 
 __all__ = ["resolve_tags", "resolve_tags_by_name"]

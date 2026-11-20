@@ -51,8 +51,10 @@ Facts that are easy to get wrong:
   host (taken from `DATABASE__URL`) and a host named `redis` on that network. The
   database is a shared one (`make createdb` runs against the container
   `shared-db-postgres`).
-- **There is no WebSocket service.** No WebSocket transport ships in the package
-  (the Centrifugo integration was removed in 2.3.0).
+- **There is no separate WebSocket service.** django-cfg realtime is served by the
+  Django container's own uvicorn on `/ws` when `realtime.enabled` (the Centrifugo
+  integration was removed in 2.3.0). Flags, `stop_grace_period` and the optional
+  second `/ws` container: [Realtime deployment](/features/modules/django-realtime/deployment).
 - **gRPC is off.** The `grpc` service is kept commented out in the production group;
   the monolithic `docker-compose.yaml` and the local file still define it.
 - **The worker and scheduler reuse the API image.** Only `api` has a `build:`
