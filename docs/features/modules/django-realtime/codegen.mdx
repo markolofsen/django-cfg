@@ -21,6 +21,7 @@ The drf-spectacular hook `django_cfg.modules.django_realtime.openapi.postprocess
 
 - Event models (and their nested models) become ordinary `components.schemas`, so they get zod schemas and types like any serializer.
 - A topic's tag is its `group` (by default the declaring app), so the slicer puts it in that group's client.
+- A group slice without topics has no `x-realtime` key at all (not `topics: []`), so its committed `openapi.json`/`openapi.yaml` does not change when another group gains a topic. Only the slices that carry topics have the key.
 - A schema name that already holds a different schema stops generation (`SchemaCollision`): rename the event model. It is never overwritten.
 
 ## `realtime.ts`

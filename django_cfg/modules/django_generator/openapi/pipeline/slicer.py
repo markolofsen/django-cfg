@@ -65,6 +65,11 @@ def slice_by_tags(spec: dict[str, Any], allowed_tags: set[str]) -> dict[str, Any
             t for t in realtime.get("topics") or []
             if {_normalize_tag(tag) for tag in t.get("tags") or []} & norm_allowed
         ]
+        if not realtime["topics"]:
+            # A slice without topics carries no `x-realtime` at all: an empty
+            # `topics: []` in every group slice churned committed clients.
+            del sliced["x-realtime"]
+            realtime = None
 
     schemas: dict[str, Any] = sliced.get("components", {}).get("schemas", {})
     if schemas:

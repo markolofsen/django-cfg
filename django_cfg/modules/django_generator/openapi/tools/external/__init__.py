@@ -8,17 +8,17 @@ Each module exposes:
 from . import (
     buf_proto,
     grpc_python,
-    hey_api,
     ogen,
     openapi_python_client,
+    orval,
     swift_openapi,
 )
 
 __all__ = [
     "buf_proto",
     "grpc_python",
-    "hey_api",
     "ogen",
     "openapi_python_client",
+    "orval",
     "swift_openapi",
 ]

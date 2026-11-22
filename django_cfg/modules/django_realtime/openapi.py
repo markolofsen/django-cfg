@@ -10,9 +10,9 @@ and slices them per group by `tags` like operations. A name that already holds a
 and stops generation; it is never overwritten.
 
 `@invalidated_by("orders:{order_id}")` on a DRF view, viewset or action marks the operations whose responses the
-topic invalidates. The schema class writes it as `x-realtime-invalidates` on each operation; the generator tags the
-SWR keys of those reads with the concrete topic name, the parameters taken from the path parameters of the same
-names. A marker naming no declared topic stops generation.
+topic invalidates. The schema class writes it as `x-realtime-invalidates` on each operation; client integrations can
+use the concrete topic name and the parameters taken from the path parameters of the same names when invalidating
+their cache. A marker naming no declared topic stops generation.
 """
 
 from __future__ import annotations

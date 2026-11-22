@@ -215,7 +215,7 @@ class APIFrameworksGenerator:
                     # Bare-array list endpoints are left as-is (the
                     # writer's intent is clear from ``pagination_class
                     # = None`` or an APIView with ``many=True``); the
-                    # runtime zod check in the generated SWR hooks is
+                    # runtime zod check in the generated React Query operations is
                     # what guards drift between schema and wire.
                     "django_cfg.middleware.pagination_schema_hook.extract_paginated_components",
                     # Declared realtime topics as `x-realtime`, their events as components

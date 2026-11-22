@@ -9,7 +9,7 @@
     publish(orders(order_id=42), OrderEvent(kind="paid"))   # appended after the transaction commits
     broadcasts(Order, orders)                               # a hint per committed save/delete; touch() for update()
 
-    # a DRF view whose cached reads a topic invalidates (x-realtime-invalidates -> tagged SWR keys)
+    # a DRF view whose cached reads a topic invalidates (x-realtime-invalidates -> client cache keys)
     @invalidated_by("orders:{order_id}")
 
     # api/asgi.py

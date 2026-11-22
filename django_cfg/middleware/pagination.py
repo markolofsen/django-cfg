@@ -117,8 +117,8 @@ class DefaultPagination(PageNumberPagination):
                     'example': True
                 },
                 # OpenAPI 3.1 union form. drf-spectacular's 3.0-style
-                # ``nullable: True`` is silently dropped by the 3.1 ts_extras
-                # post-processor, so the generated zod schema would emit
+                # Keep the OpenAPI 3.1 union explicit so Orval's generated Zod
+                # schema preserves the nullable wire value instead of emitting
                 # ``z.number().optional()`` and reject the legitimate
                 # ``null`` we send when there is no next/previous page.
                 'next_page': {

@@ -6,7 +6,7 @@ WHY:
    verbatim into every list endpoint's 200 response. Two follow-on
    problems:
 
-   1. The TS codegen (``ts_extras``) refuses to generate zod schemas
+   1. The TypeScript client generator needs named reusable schemas
       for inline responses — so paginated endpoints lose runtime
       validation, and the frontend trusts ``Array<X>`` types that
       lie about the wire shape.
@@ -42,7 +42,7 @@ WHAT THIS HOOK DOES NOT DO:
    need the whole structure at once. The author signals that intent
    with ``pagination_class = None`` or by using ``APIView`` with
    ``many=True``. We trust that signal. The runtime zod check in the
-   generated SWR hooks (separate concern) catches schema-vs-wire
+   generated React Query operations (separate concern) catches schema-vs-wire
    drift if someone later adds a wrapper without updating the spec.
 
 USAGE:

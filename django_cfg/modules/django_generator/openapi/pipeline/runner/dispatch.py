@@ -5,7 +5,7 @@ Two entry points:
 * ``run_target`` — picks the layout policy (single output vs
   per-group split) and drives ``run_single`` for each slice.
 * ``run_single`` — slices the spec, dispatches to the external tool,
-  caches the output, runs ts_extras when needed.
+  and caches the output.
 
 The cache is consulted before the external tool runs and populated
 after. A hit replays the stored snapshot into ``out_dir`` and the
@@ -15,13 +15,11 @@ external tool never runs.
 from __future__ import annotations
 
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
 from pathlib import Path
 from typing import Any
 
 from ..cache import (
-    _dict_hash,
-    cache_disabled,
     compute_target_cache_key,
     restore_target_output,
     store_target_output,
@@ -31,13 +29,13 @@ from ..errors import GeneratorError
 from ..postprocess import nullable_3_1_to_3_0
 from ..slicer import slice_by_tags
 from ...groups.resolver import resolve_tags, resolve_tags_by_name
-from ...tools.openapi_processor.ts.ir import promote_inline_schemas
+from ..schema_refs import promote_inline_schemas
 from ...tools.external import (
     buf_proto,
     grpc_python,
-    hey_api,
     ogen,
     openapi_python_client,
+    orval,
     swift_openapi,
 )
 from ...tools.openapi_processor.go.tool import generate as generate_go_wrapper
@@ -46,11 +44,9 @@ from ...tools.openapi_processor.python.wrapper.generator import (
     generate as generate_python_wrapper,
     generate_barrel as generate_python_barrel,
 )
-from ...tools.openapi_processor.ts.tool import generate as generate_ts_extras
 from .cache_keys import target_cache_slot, target_signature
 from .paths import effective_root
 from .stamp import stamp_target
-from .ts_wrapper import clean_stale_root, run_ts_wrapper, ts_extras_list
 
 
 def run_target(
@@ -82,8 +78,8 @@ def _run_target(
     Splitting policy:
       • Proto tools (``buf`` / ``grpc-python``) render flat into
         ``target.path``.
-      • TS targets (``hey-api``) render one sub-SDK per group into
-        ``<target>/<group>/`` and emit a wrapper layer at ``<target>/``.
+      • Orval TS targets render a clean React Query/Zod/MSW tree into the
+        target root using ``tags-split``.
       • Other tools render flat for single-group targets, multi-group
         for the rest.
     """
@@ -94,131 +90,19 @@ def _run_target(
             ok, err, hit = run_single(target, target.groups, out_root, global_spec, config, cache)
             return ok, err, hit
 
-        # TS targets: hey-api runs ONCE on the full spec into target_root/
-        # (one sdk.gen.ts, one types.gen.ts, shared client/ core/).
-        # ts_extras (zod schemas + SWR hooks) runs per-group with a
-        # tag-sliced spec into target_root/_<group>/ so each group folder
-        # contains only its own hooks and schemas.
-        if target.tool == "hey-api":
-            target_root = out_root
-            groups_to_run = target.groups or ["default"]
-
-            # Guard against group names that would conflict with hey-api SDK
-            # output paths after the underscore prefix is prepended.
-            _HEY_API_RESERVED = {
-                "sdk.gen.ts", "types.gen.ts", "client.gen.ts",
-                "client", "core", "helpers", "index.ts", "api.ts",
-                "events.ts",
-            }
-            for _g in groups_to_run:
-                _prefixed = f"_{_g}"
-                if _prefixed in _HEY_API_RESERVED:
-                    raise GeneratorError(
-                        f"Group name {_prefixed!r} conflicts with hey-api SDK output "
-                        f"— rename the group (reserved names: {sorted(_HEY_API_RESERVED)})"
-                    )
-
-            clean_stale_root(target_root, groups_to_run)
-
-            # --- Step 1: single hey-api pass on union of all target groups ---
-            # We slice to exactly the tags this target needs — cfg_* tags
-            # won't bleed into a target that doesn't list them.
-            sdk_cache = cache / "runs" / target.name / "__sdk__"
-            sdk_cache.mkdir(parents=True, exist_ok=True)
-            ok, err, sdk_hit = run_single(
+        if target.tool == "orval":
+            # Orval runs once on the union slice. Its tags-split mode creates
+            # one endpoint module per OpenAPI tag and one shared model tree;
+            # Orval owns the complete TypeScript output; no post-processor is involved.
+            ok, err, hit = run_single(
                 target,
-                groups_to_run,   # union slice of all groups for this target
-                target_root,
+                target.groups,
+                out_root,
                 global_spec,
                 config,
                 cache,
-                cache_subdir=sdk_cache,
-                _skip_ts_extras=True,  # ts_extras runs per-group below
             )
-            if not ok:
-                return False, f"hey-api (full spec): {err}", False
-
-            # --- Step 2: ts_extras per group into <group>/ in parallel ---
-            all_hit = sdk_hit
-            extras = ts_extras_list(config)
-            if extras:
-                extras_key = "+".join(sorted(extras))
-
-                def _run_group_extras(group_name: str) -> bool:
-                    """Returns True if the group was served from cache."""
-                    group_sliced = _resolve_and_slice(
-                        target, [group_name], global_spec, config
-                    )
-
-                    if not group_sliced.get("paths") and not (group_sliced.get("x-realtime") or {}).get("topics"):
-                        sep = "=" * 64
-                        print(
-                            f"\n{sep}\n"
-                            f"  ⚠️  WARNING: group '{group_name}' matched 0 paths!\n"
-                            f"  The OpenAPI tag in @extend_schema(tags=[...]) must match\n"
-                            f"  the group name exactly (case-sensitive).\n"
-                            f"  Expected tag string: '{group_name}'\n"
-                            f"  Fix: update Django views so tags=['{group_name}'] everywhere.\n"
-                            f"{sep}\n",
-                            flush=True,
-                        )
-
-                    group_spec_cache = cache / "runs" / target.name / group_name
-                    group_spec_cache.mkdir(parents=True, exist_ok=True)
-
-                    # ts_extras output goes into target_root/_<group_name>/
-                    # (underscore prefix keeps group dirs distinct from hey-api
-                    # SDK files at the root).
-                    group_out_dir = target_root / f"_{group_name}"
-
-                    # Fingerprint: sliced spec + extras list + out_dir.
-                    fp_input = {
-                        "spec": group_sliced,
-                        "extras": extras_key,
-                        "out": group_out_dir.as_posix(),
-                    }
-                    fp = _dict_hash(fp_input)
-                    fp_path = group_spec_cache / "extras.fingerprint"
-                    if not cache_disabled() and fp_path.is_file():
-                        try:
-                            if fp_path.read_text(encoding="utf-8").strip() == fp:
-                                return True  # cache hit — skip ts_extras
-                        except OSError:
-                            pass
-
-                    group_spec_path = group_spec_cache / "openapi.json"
-                    group_spec_path.write_text(
-                        json.dumps(group_sliced, ensure_ascii=False, indent=2)
-                    )
-                    generate_ts_extras(
-                        group_spec_path,
-                        group_out_dir,
-                        extras=extras,
-                        enum_prefix=group_name,
-                    )
-                    group_out_dir.mkdir(parents=True, exist_ok=True)
-                    (group_out_dir / "openapi.json").write_text(
-                        json.dumps(group_sliced, ensure_ascii=False, indent=2), encoding="utf-8"
-                    )
-                    try:
-                        fp_path.write_text(fp, encoding="utf-8")
-                    except OSError:
-                        pass
-                    return False
-
-                group_hits: list[bool] = []
-                workers = min(len(groups_to_run), 8)
-                with ThreadPoolExecutor(max_workers=workers) as pool:
-                    futs = {pool.submit(_run_group_extras, g): g for g in groups_to_run}
-                    for fut in as_completed(futs):
-                        exc = fut.exception()
-                        if exc:
-                            return False, f"{futs[fut]}: {exc}", False
-                        group_hits.append(fut.result())
-                all_hit = all_hit and all(group_hits)
-
-            run_ts_wrapper(target, out_root)
-            return True, None, all_hit
+            return ok, err, hit
 
         # Swift and TypeScript generators emit one module-level client from the
         # union of their selected groups. Splitting a Swift target produces
@@ -271,8 +155,6 @@ def run_single(
     config: OpenAPIConfig,
     cache: Path,
     cache_subdir: Path | None = None,
-    *,
-    _skip_ts_extras: bool = False,
 ) -> tuple[bool, str | None, bool]:
     """Generate one SDK (one slice) into ``out_dir``.
 
@@ -317,7 +199,7 @@ def run_single(
             generate_go_wrapper(out_dir=out_dir, package=pkg)
         return True, None, True
 
-    ok, err = _dispatch_tool(target, spec_path, out_dir, config, skip_ts_extras=_skip_ts_extras)
+    ok, err = _dispatch_tool(target, spec_path, out_dir, config)
     if not ok:
         return False, err, False
 
@@ -361,8 +243,7 @@ def _resolve_and_slice(
         # in *all* endpoints.
         empty = dict(global_spec)
         empty["paths"] = {}
-        if isinstance(empty.get("x-realtime"), dict):
-            empty["x-realtime"] = {**empty["x-realtime"], "topics": []}
+        empty.pop("x-realtime", None)  # no topics in this slice, so no key (see slicer.slice_by_tags)
         return empty
     return slice_by_tags(global_spec, allowed)
 
@@ -372,8 +253,6 @@ def _dispatch_tool(
     spec_path: Path,
     out_dir: Path,
     config: OpenAPIConfig,
-    *,
-    skip_ts_extras: bool = False,
 ) -> tuple[bool, str | None]:
     """Hand the sliced spec to the right external generator.
 
@@ -390,15 +269,28 @@ def _dispatch_tool(
         generate_go_wrapper(out_dir=out_dir, package=pkg)
         return True, None
 
-    if tool == "hey-api":
-        client = str(options.get("client", "fetch"))
-        plugins_opt = options.get("plugins")
-        plugins = plugins_opt if isinstance(plugins_opt, list) else None
-        hey_api.generate(spec_path, out_dir, client=client, plugins=plugins)
-        if not skip_ts_extras:
-            extras = ts_extras_list(config)
-            if extras:
-                generate_ts_extras(spec_path, out_dir, extras=extras)
+    if tool == "orval":
+        workspace = _find_frontend_workspace(target.path)
+        mock = options.get("mock", True)
+        prettier = options.get("prettier", True)
+        # Prefer a runtime next to the package's generated tree. Other
+        # frontend targets consume the public API package's runtime export.
+        local_runtime = target.path.parent.parent / "runtime" / "orval-mutator.ts"
+        if local_runtime.is_file():
+            mutator_import = os.path.relpath(
+                local_runtime.with_suffix(""),
+                start=target.path / "runtime",
+            )
+        else:
+            mutator_import = "@djangocfg/api"
+        orval.generate(
+            spec_path,
+            out_dir,
+            cwd=workspace,
+            mock=bool(mock),
+            prettier=bool(prettier),
+            mutator_import=mutator_import,
+        )
         return True, None
 
     if tool == "openapi-python-client":
@@ -454,6 +346,27 @@ def _dispatch_tool(
         return True, None
 
     return False, f"unknown tool: {tool}"
+
+
+def _find_frontend_workspace(start: Path) -> Path:
+    """Find the pnpm workspace that owns a generated TS target."""
+    current = Path(start).resolve()
+    candidates = [current, *current.parents]
+    for directory in candidates:
+        package_json = directory / "package.json"
+        if not package_json.is_file():
+            continue
+        try:
+            package = json.loads(package_json.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(package, dict) and package.get("workspaces"):
+            return directory
+        if (directory / "pnpm-workspace.yaml").is_file():
+            return directory
+    raise GeneratorError(
+        f"could not find a pnpm workspace above TypeScript target {start}"
+    )
 
 
 __all__ = ["run_single", "run_target"]

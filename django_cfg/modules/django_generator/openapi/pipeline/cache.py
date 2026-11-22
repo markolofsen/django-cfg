@@ -11,7 +11,7 @@ Two layers of cache, both fingerprint-based:
 **2. Per-target output cache.** A target's ``out_dir`` is a pure function
    of (sliced spec, tool, tool config). If we've already generated those
    bytes in a previous run, we can skip the entire ``ogen`` /
-   ``hey-api`` / ``swift-openapi`` / ``openapi-python-client`` invocation.
+   ``orval`` / ``swift-openapi`` / ``openapi-python-client`` invocation.
    That's where most of the wallclock time lives — each tool boots a Go
    / Node / Python runtime, parses the spec, walks templates, writes
    files. None of that runs again on a clean cache hit.
@@ -204,7 +204,7 @@ def restore_target_output(
     untouched.
 
     Used by the runner before invoking the external tool — a hit means
-    we skip the entire ogen / hey-api / swift / python-client run.
+   we skip the entire ogen / orval / swift / python-client run.
     """
     if cache_disabled():
         return False

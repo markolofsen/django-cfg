@@ -83,9 +83,8 @@ def run_pipeline(
     # Without this wipe, edits to generator templates / post-processors go
     # undetected when the spec hasn't changed, and stale output ships.
     #
-    # Two file names are wiped:
-    #   • `extras.fingerprint`  — ts_extras (TS post-processor) per-group cache
-    #   • `fingerprint`         — per-target snapshot cache (ogen / hey-api /
+    # The per-target `fingerprint` is wiped for every external generator.
+    # It covers the per-target snapshot cache (ogen / orval /
     #                             openapi-python-client / swift-openapi /
     #                             python post-processor)
     #
@@ -97,10 +96,9 @@ def run_pipeline(
     #     before the next `make gen` actually picks up the new code.
     #
     # This is the single source of truth for cache invalidation when
-    # GENERATOR CODE changes. Spec-only changes are handled by the per-group
-    # fingerprint comparison in dispatch._run_group_extras.
+    # GENERATOR CODE changes.
     # ════════════════════════════════════════════════════════════════════
-    for fp_name in ("extras.fingerprint", "fingerprint"):
+    for fp_name in ("fingerprint",):
         for fp in cache.rglob(fp_name):
             fp.unlink(missing_ok=True)
 
@@ -134,7 +132,7 @@ def run_pipeline(
 
     # Targets are independent: each slices a fresh copy of `global_spec`
     # into its own cache subdir and writes to its own `out_dir`. The
-    # heavy lifting is external subprocess (ogen / hey-api / swift /
+    # heavy lifting is external subprocess (ogen / orval / swift /
     # python-client) — Python time inside the worker is small, so a
     # ThreadPool releases the GIL during ``subprocess.run()`` and yields
     # ~Nx wallclock speedup for N tools running in parallel.

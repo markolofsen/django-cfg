@@ -1,10 +1,10 @@
 # django_generator
 
 Clean-room rewrite of `django_client/` modeled on the FastAPI-side cmdop
-generator. Thin orchestrator over external CLIs (ogen, Hey API,
-openapi-python-client, swift-openapi-generator, buf) plus a `ts_extras/`
-layer that adds zod schemas, SWR hooks, and an `events.ts` bridge on top
-of Hey API output.
+generator. Thin orchestrator over external CLIs (ogen, Orval,
+openapi-python-client, swift-openapi-generator, buf). TypeScript targets are
+generated from OpenAPI by the pinned Orval tool into a React Query/Zod/MSW
+client; Python/Go/Swift targets keep their own external generators.
 
 ## Pipeline
 
@@ -13,11 +13,7 @@ drf-spectacular → spec_loader → postprocess → resolve_tags → slicer
                                                                 │
                                        ┌────────────────────────┘
                                        ▼
-                       external CLI (ogen / hey-api / openapi-python-client / …)
-                                       │
-                                  (TS only)
-                                       ▼
-                       ts_extras (zod / SWR hooks / events.ts)
+                       external CLI (ogen / Orval / openapi-python-client / …)
                                        │
                                        ▼
                                   <Target.path>/
@@ -49,7 +45,7 @@ go install github.com/ogen-go/ogen/cmd/ogen@latest
 brew install bufbuild/buf/buf
 brew install apple/tap/swift-openapi-generator
 brew install swift-protobuf grpc-swift   # for proto-Swift targets
-# Hey API runs via npx — no install step (Node 20+ required)
+# Orval is installed and pinned in the frontend workspace (Node 22.18+ required)
 ```
 
 `python manage.py gen --check` probes every CLI and prints install hints

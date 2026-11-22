@@ -3,7 +3,7 @@
 Reads `OpenAPI(targets=[Target(...)])` from generation.py, translates each
 Target into a pipeline GenerationTarget, and dispatches via
 `openapi/pipeline/runner.run_pipeline()` (drf-spectacular → tag-slice →
-external CLI: ogen / Hey API / openapi-python-client / swift-openapi).
+external CLI: ogen / Orval / openapi-python-client / swift-openapi).
 
 The legacy `call_command("generate_clients")` path was removed; in-house
 emitters now live under `@archive/django-cfg-src/modules/django_generator/@archive/django_client_old/` (repo root)
@@ -29,7 +29,7 @@ from .utils import (
 )
 
 _LANG_DEFAULT_TOOL: dict[str, str] = {
-    "typescript": "hey-api",
+    "typescript": "orval",
     "python": "openapi-python-client",
     "go": "ogen",
     "swift": "swift-openapi",

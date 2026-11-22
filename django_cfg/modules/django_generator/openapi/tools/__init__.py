@@ -1,1 +1,1 @@
-"""External tool wrappers + ts_extras layer."""
+"""External tool wrappers used by the OpenAPI generation pipeline."""

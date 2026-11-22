@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.103] - 2026-11-22
+
+### Fixed
+
+- **Generator: a group slice without realtime topics no longer carries `x-realtime: {topics: []}`.** Since 2.4.102, once any topic existed every group's `openapi.json`/`openapi.yaml` got the empty key, which churned committed clients. The slicer (`pipeline/slicer.py`) and the no-tags fallback (`runner/dispatch.py`) now omit the key when the slice has no topics; slices with topics are unchanged. Note for existing projects: the next `make gen` removes the empty key from every group slice once, then stays stable.
+
 ## [2.4.102] - 2026-11-20
 
 ### Added

@@ -1,7 +1,7 @@
 """django_generator — unified codegen module.
 
 Combines:
-  - Internal pipeline (drf-spectacular slicer + external CLIs + ts_extras)
+  - Internal pipeline (drf-spectacular slicer + external CLIs)
   - User-facing config (Config/OpenAPI/Target/...) — was django_codegen
   - Codegen runner (orchestrator with copy_groups, post_build, wildcards)
   - FastAPI ORM generator (was django_fastapi)

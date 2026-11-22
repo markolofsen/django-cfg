@@ -114,6 +114,7 @@ class APIKeyViewSet(ClientAPIMixin, viewsets.GenericViewSet):
             "signed-in user to copy and paste into agent onboarding. Default "
             "GET stays masked; this is the explicit reveal action."
         ),
+        request=None,
         responses={
             200: APIKeyRevealSerializer,
             401: {"description": "Authentication credentials were not provided."},
@@ -136,6 +137,7 @@ class APIKeyViewSet(ClientAPIMixin, viewsets.GenericViewSet):
         tags=["cfg_accounts_api_key"],
         summary="Regenerate API key",
         description="Generate a new API key. The full key is returned only once.",
+        request=None,
         responses={
             200: APIKeyRegenerateSerializer,
             401: {"description": "Authentication credentials were not provided."},

@@ -37,8 +37,7 @@ def get_queryset(self):
 
 ## 3. Inline schema vs `$ref`
 
-`ts_extras` ignores inline response schemas — no zod, no typed hooks.
-Two fixes:
+Named schemas give Orval reusable types and Zod schemas. Two fixes:
 
 **A. Paginate** (wraps in `{count, next, previous, results}`):
 ```python

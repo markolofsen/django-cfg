@@ -207,8 +207,8 @@ def discriminator_literals(spec: dict[str, Any]) -> int:
     """Make a ``oneOf`` + ``discriminator`` union narrow in TypeScript. Returns the number of properties rewritten.
 
     drf-spectacular types each member's discriminator property as a one-value
-    enum component (``type: {allOf: [{$ref: ChatRunFrameTypeEnum}]}``). Hey API
-    (``enums.mode: 'typescript'``) turns that into a real ``enum`` and the union
+    enum component (``type: {allOf: [{$ref: ChatRunFrameTypeEnum}]}``). A
+    TypeScript generator can turn that into a real ``enum`` and the union
     member into ``{ type: 'run' } & { type: ChatRunFrameTypeEnum }``, and
     ``'run' & ChatRunFrameTypeEnum`` is ``never``: the whole union collapses and
     ``switch (frame.type)`` finds no property. Rewriting the property to
@@ -217,8 +217,7 @@ def discriminator_literals(spec: dict[str, Any]) -> int:
 
     Only a member that is referenced by the discriminator ``mapping`` and whose
     property is a single-value enum equal to the mapped value is touched; anything
-    else is left alone. Meant for the hey-api input only (the other generators keep
-    the enum). Idempotent.
+    else is left alone. Idempotent.
     """
     schemas = (spec.get("components") or {}).get("schemas") or {}
     changed = 0

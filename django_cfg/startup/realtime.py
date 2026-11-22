@@ -85,11 +85,11 @@ def check_realtime(app_configs, **kwargs):
 
 
 def untaggable_markers(markers) -> list:
-    """W052 for each `invalidated_by` topic a client cache key cannot carry: its name has neither ':' nor '.'."""
+    """W052 for each `invalidated_by` topic a cache-key middleware cannot carry: its name has neither ':' nor '.'."""
     return [
         Warning(
             f"{label}: invalidated_by({pattern!r}) cannot tag a cache key",
-            hint="The SWR middleware reads only key parts with ':' or '.' as topics; rename the topic "
+            hint="The cache-key middleware reads only key parts with ':' or '.' as topics; rename the topic "
                  "(e.g. 'orders.list') or drop the marker.",
             id="django_cfg.W052",
         )

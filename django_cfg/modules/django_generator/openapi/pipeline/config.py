@@ -79,22 +79,6 @@ class OpenAPIConfig(BaseModel):
     generate_typescript: bool = True
     generate_package_files: bool = False
 
-    # TS extras (default-on; legacy was opt-in)
-    generate_zod_schemas: bool = True
-    generate_fetchers: bool = True
-    generate_swr_hooks: bool = True
-    # events.ts registered a SECOND response/error interceptor pair emitting
-    # `cmdop:network-error` CustomEvents — audited across all consumers
-    # (2026-07): nothing imports it. Off by default; opt back in per project.
-    generate_events_bridge: bool = False
-    # `_<group>/streams.ts`: a typed `stream<OperationId>()` per `text/event-stream`
-    # operation (frame union, no retry, typed StreamHttpError). Emits nothing for a
-    # group without such an operation, so it is on by default.
-    generate_sse_streams: bool = True
-    # `_<group>/realtime.ts`: typed topic builders and event schemas from `x-realtime` (django_realtime).
-    # Emits nothing for a group without topics, so it is on by default.
-    generate_realtime: bool = True
-
     client_structure: Literal["flat", "namespaced"] = "namespaced"
 
     # Devx: copy each generated tree to <project>/.tmp/generated/<name>/
@@ -166,7 +150,7 @@ class GenerationTarget:
     lang: Literal["python", "typescript", "go", "swift", "proto"]
     tool: Literal[
         "ogen",
-        "hey-api",
+        "orval",
         "openapi-python-client",
         "swift-openapi",
         "buf",

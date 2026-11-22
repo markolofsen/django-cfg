@@ -12,7 +12,7 @@ from rest_framework import serializers
 
 class FrontendEventType(models.TextChoices):
     """Named enum so drf-spectacular emits a standalone components/schemas
-    entry — Hey API then materializes it as a TS `enum` (not an inline union)."""
+    entry — Orval then materializes it as a reusable TypeScript/Zod enum (not an inline union)."""
 
     JS_ERROR = "JS_ERROR"
     NETWORK_ERROR = "NETWORK_ERROR"

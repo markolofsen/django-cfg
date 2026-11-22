@@ -1,7 +1,5 @@
-"""openapi_processor — standalone post-processor for OpenAPI-generated SDKs.
+"""Post-processors for non-TypeScript OpenAPI generators.
 
-Drop this entire folder into any generator package.  Current sub-processors:
-
-    ts/   — Zod schemas + SWR hooks + events bridge + class API wrapper
-            (post-processes @hey-api/openapi-ts output)
+The former TypeScript post-processor is archived. Active modules provide
+Python and Go wrappers where those generators need project-specific output.
 """

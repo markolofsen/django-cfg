@@ -16,7 +16,7 @@ class DjangoOpenAPI:
     """Service wrapper around an OpenAPIConfig.
 
     Holds the active config and exposes `run()` which orchestrates the full
-    pipeline (spec_load → postprocess → slice → external tool → ts_extras → fs).
+    pipeline (spec_load → postprocess → slice → external tool → fs).
     """
 
     def __init__(self, config: Optional[OpenAPIConfig] = None) -> None:
@@ -55,7 +55,7 @@ class DjangoOpenAPI:
         """Execute the generator pipeline.
 
         Phase 1: stub (returns empty report).
-        Phase 2+ wires spec_loader, slicer, external tools, ts_extras.
+        Phase 2+ wires spec_loader, slicer, external tools, and staging.
         """
         if not self.is_enabled():
             return RunReport()

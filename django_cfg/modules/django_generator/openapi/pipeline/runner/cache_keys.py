@@ -4,8 +4,8 @@ Two pieces:
 
 * ``target_signature`` — extra inputs that affect output but aren't
   captured by the sliced-spec hash (target name, tool, group set,
-  ``out_dir``). ``out_dir`` matters because hey-api / ts_extras embed
-  the path inside generated source.
+  ``out_dir``). ``out_dir`` matters because generators can embed the
+  destination path inside generated source.
 
 * ``target_cache_slot`` — the on-disk slot name used by
   ``cache.restore_target_output`` / ``store_target_output``. Multi-group
