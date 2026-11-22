@@ -18,7 +18,7 @@ The browser half is `@djangocfg/realtime`. `BaseApp` from `@djangocfg/layouts` m
 - **Model hints.** `broadcasts(Order, topic)` sends one hint per topic per committed transaction, with no code in your views.
 - **Replay that tells the truth.** A reconnect with `since` gets the missed messages, or `recovered: false` when the history no longer reaches back (or Redis lost data). The client then refetches over REST.
 - **Hints first.** The default event is an empty hint. The REST API stays the source of truth.
-- **Self-refreshing cache keys.** `@invalidated_by("orders:{order_id}")` on a DRF view tags the generated SWR key with the topic; the page revalidates on each publication with no realtime code.
+- **Self-refreshing query caches.** `@invalidated_by("orders:{order_id}")` on a DRF view associates the generated React Query key with the topic; the page invalidates/refetches on each publication with no page-level socket code.
 - **No ORM on the event loop.** Auth and `allow` run in a small bounded thread pool, with stale connections closed around every call.
 - **Revocation.** Logout, `logout_all`, a password change and deactivation close the user's sockets (close 4419); the credential is also re-checked every 15 minutes.
 - **No echo.** A request that sends `X-Realtime-Cid` does not get its own change back.
@@ -71,8 +71,8 @@ graph LR
   <Cards.Card title="Quick Start" href="/features/modules/django-realtime/quick-start">asgi.py, config, a first topic, publish, useTopic</Cards.Card>
   <Cards.Card title="Topics & Permissions" href="/features/modules/django-realtime/topics-and-permissions">Patterns, event models, allow, anonymous topics, history, limits</Cards.Card>
   <Cards.Card title="Publishing" href="/features/modules/django-realtime/publishing">publish, on_commit, broadcasts, touch, suppress, X-Realtime-Cid</Cards.Card>
-  <Cards.Card title="Frontend" href="/features/modules/django-realtime/frontend">BaseApp, useTopic, typed topics, zero-code SWR refresh, RealtimePanel</Cards.Card>
-  <Cards.Card title="Code Generation" href="/features/modules/django-realtime/codegen">realtime.ts, tagged SWR keys, the ':' or '.' rule</Cards.Card>
+  <Cards.Card title="Frontend" href="/features/modules/django-realtime/frontend">BaseApp, useTopic, typed topics, query-cache refresh, RealtimePanel</Cards.Card>
+  <Cards.Card title="Code Generation" href="/features/modules/django-realtime/codegen">realtime adapter metadata, query-key invalidation, the ':' or '.' rule</Cards.Card>
   <Cards.Card title="Testing" href="/features/modules/django-realtime/testing">realtime_outbox, WebSocketDriver with inline hooks, the mock server</Cards.Card>
   <Cards.Card title="Deployment" href="/features/modules/django-realtime/deployment">uvicorn flags, Docker, Traefik, Cloudflare, Redis, system checks</Cards.Card>
   <Cards.Card title="Wire Protocol v1" href="/features/modules/django-realtime/protocol">Frames, close codes, offsets</Cards.Card>

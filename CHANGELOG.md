@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.104] - 2026-11-23
+
+### Changed
+
+- **TypeScript client generation now uses the pinned Orval pipeline.** Django
+  OpenAPI targets keep their configured group slicing and emit a shared
+  `tags-split` client tree with Fetch transport, React Query v5 hooks/query
+  keys, Zod schemas, MSW handlers, runtime validation, and atomic staged
+  writes. Python, Go, Swift, FastAPI, and realtime generators remain separate
+  backends. Schema validation now rejects missing/duplicate operation IDs and
+  untagged operations before external generation; generated runtime imports are
+  resolved against the final consumer path after stage swaps.
+- **Generator documentation and checks describe the Orval contract.** The
+  active REST path no longer relies on the retired Hey API/`ts_extras` client;
+  legacy material is retained only under the explicit archive.
+- **Nested Orval targets resolve their handwritten runtime after staging.**
+  Runtime-shim imports are calculated from the final consumer path, so targets
+  such as `apps/torrent/app/_lib/api/generated` keep their API origin instead
+  of silently falling back to the shared package runtime. The regression is
+  covered by the generator dispatch tests.
+- **OpenAPI inspection routes are complete and permission-aware.** Each
+  configured group now exposes its schema, Swagger UI, and ReDoc under
+  `/cfg/openapi/{group}/...`; `auth_required=True` applies
+  `IsAuthenticated` to all three routes instead of bypassing the project's
+  DRF permission policy. The route matrix is covered by generator tests.
+- **Mapped consumers classify inspection-route visibility explicitly.** Private,
+  staff, authenticated-user, API-key, and internal groups now opt into
+  `auth_required=True`; groups documented as anonymous/public remain open for
+  schema inspection.
+- **Important nested response shapes are named in the reference contracts.**
+  The central demo and carapis profile APIs now expose `UserInfo` as an
+  explicit serializer component, so Orval/Zod consumers receive a reusable
+  object schema instead of an inferred method-field shape; wire JSON is
+  unchanged.
+- **Enum override discovery now respects explicit choice-set names.** The
+  generator compares the normalized wire choices behind dotted-path and
+  literal overrides before adding an auto alias, preventing
+  `ENUM_NAME_OVERRIDES` collisions while preserving a project's canonical
+  component name. A regression test covers a literal override paired with a
+  discovered `TextChoices` class.
+
 ## [2.4.103] - 2026-11-22
 
 ### Fixed

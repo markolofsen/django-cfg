@@ -1,91 +1,110 @@
 ---
 title: SSR & Hydration
-description: Server Component data fetching with SWR initialData hydration, force-dynamic for auth pages, client-only rendering, and metadata generation.
+description: Server Component data fetching with React Query v5 dehydration, initialData hydration, force-dynamic for auth pages, client-only rendering, and metadata generation.
 ---
 
 # SSR & Hydration
 
-The dominant data pattern across all apps. Server Components fetch data and pass it as `initialData` to client wrappers. SWR then takes over for subsequent interactions.
+Use the same Orval operation and query key on the server and in the client.
+React Query v5 then reuses the server result after hydration instead of
+starting a second, unrelated cache. Authentication and transport continue to
+come from the shared `@djangocfg/api` runtime.
 
 <Callout type="info">
-For generated API clients and SWR hooks see [Data Layer](./data-layer). For Context architecture see [State Management](./state-management).
+For generated operations, Zod models, query keys, and MSW handlers see [Data Layer](./data-layer). For Context architecture see [State Management](./state-management).
 </Callout>
 
-## The initialData Hydration Pattern
+## The React Query v5 hydration pattern
 
-### Step 1: Server Component Fetches
+### Step 1: Prefetch in a Server Component
 
 ```typescript
 // app/[locale]/(pages)/catalog/page.tsx — Server Component
-import { createCatalogPublicClient } from '@lib/api/server';
-import { getCatalogPublicVehiclesList } from '@api/generated/catalog_public/_utils/fetchers';
+import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
+import { getCryptoCoinsListQueryOptions } from '@api/generated/endpoints';
+import { CatalogClient } from './CatalogClient';
 
-export default async function CatalogPage({ searchParams }) {
-  const client = createCatalogPublicClient();
+export default async function CatalogPage() {
+  const queryClient = new QueryClient();
+  const params = { page: 1, page_size: 20 };
 
-  const [vehicles, brands] = await Promise.all([
-    getCatalogPublicVehiclesList({ page: 1, page_size: 20 }, client).catch(() => null),
-    getCatalogPublicBrandsList(undefined, client).catch(() => []),
-  ]);
+  await queryClient.prefetchQuery(
+    getCryptoCoinsListQueryOptions(params),
+  );
 
   return (
-    <CatalogClientWrapper
-      initialVehicles={vehicles}
-      initialBrands={brands}
-    />
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <CatalogClient params={params} />
+    </HydrationBoundary>
   );
 }
 ```
 
-Use `Promise.all` for parallel fetches and `.catch(() => null)` for graceful fallback when individual fetches fail.
+`prefetchQuery` uses the generated query key and query function. Use
+`Promise.all` when prefetching independent resources. If a non-critical query
+may fail, catch that query separately so the page can still render.
 
-### Step 2: Client Component Hydrates
+### Step 2: Read the hydrated query in a Client Component
 
 ```typescript
-// CatalogClientWrapper.tsx — 'use client'
+// CatalogClient.tsx — 'use client'
 'use client';
 
-export function CatalogClientWrapper({ initialVehicles, initialBrands }) {
-  return (
-    <CatalogProvider>
-      <FiltersProvider>
-        <VehiclesProvider initialData={initialVehicles}>
-          <CatalogLayout />
-        </VehiclesProvider>
-      </FiltersProvider>
-    </CatalogProvider>
-  );
+import { useCryptoCoinsList } from '@api/generated/endpoints';
+
+export function CatalogClient({ params }) {
+  const { data, isPending, error } = useCryptoCoinsList(params, {
+    query: { staleTime: 60_000 },
+  });
+
+  if (isPending) return <CatalogSkeleton />;
+  if (error) return <CatalogError error={error} />;
+  return <CatalogGrid items={data?.results ?? []} />;
 }
 ```
 
-### Step 3: SWR Takes Over
+The hook resolves from the hydrated cache on the first client render. It can
+still refetch in the background when `staleTime` or the query policy says it
+should.
+
+### A smaller alternative: `initialData`
+
+For a single query, a Server Component can call the generated operation and
+pass the result to a Client Component:
 
 ```typescript
-// VehiclesContext.tsx
-const { data: swrData, isLoading } = useCatalogPublicVehiclesList(apiParams, client);
+// Server Component
+import { cryptoCoinsList } from '@api/generated/endpoints';
 
-// Prefer SWR data over SSR initialData
-const vehicles = swrData ?? initialData;
+const initialData = await cryptoCoinsList({ page: 1 });
+return <CatalogClient initialData={initialData} />;
+
+// Client Component
+const query = useCryptoCoinsList(params, { query: { initialData } });
 ```
 
-SWR revalidates in the background. On first render the SSR data is shown immediately — no loading spinner.
+Prefer `HydrationBoundary` for pages with several queries or shared layouts;
+use `initialData` when the data is local to one component and the simpler prop
+boundary is clearer.
 
 ## force-dynamic for Auth-Dependent Pages
 
-Pages that depend on authenticated state or real-time data disable static generation:
+Pages that depend on authenticated state, request cookies, or real-time data
+disable static generation:
 
 ```typescript
 export const dynamic = 'force-dynamic';
 ```
 
-Used in: dashboards, project editors, all private routes.
+Use it for dashboards, project editors, and other private routes whose result
+cannot be shared between users.
 
 ## Client-Only Rendering
 
-For highly interactive pages (video editors, complex canvas), SSR is skipped entirely with a mounted-state gate:
+For highly interactive pages (video editors, complex canvas), SSR can be
+skipped with a mounted-state gate:
 
 ```typescript
-// ProjectEditorView.tsx
 const [mounted, setMounted] = useState(false);
 useEffect(() => { setMounted(true); }, []);
 if (!mounted) return <EditorLoader />;
@@ -93,7 +112,7 @@ if (!mounted) return <EditorLoader />;
 return <EditorLayout />;
 ```
 
-Alternatively, use Next.js `dynamic` import with `ssr: false`:
+Alternatively, use a Next.js `dynamic` import with `ssr: false`:
 
 ```typescript
 const EditorView = dynamic(() => import('./EditorView'), { ssr: false });
@@ -101,7 +120,8 @@ const EditorView = dynamic(() => import('./EditorView'), { ssr: false });
 
 ## Static Generation for Locale Segments
 
-Only locale parameters are statically generated — content pages use SSR:
+Only locale parameters are statically generated; request-dependent content
+uses SSR:
 
 ```typescript
 export function generateStaticParams() {
@@ -123,27 +143,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 ```
 
-The `generateAppMetadata` helper from `@core/metadata` adds OG images, canonical URLs, and other defaults.
+The `generateAppMetadata` helper from `@core/metadata` adds OG images,
+canonical URLs, and other defaults.
 
 ## Data Shape Adaptation
 
-When SSR-fetched data has a different shape than what components expect, adapt with `useMemo`:
+When API data has a different shape than a view expects, adapt it with
+`useMemo` at the view boundary:
 
 ```typescript
-// SavedView.tsx — adapt VehicleDetail to VehicleList shape
 const listItem = useMemo(() => ({
   ...data,
   main_photo_url: data.photos[0]?.url ?? null,
   photos_count: data.photos.length,
-  source: { id: data.source.id, code: data.source.code, name: data.source.name },
 }), [data]);
 ```
 
 ## Rules
 
-1. Server Components fetch data and pass it as `initialData` props — never fetch data inside client components directly
-2. Use `Promise.all` with `.catch(() => null)` for parallel SSR fetches with graceful fallback
-3. SWR takes over after hydration — prefer `swrData ?? initialData` to show SSR data immediately
-4. Set `export const dynamic = 'force-dynamic'` on auth-dependent and real-time pages
-5. Use `dynamic(() => import(...), { ssr: false })` or a mounted-state gate for client-only editors
-6. Data shape mismatches between server and client are resolved with `useMemo` in the view component
+1. Prefetch with the generated `get*QueryOptions` and hydrate with `dehydrate`/`HydrationBoundary`.
+2. Use the matching generated hook in the Client Component; never create a second cache key by hand.
+3. Use `initialData` for a small, local boundary and `HydrationBoundary` for shared or multi-query pages.
+4. Use `Promise.all` for independent SSR queries and catch only non-critical failures.
+5. Set `export const dynamic = 'force-dynamic'` on auth-dependent and request-specific pages.
+6. Use `dynamic(() => import(...), { ssr: false })` or a mounted-state gate for client-only editors.

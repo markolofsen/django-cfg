@@ -161,9 +161,9 @@ Look for correct array format:
 After generation, the fetcher should return an array type:
 
 ```typescript
-// ✅ Correct
+// ✅ Correct: Orval emits an operation returning an array and a React Query hook
 export async function getCommandsAvailable(): Promise<CommandAvailable[]> { ... }
-export function useCommandsAvailable(): SWRResponse<CommandAvailable[]> { ... }
+const query = useCommandsAvailable(); // generated hook; query.data is CommandAvailable[] | undefined
 
 // ❌ Wrong (paginated wrapper)
 export async function getCommandsAvailable(): Promise<PaginatedCommandAvailableList> { ... }

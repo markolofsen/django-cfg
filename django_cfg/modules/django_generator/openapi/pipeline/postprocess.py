@@ -3,6 +3,7 @@
 Runs once on the freshly-loaded drf-spectacular spec, before slicing.
 
   - enforce_tags(spec): every operation must declare ≥1 tag, else PostprocessError.
+  - enforce_operation_ids(spec): every operation must have one unique operationId.
   - enforce_unique_schemas(spec): detect drf-spectacular auto-rename collisions
     (`UserProfileUpdate`, `UserProfileUpdate2`, …) and abort with a clear
     message pointing at the offending serializer classes.
@@ -79,6 +80,45 @@ def enforce_tags(spec: dict[str, Any]) -> None:
         raise PostprocessError(f"operations without tags: {head}{more}")
 
 
+def enforce_operation_ids(spec: dict[str, Any]) -> None:
+    """Require one explicit, unique operationId for every HTTP operation."""
+    missing: list[str] = []
+    duplicates: dict[str, list[str]] = {}
+    seen: dict[str, str] = {}
+
+    for path, item in (spec.get("paths") or {}).items():
+        if not isinstance(item, dict):
+            continue
+        for method, op in item.items():
+            if method.lower() not in _HTTP_METHODS or not isinstance(op, dict):
+                continue
+            location = f"{method.upper()} {path}"
+            operation_id = op.get("operationId")
+            if not isinstance(operation_id, str) or not operation_id.strip():
+                missing.append(location)
+                continue
+            operation_id = operation_id.strip()
+            previous = seen.get(operation_id)
+            if previous is not None:
+                duplicates.setdefault(operation_id, [previous]).append(location)
+            else:
+                seen[operation_id] = location
+
+    if missing or duplicates:
+        parts: list[str] = []
+        if missing:
+            head = ", ".join(missing[:5])
+            more = f" (+{len(missing) - 5} more)" if len(missing) > 5 else ""
+            parts.append(f"operations without operationId: {head}{more}")
+        if duplicates:
+            duplicate_text = "; ".join(
+                f"{operation_id}: {', '.join(locations)}"
+                for operation_id, locations in sorted(duplicates.items())
+            )
+            parts.append(f"duplicate operationId values: {duplicate_text}")
+        raise PostprocessError("; ".join(parts))
+
+
 def normalize_tags(spec: dict[str, Any]) -> None:
     for item in (spec.get("paths") or {}).values():
         if not isinstance(item, dict):
@@ -96,6 +136,59 @@ def normalize_tags(spec: dict[str, Any]) -> None:
                         cleaned.append(s)
                         seen.add(s)
                 op["tags"] = cleaned
+
+
+def normalize_invalid_enum_defaults(spec: dict[str, Any]) -> int:
+    """Drop defaults that are not members of their enum.
+
+    DRF can expose an empty model default for a field whose actual choices are
+    non-empty. Orval correctly emits that default into Zod, where the generated
+    TypeScript then fails to type-check (`z.enum(...).default("")`). The
+    OpenAPI contract is already contradictory in that case; omitting the
+    invalid default preserves the enum constraint and lets the server apply
+    its own real default.
+    """
+    changed = 0
+    schemas = (spec.get("components") or {}).get("schemas") or {}
+
+    def enum_values(node: dict[str, Any], seen: set[str] | None = None) -> list[Any] | None:
+        direct = node.get("enum")
+        if isinstance(direct, list):
+            return direct
+        seen = seen or set()
+        ref = node.get("$ref")
+        if isinstance(ref, str):
+            name = ref.rsplit("/", 1)[-1]
+            if name in seen:
+                return None
+            target = schemas.get(name)
+            if isinstance(target, dict):
+                return enum_values(target, seen | {name})
+        for key in ("allOf", "anyOf", "oneOf"):
+            branches = node.get(key)
+            if isinstance(branches, list):
+                for branch in branches:
+                    if isinstance(branch, dict):
+                        values = enum_values(branch, seen)
+                        if values is not None:
+                            return values
+        return None
+
+    def walk(node: Any) -> None:
+        nonlocal changed
+        if isinstance(node, dict):
+            enum = enum_values(node)
+            if isinstance(enum, list) and "default" in node and node["default"] not in enum:
+                node.pop("default")
+                changed += 1
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(spec)
+    return changed
 
 
 def warn_tag_format(spec: dict[str, Any]) -> None:
@@ -262,5 +355,6 @@ __all__ = [
     "enforce_tags",
     "enforce_unique_schemas",
     "normalize_tags",
+    "normalize_invalid_enum_defaults",
     "nullable_3_1_to_3_0",
 ]

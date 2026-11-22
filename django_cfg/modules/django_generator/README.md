@@ -9,7 +9,8 @@ client; Python/Go/Swift targets keep their own external generators.
 ## Pipeline
 
 ```
-drf-spectacular → spec_loader → postprocess → resolve_tags → slicer
+drf-spectacular → validate/fail-on-warn → spec_loader → postprocess
+                                                        → resolve_tags → slicer
                                                                 │
                                        ┌────────────────────────┘
                                        ▼
@@ -54,6 +55,11 @@ for any that are missing.
 ## Test loop
 
 `make gen` in `solution/django/` is the integration acceptance gate.
+
+The schema gate runs before any external client generator and mirrors
+`manage.py spectacular --validate --fail-on-warn`. During a controlled
+migration, `DJANGO_CFG_GEN_ALLOW_SCHEMA_WARNINGS=1` can be used temporarily;
+it must not become the normal CI or production generation setting.
 
 ## API base URL strategy
 

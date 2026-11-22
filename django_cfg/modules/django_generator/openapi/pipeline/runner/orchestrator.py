@@ -33,7 +33,13 @@ from ..cache import (
 )
 from ..config import GenerationTarget, OpenAPIConfig, RunReport
 from ..errors import GeneratorError
-from ..postprocess import normalize_tags, warn_tag_format
+from ..postprocess import (
+    enforce_operation_ids,
+    enforce_tags,
+    normalize_invalid_enum_defaults,
+    normalize_tags,
+    warn_tag_format,
+)
 from ..spec_loader import load_spec
 from .dispatch import run_target
 from ..staging import Stage
@@ -225,7 +231,10 @@ def _load_spec_cached(
     # Schema-name collisions are caught earlier inside
     # ``spec_loader.load_spec``.
     try:
+        enforce_operation_ids(spec)
+        enforce_tags(spec)
         normalize_tags(spec)
+        normalize_invalid_enum_defaults(spec)
         warn_tag_format(spec)
     except GeneratorError as e:
         for t in targets:

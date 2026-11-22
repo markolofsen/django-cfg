@@ -1,11 +1,16 @@
 ---
 title: Realtime Code Generation
-description: How declared realtime topics reach TypeScript — x-realtime in the OpenAPI document, the generated realtime.ts builders, @invalidated_by and SWR keys tagged with topic names.
+description: How declared realtime topics reach TypeScript — x-realtime in the OpenAPI document, the dedicated realtime adapter, and React Query keys associated with topic names.
 ---
 
 # Code generation
 
-Topics travel through the same pipeline as the REST API: `make gen` reads them from the OpenAPI document and writes TypeScript next to the group's hooks and schemas. There is no second generator and no hand-written topic string in the frontend.
+Topics travel through the same pipeline as the REST API: `make gen` reads them
+from the OpenAPI document and writes metadata for the dedicated realtime
+adapter alongside the target's generated TypeScript tree. Orval owns ordinary
+REST operations; realtime transport remains a separate protocol adapter. There
+is no hand-written topic string in the frontend when a typed topic builder is
+available.
 
 ## `x-realtime` in the schema
 
@@ -54,7 +59,7 @@ export const realtimeTopics = { "orders:{order_id:int}": { "builder": "ordersTop
 - `schema` validates `msg.data`. A topic with the empty `Hint` event is typed `RealtimeTopic<RealtimeHint>`; without zod generation, `RealtimeTopic<unknown>` with `schema: null`.
 - `RealtimeTopic<E>` is structural: `realtime.ts` never imports `@djangocfg/realtime`, and `useTopic` accepts it as is.
 
-## Tagged SWR keys
+## Query-key invalidation
 
 Mark the REST reads a topic makes stale, on a view, a viewset or an action:
 
@@ -73,17 +78,20 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
 - The pattern syntax is checked at import. Whether a declared topic of that shape exists is checked at schema generation: **a marker naming no declared topic stops generation** (`UnknownTopic`).
 - A marker matches a declared topic by shape, so it may rename the parameters to match the URL: `invalidated_by("orders:{pk}")` matches `orders:{order_id:int}` and takes `pk` from the path.
 
-django-cfg's schema class writes the markers as `x-realtime-invalidates` on each operation. The generated SWR query and infinite-query hooks then put the concrete topic names into their keys:
+django-cfg's schema class writes the markers as `x-realtime-invalidates` on each operation. The generated React Query query options associate the concrete topic names with their query keys:
 
 ```ts
 const key = ["orders_retrieve", args, `orders:${String(args.path["order_id"])}`, "orders.all"] as const;
 ```
 
-Each parameter comes from the **path parameter of the same name**. The `BaseApp` SWR middleware subscribes every tagged key part while the hook is mounted and revalidates on each message and gap. The generated client never imports `@djangocfg/realtime`, and the page has no realtime code. See [zero-code refresh](./frontend#zero-code-refresh-with-swr).
+Each parameter comes from the **path parameter of the same name**. The `BaseApp` cache bridge watches every associated query while the hook is mounted and invalidates it on each message and gap. The generated REST client never imports `@djangocfg/realtime`, and the page has no realtime code. See [zero-code refresh](./frontend#zero-code-refresh-with-react-query).
 
 ## The `:` or `.` rule
 
-The SWR middleware reads only key parts that contain `:` or `.` as topics; a bare word like `"me"` or `"list"` must never open a subscription. So a topic named with neither (`topic("orders")`) cannot tag a key. Name list topics with a dot: `orders.all`, `orders.list`.
+The realtime bridge associates only topic names that contain `:` or `.`; a bare
+word like `"me"` or `"list"` must never open a subscription. So a topic named
+with neither (`topic("orders")`) cannot be used for query invalidation. Name
+list topics with a dot: `orders.all`, `orders.list`.
 
 ## Warnings
 
@@ -98,4 +106,6 @@ An untaggable marker is skipped, not fatal: the key simply carries no tag, and t
 
 ## Sender id in the auth runtime
 
-The generated auth runtime (`helpers/auth.ts`, re-exported from the client root) also exports `setRealtimeCidProvider(provider)`. The provider is kept in one page-wide slot (`Symbol.for('djangocfg.realtime.cid')` on `globalThis`), so installing it through any generated client covers them all; their writes then carry `X-Realtime-Cid`. See [Frontend](./frontend#no-echo-for-your-own-writes).
+The shared auth/runtime package also exports `setRealtimeCidProvider(provider)`.
+The provider is kept in one page-wide slot, so installing it once covers every
+generated target; their writes then carry `X-Realtime-Cid`. See [Frontend](./frontend#no-echo-for-your-own-writes).

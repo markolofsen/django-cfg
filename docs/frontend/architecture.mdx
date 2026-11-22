@@ -71,13 +71,13 @@ app/
 │
 ├── _lib/                        # Business logic layer
 │   ├── api/
-│   │   ├── BaseClient.ts        # Singleton API factory
-│   │   ├── server.ts            # SSR-safe API factories
+│   │   ├── index.ts             # App-owned stable API barrel
+│   │   ├── server.ts            # SSR query/prefetch helpers
 │   │   └── generated/           # DO NOT EDIT — auto-generated
-│   │       └── <domain>/
-│   │           ├── _utils/fetchers/    # Zod-validated fetch functions
-│   │           ├── _utils/hooks/       # SWR hooks
-│   │           └── _utils/schemas/     # Zod schemas per model
+│   │       ├── endpoints/       # Orval operations, hooks, query options/keys
+│   │       ├── models/          # Zod schemas and inferred types
+│   │       ├── runtime/         # Generated adapter to @djangocfg/api
+│   │       └── .../*.msw.ts     # Generated MSW handlers
 │   ├── contexts/
 │   │   ├── <domain>/
 │   │   │   ├── <Domain>Context.tsx
@@ -88,7 +88,7 @@ app/
 │   ├── hooks/                   # Custom hooks
 │   ├── utils/                   # Pure utility functions
 │   └── providers/
-│       └── SWRProvider.tsx      # Global SWR config + presets
+│       └── QueryProvider.tsx    # QueryClientProvider / ApiQueryProvider
 │
 └── _views/                      # Optional: page-level view components
 ```
@@ -175,7 +175,7 @@ The same entry exports `indexNowKeyRewrite(apiUrl)`, which serves the IndexNow k
 | `page.tsx` | none (Server) | SSR data fetch, metadata, pass initialData |
 | `layout.tsx` | none (Server) | Font, i18n, provider wrapping |
 | `<Feature>View.tsx` | `'use client'` | Interactive UI, hooks, context consumption |
-| `<Feature>Context.tsx` | `'use client'` | State + SWR |
+| `<Feature>Context.tsx` | `'use client'` | State + React Query v5 |
 | `<store>.ts` | `'use client'` (implicit via zustand) | Client state |
 
 ## Rules

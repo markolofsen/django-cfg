@@ -107,7 +107,10 @@ openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
 )
 ```
 
-The generator (`django_generator`) produces TypeScript clients with Zod schemas, fetchers and SWR hooks, and a Python client.
+The generator (`django_generator`) produces TypeScript REST clients with Orval
+operations, React Query v5 hooks/query keys, Zod schemas, and MSW handlers,
+plus a Python client. Authentication, refresh, transport, and error handling
+stay in the stable `@djangocfg/api` runtime boundary.
 
 ### Background jobs
 

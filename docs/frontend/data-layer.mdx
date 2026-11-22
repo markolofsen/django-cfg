@@ -1,11 +1,14 @@
 ---
 title: Data Layer
-description: Generated API clients from Django ViewSets, BaseClient singleton, Zod runtime validation, SWR hooks, and type re-export patterns.
+description: Generated API clients from Django ViewSets, Orval operations, React Query v5 hooks/query keys, Zod runtime validation, and stable runtime exports.
 ---
 
 # Data Layer
 
-The data layer is fully generated from Django ViewSets via OpenAPI. Every API response is validated at runtime with Zod.
+The data layer is generated from Django ViewSets via a validated OpenAPI
+contract. The pinned Orval target emits operations, React Query v5 hooks/query
+keys, Zod schemas, and MSW handlers. The application-owned runtime boundary
+handles authentication, refresh, transport, and normalized errors.
 
 <Callout type="info">
 For Django ViewSet patterns see [App Design Guide — ViewSets](../guides/app-design/viewsets). For SSR data fetching see [SSR & Hydration](./ssr-hydration).
@@ -24,80 +27,75 @@ A generated target (the `path` of a `Target` in `generation.py`) contains:
 
 ```
 generated/
-├── sdk.gen.ts              # Hey API SDK, shared by every group
-├── types.gen.ts            # Types for all operations
-├── api.ts, index.ts        # `class API` wrapper and exports
-├── helpers/                # auth, base URL, client headers
-└── _<group>/
-    ├── fetchers/           # Plain async functions (SSR-safe)
-    ├── hooks/              # SWR hooks (client-only)
-    └── schemas/            # Zod schemas per model
+├── endpoints/              # Orval tags-split operations and hooks
+├── models/                 # TypeScript and Zod schemas
+├── mocks/                  # MSW handlers
+└── index.ts                # Stable project barrel
 ```
 
 <Callout type="warning">
 Never edit `generated/` manually. Regenerate with `python manage.py gen`.
 </Callout>
 
-## BaseClient Singleton
+## Runtime boundary
 
-Each app creates one singleton API instance per domain in `_lib/api/BaseClient.ts`:
+Generated operations use the shared runtime/mutator boundary from
+`@djangocfg/api`. Application code does not create a second API client or token
+store:
 
 ```typescript
-// Client-side: uses localStorage for auth tokens
-import { LocalStorageAdapter } from '@djangocfg/api';
+import { auth, djangoFetch } from '@djangocfg/api';
 
-class CatalogStorage extends LocalStorageAdapter {
-  keyPrefix = 'catalog_public';
-}
-
-export const catalogPublicClient = new CatalogPublicAPI(
-  settings.api.baseUrl,
-  { storage: new CatalogStorage() }
-);
+export { auth, djangoFetch };
 ```
 
-For SSR, `_lib/api/server.ts` uses `MemoryStorageAdapter`:
+The generated `runtime/orval-mutator.ts` re-exports this boundary. It adds auth
+headers, refresh/retry behavior, normalized errors, and Zod response parsing.
+For SSR, use the imperative operation or its generated query options; do not
+instantiate a browser client in a Server Component.
 
 ```typescript
-import { MemoryStorageAdapter } from '@djangocfg/api';
+import { cryptoCoinsList } from '@api/generated/endpoints';
 
-export function createCatalogPublicClient(): CatalogPublicAPI {
-  return new CatalogPublicAPI(settings.api.baseUrl, {
-    storage: new CatalogPublicMemoryStorage()
-  });
-}
+const coins = await cryptoCoinsList({ page: 1 });
 ```
 
 ## Zod Validation
 
-Generated fetchers validate every response at runtime:
+Generated operations validate every response at runtime:
 
 ```typescript
-// In generated fetcher
-const response = await api.catalog_public_vehicles.catalogPublicVehiclesList(params);
-return PaginatedVehicleListListSchema.parse(response);
+// Orval operation; the schema is passed to djangoFetch by generated code.
+const response = await cryptoCoinsList({ page: 1 });
+// response is already Zod-validated
 ```
 
 On validation failure, a `CustomEvent('zod-validation-error', ...)` is dispatched to the browser window for dev tooling.
 
-## SWR Hooks
+## React Query Hooks and Query Keys
 
-Generated hooks wrap fetchers with SWR:
+Generated hooks wrap operations with TanStack Query:
 
 ```typescript
-// Auto-generated in _utils/hooks/
-export function useCatalogPublicVehiclesList(
-  params?: VehiclesListParams,
-  client?: CatalogPublicAPI
-) {
-  return useSWR(
-    params ? ['catalog-vehicles', params] : null,
-    () => getCatalogPublicVehiclesList(params!, client)
-  );
-}
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useCryptoCoinsList,
+  getCryptoCoinsListQueryKey,
+} from '@api/generated/endpoints';
+
+const queryClient = useQueryClient();
+const query = useCryptoCoinsList({ page: 1 }, {
+  query: { staleTime: 60_000 },
+});
+
+queryClient.invalidateQueries({
+  queryKey: getCryptoCoinsListQueryKey({ page: 1 }),
+});
 ```
 
-Pass `null` as the key to conditionally skip fetching. Mutation hooks return an async function and auto-mutate related SWR keys.
+Use the generated `enabled` option to conditionally skip fetching. After a
+mutation, invalidate the generated query key with `queryClient`; never hand-build
+or globally mutate string-based cache keys.
 
 ## Type Re-Export Pattern (types.ts)
 
@@ -105,15 +103,14 @@ Components import types from the context's `types.ts`, never from `generated/` d
 
 ```typescript
 // contexts/<domain>/types.ts — SINGLE SOURCE OF TRUTH
-import * as CatalogEnums from '@api/generated/catalog_public/enums';
+import { CoinListing } from '@api/generated/models';
 
-// Dual export: runtime value + compile-time type
-export const VehicleSource = CatalogEnums.VehicleListSource;
-export type VehicleSource = CatalogEnums.VehicleListSource;
+// Re-export from the generated model barrel, not a disposable file path.
+export { CoinListing } from '@api/generated/models';
+export type { CoinListingOutput } from '@api/generated/models';
 
-// Re-export schema types
-export type { VehicleList } from '@api/generated/catalog_public/_utils/schemas/VehicleList.schema';
-export type { VehicleDetail } from '@api/generated/catalog_public/_utils/schemas/VehicleDetail.schema';
+// App-specific types stay handwritten.
+export type CatalogItem = CoinListing;
 
 // App-specific types
 export interface FilterState {
@@ -128,18 +125,18 @@ export interface FilterState {
 
 The dual export pattern (`export const` + `export type` for the same name) allows both runtime usage and type-level usage from a single import.
 
-## SWR Configuration Presets
+## Query configuration
 
-Global SWR config in `_lib/providers/SWRProvider.tsx` with named presets:
+Configure TanStack Query once at the application boundary and keep endpoint
+freshness close to the generated hook:
 
-| Preset | Use Case | Key Settings |
-|--------|----------|-------------|
-| `staticDataConfig` | Brands, categories | `revalidateOnFocus: false`, `dedupingInterval: 60000` |
-| `detailPageConfig` | Item detail | `revalidateOnFocus: false`, no polling |
-| `liveListConfig` | Live data lists | `refreshInterval: 300000` (5 min) |
-| `statsConfig` | Dashboard stats | `dedupingInterval: 30000` |
+| Option | Use Case | Guidance |
+|--------|----------|----------|
+| `staleTime` | Reference/static data | Avoid unnecessary refetches |
+| `gcTime` | Inactive data | Bound retained cache lifetime |
+| `enabled` | Conditional queries | Wait for required input |
 
-Default config: `revalidateOnFocus: true`, `keepPreviousData: true`, `errorRetryCount: 3`, no retry on 4xx.
+The provider owns retry and focus policies; generated query keys own cache identity.
 
 ## CFG API vs Custom API
 
@@ -154,8 +151,8 @@ Extensions use `createExtensionAPI()` from `@djangocfg/ext-base` to share auth s
 
 ## Auth token & logging
 
-The generated client's auth interceptor (in `@djangocfg/api` `helpers/auth.ts`)
-handles tokens, headers, and refresh. One behavior worth knowing:
+The `@djangocfg/api` runtime boundary handles tokens, headers, refresh, and
+normalized errors for generated operations. One behavior worth knowing:
 
 - **Role-aware console logging.** All `@djangocfg/*` loggers share a runtime level
   (`applyRoleLogPolicy` / `setLogLevel` from `@djangocfg/api`). `AuthProvider`
@@ -165,9 +162,8 @@ handles tokens, headers, and refresh. One behavior worth knowing:
 
 ## Rules
 
-1. Never edit `generated/` directories — regenerate with `python manage.py gen`
-2. Import types from the context's `types.ts`, never from `generated/` directly
-3. Use the dual export pattern (`export const` + `export type`) for enums in `types.ts`
-4. Create one `BaseClient` singleton per domain — use `LocalStorageAdapter` on client, `MemoryStorageAdapter` on server
-5. Use SWR config presets from `SWRProvider.tsx` — do not set `refreshInterval` or `dedupingInterval` inline
-6. Pass `null` as SWR key to conditionally skip fetching — never call hooks inside conditionals
+1. Never edit `generated/` directories — regenerate with `python manage.py gen`.
+2. Import from `generated/endpoints`, `generated/models`, or an app-owned API barrel; do not couple application code to disposable operation files.
+3. Use generated query-key factories for cache reads and invalidation.
+4. Keep authentication, refresh, error normalization, and transport in the runtime boundary.
+5. Use `enabled` for conditional queries; never call hooks conditionally.

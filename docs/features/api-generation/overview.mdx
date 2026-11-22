@@ -1,6 +1,6 @@
 ---
 title: API Client Generation Overview
-description: Auto-generate type-safe TypeScript, Python, Go, and Swift clients from Django REST Framework. Built for Next.js, React, React Native, iOS, and modern Python backends.
+description: Generate type-safe TypeScript, Python, Go, and Swift clients from a validated Django OpenAPI contract. TypeScript REST uses Orval, React Query v5, Zod, and MSW.
 ---
 
 # API Client Generation
@@ -9,7 +9,11 @@ Django-CFG includes **integrated API client generation** that automatically crea
 
 ## What is API Client Generation?
 
-The API client generator is a zero-config system built into Django-CFG that eliminates the manual work of creating and maintaining API clients. It generates fully-typed clients with authentication, error handling, and complete type safety.
+The API client generator is a Python-owned orchestration layer around the
+OpenAPI contract. TypeScript REST targets use the pinned Orval toolchain to
+generate Fetch operations, TanStack Query v5 hooks/query keys, Zod schemas,
+and MSW handlers. Authentication, refresh, error handling, and transport stay
+in one handwritten runtime boundary.
 
 
 <Callout type="info">
@@ -25,7 +29,7 @@ API client generation is **pre-configured** in Django-CFG. Simply enable it in y
 
 Generate fully typed clients with:
 
-- **TypeScript**: Interfaces, Zod schemas, typed fetch functions, SWR hooks
+- **TypeScript**: Orval Fetch operations, Zod schemas, React Query v5 hooks/query keys, MSW handlers
 - **Python**: Pydantic 2 models, async/await client, type hints
 - **Go**: Structs, interfaces, typed HTTP client
 - **Swift**: Native Swift types via apple/swift-openapi-generator or simple Codable structs
@@ -51,12 +55,10 @@ groups=[
 ]
 ```
 
-Each group gets its own:
-- OpenAPI schema
-- Generated TypeScript client
-- Generated Python client
-- Generated Go client
-- Generated Swift client (optional)
+Each target receives the groups explicitly listed in `Target.groups`. Those
+groups select OpenAPI tags and are emitted as split modules inside one shared
+generated tree. Python, Go, and Swift targets can select the same groups for
+their own runtime, but groups do not create independent npm packages.
 
 ### ⚙️ Auto-Generated Clients
 
@@ -64,20 +66,19 @@ For each group, the generator creates:
 
 - ✅ **Auto-generated TypeScript** clients with Zod validation
 - ✅ **Auto-generated Python** clients with type hints
-- ✅ **SWR hooks** for React/Next.js
-- ✅ **Type-safe fetchers** with error handling
+- ✅ **React Query v5 hooks and query keys** for React/Next.js
+- ✅ **MSW handlers** for tests and local development
+- ✅ **Type-safe operations** with shared runtime error handling
 - ✅ **Group-based architecture** for API organization
 
 **TypeScript Client:**
 ```typescript
-import { getWallets, getTransactions } from '@/api/generated/_utils/fetchers/wallets'
-import { useWallets } from '@/api/generated/_utils/hooks/wallets'
+import { useWallets } from '@/api/generated'
 
-// Next.js Server Component
-const wallets = await getWallets({ currency: 'BTC' })
-
-// React Client Component
-const { data, error } = useWallets({ currency: 'ETH' })
+// React Client Component; the generated hook owns the query key.
+const { data, error } = useWallets({
+  query: { staleTime: 60_000 },
+})
 ```
 
 **Python Client:**
@@ -157,26 +158,18 @@ Generation is optimized for large APIs. A typical API with 300 operations genera
 
 ```
 frontend/src/api/generated/
-├── core/                          # Group name
-│   ├── client.ts                  # Main API client
-│   ├── models.ts                  # TypeScript interfaces
-│   ├── enums.ts                   # Enum definitions
-│   └── _utils/
-│       ├── fetchers/              # Typed fetch functions
-│       │   ├── users.ts
-│       │   └── api_keys.ts
-│       ├── hooks/                 # SWR hooks (React)
-│       │   ├── users.ts
-│       │   └── api_keys.ts
-│       └── schemas/               # Zod validation schemas
-│           ├── User.schema.ts
-│           └── APIKey.schema.ts
-│
-├── trading/                       # Another group
-│   └── ...
-│
-└── index.ts                       # Main entry point
+├── endpoints/                     # Orval tags-split operations/hooks/query keys
+│   ├── core/
+│   └── trading/
+├── models/                        # TypeScript types and Zod schemas
+├── runtime/                       # Generated adapter to @djangocfg/api
+└── endpoints/**/*.msw.ts          # MSW handlers and Faker factories
 ```
+
+The generated `endpoints/index.ts` and `models/index.ts` files are the stable
+generated sub-barrels. Keep any app-specific `app/_lib/api/index.ts` barrel
+handwritten, and import auth/transport from `@djangocfg/api` rather than from
+the generated tree.
 
 ### Python Output
 
@@ -209,7 +202,7 @@ backend/api_client/
 ✅ **File uploads** - Multipart FormData handling
 ✅ **Pagination** - Built-in pagination support
 ✅ **Validation** - Zod schemas for runtime validation (TypeScript)
-✅ **React integration** - SWR hooks for data fetching
+✅ **React integration** - React Query v5 hooks and generated query keys
 
 ## Quick Start
 
@@ -222,10 +215,6 @@ from django_cfg import DjangoConfig, OpenAPIClientConfig, OpenAPIGroupConfig
 class CryptoConfig(DjangoConfig):
     openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
         enabled=True,
-        generate_package_files=True,
-        generate_zod_schemas=True,
-        generate_fetchers=True,
-        generate_swr_hooks=True,
         api_prefix="apix",  # default: "apix"
         output_dir="openapi",  # default: "openapi"
         groups=[
@@ -289,13 +278,17 @@ See [CLI Usage](./cli-usage) for every flag.
 
 **TypeScript (Next.js Server Component):**
 ```typescript
-import { getWallets } from '@/api/generated/_utils/fetchers/wallets'
+import { cryptoCoinsList } from '@/api/generated/endpoints'
 
 export default async function WalletsPage() {
-  const wallets = await getWallets({ currency: 'BTC' })
-  return <div>{wallets.count} wallets</div>
+  const coins = await cryptoCoinsList({ page: 1 })
+  return <div>{coins.count} coins</div>
 }
 ```
+
+Client Components use the same generated barrel for React Query v5 hooks and
+query keys; use `@djangocfg/api/query` for `ApiQueryProvider` and
+`@djangocfg/api/mocks` for generated MSW handlers.
 
 **Python:**
 ```python
@@ -309,7 +302,7 @@ async def main():
 
 ## Configuration with Groups
 
-Groups allow you to organize large APIs into logical sections. Each group can include multiple Django apps and generates separate clients:
+Groups allow you to organize large APIs into logical sections. Each group can include multiple Django apps. A target selects one or more groups and emits one shared client tree with tag-split modules:
 
 ```python
 openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
@@ -358,10 +351,7 @@ Each group is generated into every target that lists it; the output location is 
 | `generate_python` | `bool` | `True` | Generate Python client |
 | `generate_typescript` | `bool` | `True` | Generate TypeScript client |
 | **TypeScript Features** | | | |
-| `generate_package_files` | `bool` | `False` | Generate package.json, tsconfig.json |
-| `generate_zod_schemas` | `bool` | `True` | Generate Zod validation schemas |
-| `generate_fetchers` | `bool` | `True` | Generate typed fetcher functions |
-| `generate_swr_hooks` | `bool` | `True` | Generate SWR hooks for React |
+| TypeScript REST toolchain | pinned | Orval | Fetch operations, React Query v5 hooks/query keys, Zod schemas, and MSW handlers |
 | **Client Structure** | | | |
 | `client_structure` | `Literal["flat", "namespaced"]` | `"namespaced"` | `flat`: `client.posts_list()`, `namespaced`: `client.posts.list()` |
 | **API Configuration** | | | |
@@ -393,8 +383,14 @@ urlpatterns = [
 urlpatterns = add_django_cfg_urls(urlpatterns)
 ```
 
-This adds:
-- `/schema/{group}/schema/` - OpenAPI schema endpoint
+This adds, for each configured group:
+- `/cfg/openapi/{group}/schema/` - OpenAPI schema endpoint
+- `/cfg/openapi/{group}/docs/` - Swagger UI
+- `/cfg/openapi/{group}/redoc/` - ReDoc
+
+Set `auth_required=True` on a group to require DRF authentication for all
+three inspection endpoints. Keep the generated API endpoints' own
+`permission_classes` as the source of truth for API access.
 
 ### Built-in drf-spectacular Integration
 
@@ -416,7 +412,7 @@ Group-specific title, description, and version are set per-group via `OpenAPIGro
 ### TypeScript/JavaScript
 
 - ✅ Next.js 13+ (App Router, Pages Router, Server Components)
-- ✅ React 18+ (with SWR hooks)
+- ✅ React 18+ (with React Query v5 hooks)
 - ✅ React Native (with fetch API)
 - ✅ Node.js (backend services)
 - ✅ Remix, Astro, and other modern frameworks
@@ -466,16 +462,12 @@ groups=[
 - **Models**: Use PascalCase
 - **Groups**: Use lowercase, descriptive names
 
-### 4. Enable All Type Safety Features
+### 4. Keep runtime concerns outside generated code
 
-```python
-OpenAPIClientConfig(
-    generate_zod_schemas=True,        # Runtime validation
-    generate_package_files=True,      # Proper TypeScript setup
-    generate_fetchers=True,           # Universal fetch functions
-    generate_swr_hooks=True,          # React integration
-)
-```
+- Import operations and models from generated barrels.
+- Import `djangoFetch`, `auth`, and error types from `@djangocfg/api`.
+- Mount one `ApiQueryProvider` per app and use generated query keys for invalidation.
+- Use generated MSW handlers in tests and local development; do not edit them.
 
 ## Next Steps
 

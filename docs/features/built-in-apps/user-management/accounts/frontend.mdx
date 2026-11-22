@@ -1,6 +1,6 @@
 ---
 title: Frontend Integration
-description: How to integrate the Accounts app with @djangocfg/api and @djangocfg/layouts — AuthLayout, auth hooks, server middleware, and SWR data fetching.
+description: How to integrate the Accounts app with @djangocfg/api and @djangocfg/layouts — AuthLayout, auth hooks, server middleware, and Orval/React Query data fetching.
 ---
 
 # Frontend Integration
@@ -290,26 +290,26 @@ const { has2FAEnabled, devices, fetchStatus, disable2FA } = useTwoFactorStatus()
 
 ---
 
-## Server Components & SWR Hooks
+## Server Components & React Query Hooks
 
 ### Server component (fetcher)
 
 ```typescript
-import { Fetchers, api } from '@djangocfg/api'
+import { cfgAccountsProfileRetrieve } from '@djangocfg/api'
 
 export default async function ProfilePage() {
-  const profile = await Fetchers.getAccountsProfileRetrieve(api)
+  const profile = await cfgAccountsProfileRetrieve()
   return <div>{profile.email}</div>
 }
 ```
 
-### Client hook (SWR)
+### Client hook (React Query)
 
 ```tsx
 'use client'
-import { useAccountsProfileRetrieve } from '@djangocfg/api/hooks'
+import { useCfgAccountsProfileRetrieve } from '@djangocfg/api'
 
-const { data: profile, isLoading, mutate } = useAccountsProfileRetrieve()
+const { data: profile, isPending, refetch } = useCfgAccountsProfileRetrieve()
 ```
 
 ---

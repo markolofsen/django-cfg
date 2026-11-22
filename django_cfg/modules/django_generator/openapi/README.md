@@ -13,7 +13,8 @@ or grpc-python.
 ## Pipeline
 
 ```
-drf-spectacular → spec_loader → tag resolver → slicer → external generator
+drf-spectacular → validate/fail-on-warn → spec_loader → tag resolver → slicer
+                                                        → external generator
                                                         ↓
                                       staging → target.path → mirror (.tmp)
 ```
@@ -32,6 +33,13 @@ python manage.py gen --check
 The cache key includes the sliced spec, tool options, target, group set, and
 output path. Every generation run invalidates target fingerprints so changes
 to the Python orchestration cannot silently leave stale generated output.
+
+Before any external generator is started, `spec_loader` applies the equivalent
+of `python manage.py spectacular --validate --fail-on-warn`. This prevents
+Orval, openapi-python-client, ogen, or Swift from consuming an ambiguous
+contract. A project that is being migrated can temporarily set
+`DJANGO_CFG_GEN_ALLOW_SCHEMA_WARNINGS=1`, but that exception should be removed
+after the emitted serializer/view warnings are fixed.
 
 ## Schema discipline
 

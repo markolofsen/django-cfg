@@ -21,12 +21,25 @@ def _is_django_configured() -> bool:
 def get_openapi_urls() -> list[Any]:
     """Return URL patterns for each configured group.
 
-    Pattern shape: `/{group_name}/schema/` → JSON schema (drf-spectacular).
+    Pattern shapes (mounted by ``/cfg/openapi/`` in the built-in URL set):
+
+    * ``/{group_name}/schema/`` — the machine-readable OpenAPI document;
+    * ``/{group_name}/docs/`` — Swagger UI;
+    * ``/{group_name}/redoc/`` — ReDoc.
+
+    The group-level ``auth_required`` flag protects all three inspection
+    endpoints.  It is deliberately explicit: passing ``AllowAny`` to
+    ``SpectacularAPIView`` would otherwise bypass the project's DRF default
+    permission classes.
     """
     try:
         from django.urls import path
-        from drf_spectacular.views import SpectacularAPIView
-        from rest_framework.permissions import AllowAny
+        from drf_spectacular.views import (
+            SpectacularAPIView,
+            SpectacularRedocView,
+            SpectacularSwaggerView,
+        )
+        from rest_framework.permissions import AllowAny, IsAuthenticated
 
         from .openapi.service import (
             get_openapi_service,
@@ -41,15 +54,37 @@ def get_openapi_urls() -> list[Any]:
     patterns: list[Any] = []
     for group in service.list_groups():
         urlconf_name = f"_django_generator_urlconf_{group.name}"
+        permission_classes = [IsAuthenticated] if group.auth_required else [AllowAny]
+        schema_url_name = f"openapi-schema-{group.name}"
         patterns.append(
             path(
                 f"{group.name}/schema/",
                 SpectacularAPIView.as_view(
                     urlconf=urlconf_name,
                     api_version=group.version,
-                    permission_classes=[AllowAny],
+                    permission_classes=permission_classes,
                 ),
-                name=f"openapi-schema-{group.name}",
+                name=schema_url_name,
+            )
+        )
+        patterns.append(
+            path(
+                f"{group.name}/docs/",
+                SpectacularSwaggerView.as_view(
+                    url_name=schema_url_name,
+                    permission_classes=permission_classes,
+                ),
+                name=f"openapi-docs-{group.name}",
+            )
+        )
+        patterns.append(
+            path(
+                f"{group.name}/redoc/",
+                SpectacularRedocView.as_view(
+                    url_name=schema_url_name,
+                    permission_classes=permission_classes,
+                ),
+                name=f"openapi-redoc-{group.name}",
             )
         )
     return patterns

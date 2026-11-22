@@ -11,13 +11,13 @@ After generating clients with `python manage.py gen`, you'll have type-safe Type
 
 ### Installation
 
-A TypeScript target is written into the `path` of its `Target` in `generation.py`. Hey API puts one shared SDK (`sdk.gen.ts`, `types.gen.ts`, `client/`, `core/`) at that root, next to the wrapper layer (`api.ts`, `index.ts`, `helpers/`). The per-group extras (hooks, Zod schemas) go into `_<group>/` subfolders, for example `_core/` and `_shop/`.
+A TypeScript target is written into the `path` of its `Target` in `generation.py`. The pinned Orval target produces one shared generated tree with `tags-split` endpoint modules, model/Zod schemas, React Query v5 hooks/query keys, and MSW handlers. The handwritten Fetch mutator/runtime stays outside the disposable generated directory.
 
 
 <Callout type="info">
 **Group Organization**
 
-Each group listed in the target gets its own `_<group>/` folder with fetchers, hooks and schemas; the SDK types are shared.
+Each group listed in the target selects OpenAPI tags and becomes a split module inside the same target tree; schemas, query infrastructure, and authentication runtime are shared. A separate deployable client requires a separate `Target`.
 
 </Callout>
 
@@ -44,43 +44,36 @@ Then install locally or publish to NPM.
 ### Basic Usage
 
 ```typescript
-import { APIClient } from './api/core';
+import { useGetUser } from '@api/generated';
 
-// Initialize client
-const client = new APIClient({ baseUrl: 'https://api.example.com', token: 'access-token' });
-
-// Make API calls (all methods are fully typed)
-const users = await client.users.list();
-const user = await client.users.retrieve({ id: 1 });
-const newUser = await client.users.create({
-  email: 'user@example.com',
-  name: 'John Doe'
-});
+export function UserCard({ id }: { id: number }) {
+  const { data: user } = useGetUser(id, {
+    query: { staleTime: 60_000 },
+  });
+  return <span>{user?.name}</span>;
+}
 ```
 
 ### Authentication
 
-Every generated TypeScript client ships a global `auth` store
-(`helpers/auth.ts`) that is wired into the HTTP client automatically. It is
-**self-sufficient out of the box**:
+The generated operations delegate transport and authentication to the
+handwritten `@djangocfg/api` mutator/runtime boundary. Applications use the
+stable package auth/session exports; the disposable Orval tree must not become
+a second token store.
 
 - **Auto-refresh** — when the target's API exposes the SimpleJWT refresh
   endpoint (`/cfg/accounts/token/refresh/`), the client registers a default
   refresh handler at import time. A 401 transparently refreshes and retries —
   no app wiring needed. Override with `auth.setRefreshHandler(...)` if your
   backend differs.
-- **Cross-store safety** — several generated clients in one app (a local
-  client + `@djangocfg/api` + others) share the same storage keys. Refreshes
-  are serialized through a `navigator.locks` mutex, so token rotation
-  (`ROTATE_REFRESH_TOKENS`) never races between stores.
-- **Reactive session** — the store owns "am I logged in" (JWT `exp`-aware)
-  and pushes changes on token writes, refresh results, expiry, and cross-tab
-  / cross-store events.
+- **Shared session** — all generated target slices use the same application
+  auth/runtime boundary, so refresh and cache invalidation do not diverge by
+  group.
 
 #### Session (login / logout)
 
 ```typescript
-import { auth } from './generated';
+import { auth } from '@djangocfg/api';
 
 // The ONE write path after any login flow (atomic pair + notification):
 auth.setSession({ access, refresh });
@@ -94,45 +87,37 @@ auth.isAuthenticated();
 
 #### Storage modes
 
-Tokens are stored in one place, selected at bootstrap:
+The runtime owns token storage and exposes one session store to all generated
+operations. Do not configure storage separately for each group or generated
+target:
 
 ```typescript
-// StorageMode = 'localStorage' | 'sessionStorage' | 'cookie'
-auth.setStorageMode('cookie');   // call ONCE at startup, before any setSession
+import { auth } from '@djangocfg/api';
+
+auth.setSession({ access, refresh });
+const token = auth.getToken();
 ```
 
-| Mode | Behavior |
-|---|---|
-| `localStorage` | **Default.** Survives reload and browser restart. |
-| `sessionStorage` | Cleared when the browser session ends. |
-| `cookie` | JS-readable (not `HttpOnly`) — for SSR `cookies()` access or subdomain sharing. |
-
-`setStorageMode()` is a **one-time bootstrap relocation**, not a per-login
-switch — the mode is module state that resets on reload, so set it before the
-first `setSession`. Public clients support only `'localStorage' | 'cookie'`.
+The default runtime uses the configured CFG cookie/session policy. If an app
+needs a different persistence policy, configure the application auth package;
+never add a second token store inside generated code.
 
 <Callout type="info">
-Storage mode is *where* the token lives, not *how long the session lasts*.
 Session length is the server's refresh-token lifetime — see
 [Session Length](/features/built-in-apps/user-management/accounts/otp#session-length).
-There is no `persist`/`remember` parameter on the client store.
 </Callout>
 
 #### Other storage keys
 
-`helpers/keys.ts` is the registry of every key the framework writes
-(`CFG_KEYS`, `cfgStorage`): tokens, the saved return URL, the sign-in attempt
-(`oauthState`, `oauthProvider`, wiped on sign-out) and the cached list of
-enabled sign-in providers (`oauthProviders`, `sessionStorage`, kept across
-sign-out because it is public server state). Read and write through
-`cfgStorage` rather than the raw browser API; regenerate to pick up new keys,
-never edit the file.
+Use the stable `@djangocfg/api/storage` and `@djangocfg/api/auth` exports when
+an integration needs framework storage or session state. Do not import a
+generated helper or read token keys directly from browser storage.
 
 #### React — subscribe to the session
 
 ```tsx
 import { useSyncExternalStore } from 'react';
-import { auth } from './generated';
+import { auth } from '@djangocfg/api';
 
 const session = useSyncExternalStore(
   auth.subscribe,
@@ -157,8 +142,8 @@ const unsubscribe = auth.onSessionExpired(() => {
 #### API Key
 
 ```typescript
-// Set API key (sent as X-API-Key; falls back to NEXT_PUBLIC_API_KEY)
-auth.setApiKey('your-api-key');
+// Set API key (sent as X-API-Key)
+auth.setApiKeyPersist('your-api-key');
 ```
 
 #### Context headers and a hand-written `fetch`
@@ -203,135 +188,75 @@ OAuth endpoints, since 2.3.367).
 
 ### Multiple Groups
 
-Use clients from different groups together:
+Groups are modules in one generated target, not separate API client instances.
+Import the generated endpoint barrel once and let the shared runtime handle
+authentication for every operation:
 
 ```typescript
-// Import clients from different groups
-import { APIClient as CoreClient } from './api/core';
-import { APIClient as TradingClient } from './api/trading';
-import { APIClient as MarketClient } from './api/market';
+import {
+  cryptoCoinsList,
+  useCryptoCoinsList,
+} from '@api/generated/endpoints';
 
-// Initialize with shared authentication
-const token = 'access-token';
-const baseUrl = 'https://api.cryptoplatform.com';
+// Server Component or non-React code
+const coins = await cryptoCoinsList({ page: 1 });
 
-const core = new CoreClient({ baseUrl, token });
-const trading = new TradingClient({ baseUrl, token });
-const market = new MarketClient({ baseUrl, token });
-
-// Use each client independently
-const user = await core.users.retrieve({ id: 1 });
-const wallets = await trading.wallets.list();
-const prices = await market.prices.list({ symbols: ['BTC', 'ETH'] });
+// Client Component
+const query = useCryptoCoinsList({ page: 1 }, {
+  query: { staleTime: 60_000 },
+});
 ```
 
 ### React Integration
 
 ```typescript
-import { useState, useEffect } from 'react';
-import { APIClient } from './api/trading';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  getCryptoCoinsListQueryKey,
+  useCryptoCoinsList,
+} from '@api/generated/endpoints';
 
 function WalletList() {
-  const [wallets, setWallets] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data, isPending, error } = useCryptoCoinsList({ page: 1 });
 
-  useEffect(() => {
-    const client = new APIClient({
-      baseUrl: process.env.REACT_APP_API_URL,
-      token: localStorage.getItem('access_token')
-    });
-
-    client.wallets.list()
-      .then(data => {
-        setWallets(data.results);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Failed to load wallets:', error);
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) return <div>Loading...</div>;
+  if (isPending) return <div>Loading...</div>;
+  if (error) return <div>Could not load coins.</div>;
 
   return (
     <ul>
-      {wallets.map(wallet => (
-        <li key={wallet.id}>{wallet.currency}: {wallet.balance}</li>
+      {data?.results.map(coin => (
+        <li key={coin.id}>{coin.symbol}: {coin.name}</li>
       ))}
     </ul>
   );
 }
-```
 
-### Vue Integration
-
-```vue
-<template>
-  <div>
-    <div v-if="loading">Loading...</div>
-    <ul v-else>
-      <li v-for="wallet in wallets" :key="wallet.id">
-        {{ wallet.currency }}: {{ wallet.balance }}
-      </li>
-    </ul>
-  </div>
-</template>
-
-<script>
-import { APIClient } from './api/trading';
-
-export default {
-  data() {
-    return {
-      wallets: [],
-      loading: true,
-    };
-  },
-  async mounted() {
-    const client = new APIClient({
-      baseUrl: process.env.VUE_APP_API_URL,
-      token: localStorage.getItem('access_token')
-    });
-
-    try {
-      const data = await client.wallets.list();
-      this.wallets = data.results;
-    } catch (error) {
-      console.error('Failed to load wallets:', error);
-    } finally {
-      this.loading = false;
-    }
-  },
-};
-</script>
+// Mutations invalidate the generated key; do not invent string keys.
+queryClient.invalidateQueries({
+  queryKey: getCryptoCoinsListQueryKey({ page: 1 }),
+});
 ```
 
 ### Error Handling
 
 ```typescript
+import { APIError, NetworkError } from '@djangocfg/api';
+
 try {
-  const order = await client.orders.create({
-    symbol: 'BTC/USDT',
-    side: 'buy',
-    amount: 0.1,
-    price: 45000
-  });
-  console.log('Order created:', order.id);
+  const coins = await cryptoCoinsList({ page: 1 });
+  console.log(coins.results);
 } catch (error) {
-  if (error.response) {
-    // API error response
-    console.error('Status:', error.response.status);
-    console.error('Data:', error.response.data);
-  } else if (error.request) {
-    // No response received
-    console.error('No response from server');
-  } else {
-    // Other errors
-    console.error('Error:', error.message);
-  }
+  if (error instanceof APIError) console.error(error.status, error.body);
+  else if (error instanceof NetworkError) console.error('Network error', error);
+  else throw error;
 }
 ```
+
+Generated operations parse successful responses with Zod before returning
+them. Use the generated MSW handlers from `@djangocfg/api/mocks` (or the
+target's MSW barrel) in tests and Storybook; do not hand-write a second REST
+mock contract.
 
 ## Python Clients
 
@@ -739,24 +664,18 @@ do {
 
 ### TypeScript Types
 
-All request and response types are automatically generated:
+Request/response types and Zod schemas are generated together. Import them
+from the model barrel and use the operation barrel for calls:
 
 ```typescript
-// Types are inferred automatically
-const ticket = await api.getTicket({ id: '123' });
-// ticket.id: string
-// ticket.title: string
-// ticket.description: string
-// ticket.priority: 'low' | 'medium' | 'high' | 'critical'
-// ticket.status: 'open' | 'in_progress' | 'resolved' | 'closed'
-// ticket.created_at: string
+import { cryptoCoinsList } from '@api/generated/endpoints';
+import { CoinListing } from '@api/generated/models';
 
-// TypeScript will catch errors
-const newTicket = await api.createTicket({
-  title: 'Test',
-  description: 'Test ticket',
-  priority: 'invalid'  // ❌ Type error: not assignable
-});
+const coins: Awaited<ReturnType<typeof cryptoCoinsList>> =
+  await cryptoCoinsList({ page: 1 });
+
+const firstCoin: CoinListing | undefined = coins.results[0];
+// Successful responses have already passed the generated Zod schema.
 ```
 
 ### Python Types
@@ -784,99 +703,25 @@ invalid = TicketCreate(priority="invalid")  # ❌ ValidationError
 
 ## Best Practices
 
-### 1. Centralize Client Configuration
+### 1. Keep one runtime boundary
 
-Create a client factory:
+- Import operations and models from generated barrels.
+- Import `auth`, `djangoFetch`, `APIError`, and `NetworkError` from `@djangocfg/api`.
+- Do not add a per-group client, token store, refresh handler, or hand-written fetch wrapper.
 
-```typescript
-// api/client.ts
-import SupportAPI from './cfg_support';
-import AccountsAPI from './cfg_accounts';
+### 2. Use generated query infrastructure
 
-export class APIClient {
-  private baseUrl: string;
-  private token: string | null = null;
+- Mount one `ApiQueryProvider` from `@djangocfg/api/query` per app.
+- Use generated `get*QueryOptions` for SSR prefetching.
+- Use generated `get*QueryKey` for invalidation; never invent string keys.
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
-  }
+### 3. Keep mocks next to the contract
 
-  setToken(token: string) {
-    this.token = token;
-  }
+Use generated MSW handlers from `@djangocfg/api/mocks` or the target's MSW
+barrel in tests and Storybook. Do not edit generated handlers to fix a schema
+problem; fix the Django serializer/OpenAPI metadata and regenerate.
 
-  get support() {
-    const client = new SupportAPI(this.baseUrl);
-    if (this.token) client.setToken(this.token);
-    return client;
-  }
-
-  get accounts() {
-    const client = new AccountsAPI(this.baseUrl);
-    if (this.token) client.setToken(this.token);
-    return client;
-  }
-}
-
-// Usage
-const api = new APIClient(process.env.API_URL);
-api.setToken(localStorage.getItem('token'));
-const tickets = await api.support.listTickets();
-```
-
-### 2. Handle Token Refresh
-
-```typescript
-class AuthenticatedAPI {
-  private api: API;
-  private refreshToken: string | null = null;
-
-  constructor(baseUrl: string) {
-    this.api = new API(baseUrl);
-  }
-
-  async call<T>(fn: () => Promise<T>): Promise<T> {
-    try {
-      return await fn();
-    } catch (error) {
-      if (error.response?.status === 401 && this.refreshToken) {
-        // Refresh token and retry
-        await this.refresh();
-        return await fn();
-      }
-      throw error;
-    }
-  }
-
-  async refresh() {
-    const newToken = await this.api.refreshToken({
-      refresh: this.refreshToken
-    });
-    this.api.setToken(newToken.access);
-  }
-}
-```
-
-### 3. Environment-Specific Configuration
-
-```typescript
-// config.ts
-const API_URLS = {
-  development: 'http://localhost:8000',
-  staging: 'https://staging.api.example.com',
-  production: 'https://api.example.com'
-};
-
-export const getApiUrl = () => {
-  const env = process.env.NODE_ENV || 'development';
-  return API_URLS[env];
-};
-
-// Usage
-const api = new API(getApiUrl());
-```
-
-### 4. Retry Logic
+### 4. Retry only at the query policy boundary
 
 ```python
 import backoff

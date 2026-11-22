@@ -273,13 +273,25 @@ def _dispatch_tool(
         workspace = _find_frontend_workspace(target.path)
         mock = options.get("mock", True)
         prettier = options.get("prettier", True)
-        # Prefer a runtime next to the package's generated tree. Other
-        # frontend targets consume the public API package's runtime export.
-        local_runtime = target.path.parent.parent / "runtime" / "orval-mutator.ts"
-        if local_runtime.is_file():
+        # Prefer a handwritten runtime boundary belonging to the package. The
+        # output layout is intentionally not fixed: a target can be flat
+        # (`packages/api/src/generated`) or nested below a group (`src/<group>
+        # /generated`). Walk the target's ancestors instead of guessing two
+        # levels, otherwise nested workspaces silently fall back to the shared
+        # runtime and lose their configured API origin.
+        consumer_path = _consumer_path_for_stage(target.path)
+        local_runtime = next(
+            (
+                candidate / "runtime" / "orval-mutator.ts"
+                for candidate in consumer_path.parents
+                if (candidate / "runtime" / "orval-mutator.ts").is_file()
+            ),
+            None,
+        )
+        if local_runtime is not None:
             mutator_import = os.path.relpath(
                 local_runtime.with_suffix(""),
-                start=target.path / "runtime",
+                start=consumer_path / "runtime",
             )
         else:
             mutator_import = "@djangocfg/api"
@@ -367,6 +379,21 @@ def _find_frontend_workspace(start: Path) -> Path:
     raise GeneratorError(
         f"could not find a pnpm workspace above TypeScript target {start}"
     )
+
+
+def _consumer_path_for_stage(path: Path) -> Path:
+    """Return the final output path when ``path`` is a staged target.
+
+    Relative imports in generated files must be calculated from the path that
+    will exist after the atomic stage swap, not from the temporary
+    ``.<name>.djcfg-stage-*`` directory used while Orval runs.
+    """
+    path = Path(path)
+    marker = f".{path.name}.djcfg-stage-"
+    for parent in path.parents:
+        if parent.name.startswith(marker):
+            return parent.parent / path.name
+    return path
 
 
 __all__ = ["run_single", "run_target"]

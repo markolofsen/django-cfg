@@ -7,8 +7,10 @@ description: The `manage.py gen` command that generates TypeScript, Python, Go a
 
 Client generation is one management command, `python manage.py gen`. It reads a
 `generation.py` file that sits next to `manage.py`, runs the pipeline (drf-spectacular,
-tag slicing, then the external generator for each language) and writes every client straight
-into the `path` of its target. There is no separate validation command and no archive step.
+tag slicing, then the pinned external generator for each language) and writes every client
+straight into the `path` of its target. TypeScript REST targets use Orval with Fetch,
+React Query v5, Zod, and MSW. There is no legacy TypeScript generator or SWR
+generation path.
 
 ## `gen`
 
@@ -79,14 +81,16 @@ config = Config(
 )
 ```
 
-TypeScript extras (Zod schemas, fetchers, SWR hooks, SSE streams) are switched on or off in
-`OpenAPIClientConfig`; see the [parameter table](./overview#openapiconfig-parameters).
+TypeScript REST output is configured by the target and the pinned frontend toolchain;
+authentication, refresh, error normalization, and response validation are owned by the
+handwritten mutator/runtime boundary. SSE, WebSocket, and NDJSON adapters remain separate
+protocol code. See the [parameter table](./overview#openapiconfig-parameters).
 
 ## External tools
 
-The generators are external programs: Hey API (TypeScript, run through `npx`, Node 18+),
-`openapi-python-client`, `ogen` (Go) and `swift-openapi-generator` (Swift). Install the Python
-side with `pip install "django-cfg[gen]"`. A missing tool fails the target that needs it.
+The generators are external programs: pinned Orval (TypeScript, Node 22.18+),
+`openapi-python-client`, `ogen` (Go), and `swift-openapi-generator` (Swift). Install the
+Python side with `pip install "django-cfg[gen]"`. A missing tool fails the target that needs it.
 
 ## Cache and parallelism
 
@@ -115,7 +119,8 @@ committed clients were produced by the django-cfg version you have installed.
 ## Best practices
 
 - Commit the generated code, so a review shows what an API change does to the clients.
-- Use groups to keep each client small; five to ten apps per group is a good size.
+- Use groups to keep each target's OpenAPI slice small; groups are selection boundaries,
+  not separate npm packages or independent authentication stores.
 - Put output paths in named constants at the top of `generation.py`.
 - Use `--dry-run` or `--list-targets` before the first run to check the paths.
 

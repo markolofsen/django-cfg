@@ -1,11 +1,11 @@
 ---
 title: Group Configuration
-description: Configure API generation groups for organizing large APIs. Manage multiple API clients with group-specific settings and separate OpenAPI schemas.
+description: Configure OpenAPI tag slices for API targets while keeping one shared generated client tree per target.
 ---
 
 # Group Configuration
 
-Groups organize your Django REST Framework API into logical sections for different features, teams, or microservices. Django-CFG's API client generator creates separate clients for each group.
+Groups organize your Django REST Framework API into logical sections for different features, teams, or microservices. Python resolves each group's apps/tags into an OpenAPI slice, then the configured target generator combines its selected groups into one client tree.
 
 ## Understanding Groups
 
@@ -15,13 +15,15 @@ A **group** is a collection of Django apps that share:
 - Target audience or purpose
 - Similar access patterns
 
-Each group gets:
+Each group contributes:
 - **Separate OpenAPI schema** - Independent API documentation
-- **Generated TypeScript client** - Type-safe frontend client
-- **Generated Python client** - Async backend client
-- **Generated Go client** - Type-safe Go HTTP client
-- **Generated Swift client** - Native iOS/macOS client (optional)
+- **TypeScript tag-split modules** - Orval operations, React Query hooks/query keys, Zod schemas, and MSW handlers inside the target tree
+- **Language slices** - Python, Go, and Swift output when a target selects the group
 - **API documentation** - Swagger UI and Redoc
+
+Groups are selection boundaries, not separate npm packages, cache providers, or
+authentication stores. A genuinely independent deployable client is a separate
+`Target` with its own explicit group union.
 
 ## Configuration
 
@@ -54,11 +56,6 @@ Organize large APIs into logical groups:
 ```python
 openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
     enabled=True,
-    generate_package_files=True,
-    generate_zod_schemas=True,
-    generate_fetchers=True,
-    generate_swr_hooks=True,
-    output_dir="openapi",
     groups=[
         # Core functionality
         OpenAPIGroupConfig(
@@ -99,7 +96,7 @@ openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
 
 | Parameter | Type | Default | Required | Description |
 |-----------|------|---------|----------|-------------|
-| `name` | `str` | - | Yes | Unique group identifier. Lowercase, no spaces. Used in the schema URL (`/schema/{name}/schema/`) and as the group name in `Target.groups` |
+| `name` | `str` | - | Yes | Unique group identifier. Lowercase, no spaces. Used in the schema/documentation URLs (`/cfg/openapi/{name}/...`) and as the group name in `Target.groups` |
 | `apps` | `List[str]` | - | Yes | Django app labels to include. Supports wildcards (e.g., `"django_cfg.*"`) |
 | `title` | `str` | - | Yes | Human-readable title. Shown in Swagger UI and Redoc |
 | `description` | `str` | `""` | No | Detailed explanation of group purpose |
@@ -134,11 +131,17 @@ The generator writes each client into the `path` of the `Target` in `generation.
 
 Each group gets its own OpenAPI schema URL:
 
+In the built-in URL configuration the actual prefix is `/cfg/openapi/`:
+
 ```
-/schema/core/schema/         # OpenAPI JSON
-/schema/shop/schema/         # OpenAPI JSON
-/schema/content/schema/      # OpenAPI JSON
+/cfg/openapi/core/schema/     # OpenAPI document
+/cfg/openapi/core/docs/       # Swagger UI
+/cfg/openapi/core/redoc/      # ReDoc
 ```
+
+The `auth_required=True` group flag protects all three inspection endpoints
+with DRF `IsAuthenticated`; otherwise the group is intentionally public. Set
+the flag explicitly for production APIs whose schema must not be anonymous.
 
 ## Examples
 
@@ -455,7 +458,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 ]
 
-# Adds /schema/{group}/ URLs automatically
+# Adds /cfg/openapi/{group}/{schema,docs,redoc}/ URLs automatically
 urlpatterns = add_django_cfg_urls(urlpatterns)
 ```
 
@@ -483,6 +486,8 @@ Group-specific title, description, and version are set per-group via `OpenAPIGro
 <Callout type="info">
 **Group Testing**
 
-Access `/schema/{group}/schema/` to download your group's OpenAPI schema before generating clients.
+Access `/cfg/openapi/{group}/schema/` to download the OpenAPI document, or
+`/cfg/openapi/{group}/docs/` and `/cfg/openapi/{group}/redoc/` for interactive
+inspection before generating clients.
 
 </Callout>

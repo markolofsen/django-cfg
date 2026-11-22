@@ -5,7 +5,8 @@ description: Zustand store patterns — standard store, slice architecture, zund
 
 # Zustand
 
-Zustand is used when Context + SWR is not enough — complex client-only state with frequent updates, undo/redo, or cross-component synchronization.
+Zustand is used when Context + React Query is not enough — complex client-only
+state with frequent updates, undo/redo, or cross-component synchronization.
 
 <Callout type="info">
 For deciding when to use Zustand vs Context see [State Management](../state-management).
@@ -15,7 +16,7 @@ For deciding when to use Zustand vs Context see [State Management](../state-mana
 
 | Scenario | Use Zustand? |
 |----------|-------------|
-| Server data with CRUD | No — use SWR + Context |
+| Server data with CRUD | No — use React Query + Context |
 | URL filters / pagination | No — use `useSearchParams` |
 | Local preferences | No — use `useLocalStorage` |
 | Complex editor state | Yes |
@@ -213,7 +214,7 @@ useEffect(() => () => { debouncedSync.flush(); }, [debouncedSync]);
 
 ## Rules
 
-1. Use Zustand only for complex client-only state — Context + SWR is the default
+1. Use Zustand only for complex client-only state — React Query + Context is the default for server data
 2. Wrap every store with `devtools` middleware for debugging
 3. Use slice architecture for stores with more than ~5 actions
 4. Use module-level refs (not Zustand state) for high-frequency drag/resize updates

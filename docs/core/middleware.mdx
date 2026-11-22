@@ -398,14 +398,14 @@ class MyViewSet(viewsets.ModelViewSet):
 
 ## Pagination Schema Hook (`extract_paginated_components`)
 
-**Purpose:** drf-spectacular post-processing hook that promotes inline paginated response schemas to named `components/schemas` entries, enabling TypeScript codegen to produce typed Zod validators for every paginated endpoint.
+**Purpose:** drf-spectacular post-processing hook that promotes inline paginated response schemas to named `components/schemas` entries, enabling the Orval TypeScript target to produce typed Zod validators for every paginated endpoint.
 
 **Active when:** Wired into `SPECTACULAR_SETTINGS['POSTPROCESSING_HOOKS']` (done automatically by `django_cfg.models.api.drf.SpectacularConfig`).
 
 Without this hook:
 - drf-spectacular embeds the pagination wrapper inline in every list endpoint.
-- TypeScript codegen cannot produce a named Zod schema for inline responses.
-- The generated SWR hooks skip runtime validation for paginated responses.
+- Orval cannot produce a stable named Zod schema for an inline response.
+- Generated operations would lose the named runtime validator used by the shared mutator.
 
 The hook identifies paginated responses by checking for the characteristic field set (`count`, `page`, `pages`, `has_next`, `results`), then extracts them to `PaginatedXList` named components. It is idempotent.
 

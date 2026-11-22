@@ -171,10 +171,6 @@ from django_cfg import OpenAPIClientConfig, OpenAPIGroupConfig
 class MyConfig(DjangoConfig):
     openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
         enabled=True,
-        generate_package_files=True,
-        generate_zod_schemas=True,
-        generate_fetchers=True,
-        generate_swr_hooks=True,
         api_prefix="api",
         output_dir="openapi",
         drf_title="My App API",
@@ -200,10 +196,10 @@ class MyConfig(DjangoConfig):
 ```
 
 **Automatically provides**:
-- **TypeScript clients** with Zod validation schemas
+- **TypeScript clients** with Orval operations, React Query v5 hooks/query keys, and Zod validation schemas
 - **Python clients** with type hints
-- **SWR hooks** for React/Next.js integration
-- **Type-safe fetchers** with error handling
+- **MSW handlers** for tests and local development
+- **Stable runtime/barrel exports** for transport, auth, and generated models
 
 **See**: [Sample Project API Documentation](./sample-project/api-documentation)
 

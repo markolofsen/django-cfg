@@ -7,6 +7,12 @@ Two modes:
 
 Returns a Python dict ready for postprocessing.
 
+Every schema is validated before it can reach an external generator.  The
+in-process path mirrors ``manage.py spectacular --validate --fail-on-warn``;
+the subprocess path invokes those exact flags.  Set
+``DJANGO_CFG_GEN_ALLOW_SCHEMA_WARNINGS=1`` only as a temporary migration
+escape hatch for a project that has not yet cleaned up its schema warnings.
+
 Schema-name collisions are detected here, not in postprocess: drf-spectacular
 emits warnings to stderr at generation time but silently keeps only one
 component, so the post-load spec is already lossy. We capture stderr,
@@ -17,6 +23,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import re
 import subprocess
 import sys
@@ -28,6 +35,8 @@ from typing import Any, Literal
 from .errors import SpecLoadError
 
 LoadMode = Literal["in_process", "subprocess"]
+
+_ALLOW_SCHEMA_WARNINGS = "DJANGO_CFG_GEN_ALLOW_SCHEMA_WARNINGS"
 
 _COLLISION_RE = re.compile(
     r'Encountered 2 components with identical names "(?P<name>[^"]+)"'
@@ -49,6 +58,15 @@ def _load_in_process() -> dict[str, Any]:
     except ImportError as e:
         raise SpecLoadError("drf-spectacular not installed") from e
 
+    # drf-spectacular keeps warning state globally.  A previous management
+    # command in the same interpreter must not poison this generation run.
+    try:
+        from drf_spectacular.drainage import reset_generator_stats
+
+        reset_generator_stats()
+    except ImportError:  # pragma: no cover - old drf-spectacular fallback
+        pass
+
     buf = io.StringIO()
     try:
         with redirect_stderr(buf):
@@ -64,6 +82,8 @@ def _load_in_process() -> dict[str, Any]:
 
     if not isinstance(schema, dict):
         raise SpecLoadError(f"unexpected schema type: {type(schema).__name__}")
+
+    _validate_schema(schema, warning_output=buf.getvalue())
     return schema
 
 
@@ -71,9 +91,19 @@ def _load_subprocess() -> dict[str, Any]:
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
         out = Path(tmp.name)
     try:
+        command = [
+            sys.executable,
+            "manage.py",
+            "spectacular",
+            "--file",
+            str(out),
+            "--format",
+            "openapi-json",
+        ]
+        if not _allow_schema_warnings():
+            command.extend(["--validate", "--fail-on-warn"])
         proc = subprocess.run(
-            [sys.executable, "manage.py", "spectacular",
-             "--file", str(out), "--format", "openapi-json"],
+            command,
             capture_output=True,
             text=True,
         )
@@ -84,7 +114,11 @@ def _load_subprocess() -> dict[str, Any]:
             )
         _check_collisions(proc.stderr)
         text = out.read_text(encoding="utf-8")
-        return json.loads(text)
+        schema = json.loads(text)
+        # Older drf-spectacular releases may not understand the CLI flags.
+        # Keep the loaded document protected by the same in-process gate.
+        _validate_schema(schema, warning_output=proc.stderr, check_warnings=False)
+        return schema
     finally:
         out.unlink(missing_ok=True)
 
@@ -188,6 +222,48 @@ def _check_collisions(stderr_text: str) -> None:
         + "\n\nFix: rename one of the conflicting serializer classes (or set its "
           "`Meta.ref_name` as shown above) so each component name is unique."
     )
+
+
+def _allow_schema_warnings() -> bool:
+    """Return whether the temporary warning escape hatch is enabled."""
+    return os.environ.get(_ALLOW_SCHEMA_WARNINGS, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _validate_schema(
+    schema: dict[str, Any], *, warning_output: str = "", check_warnings: bool = True
+) -> None:
+    """Apply drf-spectacular's schema and warning gates before codegen."""
+    try:
+        from drf_spectacular.validation import validate_schema
+
+        validate_schema(schema)
+    except Exception as exc:  # noqa: BLE001 - preserve validator diagnostics
+        raise SpecLoadError(
+            "drf-spectacular OpenAPI validation failed before client generation: "
+            f"{type(exc).__name__}: {exc}"
+        ) from exc
+
+    if not check_warnings or _allow_schema_warnings():
+        return
+
+    try:
+        from drf_spectacular.drainage import GENERATOR_STATS
+    except ImportError:  # pragma: no cover - old drf-spectacular fallback
+        GENERATOR_STATS = None
+
+    if GENERATOR_STATS:
+        details = warning_output.strip()
+        suffix = f"\n{details}" if details else ""
+        raise SpecLoadError(
+            "drf-spectacular emitted warnings/errors; refusing to generate "
+            "clients from an ambiguous contract. Fix the schema or set "
+            f"{_ALLOW_SCHEMA_WARNINGS}=1 temporarily.{suffix}"
+        )
 
 
 __all__ = ["load_spec", "LoadMode"]
