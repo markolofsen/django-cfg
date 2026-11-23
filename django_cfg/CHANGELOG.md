@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.107] - 2026-11-24
+
+### Fixed
+
+- **Go clients no longer lose operations to string unions.** ogen cannot tell
+  two string branches of a `oneOf` apart ("discriminator inference not
+  implemented"), and with `ignore_not_implemented` it dropped the whole
+  operation and every type only it used. That hit the blank-able choices
+  (`oneOf [Enum, ""(, null)]`, since 2.4.104/2.4.106) and `URLField(blank=True)`
+  (`oneOf [uri, maxLength 0]`): gptkino's node client lost the task-result and
+  fetch types, cmdop's CLI client eight skills/push operations. The Go target now
+  hands ogen `openapi.ogen.json`, the same contract with those unions collapsed
+  into one string schema (a merged inline enum named `<Schema><Field>`, or a
+  string that keeps the real branch's `format`).
+- **A skipped Go operation fails the target.** ogen's "Skipping operation" lines
+  were never read, so a client missing calls looked generated. The target now
+  stops with the operations ogen skipped.
+
 ## [2.4.106] - 2026-11-23
 
 ### Fixed
