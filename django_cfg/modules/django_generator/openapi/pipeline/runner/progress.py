@@ -108,6 +108,16 @@ def print_run_summary(
         sys.stderr.flush()
 
 
+def print_note(name: str, text: str) -> None:
+    """One dim line about a target, e.g. a check that was skipped on request."""
+    if is_quiet():
+        return
+    line = f"  {_color(_DIM, '-')} {name:<32} {_color(_DIM, text)}"
+    with _lock:
+        sys.stderr.write(line + "\n")
+        sys.stderr.flush()
+
+
 def now() -> float:
     """Monotonic seconds — used by the orchestrator for elapsed timing."""
     return time.perf_counter()
@@ -116,6 +126,7 @@ def now() -> float:
 __all__ = [
     "is_quiet",
     "now",
+    "print_note",
     "print_run_summary",
     "print_spec_status",
     "print_target_result",

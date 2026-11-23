@@ -121,6 +121,18 @@ python manage.py gen --force   # overwrite uncommitted changes in the output fol
 
 ---
 
+## TypeScript Type-Check
+
+A TypeScript client is published only if it type-checks. Before a generated tree replaces its output folder, `gen` runs `tsc --noEmit` on it. It uses the frontend's own TypeScript and `tsconfig.json`, and the check sees the tree as if it were already in place, so imports of the runtime and of `node_modules` resolve as they will for the app. A type error in a generated file fails that target: the output folder keeps its previous tree, and `gen` exits non-zero with the diagnostics. Errors in hand-written files the client imports do not fail generation. Missing TypeScript or Node is an error, not a skip.
+
+To generate without the check for one run, set `DJANGO_CFG_GEN_SKIP_TYPECHECK=1`. Use it when the check cannot run for a reason outside the tree. For example, a client that imports `@djangocfg/api` needs that package built first. It is also how to inspect a tree that fails: generate it with the check off, then run the app's `tsc --noEmit`.
+
+```bash
+DJANGO_CFG_GEN_SKIP_TYPECHECK=1 python manage.py gen --ts
+```
+
+---
+
 ## Common Workflows
 
 ### Development

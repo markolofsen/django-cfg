@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.105] - 2026-11-23
+
+### Added
+
+- **`manage.py gen` type-checks every TypeScript tree before publishing it.**
+  Each generated tree runs through `tsc --noEmit` with the consumer's
+  TypeScript and `tsconfig.json`, before it replaces its output folder. A type
+  error in a generated file fails the target, keeps the previous tree and
+  makes `gen` exit non-zero. `DJANGO_CFG_GEN_SKIP_TYPECHECK=1` skips the check
+  for one run.
+- **Generated-client smoke suite.** `@djangocfg/api`'s `smoke/` calls a
+  generated operation with `fetch` stubbed. It covers the API origin (built-in
+  env and `configureApi`), `Accept-Language`, `X-Client-Id`, Bearer, the 401
+  refresh, the soft Zod contract and an unreachable host. It runs in
+  `pnpm test` and in `make test-fast`.
+
 ## [2.4.104] - 2026-11-23
 
 ### Changed

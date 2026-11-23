@@ -8,6 +8,7 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from django_cfg.core.contract import SIGN_IN_STEP
 from django_cfg.core.site import site_for
 from django_cfg.apps.system.totp.services import TOTPService, TwoFactorSessionService
 from django_cfg.modules.base import BaseCfgModule
@@ -82,6 +83,7 @@ class OTPViewSet(viewsets.GenericViewSet):
             500: OTPErrorResponseSerializer,
         },
         tags=["cfg_accounts_otp"],
+        extensions=SIGN_IN_STEP,
     )
     @action(detail=False, methods=["post"], url_path="request", url_name="request")
     def request_otp(self, request):
@@ -211,6 +213,7 @@ class OTPViewSet(viewsets.GenericViewSet):
             429: OTPErrorResponseSerializer,
         },
         tags=["cfg_accounts_otp"],
+        extensions=SIGN_IN_STEP,
     )
     @action(detail=False, methods=["post"], url_path="verify", url_name="verify")
     def verify_otp(self, request):

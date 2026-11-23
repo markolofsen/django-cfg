@@ -7,6 +7,8 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from django_cfg.core.contract import SIGN_IN_STEP
+
 
 from ..models import SessionStatus, TwoFactorSession
 from ..serializers.verify import (
@@ -30,6 +32,7 @@ User = get_user_model()
             403: {"description": "Too many attempts"},
         },
         tags=["cfg_totp_verify"],
+        extensions=SIGN_IN_STEP,
     ),
     verify_backup=extend_schema(
         request=VerifyBackupSerializer,
@@ -38,6 +41,7 @@ User = get_user_model()
             400: {"description": "Invalid backup code or session"},
         },
         tags=["cfg_totp_verify"],
+        extensions=SIGN_IN_STEP,
     ),
 )
 class VerifyViewSet(viewsets.GenericViewSet):

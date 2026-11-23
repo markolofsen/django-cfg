@@ -22,4 +22,19 @@ CONTRACT_SINCE = "2.3.415"
 SPEC_KEY_VERSION = "x-cfg-version"
 SPEC_KEY_CONTRACT = "x-cfg-contract"
 
-__all__ = ["CFG_VERSION", "CONTRACT_SINCE", "SPEC_KEY_VERSION", "SPEC_KEY_CONTRACT"]
+#: The operation extension that marks a sign-in step (password, OTP, OAuth callback, 2FA verify). A view sets it with
+#: `extend_schema(extensions=SIGN_IN_STEP)`; the TypeScript generator turns it into `skipAuthRefresh: true`, because a
+#: 401 there is a wrong code or password, not an expired session. It changes no server behaviour, so no contract bump.
+SPEC_KEY_AUTH = "x-cfg-auth"
+AUTH_SIGN_IN = "sign-in"
+SIGN_IN_STEP = {SPEC_KEY_AUTH: AUTH_SIGN_IN}
+
+__all__ = [
+    "AUTH_SIGN_IN",
+    "CFG_VERSION",
+    "CONTRACT_SINCE",
+    "SIGN_IN_STEP",
+    "SPEC_KEY_AUTH",
+    "SPEC_KEY_CONTRACT",
+    "SPEC_KEY_VERSION",
+]

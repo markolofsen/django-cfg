@@ -25,9 +25,9 @@ from ..cache import (
     store_target_output,
 )
 from ..config import GenerationTarget, OpenAPIConfig
-from ..errors import GeneratorError
-from ..postprocess import nullable_3_1_to_3_0
-from ..slicer import slice_by_tags
+from ..errors import GeneratorError, SliceError
+from ..postprocess import enforce_response_schemas, nullable_3_1_to_3_0
+from ..slicer import _normalize_tag, slice_by_tags
 from ...groups.resolver import resolve_tags, resolve_tags_by_name
 from ..schema_refs import promote_inline_schemas
 from ...tools.external import (
@@ -46,7 +46,7 @@ from ...tools.openapi_processor.python.wrapper.generator import (
 )
 from .cache_keys import target_cache_slot, target_signature
 from .paths import effective_root
-from .stamp import stamp_target
+from .stamp import stamp_info, stamp_target
 
 
 def run_target(
@@ -164,6 +164,16 @@ def run_single(
     """
     sliced = _resolve_and_slice(target, groups, global_spec, config)
     promote_inline_schemas(sliced)
+    if target.tool == "orval":
+        # Before Orval: it types such an operation `unknown`, or refuses the spec without naming the view.
+        enforce_response_schemas(sliced)
+        # The banner Orval writes into every file reads `x-cfg-contract` from
+        # `info`, so the slice is stamped before the tool runs and before the
+        # cache key is taken (see ``stamp``). A copy of `info`: an empty slice
+        # shares it with the global spec, which other targets read in parallel.
+        if isinstance(sliced.get("info"), dict):
+            sliced["info"] = dict(sliced["info"])
+        stamp_info(sliced)
 
     if target.tool in ("ogen", "swift-openapi"):
         # ogen needs 3.0-style nullable; swift-openapi SILENTLY DROPS fields whose
@@ -233,7 +243,10 @@ def _resolve_and_slice(
         if group is not None:
             allowed |= resolve_tags(group, global_spec)
         else:
-            allowed |= resolve_tags_by_name(group_name, global_spec)
+            tags = resolve_tags_by_name(group_name, global_spec)
+            if not _tags_in_spec(tags, global_spec):
+                raise SliceError(_unknown_group_message(target, group_name, config, global_spec))
+            allowed |= tags
     if target.tags:
         allowed |= set(target.tags)
     if not allowed:
@@ -246,6 +259,42 @@ def _resolve_and_slice(
         empty.pop("x-realtime", None)  # no topics in this slice, so no key (see slicer.slice_by_tags)
         return empty
     return slice_by_tags(global_spec, allowed)
+
+
+def _spec_tags(global_spec: dict[str, Any]) -> set[str]:
+    """Every tag an operation or realtime topic carries, normalized as the slicer compares them."""
+    found: set[str] = set()
+    for item in (global_spec.get("paths") or {}).values():
+        if isinstance(item, dict):
+            for op in item.values():
+                if isinstance(op, dict):
+                    found.update(_normalize_tag(str(t)) for t in op.get("tags") or [])
+    realtime = global_spec.get("x-realtime")
+    if isinstance(realtime, dict):
+        for topic in realtime.get("topics") or []:
+            if isinstance(topic, dict):
+                found.update(_normalize_tag(str(t)) for t in topic.get("tags") or [])
+    return found
+
+
+def _tags_in_spec(tags: set[str], global_spec: dict[str, Any]) -> bool:
+    return bool({_normalize_tag(t) for t in tags} & _spec_tags(global_spec))
+
+
+def _unknown_group_message(
+    target: GenerationTarget, group_name: str, config: OpenAPIConfig, global_spec: dict[str, Any]
+) -> str:
+    """A group that is neither configured nor a tag: it would generate an empty client without a word."""
+    configured = sorted(g.name for g in config.groups)
+    near = sorted(t for t in _spec_tags(global_spec) if group_name.lower().rstrip("*_") in t)[:8]
+    return (
+        f"unknown group {group_name!r} in target {target.name} ({target.path}): it is not an OpenAPIGroupConfig "
+        f"and no operation carries a tag for it, so the client would be empty. "
+        f"Configured groups: {', '.join(configured) or 'none'}."
+        + (f" Tags that look close: {', '.join(near)}." if near else "")
+        + " Fix: correct the name in the Target's groups (generation.py), or add "
+        f'OpenAPIGroupConfig(name="{group_name}", apps=[...]) to the openapi_client groups.'
+    )
 
 
 def _dispatch_tool(
@@ -273,35 +322,21 @@ def _dispatch_tool(
         workspace = _find_frontend_workspace(target.path)
         mock = options.get("mock", True)
         prettier = options.get("prettier", True)
-        # Prefer a handwritten runtime boundary belonging to the package. The
-        # output layout is intentionally not fixed: a target can be flat
-        # (`packages/api/src/generated`) or nested below a group (`src/<group>
-        # /generated`). Walk the target's ancestors instead of guessing two
-        # levels, otherwise nested workspaces silently fall back to the shared
-        # runtime and lose their configured API origin.
         consumer_path = _consumer_path_for_stage(target.path)
-        local_runtime = next(
-            (
-                candidate / "runtime" / "orval-mutator.ts"
-                for candidate in consumer_path.parents
-                if (candidate / "runtime" / "orval-mutator.ts").is_file()
-            ),
-            None,
-        )
-        if local_runtime is not None:
-            mutator_import = os.path.relpath(
-                local_runtime.with_suffix(""),
-                start=consumer_path / "runtime",
-            )
-        else:
-            mutator_import = "@djangocfg/api"
+        # The consumer folder, not ``out_dir``: with ``source_root`` the tree is
+        # written inside the Django project, whose nearest package.json and
+        # prettier config are not the frontend's.
         orval.generate(
             spec_path,
             out_dir,
             cwd=workspace,
+            consumer_dir=consumer_path,
             mock=bool(mock),
             prettier=bool(prettier),
-            mutator_import=mutator_import,
+            runtime=runtime_import_for(consumer_path),
+            auth_mode=str(options.get("auth_mode", "default")),
+            direct_origin_tags=tuple(options.get("direct_origin_tags") or ()),
+            infinite=bool(options.get("infinite", False)),
         )
         return True, None
 
@@ -360,6 +395,55 @@ def _dispatch_tool(
     return False, f"unknown tool: {tool}"
 
 
+def runtime_import_for(consumer_path: Path) -> orval.RuntimeImport:
+    """Where the generated mutator shim of the tree published to ``consumer_path`` imports the runtime from.
+
+    * Default: the ``@djangocfg/api`` package root.
+    * A hand-written ``runtime/orval-mutator.ts`` in an ancestor of the tree wins: a package that wraps the runtime
+      (its own origin or headers) keeps doing so. The layout is not fixed (``packages/api/src/generated``,
+      ``src/<group>/generated``), so every ancestor is checked. Such a file exports ``djangoFetch`` and
+      ``DjangoRequestInit`` but not ``ApiClientError``, which then comes from the package.
+    * Inside ``@djangocfg/api`` itself that ancestor is the runtime, and the package cannot import itself by name:
+      everything comes relatively from that ``runtime`` folder's index.
+    """
+    consumer_path = Path(consumer_path)
+    local_runtime = next(
+        (
+            candidate / "runtime" / "orval-mutator.ts"
+            for candidate in consumer_path.parents
+            if (candidate / "runtime" / "orval-mutator.ts").is_file()
+        ),
+        None,
+    )
+    if local_runtime is None:
+        return orval.RuntimeImport(fetch=orval.RUNTIME_PACKAGE)
+    shim_dir = consumer_path / "runtime"
+    if _package_name(consumer_path) == orval.RUNTIME_PACKAGE:
+        return orval.RuntimeImport(fetch=_relative_import(local_runtime.parent, shim_dir))
+    return orval.RuntimeImport(
+        fetch=_relative_import(local_runtime.with_suffix(""), shim_dir),
+        errors=orval.RUNTIME_PACKAGE,
+    )
+
+
+def _relative_import(module: Path, start: Path) -> str:
+    rel = Path(os.path.relpath(module, start=start)).as_posix()
+    return rel if rel.startswith(".") else f"./{rel}"
+
+
+def _package_name(consumer_path: Path) -> str | None:
+    """The ``name`` of the ``package.json`` the consumer folder belongs to."""
+    package_json = orval.consumer_package_json(consumer_path)
+    if package_json is None:
+        return None
+    try:
+        package = json.loads(package_json.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    name = package.get("name") if isinstance(package, dict) else None
+    return name if isinstance(name, str) else None
+
+
 def _find_frontend_workspace(start: Path) -> Path:
     """Find the pnpm workspace that owns a generated TS target."""
     current = Path(start).resolve()
@@ -396,4 +480,4 @@ def _consumer_path_for_stage(path: Path) -> Path:
     return path
 
 
-__all__ = ["run_single", "run_target"]
+__all__ = ["run_single", "run_target", "runtime_import_for"]

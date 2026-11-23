@@ -4,6 +4,7 @@ Runs once on the freshly-loaded drf-spectacular spec, before slicing.
 
   - enforce_tags(spec): every operation must declare ≥1 tag, else PostprocessError.
   - enforce_operation_ids(spec): every operation must have one unique operationId.
+  - enforce_response_schemas(spec): every operation of an Orval slice has a typed success response.
   - enforce_unique_schemas(spec): detect drf-spectacular auto-rename collisions
     (`UserProfileUpdate`, `UserProfileUpdate2`, …) and abort with a clear
     message pointing at the offending serializer classes.
@@ -81,7 +82,13 @@ def enforce_tags(spec: dict[str, Any]) -> None:
 
 
 def enforce_operation_ids(spec: dict[str, Any]) -> None:
-    """Require one explicit, unique operationId for every HTTP operation."""
+    """Require one explicit, unique operationId for every HTTP operation.
+
+    drf-spectacular itself renames colliding ids (``spec_loader._check_operation_id_collisions`` refuses that), so a
+    duplicate here comes from a hook or a hand-built document.
+    """
+    from .views import describe
+
     missing: list[str] = []
     duplicates: dict[str, list[str]] = {}
     seen: dict[str, str] = {}
@@ -92,7 +99,7 @@ def enforce_operation_ids(spec: dict[str, Any]) -> None:
         for method, op in item.items():
             if method.lower() not in _HTTP_METHODS or not isinstance(op, dict):
                 continue
-            location = f"{method.upper()} {path}"
+            location = describe(path, method)
             operation_id = op.get("operationId")
             if not isinstance(operation_id, str) or not operation_id.strip():
                 missing.append(location)
@@ -116,7 +123,55 @@ def enforce_operation_ids(spec: dict[str, Any]) -> None:
                 for operation_id, locations in sorted(duplicates.items())
             )
             parts.append(f"duplicate operationId values: {duplicate_text}")
-        raise PostprocessError("; ".join(parts))
+        raise PostprocessError(
+            "; ".join(parts) + '. Fix: set `@extend_schema(operation_id="<unique_id>")` on the view method.'
+        )
+
+
+_EMPTY_BODY_STATUSES = {"204", "205", "304"}
+
+
+def enforce_response_schemas(spec: dict[str, Any]) -> None:
+    """Require a typed success response on every operation of a TypeScript (Orval) slice.
+
+    Orval types an operation without one as ``Promise<unknown>``, and refuses a spec whose operation has no
+    ``responses`` at all with a validation message that names neither the view nor the fix. Refused here:
+
+    * no ``2xx`` and no ``default`` response;
+    * a ``2xx`` response whose media type has no ``schema``.
+
+    A ``2xx`` without ``content`` is an empty body (``Promise<void>``) and is fine, as is any 204/205/304.
+    """
+    from .views import describe
+
+    problems: list[str] = []
+    for path, item in (spec.get("paths") or {}).items():
+        if not isinstance(item, dict):
+            continue
+        for method, op in item.items():
+            if method.lower() not in _HTTP_METHODS or not isinstance(op, dict):
+                continue
+            responses = op.get("responses") or {}
+            success = {str(code): r for code, r in responses.items() if str(code).upper().startswith("2")}
+            where = describe(path, method, op.get("operationId"))
+            if not success and "default" not in responses:
+                problems.append(f"{where}: no success response")
+                continue
+            for code, response in success.items():
+                if not isinstance(response, dict) or "$ref" in response or code in _EMPTY_BODY_STATUSES:
+                    continue
+                for media_type, media in (response.get("content") or {}).items():
+                    if not isinstance(media, dict) or "schema" not in media:
+                        problems.append(f"{where}: response {code} {media_type} has no schema")
+    if problems:
+        head = "\n".join(f"  • {p}" for p in problems[:20])
+        more = f"\n  (+{len(problems) - 20} more)" if len(problems) > 20 else ""
+        raise PostprocessError(
+            "operations without a response schema; the TypeScript client would type them `unknown`:\n"
+            f"{head}{more}\n"
+            "Fix: declare the response on the view, `@extend_schema(responses={200: <Serializer>})`, or "
+            "`responses={204: None}` for an empty body."
+        )
 
 
 def normalize_tags(spec: dict[str, Any]) -> None:
@@ -352,6 +407,8 @@ def _single_enum_values(prop: dict[str, Any], schemas: dict[str, Any]) -> list[A
 
 __all__ = [
     "discriminator_literals",
+    "enforce_operation_ids",
+    "enforce_response_schemas",
     "enforce_tags",
     "enforce_unique_schemas",
     "normalize_tags",

@@ -154,14 +154,60 @@ Every request the generated client makes carries `Accept-Language`, `X-Timezone`
 
 The generated client already sends headers the default CORS list covers (`Authorization`, `X-API-Key`, `X-Timezone`, `X-Client-Time`, `X-Client-Id`, `X-Auth-Retry`, the chunked-upload headers, `Idempotency-Key`). If your app adds its own (`X-Holder`, `X-Content-SHA256`, ...) through a custom `fetch` or interceptor, no backend setup is needed: a preflight from an already-trusted origin gets the requested headers back. To list one explicitly set `cors_extra_headers = ["x-holder"]`; see [Custom request headers](/configuration/security#custom-request-headers). A browser "CORS error" with only `OPTIONS 200` in the server log means the preflight was refused: [how to read it](/configuration/security#reading-an-opaque-cors-error).
 
-#### Public clients (no auth) — automatic
+#### Public operations and sign-in steps — from the spec
 
-If a target's sliced OpenAPI spec contains **zero secured operations** (for
-example a public ingest API), the generator automatically emits a token-free
-minimal store instead: no `Authorization` header, no token storage, no refresh
-machinery. This also prevents a logged-in user's Bearer token from leaking
-onto public endpoints. No configuration needed — the mode is derived from the
-spec's `security` requirements.
+Each generated call carries the facts the spec states about its operation, and the runtime acts on them:
+
+- **No credentials accepted** (`security: [{}]`, or no `security` at all in a document without a global one):
+  the call is sent with `auth: 'none'`. No `Authorization` header from the session, no refresh on a 401, and a
+  401 never signs the user out. A logged-in user's token does not reach public endpoints. Optional auth (a session
+  is used when there is one) gets no flag.
+- **Sign-in steps** (password login, OTP request and verify, the OAuth callbacks, 2FA verify): `skipAuthRefresh:
+  true`, because a 401 there is a wrong code or password, not an expired session. A view of your own marks one with
+  `@extend_schema(extensions=SIGN_IN_STEP)` from `django_cfg.core.contract`.
+
+Every operation takes `DjangoRequestInit` as its last argument, and every query and mutation hook takes it as
+`request`, so a caller can set or override a flag for one call:
+
+```typescript
+await cfgAccountsProfileRetrieve({ signal });
+const profile = useCfgAccountsProfileRetrieve({ request: { origin: 'direct' } });
+```
+
+#### Target options (TypeScript)
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `auth_mode` | `"default"` | `"public"`: every request of this client goes without the session (`auth: 'none'`), and callers cannot turn it back on. For a client of public endpoints only. |
+| `direct_origin_tags` | `[]` | OpenAPI tags whose operations go straight to the API host (`NEXT_PUBLIC_API_URL`), never through the proxy. A tag the target does not contain stops generation. |
+| `infinite` | `False` | Also generate `use<Op>Infinite` and `get<Op>InfiniteQueryOptions` for every GET that takes a `page` (or else `cursor`) query parameter. Other GETs are unchanged. |
+
+With `infinite=True`, the generated hook pages through the `page` (or `cursor`) parameter, but TanStack also needs
+`initialPageParam` and `getNextPageParam`, which the generator does not write. Spread the runtime's page params for
+the django-cfg envelope:
+
+```typescript
+import { drfCursorParams, drfPageParams } from '@djangocfg/api';
+
+const pings = useRealtimeDemoPingsListInfinite({ page_size: 20 }, { query: { ...drfPageParams } });
+// pings.data?.pages: one page envelope per fetch; pings.fetchNextPage() follows next_page.
+
+// A cursor list (a `cursor` query parameter and `next_cursor` in the body):
+const comments = useCommentsListInfinite({ object_id }, { query: { ...drfCursorParams } });
+```
+
+An infinite query has its own key, starting with `'infinite'`. A mutation that changes the list invalidates both:
+`getRealtimeDemoPingsListQueryKey(params)` and `getRealtimeDemoPingsListInfiniteQueryKey(params)`.
+
+```python
+Target(
+    lang=Language.TYPESCRIPT,
+    type=TargetType.WEB,
+    path=FRONTEND / "packages" / "catalog-api" / "src" / "generated",
+    groups=["catalog"],
+    direct_origin_tags=["listings", "api_keys"],
+)
+```
 
 ### Enum names
 
@@ -252,6 +298,9 @@ try {
   else throw error;
 }
 ```
+
+A hook's `error` is typed `ApiClientError` (`APIError | NetworkError | APIConfigurationError | ZodError |
+DOMException`), exported from `@djangocfg/api`.
 
 Generated operations parse successful responses with Zod before returning
 them. Use the generated MSW handlers from `@djangocfg/api/mocks` (or the

@@ -29,7 +29,7 @@ Example:
 """
 
 # Version information
-__version__ = "2.4.104"
+__version__ = "2.4.105"
 __license__ = "MIT"
 
 # Setup warnings debug early (checks env var only at this point)

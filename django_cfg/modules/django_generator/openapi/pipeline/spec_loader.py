@@ -21,6 +21,7 @@ look for the diagnostic pattern, and abort with a clear error.
 
 from __future__ import annotations
 
+import ast
 import io
 import json
 import os
@@ -41,6 +42,10 @@ _ALLOW_SCHEMA_WARNINGS = "DJANGO_CFG_GEN_ALLOW_SCHEMA_WARNINGS"
 _COLLISION_RE = re.compile(
     r'Encountered 2 components with identical names "(?P<name>[^"]+)"'
     r' and different identities (?P<a>.+?) and (?P<b>.+?)\. ',
+)
+# drf_spectacular.plumbing.sanitize_result_object: it renames every operation after the first one.
+_OPERATION_ID_COLLISION_RE = re.compile(
+    r'operationId "(?P<id>[^"]+)" has collisions (?P<locations>\[.*?\])\. resolving with numeral suffixes\.'
 )
 
 
@@ -79,6 +84,7 @@ def _load_in_process() -> dict[str, Any]:
         sys.stderr.write(buf.getvalue())
 
     _check_collisions(buf.getvalue())
+    _check_operation_id_collisions(buf.getvalue())
 
     if not isinstance(schema, dict):
         raise SpecLoadError(f"unexpected schema type: {type(schema).__name__}")
@@ -108,11 +114,13 @@ def _load_subprocess() -> dict[str, Any]:
             text=True,
         )
         sys.stderr.write(proc.stderr)
+        # Before the exit code: with --fail-on-warn a collision also fails the command, and these name the fix.
+        _check_collisions(proc.stderr)
+        _check_operation_id_collisions(proc.stderr)
         if proc.returncode != 0:
             raise SpecLoadError(
                 f"manage.py spectacular failed (exit {proc.returncode}):\n{proc.stderr}"
             )
-        _check_collisions(proc.stderr)
         text = out.read_text(encoding="utf-8")
         schema = json.loads(text)
         # Older drf-spectacular releases may not understand the CLI flags.
@@ -221,6 +229,41 @@ def _check_collisions(stderr_text: str) -> None:
         + "\n\n".join(blocks)
         + "\n\nFix: rename one of the conflicting serializer classes (or set its "
           "`Meta.ref_name` as shown above) so each component name is unique."
+    )
+
+
+def _check_operation_id_collisions(stderr_text: str) -> None:
+    """Abort if drf-spectacular gave two operations the same operationId.
+
+    It does not fail: it appends ``_2``, ``_3`` in URL order and warns. The generated function and hook names then
+    depend on route order, and a new route can rename an existing client call. Refused even with the schema-warning
+    escape hatch, like a schema-name collision.
+    """
+    found: dict[str, list[tuple[str, str]]] = {}
+    for m in _OPERATION_ID_COLLISION_RE.finditer(stderr_text):
+        try:
+            locations = ast.literal_eval(m.group("locations"))
+        except (ValueError, SyntaxError):
+            locations = []
+        found.setdefault(m.group("id"), [])
+        for item in locations:
+            if isinstance(item, (list, tuple)) and len(item) == 2 and tuple(item) not in found[m.group("id")]:
+                found[m.group("id")].append((str(item[0]), str(item[1])))
+    if not found:
+        return
+    from .views import describe
+
+    blocks = []
+    for operation_id, locations in sorted(found.items()):
+        lines = [f'  • operationId "{operation_id}" is claimed by:']
+        lines += [f"      - {describe(path, method)}" for path, method in sorted(locations)] or ["      - (locations not reported)"]
+        blocks.append("\n".join(lines))
+    raise SpecLoadError(
+        "operationId collision: drf-spectacular renames all but the first of these with a numeral suffix "
+        "(`_2`, `_3`, in URL order), so the generated client names would depend on route order:\n"
+        + "\n".join(blocks)
+        + '\n\nFix: give each one its own id with `@extend_schema(operation_id="<unique_id>")` on the view method '
+        "(for a viewset action, on the action), or rename one of the routes."
     )
 
 

@@ -34,6 +34,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from django_cfg.core.contract import SIGN_IN_STEP
 from django_cfg.apps.system.totp.services import TOTPService, TwoFactorSessionService
 from django_cfg.modules.base import BaseCfgModule
 
@@ -61,6 +62,7 @@ PASSWORD_LOGIN_IP_RATE = "10/m"
         429: PasswordLoginErrorSerializer,
     },
     tags=["cfg_accounts_auth"],
+    extensions=SIGN_IN_STEP,
 )
 class PasswordLoginView(TokenObtainPairView):
     """Obtain a JWT pair with email + password.

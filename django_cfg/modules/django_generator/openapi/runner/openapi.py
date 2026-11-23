@@ -135,7 +135,7 @@ def _build_targets(
                 tool=tool,  # type: ignore[arg-type]
                 path=Path(t.path),
                 groups=groups,
-                options={},
+                options=t.typescript_options(),
                 source_path=source_path,
             )
         )

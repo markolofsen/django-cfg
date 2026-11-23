@@ -42,6 +42,7 @@ from ..postprocess import (
 )
 from ..spec_loader import load_spec
 from .dispatch import run_target
+from .typecheck import typecheck_staged
 from ..staging import Stage
 from .paths import (
     cache_dir,
@@ -288,8 +289,9 @@ def _run_staged(
     The tools clean their output folder before writing (``rmtree(out_dir)``,
     ``clean_stale_root``). They do it in a copy next to the real folder; the
     real folder (and, with ``source_path``, the consumer folder) is replaced
-    only when the target succeeded and the git guard passed for both. On any
-    failure both stay exactly as they were.
+    only when the target succeeded, its TypeScript tree type-checks
+    (``typecheck_staged``, checked on the tree bound for the consumer) and the
+    git guard passed for both. On any failure both stay exactly as they were.
     """
     try:
         stage = Stage.open(effective_root(target))
@@ -307,6 +309,7 @@ def _run_staged(
             return ok, err, hit
         try:
             consumer = stage_consumer(target, stage.path)
+            typecheck_staged(target, consumer or stage)
             stage.check(force=force)
             if consumer is not None:
                 consumer.check(force=force)

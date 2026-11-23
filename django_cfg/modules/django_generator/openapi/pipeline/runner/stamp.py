@@ -1,10 +1,14 @@
 """Stamp a generated target with the django-cfg that produced it.
 
-Runs AFTER the tool and the output cache, on every outcome (fresh or replayed), so the stamp never enters a cache key and a
-cache hit never keeps an old one. Writes only two things:
+Runs AFTER the tool and the output cache, on every outcome (fresh or replayed), so a cache hit never keeps an old stamp.
+One exception: an Orval target's slice is stamped BEFORE the tool (`dispatch.run_single`, through `stamp_info`), because the
+banner Orval writes into every file reads `x-cfg-contract` from `info`. There the stamp is part of the cache key, so a hit
+cannot replay an older banner. Writes only two things:
 
 * `info["x-cfg-version"]` / `info["x-cfg-contract"]` in every `openapi.json` of the target (all languages have one);
-* `helpers/cfg.ts` for a TypeScript target: `CFG = { version, contract }`, readable at runtime by a client that wants to compare.
+* `helpers/cfg.ts` for a TypeScript target that has a `helpers/` folder: `CFG = { version, contract }`, readable at runtime by a
+  client that wants to compare. An Orval tree gets the same constant as `runtime/cfg.ts`, written by the Orval step from the
+  stamped slice (`orval.render_cfg_ts`), so it is part of the cached output.
 
 `version` is the django-cfg that generated the client; `contract` is the oldest django-cfg that serves the same contract
 (`django_cfg.core.contract.CONTRACT_SINCE`), i.e. the minimum a host must run.
@@ -44,19 +48,25 @@ def _specs(root: Path) -> list[Path]:
     return [p for p in found if p.is_file()]
 
 
+def stamp_info(spec: dict) -> bool:
+    """Put this django-cfg's stamp into `spec["info"]`. `True` if that changed the spec; a spec without `info` is left alone."""
+    info = spec.get("info")
+    if not isinstance(info, dict):
+        return False
+    if info.get(SPEC_KEY_VERSION) == CFG_VERSION and info.get(SPEC_KEY_CONTRACT) == CONTRACT_SINCE:
+        return False
+    info[SPEC_KEY_VERSION] = CFG_VERSION
+    info[SPEC_KEY_CONTRACT] = CONTRACT_SINCE
+    return True
+
+
 def _stamp_spec(path: Path) -> None:
     try:
         spec = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return
-    info = spec.get("info")
-    if not isinstance(info, dict):
-        return
-    if info.get(SPEC_KEY_VERSION) == CFG_VERSION and info.get(SPEC_KEY_CONTRACT) == CONTRACT_SINCE:
-        return
-    info[SPEC_KEY_VERSION] = CFG_VERSION
-    info[SPEC_KEY_CONTRACT] = CONTRACT_SINCE
-    path.write_text(json.dumps(spec, ensure_ascii=False, indent=2), encoding="utf-8")
+    if isinstance(spec, dict) and stamp_info(spec):
+        path.write_text(json.dumps(spec, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def check_stamps(paths: list[Path]) -> list[str]:

@@ -19,6 +19,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from django_cfg.core.contract import SIGN_IN_STEP
+
 from ..models.oauth import OAuthConnection
 from ..serializers.oauth import (
     OAuthAuthorizeRequestSerializer,
@@ -190,6 +192,7 @@ def make_views(provider) -> Tuple[Type[APIView], Type[APIView]]:
                 f"Exchange the authorization code for JWT tokens. Call this after {provider.name} "
                 "redirects back with a code. The state is single use."
             ),
+            extensions=SIGN_IN_STEP,
         )
     )(callback)
     return authorize, callback

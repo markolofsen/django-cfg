@@ -6,8 +6,9 @@ v5.3: Groups only in Target, no inheritance.
 
 from enum import Enum
 from pathlib import Path
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 # =============================================================================
 # Enums
@@ -83,6 +84,35 @@ class Target(BaseModel):
     path: Path
     groups: list[str]  # Required, no inheritance
     post_build: str | None = None  # e.g., "pnpm build"
+
+    # TypeScript (Orval) options; the generator README lists them under "Target options".
+    #: "public": every request of this client goes without the session (`auth: 'none'` in the generated shim).
+    auth_mode: Literal["default", "public"] = "default"
+    #: Raw OpenAPI tags whose operations go straight to the API host (`origin: 'direct'`), never through the proxy.
+    direct_origin_tags: list[str] = []
+    #: Also generate `use<Op>Infinite` for every GET that takes a `page` or `cursor` query parameter.
+    infinite: bool = False
+
+    @model_validator(mode="after")
+    def _typescript_options_only_on_typescript(self) -> "Target":
+        if self.lang != Language.TYPESCRIPT:
+            set_options = sorted(self.typescript_options())
+            if set_options:
+                raise ValueError(
+                    f"{', '.join(set_options)} only apply to a TypeScript target, not {self.lang.value} ({self.path})"
+                )
+        return self
+
+    def typescript_options(self) -> dict[str, Any]:
+        """The TypeScript options set away from their defaults, as the pipeline's ``GenerationTarget.options``."""
+        options: dict[str, Any] = {}
+        if self.auth_mode != "default":
+            options["auth_mode"] = self.auth_mode
+        if self.direct_origin_tags:
+            options["direct_origin_tags"] = list(self.direct_origin_tags)
+        if self.infinite:
+            options["infinite"] = True
+        return options
 
     def matches_filter(self, filter_type: str | None) -> bool:
         """Check if target matches --target filter."""
