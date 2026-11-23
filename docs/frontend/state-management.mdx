@@ -13,11 +13,47 @@ synchronization.
 For Zustand store patterns, persistence, and undo/redo see [Zustand recipe](./recipes/zustand). For generated operations and query keys see [Data Layer](./data-layer).
 </Callout>
 
-<Callout type="warning">
-SWR is not the generated REST contract. It may remain in explicitly legacy or
-non-generated integrations, but new Django-CFG API work uses Orval and React
-Query v5.
-</Callout>
+## The QueryClient
+
+`BaseApp` from `@djangocfg/layouts` provides the app's one QueryClient. Do not
+add a `QueryClientProvider` of your own, and never create a QueryClient at
+module scope: on the server it would share one cache between requests.
+
+`BaseApp` picks the client in this order:
+
+1. the `queryClient` prop, used as it is (its defaults are not merged);
+2. a QueryClient already provided above `BaseApp`, reused, never nested;
+3. otherwise a new one per mount from `createAppQueryClient()`.
+
+| Default | Value |
+|---------|-------|
+| Query retry | none on a 4xx; up to 2 on a network error or a 5xx |
+| `throwOnError` | `false` |
+| `staleTime` | 30 s |
+| Refetch on window focus | on |
+| Mutation retry | none |
+
+```tsx
+import { BaseApp, createAppQueryClient } from '@djangocfg/layouts';
+
+// Only when the app needs its own defaults. Create it inside the component.
+const [queryClient] = useState(() => createAppQueryClient());
+
+<BaseApp
+  queryClient={queryClient}
+  queryDevtools={() => import('@tanstack/react-query-devtools')}
+>
+  {children}
+</BaseApp>
+```
+
+`queryDevtools` is optional. It renders only in development and loads lazily,
+and the app installs `@tanstack/react-query-devtools` itself.
+
+`@tanstack/react-query` is a peer dependency of `@djangocfg/layouts`, so every
+app that mounts `BaseApp` lists it as a direct dependency. A QueryClient passed
+explicitly to a generated hook is a second cache: the realtime bridge never
+sees it, so invalidations from Centrifugo do not reach it.
 
 ## The State Management Spectrum
 
@@ -32,66 +68,90 @@ Query v5.
 
 ### Standard Context Template
 
-Every context follows this exact pattern:
+Every context follows this pattern. The example uses the demo app's coin
+endpoints (`/apix/crypto/coins/`):
 
-```typescript
+```tsx
 'use client';
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  getMachinesMachinesListQueryKey,
-  useMachinesMachinesCreate,
-  useMachinesMachinesList,
+  getCryptoCoinsListQueryKey,
+  useCryptoCoinsCreate,
+  useCryptoCoinsDestroy,
+  useCryptoCoinsList,
 } from '@api/generated/endpoints';
+import type {
+  CoinListing,
+  CoinListingWrite,
+  CoinListingWriteRequest,
+  CryptoCoinsListParams,
+} from '@api/generated/models';
 
-interface MachinesContextType {
-  machines: Machine[];
+interface CoinsContextType {
+  coins: CoinListing[];
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  createMachine: (data: CreateMachineRequest) => Promise<Machine>;
-  deleteMachine: (id: string) => Promise<void>;
+  createCoin: (data: CoinListingWriteRequest) => Promise<CoinListingWrite>;
+  deleteCoin: (id: number) => Promise<void>;
 }
 
-const MachinesContext = createContext<MachinesContextType | undefined>(undefined);
+const CoinsContext = createContext<CoinsContextType | undefined>(undefined);
 
-export function MachinesProvider({ children }: { children: ReactNode }) {
-  // 1. Generated React Query v5 query
+export function CoinsProvider({
+  params,
+  children,
+}: {
+  params?: CryptoCoinsListParams;
+  children: ReactNode;
+}) {
+  // 1. Generated React Query v5 query (the QueryClient comes from BaseApp)
   const queryClient = useQueryClient();
-  const { data, error, isPending } = useMachinesMachinesList(params, {
+  const { data, error, isPending } = useCryptoCoinsList(params, {
     query: { staleTime: 60_000 },
   });
 
   // 2. Derived data with useMemo
-  const machines = useMemo(() => data?.results ?? [], [data]);
+  const coins = useMemo(() => data?.results ?? [], [data]);
 
   // 3. Mutation hooks
-  const createMutation = useMachinesMachinesCreate();
+  const createMutation = useCryptoCoinsCreate();
+  const destroyMutation = useCryptoCoinsDestroy();
 
-  // 4. Stable action callbacks
-  const createMachine = useCallback(async (data) => {
-    const result = await createMutation.mutateAsync({ data });
-    await queryClient.invalidateQueries({
-      queryKey: getMachinesMachinesListQueryKey(params),
-    });
-    return result;
-  }, [createMutation, queryClient, params]);
+  // 4. Stable action callbacks; invalidate with the generated key factory
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: getCryptoCoinsListQueryKey(params) }),
+    [queryClient, params],
+  );
+  const createCoin = useCallback(async (body: CoinListingWriteRequest) => {
+    const created = await createMutation.mutateAsync({ data: body });
+    await refresh();
+    return created;
+  }, [createMutation, refresh]);
+  const deleteCoin = useCallback(async (id: number) => {
+    await destroyMutation.mutateAsync({ id });
+    await refresh();
+  }, [destroyMutation, refresh]);
 
-  // 5. Memoized context value
-  const value = useMemo(() => ({
-    machines, isLoading: isPending, error: error?.message ?? null,
-    refresh: () => queryClient.invalidateQueries({
-      queryKey: getMachinesMachinesListQueryKey(params),
-    }), createMachine, deleteMachine,
-  }), [machines, isPending, error, queryClient, params, createMachine, deleteMachine]);
+  // 5. Memoized context value. A generated hook's error is typed `unknown`.
+  const value = useMemo<CoinsContextType>(() => ({
+    coins,
+    isLoading: isPending,
+    error: error instanceof Error ? error.message : null,
+    refresh,
+    createCoin,
+    deleteCoin,
+  }), [coins, isPending, error, refresh, createCoin, deleteCoin]);
 
-  return <MachinesContext.Provider value={value}>{children}</MachinesContext.Provider>;
+  return <CoinsContext.Provider value={value}>{children}</CoinsContext.Provider>;
 }
 
 // 6. Guard hook
-export function useMachines(): MachinesContextType {
-  const context = useContext(MachinesContext);
-  if (!context) throw new Error('useMachines must be used within MachinesProvider');
+export function useCoins(): CoinsContextType {
+  const context = useContext(CoinsContext);
+  if (!context) throw new Error('useCoins must be used within CoinsProvider');
   return context;
 }
 ```

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.106] - 2026-11-23
+
+### Fixed
+
+- **Enums that allow a blank keep it in the schema.** drf-spectacular's enum
+  hook strips `""` from every component enum, so a `ChoiceField(allow_blank=True)`
+  became a bare `$ref` and the generated Zod schema rejected the blank the server
+  sends (docman and reforms `ChatMessage.error_code: ""`). The
+  `postprocess_schema_enums_keep_null` hook now restores it next to `null`:
+  `oneOf [enum, {"type": "string", "enum": [""]}, null]`, typed `Enum | ''`.
+
 ## [2.4.105] - 2026-11-23
 
 ### Added

@@ -1,0 +1,73 @@
+---
+title: Target Options
+description: Reference for the TypeScript Target options of django-cfg client generation - auth_mode, direct_origin_tags, infinite, mock and prettier.
+---
+
+# Target Options
+
+A TypeScript `Target` in `generation.py` takes these options. Each one ends as Orval config or generated code, not
+as a runtime switch an app sets by hand. A target that sets none keeps exactly the output it had. The first three are
+refused on a non-TypeScript target.
+
+| Option | Type, default | Effect |
+|---|---|---|
+| `auth_mode` | `"default" \| "public"`, `"default"` | `"public"`: the generated mutator sends every request with `auth: 'none'`, after the caller's options, so no call of this client can carry the session. For a client of public endpoints only. |
+| `direct_origin_tags` | `list[str]`, `[]` | Raw OpenAPI tags whose operations get `origin: 'direct'`: they go to the API host, never through a same-origin proxy or a static-build relative URL. A tag that no operation of the target carries stops generation. |
+| `infinite` | `bool`, `False` | Adds `use<Op>Infinite`, `get<Op>InfiniteQueryOptions` and `get<Op>InfiniteQueryKey` to every GET with a `page` (else `cursor`) query parameter. Other GETs and all other files are unchanged. |
+
+Two more settings are always on for a `Target` and are not fields of it:
+
+- **mock**: MSW handlers and Faker factories in `endpoints/<tag>/<tag>.msw.ts`.
+- **prettier**: the tree is formatted with the prettier config a file in the consumer folder gets (the `.prettierrc`
+  of your frontend), whatever folder the generator wrote into.
+
+Both exist only as internal pipeline options (`GenerationTarget.options`). `Target(mock=False)` is not an error: an
+unknown keyword is ignored, so it changes nothing.
+
+```python
+from django_cfg.modules.django_generator import Language, Target, TargetType
+
+catalog = Target(
+    lang=Language.TYPESCRIPT,
+    type=TargetType.WEB,
+    path=FRONTEND / "packages" / "catalog-api" / "src" / "generated",
+    groups=["catalog"],
+    direct_origin_tags=["listings", "api_keys"],  # these skip the /apix proxy
+    infinite=True,
+)
+```
+
+## `auth_mode`
+
+The default client sends the session's Bearer token on every operation except those the spec marks public
+(`security: [{}]`), which get `auth: 'none'` one by one. `"public"` forces it for the whole client. Use it for a
+client that a signed-in user's token must never reach, such as a proxy that injects its own API key.
+
+## `direct_origin_tags`
+
+For an app whose browser requests normally go through a same-origin proxy (`NEXT_PUBLIC_API_PROXY_URL`), while some
+groups must reach the API host directly. On the server every request goes to the API host anyway. How the origin is
+resolved: [API origin modes](./runtime#api-origin-modes).
+
+## `infinite`
+
+Orval does not write `initialPageParam` or `getNextPageParam`. Spread the runtime's helper into `query`:
+
+```tsx
+import { drfPageParams } from '@djangocfg/api';
+
+const coins = useCryptoCoinsListInfinite({ page_size: 20 }, { query: { ...drfPageParams } });
+```
+
+`drfPageParams` fits every `Paginated*` envelope (`next_page`, else `page + 1` while `has_next`). `drfCursorParams`
+fits a cursor list (`next_cursor`, or the `cursor` of a DRF `next` URL). Infinite keys start with `'infinite'`:
+a mutation invalidates `get<Op>InfiniteQueryKey(params)` as well as `get<Op>QueryKey(params)`.
+
+## What is not an option
+
+- **The API origin.** It is decided at run time; see [Runtime](./runtime). A generated base URL would enter every
+  query key and differ between server and browser.
+- **Per-operation auth.** It comes from the view's OpenAPI `security`, and sign-in steps from
+  `extend_schema(extensions=SIGN_IN_STEP)`.
+- **QueryClient defaults** (retry, stale time). They belong to `BaseApp`; see
+  [State management](/frontend/state-management).

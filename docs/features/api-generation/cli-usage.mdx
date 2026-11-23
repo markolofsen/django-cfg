@@ -9,8 +9,8 @@ Client generation is one management command, `python manage.py gen`. It reads a
 `generation.py` file that sits next to `manage.py`, runs the pipeline (drf-spectacular,
 tag slicing, then the pinned external generator for each language) and writes every client
 straight into the `path` of its target. TypeScript REST targets use Orval with Fetch,
-React Query v5, Zod, and MSW. There is no legacy TypeScript generator or SWR
-generation path.
+React Query v5, Zod, and MSW; how a TypeScript tree is made is on the
+[Overview](./overview#how-a-typescript-client-is-made).
 
 ## `gen`
 
@@ -81,10 +81,10 @@ config = Config(
 )
 ```
 
-TypeScript REST output is configured by the target and the pinned frontend toolchain;
-authentication, refresh, error normalization, and response validation are owned by the
-handwritten mutator/runtime boundary. SSE, WebSocket, and NDJSON adapters remain separate
-protocol code. See the [parameter table](./overview#openapiconfig-parameters).
+TypeScript output is shaped by the [Target options](./target-options) and the pinned
+frontend toolchain. Authentication, refresh, errors and response validation belong to the
+[runtime](./runtime). SSE, WebSocket and NDJSON adapters are separate protocol code. See the
+[parameter table](./overview#openapiclientconfig-parameters).
 
 ## External tools
 
@@ -102,6 +102,14 @@ in parallel.
 | `DJANGO_CFG_GEN_NO_CACHE=1` | Skip both cache layers |
 | `DJANGO_CFG_GEN_PARALLELISM=N` | Worker count (default `min(8, cpu_count, target_count)`) |
 | `DJANGO_CFG_GEN_QUIET=1` | Silence per-target output |
+| `DJANGO_CFG_GEN_SKIP_TYPECHECK=1` | Publish TypeScript trees without the `tsc --noEmit` gate. Only for a reason outside the tree (for example a fresh checkout without the runtime's built types); each skipped target prints `type-check skipped` |
+
+## The type-check gate
+
+A TypeScript tree replaces the old one only if `tsc --noEmit` passes on it, with your app's
+TypeScript and nearest `tsconfig.json`. A failing target keeps its previous tree, and `gen`
+exits non-zero with up to 20 diagnostics. Generate with `DJANGO_CFG_GEN_SKIP_TYPECHECK=1` to
+inspect such a tree, then run your app's own `tsc --noEmit`.
 
 ## CI
 

@@ -1,0 +1,113 @@
+---
+title: Pitfalls
+description: Mistakes that compile and still break a django-cfg frontend - env reads, the mutator, locale and query keys, QueryClients, hand-written sign-in calls.
+---
+
+# Pitfalls
+
+Each of these type-checks and fails at run time.
+
+## Never read env through `globalThis.process` or an alias
+
+Next.js inlines a `NEXT_PUBLIC_*` variable only where the code says `process.env.NEXT_PUBLIC_NAME` literally. In the
+browser every other form is empty:
+
+```tsx
+export const apiUrl = process.env.NEXT_PUBLIC_API_URL; // inlined: correct
+
+// All empty in the browser:
+// globalThis.process?.env.NEXT_PUBLIC_API_URL
+// const env = process.env; env.NEXT_PUBLIC_API_URL
+// const { NEXT_PUBLIC_API_URL } = process.env
+// process.env[name]
+```
+
+`@djangocfg/api@2.1.663` read `globalThis.process?.env`. Every request went to the page's own origin, and a type-check
+passed. Do not set `globalThis.process.env` by hand to feed such a reader either: fix the reader.
+
+## Never re-export the mutator
+
+The generated `runtime/orval-mutator.ts` is a two-parameter function with literal `ErrorType` and `BodyType`
+declarations, because Orval reads the file as text. A file that says `export { djangoFetch } from '@djangocfg/api'`
+counts as a one-parameter mutator: operations take a plain `RequestInit`, hooks lose `request`, mutation hooks
+cannot pass options, and every `error` is `unknown`. The generator writes the shim; do not replace it. A package
+with a real exception keeps a hand-written `runtime/orval-mutator.ts` above the tree, and the generated shim wraps
+it.
+
+## Locale is not in query keys
+
+A key is the path plus the parameters. `Accept-Language` is a header, so data cached in one language stays cached
+after a switch until something refetches it. Nothing in `BaseApp` does this for you. Invalidate after the switch:
+
+```tsx
+import { useQueryClient } from '@tanstack/react-query';
+import { auth } from '@djangocfg/api';
+
+export function useAfterLocaleSwitch() {
+  const queryClient = useQueryClient();
+  return (locale: string) => {
+    auth.setLocale(locale); // optional: otherwise the NEXT_LOCALE cookie decides
+    void queryClient.invalidateQueries();
+  };
+}
+```
+
+## One QueryClient per page
+
+`BaseApp` provides the QueryClient. It reuses one provided above it, and takes yours as the `queryClient` prop. Do
+not:
+
+- create a QueryClient at module scope. On the server it is shared by every request, so one visitor's data can reach
+  another's page;
+- mount a second `QueryClientProvider` inside `BaseApp`;
+- pass a client as a hook's last argument (`useCryptoCoinsList(params, options, client)`).
+
+Each of these is a second cache. Realtime refresh watches only `BaseApp`'s, and an invalidation in one never reaches
+the other. If you need your own defaults, create the client with `useState`, once per mount, and pass it in:
+
+```tsx
+'use client';
+
+import { QueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
+
+import { BaseApp } from '@djangocfg/layouts';
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 60_000 } } }));
+  return (
+    <BaseApp project="shop" queryClient={queryClient}>
+      {children}
+    </BaseApp>
+  );
+}
+```
+
+`createAppQueryClient()` from `@djangocfg/layouts` gives you django-cfg's defaults to start from.
+
+## Hand-written sign-in calls need `skipAuthRefresh`
+
+The runtime treats a 401 by the operation's flags, not by its URL. Generated sign-in operations carry
+`skipAuthRefresh: true`. A call you write yourself does not: a wrong password there would trigger a refresh, and a
+refused refresh would sign the user out and redirect while they are signing in. Pass the flag:
+
+```tsx
+import { djangoFetch } from '@djangocfg/api';
+
+export function verifyMagicLink(token: string) {
+  return djangoFetch<{ access: string; refresh: string }>('/api/magic-link/verify/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+    skipAuthRefresh: true,
+  });
+}
+```
+
+Better: mark the view with `extend_schema(extensions=SIGN_IN_STEP)` and use the generated operation.
+
+## A streamed or uploaded request gets no transport headers
+
+A request that does not go through `djangoFetch` (an SSE stream, a direct upload) sends no `Authorization`,
+`Accept-Language` or `X-Client-Id`. Spread `auth.clientHeaders()` into its headers.

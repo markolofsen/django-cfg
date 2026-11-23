@@ -1,27 +1,19 @@
 # django_generator
 
-Clean-room rewrite of `django_client/` modeled on the FastAPI-side cmdop
-generator. Thin orchestrator over external CLIs (ogen, Orval,
-openapi-python-client, swift-openapi-generator, buf). TypeScript targets are
-generated from OpenAPI by the pinned Orval tool into a React Query/Zod/MSW
-client; Python/Go/Swift targets keep their own external generators.
+Generates API clients and ORM code from a Django project. A thin orchestrator over external tools: Orval for
+TypeScript, ogen for Go, openapi-python-client for Python, swift-openapi-generator for Swift, buf and grpc-python for
+protobuf. The FastAPI ORM generator is separate (`fastapi/`, `@docs/fastapi/`).
 
 ## Pipeline
 
 ```
-drf-spectacular → validate/fail-on-warn → spec_loader → postprocess
-                                                        → resolve_tags → slicer
-                                                                │
-                                       ┌────────────────────────┘
-                                       ▼
-                       external CLI (ogen / Orval / openapi-python-client / …)
-                                       │
-                                       ▼
-                                  <Target.path>/
-                                       │
-                                       ▼
-                          .tmp/generated/<name>/  (mirror, dev only)
+drf-spectacular → validate (fail on warn) → normalize → per target: groups → tags → slice → stamp
+    → external tool (Orval: + request flags, realtime topics, shim, cfg.ts, prettier)
+    → type-check gate (TypeScript) → git guard → swap into Target.path → mirror (.tmp, dev only)
 ```
+
+Step by step, with file paths: [`@docs/openapi/pipeline.md`](@docs/openapi/pipeline.md). What the TypeScript output
+contains and the Target options: [`openapi/README.md`](openapi/README.md).
 
 ## Public API
 
@@ -49,52 +41,30 @@ brew install swift-protobuf grpc-swift   # for proto-Swift targets
 # Orval is installed and pinned in the frontend workspace (Node 22.18+ required)
 ```
 
-`python manage.py gen --check` probes every CLI and prints install hints
-for any that are missing.
+`python manage.py gen --check` probes every CLI and prints install hints for any that are missing.
 
 ## Test loop
 
-`make gen` in `solution/django/` is the integration acceptance gate.
+- `make test-fast` in `projects/django-cfg`: unit tests, the Orval golden snapshot and the generated-client smoke
+  suite.
+- `make gen` in `solution/django/`: the integration acceptance gate (both reference trees, type-check gate on).
 
-The schema gate runs before any external client generator and mirrors
-`manage.py spectacular --validate --fail-on-warn`. During a controlled
-migration, `DJANGO_CFG_GEN_ALLOW_SCHEMA_WARNINGS=1` can be used temporarily;
-it must not become the normal CI or production generation setting.
+Details, including `UPDATE_SNAPSHOTS=1` and `DJANGO_CFG_GEN_SKIP_TYPECHECK=1`:
+[`@docs/openapi/testing.md`](@docs/openapi/testing.md).
 
-## API base URL strategy
+The schema gate runs before any external generator and mirrors `manage.py spectacular --validate --fail-on-warn`.
+During a controlled migration `DJANGO_CFG_GEN_ALLOW_SCHEMA_WARNINGS=1` can be used temporarily; it must not become
+the normal CI or production setting.
 
-Generated `helpers/auth.ts` resolves `baseUrl` from `NEXT_PUBLIC_API_URL` on
-both server and browser — requests go directly to Django.
+## Developer docs
 
-### Why no same-origin fallback in the generator
+[`@docs/openapi/`](@docs/openapi/README.md): the pipeline, adding a Target option or a request flag, the tests and
+gates, the Orval pin and the mechanisms we use or rejected.
 
-Earlier versions returned `''` in the browser so Next.js rewrites could
-intercept requests and proxy them server-side (useful when an API key must
-never reach the browser). That logic was removed from the generator because:
+## API origin
 
-1. It is **project-specific**, not a universal pattern.
-2. Most apps (`my`, `crm`) talk to Django directly — no proxy needed.
-
-### How catalog-api handles the proxy exception
-
-`@carapis/catalog-api` is the one package that routes browser requests through
-a Next.js Route Handler (`/api/apix/[...path]/route.ts`) so the API key is
-injected server-side and never exposed in the browser bundle.
-
-This is achieved in `packages/catalog-api/src/client/index.ts` (a
-hand-maintained file, never overwritten by `make gen`):
-
-```ts
-// Browser → same-origin so Route Handler proxies + injects API key
-if (typeof window !== 'undefined') {
-  auth.setBaseUrl('');
-}
-```
-
-Server-side `defaultBaseUrl()` returns `NEXT_PUBLIC_API_URL` as usual.
-
-### Rule
-
-Do **not** add `isBrowser → ''` back to the generator template.
-If a new package needs proxy behaviour, override `auth.setBaseUrl('')` in its
-own hand-maintained entry point.
+The generator writes no origin into a TypeScript tree. Where a request goes is decided at run time by the
+`@djangocfg/api` runtime (`resolveApiOrigin`): an explicit `configureApi` value, a static build, a same-origin proxy
+(`NEXT_PUBLIC_API_PROXY_URL=''`), or `NEXT_PUBLIC_API_URL`. A tag that must skip the proxy is the Target option
+`direct_origin_tags`. The hey-api-era "API base URL strategy" (`helpers/auth.ts`, `auth.setBaseUrl('')`) is archived
+in [`@docs/_archive/`](@docs/_archive/api-base-url-strategy-hey-api.md).

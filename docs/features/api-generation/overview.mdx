@@ -1,212 +1,43 @@
 ---
 title: API Client Generation Overview
-description: Generate type-safe TypeScript, Python, Go, and Swift clients from a validated Django OpenAPI contract. TypeScript REST uses Orval, React Query v5, Zod, and MSW.
+description: How django-cfg turns a Django REST Framework API into typed clients - drf-spectacular, the Python generator, Orval 8.48, the type-check gate, the @djangocfg/api runtime and BaseApp.
 ---
 
 # API Client Generation
 
-Django-CFG includes **integrated API client generation** that automatically creates type-safe **TypeScript**, **Python**, **Go**, and **Swift** clients from your Django REST Framework API using OpenAPI specifications.
+`python manage.py gen` turns your Django REST Framework API into typed clients: TypeScript (operations, React Query v5
+hooks, Zod schemas, MSW mocks), Python, Go and Swift. The OpenAPI document is the contract; a client is never edited
+by hand.
 
-## What is API Client Generation?
+## How a TypeScript client is made
 
-The API client generator is a Python-owned orchestration layer around the
-OpenAPI contract. TypeScript REST targets use the pinned Orval toolchain to
-generate Fetch operations, TanStack Query v5 hooks/query keys, Zod schemas,
-and MSW handlers. Authentication, refresh, error handling, and transport stay
-in one handwritten runtime boundary.
+Six steps, each with one owner:
 
+1. **drf-spectacular** renders one OpenAPI document from your URLconf, validated as with
+   `spectacular --validate --fail-on-warn`. A warning stops generation.
+2. **The Python generator** resolves each target's groups to OpenAPI tags and slices the document. It stamps the
+   slice with the django-cfg version and contract, and reads per-operation facts from it:
+   - a view that accepts no credentials (`security: [{}]`) becomes `auth: 'none'`;
+   - a view marked `extend_schema(extensions=SIGN_IN_STEP)` becomes `skipAuthRefresh: true`;
+   - a GET marked `@invalidated_by("topic")` carries its realtime topics.
+3. **Orval 8.48** (pinned in the frontend workspace) writes the tree: operation functions, React Query v5 hooks and
+   query keys, Zod schemas, MSW handlers, and a banner on every file. The generator adds the mutator shim, `CFG`,
+   the realtime topic builders, and formats the tree with your frontend's prettier config.
+4. **The type-check gate** runs `tsc --noEmit` on the tree as your app will see it. Only a tree that compiles
+   replaces the old one.
+5. **The runtime `@djangocfg/api`** is small and hand-written. It resolves the API origin (proxy, static build,
+   direct), keeps one session store per page with cross-tab sync and a Web Locks refresh, honours the flags, and
+   turns failures into `ApiClientError`. A schema miss is reported, not thrown. See [Runtime](./runtime).
+6. **`BaseApp`** (`@djangocfg/layouts`) provides the QueryClient with django-cfg's defaults and refreshes every
+   query whose view is `invalidated_by` a topic, through the QueryCache. See
+   [State management](/frontend/state-management).
 
-<Callout type="info">
-**Built-in Integration**
-
-API client generation is **pre-configured** in Django-CFG. Simply enable it in your configuration and run the management command to generate clients for your API.
-
-</Callout>
-
-## Key Features
-
-### 🎯 Type-Safe Code Generation
-
-Generate fully typed clients with:
-
-- **TypeScript**: Orval Fetch operations, Zod schemas, React Query v5 hooks/query keys, MSW handlers
-- **Python**: Pydantic 2 models, async/await client, type hints
-- **Go**: Structs, interfaces, typed HTTP client
-- **Swift**: Native Swift types via apple/swift-openapi-generator or simple Codable structs
-
-### 🏗️ Group-Based Organization
-
-Organize your API into logical **groups** based on functionality:
-
-```python
-groups=[
-    OpenAPIGroupConfig(
-        name="core",
-        apps=["users", "accounts", "api_keys"],
-        title="Core API",
-        description="User management and authentication"
-    ),
-    OpenAPIGroupConfig(
-        name="trading",
-        apps=["wallets", "orders", "transactions"],
-        title="Trading API",
-        description="Crypto trading and wallet management"
-    )
-]
-```
-
-Each target receives the groups explicitly listed in `Target.groups`. Those
-groups select OpenAPI tags and are emitted as split modules inside one shared
-generated tree. Python, Go, and Swift targets can select the same groups for
-their own runtime, but groups do not create independent npm packages.
-
-### ⚙️ Auto-Generated Clients
-
-For each group, the generator creates:
-
-- ✅ **Auto-generated TypeScript** clients with Zod validation
-- ✅ **Auto-generated Python** clients with type hints
-- ✅ **React Query v5 hooks and query keys** for React/Next.js
-- ✅ **MSW handlers** for tests and local development
-- ✅ **Type-safe operations** with shared runtime error handling
-- ✅ **Group-based architecture** for API organization
-
-**TypeScript Client:**
-```typescript
-import { useWallets } from '@/api/generated'
-
-// React Client Component; the generated hook owns the query key.
-const { data, error } = useWallets({
-  query: { staleTime: 60_000 },
-})
-```
-
-**Python Client:**
-```python
-from api_client import APIClient
-
-client = APIClient(base_url="https://api.cryptoplatform.com")
-
-# Fully async with Pydantic 2 models
-wallets = await client.wallets.list(currency="BTC")
-orders = await client.orders.list(status="open")
-```
-
-**Swift Client (iOS):**
-```swift
-import OpenAPIClient
-
-let client = Client(serverURL: URL(string: "https://api.cryptoplatform.com")!)
-
-// Async/await with native Swift types
-let wallets = try await client.walletsList(query: .init(currency: "BTC"))
-let order = try await client.ordersCreate(body: .json(.init(
-    symbol: "BTC/USDT",
-    side: .buy,
-    amount: 0.1
-)))
-```
-
-**Swift Codable (iOS), `Language.SWIFT_CODABLE`:**
-```swift
-// Simple Codable structs — no OpenAPIRuntime dependency
-struct Wallet: Codable {
-    let id: Int
-    let currency: String
-    let balance: String
-}
-
-// Use with any networking library (URLSession, Alamofire, etc.)
-let (data, _) = try await URLSession.shared.data(from: url)
-let wallets = try JSONDecoder().decode([Wallet].self, from: data)
-```
-
-## Why Use API Client Generation?
-
-### ⛔ Without API Client Generation
-
-Manual API client development requires:
-1. Manually writing type definitions
-2. Keeping types in sync with backend
-3. Writing fetch/request logic
-4. Handling errors and validation
-5. Maintaining multiple clients across projects
-6. Repeating this on every API change
-
-**Time investment:** Weeks to months for enterprise setup
-
-### ✅ With Django-CFG API Client Generation
-
-```bash
-# One command to generate everything
-python manage.py gen
-```
-
-**Time investment:** Seconds! 🚀
-
-
-<Callout type="info">
-**Performance**
-
-Generation is optimized for large APIs. A typical API with 300 operations generates in ~3 seconds.
-
-</Callout>
-
-## What Gets Generated?
-
-### TypeScript Output
-
-```
-frontend/src/api/generated/
-├── endpoints/                     # Orval tags-split operations/hooks/query keys
-│   ├── core/
-│   └── trading/
-├── models/                        # TypeScript types and Zod schemas
-├── runtime/                       # Generated adapter to @djangocfg/api
-└── endpoints/**/*.msw.ts          # MSW handlers and Faker factories
-```
-
-The generated `endpoints/index.ts` and `models/index.ts` files are the stable
-generated sub-barrels. Keep any app-specific `app/_lib/api/index.ts` barrel
-handwritten, and import auth/transport from `@djangocfg/api` rather than from
-the generated tree.
-
-### Python Output
-
-```
-backend/api_client/
-├── core/                          # Group name
-│   ├── __init__.py
-│   ├── client.py                  # Main async client
-│   ├── models/                    # Pydantic models
-│   │   ├── users.py
-│   │   └── api_keys.py
-│   └── subclients/                # Sub-clients by tag
-│       ├── users.py
-│       └── api_keys.py
-│
-├── trading/                       # Another group
-│   └── ...
-│
-└── index.py                       # Main entry point
-```
-
-## Generated Features
-
-✅ **Type-safe API calls** - Full TypeScript/Python/Go/Swift types
-✅ **Authentication** - Bearer tokens, API keys, custom headers
-✅ **Error handling** - Proper error types and validation
-✅ **Async support** - Both sync and async methods
-✅ **Enum generation** - Real Enum classes (not strings)
-✅ **Request/Response split** - Separate UserRequest vs User models
-✅ **File uploads** - Multipart FormData handling
-✅ **Pagination** - Built-in pagination support
-✅ **Validation** - Zod schemas for runtime validation (TypeScript)
-✅ **React integration** - React Query v5 hooks and generated query keys
+A fact about one operation is generated. State, and logic that spans requests, stays in the runtime. Python, Go and
+Swift targets use their own generators (openapi-python-client, ogen, swift-openapi-generator) on the same slices.
 
 ## Quick Start
 
-### 1. Configure Django-CFG
+### 1. Configure the groups
 
 ```python
 # api/config.py
@@ -216,7 +47,6 @@ class CryptoConfig(DjangoConfig):
     openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
         enabled=True,
         api_prefix="apix",  # default: "apix"
-        output_dir="openapi",  # default: "openapi"
         groups=[
             OpenAPIGroupConfig(
                 name="core",
@@ -228,7 +58,6 @@ class CryptoConfig(DjangoConfig):
                 name="trading",
                 apps=["wallets", "orders", "transactions"],
                 title="Trading API",
-                description="Crypto wallets and trading",
             ),
         ],
     )
@@ -249,7 +78,7 @@ config = Config(
             Target(
                 lang=Language.TYPESCRIPT,
                 type=TargetType.WEB,
-                path=FRONTEND / "src" / "api" / "generated",
+                path=FRONTEND / "apps" / "web" / "app" / "_lib" / "api" / "generated",
                 groups=["core", "trading"],
             ),
             Target(
@@ -263,7 +92,9 @@ config = Config(
 )
 ```
 
-### 3. Generate Clients
+TypeScript targets take a few more options: [Target options](./target-options).
+
+### 3. Generate
 
 ```bash
 python manage.py gen                    # all targets
@@ -274,203 +105,78 @@ python manage.py gen --dry-run          # plan only
 
 See [CLI Usage](./cli-usage) for every flag.
 
-### 4. Use Generated Clients
+### 4. Mount `BaseApp` and use the client
 
-**TypeScript (Next.js Server Component):**
-```typescript
-import { cryptoCoinsList } from '@/api/generated/endpoints'
+```tsx
+// app/[locale]/layout.tsx (a client component): BaseApp provides the QueryClient and the session.
+<BaseApp project="crypto" auth={{ apiUrl: process.env.NEXT_PUBLIC_API_URL }}>
+  {children}
+</BaseApp>
+```
 
-export default async function WalletsPage() {
-  const coins = await cryptoCoinsList({ page: 1 })
-  return <div>{coins.count} coins</div>
+```tsx
+import { cryptoCoinsList, useCryptoCoinsList } from '@/api/generated/endpoints/crypto/crypto';
+
+// Server Component
+export async function CoinCount() {
+  const coins = await cryptoCoinsList({ page: 1 });
+  return <div>{coins.count} coins</div>;
+}
+
+// Client Component
+export function Coins() {
+  const { data } = useCryptoCoinsList({ page: 1 });
+  return <div>{data?.count ?? '…'} coins</div>;
 }
 ```
 
-Client Components use the same generated barrel for React Query v5 hooks and
-query keys; use `@djangocfg/api/query` for `ApiQueryProvider` and
-`@djangocfg/api/mocks` for generated MSW handlers.
+Every app that mounts `BaseApp` lists `@tanstack/react-query` as a dependency. More in
+[Generated clients](./generated-clients).
 
-**Python:**
-```python
-from api_client import APIClient
-
-async def main():
-    client = APIClient(base_url="https://api.cryptoplatform.com")
-    wallets = await client.wallets.list(currency="BTC")
-    orders = await client.orders.list(status="open")
-```
-
-## Configuration with Groups
-
-Groups allow you to organize large APIs into logical sections. Each group can include multiple Django apps. A target selects one or more groups and emits one shared client tree with tag-split modules:
-
-```python
-openapi_client: OpenAPIClientConfig = OpenAPIClientConfig(
-    enabled=True,
-    # ... other settings ...
-    groups=[
-        # Core functionality
-        OpenAPIGroupConfig(
-            name="core",
-            apps=["users", "accounts", "api_keys"],
-            title="Core API",
-            description="User management and API keys",
-        ),
-
-        # Trading
-        OpenAPIGroupConfig(
-            name="trading",
-            apps=["wallets", "orders", "transactions"],
-            title="Trading API",
-            description="Crypto wallets and trading",
-        ),
-
-        # Market data
-        OpenAPIGroupConfig(
-            name="market",
-            apps=["prices", "charts", "alerts"],
-            title="Market API",
-            description="Real-time market data and alerts",
-        ),
-    ],
-)
-```
-
-Each group is generated into every target that lists it; the output location is the target's `path`.
-
-## OpenAPIConfig Parameters
+## `OpenAPIClientConfig` parameters
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| **Required** | | | |
+|---|---|---|---|
 | `enabled` | `bool` | `False` | Enable API client generation |
-| `groups` | `List[OpenAPIGroupConfig]` | `[]` | Application groups (required when enabled) |
-| **Output** | | | |
-| `output_dir` | `str` | `"openapi"` | Base output directory |
-| **Language Generation** | | | |
-| `generate_python` | `bool` | `True` | Generate Python client |
-| `generate_typescript` | `bool` | `True` | Generate TypeScript client |
-| **TypeScript Features** | | | |
-| TypeScript REST toolchain | pinned | Orval | Fetch operations, React Query v5 hooks/query keys, Zod schemas, and MSW handlers |
-| **Client Structure** | | | |
-| `client_structure` | `Literal["flat", "namespaced"]` | `"namespaced"` | `flat`: `client.posts_list()`, `namespaced`: `client.posts.list()` |
-| **API Configuration** | | | |
+| `groups` | `list[OpenAPIGroupConfig]` | `[]` | Application groups (required when enabled) |
 | `api_prefix` | `str` | `"apix"` | URL prefix for API endpoints |
-| **Streams and events** | | | |
-| `generate_sse_streams` | `bool` | `True` | Typed `stream<OperationId>()` per `text/event-stream` operation (nothing is emitted for a group without one) |
-| `generate_events_bridge` | `bool` | `False` | Extra response/error interceptors emitting `cmdop:network-error` events |
-| **Devx** | | | |
+| `output_dir` | `str` | `"openapi"` | Base folder for the rendered schemas |
+| `generate_python` | `bool` | `True` | Generate Python clients |
+| `generate_typescript` | `bool` | `True` | Generate TypeScript clients |
+| `client_structure` | `"flat" \| "namespaced"` | `"namespaced"` | Python: `client.posts_list()` or `client.posts.list()` |
 | `mirror_to_tmp` | `bool` | `True` | Copy each generated tree to `<project>/.tmp/generated/<name>/` |
-| **Performance** | | | |
-| `max_workers` | `int` | `1` | Parallel workers (1 is usually enough) |
+| `max_workers` | `int` | `1` | Parallel workers |
 
-## Integration with Django-CFG
+There is no option for SSE stream generators or an events bridge: streams live in dedicated adapters. See
+[Migrating from the old client](./migration).
 
-### Automatic URL Integration
+## Inspecting the contract
 
-Django-CFG automatically integrates API generation URLs:
+`add_django_cfg_urls(urlpatterns)` adds, for each configured group:
 
-```python
-# api/urls.py
-from django.urls import path, include
-from django_cfg import add_django_cfg_urls
+- `/cfg/openapi/{group}/schema/`: the OpenAPI document;
+- `/cfg/openapi/{group}/docs/`: Swagger UI;
+- `/cfg/openapi/{group}/redoc/`: ReDoc.
 
-urlpatterns = [
-    path("admin/", admin.site.urls),
-]
+Set `auth_required=True` on a group to require authentication for all three. The API views' own
+`permission_classes` remain the authority for endpoint access. drf-spectacular is configured for generation
+(`COMPONENT_SPLIT_REQUEST`, `COMPONENT_SPLIT_PATCH`, per-group title and version).
 
-# Automatically adds OpenAPI schema endpoints
-urlpatterns = add_django_cfg_urls(urlpatterns)
-```
+## Rules of thumb
 
-This adds, for each configured group:
-- `/cfg/openapi/{group}/schema/` - OpenAPI schema endpoint
-- `/cfg/openapi/{group}/docs/` - Swagger UI
-- `/cfg/openapi/{group}/redoc/` - ReDoc
-
-Set `auth_required=True` on a group to require DRF authentication for all
-three inspection endpoints. Keep the generated API endpoints' own
-`permission_classes` as the source of truth for API access.
-
-### Built-in drf-spectacular Integration
-
-Django-CFG automatically configures `drf-spectacular` with optimized settings for client generation:
-
-```python
-# Automatic configuration from openapi settings
-SPECTACULAR_SETTINGS = {
-    'COMPONENT_SPLIT_REQUEST': True,  # Separate Request/Response models
-    'COMPONENT_SPLIT_PATCH': True,    # Separate Patch models
-    # ... other settings auto-configured
-}
-```
-
-Group-specific title, description, and version are set per-group via `OpenAPIGroupConfig`.
-
-## Supported Frameworks
-
-### TypeScript/JavaScript
-
-- ✅ Next.js 13+ (App Router, Pages Router, Server Components)
-- ✅ React 18+ (with React Query v5 hooks)
-- ✅ React Native (with fetch API)
-- ✅ Node.js (backend services)
-- ✅ Remix, Astro, and other modern frameworks
-
-### Python
-
-- ✅ Django (async views)
-- ✅ FastAPI (as HTTP client)
-- ✅ Flask (async with asyncio)
-- ✅ Celery (background tasks)
-- ✅ pytest (test fixtures)
-
-### Swift/iOS
-
-- ✅ iOS 15+ (async/await)
-- ✅ macOS 12+ (Catalyst, native)
-- ✅ SwiftUI (with Combine/async)
-- ✅ UIKit (completion handlers)
-
-## Best Practices
-
-### 1. Version Control Generated Code
-
-Always commit generated code to version control:
-
-```bash
-git add frontend/src/api/generated
-git add backend/api_client
-git commit -m "Update API clients"
-```
-
-### 2. Use Groups for Large APIs
-
-Organize APIs into logical groups (5-10 apps per group recommended):
-
-```python
-groups=[
-    OpenAPIGroupConfig(name="core", apps=["users", "accounts", "api_keys"], title="Core API"),
-    OpenAPIGroupConfig(name="trading", apps=["wallets", "orders", "transactions"], title="Trading API"),
-    OpenAPIGroupConfig(name="market", apps=["prices", "charts", "alerts"], title="Market API"),
-]
-```
-
-### 3. Follow Naming Conventions
-
-- **Operation IDs**: Use `{tag}_{action}` format
-- **Models**: Use PascalCase
-- **Groups**: Use lowercase, descriptive names
-
-### 4. Keep runtime concerns outside generated code
-
-- Import operations and models from generated barrels.
-- Import `djangoFetch`, `auth`, and error types from `@djangocfg/api`.
-- Mount one `ApiQueryProvider` per app and use generated query keys for invalidation.
-- Use generated MSW handlers in tests and local development; do not edit them.
+- **Commit the generated code** with the serializer or view change that caused it, so a review shows what the change
+  does to the clients.
+- **Use groups to keep each slice small**; a group is a selection boundary, not a separate package or session.
+- **Give every operation a stable `operationId` and an explicit tag.** A collision stops generation.
+- **Keep runtime concerns out of generated code.** Import operations and models from the tree; `auth`,
+  `djangoFetch` and the error classes from `@djangocfg/api`.
+- **Read [Pitfalls](./pitfalls)** before writing the first hook.
 
 ## Next Steps
 
-- **[Group Configuration](./groups)** - Configure API groups
-- **[CLI Usage](./cli-usage)** - Generation commands
-- **[Generated Clients](./generated-clients)** - Using generated clients
+- [Generated clients](./generated-clients): operations, hooks, keys, Zod, mocks
+- [Runtime](./runtime): API origin modes, session, errors
+- [Target options](./target-options)
+- [Groups](./groups) and [CLI Usage](./cli-usage)
+- [Migrating from the old client](./migration)
+- [Troubleshooting](./troubleshooting)

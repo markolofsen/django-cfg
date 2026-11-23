@@ -85,12 +85,19 @@ python manage.py gen --groups profiles catalog
 ```
 django_generator/
 ├── __init__.py           # Public API exports
-├── public/config.py      # Pydantic configuration models
+├── public/config.py      # Pydantic configuration models (Target, Config, …)
 ├── apps.py               # Django app config
-└── management/
-    └── commands/
-        └── gen.py        # Management command
+├── management/commands/
+│   └── gen.py            # Management command
+└── openapi/
+    ├── pipeline/         # spectacular, slicing, cache, staging, type-check gate
+    └── tools/external/   # Orval, ogen, openapi-python-client, swift, buf, tsc
 ```
+
+For a TypeScript target the pipeline runs drf-spectacular, slices the document per target, runs the pinned Orval
+8.48 (operations, React Query v5 hooks, Zod, MSW), type-checks the tree, and only then swaps it in. The generated
+code runs on the `@djangocfg/api` runtime and `BaseApp`'s QueryClient. The whole chain:
+[API generation overview](/features/api-generation/overview).
 
 ---
 
@@ -209,18 +216,6 @@ config = Config(
     ),
 )
 ```
-
----
-
-## Streamlit Integration
-
-Generate Python clients for Streamlit admin:
-
-```bash
-python manage.py gen --streamlit
-```
-
-This copies generated Python clients to the Streamlit app's `api/generated/` directory.
 
 ---
 

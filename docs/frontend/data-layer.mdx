@@ -62,15 +62,19 @@ const coins = await cryptoCoinsList({ page: 1 });
 
 ## Zod Validation
 
-Generated operations validate every response at runtime:
+Generated operations check every response against its Zod schema at runtime.
+The check reports; it does not block:
 
 ```typescript
-// Orval operation; the schema is passed to djangoFetch by generated code.
+// Orval operation; the generated code passes the schema to djangoFetch.
 const response = await cryptoCoinsList({ page: 1 });
-// response is already Zod-validated
+// On a match, `response` is the parsed data. On a miss, it is the body exactly
+// as the server sent it, and `zod-validation-error` was dispatched on `window`.
 ```
 
-On validation failure, a `CustomEvent('zod-validation-error', ...)` is dispatched to the browser window for dev tooling.
+To reject a miss instead, pass `validation: 'strict'`; the call then rejects with the
+`ZodError`. Listen for misses with `onValidationError` from `@djangocfg/api`. See
+[Runtime](/features/api-generation/runtime) for the full option list.
 
 ## React Query Hooks and Query Keys
 

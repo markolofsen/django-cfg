@@ -73,6 +73,12 @@ Target(
 | `path` | `Path` | Required | Output directory |
 | `groups` | `list[str]` | Required | API groups to include |
 | `post_build` | `str \| None` | `None` | Command to run after generation |
+| `auth_mode` | `"default" \| "public"` | `"default"` | TypeScript only. `"public"`: every request of the client goes without the session |
+| `direct_origin_tags` | `list[str]` | `[]` | TypeScript only. OpenAPI tags whose operations skip the proxy (`origin: 'direct'`) |
+| `infinite` | `bool` | `False` | TypeScript only. `use<Op>Infinite` hooks for GETs with a `page` or `cursor` parameter |
+
+The three TypeScript options are refused on another language. What each one generates:
+[Target options](/features/api-generation/target-options).
 
 ---
 
@@ -236,7 +242,6 @@ options = GeneratorOptions(
     groups=["profiles", "catalog"],
     dry_run=False,
     verbose=True,
-    streamlit=False,
     external_go=False,
     external_python=False,
 )
@@ -250,7 +255,6 @@ options = GeneratorOptions(
 | `groups` | `list[str] \| None` | `None` | Groups to filter (None = all) |
 | `dry_run` | `bool` | `False` | Show what would be generated |
 | `verbose` | `bool` | `False` | Verbose output |
-| `streamlit` | `bool` | `False` | Copy to Streamlit app |
 | `external_go` | `bool` | `False` | Use oapi-codegen |
 | `external_python` | `bool` | `False` | Use openapi-python-client |
 

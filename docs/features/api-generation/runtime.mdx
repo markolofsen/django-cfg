@@ -1,0 +1,185 @@
+---
+title: Client Runtime
+description: The small hand-written runtime behind every generated TypeScript client - API origin modes, the session store, request flags, errors, soft Zod and pagination helpers.
+---
+
+# Client Runtime
+
+Every generated operation calls one function, `djangoFetch` from `@djangocfg/api`. The generated tree holds no
+state; the runtime holds all of it:
+
+- where requests go (the origin resolver);
+- the session: tokens, refresh, cross-tab sync;
+- transport headers: `Authorization`, `Accept-Language`, `X-Client-Id`, `X-Timezone`, `X-Client-Time`, `X-API-Key`,
+  and `X-Realtime-Cid` on writes;
+- what the per-operation flags mean;
+- errors and validation events.
+
+The split is deliberate. A fact about one operation (it is public, it is a sign-in step, it skips the proxy) is
+written into the generated call. Anything that spans requests stays here. This page describes `@djangocfg/api`
+2.1.664.
+
+## API origin modes
+
+The runtime decides per request, at call time, with one resolver (`resolveApiOrigin`). The transport, the token
+refresh and the profile guard all use it.
+
+**Browser** (a `document` exists), first match wins:
+
+1. an explicit `configureApi({ apiUrl })` or `setApiOrigin(url)` value (`BaseApp` passes `auth.apiUrl`);
+2. `NEXT_PUBLIC_STATIC_BUILD=true`: same-origin relative;
+3. `NEXT_PUBLIC_API_PROXY_URL` when it is defined at all: its value, and `''` means same-origin relative;
+4. `NEXT_PUBLIC_API_URL`;
+5. `configureApi({ allowRelative: true })`: same-origin relative;
+6. nothing: the request fails with `APIConfigurationError` before `fetch`.
+
+**Server** (no `document`): an explicit absolute value, else `NEXT_PUBLIC_API_URL`, else `APIConfigurationError`.
+The proxy, the static mode and a relative explicit value are ignored: a request to itself would be a round trip, and
+Node's `fetch` cannot take a relative URL.
+
+**`origin: 'direct'`** on a request resolves like the server, in the browser too.
+
+For `GET /cfg/accounts/profile/`, with `NEXT_PUBLIC_API_URL=https://api.example.com` where it says "URL set":
+
+| Configuration | Browser | Server | `origin: 'direct'` |
+|---|---|---|---|
+| URL set | `https://api.example.com/cfg/…` | `https://api.example.com/cfg/…` | `https://api.example.com/cfg/…` |
+| URL set, `PROXY_URL=''` | `/cfg/…` (same origin) | `https://api.example.com/cfg/…` | `https://api.example.com/cfg/…` |
+| `PROXY_URL=''`, no URL | `/cfg/…` | `APIConfigurationError` | `APIConfigurationError` |
+| URL set, `PROXY_URL=https://proxy.example.com` | `https://proxy.example.com/cfg/…` | `https://api.example.com/cfg/…` | `https://api.example.com/cfg/…` |
+| URL set, `PROXY_URL=/apix` | `/apix/cfg/…` | `https://api.example.com/cfg/…` | `https://api.example.com/cfg/…` |
+| URL set, `STATIC_BUILD=true` (wins over a proxy) | `/cfg/…` | `https://api.example.com/cfg/…` | `https://api.example.com/cfg/…` |
+| `STATIC_BUILD=true`, no URL | `/cfg/…` | `APIConfigurationError` | `APIConfigurationError` |
+| Nothing set | `APIConfigurationError` | `APIConfigurationError` | `APIConfigurationError` |
+| Nothing set, `allowRelative: true` | `/cfg/…` | `APIConfigurationError` | `APIConfigurationError` |
+| `configureApi({ apiUrl: 'https://api.other.com' })` | `https://api.other.com/cfg/…` (wins over everything) | `https://api.other.com/cfg/…` | `https://api.other.com/cfg/…` |
+| `configureApi({ apiUrl: '/apix' })`, URL set | `/apix/cfg/…` | `https://api.example.com/cfg/…` | `https://api.example.com/cfg/…` |
+
+A static mode counts as configured: the profile guard (`hasApiOrigin()`) lets the request go. `STATIC_BUILD` only
+counts as the exact string `true`. An invalid value (not an absolute http(s) URL, not a path starting with `/`)
+warns once in the console and is ignored. `configureApi` never throws, so it is safe during render.
+
+<Callout type="warning">
+The runtime reads each variable as the literal text `process.env.NEXT_PUBLIC_API_URL` (and `…_PROXY_URL`,
+`…_STATIC_BUILD`), because Next.js inlines only that form, in every module it compiles, `node_modules` included.
+`globalThis.process.env`, an aliased `process.env` or a destructure is empty in the browser. 2.1.663 read
+`globalThis.process?.env` and sent every request to the page's own origin. Read env the same way in your own code;
+see [Pitfalls](./pitfalls).
+</Callout>
+
+`auth.setBaseUrl(url)` is an alias of `setApiOrigin`. `getApiOrigin()` returns the base (`''` for same origin) or
+`null`.
+
+## One store per page
+
+All runtime state lives in one `globalThis` slot (`Symbol.for('djangocfg.api.auth')`, and `djangocfg.api.runtime`
+for the origin). The package ships several entries (`@djangocfg/api`, `/auth`, `/clients`, `/hooks`), each bundling
+the runtime, and an app may load the ESM and the CJS build side by side. They all share one session: a sign-in through
+`@djangocfg/api/auth` is seen by every generated call.
+
+```tsx
+import { auth } from '@djangocfg/api';
+
+export function afterSignIn(access: string, refresh: string) {
+  auth.setSession({ access, refresh }); // the one write path after any sign-in flow
+}
+
+export function onDeadSession() {
+  // Fires only when refresh is exhausted; the session is already cleared. Returns an unsubscribe.
+  return auth.onSessionExpired(() => window.location.replace('/auth'));
+}
+```
+
+Tokens are kept in cookies. `useSession()` from `@djangocfg/api/auth` subscribes a component to the store (a
+referentially stable snapshot). `auth.isAuthenticated()` respects `exp`: signed in means a live access token or a
+live refresh token.
+
+### Cross-tab sync and refresh
+
+- Every write bumps a localStorage signal (no token in it). Other tabs re-read the cookies on `storage`, focus,
+  visibility and `cookieStore` events, so a sign-in or sign-out in one tab reaches the others.
+- With only the refresh token alive, a request refreshes first instead of earning a 401.
+- A refresh runs once per page (single flight) and, where Web Locks exist, one tab at a time
+  (`navigator.locks.request('djangocfg.api.refresh')`). Inside the lock the tokens are re-read: if another tab
+  already rotated them, their access token is adopted with no second call, so a rotating refresh token is never
+  presented twice.
+- Only a 400/401/403 from the refresh endpoint, or an answer without `access`, ends the session. A network error, a
+  5xx or a missing origin rejects the request (`NetworkError`, `APIConfigurationError`) and keeps the user signed
+  in.
+
+## Flags
+
+The generator sets these per operation; a caller may pass them in any operation's options or a hook's `request`
+(`DjangoRequestInit`):
+
+| Flag | Effect |
+|---|---|
+| `auth: 'none'` | No `Authorization` from the store, no refresh, a 401 never expires the session. An `Authorization` header passed explicitly is still sent. |
+| `skipAuthRefresh: true` | No refresh before or after the request, and a 401 never expires the session: it is a refused credential. |
+| `origin: 'direct'` | The API host (explicit absolute origin or `NEXT_PUBLIC_API_URL`), never the proxy or a relative URL. |
+| `validation: 'strict'` | A schema miss rejects with the `ZodError`. The default, `'report'`, dispatches an event and returns the data. |
+
+The runtime never matches URLs to decide any of this. A request you write by hand to a sign-in endpoint must pass
+`skipAuthRefresh: true` itself; see [Pitfalls](./pitfalls#hand-written-sign-in-calls-need-skipauthrefresh).
+
+## Errors
+
+Every operation rejects with an `ApiClientError`:
+
+| Class | When |
+|---|---|
+| `APIError` | The API answered with a non-2xx status, or a 2xx body that is not JSON where a schema expects it |
+| `NetworkError` | The request, or the refresh it needed, did not reach the API |
+| `APIConfigurationError` | No origin resolves for the request |
+| `ZodError` | The response missed its schema, only with `validation: 'strict'` |
+| `DOMException` | The caller's own abort (`AbortError`, or `TimeoutError` from `AbortSignal.timeout`), rethrown unchanged |
+
+`APIError` reads DRF bodies for you:
+
+- `errorMessage`: DRF `detail` (a string or an array), then `error`, `message`, `non_field_errors`, then the first
+  field error as `field: message`, then `HTTP <status>: <statusText>`;
+- `fieldErrors`: each field to its messages;
+- `statusCode`, `isValidationError` (400 or field errors), `isAuthError` (401), `isPermissionError` (403 only),
+  `isNotFoundError`, `isServerError`.
+
+```tsx
+import { APIError, NetworkError, cfgAccountsProfileRetrieve } from '@djangocfg/api';
+
+export async function loadProfile() {
+  try {
+    return await cfgAccountsProfileRetrieve();
+  } catch (error) {
+    if (error instanceof APIError) console.error(error.statusCode, error.errorMessage, error.fieldErrors);
+    else if (error instanceof NetworkError) console.error('API unreachable', error.url);
+    else throw error;
+    return undefined;
+  }
+}
+```
+
+## Soft Zod and validation events
+
+A response that misses its schema dispatches `zod-validation-error` on `window` and is returned as the server sent
+it. `BaseApp`'s error tracking and `@djangocfg/devtools` listen for it; your own code can use
+`onValidationError(callback)`. The detail carries `operation` (`METHOD path`), `path`, `method`, the `ZodError`, the
+raw `response` and a `timestamp`.
+
+## Pagination helpers
+
+For the generated infinite hooks (Target option `infinite`), spread one of these into `query`:
+
+- `drfPageParams`: page numbers from 1, then `next_page`, else `page + 1` while `has_next`. It fits every
+  `Paginated*` envelope of django-cfg's `DefaultPagination`.
+- `drfCursorParams`: `next_cursor`, else the `cursor` of a DRF `next` URL.
+
+## Other store methods
+
+`auth.setLocale(locale)` overrides `Accept-Language` (otherwise the `NEXT_LOCALE` cookie, then the browser language).
+`auth.setApiKey(key)` (this page only), `auth.setApiKeyPersist(key)` and `auth.clearApiKey()` manage `X-API-Key`
+(else `NEXT_PUBLIC_API_KEY`). `auth.setWithCredentials(false)` sends `credentials: 'same-origin'`.
+`auth.clientHeaders()` returns the transport headers, for a request that does not go through the client (an SSE
+stream, an upload).
+
+The default CORS list covers every header the client sends. Headers of your own need no backend change for an
+already-trusted origin; to list one explicitly set `cors_extra_headers`, see
+[Custom request headers](/configuration/security#custom-request-headers).

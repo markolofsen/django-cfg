@@ -10,14 +10,14 @@ The browser half: one WebSocket per tab, opened lazily, reference-counted topics
 | Import | Holds |
 |---|---|
 | `@djangocfg/realtime` | `createRealtimeClient`, `watchTopics`, the protocol types and close codes, the store, `RealtimeTopic<E>`. No React, no DOM |
-| `@djangocfg/realtime/react` | `RealtimeProvider`, `RealtimeClientProvider`, `useTopic`, `useTopicRefresh`, `useRealtimeState`, `useRealtimeClient`, `isKeyForTopic`, `topicsInKey` |
+| `@djangocfg/realtime/react` | `RealtimeProvider`, `RealtimeClientProvider`, `useTopic`, `useRealtimeState`, `useRealtimeClient` |
 | `@djangocfg/realtime/debug` | `RealtimePanel` |
 | `@djangocfg/realtime/testing` | `createMockServer()` |
 | `@djangocfg/realtime/styles` | `@source` for the panel's classes |
 
 ## `BaseApp` mounts it
 
-`BaseApp` from `@djangocfg/layouts` mounts the provider inside `AuthProvider` and the app's query/runtime boundary. **Do not mount a second `RealtimeProvider`.** It opens nothing by itself: the first `useTopic` connects, and an app whose pages never subscribe never opens a socket.
+`BaseApp` from `@djangocfg/layouts` mounts the provider inside its QueryClient and `AuthProvider`. **Do not mount a second `RealtimeProvider`.** It opens nothing by itself: the first `useTopic` connects, and an app whose pages never subscribe never opens a socket.
 
 ```tsx
 <BaseApp project="shop" auth={{ apiUrl }} realtime={{ path: '/ws' }}>
@@ -33,7 +33,7 @@ The browser half: one WebSocket per tab, opened lazily, reference-counted topics
 | `path` | Default `/ws` |
 | `onGap` | Your own refetch for a topic whose history no longer reaches the client's offset |
 | `onIssue` | An extra sink for [issues](#issues); they go to `@djangocfg/devtools` either way |
-| `false` | Off: no provider or cache invalidation bridge |
+| `false` | Off: no provider and no React Query bridge |
 
 Without `url`, the socket URL is the API origin (`realtime.apiUrl`, else `apiUrl`, else `auth.apiUrl`, else `NEXT_PUBLIC_API_URL`, else the page's own origin) plus `path`, with `ws:` for `http:` and `wss:` for `https:`.
 
@@ -41,17 +41,21 @@ Without `url`, the socket URL is the API origin (`realtime.apiUrl`, else `apiUrl
 
 ```tsx
 'use client';
-import { useTopic } from '@djangocfg/realtime/react';
-import { ordersTopic } from '@/api/generated/_orders/realtime';
 
-function OrderBadge({ id }: { id: number }) {
-  const { data, mutate } = useOrder(id);
-  const state = useTopic(ordersTopic({ orderId: id }), (event) => {
-    if (event.kind === 'paid') void mutate();   // `event` is typed OrderEvent
-  });
-  return <Badge>{data?.status}{state?.status === 'live' ? '' : ' …'}</Badge>;
+import { useState } from 'react';
+import { useTopic } from '@djangocfg/realtime/react';
+
+import { demoPingTopic } from '@/api/generated/realtime';
+
+export function LastPing() {
+  const [note, setNote] = useState<string | null>(null);
+  const state = useTopic(demoPingTopic(), (event) => setNote(event.note)); // `event` is typed DemoPingEventOutput
+  return <span>{note ?? '…'}{state?.status === 'live' ? '' : ' (connecting)'}</span>;
 }
 ```
+
+When all you do on an event is refetch, you need no `useTopic` at all: mark the view `@invalidated_by` and let
+`BaseApp` do it (next section).
 
 ```ts
 useTopic<E>(topic: string | RealtimeTopic<E> | null, onEvent: (data: E, meta: EventMeta) => void,
@@ -67,25 +71,32 @@ useTopic<E>(topic: string | RealtimeTopic<E> | null, onEvent: (data: E, meta: Ev
 
 ## Zero-code refresh with React Query
 
-`BaseApp` registers a cache bridge: every generated React Query key associated
-with a topic watches that topic while mounted and invalidates/refetches on each
-publication and on each gap, at most once per ~250 ms. Untagged queries cost
-nothing.
+A REST read whose view is marked `@invalidated_by("orders:{order_id}")` refreshes itself. The generated query
+carries the concrete topic names in `meta.realtimeTopics` (see [code generation](./codegen#query-invalidation)), and
+`BaseApp` watches its QueryCache:
 
-A key is tagged when it is the topic string, or an array holding it:
+- while at least one query with an observer (a mounted hook) carries a topic, that topic stays subscribed; when the
+  last one goes, it is released (after the client's 1.5 s delay, so a remount costs nothing);
+- each message, each gap, and a fresh subscription going live invalidate the queries tagged with that topic, once
+  per burst of ~250 ms (`watchTopics`).
 
-```ts
-queryClient.invalidateQueries({ queryKey: ordersQueryKey(id) }); // tagged query
-queryClient.invalidateQueries({ queryKey: ['orders', 'me'] });    // ordinary key
+Untagged queries cost nothing and open no socket. The page has no realtime code:
+
+```tsx
+import { useRealtimeDemoPingsList } from '@/api/generated/endpoints/realtime-demo/realtime-demo';
+
+export function PingList() {
+  const pings = useRealtimeDemoPingsList({ page_size: 10 }); // refetches when demo.pings publishes
+  return <div>{pings.data?.count ?? '…'} pings</div>;
+}
 ```
 
-**Only a string with `:` or `.` that is a valid topic name counts as a tag.** A bare word (`'list'`, `'me'`) is a common key part; reading it as a topic would open a socket on every page that caches anything.
+The revalidation on a fresh subscription catches a publication that landed between the fetch and the subscription.
+A resubscribe after a reconnect replays with `since` instead.
 
-You rarely write these keys by hand: [`@invalidated_by`](./codegen#query-key-invalidation) associates generated query keys with topics, so the page needs no realtime code at all.
-
-It also revalidates once when a fresh subscription is first confirmed, so a publication that landed between the fetch and the subscription is not missed. A resubscribe after a reconnect replays with `since` instead.
-
-Outside `BaseApp`, with any cache: `useTopicRefresh(key, refetch)` applies the same rule to one key.
+This works only in `BaseApp`'s QueryClient. A client created at module scope, a second `QueryClientProvider`, or a
+client passed to a hook as its last argument is a cache the bridge never sees. `REALTIME_META_KEY` and
+`topicsOfQuery(query)` from `@djangocfg/layouts` read the tag, for an app that bridges another client itself.
 
 ## Gaps
 
@@ -93,7 +104,7 @@ A gap means the server could not replay what the client missed: `sub_ok` with `r
 
 - With `onGap` on the `useTopic` call: that runs.
 - Else the provider's `onGap` (the `BaseApp` `realtime.onGap`).
-- Else `BaseApp` invalidates every generated query key associated with the topic.
+- Else `BaseApp` invalidates every query tagged with the topic (`meta.realtimeTopics`).
 
 A reconnect that replays everything is not a gap. A message that follows the gap carrying the offset it announced is delivered, not dropped as a duplicate. Never treat events as the only copy of the data: refetch on a gap.
 
@@ -131,9 +142,13 @@ Every issue carries `cid`, the live connection's id or `null`; none carries a to
 
 ## No echo for your own writes
 
-Every generated client exports `setRealtimeCidProvider(provider)` from its root (it lives in `helpers/auth.ts`). Once a provider returns the socket's id, every POST, PUT, PATCH and DELETE of that client carries `X-Realtime-Cid`, and the server skips this tab's socket when the write publishes ([details](./publishing#no-echo-x-realtime-cid)).
+`@djangocfg/api` exports `setRealtimeCidProvider(provider)`. Once a provider returns the socket's id, every POST,
+PUT, PATCH and DELETE sent through `djangoFetch` carries `X-Realtime-Cid`, and the server skips this tab's socket
+when the write publishes ([details](./publishing#no-echo-x-realtime-cid)).
 
-`BaseApp` installs it once. The provider lives in one slot per page (`globalThis[Symbol.for('djangocfg.realtime.cid')]`), not per client, so the install reaches every generated client in the bundle: `@djangocfg/api` and your project's own `make gen` output alike. Nothing to wire per client.
+`BaseApp` installs it once. The provider lives in one slot per page (`globalThis[Symbol.for('djangocfg.realtime.cid')]`),
+and every generated tree calls the same `djangoFetch`, so the install covers `@djangocfg/api`'s own operations and
+your project's `make gen` output alike. A request that does not go through `djangoFetch` adds the header itself.
 
 `client.getCid()` is `null` while no socket is live; then no header is sent.
 

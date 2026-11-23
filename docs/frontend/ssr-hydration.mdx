@@ -161,7 +161,7 @@ const listItem = useMemo(() => ({
 
 ## Rules
 
-1. Prefetch with the generated `get*QueryOptions` and hydrate with `dehydrate`/`HydrationBoundary`.
+1. Prefetch with the generated `get*QueryOptions` and hydrate with `dehydrate`/`HydrationBoundary`. An operation marked `invalidated_by` (realtime) has `use<Op>QueryOptions` instead of `get<Op>QueryOptions`, because Orval names an options factory that goes through a `queryOptions` mutator as a hook; the query key factory `get<Op>QueryKey` keeps its name.
 2. Use the matching generated hook in the Client Component; never create a second cache key by hand.
 3. Use `initialData` for a small, local boundary and `HydrationBoundary` for shared or multi-query pages.
 4. Use `Promise.all` for independent SSR queries and catch only non-critical failures.

@@ -4,38 +4,57 @@ Common issues and solutions when generating API clients with Django-CFG API Clie
 
 ## TypeScript Generation Issues
 
-### TypeScript output does not compile
+### `gen` fails with tsc diagnostics
 
-**Problem:**
+**Problem:** a TypeScript target fails with `error TS…` lines, and the app keeps its previous tree.
 
-TypeScript build fails with errors like:
-```
-error TS2304: Cannot find name 'ApiKeyDetail'
-```
+That is the type-check gate: the new tree did not compile for your app. Do not patch the generated file; the fix
+belongs in the serializer or view, the Target options, or the runtime.
 
-First inspect the generated Orval output and the OpenAPI document that fed it.
-Do not patch the generated file: the fix belongs in the serializer/schema,
-operation metadata, Orval config, or handwritten runtime boundary.
+- `TS2353` (an unknown property in an object literal) on `auth`, `origin` or `skipAuthRefresh`: the installed
+  `@djangocfg/api` is older than the generator. Upgrade both together (`make update`).
+- An import from `@djangocfg/api` that does not resolve in a fresh checkout: the runtime's `dist` types are not built
+  yet. Build it, or run once with `DJANGO_CFG_GEN_SKIP_TYPECHECK=1`.
+- Anything else: generate with `DJANGO_CFG_GEN_SKIP_TYPECHECK=1`, then run your app's `tsc --noEmit` to read the
+  error in place.
 
-**Root Cause:**
+Validate the schema and the targets first:
 
-Common causes are an invalid OpenAPI reference, an unstable `operationId`, a
-missing tag selected by `Target.groups`, or a runtime mutator whose return type
-does not match the generated operation.
-
-**Solution:**
-
-Validate the schema and operation metadata first:
-
-```python
+```bash
 python manage.py spectacular --validate
 python manage.py gen --list-targets
 DJANGO_CFG_GEN_NO_CACHE=1 python manage.py gen
 ```
 
-If an endpoint is missing, add explicit `@extend_schema`, stable `operationId`,
-and a deliberate OpenAPI tag. If only one target is wrong, verify its group
-union and output path before rerunning all targets.
+### `gen` names a view and stops
+
+An operationId collision, an operation without a response schema, an unknown group, an unknown `x-cfg-auth` value,
+a `direct_origin_tags` entry no operation carries, or an `@invalidated_by` topic whose parameter is no path
+parameter of the GET. Each message names the route, the view and the fix.
+
+## Browser Request Issues (TypeScript)
+
+### Requests go to the page's own origin (404 on `/cfg/...` or `/apix/...`)
+
+The browser resolved a relative URL. Check, in this order: the value `BaseApp` gets as `auth.apiUrl`,
+`NEXT_PUBLIC_STATIC_BUILD`, `NEXT_PUBLIC_API_PROXY_URL` (an empty value means same-origin on purpose), then
+`NEXT_PUBLIC_API_URL`. The full order is in [API origin modes](./runtime#api-origin-modes). If your own code reads
+the variable, it must read the literal `process.env.NEXT_PUBLIC_API_URL`; see [Pitfalls](./pitfalls).
+
+### `APIConfigurationError: API origin is not configured`
+
+Nothing resolved for this request. On the server, only `NEXT_PUBLIC_API_URL` or an explicit absolute origin count:
+a proxy or static build does not apply there. Set `NEXT_PUBLIC_API_URL` for server rendering.
+
+### Data in the wrong language after a locale switch
+
+The query key holds no locale. Invalidate after the switch; see [Pitfalls](./pitfalls#locale-is-not-in-query-keys).
+
+### A realtime list does not refresh
+
+The view needs `@invalidated_by("topic")`, the tree must be regenerated, and the hook must run in `BaseApp`'s
+QueryClient (no client passed to the hook, no second provider). See
+[Realtime: frontend](/features/modules/django-realtime/frontend).
 
 ## Schema Generation Issues
 
@@ -99,7 +118,7 @@ Or add to your project dependencies:
 openapi-python-client = "^0.15.0"
 ```
 
-## Browser Request Issues
+## Browser Request Issues (CORS)
 
 ### CORS error, but the server sees only OPTIONS
 
@@ -142,13 +161,12 @@ If you encounter persistent issues:
 DJANGO_CFG_GEN_NO_CACHE=1 python manage.py gen
 ```
 
-### Verify TypeScript build
+### Type-check the app
 
-After generation, always test the TypeScript build:
+The gate checks the generated tree. Your own code against it is checked by your app:
 
 ```bash
-cd frontend/packages/api
-pnpm build
+pnpm exec tsc --noEmit
 ```
 
 ## Getting Help
