@@ -22,12 +22,15 @@ so manual cache busts are almost never necessary. To force a fresh
 build, just ``rm -rf openapi/.cache``.
 
 Set ``DJANGO_CFG_GEN_NO_CACHE=1`` to disable both layers (useful when
-chasing a flaky tool — every target re-runs). This is also required
-when modifying the generator's Python source: the fingerprint covers
-only the spec + tool config, not the generator code itself, so cache
-hits are stale after generator changes.
+chasing a flaky tool — every target re-runs).
 
-    DJANGO_CFG_GEN_NO_CACHE=1 make gen   # force full re-render + tool run
+The spec layer is dropped at the start of every run (the orchestrator
+renders a fresh spec). A target's key covers the sliced spec, the tool
+options, the generator's own source, django-cfg's version and the
+external tool's identity (``runner/cache_keys.py``), so editing a
+post-processor or upgrading a tool misses without a manual bust.
+
+    DJANGO_CFG_GEN_NO_CACHE=1 make gen   # force every tool to run
 """
 
 from __future__ import annotations
@@ -44,7 +47,7 @@ from typing import Any, Iterable
 
 # Bump when changing the cache fingerprint algorithm or the runner's
 # external-tool argument shape. Older cache entries silently miss.
-_CACHE_FORMAT_VERSION = "v1"
+_CACHE_FORMAT_VERSION = "v2"
 
 # Files inside a Django project whose mtime is part of the spec
 # fingerprint. We don't read every Python file in the project — that

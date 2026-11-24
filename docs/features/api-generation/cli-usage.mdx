@@ -1,6 +1,6 @@
 ---
 title: CLI Usage
-description: The `manage.py gen` command that generates TypeScript, Python, Go and Swift API clients from your Django REST Framework API.
+description: The `manage.py gen` command that generates TypeScript, Python, Go, Rust and Swift API clients from your Django REST Framework API.
 ---
 
 # CLI Usage
@@ -24,11 +24,12 @@ come from `generation.py` (see [Code Generation](/cli/commands/codegen)).
 | Flag | Description |
 |------|-------------|
 | `--config PATH` | Path to `generation.py` (default `./generation.py`) |
-| `--ts`, `--py`, `--go`, `--swift` | Generate only for that language |
+| `--ts`, `--py`, `--go`, `--rust`, `--swift` | Generate only for that language |
 | `--target`, `-t TYPE` | Only targets of that type: `admin`, `web`, `packages`, `sdk`, `parsers`, `extensions` |
 | `--groups NAME [NAME ...]` | Only these groups |
 | `--dry-run` | Print what would be generated, write nothing |
 | `--list-targets` | Print the configured targets and exit |
+| `--check` | Write nothing, run no tool; fail when a client's CFG contract differs from the installed django-cfg, or when the Django schema changed since the client was generated |
 | `--check-stamp` | Write nothing; fail when a generated client's CFG contract differs from the installed django-cfg |
 | `--verbose` / `--quiet` | More or less output |
 
@@ -39,7 +40,7 @@ python manage.py gen --groups core shop       # two groups
 python manage.py gen --target web --ts        # web targets, TypeScript only
 python manage.py gen --dry-run                # plan only
 python manage.py gen --list-targets
-python manage.py gen --check-stamp            # CI: are the clients current?
+python manage.py gen --check                  # CI: are the clients current?
 ```
 
 The command exits non-zero when a target fails, so it is safe in CI.
@@ -89,17 +90,20 @@ frontend toolchain. Authentication, refresh, errors and response validation belo
 ## External tools
 
 The generators are external programs: pinned Orval (TypeScript, Node 22.18+),
-`openapi-python-client`, `ogen` (Go), and `swift-openapi-generator` (Swift). Install the
-Python side with `pip install "django-cfg[gen]"`. A missing tool fails the target that needs it.
+`openapi-python-client`, `ogen` (Go), `cargo-progenitor` (Rust: `cargo install cargo-progenitor --version 0.17.0 --locked`) and
+`swift-openapi-generator` (Swift). Install the Python side with `pip install "django-cfg[gen]"`. A missing tool
+fails the target that needs it.
 
 ## Cache and parallelism
 
-A run with unchanged serializers, views and URLs is served from a two-layer cache. Targets run
-in parallel.
+The OpenAPI document is rendered fresh on every run (a few seconds). A target whose slice, options, external tool
+and django-cfg code are all unchanged is replayed from its snapshot under `openapi/.cache/` without running the
+tool; the run prints `(cached)` next to it. Editing django-cfg's generator or upgrading a tool invalidates the
+snapshot by itself. Targets run in parallel.
 
 | Variable | Effect |
 |----------|--------|
-| `DJANGO_CFG_GEN_NO_CACHE=1` | Skip both cache layers |
+| `DJANGO_CFG_GEN_NO_CACHE=1` | Run every tool, ignore the snapshots |
 | `DJANGO_CFG_GEN_PARALLELISM=N` | Worker count (default `min(8, cpu_count, target_count)`) |
 | `DJANGO_CFG_GEN_QUIET=1` | Silence per-target output |
 | `DJANGO_CFG_GEN_SKIP_TYPECHECK=1` | Publish TypeScript trees without the `tsc --noEmit` gate. Only for a reason outside the tree (for example a fresh checkout without the runtime's built types); each skipped target prints `type-check skipped` |
@@ -121,8 +125,11 @@ inspect such a tree, then run your app's own `tsc --noEmit`.
   run: git diff --exit-code frontend/src/api/generated
 ```
 
-`python manage.py gen --check-stamp` is a cheaper gate when you only need to know that the
-committed clients were produced by the django-cfg version you have installed.
+`python manage.py gen --check` (`make gen-check`) is a cheaper gate that runs no external tool. Every
+target keeps the slice it was generated from as `openapi.json`; the check renders the schema, cuts each
+slice again and compares, then checks the CFG stamp. It names the operations and schemas that moved.
+It does not see a hand edit of generated files, which only `make gen` plus `git diff --exit-code`
+catches. `--check-stamp` checks the stamp alone and needs no schema render.
 
 ## Best practices
 

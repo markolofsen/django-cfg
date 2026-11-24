@@ -16,9 +16,30 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
+from ...groups.resolver import resolve_tags, resolve_tags_by_name
+from ...tools.external import (
+    buf_proto,
+    grpc_python,
+    ogen,
+    openapi_python_client,
+    orval,
+    progenitor,
+    swift_openapi,
+)
+from ...tools.openapi_processor.go.tool import generate as generate_go_wrapper
+from ...tools.openapi_processor.python.tool import generate as generate_python_extras
+from ...tools.openapi_processor.python.wrapper.generator import (
+    generate as generate_python_wrapper,
+)
+from ...tools.openapi_processor.python.wrapper.generator import (
+    generate_barrel as generate_python_barrel,
+)
+from ...tools.openapi_processor.rust.tool import find_workspace_root
+from ...tools.openapi_processor.rust.tool import generate as generate_rust_wrapper
 from ..cache import (
     compute_target_cache_key,
     restore_target_output,
@@ -27,24 +48,9 @@ from ..cache import (
 from ..config import GenerationTarget, OpenAPIConfig
 from ..errors import GeneratorError, SliceError
 from ..postprocess import enforce_response_schemas, nullable_3_1_to_3_0
-from ..slicer import _normalize_tag, slice_by_tags
-from ...groups.resolver import resolve_tags, resolve_tags_by_name
 from ..schema_refs import promote_inline_schemas
-from ...tools.external import (
-    buf_proto,
-    grpc_python,
-    ogen,
-    openapi_python_client,
-    orval,
-    swift_openapi,
-)
-from ...tools.openapi_processor.go.tool import generate as generate_go_wrapper
-from ...tools.openapi_processor.python.tool import generate as generate_python_extras
-from ...tools.openapi_processor.python.wrapper.generator import (
-    generate as generate_python_wrapper,
-    generate_barrel as generate_python_barrel,
-)
-from .cache_keys import target_cache_slot, target_signature
+from ..slicer import _normalize_tag, slice_by_tags
+from .cache_keys import target_cache_slot, target_signature, unstaged
 from .paths import effective_root
 from .stamp import stamp_info, stamp_target
 
@@ -104,12 +110,12 @@ def _run_target(
             )
             return ok, err, hit
 
-        # Swift and TypeScript generators emit one module-level client from the
-        # union of their selected groups. Splitting a Swift target produces
+        # Swift, Rust and TypeScript generators emit one module-level client from the
+        # union of their selected groups (Rust: one crate). Splitting a Swift target produces
         # duplicate `Client`/`Components` declarations in the same SwiftPM
         # module; the group boundary belongs in the sliced spec, not the output
         # directory tree.
-        if target.tool == "swift-openapi" or len(target.groups) <= 1:
+        if not splits_by_group(target):
             ok, err, hit = run_single(target, target.groups, out_root, global_spec, config, cache)
             return ok, err, hit
 
@@ -162,24 +168,7 @@ def run_single(
     the per-target output cache served the result without invoking the
     external tool.
     """
-    sliced = _resolve_and_slice(target, groups, global_spec, config)
-    promote_inline_schemas(sliced)
-    if target.tool == "orval":
-        # Before Orval: it types such an operation `unknown`, or refuses the spec without naming the view.
-        enforce_response_schemas(sliced)
-        # The banner Orval writes into every file reads `x-cfg-contract` from
-        # `info`, so the slice is stamped before the tool runs and before the
-        # cache key is taken (see ``stamp``). A copy of `info`: an empty slice
-        # shares it with the global spec, which other targets read in parallel.
-        if isinstance(sliced.get("info"), dict):
-            sliced["info"] = dict(sliced["info"])
-        stamp_info(sliced)
-
-    if target.tool in ("ogen", "swift-openapi"):
-        # ogen needs 3.0-style nullable; swift-openapi SILENTLY DROPS fields whose
-        # schema is `anyOf:[{type:X},{type:null}]` (FastAPI/DRF Optional) unless they
-        # are collapsed to `nullable:true` first. Same transform serves both.
-        nullable_3_1_to_3_0(sliced)
+    sliced = prepare_slice(target, groups, global_spec, config)
 
     spec_dir = cache_subdir or (cache / "runs" / target.name)
     spec_dir.mkdir(parents=True, exist_ok=True)
@@ -202,11 +191,8 @@ def run_single(
     )
     slot = target_cache_slot(target, groups)
     if restore_target_output(cache, slot, target_key, out_dir):
-        # Cache hit: ogen output restored. Still run the Go wrapper so it
-        # picks up any changes made to the post-processor itself.
-        if target.tool == "ogen":
-            pkg = str((target.options or {}).get("package", "api"))
-            generate_go_wrapper(out_dir=out_dir, package=pkg)
+        # Cache hit: the snapshot already holds the post-processors' output; their
+        # code is part of the key (``cache_keys.generator_signature``).
         return True, None, True
 
     ok, err = _dispatch_tool(target, spec_path, out_dir, config)
@@ -221,6 +207,48 @@ def run_single(
     # Snapshot the freshly generated output for next run's cache lookup.
     store_target_output(cache, slot, target_key, out_dir)
     return True, None, False
+
+
+def splits_by_group(target: GenerationTarget) -> bool:
+    """One output folder per group (ogen / openapi-python-client with several groups), else one tree."""
+    if target.tool in ("buf", "grpc-python", "orval", "swift-openapi", "progenitor"):
+        return False
+    return len(target.groups) > 1
+
+
+def output_units(target: GenerationTarget, root: Path) -> list[tuple[list[str], Path]]:
+    """``(groups, folder)`` for each slice ``run_target`` generates under ``root``: the layout the drift check reads."""
+    if splits_by_group(target):
+        return [([group], Path(root) / group) for group in target.groups]
+    return [(list(target.groups), Path(root))]
+
+
+def prepare_slice(
+    target: GenerationTarget,
+    groups: list[str],
+    global_spec: dict[str, Any],
+    config: OpenAPIConfig,
+) -> dict[str, Any]:
+    """The slice a tool is given, and the ``openapi.json`` written beside its output."""
+    sliced = _resolve_and_slice(target, groups, global_spec, config)
+    promote_inline_schemas(sliced)
+    if target.tool == "orval":
+        # Before Orval: it types such an operation `unknown`, or refuses the spec without naming the view.
+        enforce_response_schemas(sliced)
+        # The banner Orval writes into every file reads `x-cfg-contract` from
+        # `info`, so the slice is stamped before the tool runs and before the
+        # cache key is taken (see ``stamp``). A copy of `info`: an empty slice
+        # shares it with the global spec, which other targets read in parallel.
+        if isinstance(sliced.get("info"), dict):
+            sliced["info"] = dict(sliced["info"])
+        stamp_info(sliced)
+
+    if target.tool in ("ogen", "progenitor", "swift-openapi"):
+        # ogen and progenitor need 3.0-style nullable; swift-openapi SILENTLY DROPS fields whose
+        # schema is `anyOf:[{type:X},{type:null}]` (FastAPI/DRF Optional) unless they
+        # are collapsed to `nullable:true` first. Same transform serves both.
+        nullable_3_1_to_3_0(sliced)
+    return sliced
 
 
 def _resolve_and_slice(
@@ -316,6 +344,27 @@ def _dispatch_tool(
         pkg = str(options.get("package", "api"))
         ogen.generate(spec_path, out_dir, package=pkg)
         generate_go_wrapper(out_dir=out_dir, package=pkg)
+        return True, None
+
+    if tool == "progenitor":
+        progenitor.generate(
+            spec_path,
+            out_dir,
+            crate_name=progenitor.crate_name_for(target.path, options.get("crate_name")),
+        )
+        workspace_root = None
+        if options.get("workspace"):
+            consumer = unstaged(target.path)
+            workspace_root = find_workspace_root(consumer.parent)
+            if workspace_root is None:
+                return False, f"rust_workspace: no Cargo.toml with [workspace] above {consumer}"
+        result = generate_rust_wrapper(out_dir, spec_path, workspace_root=workspace_root)
+        if result.missing_workspace_deps:
+            print(
+                f"  ! {target.name}: add to [workspace.dependencies] of {workspace_root / 'Cargo.toml'}: "
+                f"{', '.join(result.missing_workspace_deps)} (entries in workspace-dependencies.toml)",
+                file=sys.stderr,
+            )
         return True, None
 
     if tool == "orval":

@@ -14,6 +14,7 @@ from . import (
     ogen,
     openapi_python_client,
     orval,
+    progenitor,
     swift_openapi,
     tsc,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "ogen",
     "openapi_python_client",
     "orval",
+    "progenitor",
     "swift_openapi",
     "tsc",
 ]

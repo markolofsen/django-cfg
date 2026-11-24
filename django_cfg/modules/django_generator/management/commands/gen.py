@@ -37,6 +37,7 @@ class Command(BaseCommand):
         parser.add_argument("--ts", action="store_true", help="TypeScript only")
         parser.add_argument("--py", action="store_true", help="Python only")
         parser.add_argument("--go", action="store_true", help="Go only")
+        parser.add_argument("--rust", action="store_true", help="Rust only")
         parser.add_argument("--swift", action="store_true", help="Swift only")
         # Target / group filters
         parser.add_argument(
@@ -56,6 +57,9 @@ class Command(BaseCommand):
         )
         parser.add_argument("--list-targets", action="store_true",
                             help="Show configured targets and exit.")
+        parser.add_argument("--check", action="store_true",
+                            help="Generate nothing: fail when a generated client's CFG contract differs from the "
+                                 "installed django-cfg's, or when the Django schema changed since it was generated.")
         parser.add_argument("--check-stamp", action="store_true",
                             help="Generate nothing: fail when a generated client's CFG contract differs from the installed django-cfg's.")
         parser.add_argument("--verbose", action="store_true")
@@ -79,6 +83,17 @@ class Command(BaseCommand):
                 self.stdout.write(f"           groups: {', '.join(t.groups)}")
             return
 
+        if opts["check"]:
+            from django_cfg.modules.django_generator.openapi.runner.openapi import check_openapi
+
+            if cfg_obj.openapi is None:
+                raise CommandError("generation.py has no OpenAPI targets to check.")
+            problems = check_openapi(cfg_obj.openapi)
+            if problems:
+                raise CommandError("generated clients are out of date:\n  " + "\n  ".join(problems))
+            self.stdout.write("every generated client matches this django-cfg and the Django schema")
+            return
+
         if opts["check_stamp"]:
             from django_cfg.modules.django_generator import inspect_config
             from django_cfg.modules.django_generator.openapi.pipeline.runner.stamp import check_stamps
@@ -90,7 +105,7 @@ class Command(BaseCommand):
             return
 
         # Translate flags → run() kwargs
-        lang_map = {"ts": "typescript", "py": "python", "go": "go", "swift": "swift"}
+        lang_map = {"ts": "typescript", "py": "python", "go": "go", "rust": "rust", "swift": "swift"}
         only_platforms = [v for k, v in lang_map.items() if opts.get(k)] or None
 
         from django_cfg.modules.django_generator import run

@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.109] - 2026-11-24
+
+### Added
+
+- **Rust clients.** `Target(lang=Language.RUST, rust_crate="…")` generates one
+  Cargo crate with progenitor (`cargo install cargo-progenitor --locked`): serde
+  models and an async `reqwest` client, one builder method per operation. The
+  crate adds `DjangoClientBuilder` (base URL or `<CRATE>_BASE_URL`, Bearer
+  token, `X-Api-Key`), methods for `multipart/form-data` operations (which
+  progenitor does not take), a re-export of `reqwest` and a TLS default feature.
+  The slice is lowered to the OpenAPI 3.0 progenitor reads; untyped or mixed
+  error bodies share one `ApiErrorBody`. `manage.py gen --rust`.
+  `rust_workspace=True` makes the crate a Cargo workspace member (inherited
+  package keys and lints, `dep.workspace = true`, `workspace-dependencies.toml`
+  for the root); the generated code allows lints with a reason, unused deps are
+  listed for cargo-machete. progenitor is pinned to 0.17.0 and checked.
+  TLS features `default-tls`, `rustls-no-provider` (bring a ring or aws-lc
+  CryptoProvider) and `native-tls`; `default-tls` is on for a standalone crate,
+  nothing is on for a workspace member, so the workspace picks its TLS stack.
+- **`gen --check` (`make gen-check`): drift without regenerating.** Renders the
+  Django schema, cuts every target's slice again and compares it with the
+  `openapi.json` committed beside the client, then checks the CFG stamp. It
+  names the operations and schemas that moved and runs no external tool, for
+  every language. `--check-stamp` stays for the stamp alone.
+
+### Fixed
+
+- **The target cache replays again.** Every run deleted all fingerprints and the
+  whole cache, so no target was ever served from it, and a stage folder's random
+  name in the key would have missed anyway. The key now covers the generator's
+  own source, django-cfg's version and the tool's identity (binary, Orval version,
+  prettier config, runtime import; `.proto` files for buf), with stage paths
+  mapped to the published folder. Only the spec layer is dropped per run. An
+  unchanged `make gen` prints `(cached)` per target.
+- **Linux installs skip `c2pa-python` 0.38.2.** That release (pulled in by
+  `remove-ai-watermarks`) has macOS wheels only; django-cfg now depends on
+  `c2pa-python>=0.38.0,!=0.38.2`, so a local constraint is no longer needed.
+
 ## [2.4.108] - 2026-11-24
 
 ### Fixed

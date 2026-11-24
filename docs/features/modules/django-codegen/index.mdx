@@ -7,11 +7,11 @@ description: Unified code generation module for API clients, supporting multiple
 
 **Unified code generation module for multi-platform API clients.**
 
-The `django_generator` module provides a declarative configuration system for generating API clients across multiple platforms (TypeScript, Python, Go, Swift) with support for multiple targets and automatic extension discovery.
+The `django_generator` module provides a declarative configuration system for generating API clients across multiple platforms (TypeScript, Python, Go, Rust, Swift) with support for multiple targets and automatic extension discovery.
 
 ## Key Features
 
-- **Multi-Platform** — TypeScript, Python, Go, Swift
+- **Multi-Platform** — TypeScript, Python, Go, Rust, Swift
 - **Multi-Target** — Generate different clients for admin, web, SDK, extensions
 - **Group Filtering** — Include specific API groups per target with wildcard support
 - **Extension Auto-Discovery** — Automatically find and generate clients for extension packages
@@ -76,6 +76,9 @@ python manage.py gen --target admin
 
 # Specific groups
 python manage.py gen --groups profiles catalog
+
+# CI: generate nothing, fail when a client is out of date with the schema or django-cfg
+python manage.py gen --check
 ```
 
 ---
@@ -91,7 +94,7 @@ django_generator/
 │   └── gen.py            # Management command
 └── openapi/
     ├── pipeline/         # spectacular, slicing, cache, staging, type-check gate
-    └── tools/external/   # Orval, ogen, openapi-python-client, swift, buf, tsc
+    └── tools/external/   # Orval, ogen, progenitor, openapi-python-client, swift, buf, tsc
 ```
 
 For a TypeScript target the pipeline runs drf-spectacular, slices the document per target, runs the pinned Orval
@@ -112,6 +115,7 @@ Supported generation platforms:
 | `TYPESCRIPT` | TypeScript/JavaScript clients |
 | `PYTHON` | Python clients with httpx |
 | `GO` | Go clients |
+| `RUST` | Rust crate (progenitor + reqwest) |
 | `SWIFT` | Swift clients (OpenAPI Runtime) |
 | `SWIFT_CODABLE` | Swift Codable types (simple) |
 | `PROTO` | Protocol Buffers / gRPC |

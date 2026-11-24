@@ -2,7 +2,8 @@
 
 The pipeline renders one drf-spectacular document, resolves each target's groups to OpenAPI tags, slices the
 document, then runs the target's generator. TypeScript targets use the pinned Orval (8.48.0) from the frontend
-workspace. The other languages use ogen, openapi-python-client, swift-openapi-generator, buf or grpc-python.
+workspace. The other languages use ogen (Go), progenitor (Rust), openapi-python-client, swift-openapi-generator, buf or
+grpc-python. Rust: [`../@docs/openapi/rust.md`](../@docs/openapi/rust.md).
 
 This page says what a TypeScript tree contains and which options shape it. Changing the generator itself:
 [`../@docs/openapi/`](../@docs/openapi/README.md).

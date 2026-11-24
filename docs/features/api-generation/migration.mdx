@@ -30,7 +30,7 @@ runtime. This page is for an app that still has code written against the old cli
 ## Steps for one app
 
 1. Upgrade django-cfg (2.4.105 or later) and every `@djangocfg/*` package (2.1.664 or later) together: `make update`.
-2. Regenerate: `make gen`, then `make gen-check`. The type-check gate refuses a tree that does not compile.
+2. Regenerate: `make gen`, then `make gen-check` (stamp and schema drift). The type-check gate refuses a tree that does not compile.
 3. Remove SWR: imports, the `swr` dependency, `SWRConfig`, the `swr` prop of `BaseApp`.
 4. Add `@tanstack/react-query` as a direct dependency of every app that mounts `BaseApp` (layouts has it as a peer).
 5. Delete your own `QueryClientProvider` around `BaseApp`, or pass that client as `queryClient`. Delete any

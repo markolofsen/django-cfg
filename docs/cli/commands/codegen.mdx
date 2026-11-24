@@ -174,6 +174,7 @@ This scans `frontend/extensions/ext-*/` and maps each to the `ext_{name}` API gr
 | `--groups <g1> <g2>` | Filter to specific groups |
 | `--dry-run` | Preview what would be generated, no files written |
 | `--list-targets` | Print all configured targets and exit |
+| `--check` | Generate nothing; fail when a client's CFG contract differs from the installed django-cfg, or the Django schema changed since it was generated |
 | `--check-stamp` | Generate nothing; fail when a generated client's CFG contract differs from the installed django-cfg |
 | `--config <path>` | Path to `generation.py` (default `./generation.py`) |
 | `--verbose` / `--quiet` | Verbose or quiet output |

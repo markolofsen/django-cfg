@@ -1,7 +1,7 @@
 # django_generator
 
 Generates API clients and ORM code from a Django project. A thin orchestrator over external tools: Orval for
-TypeScript, ogen for Go, openapi-python-client for Python, swift-openapi-generator for Swift, buf and grpc-python for
+TypeScript, ogen for Go, progenitor for Rust, openapi-python-client for Python, swift-openapi-generator for Swift, buf and grpc-python for
 protobuf. The FastAPI ORM generator is separate (`fastapi/`, `@docs/fastapi/`).
 
 ## Pipeline
@@ -35,13 +35,16 @@ pip install "django-cfg[gen]"
 
 # External CLIs
 go install github.com/ogen-go/ogen/cmd/ogen@latest
+cargo install cargo-progenitor --version 0.17.0 --locked   # Rust targets (pinned)
 brew install bufbuild/buf/buf
 brew install apple/tap/swift-openapi-generator
 brew install swift-protobuf grpc-swift   # for proto-Swift targets
 # Orval is installed and pinned in the frontend workspace (Node 22.18+ required)
 ```
 
-`python manage.py gen --check` probes every CLI and prints install hints for any that are missing.
+A missing CLI fails its target with the install hint. `python manage.py gen --check` (`make gen-check`) generates
+nothing: it fails when a client's CFG contract differs from the installed django-cfg or the Django schema changed
+since the client was generated ([@docs/openapi/pipeline.md](@docs/openapi/pipeline.md#checking-without-generating-gen---check)).
 
 ## Test loop
 

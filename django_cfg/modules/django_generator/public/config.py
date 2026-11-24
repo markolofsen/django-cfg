@@ -21,6 +21,7 @@ class Platform(str, Enum):
     TYPESCRIPT = "typescript"
     PYTHON = "python"
     GO = "go"
+    RUST = "rust"  # progenitor: one reqwest crate per target
     SWIFT = "swift"
     SWIFT_CODABLE = "swift_codable"  # Simple Codable types without OpenAPIRuntime
     PROTO = "proto"  # Protocol Buffers / gRPC
@@ -28,7 +29,7 @@ class Platform(str, Enum):
     @classmethod
     def api_platforms(cls) -> set["Platform"]:
         """Platforms for API client generation (OpenAPI)."""
-        return {cls.TYPESCRIPT, cls.PYTHON, cls.GO, cls.SWIFT, cls.SWIFT_CODABLE, cls.PROTO}
+        return {cls.TYPESCRIPT, cls.PYTHON, cls.GO, cls.RUST, cls.SWIFT, cls.SWIFT_CODABLE, cls.PROTO}
 
     @classmethod
     def default_platforms(cls) -> set["Platform"]:
@@ -93,6 +94,13 @@ class Target(BaseModel):
     #: Also generate `use<Op>Infinite` for every GET that takes a `page` or `cursor` query parameter.
     infinite: bool = False
 
+    # Rust (progenitor) options.
+    #: Cargo package name of the generated crate; default: the target folder's name, kebab-cased.
+    rust_crate: str | None = None
+    #: The crate is a member of the Cargo workspace above ``path``: inherited package keys and lints,
+    #: ``dep.workspace = true``, and ``workspace-dependencies.toml`` with the entries for the root.
+    rust_workspace: bool = False
+
     @model_validator(mode="after")
     def _typescript_options_only_on_typescript(self) -> "Target":
         if self.lang != Language.TYPESCRIPT:
@@ -101,7 +109,20 @@ class Target(BaseModel):
                 raise ValueError(
                     f"{', '.join(set_options)} only apply to a TypeScript target, not {self.lang.value} ({self.path})"
                 )
+        if self.lang != Language.RUST and (self.rust_crate is not None or self.rust_workspace):
+            raise ValueError(
+                f"rust_crate and rust_workspace only apply to a Rust target, not {self.lang.value} ({self.path})"
+            )
         return self
+
+    def rust_options(self) -> dict[str, Any]:
+        """The Rust options set away from their defaults, as the pipeline's ``GenerationTarget.options``."""
+        options: dict[str, Any] = {}
+        if self.rust_crate:
+            options["crate_name"] = self.rust_crate
+        if self.rust_workspace:
+            options["workspace"] = True
+        return options
 
     def typescript_options(self) -> dict[str, Any]:
         """The TypeScript options set away from their defaults, as the pipeline's ``GenerationTarget.options``."""

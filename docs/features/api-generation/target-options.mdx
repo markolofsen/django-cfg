@@ -1,6 +1,6 @@
 ---
 title: Target Options
-description: Reference for the TypeScript Target options of django-cfg client generation - auth_mode, direct_origin_tags, infinite, mock and prettier.
+description: Reference for the Target options of django-cfg client generation - TypeScript auth_mode, direct_origin_tags, infinite, mock and prettier, and Rust rust_crate.
 ---
 
 # Target Options
@@ -62,6 +62,45 @@ const coins = useCryptoCoinsListInfinite({ page_size: 20 }, { query: { ...drfPag
 `drfPageParams` fits every `Paginated*` envelope (`next_page`, else `page + 1` while `has_next`). `drfCursorParams`
 fits a cursor list (`next_cursor`, or the `cursor` of a DRF `next` URL). Infinite keys start with `'infinite'`:
 a mutation invalidates `get<Op>InfiniteQueryKey(params)` as well as `get<Op>QueryKey(params)`.
+
+## `rust_crate` (Rust)
+
+A Rust `Target` writes one Cargo crate. `rust_crate` is its package name; the default is the target folder's name,
+kebab-cased. Setting it on a non-Rust target is an error.
+
+```python
+Target(
+    lang=Language.RUST,
+    type=TargetType.SDK,
+    path=ROOT.parent / "rust" / "djangocfg-api",
+    groups=["cfg_accounts", "cfg_totp"],
+    rust_crate="djangocfg-api",
+)
+```
+
+The base URL environment variable is derived from it: `djangocfg-api` reads `DJANGOCFG_API_BASE_URL`.
+
+## `rust_workspace` (Rust)
+
+`rust_workspace=True` makes the crate a member of the Cargo workspace above `path`:
+
+- package keys the root's `[workspace.package]` defines (`version`, `edition`, `rust-version`, `publish`, `license`,
+  …) are inherited, the others keep progenitor's values;
+- every dependency is `dep = { workspace = true, features = [...] }` (features are additive, so the root's own
+  features stay);
+- `[lints] workspace = true`; the generated `lib.rs` opens with one `#![allow(clippy::all, clippy::pedantic, …,
+  reason = "…")]`, so a strict workspace (pedantic, `unwrap_used`, `allow_attributes_without_reason`,
+  `unreachable_pub`) judges your code, not progenitor's;
+- `workspace-dependencies.toml` in the crate lists the entries the root's `[workspace.dependencies]` needs, with the
+  versions progenitor chose. `make gen` names the ones the root does not declare yet;
+- no TLS feature is on (`default = []`): the consumer enables `default-tls` (rustls on aws-lc-rs), `native-tls` or
+  `rustls-no-provider` and installs a provider, e.g. `rustls::crypto::ring::default_provider().install_default()`,
+  so a ring-only workspace never pulls `aws-lc-sys`.
+
+The inner `#![allow]` covers every module of the crate and lowers a workspace `deny`; only `forbid` cannot be
+lowered, and the generated code has no `unsafe`.
+
+A path with no `[workspace]` manifest above it fails the target.
 
 ## What is not an option
 

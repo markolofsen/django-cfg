@@ -6,7 +6,7 @@ description: How django-cfg turns a Django REST Framework API into typed clients
 # API Client Generation
 
 `python manage.py gen` turns your Django REST Framework API into typed clients: TypeScript (operations, React Query v5
-hooks, Zod schemas, MSW mocks), Python, Go and Swift. The OpenAPI document is the contract; a client is never edited
+hooks, Zod schemas, MSW mocks), Python, Go, Rust and Swift. The OpenAPI document is the contract; a client is never edited
 by hand.
 
 ## How a TypeScript client is made
@@ -32,8 +32,9 @@ Six steps, each with one owner:
    query whose view is `invalidated_by` a topic, through the QueryCache. See
    [State management](/frontend/state-management).
 
-A fact about one operation is generated. State, and logic that spans requests, stays in the runtime. Python, Go and
-Swift targets use their own generators (openapi-python-client, ogen, swift-openapi-generator) on the same slices.
+A fact about one operation is generated. State, and logic that spans requests, stays in the runtime. Python, Go,
+Rust and Swift targets use their own generators (openapi-python-client, ogen, progenitor, swift-openapi-generator) on
+the same slices.
 
 ## Quick Start
 

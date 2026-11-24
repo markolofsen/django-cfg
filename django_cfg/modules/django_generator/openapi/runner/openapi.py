@@ -3,7 +3,7 @@
 Reads `OpenAPI(targets=[Target(...)])` from generation.py, translates each
 Target into a pipeline GenerationTarget, and dispatches via
 `openapi/pipeline/runner.run_pipeline()` (drf-spectacular → tag-slice →
-external CLI: ogen / Orval / openapi-python-client / swift-openapi).
+external CLI: ogen / progenitor / Orval / openapi-python-client / swift-openapi).
 
 The legacy `call_command("generate_clients")` path was removed; in-house
 emitters now live under `@archive/django-cfg-src/modules/django_generator/@archive/django_client_old/` (repo root)
@@ -32,6 +32,7 @@ _LANG_DEFAULT_TOOL: dict[str, str] = {
     "typescript": "orval",
     "python": "openapi-python-client",
     "go": "ogen",
+    "rust": "progenitor",
     "swift": "swift-openapi",
     "swift_codable": "swift-openapi",
     "proto": "buf",
@@ -93,6 +94,22 @@ def run_openapi(
             run_post_build(Path(t.path), t.post_build, logger)
 
 
+def check_openapi(cfg: OpenAPI) -> list[str]:
+    """``gen --check``: the stamp of every target, then whether the Django schema moved since it was generated.
+
+    Generates nothing and runs no external tool (see ``pipeline/runner/drift.py``). Empty = up to date.
+    """
+    from ..pipeline.runner.drift import check_drift
+    from ..pipeline.runner.stamp import check_stamps
+
+    targets = _build_targets(cfg, None, None, None)
+    problems = check_stamps([Path(t.path) for t in targets if t.tool not in ("buf", "grpc-python")])
+    service = get_openapi_service()
+    if not service.is_enabled():
+        service.set_config(OpenAPIConfig(enabled=True))
+    return problems + check_drift(service.config, targets)
+
+
 def _build_targets(
     cfg: OpenAPI,
     only_platforms: list[str] | None,
@@ -135,11 +152,11 @@ def _build_targets(
                 tool=tool,  # type: ignore[arg-type]
                 path=Path(t.path),
                 groups=groups,
-                options=t.typescript_options(),
+                options={**t.typescript_options(), **t.rust_options()},
                 source_path=source_path,
             )
         )
     return out
 
 
-__all__ = ["run_openapi"]
+__all__ = ["check_openapi", "run_openapi"]

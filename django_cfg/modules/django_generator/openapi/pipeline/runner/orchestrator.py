@@ -41,9 +41,8 @@ from ..postprocess import (
     warn_tag_format,
 )
 from ..spec_loader import load_spec
-from .dispatch import run_target
-from .typecheck import typecheck_staged
 from ..staging import Stage
+from .dispatch import run_target
 from .paths import (
     cache_dir,
     effective_root,
@@ -57,6 +56,7 @@ from .progress import (
     print_spec_status,
     print_target_result,
 )
+from .typecheck import typecheck_staged
 
 
 def run_pipeline(
@@ -81,42 +81,14 @@ def run_pipeline(
     cache = cache_dir(config)
     run_started = now()
 
-    # ════════════════════════════════════════════════════════════════════
-    # ⚠️  CRITICAL — DO NOT REMOVE: per-run fingerprint invalidation
-    # ════════════════════════════════════════════════════════════════════
-    # Every `make gen` MUST nuke ALL fingerprint files in the cache so the
-    # generators re-run end-to-end. Fingerprints only hash the SLICED SPEC
-    # + tool config — they do NOT hash the generator's own Python source.
-    # Without this wipe, edits to generator templates / post-processors go
-    # undetected when the spec hasn't changed, and stale output ships.
-    #
-    # The per-target `fingerprint` is wiped for every external generator.
-    # It covers the per-target snapshot cache (ogen / orval /
-    #                             openapi-python-client / swift-openapi /
-    #                             python post-processor)
-    #
-    # If you (an AI agent or human) "see this is unnecessary" — IT IS NOT.
-    # The pain it prevents:
-    #   - Generator template / post-process fixer edited → no spec change →
-    #     cache says "hit" → tool isn't re-invoked → app keeps shipping
-    #     stale output → 30 min of `find … -name fingerprint -delete`
-    #     before the next `make gen` actually picks up the new code.
-    #
-    # This is the single source of truth for cache invalidation when
-    # GENERATOR CODE changes.
-    # ════════════════════════════════════════════════════════════════════
-    for fp_name in ("fingerprint",):
-        for fp in cache.rglob(fp_name):
-            fp.unlink(missing_ok=True)
-
-    # ════════════════════════════════════════════════════════════════════
-    # Always nuke the spec cache so tag / schema / endpoint changes are
-    # never masked.  The spec render is fast enough (~1-5 s) that the
-    # safety of a guaranteed-fresh spec outweighs the cost.
-    # ════════════════════════════════════════════════════════════════════
-    if cache.exists():
-        import shutil
-        shutil.rmtree(cache)
+    # The spec is rendered fresh on every run: its fingerprint (serializer / view /
+    # url mtimes) misses inputs such as models, enums and settings read at import,
+    # and a render costs seconds. Only the spec layer is dropped. Target snapshots
+    # stay: their key covers the generator's own code and the external tool's
+    # identity (``cache_keys.target_signature``), so an edited post-processor or an
+    # upgraded tool misses by itself and an unchanged target is replayed.
+    for name in ("global_spec.json", "global_spec.fingerprint"):
+        (cache / name).unlink(missing_ok=True)
 
     global_spec = _load_spec_cached(config, cache, targets, report)
     if global_spec is None:

@@ -147,9 +147,10 @@ class GenerationTarget:
     """
 
     name: str
-    lang: Literal["python", "typescript", "go", "swift", "proto"]
+    lang: Literal["python", "typescript", "go", "rust", "swift", "proto"]
     tool: Literal[
         "ogen",
+        "progenitor",
         "orval",
         "openapi-python-client",
         "swift-openapi",
