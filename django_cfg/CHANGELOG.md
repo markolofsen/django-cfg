@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.108] - 2026-11-24
+
+### Fixed
+
+- **Sitemap index entries carry a true `lastmod`.** `GET /cfg/sitemap/index/` now
+  reports, per chunk, `lastmod`: the newest value of the source's `lastmod_field`
+  among the chunk's rows (ISO, or `null`). `@djangocfg/nextjs` `createSitemapIndex`
+  writes it per `<sitemap>` and omits the tag when unknown; before, every shard was
+  stamped with the request time, so crawlers read every shard as changed on every
+  fetch and learned to ignore `lastmod`. Older frontends ignore the new key.
+
 ## [2.4.107] - 2026-11-24
 
 ### Fixed

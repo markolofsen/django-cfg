@@ -144,21 +144,33 @@ def _walk_chunks(source: SitemapSource) -> tuple[list[dict[str, Any]], int]:
     total = 0
     page_size = source.page_size
     last_in_chunk: tuple[Any, ...] | None = None
+    # The newest `lastmod_field` value of the chunk being walked: the index entry's own lastmod.
+    # A request-time stamp tells a crawler every shard changed on every read, so it learns to ignore it.
+    newest: Any = None
+    n_cursor = len(cursor_fields_orm)
+    columns = cursor_fields_orm + ([source.lastmod_field.replace(".", "__")] if source.lastmod_field else [])
 
-    rows = qs.order_by(*order_args).values_list(*cursor_fields_orm).iterator(
+    rows = qs.order_by(*order_args).values_list(*columns).iterator(
         chunk_size=10_000,
     )
-    for idx, row in enumerate(rows, start=1):
+    for idx, full in enumerate(rows, start=1):
+        row = tuple(full[:n_cursor])
         total += 1
         last_in_chunk = row
+        if source.lastmod_field:
+            value = full[n_cursor]
+            if value is not None and (newest is None or value > newest):
+                newest = value
         if idx % page_size == 0:
             chunks.append(
                 {
                     "id": f"{source.name}-{len(chunks) + 1}",
                     "cursor_to": encode_cursor(row),
                     "count_estimate": page_size,
+                    "lastmod": _iso(newest),
                 }
             )
+            newest = None
 
     remainder = total - len(chunks) * page_size
     if remainder > 0 and last_in_chunk is not None:
@@ -167,10 +179,15 @@ def _walk_chunks(source: SitemapSource) -> tuple[list[dict[str, Any]], int]:
                 "id": f"{source.name}-{len(chunks) + 1}",
                 "cursor_to": None,
                 "count_estimate": remainder,
+                "lastmod": _iso(newest),
             }
         )
 
     return chunks, total
+
+
+def _iso(value: Any) -> str | None:
+    return value.isoformat() if hasattr(value, "isoformat") else None
 
 
 def _build_feed(
