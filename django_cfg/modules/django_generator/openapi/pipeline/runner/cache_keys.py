@@ -92,12 +92,22 @@ def tool_signature(target: GenerationTarget) -> str:
     if tool == "ogen":
         return _file_identity(ogen.find_binary())
     if tool == "progenitor":
-        identity = _file_identity(progenitor.find_binary())
+        from ...tools.openapi_processor.rust.tool import (
+            find_workspace_root,
+            rustfmt_inputs,
+            rustfmt_version,
+        )
+
+        consumer = unstaged(target.path)
+        # The crate is formatted last: the rustfmt binary, its config and the pinned toolchain shape every .rs file.
+        identity = "|".join((
+            _file_identity(progenitor.find_binary()),
+            rustfmt_version(consumer),
+            hashlib.sha256(rustfmt_inputs(consumer)).hexdigest(),
+        ))
         if (target.options or {}).get("workspace"):
             # A member crate inherits the root's package keys: the root manifest shapes its Cargo.toml.
-            from ...tools.openapi_processor.rust.tool import find_workspace_root
-
-            root = find_workspace_root(unstaged(target.path).parent)
+            root = find_workspace_root(consumer.parent)
             manifest = (root / "Cargo.toml").read_bytes() if root else b"none"
             identity += "|" + hashlib.sha256(manifest).hexdigest()
         return identity

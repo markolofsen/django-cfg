@@ -451,7 +451,10 @@ The version is pinned (`PROGENITOR_VERSION` in django-cfg): another one fails th
 the generator is written against its limits and output layout.
 
 progenitor formats with rustfmt's nightly options; with no nightly toolchain installed, django-cfg runs the stable
-`rustfmt` without them. Set `RUSTFMT` to choose one yourself.
+`rustfmt` without them. Set `RUSTFMT` to choose one yourself. The finished crate is then formatted the way
+`cargo fmt` formats it, with the crate's edition, your `rustfmt.toml` and your `rust-toolchain.toml`, so
+`cargo fmt --all` after `make gen` changes nothing. Without `rustfmt` the crate is written unformatted, with a
+warning.
 
 ### The crate
 

@@ -9,7 +9,8 @@ caller to assemble the base URL and the auth headers. This writes
         .build()?;
     let me = api.cfg_accounts_profile_retrieve().send().await?;
 
-Idempotent: re-running rewrites ``django.rs`` and adds the ``lib.rs`` lines once.
+Idempotent: re-running rewrites ``django.rs`` and adds the ``lib.rs`` lines once. Last, ``rustfmt`` formats
+``src/*.rs`` as ``cargo fmt`` would (``format_crate``), so a formatted workspace shows no drift after ``make gen``.
 """
 
 from __future__ import annotations
@@ -17,6 +18,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
+import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -32,6 +36,8 @@ class RustWrapperResult:
     skipped: bool = False
     #: Dependencies the workspace root does not declare yet (see ``workspace-dependencies.toml``).
     missing_workspace_deps: list[str] = field(default_factory=list)
+    #: ``False`` when rustfmt was not found or failed: the crate is written but not formatted.
+    formatted: bool = True
 
 
 def env_var_for(crate_name: str) -> str:
@@ -463,6 +469,83 @@ def write_cargo(out_dir: Path, *, multipart: bool, workspace_root: Path | None =
     return missing
 
 
+# ── rustfmt ──────────────────────────────────────────────────────────
+
+#: Files rustfmt reads besides the sources: the config and the pinned toolchain (``cargo fmt`` honours both).
+_FMT_CONFIGS = ("rustfmt.toml", ".rustfmt.toml", "rust-toolchain.toml", "rust-toolchain")
+
+
+def find_rustfmt() -> str | None:
+    found = shutil.which("rustfmt")
+    if found:
+        return found
+    home = Path(os.environ.get("CARGO_HOME") or Path.home() / ".cargo") / "bin" / "rustfmt"
+    return str(home) if home.is_file() else None
+
+
+def rustfmt_version(cwd: Path) -> str:
+    """``rustfmt --version`` where the crate lives: rustup's proxy resolves the pinned toolchain from ``cwd``."""
+    rustfmt = find_rustfmt()
+    if rustfmt is None:
+        return "missing"
+    folder = next((f for f in [Path(cwd), *Path(cwd).parents] if f.is_dir()), Path.cwd())
+    try:
+        out = subprocess.run(  # noqa: S603 — rustfmt from PATH, version only
+            [rustfmt, "--version"], cwd=folder, capture_output=True, text=True, check=False, timeout=30
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return "unavailable"
+    return out.stdout.strip() or out.stderr.strip()[:200]
+
+
+def rustfmt_inputs(start: Path) -> bytes:
+    """Every rustfmt config and toolchain file from ``start`` up: what makes ``cargo fmt`` format differently."""
+    h = []
+    for folder in [Path(start), *Path(start).parents]:
+        for name in _FMT_CONFIGS:
+            path = folder / name
+            if path.is_file():
+                h.append(path.relative_to(folder).as_posix().encode() + b"\x00" + path.read_bytes())
+    return b"\x01".join(h)
+
+
+def _edition(out_dir: Path, workspace_root: Path | None) -> str:
+    package = tomllib.loads((out_dir / "Cargo.toml").read_text(encoding="utf-8")).get("package", {})
+    edition = package.get("edition")
+    if isinstance(edition, dict) and workspace_root is not None:
+        root = tomllib.loads((workspace_root / "Cargo.toml").read_text(encoding="utf-8"))
+        edition = root.get("workspace", {}).get("package", {}).get("edition")
+    return edition if isinstance(edition, str) else "2021"
+
+
+def format_crate(out_dir: Path, workspace_root: Path | None = None) -> bool:
+    """``rustfmt --edition <crate's>`` over ``src/*.rs``, as ``cargo fmt`` would: same output after a ``cargo fmt``.
+
+    Runs inside the crate folder, so rustup picks the workspace's ``rust-toolchain.toml`` and rustfmt the
+    nearest ``rustfmt.toml`` above it. A missing or failing rustfmt is a loud warning, not an error: the
+    crate still builds, it is only unformatted.
+    """
+    files = sorted(str(p) for p in (out_dir / "src").glob("*.rs"))
+    if not files:
+        return True
+    rustfmt = find_rustfmt()
+    if rustfmt is None:
+        print(
+            f"! rustfmt not found: {out_dir} is written unformatted, so `cargo fmt` will change it. "
+            "Install: rustup component add rustfmt",
+            file=sys.stderr,
+        )
+        return False
+    edition = _edition(out_dir, workspace_root)
+    result = subprocess.run(  # noqa: S603 — rustfmt from PATH on our own generated files
+        [rustfmt, "--edition", edition, *files], cwd=out_dir, capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        print(f"! rustfmt failed on {out_dir} (left unformatted): {result.stderr.strip()[:500]}", file=sys.stderr)
+        return False
+    return True
+
+
 def generate(out_dir: Path, spec_path: Path | None = None, *, workspace_root: Path | None = None) -> RustWrapperResult:
     """Write ``src/django.rs`` (and ``src/multipart.rs`` when needed), export them from ``src/lib.rs``, rewrite Cargo.toml.
 
@@ -497,4 +580,5 @@ def generate(out_dir: Path, spec_path: Path | None = None, *, workspace_root: Pa
     missing = write_cargo(out_dir, multipart=bool(multipart), workspace_root=workspace_root)
     (out_dir / ".gitignore").write_text("/target\nCargo.lock\n", encoding="utf-8")
     written += [out_dir / "Cargo.toml", out_dir / ".gitignore"]
-    return RustWrapperResult(out_dir=out_dir, written=written, missing_workspace_deps=missing)
+    formatted = format_crate(out_dir, workspace_root)
+    return RustWrapperResult(out_dir=out_dir, written=written, missing_workspace_deps=missing, formatted=formatted)

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.110] - 2026-11-24
+
+### Fixed
+
+- **A Rust crate comes out as `cargo fmt` leaves it.** After writing, the
+  generator runs `rustfmt --edition <crate's>` over `src/*.rs` inside the crate
+  folder, so the workspace's `rustfmt.toml` and `rust-toolchain.toml` apply. A
+  `cargo fmt --all` followed by `make gen` no longer shows drift in `lib.rs` and
+  `django.rs`. No rustfmt is a warning, not an error. The rustfmt version and
+  config are part of the target cache key.
+
 ## [2.4.109] - 2026-11-24
 
 ### Added
