@@ -110,11 +110,30 @@ def summary(source: AnalyticsSource, period: Period) -> dict[str, Any]:
     total_sessions = session_agg["sessions"] or 0
     bounces = session_agg["bounces"] or 0
 
+    # People vs. machines. `interacted` is set only when the SDK reports a pointer
+    # move, scroll, key press or product event, so a JavaScript-running crawler
+    # that merely loads pages never gets it. A session is *engaged* when a person
+    # also stayed 10s or looked at a second page (the GA4 definition), and the
+    # human bounce rate is measured among people only.
+    human_agg = sessions.filter(interacted=True).aggregate(
+        human=Count("id"),
+        engaged=Count("id", filter=Q(engaged_sec__gte=10) | Q(pageviews__gte=2)),
+    )
+    human_sessions = human_agg["human"] or 0
+    engaged_sessions = human_agg["engaged"] or 0
+
     return {
         **agg,
         "known_users": known_users,
         "sessions": total_sessions,
         "bounce_rate": round(bounces / total_sessions, 4) if total_sessions else 0.0,
+        "human_sessions": human_sessions,
+        "engaged_sessions": engaged_sessions,
+        # None until the SDK that reports interaction has produced any: an old
+        # period cannot be classified, and 0% would read as "no bots".
+        "human_bounce_rate": (
+            round(1 - engaged_sessions / human_sessions, 4) if human_sessions else None
+        ),
         "views_per_session": (
             round((agg["pageviews"] or 0) / total_sessions, 2) if total_sessions else 0.0
         ),
@@ -147,6 +166,13 @@ def timeseries(source: AnalyticsSource, period: Period) -> list[dict[str, Any]]:
         .order_by("day")
     )
     by_day = {r["day"]: r for r in rows}
+    sess_rows = (
+        _sessions(source, period)
+        .annotate(day=TruncDate("started_at", tzinfo=tz))
+        .values("day")
+        .annotate(sessions=Count("id"))
+    )
+    sessions_by_day = {r["day"]: r["sessions"] for r in sess_rows}
 
     start = period.start.astimezone(tz).date()
     end = period.end.astimezone(tz).date()
@@ -160,6 +186,7 @@ def timeseries(source: AnalyticsSource, period: Period) -> list[dict[str, Any]]:
                 "date": day,
                 "pageviews": row["pageviews"] if row else 0,
                 "visitors": row["visitors"] if row else 0,
+                "sessions": sessions_by_day.get(day, 0),
             }
         )
         day += timedelta(days=1)

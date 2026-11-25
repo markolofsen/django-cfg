@@ -54,6 +54,18 @@ class AnalyticsBatchSerializer(serializers.Serializer):
         max_length=255,
         help_text="Site domain. Must match a registered AnalyticsSite.",
     )
+    auth = serializers.CharField(
+        max_length=4096,
+        required=False,
+        allow_blank=True,
+        default="",
+        write_only=True,
+        help_text=(
+            "Optional access token of the signed-in user. The beacon cannot send an "
+            "Authorization header, so the SDK puts the token in the body; the server "
+            "verifies it exactly like a Bearer token and stores only the user id."
+        ),
+    )
     events = serializers.ListField(
         child=AnalyticsEventSerializer(),
         allow_empty=False,

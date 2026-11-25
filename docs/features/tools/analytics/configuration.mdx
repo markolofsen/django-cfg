@@ -156,3 +156,16 @@ DRF's own documentation says its throttling is *"open to race conditions"* and *
 <Callout type="warning">
 `$binary_remote_addr` is the **peer** address. Behind Cloudflare that is the proxy, so you would rate-limit the entire internet as one client. Set `set_real_ip_from` to your proxy CIDRs only.
 </Callout>
+
+
+## People versus crawlers
+
+A crawler that runs JavaScript sends pageviews under a normal browser User-Agent, so the User-Agent filter cannot catch it. The browser SDK therefore reports `engagement` events: the first pointer move, scroll, key press or touch (`interacted`), and the seconds the page was visible and in use (`engaged_sec`, idle after 30 s). A session with `interacted = false` was never driven by a person.
+
+The dashboard shows **Human sessions** and **Human bounce** (among interacted sessions, a visit that stayed under 10 s on one page). Periods recorded before the SDK reported engagement show "—", not 0%. The raw **Bounce rate** still counts everything.
+
+**Visitor-days.** Visitor ids rotate daily, so the headline visitors figure is the sum of per-day unique (IP, browser) pairs, not a head count.
+
+## Signed-in attribution without cookies
+
+A SPA that signs in with a bearer token has no session cookie, and a beacon cannot set `Authorization`. Pass `getAuthToken` to the `djangocfg` transport (`BaseApp` does this); the SDK puts the access token in the body, the server verifies it with the same class that guards the API and stores only the user id. A bad or expired token is an anonymous hit.

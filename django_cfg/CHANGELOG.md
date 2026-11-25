@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.113] - 2026-11-25
+
+### Added
+- **Analytics tells people from crawlers.** Sessions now carry `interacted` and `engaged_sec`, reported by the browser SDK (`engagement` events: pointer, scroll, key, touch, and visible-and-active seconds). A crawler that runs JavaScript under a normal Chrome User-Agent never produces one. The dashboard shows *Human sessions* and *Human bounce* beside the raw bounce rate; before the SDK reports (old periods) they read "—" instead of a misleading 0%. Migration `0006_session_engagement`.
+- **Analytics attributes pageviews to the signed-in user for token-auth SPAs.** The collect body accepts an optional `auth` access token (the beacon cannot send an Authorization header); the server verifies it with the same `JWTAuthenticationWithLastLogin` that guards the API, stores only the user id, and treats any failure as an anonymous hit. "Signed in" and per-user journeys now work without a session cookie.
+- `timeseries()` returns `sessions` per day.
+
+### Fixed
+- The dashboard chart drew pageviews against a labelled axis and unique visitors against a second, unlabelled one (each normalised to its own maximum), so the visitors line looked higher than the bars. Both now share one axis; the legend says "unique visitors per day" and the hover readout adds sessions. The headline tile is renamed *Visitor-days*: visitor ids rotate daily, so the sum over a period is not a head count.
+
 ## [2.4.112] - 2026-11-25
 
 ### Added

@@ -63,6 +63,30 @@ def _client_ip(request) -> str:
     return get_client_ip(request)
 
 
+def _resolve_user_id(request, token: str) -> int | None:
+    """The authenticated user's id, or None.
+
+    Cookie/session auth resolves through DRF as usual. A SPA that signs in with a
+    bearer token has no cookie, and `sendBeacon` cannot set an Authorization
+    header, so the SDK may carry the access token in the body instead. It is
+    verified here by the same class that guards the API (signature, expiry,
+    is_active and the sign-out cutoff) and is never stored; any failure means an
+    anonymous hit, never an error.
+    """
+    if request.user.is_authenticated:
+        return request.user.id
+    if not token:
+        return None
+    try:
+        from django_cfg.middleware.authentication import JWTAuthenticationWithLastLogin
+
+        backend = JWTAuthenticationWithLastLogin()
+        user = backend.get_user(backend.get_validated_token(token.encode()))
+        return user.id if user is not None and user.is_active else None
+    except Exception:
+        return None
+
+
 class CollectView(APIView):
     """Accept a batch of analytics events."""
 
@@ -107,6 +131,7 @@ class CollectView(APIView):
             return Response({"accepted": 0}, status=status.HTTP_202_ACCEPTED)
 
         config = get_analytics_config()
+        user_id = _resolve_user_id(request, data.get("auth", "")) if config.store_user_id else None
 
         try:
             written = ingest_batch(
@@ -116,11 +141,7 @@ class CollectView(APIView):
                 user_agent=request.META.get("HTTP_USER_AGENT", ""),
                 # Resolves because authentication stays enabled. This is the line
                 # django_monitor cannot have.
-                user_id=(
-                    request.user.id
-                    if config.store_user_id and request.user.is_authenticated
-                    else None
-                ),
+                user_id=user_id,
                 fast_commit=config.fast_commit,
                 session_timeout_minutes=config.session_timeout_minutes,
                 salt_rotation_days=config.salt_rotation_days,

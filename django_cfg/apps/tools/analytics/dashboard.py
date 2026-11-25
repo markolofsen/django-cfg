@@ -93,9 +93,13 @@ def tab_context(request: HttpRequest) -> dict:
                 "known_users": 0,
                 "sessions": 0,
                 "bounce_rate": 0.0,
+                "human_sessions": 0,
+                "engaged_sessions": 0,
+                "human_bounce_rate": None,
                 "views_per_session": 0.0,
             },
             "bounce_pct": 0,
+            "human_bounce_pct": None,
             "timeseries": series,
             "top_pages": [],
             "top_referrers": [],
@@ -137,6 +141,11 @@ def tab_context(request: HttpRequest) -> dict:
         # A Django template cannot multiply, and `|floatformat:"0%"` does not
         # scale a ratio — it would render 0.5 as "0%". Do it here.
         "bounce_pct": round(summary["bounce_rate"] * 100),
+        "human_bounce_pct": (
+            round(summary["human_bounce_rate"] * 100)
+            if summary["human_bounce_rate"] is not None
+            else None
+        ),
         "timeseries": series,
         # Rendering an unbounded categorical breakdown makes a dashboard slow
         # and unusable on a busy site. Fifty gives operators enough long-tail
@@ -200,7 +209,7 @@ def _empty_timeseries(period: Period) -> list[dict]:
     end = period.end.date()
     rows = []
     while day <= end:
-        rows.append({"date": day, "pageviews": 0, "visitors": 0, "share": 0})
+        rows.append({"date": day, "pageviews": 0, "visitors": 0, "sessions": 0, "share": 0})
         day += timedelta(days=1)
     return rows
 

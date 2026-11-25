@@ -91,7 +91,7 @@
     const series = JSON.parse(document.getElementById("analytics-timeseries").textContent);
     return {
       series,
-      activeIndex: series.length ? Math.max(0, series.map(p => Math.max(p.pageviews, p.visitors)).lastIndexOf(Math.max(...series.map(p => Math.max(p.pageviews, p.visitors))))) : 0,
+      activeIndex: series.length ? Math.max(0, series.map(p => p.pageviews).lastIndexOf(Math.max(...series.map(p => p.pageviews)))) : 0,
       init() { if (!this.series.some(point => point.pageviews || point.visitors)) this.activeIndex = this.series.length - 1; },
       /* Top of the pageview axis: twice a 1-2-5 step, so the three labels (top, half, 0) are
          distinct integers even with no traffic ("2, 1, 0", never "1, 1, 0"). Bars use the same top. */
@@ -101,15 +101,15 @@
         const magnitude = 10 ** Math.floor(Math.log10(half));
         return 2 * [1, 2, 5, 10].map(m => m * magnitude).find(step => step >= half);
       },
-      visitorPeak() { return Math.max(1, ...this.series.map(point => point.visitors)); },
       pageviewHeight(point) { return Math.max(point.pageviews ? 3 : 1, Math.round(point.pageviews / this.pageviewPeak() * 100)); },
-      visitorY(point) { return 98 - Math.round(point.visitors / this.visitorPeak() * 94); },
+      /* Same axis as the bars: a visitor is a pageview-bearing visit, so the line can never rise above its bar. */
+      visitorY(point) { return 98 - Math.round(point.visitors / this.pageviewPeak() * 94); },
       x(index) { return this.series.length > 1 ? index / (this.series.length - 1) * 100 : 50; },
       visitorLine() { return this.series.map((point, index) => `${this.x(index)},${this.visitorY(point)}`).join(" "); },
       scaleValue(fraction) { return Math.round(this.pageviewPeak() * fraction).toLocaleString(); },
-      active() { return this.series[this.activeIndex] || {date: "", pageviews: 0, visitors: 0}; },
+      active() { return this.series[this.activeIndex] || {date: "", pageviews: 0, visitors: 0, sessions: 0}; },
       label(date) { return new Intl.DateTimeFormat(undefined, {month:"short", day:"numeric"}).format(new Date(`${date}T12:00:00`)); },
-      aria(point) { return `${this.label(point.date)}: ${point.pageviews} pageviews, ${point.visitors} visitors`; },
+      aria(point) { return `${this.label(point.date)}: ${point.pageviews} pageviews, ${point.sessions} sessions, ${point.visitors} unique visitors`; },
     };
   }
 </script>
@@ -135,22 +135,24 @@
   </div>
 
   <div class="an-stats">
-    <div class="an-stat"><div class="an-stat__label">Visitors</div><div class="an-stat__value">{{ summary.visitors }}</div></div>
+    <div class="an-stat" title="Distinct (IP, browser) pairs per day, summed over the period. Not people: the same person on another day counts again."><div class="an-stat__label">Visitor-days</div><div class="an-stat__value">{{ summary.visitors }}</div></div>
     <div class="an-stat"><div class="an-stat__label">Pageviews</div><div class="an-stat__value">{{ summary.pageviews }}</div></div>
     <div class="an-stat"><div class="an-stat__label">Sessions</div><div class="an-stat__value">{{ summary.sessions }}</div></div>
     <div class="an-stat" title="Unique authenticated users"><div class="an-stat__label">Signed in</div><div class="an-stat__value">{{ summary.known_users }}</div></div>
-    <div class="an-stat"><div class="an-stat__label">Bounce rate</div><div class="an-stat__value">{{ bounce_pct }}%</div></div>
+    <div class="an-stat" title="Sessions with a single pageview, robots included"><div class="an-stat__label">Bounce rate</div><div class="an-stat__value">{{ bounce_pct }}%</div></div>
+    <div class="an-stat" title="Sessions where the browser reported a pointer move, scroll, key press or product event. Crawlers that only load pages never do."><div class="an-stat__label">Human sessions</div><div class="an-stat__value">{% if summary.human_sessions %}{{ summary.human_sessions }}{% else %}&mdash;{% endif %}</div></div>
+    <div class="an-stat" title="Among human sessions: share that stayed under 10 s on one page"><div class="an-stat__label">Human bounce</div><div class="an-stat__value">{% if human_bounce_pct is not None %}{{ human_bounce_pct }}%{% else %}&mdash;{% endif %}</div></div>
   </div>
 
   <div class="an-card an-chart">
     <div class="an-card__head">
       <span>Traffic</span>
-      <div class="an-chart__legend" aria-label="Chart legend"><span><i></i>Pageviews</span><span><i class="an-chart__key-visitors"></i>Unique visitors</span></div>
+      <div class="an-chart__legend" aria-label="Chart legend"><span><i></i>Pageviews</span><span><i class="an-chart__key-visitors"></i>Unique visitors per day</span></div>
     </div>
     <div class="an-card__body">
       <div class="an-chart__topline" aria-live="polite">
-        <div class="an-chart__readout"><strong x-text="label(active().date)"></strong><span> · </span><strong x-text="active().pageviews.toLocaleString()"></strong><span> pageviews · </span><strong x-text="active().visitors.toLocaleString()"></strong><span> unique visitors</span></div>
-        <span class="an-muted">Hover or focus a day</span>
+        <div class="an-chart__readout"><strong x-text="label(active().date)"></strong><span> · </span><strong x-text="active().pageviews.toLocaleString()"></strong><span> pageviews · </span><strong x-text="active().sessions.toLocaleString()"></strong><span> sessions · </span><strong x-text="active().visitors.toLocaleString()"></strong><span> unique visitors that day</span></div>
+        <span class="an-muted">One shared axis · hover or focus a day</span>
       </div>
       <div class="an-chart__frame">
         <div class="an-chart__scale" aria-label="Pageviews scale"><span x-text="scaleValue(1)"></span><span x-text="scaleValue(.5)"></span><span>0</span></div>

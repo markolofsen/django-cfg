@@ -68,6 +68,16 @@ class AnalyticsSession(models.Model):
     # the bounce-rate report is an index-only aggregate instead of a subquery.
     is_bounce = models.BooleanField(default=True)
 
+    # ── Engagement (reported by the browser SDK, never inferred server-side) ───
+    # A crawler that runs JavaScript still sends a pageview, but it never moves a
+    # pointer, scrolls or presses a key. `interacted` is the cheap, honest line
+    # between a person and a headless Chrome wearing a normal User-Agent.
+    interacted = models.BooleanField(default=False)
+    # Seconds the page was visible AND the visitor was active. Summed from
+    # `engagement` events; `duration_sec` is only batch-to-batch server time and
+    # is 0 for every single-page visit.
+    engaged_sec = models.PositiveIntegerField(default=0)
+
     # ── Acquisition (fixed for the life of the visit) ─────────────────────────
     channel = models.CharField(max_length=32, blank=True)
     referrer_domain = models.CharField(max_length=255, blank=True)

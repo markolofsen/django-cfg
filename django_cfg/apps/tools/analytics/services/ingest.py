@@ -212,6 +212,7 @@ def _touch_session(
 
     pageviews = sum(1 for r in rows if r.event_name == "pageview")
     last_path = rows[-1].pathname if rows else session.exit_pathname
+    interacted, engaged_sec = _engagement(rows)
 
     AnalyticsSession.objects.filter(pk=session.pk).update(
         last_seen_at=now,
@@ -219,6 +220,14 @@ def _touch_session(
         events=F("events") + len(rows),
         pageviews=F("pageviews") + pageviews,
         duration_sec=_duration(session, now),
+        **(
+            {
+                "interacted": True if interacted else F("interacted"),
+                "engaged_sec": F("engaged_sec") + engaged_sec,
+            }
+            if (interacted or engaged_sec)
+            else {}
+        ),
         # A visit stops being a bounce the moment it has a second pageview.
         # Computed from the stored count, not the one read before this batch:
         # two concurrent batches both saw 0, both added 1, and both wrote
@@ -229,6 +238,35 @@ def _touch_session(
             output_field=BooleanField(),
         ),
     )
+
+
+#: Events that are the SDK's own report of a human acting, not of the page loading.
+#: A crawler never produces one. `engagement` carries `props.interacted` and
+#: `props.seconds`; any other non-pageview event the page sent also proves an
+#: interaction (a click, a reveal, a lead form).
+_PASSIVE_EVENTS = {"pageview"}
+#: One report covers at most this many seconds, so a forged value cannot inflate
+#: time-on-page by more than a heartbeat.
+_MAX_ENGAGED_PER_EVENT = 120
+
+
+def _engagement(rows: list[AnalyticsEvent]) -> tuple[bool, int]:
+    interacted = False
+    seconds = 0
+    for r in rows:
+        if r.event_name in _PASSIVE_EVENTS:
+            continue
+        props = r.props if isinstance(r.props, dict) else {}
+        if r.event_name == "engagement":
+            if props.get("interacted"):
+                interacted = True
+            try:
+                seconds += max(0, min(int(props.get("seconds", 0) or 0), _MAX_ENGAGED_PER_EVENT))
+            except (TypeError, ValueError):
+                pass
+        elif not r.event_name.startswith(("auth_", "error_")):
+            interacted = True
+    return interacted, seconds
 
 
 def _duration(session: AnalyticsSession, now: datetime) -> int:

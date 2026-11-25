@@ -77,7 +77,7 @@ That is not a shortcut — it is the production baseline. Measured on durable st
 |---|---|
 | `AnalyticsProperty` | A logical product, normally the trusted apex domain; it aggregates related hosts. |
 | `AnalyticsSite` | One row per domain. The host boundary and timezone anchor. |
-| `AnalyticsSession` | One row per visit. All mutable state (pageviews, duration, bounce). |
+| `AnalyticsSession` | One row per visit. All mutable state (pageviews, duration, bounce, `interacted`, `engaged_sec`). |
 | `AnalyticsEvent` | Append-only. One row per pageview or custom event. |
 
 Key event columns: `site`, `ts` (UTC), `visitor_id`, `session`, **`user`**, `pathname`, `route`, `locale`, `referrer_domain`, `channel`, `utm_*`, `props` (JSONB), `is_measurement` (false for server-confirmed facts so they never inflate traffic), `source_id_hash` (HMAC digest backing server-event idempotency).
@@ -94,7 +94,8 @@ site = AnalyticsSite.objects.get(domain="example.com")
 property_ = AnalyticsProperty.objects.get(domain="example.com")
 period = Period.last_days(7)
 
-reports.summary(site, period)         # visitors, pageviews, sessions, bounce_rate, known_users
+reports.summary(site, period)         # visitors, pageviews, sessions, bounce_rate, known_users,
+                                      # human_sessions, engaged_sessions, human_bounce_rate
 reports.timeseries(site, period)      # per site-local day, gaps included as zeros
 reports.top_pages(site, period)       # grouped by templated route
 reports.top_referrers(site, period)
