@@ -19,11 +19,12 @@ Route = Callable[[Any], Optional[str]]
 _connections: Dict[str, dict] = {}
 
 
-def connect(model, *, adapter: Adapter, route: Optional[Route] = None, project: Optional[str] = None) -> None:
+def connect(model, *, adapter: Adapter, route: Optional[Route] = None, project: Optional[str] = None, notify: bool = True) -> None:
     """Mirror new ``model`` rows into Notion.
 
     ``adapter(instance) -> NotionLead``; ``route(instance) -> target name | None`` (None = do not send). Without
-    ``route`` the single configured target is used. Fires once, when the row is created.
+    ``route`` the single configured target is used. Fires once, when the row is created. ``notify=False`` sends the
+    row to Notion only: no Telegram, admin email or acknowledgement, for a model whose own code already announces it.
     """
     label = model._meta.label_lower
 
@@ -46,9 +47,9 @@ def connect(model, *, adapter: Adapter, route: Optional[Route] = None, project: 
         except Exception:
             logger.exception("django_notion: adapter/route failed for %s pk=%s (the lead itself is saved)", label, getattr(instance, "pk", "?"))
             return
-        capture(instance, lead, target, project=project)
+        capture(instance, lead, target, project=project, notify=notify)
 
-    _connections[label] = {"adapter": adapter, "route": route}
+    _connections[label] = {"adapter": adapter, "route": route, "notify": notify}
     post_save.connect(handler, sender=model, weak=False, dispatch_uid=f"django_notion:{label}")
 
 

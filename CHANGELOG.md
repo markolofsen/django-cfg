@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.112] - 2026-11-25
+
+### Added
+
+- **django_notion: `connect(..., notify=False)`.** The row goes to Notion only:
+  Telegram, the admin email and the acknowledgement letter are stamped as
+  settled on purpose, and no notify job is queued. For a model whose own code
+  already announces each row (carapis vehicle enquiries), so the desk is not
+  told twice. The default stays `True`.
+
 ## [2.4.111] - 2026-11-25
 
 ### Added

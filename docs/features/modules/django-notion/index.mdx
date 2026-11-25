@@ -49,6 +49,9 @@ connect(Inquiry, adapter=to_lead, route=route)
 
 `NOTION__TOKEN` in the environment (never in code). `python manage.py migrate` creates the outbox table.
 
+`connect(..., notify=False)` sends the row to Notion only: no Telegram, admin email or acknowledgement letter. Use it for
+a model whose own code already announces each row, so the desk is not told twice.
+
 ## What reaches Notion
 
 | NotionLead | Column | Notes |

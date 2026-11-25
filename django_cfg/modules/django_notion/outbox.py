@@ -21,14 +21,21 @@ def make_key(project: str, instance) -> str:
     return f"{project}:{instance._meta.label_lower}:{instance.pk}"
 
 
-def record(key: str, target: str, lead: NotionLead):
-    """Create the outbox row (idempotent on ``key``). Runs in a savepoint so a failure cannot poison the caller's transaction."""
+def record(key: str, target: str, lead: NotionLead, *, notify: bool = True):
+    """Create the outbox row (idempotent on ``key``). Runs in a savepoint so a failure cannot poison the caller's transaction.
+
+    ``notify=False`` stamps Telegram, admin email and acknowledgement as settled on purpose: the row goes to Notion only.
+    """
+    from django.utils import timezone
+
     from .models import NotionOutbox
 
+    defaults = {"target": target, "payload": lead.model_dump(mode="json")}
+    if not notify:
+        now = timezone.now()
+        defaults.update(telegram_notified_at=now, email_notified_at=now, ack_notified_at=now)
     with transaction.atomic():
-        row, _ = NotionOutbox.objects.get_or_create(
-            key=key, defaults={"target": target, "payload": lead.model_dump(mode="json")}
-        )
+        row, _ = NotionOutbox.objects.get_or_create(key=key, defaults=defaults)
     return row
 
 
@@ -60,19 +67,23 @@ def enqueue_notify(row_id: int) -> bool:
         return False
 
 
-def _after_commit(row_id: int) -> None:
+def _after_commit(row_id: int, notify: bool = True) -> None:
     enqueue(row_id)
-    enqueue_notify(row_id)
+    if notify:
+        enqueue_notify(row_id)
 
 
-def capture(instance, lead: NotionLead, target: Optional[str], *, project: Optional[str] = None) -> None:
-    """Record ``lead`` for ``target`` and queue delivery after the surrounding transaction commits. Never raises."""
+def capture(instance, lead: NotionLead, target: Optional[str], *, project: Optional[str] = None, notify: bool = True) -> None:
+    """Record ``lead`` for ``target`` and queue delivery after the surrounding transaction commits. Never raises.
+
+    ``notify=False``: Notion only, no Telegram, admin email or acknowledgement (a model that already announces itself).
+    """
     try:
         cfg = conf.get_notion_config()
         if target not in cfg.targets:
             raise ValueError(f"unknown Notion target {target!r}; configured: {sorted(cfg.targets)}")
         key = make_key(project or conf.project_name(cfg), instance)
-        row = record(key, target, enrich(lead) if cfg.enrich else with_project(lead))
-        transaction.on_commit(lambda: _after_commit(row.pk))
+        row = record(key, target, enrich(lead) if cfg.enrich else with_project(lead), notify=notify)
+        transaction.on_commit(lambda: _after_commit(row.pk, notify))
     except Exception:
         logger.exception("django_notion: lead %s was NOT recorded for Notion (the lead itself is saved)", getattr(instance, "pk", "?"))
