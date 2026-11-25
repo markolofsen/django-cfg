@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 from urllib.parse import urlsplit
 
 from .__cfg__ import NotionTarget
-from .details import build_details, humanize
+from .details import PROJECT_KEY_LABEL, build_details, humanize
 from .lead import NotionLead
 
 CHUNK = 2000
@@ -73,7 +73,8 @@ def _build(lead: NotionLead, target: NotionTarget, key: str, source_default: str
         if not put(logical, lambda: {"rich_text": rich_text(value, limit)}):
             extra[humanize(logical)] = value
 
-    title = lead.name or lead.company or lead.email or lead.phone or "Lead"
+    company = str(extra.get("Company") or extra.get("company") or "").strip()
+    title = lead.name or company or lead.email or lead.phone or "Lead"
     put("name", lambda: {"title": rich_text(title)})
     put("status", lambda: {"select": {"name": "New"}})
     source = lead.source if lead.source.lower() in SOURCES else source_default
@@ -97,6 +98,8 @@ def _build(lead: NotionLead, target: NotionTarget, key: str, source_default: str
         brand = lead.brand.replace(",", " ").strip()[:100]
         if not put("brand", lambda: {"multi_select": [{"name": brand}]}):
             extra["Brand"] = lead.brand
+    if lead.project:
+        extra.setdefault(PROJECT_KEY_LABEL, lead.project)
     if lead.received_at:
         put("received_at", lambda: {"date": {"start": _iso(lead.received_at)}})
 

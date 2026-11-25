@@ -14,10 +14,13 @@ _data_sources: Dict[str, str] = {}
 
 
 def set_client_factory(factory: Optional[Callable[[], Any]]) -> None:
-    """Replace how the client is built (tests). ``None`` restores the real one. Clears the data source cache."""
+    """Replace how the client is built (tests). ``None`` restores the real one. Clears the data source and option caches."""
     global _factory
+    from . import keys
+
     _factory = factory
     _data_sources.clear()
+    keys.clear_cache()
 
 
 def get_client(target: Optional[NotionTarget] = None):

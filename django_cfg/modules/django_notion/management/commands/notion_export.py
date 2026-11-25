@@ -5,7 +5,8 @@
     python manage.py notion_export auth.User --to <ds> --apply --limit 3                      # a tiny real batch
     python manage.py notion_export auth.User --to <ds> --apply --manifest /tmp/m.tsv   # written row by row
 
-Safe to re-run: a row whose key is already in Notion is skipped; nothing is updated or deleted. Reports carry counts
+Safe to re-run: a row whose key is already in Notion is not created again; nothing is deleted. With a mapping's
+``projects_column`` the only update adds the row's project option to an existing row, keeping the options people set. Reports carry counts
 and masked shapes only. The mapping comes from ``register_export``; the user model has a minimal built-in preset.
 """
 

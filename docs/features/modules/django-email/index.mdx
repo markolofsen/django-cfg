@@ -177,7 +177,7 @@ service = DjangoEmailService()
 
 | Method | Description |
 | --- | --- |
-| `send_simple(subject, message, recipient_list, ...)` | Plain text email |
+| `send_simple(subject, message, recipient_list, ..., headers=None)` | Plain text email; `headers={"X-Project-Key": "carapis"}` adds message headers (the gateway backend passes them through) |
 | `send_html(subject, html_message, recipient_list, ...)` | HTML email with auto text fallback |
 | `send_template(subject, template_name, context, recipient_list, ...)` | Template-based email |
 | `send_multipart(subject, recipient_list, html_content, ...)` | Email with attachments |

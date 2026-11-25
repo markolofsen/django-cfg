@@ -13,6 +13,7 @@ Bearer token and the API key (see ``openapi_processor/rust``).
 
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import re
@@ -261,6 +262,21 @@ def _one_response_type(spec: dict) -> None:
                 )
 
 
+def _dedent_docs(node: object) -> None:
+    """Strip the common indent of every description and summary (a view's docstring keeps
+    it): progenitor copies them into /// comments, where four leading spaces open a markdown
+    code block that rustdoc then compiles as a doctest."""
+    if isinstance(node, dict):
+        for key in ("description", "summary"):
+            if isinstance(node.get(key), str):
+                node[key] = inspect.cleandoc(node[key])
+        for value in node.values():
+            _dedent_docs(value)
+    elif isinstance(node, list):
+        for value in node:
+            _dedent_docs(value)
+
+
 def progenitor_spec(spec_path: Path) -> Path:
     """Write the spec progenitor reads: the same contract in OpenAPI 3.0.3 shapes."""
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
@@ -271,6 +287,7 @@ def progenitor_spec(spec_path: Path) -> Path:
         spec.pop(key)  # x-realtime & co.: not part of the REST contract
     _drop_multipart(spec)
     _one_response_type(spec)
+    _dedent_docs(spec.get("paths", {}))
     schemas = spec.get("components", {}).get("schemas", {})
     _lower(spec.get("paths", {}), schemas)
     for schema in schemas.values():

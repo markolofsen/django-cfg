@@ -19,7 +19,9 @@ class NotionLead(BaseModel):
     message: str = ""
     form: str = ""
     page_url: str = ""
-    brand: str = ""  # which site/product the lead came from (multi_select); "" = not written
+    brand: str = ""  # an explicit Brand option; "" = the option matching ``project`` (keys.brand_option)
+    site: str = ""  # django-cfg site key, when the adapter knows it better than the request (a declared site field)
+    project: str = ""  # project key; "" = NotionConfig.project_keys[site], filled by enrich
     received_at: Optional[datetime] = None
     source: str = "Website"  # Website, Telegram, Referral, Other, Email
     extra: Dict[str, Any] = Field(default_factory=dict)

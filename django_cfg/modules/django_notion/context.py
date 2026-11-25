@@ -1,7 +1,9 @@
-"""What the request that saved the lead said about itself: page, campaign, language.
+"""What the request that saved the lead said about itself: page, campaign, language, and which site it is.
 
 ``RequestContextMiddleware`` keeps a small dict for the lifetime of one request; ``enrich`` reads it. Outside a request
 (a shell, a worker) the dict is empty and nothing is added. Only attribution is kept: no cookies, no IP, no user agent.
+The site is the registered site the request matches by Origin, Referer, then Host (``site_for``'s rules, without its
+fall-back to the first site), so a request can select one of our sites but never name a new one, and no match is no site.
 """
 
 from __future__ import annotations
@@ -40,7 +42,18 @@ def from_request(request) -> Dict[str, Any]:
     campaign = _campaign(page) if page else {}
     campaign.update(_campaign(request.get_full_path()))
     lang = (meta.get("HTTP_ACCEPT_LANGUAGE") or "").split(",")[0].split(";")[0].strip()[:35]
-    return {"page_url": page, "campaign": campaign, "locale": lang}
+    return {"page_url": page, "campaign": campaign, "locale": lang, "site": _site_key(request)}
+
+
+def _site_key(request) -> str:
+    """The registered site this request matched by Origin, Referer or Host; "" when none matched (never the first site)."""
+    try:
+        from django_cfg.core.site import _site_of_request, sites
+
+        site = _site_of_request(request, sites())
+        return site.key if site is not None else ""
+    except Exception:  # not configured: no site, no key
+        return ""
 
 
 class RequestContextMiddleware:

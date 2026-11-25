@@ -15,6 +15,7 @@ Idempotent: re-running rewrites ``django.rs`` and adds the ``lib.rs`` lines once
 
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import re
@@ -228,7 +229,7 @@ def _resolve(schema: dict, schemas: dict) -> dict:
 
 
 def _doc(text: str) -> list[str]:
-    return [f"    /// {line}".rstrip() for line in text.strip().splitlines()]
+    return [f"    /// {line}".rstrip() for line in inspect.cleandoc(text).splitlines()]
 
 
 def _render_multipart(path: str, method: str, op: dict, schemas: dict, types: dict[str, str]) -> str:

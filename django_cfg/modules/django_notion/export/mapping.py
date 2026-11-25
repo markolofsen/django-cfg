@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-from typing import Any, Callable, Dict, FrozenSet, Optional, Tuple
+from typing import Any, Callable, Dict, FrozenSet, List, Optional, Tuple
 from urllib.parse import urlsplit
 
 from ..details import is_forbidden
@@ -85,6 +85,9 @@ class ExportMapping:
     exclusions: Tuple[Exclusion, ...] = ()
     queryset: Optional[Callable[[Any], Any]] = None
     batch_column: Optional[str] = "Import batch"
+    # The row's project key (``keys.for_object``: the user's site -> NotionConfig.project_keys) as the matching live
+    # option of this multi_select column. Written on create; on a row already in Notion it is added, never removed.
+    projects_column: Optional[str] = None
     allow_secret: FrozenSet[str] = frozenset()  # explicit override: attribute names that may be mapped though they look secret
 
     def __post_init__(self) -> None:
@@ -93,10 +96,9 @@ class ExportMapping:
         if self.key.kind not in KEY_KINDS:
             raise ExportConfigError(f"the join key kind must be one of {KEY_KINDS}, got {self.key.kind!r}")
         columns = [f.column for f in (self.key, *self.fields)]
-        if self.batch_column:
-            columns.append(self.batch_column)
+        columns += [c for c in (self.batch_column, self.projects_column) if c]
         if len(set(columns)) != len(columns):
-            raise ExportConfigError("two fields (or a field and the batch column) write the same Notion column")
+            raise ExportConfigError("two fields (or a field and the batch or projects column) write the same Notion column")
         for f in (self.key, *self.fields):
             if re.split(r"[^a-z0-9]+", f.source.lower())[0] in _ACTION_WORDS:
                 raise ExportConfigError(f"column {f.column!r} reads {f.source!r}, which is an action, not a field: it would run on every row")
@@ -112,14 +114,15 @@ class ExportMapping:
     @property
     def columns(self) -> Tuple[str, ...]:
         cols = [self.key.column, *(f.column for f in self.fields)]
-        if self.batch_column:
-            cols.append(self.batch_column)
+        cols += [c for c in (self.batch_column, self.projects_column) if c]
         return tuple(cols)
 
     def column_kinds(self) -> Dict[str, str]:
         kinds = {f.column: f.kind for f in (self.key, *self.fields)}
         if self.batch_column:
             kinds[self.batch_column] = "rich_text"
+        if self.projects_column:
+            kinds[self.projects_column] = "multi_select"
         return kinds
 
 
@@ -185,8 +188,11 @@ def to_property(kind: str, value: Any) -> Optional[Dict[str, Any]]:
     return None
 
 
-def build_properties(mapping: ExportMapping, obj: Any, key: str, batch: str) -> Dict[str, Any]:
-    """The ``properties`` of ``pages.create``. The key column is always present and always holds ``key``."""
+def build_properties(mapping: ExportMapping, obj: Any, key: str, batch: str, project_option: Optional[str] = None) -> Dict[str, Any]:
+    """The ``properties`` of ``pages.create``. The key column is always present and always holds ``key``.
+
+    ``project_option`` is the live option of ``projects_column`` for the row's project key (None: not written).
+    """
     props: Dict[str, Any] = {}
     value = to_property(mapping.key.kind, key)
     if value is None:
@@ -198,7 +204,14 @@ def build_properties(mapping: ExportMapping, obj: Any, key: str, batch: str) -> 
             props[f.column] = value
     if mapping.batch_column and batch:
         props[mapping.batch_column] = {"rich_text": rich_text(batch)}
+    if mapping.projects_column and project_option:
+        props[mapping.projects_column] = {"multi_select": [{"name": project_option}]}
     return props
+
+
+def multi_select_names(prop: Dict[str, Any]) -> List[str]:
+    """The option names of a multi_select property as Notion returns it."""
+    return [o.get("name", "") for o in (prop or {}).get("multi_select") or [] if o.get("name")]
 
 
 def plain(prop: Dict[str, Any]) -> str:

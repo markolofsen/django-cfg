@@ -10,7 +10,7 @@ from django.db.models import F
 from django.utils import timezone
 
 from . import client as client_mod
-from . import conf
+from . import conf, keys
 from .exceptions import NotionConfigError
 from .lead import NotionLead
 from .models import NotionOutbox
@@ -84,7 +84,7 @@ def deliver(row_id: int) -> str:
             found = _find_existing(client, data_source_id, target.column("run_id"), row.key)
             if found:
                 return _mark_sent(row, found)
-        lead = NotionLead(**row.payload)
+        lead = _with_brand(client, data_source_id, target, NotionLead(**row.payload))
         properties = _build(lead, target, row.key)[0]
         kwargs: dict[str, Any] = {
             "parent": {"type": "data_source_id", "data_source_id": data_source_id},
@@ -97,6 +97,15 @@ def deliver(row_id: int) -> str:
         return _mark_sent(row, str(page["id"]))
     except Exception as exc:
         return _mark_failed(row, exc, cfg_max=_max_attempts(), backoff_cap=_backoff_cap())
+
+
+def _with_brand(client, data_source_id: str, target, lead: NotionLead) -> NotionLead:
+    """Brand = the live option matching the project key, unless the adapter named one. No match: Brand stays empty."""
+    column = target.column("brand")
+    if lead.brand or not lead.project or column is None:
+        return lead
+    option = keys.brand_option(client, data_source_id, column, lead.project)
+    return lead.model_copy(update={"brand": option}) if option else lead
 
 
 def _max_attempts() -> int:

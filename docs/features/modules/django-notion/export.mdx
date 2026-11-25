@@ -9,8 +9,8 @@ description: One command moves the rows of a Django model into a Notion data sou
 copies rows of a Django model into a Notion data source. It is for **backfill and reconcile**. New leads still go through
 the [outbox](./) (`connect(...)`); this command never replaces that.
 
-- **One way.** Django to Notion. An edit made in Notion is never read into Django, and nothing in Notion is updated or deleted
-  (the integration cannot delete).
+- **One way.** Django to Notion. An edit made in Notion is never read into Django, and nothing in Notion is deleted (the
+  integration cannot delete). The one update is additive: with `projects_column` a row already there gets its project option.
 - **Dry run unless `--apply`.** The dry run reads Notion (Read content) and writes nothing.
 - **Safe to re-run.** Every row has a join key in a Notion column. The command scans that column first and skips rows already there.
 - **Throttled.** About 3 requests a second; a 429 waits `Retry-After`.
@@ -66,7 +66,13 @@ register_export(ExportMapping(
 ```
 
 Kinds: `title`, `rich_text`, `email`, `phone_number`, `url`, `number`, `checkbox`, `date`, `select`. An empty value leaves
-its column out. A `source` is an attribute name; a method such as `get_full_name` is called. `transform(value, obj)` reshapes it.
+its column out.
+
+**Project of a row.** `projects_column="Projects"` (a multi-select) stamps each row with its [project key](./#project-key):
+the row's site (a user's registration site, else the only site) gives the key through `NotionConfig.project_keys`, and the
+live option whose name normalizes to it is written. A new row gets it on create. A row already in Notion gets it **added**:
+the new list is the options people set plus this one, never fewer. The dry run reports how many rows would get it, and
+counts rows with no key or no matching option instead of guessing. A `source` is an attribute name; a method such as `get_full_name` is called. `transform(value, obj)` reshapes it.
 
 A field whose name says it is a secret (password, token, session, api key, otp, hash, staff, superuser, permission ...) is
 refused when the mapping is built. A project that really means it names the attribute in `allow_secret=frozenset({...})`.

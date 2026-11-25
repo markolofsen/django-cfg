@@ -6,6 +6,8 @@ general so other mirrors can join later.
 
 - Config: `NotionConfig` (`DjangoConfig.notion`), `NotionTarget`. Token from `NOTION__TOKEN`, or per target.
 - Wiring: `connect(Model, adapter=..., route=...)`. No hand-written signals.
+- Project key: `project_keys` (site -> key) names the project of every lead: the Brand option, a Details line and the
+  notice's `X-Project-Key` header. See [Project key](#project-key).
 - Safety: outbox table + RQ delivery + retries + sweeper. Notion down = rows wait, nothing raises.
 - Also: Telegram and admin-email copy of every lead (`notify_telegram`, `notify_email`, with the Notion link) and a plain-text acknowledgement to the lead's author (`acknowledge`), independent of Notion.
 - Backfill: `manage.py notion_export <app.Model> --to <data source>` moves a model's rows into a data source (one way, dry run by default, re-run safe); built-in preset for the user model. See [Export](#export).
@@ -21,6 +23,7 @@ from django_cfg.modules.django_notion import NotionConfig, NotionTarget
 notion = NotionConfig(
     enabled=True,
     project="mls",  # prefix of the idempotency key
+    project_keys={"caribbean": "caribbean-mls", "danmerriam": "dan-merriam", "bali": "mls-bali", "toponimo": "toponimo"},
     targets={
         "mls":  NotionTarget(data_source_id="419b879d-c730-4c81-9b7f-a80b986a07fd"),  # CRM: MLS / Leads
         "saas": NotionTarget(data_source_id="<CRM: SaaS Leads data source id>"),
@@ -54,12 +57,14 @@ connect(Inquiry, adapter=to_lead, route=route)
 | source_page, locale, company | Source page, Locale, Company | |
 | received_at | Received at | |
 | ad_click | Ad click | raw string; GCLID, MSCLKID, LinkedIn click ID, UTM source/medium/campaign, Ad click time, Ad consent are parsed from it unless set |
+| project | Brand (multi_select) | the live option whose name matches the key (`MLS Bali` for `mls-bali`); none or two: Brand empty. An explicit `brand` wins |
+| project | Details `Project key: <key>` | the first Details line |
 | extra | Details | one `Label: value` line per field |
 | (always) | Hub run id | the idempotency key `<project>:<app.model>:<pk>` |
 
 Never written: Owner, Next step, Notes, Client, Conversation summary (people and Hub own them).
 
-**Details rules**: order Company, Source page, Locale, then the rest alphabetically; nested `Budget / Min: 10`; lists
+**Details rules**: order Project key, Company, Source page, Locale, then the rest alphabetically; nested `Budget / Min: 10`; lists
 `a, b`; bool `Yes`/`No`; empty values dropped; a value over 1000 characters is cut with a note; Details over ~6000
 characters ends with the number of fields not shown. Never copied: `website`, `startedAt`, `elapsedMs`, idempotency keys,
 Hub keys, and any name containing password, token, api key, authorization, captcha, cookie (also secret, csrf, turnstile).
@@ -86,7 +91,8 @@ from django_cfg import NotionConfig, NotionLead, NotionTarget   # also exported 
 notion = NotionConfig(
     enabled=True,
     targets={"mls": NotionTarget(data_source_id="...", token=None)},  # token=SecretStr(...) = this target's own integration
-    enrich=True,            # Project, Environment, Site, API host (Brand defaults to the project name)
+    project_keys={"default": "carapis"},  # django-cfg site key -> project key
+    enrich=True,            # Project, Environment, Site, API host
     notify_telegram=True,   # Telegram copy of every lead
     notify_email=True,      # email copy to the administrators
     notify_link_wait_seconds=30,  # wait this long for the Notion page link
@@ -98,11 +104,35 @@ notion = NotionConfig(
 - **Token**: `NOTION__TOKEN` is the default for every target. A `NotionTarget(token=SecretStr(...))` uses its own integration
   instead (one workspace per brand); neither ever appears in `repr`, logs or errors.
 - **Enrich** (`enrich=True`): the project name, environment, site and API host are added to every lead; a value the adapter
-  set is never overwritten.
+  set is never overwritten. Brand no longer defaults to the project name: it comes from the project key.
 - **Request context**: when `notion.enabled`, `django_notion.context.RequestContextMiddleware` is installed automatically. While a
   request is handled it keeps the page (`Referer`), campaign parameters (UTM, `gclid`, `msclkid`) and `Accept-Language`; the
   lead gets them as `page_url` and `extra` (Details), again without overwriting what the adapter set. Outside a request
   (shell, RQ job) nothing is added.
+
+## Project key
+
+One key identifies a project (a product, a brand) in every CRM table: Leads `Brand`, Clients and Documents `Projects`, the
+Hub's `## Brands`. It is a lowercase slug (`carapis`, `mls-bali`), set **by the server per site**, never typed or sent by the
+visitor, because it is attribution.
+
+- **Where it comes from.** `NotionConfig.project_keys` maps a django-cfg site key (`DjangoConfig.sites`; a single-site project
+  has one site, `default`) to the key. The lead's site is the one the adapter put in `NotionLead.site` (a declared site field,
+  such as MLS's), else the site of the saving request (`site_for`: Origin, Referer, then Host, among registered sites only),
+  else the only site of a single-site project. A site without a key gives no key; it is never guessed from `project_name`.
+  An adapter may set `NotionLead.project` directly; a value that is not a slug becomes empty.
+- **Brand.** At delivery the worker reads the target's live `Brand` options (cached per data source for 5 minutes) and writes
+  the one whose name normalizes to the key: lowercase, `[a-z0-9]` only, the Hub's `projectKey()` rule. No option, two options
+  or no read access: Brand stays empty and the page is still created (a missing option stops the writer, not the form).
+  Add the option in Notion (the Hub's `notion.projects` step) rather than letting a writer invent it.
+- **Details.** `Project key: <key>` is the first Details line.
+- **Notice.** The admin email carries the header `X-Project-Key: <key>` and the first body line `Project key: <key>` (a forward
+  may drop the header). Telegram gets the same line. The subject is unchanged, so the Hub's mailbox silence rows still match.
+  The acknowledgement to the visitor carries neither.
+- **Export.** `ExportMapping(projects_column="Projects")` writes the row's key option on create and **adds** it to a row
+  already in Notion, keeping the options people set; it never removes one. The row's site is the user's registration site.
+- **Doctor.** `notion_doctor` lists `site -> key`, errors on a key for an unregistered site, warns about a site without a key,
+  and prints each key's matched Brand option per target, warning about a key that matches no target or two options.
 
 ## Telegram, admin email and the author's acknowledgement
 
@@ -114,7 +144,7 @@ Every captured lead is also announced, once, on three channels that need no new 
 | Admin email | `django_email`, to `get_admin_emails()` (`config.admin_emails`, then Django `ADMINS`), subject `[<project>] New lead: <name>` | no recipients | `notify_email` |
 | Acknowledgement | `django_email` `send_html(text_only=True)`: a **plain-text** letter to the lead's own address, subject `We received your request — <project>` | the lead has no syntactically valid email, the address is an admin or our own sender, or it already got one in the last 24 h | `acknowledge` |
 
-Telegram and the admin email carry Name, Email, Phone, Form, Page URL, Brand, the Message (cut at 1500 characters), the
+Telegram and the admin email carry the project key line, Name, Email, Phone, Form, Page URL, Brand, the Message (cut at 1500 characters), the
 Details lines (never secrets or the Notion token) and, when the page exists, `Notion: https://www.notion.so/<page id without dashes>`.
 
 **Notion link without waiting for Notion.** The announcement job runs right after the lead is saved. When a Notion page is still to
@@ -148,7 +178,9 @@ paragraph; a broken template falls back to itself, never breaks the send. The 24
 
 1. **Turn off Hub intake for that form first.** Hub (`crm/`, `/apix/crm/leads/<public_id>/`) already writes site forms into the
    same Notion bases; with both on, every lead lands twice. This module becomes the single writer for Django projects.
-2. Create a separate Notion integration with **Insert content** only, share the Leads database with it, set `NOTION__TOKEN`.
+2. Create a separate Notion integration with **Insert content**, plus **Read content** when `project_keys` is set (the Brand
+   option is matched from the live schema; without read access Brand stays empty), share the Leads database with it, set
+   `NOTION__TOKEN`. `notion_doctor` says so when it cannot read the schema.
 3. Check on staging (see [`@docs/operations.md`](@docs/operations.md)), then `python manage.py notion_doctor`.
 4. Mention in the privacy policy that contact details (email, phone, message) are processed in Notion.
 
@@ -162,8 +194,9 @@ paragraph; a broken template falls back to itself, never breaks the send. The 24
 is its command. Public guide: `apps/docs/content/features/modules/django-notion/export.mdx`.
 
 - Layers: `build_plan` (ORM, select only) -> `scan` (key column of the data source) -> `execute` (`pages.create` through a client object, so
-  tests pass a fake). Nothing is updated or deleted; Notion is never read back into Django.
-- Mapping: `ExportMapping(model, key, fields, exclusions, queryset, batch_column, allow_secret)`; `register_export`, `user_export(...)`.
+  tests pass a fake). Nothing is deleted; Notion is never read back into Django. The one update adds the project option of
+  `projects_column` to a row already there.
+- Mapping: `ExportMapping(model, key, fields, exclusions, queryset, batch_column, projects_column, allow_secret)`; `register_export`, `user_export(...)`.
 - Guards (each from the carapis backfill): the join key is always written and read back from the create response (a key not stored
   stops the run); rich text is cut at 2000 UTF-16 units; a secret-looking field cannot be mapped without `allow_secret`;
   report and manifest carry counts, primary keys and page ids only. A source named like an action (`delete`, `save`) or a method with `alters_data` is refused; an exclusion rule that raises leaves the row out and the plan goes on; the manifest is appended row by row (`execute(..., manifest_path=)`), so an interrupted run keeps it.

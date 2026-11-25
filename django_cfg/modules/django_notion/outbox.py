@@ -8,7 +8,7 @@ from typing import Optional
 from django.db import transaction
 
 from . import conf
-from .enrich import enrich
+from .enrich import enrich, with_project
 from .lead import NotionLead
 
 logger = logging.getLogger("django_cfg.modules.django_notion")
@@ -72,7 +72,7 @@ def capture(instance, lead: NotionLead, target: Optional[str], *, project: Optio
         if target not in cfg.targets:
             raise ValueError(f"unknown Notion target {target!r}; configured: {sorted(cfg.targets)}")
         key = make_key(project or conf.project_name(cfg), instance)
-        row = record(key, target, enrich(lead) if cfg.enrich else lead)
+        row = record(key, target, enrich(lead) if cfg.enrich else with_project(lead))
         transaction.on_commit(lambda: _after_commit(row.pk))
     except Exception:
         logger.exception("django_notion: lead %s was NOT recorded for Notion (the lead itself is saved)", getattr(instance, "pk", "?"))

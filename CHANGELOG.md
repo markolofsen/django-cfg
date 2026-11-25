@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.111] - 2026-11-25
+
+### Added
+
+- **django_notion: a project key per site.** `NotionConfig.project_keys` maps a
+  django-cfg site key (`DjangoConfig.sites`; `default` for a single-site
+  project) to a lowercase slug such as `carapis` or `mls-bali`. The server sets
+  it; the visitor never does. The lead's site is `NotionLead.site` (an adapter
+  with a declared site field), else the saving request's site (`site_for`),
+  else the only site. The key becomes the Leads `Brand` (the live option whose
+  name normalizes to it, lowercase `[a-z0-9]`, read per data source and cached
+  5 minutes; none or two leaves Brand empty and the page is still created), the
+  first Details line `Project key: <key>`, and in the admin notice an
+  `X-Project-Key` header plus the first body line (a forward may drop the
+  header). Telegram gets the line; the subject and the visitor's
+  acknowledgement are unchanged. `notion_doctor` checks keys against sites and
+  options.
+- **notion_export `projects_column`.** A mapping can stamp each row's project
+  option on a multi-select: on create, and added to a row already in Notion
+  (the options people set stay; nothing is removed).
+- **`DjangoEmailService.send_simple(headers=...)`** for extra message headers;
+  the gateway backend passes them through.
+
+### Changed
+
+- **django_notion: Brand no longer defaults to `project_name`.** A project
+  whose adapter sets no `brand` must set `project_keys` in the same deploy, or
+  its leads arrive with Brand empty. An explicit `NotionLead.brand` still wins.
+
+### Fixed
+
+- **django_notion: a lead with no name no longer fails delivery.** The title
+  fallback read a `company` attribute `NotionLead` does not have; it now reads
+  `extra["Company"]`.
+- **Rust clients: a view's docstring indent no longer becomes a doctest.** The
+  generator strips the common indent of every operation description and summary
+  before progenitor copies them into `///` comments, where four leading spaces
+  opened a markdown code block that rustdoc compiled as a doctest.
+
 ## [2.4.110] - 2026-11-24
 
 ### Fixed

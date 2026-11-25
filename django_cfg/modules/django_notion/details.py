@@ -1,6 +1,6 @@
 """The Details text: every field without a column, one "Label: value" line each.
 
-Rules (same as the Hub "Any field the form sends" page): fixed order (Company, Source page, Locale, then the rest
+Rules (same as the Hub "Any field the form sends" page): fixed order (Project key, Company, Source page, Locale, then the rest
 alphabetically); nested values flat ("Budget / Min: 10"); lists "a, b"; bool Yes/No; empty values left out; a value over
 1000 characters is cut with a note; Details over about 6000 characters ends with the number of fields not shown; honeypot,
 timing, idempotency and secret-looking fields are never copied.
@@ -14,7 +14,8 @@ from typing import Any, Dict, List, Tuple
 
 MAX_VALUE = 1000
 MAX_DETAILS = 6000
-FIRST_LABELS = ("Company", "Source page", "Locale")
+PROJECT_KEY_LABEL = "Project key"
+FIRST_LABELS = (PROJECT_KEY_LABEL, "Company", "Source page", "Locale")
 
 _EXACT_SKIP = {"website", "startedat", "elapsedms"}
 _SKIP_PARTS = (

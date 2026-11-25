@@ -25,6 +25,7 @@ from django_cfg.modules.django_notion import NotionConfig, NotionTarget
 notion = NotionConfig(
     enabled=True,
     project="mls",  # prefix of the idempotency key
+    project_keys={"caribbean": "caribbean-mls", "danmerriam": "dan-merriam", "bali": "mls-bali", "toponimo": "toponimo"},
     targets={
         "mls":  NotionTarget(data_source_id="419b879d-c730-4c81-9b7f-a80b986a07fd"),  # CRM: MLS / Leads
         "saas": NotionTarget(data_source_id="<CRM: SaaS Leads data source id>"),
@@ -54,7 +55,8 @@ connect(Inquiry, adapter=to_lead, route=route)
 |---|---|---|
 | name | Name (title) | falls back to email, phone, "Lead" |
 | (always) | Status = New, Source (Website by default) | Status is set only on create |
-| brand | Brand (multi-select) | which site or product the lead came from, e.g. `Caribbean MLS`, `Dan Merriam`, `carapis` |
+| project | Brand (multi-select) | the live option whose name matches the [project key](#project-key) (`MLS Bali` for `mls-bali`); none or two: Brand empty. An explicit `brand` wins |
+| project | Details `Project key: <key>` | the first Details line |
 | email, phone, message, form, page_url | Email, Phone, Message, Form, Page URL | bad email / URL goes to Details |
 | received_at | Received at | |
 | extra | Details | one `Label: value` line per field: UTM, ad clicks (gclid), locale, company, segment, country... |
@@ -64,7 +66,7 @@ Never written: Owner, Next step, Notes, Client, Conversation summary (people and
 
 Only what people filter or sort by is a column; every other field goes to Details with no schema change.
 
-**Details rules**: order Company, Source page, Locale, then the rest alphabetically; nested `Budget / Min: 10`; lists
+**Details rules**: order Project key, Company, Source page, Locale, then the rest alphabetically; nested `Budget / Min: 10`; lists
 `a, b`; bool `Yes`/`No`; empty values dropped; a value over 1000 characters is cut with a note; Details over ~6000
 characters ends with the number of fields not shown. Never copied: `website`, `startedAt`, `elapsedMs`, idempotency keys,
 Hub keys, and any name containing password, token, api key, authorization, captcha, cookie (also secret, csrf, turnstile).
@@ -91,7 +93,8 @@ from django_cfg import NotionConfig, NotionLead, NotionTarget   # also exported 
 notion = NotionConfig(
     enabled=True,
     targets={"mls": NotionTarget(data_source_id="...", token=None)},  # token=SecretStr(...) = this target's own integration
-    enrich=True,            # Project, Environment, Site, API host (Brand defaults to the project name)
+    project_keys={"default": "carapis"},  # django-cfg site key -> project key
+    enrich=True,            # Project, Environment, Site, API host
     notify_telegram=True,   # Telegram copy of every lead
     notify_email=True,      # email copy to the administrators
     notify_link_wait_seconds=30,  # wait this long for the Notion page link
@@ -103,11 +106,40 @@ notion = NotionConfig(
 - **Token**: `NOTION__TOKEN` is the default for every target. A `NotionTarget(token=SecretStr(...))` uses its own integration
   instead (one workspace per brand); neither ever appears in `repr`, logs or errors.
 - **Enrich** (`enrich=True`): the project name, environment, site and API host are added to every lead; a value the adapter
-  set is never overwritten.
+  set is never overwritten. Brand no longer defaults to the project name: it comes from the project key.
 - **Request context**: when `notion.enabled`, `django_notion.context.RequestContextMiddleware` is installed automatically. While a
   request is handled it keeps the page (`Referer`), campaign parameters (UTM, `gclid`, `msclkid`) and `Accept-Language`; the
   lead gets them as `page_url` and `extra` (Details), again without overwriting what the adapter set. Outside a request
   (shell, RQ job) nothing is added.
+
+## Project key
+
+One key identifies a project (a product, a brand) in every CRM table: Leads `Brand`, Clients and Documents `Projects`. It is
+a lowercase slug (`carapis`, `mls-bali`), set **by the server per site**, never typed or sent by the visitor: it is attribution.
+
+```python
+notion = NotionConfig(enabled=True, project_keys={"default": "carapis"}, targets={...})          # one site
+notion = NotionConfig(enabled=True, project_keys={"bali": "mls-bali", "toponimo": "toponimo"}, ...)  # one backend, several sites
+```
+
+- **Which site.** The keys of `project_keys` are django-cfg site keys ([`DjangoConfig.sites`](/configuration/sites); a
+  single-site project has one site, `default`). The lead's site is `NotionLead.site` when the adapter sets it from a declared
+  site field, else the site of the saving request (`site_for`: Origin, Referer, then Host, among registered sites only), else
+  the only site of a single-site project. A site without a key gives no key; nothing is guessed from `project_name`.
+  `NotionLead.project` sets the key directly; a value that is not a slug becomes empty.
+- **Brand.** The delivery job reads the target's live `Brand` options (cached per data source for 5 minutes) and writes the
+  one whose name normalizes to the key: lowercase, `[a-z0-9]` only. No option, two options or no read access leaves Brand
+  empty, and the page is still created. Add the option in Notion; a writer never invents one.
+- **Notice.** The admin email gets the header `X-Project-Key: <key>` and the first body line `Project key: <key>`, in case a
+  forward drops the header. Telegram gets the same line. The subject does not change. The acknowledgement to the visitor
+  carries neither.
+- **Export.** `ExportMapping(projects_column="Projects")` writes the key's option on create and adds it to a row already in
+  Notion, keeping every option people set. See [Export](./export).
+- **Doctor.** `notion_doctor` lists `site -> key` and each key's matched Brand option per target. A key for an unregistered
+  site is an error; a site without a key, or a key that matches no option on any target, is a warning.
+
+**Upgrading.** Brand used to default to `project_name`. After the upgrade a project that sets neither `brand` in its adapter
+nor `project_keys` writes leads with Brand empty: set `project_keys` in the same deploy.
 
 ## Telegram, admin email and the author's acknowledgement
 
@@ -119,7 +151,7 @@ Every captured lead is also announced, once, on three channels that need no new 
 | Admin email | `django_email`, to `get_admin_emails()` (`config.admin_emails`, then Django `ADMINS`), subject `[<project>] New lead: <name>` | no recipients | `notify_email` |
 | Acknowledgement | `django_email` `send_html(text_only=True)`: a **plain-text** letter to the lead's own address, subject `We received your request — <project>` | the lead has no syntactically valid email, the address is an admin or our own sender, or it already got one in the last 24 h | `acknowledge` |
 
-Telegram and the admin email carry Name, Email, Phone, Form, Page URL, Brand, the Message (cut at 1500 characters), the
+Telegram and the admin email carry the project key line, Name, Email, Phone, Form, Page URL, Brand, the Message (cut at 1500 characters), the
 Details lines (never secrets or the Notion token) and, when the page exists, `Notion: https://www.notion.so/<page id without dashes>`.
 
 **Notion link without waiting for Notion.** The announcement job runs right after the lead is saved. When a Notion page is still to
@@ -153,7 +185,9 @@ paragraph; a broken template falls back to itself, never breaks the send. The 24
 
 1. **Turn off Hub intake for that form first.** Hub (`crm/`, `/apix/crm/leads/<public_id>/`) already writes site forms into the
    same Notion bases; with both on, every lead lands twice. This module becomes the single writer for Django projects.
-2. Create a separate Notion integration with **Insert content** only, share the Leads database with it, set `NOTION__TOKEN`.
+2. Create a separate Notion integration with **Insert content**, plus **Read content** when `project_keys` is set (the Brand
+   option is matched from the live schema; without read access Brand stays empty), share the Leads database with it, set
+   `NOTION__TOKEN`. `notion_doctor` says so when it cannot read the schema.
 3. Check on staging (see [Operations](#operations)), then `python manage.py notion_doctor`.
 4. Mention in the privacy policy that contact details (email, phone, message) are processed in Notion.
 
@@ -163,7 +197,7 @@ paragraph; a broken template falls back to itself, never breaks the send. The 24
 
 ## Operations
 
-### Permissions (Insert content only)
+### Permissions
 
 Notion docs: *Create a page* requires **Insert content** on the target. Retrieve database / data source state no capability; the
 capabilities page ties **Read content** to Retrieve a database. So:
@@ -175,6 +209,8 @@ capabilities page ties **Read content** to Retrieve a database. So:
 - `notion_doctor` reads the schema (Read content). With an Insert-only token it reports a **warning** ("cannot verify") and
   checks only that the token is accepted. Give it Read content temporarily on staging if you want the column check.
 - `lookup_before_retry=True` also needs Read content.
+- `project_keys` needs Read content for the Brand option match (`data_sources.retrieve`, cached 5 minutes). Without it the
+  page is still created, with Brand empty, and `notion_doctor` warns.
 
 Status of these claims: derived from the Notion documentation and the SDK source (2026-11-17). **Not verified against a real
 integration.**

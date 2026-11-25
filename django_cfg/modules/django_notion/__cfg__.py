@@ -113,7 +113,13 @@ class NotionConfig(BaseModel):
     )
     targets: Dict[str, NotionTarget] = Field(default_factory=dict, description="Target name -> Notion database")
     project: str = Field(default="", description="Prefix of the idempotency key; defaults to the DjangoConfig project name")
-    enrich: bool = Field(default=True, description="Add Project, Environment, Site and API host from the project config to every lead (Brand defaults to the project name)")
+    project_keys: Dict[str, str] = Field(
+        default_factory=dict,
+        description="django-cfg site key (DjangoConfig.sites; 'default' for a single-site project) -> project key, a "
+        "lowercase slug such as 'carapis' or 'mls-bali'. The server sets it per site, never the visitor. It becomes the "
+        "'Project key' Details line, the Brand option whose name matches it, and the X-Project-Key header of the notice",
+    )
+    enrich: bool = Field(default=True, description="Add the project key, Project, Environment, Site and API host from the project config to every lead")
     notify_telegram: bool = Field(default=True, description="Also send every lead to Telegram (DjangoConfig.telegram); skipped silently when Telegram is not configured")
     notify_email: bool = Field(default=True, description="Also email every lead to the administrators (config.admin_emails, then Django ADMINS); skipped silently with no recipients")
     notify_link_wait_seconds: int = Field(default=30, ge=0, le=600, description="Telegram and admin email wait up to this long after the lead for the Notion page, so they can carry its link; then they go without it (never twice). 0 = do not wait. No wait when Notion has no token for the lead")
@@ -128,6 +134,19 @@ class NotionConfig(BaseModel):
     sweep_interval_seconds: int = Field(default=60, ge=10, description="How often the sweeper runs (RQ schedule)")
     retention_days: int = Field(default=90, ge=1, description="Sent rows older than this are purged (they hold the payload)")
     timeout_seconds: float = Field(default=15.0, gt=0, le=120, description="HTTP timeout per Notion request")
+
+    @field_validator("project_keys")
+    @classmethod
+    def _slug_keys(cls, v: Dict[str, str]) -> Dict[str, str]:
+        from .keys import is_key
+
+        out = {}
+        for site, key in v.items():
+            key = str(key).strip()
+            if not is_key(key):
+                raise ValueError(f"project key {key!r} of site {site!r} is not a lowercase slug like 'carapis' or 'mls-bali'")
+            out[str(site).strip()] = key
+        return out
 
     def get_rq_schedules(self):
         if not self.enabled:

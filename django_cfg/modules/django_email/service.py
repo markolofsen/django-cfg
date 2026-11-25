@@ -20,7 +20,7 @@ from smtplib import (
 from typing import Any, Dict, List, Optional, Union
 
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives, send_mail
+from django.core.mail import EmailMessage, EmailMultiAlternatives, send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 
@@ -507,6 +507,7 @@ class DjangoEmailService(BaseCfgModule):
         fail_silently: bool = False,
         log_key: str = "",
         log_locale: str = "",
+        headers: Optional[Dict[str, str]] = None,
     ) -> bool:
         """
         Send a simple text email in background thread (non-blocking).
@@ -523,25 +524,28 @@ class DjangoEmailService(BaseCfgModule):
                 at all**: measured on production, all 112 rows carry a key, i.e.
                 every one came through `send_html`, and nothing sent from here or
                 from the attachments family was recorded anywhere.
+            headers: Extra message headers (``{"X-Project-Key": "carapis"}``).
+                ``send_mail`` cannot carry headers, so with headers the letter is
+                an ``EmailMessage``; the gateway backend passes them through.
 
         Returns:
             True if email queued successfully
         """
         from_email = self._get_formatted_from_email(from_email)
 
+        def _send():
+            if not headers:
+                return send_mail(subject=subject, message=message, from_email=from_email, recipient_list=recipient_list)
+            return EmailMessage(
+                subject=subject, body=message, from_email=from_email, to=recipient_list, headers=dict(headers)
+            ).send()
+
         # Before the hand-off, for the reason given in `send_html`.
         row_ids = _open_send(log_key, recipient_list, subject, log_locale)
 
         def _do_send():
             try:
-                sent = self._handle_email_sending(
-                    send_mail,
-                    subject=subject,
-                    message=message,
-                    from_email=from_email,
-                    recipient_list=recipient_list,
-                    fail_silently=fail_silently,
-                )
+                sent = self._handle_email_sending(_send, fail_silently=fail_silently)
             except Exception as exc:
                 _close_send(row_ids, "failed", str(exc))
                 raise

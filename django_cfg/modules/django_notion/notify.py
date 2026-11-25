@@ -4,6 +4,10 @@ Independent of Notion delivery (own job, own flags on the outbox row) and of eac
 the caller. A channel that is not configured (no bot / chat, no admin emails) is skipped silently and counts as
 settled; a channel that fails is retried by the sweeper, with the same ``max_attempts`` cap as delivery.
 Neither channel touches the Notion token, so the announcement works while Notion is misconfigured or down.
+
+The project key (``keys``) is the first body line of both, and the ``X-Project-Key`` header of the admin email, so the
+Hub can name the project of a notice. The subject never changes (the Hub's mailbox silence rows match on it). The
+acknowledgement letter to the visitor carries neither.
 """
 
 from __future__ import annotations
@@ -18,8 +22,8 @@ from django.core.validators import validate_email
 from django.db.models import F, Q
 from django.utils import timezone
 
-from . import conf, notify_texts
-from .details import build_details
+from . import conf, keys, notify_texts
+from .details import PROJECT_KEY_LABEL, build_details
 from .lead import NotionLead
 from .models import NotionOutbox
 
@@ -67,9 +71,24 @@ def subject(project: str, lead: NotionLead) -> str:
     return f"[{project}] New lead: {display_name(lead)}"[:200]
 
 
+PROJECT_KEY_HEADER = "X-Project-Key"
+
+
+def project_line(lead: NotionLead) -> List[str]:
+    """The fixed ``Project key: <key>`` line. In the body as well as the header: a forward may drop the header."""
+    key = keys.clean(lead.project)
+    return [f"{PROJECT_KEY_LABEL}: {key}"] if key else []
+
+
+def headers(lead: NotionLead) -> dict:
+    key = keys.clean(lead.project)
+    return {PROJECT_KEY_HEADER: key} if key else {}
+
+
 def telegram_text(project: str, lead: NotionLead, link: str = "") -> str:
     esc = html.escape
     lines = [f"<b>[{esc(project)}] New lead: {esc(display_name(lead))}</b>"]
+    lines += [esc(line) for line in project_line(lead)]
     lines += [f"{k}: {esc(v)}" for k, v in _fields(lead, project) if k != "Name"]
     lines += [esc(line) for line in _details(lead)]
     if link:
@@ -78,7 +97,7 @@ def telegram_text(project: str, lead: NotionLead, link: str = "") -> str:
 
 
 def email_text(project: str, lead: NotionLead, link: str = "") -> str:
-    lines = [f"{k}: {v}" for k, v in _fields(lead, project)]
+    lines = project_line(lead) + [f"{k}: {v}" for k, v in _fields(lead, project)]
     lines += _details(lead)
     if link:
         lines.append(f"Notion: {link}")
@@ -121,7 +140,8 @@ def send_email(project: str, lead: NotionLead, row: NotionOutbox, link: str = ""
     if not recipients:
         return SKIPPED
     ok = _email_client().send_simple(
-        subject=subject(project, lead), message=email_text(project, lead, link), recipient_list=recipients, fail_silently=False
+        subject=subject(project, lead), message=email_text(project, lead, link), recipient_list=recipients,
+        fail_silently=False, headers=headers(lead),
     )
     return SENT if ok else FAILED
 
