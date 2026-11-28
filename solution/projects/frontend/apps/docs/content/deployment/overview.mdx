@@ -11,27 +11,17 @@ Django-CFG supports multiple deployment strategies to fit your infrastructure ne
 
 ## Docker (Recommended)
 
-**Best for**: Modern cloud deployments, microservices, consistent environments
-
-**Complete Docker deployment guide:**
-**[Docker Setup Guide →](../../guides/docker/overview)**
+The published [Docker runtime](/devops/docker-runtime) is a development environment. Follow [Quick Start](/devops/quick-start) for an owned development server. Production is separately configured and authorized: [Production](/devops/production), [CI/CD](/devops/ci-cd).
 
 ### What's Included
-- ✅ Development and production Docker Compose configurations
-- ✅ Multi-service architecture (Django, PostgreSQL, Redis, Workers)
-- ✅ Automated health checks and service dependencies
-- ✅ Configuration via environment variables
-- ✅ Build optimization for minimal image sizes
-- ✅ Comprehensive troubleshooting guide
+
+The canonical sample contains Django, the frontend, PostgreSQL, Redis, a loopback gateway and an optional CMDOP workspace.
 
 ### Quick Links
-- **[Development Setup](../../guides/docker/development)** - Local Docker environment
-- **[Production Setup](../../guides/docker/production)** - Production-ready deployment
-- **[Configuration Strategy](../../guides/docker/configuration)** - environment variables
-- **[Build Optimization](../../guides/docker/build-optimization)** - Performance tips
-- **[Troubleshooting](../../guides/docker/troubleshooting)** - Common issues
 
----
+- [Runtime configuration](/devops/docker-runtime)
+- [Production](/devops/production)
+- [Troubleshooting](/devops/troubleshooting)
 
 ## Cloud Platforms
 

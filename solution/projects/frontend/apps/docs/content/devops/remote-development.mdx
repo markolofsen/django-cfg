@@ -1,0 +1,38 @@
+---
+title: "Remote Development"
+description: "Run builds and services on a development server while keeping the laptop as a client."
+---
+
+# Remote Development
+
+
+Keep the Git checkout and development services on an owned Linux machine. A laptop can be a client for editing, reviewing and viewing the application; it need not compile every dependency locally.
+
+~~~mermaid
+graph LR
+  L["Laptop / browser / AI client"] --> S["Owned Linux development host"]
+  S --> G["Git checkout"]
+  S --> D["Isolated Docker runtime"]
+  G --> R["Authorized Git remote"]
+  D --> V["Project data volumes"]
+~~~
+
+The host runs [Quick Start](/devops/quick-start). Select project-specific state, ports and storage. One integration lead controls service lifecycle and migrations.
+
+## View the loopback services
+
+Use an approved private connection, such as SSH local forwarding from your laptop. Substitute your actual host and ports.
+
+~~~bash
+ssh -N   -L 28080:127.0.0.1:28080   -L 28081:127.0.0.1:28081   -L 28082:127.0.0.1:28082   -L 28083:127.0.0.1:28083   user@dev.example.com
+~~~
+
+Open the corresponding loopback URLs on your laptop. Internet-accessible previews require separate authorization and access control.
+
+## Work from a client
+
+Use your editor, SSH or an authorized [CMDOP connection](/features/integrations/cmdop). Inspect the exact machine and Git revision before editing. Build and test on the server with bounded resources. Commit explicit paths and review before integration.
+
+Do not maintain two independent writable copies of main. Synchronize committed revisions using ordinary Git fast-forwards or reviewed merges. Keep private state, runtime credentials and machine identity on their owning host.
+
+See [AI Agent Workflow](/devops/agent-workflow) for parallel development.

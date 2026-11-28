@@ -12,7 +12,7 @@ export default {
   'production-config': 'Production Config',
   'migration-guide': 'Migration Guide',
   'django-configuration-problems-solved': 'Django Configuration Problems Solved',
-  'docker': 'Docker',
+  'docker': { display: 'hidden' },
   'troubleshooting': 'Troubleshooting',
   'faq': 'FAQ'
 }

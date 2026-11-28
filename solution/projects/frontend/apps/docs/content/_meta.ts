@@ -44,6 +44,9 @@ export default {
   '---reference': { type: 'separator', title: 'Reference' },
   api: 'API Reference',
 
+  // ── Navbar: DevOps ──
+  devops: { type: 'page', title: 'DevOps' },
+
   // ── Navbar: CLI ──
   cli: {
     type: 'page',

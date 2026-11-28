@@ -47,6 +47,9 @@ export function HomeHero() {
             <a href="/getting-started" className="home__btn home__btn--cta">
               Get started →
             </a>
+            <a href="/devops/quick-start" className="home__btn home__btn--secondary">
+              Run the full stack
+            </a>
             <a
               href={settings.github.org}
               target="_blank"

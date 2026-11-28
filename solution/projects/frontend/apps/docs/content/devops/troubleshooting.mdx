@@ -1,0 +1,41 @@
+---
+title: "Troubleshooting"
+description: "Diagnose the canonical environment without deleting unrelated data."
+---
+
+# Troubleshooting
+
+
+Start with the owned checkout, project name and private state. Use the same launcher and environment as [Quick Start](/devops/quick-start).
+
+## Bootstrap fails
+
+Check Linux Docker Engine, Compose v2, Buildx, Python, Git, OpenSSL, authorized registry access and available base images. Check free disk on the source/build disk and Docker's own storage.
+
+A mismatched or unavailable toolbox receipt is refused. Reconcile the intended image and state with the owner rather than replacing the receipt with an arbitrary tag. Do not reuse another project's state.
+
+## API not ready
+
+Run launcher status, inspect logs for the exact owned service, migrations and database/cache connectivity. Check gateway readiness:
+
+~~~bash
+curl --fail http://127.0.0.1:28083/healthz/ready
+~~~
+
+Use your selected API port. See [Monitoring](/deployment/monitoring). Never print raw secrets in diagnostics.
+
+## Frontend slow or unhealthy
+
+Check frozen dependencies and foundation package builds. Allow time for cold Next.js and Storybook compilation. Inspect CPU, memory and disk. Docs compilation has a separate 10 GiB budget.
+
+## Ports or ownership conflicts
+
+Choose unused loopback ports and a unique project name before initialization. Resolve foreign project labels with the owner; do not take over by editing labels or deleting volumes.
+
+## CMDOP not connected
+
+A running workspace is not necessarily admitted. Verify exact identity, enrollment, online state and caller grants with the [CMDOP integration](/features/integrations/cmdop). Do not copy another machine's home or identity.
+
+## Stop safely
+
+Use launcher stop with the same private environment. It retains data. Do not perform host-wide Docker prune or delete volumes to troubleshoot one project.

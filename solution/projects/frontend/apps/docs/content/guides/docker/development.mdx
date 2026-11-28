@@ -1,87 +1,24 @@
 ---
-title: Docker Development Setup
-description: Run django-cfg locally in Docker with docker-compose-local.yaml, or run only Redis and RQ in containers while Django runs on the host.
+title: "Docker Development Setup"
+description: "Navigation to the current DevOps documentation."
 ---
 
 # Docker Development Setup
 
-Two local files exist in `projects/docker/`. Pick by what you want in containers.
+This guide moved to the current DevOps section. The public canonical runtime replaces the former development Compose layout. **[Read Quick Start](/devops/quick-start).**
 
 ## Option 1: the full local stack
 
-`docker-compose-local.yaml` (project name `djangocfg`) starts Traefik, PostgreSQL with
-pgvector, Redis, Django and gRPC:
-
-| Service | Container | Image / build | Host port |
-|---|---|---|---|
-| `traefik` | `djangocfg_traefik` | `traefik:v2.11` | 7330 (HTTP), 7331 (HTTPS), 7333 (WebSocket entrypoint), 7332 (dashboard) |
-| `postgres` | `djangocfg_postgres` | `pgvector/pgvector:pg15` | none (internal network) |
-| `redis` | `djangocfg_redis` | `redis:7-alpine`, 512 MB, `allkeys-lru`, 3 databases | none |
-| `django` | `django` | built from `services/django/Dockerfile` | 7301 |
-| `grpc` | `djangocfg_grpc` | same image, `python manage.py rungrpc` | 7351 |
-
-The RQ worker and scheduler are present but commented out; uncomment them, or use
-Option 2.
-
-```bash
-cd projects/docker
-cp .env.example .env.local        # then edit: POSTGRES_*, DATABASE__URL, SECRET_KEY ...
-docker compose -f docker-compose-local.yaml up -d
-docker compose -f docker-compose-local.yaml ps
-```
-
-Notes taken from the file:
-
-- The Django service builds from the `github/solution` mirror and bind-mounts
-  `github/solution/projects/django` at `/app` for live code; media goes to
-  `volumes/django/media`; PostgreSQL data to `volumes/postgres`. Both folders are
-  git-ignored.
-- PostgreSQL and Redis sit on an `internal: true` network, so nothing outside the
-  stack can reach them. Django joins both networks.
-- `services/postgres/init.sql` runs on the first start of an empty data folder: it
-  creates `uuid-ossp`, `pg_trgm` and `vector`, and a second database `mcp_docs`.
-- Django is routed by Traefik for `api.djangocfg.com` on the `web` entrypoint, so a
-  browser needs that name pointed at 127.0.0.1 (or call `localhost:7301` directly).
-- Frontends are deliberately not part of this file; run them with `pnpm dev` from
-  `projects/solution/frontend` (apps `docs`, `demo`, `storybook`).
+[Current guidance](/devops/quick-start).
 
 ## Option 2: Redis and RQ in containers, Django on the host
 
-`docker-compose-local-services.yml` (project name `djangocfg-services`) starts Redis
-(host port 7379, 16 databases, a named volume) and, built from the same Django
-image, `rq_worker` (queues `default high low knowledge`) and `rq_scheduler` (`python manage.py rqcron`).
-
-```bash
-docker compose -f docker-compose-local-services.yml up -d
-```
-
-To run only the worker on the host instead, use `python manage.py rqworker` from
-your Django project and skip this file.
+[Current guidance](/devops/production).
 
 ## First run
 
-The entrypoint (`services/django/entrypoint.sh`) runs on every container start, so
-the first start already migrated and collected static files:
-
-1. removes a host `.venv` mounted under `/app`;
-2. waits for PostgreSQL (host from `DATABASE__URL`, port 5432) and for a host named
-   `redis` on port 6379;
-3. `python manage.py migrate --noinput`;
-4. unless `DJANGO_CREATE_ADMIN=false`, creates a development superuser
-   (`admin` / `admin123`: development only, production sets the variable to `false`);
-5. `python manage.py collectstatic --noinput --clear`;
-6. `exec`s the command: `uvicorn api.asgi:application --workers 4` by default.
+[Current guidance](/devops/quick-start).
 
 ## Everyday commands
 
-```bash
-docker compose -f docker-compose-local.yaml logs -f django
-docker exec -it django python manage.py createsuperuser
-docker exec -it django python manage.py shell
-docker exec djangocfg_postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
-docker compose -f docker-compose-local.yaml restart django
-docker compose -f docker-compose-local.yaml up -d --build django
-```
-
-django-cfg logs JSON to stdout, so `docker compose logs` is the log. See
-[Production](./production#logging) for the Docker log-size block.
+[Current guidance](/devops/operations).

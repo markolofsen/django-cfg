@@ -1,0 +1,16 @@
+---
+title: "Release v2.4.114"
+description: "Explicit MCP scalar read projections and standalone TypeScript CLI generation."
+---
+
+# Release v2.4.114
+
+
+**Released:** November 28, 2026.
+
+- MCP profiles support opt-in scalar read projections, bounded predicates and dedicated restricted readers. Explicit exposures no longer inherit global model grants; declare required grants on the appropriate profile.
+- The TypeScript generator supports the standalone Fetch CLI profile, with generated Zod models and explicit per-call API origin. The default web profile is unchanged.
+- Python client generation pins openapi-python-client 0.28.4.
+- Fixed startup after the scalar read policy change, including hosts with MCP disabled.
+
+See [MCP configuration](/features/modules/django-mcp/configuration) and [Generator target options](/features/api-generation/target-options). Full history is in the repository changelog.

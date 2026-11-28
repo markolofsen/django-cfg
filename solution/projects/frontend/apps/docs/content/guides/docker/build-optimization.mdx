@@ -1,92 +1,32 @@
 ---
-title: Docker Build Optimization
-description: How the django-cfg images are built - the Python API image and the three Node frontends (docs, storybook, demo) - and the build problems this setup has hit.
+title: "Docker Build Optimization"
+description: "Navigation to the current DevOps documentation."
 ---
 
 # Docker Build Optimization
 
-Four images are built from `projects/docker/services/`: the API image and three
-frontends. Both build contexts are large, so most of the speed comes from what the
-context excludes and in which order layers are written.
+This guide moved to the current DevOps section. The public canonical runtime replaces the former development Compose layout. **[Read Build Resources](/devops/docker-runtime#build-resources).**
 
 ## Contexts
 
-| Image | Context | Dockerfile |
-|---|---|---|
-| API (`djangocfg-api`) | repository root | `services/django/Dockerfile` |
-| Docs | `projects/solution` | `services/frontend/Dockerfile` (build args `APP_NAME`, `APP_DIR`, `APP_PORT`) |
-| Storybook | `projects/solution` | `services/frontend/Dockerfile.storybook` |
-| Demo | `projects/solution` | `services/frontend/Dockerfile.demo` |
-
-The Dockerfiles copy from `frontend/...` relative to `projects/solution`, so build
-from the compose files (or the `make` targets), not with a bare `docker build .`.
+[Current guidance](/devops/docker-runtime#build-resources).
 
 ## The API image
 
-- `python:3.12-slim` plus `uv`; dependencies are installed with a BuildKit cache mount
-  (`--mount=type=cache,target=/root/.cache/uv`), so a rebuild does not download again.
-- The `pyproject.toml` and README are copied before the application code, so a code
-  change does not invalidate the dependency layer.
-- `UV_COMPILE_BYTECODE=1` precompiles bytecode; `PYTHONDONTWRITEBYTECODE=1` stops new
-  `.pyc` at run time.
-- `uv pip install --upgrade django-cfg[full]` is the last dependency step. It makes the
-  image float to the newest release, which also means a build today and a build next
-  week differ. Pin and install from a lock in a real project.
-- The code is also bind-mounted at run time in this repository's compose files, so the
-  baked copy matters only for the dependency layer.
+[Current guidance](/devops/docker-runtime#build-resources).
 
 ## The frontend images
 
-All three are multi-stage Node 22 (alpine) builds: `base`, `installer`, `runner`.
-
-1. `installer` enables pnpm 9.15.4 through corepack, copies the workspace manifests
-   (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`), the app
-   and **all of `packages/`**, and runs `pnpm install`.
-2. It creates a throwaway git repository (`git init` and a commit), because Turborepo
-   and Nextra read git and fail without one.
-3. `pnpm turbo build --filter=<package name>` builds the app and the workspace
-   packages it depends on.
-4. `runner` copies only the standalone output (`.next/standalone`, `.next/static`,
-   and `public` for docs) and runs `node server.js` as a non-root user. Storybook is
-   a static bundle served by `serve`.
-
-`turbo prune --docker` is **not** used: it drops build-tooling packages
-(`eslint-config`, `typescript-config`) that the root `turbo.json` still references, and
-Turborepo then fails. Copying all packages is slower to hash but always resolves.
+[Current guidance](/devops/docker-runtime#build-resources).
 
 ## Problems this setup has hit
 
-- **Full package name.** `turbo --filter` needs the scoped name from the package's
-  `package.json` (`@djangocfg/demo`), not the folder name.
-- **Missing `server.js`.** With a monorepo, Next.js standalone places `server.js`
-  under the app's path inside the standalone folder. The runner copies the whole
-  standalone tree to `./` and runs from `WORKDIR /app/apps/<app>`; copying only
-  `server.js` breaks module resolution.
-- **A huge image.** Copying the whole installer stage into the runner produced a
-  multi-gigabyte image. Copy only `.next/standalone`, `.next/static` and `public`.
-- **No global pnpm in alpine.** `pnpm add -g` fails with `ERR_PNPM_NO_GLOBAL_BIN_DIR`;
-  use corepack (as the Dockerfiles do) or `npx`.
-- **A slow context.** Without a `.dockerignore` that excludes `node_modules`, `.next`
-  and build output, the context is gigabytes and the transfer alone takes minutes. The
-  Python `.dockerignore` in `projects/docker/` excludes `__pycache__`, virtual
-  environments, build output and `poetry.lock`; keep the frontend context equally
-  clean.
-- **Static files.** Django serves static files through WhiteNoise in production, and
-  the entrypoint runs `collectstatic`; no separate static container is needed.
-- **Health check path.** The demo health check probes `/`, not `/healthz`: the shared
-  Next config sets `trailingSlash`, the Route Handler does not match `/healthz/`, and
-  Traefik refuses to route an unhealthy container.
+[Current guidance](/devops/docker-runtime#build-resources).
 
 ## Measure
 
-```bash
-docker compose -f docker-compose-prod.demo.yaml build 2>&1 | tail -20   # context transfer line
-docker images | grep django-cfg                                          # image sizes
-docker history django-cfg-demo:latest                                    # find the big layer
-```
+[Current guidance](/devops/docker-runtime#build-resources).
 
 ## Build one at a time
 
-A second frontend build while another runs saturates memory and shows up as a
-`pnpm turbo build` exit 1 that passes on a plain rerun. Build one image at a time.
-`NO_CACHE=1 make <name>-build` forces a clean build when a cached layer is suspect.
+[Current guidance](/devops/docker-runtime#build-resources).

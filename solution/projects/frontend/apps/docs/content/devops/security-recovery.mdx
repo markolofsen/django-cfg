@@ -1,0 +1,37 @@
+---
+title: "Security & Recovery"
+description: "Keep machine access, application data, Git permissions and recovery boundaries separate."
+---
+
+# Security & Recovery
+
+
+## Separate authorities
+
+| Authority | Scope |
+| --- | --- |
+| OS / Docker operator | Host and project infrastructure |
+| Git provider | Repository and protected branches |
+| CMDOP | Admitted machine and authorized client tools |
+| Django-CFG MCP | Explicit application tools and data grants |
+| Deployment operator | Approved environment and release |
+
+A grant at one layer does not authorize another. The cooperative workflow is not a hostile-code sandbox. Docker access is privileged; do not mount the host socket or home into an agent workspace.
+
+## Secrets and isolation
+
+Keep the private environment outside Git with restricted permissions. Use scoped revocable credentials. Never commit tokens, identities, live environment files or backup data. Keep development and production separate. Scan for secrets before publishing. Replace synthetic provider-shaped values with clearly noncredential examples rather than disabling protection.
+
+Use [Security](/deployment/security) and [Environment Setup](/deployment/environment-setup) for production settings.
+
+## Recovery model
+
+Stopping preserves named volumes. Git preserves committed source, not database rows, media, private state or machine credentials.
+
+Back up database and media consistently, retain hashes and record corresponding source and schema revision. Store backups under separate authorized access. Test restoration into an isolated database and confirm intended records and media references.
+
+The starter does not ship a general production backup/restore service. The owner controls backup tooling and actual recovery. Do not copy a machine identity into another installation. Native CMDOP update and rollback are separate from application recovery.
+
+## What to verify
+
+After a change, confirm revision, dependency identity, readiness and affected application flows. After recovery, check data, permissions and ownership. A development startup does not prove production restore, external SDK access or native cross-version upgrade.

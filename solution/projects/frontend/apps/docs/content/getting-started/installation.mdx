@@ -5,6 +5,8 @@ description: Install Django-CFG and create your first project
 
 # Installation
 
+Need the complete Django, frontend, docs, Storybook and optional CMDOP workspace? Use [DevOps Quick Start](/devops/quick-start). The package-only path below does not require CMDOP.
+
 ## Install the Package
 
 ```bash
@@ -45,8 +47,8 @@ Start with the base install. You can add optional groups later as your project g
 |------|---------|------|
 | Python | 3.12 or 3.13 | Required (`>=3.12,<3.14`) |
 | Django | 5.2 LTS, 6.0 or 6.1 (`>=5.2.14,<6.2`) | A base dependency; pin a line in your own project if you need one |
-| Node.js | 20+ | For frontend (pnpm will be needed) |
-| Docker | Latest | Optional — for local services (Redis, PostgreSQL) |
+| Node.js | 22 | For the current frontend workspace (pnpm 9.15.4) |
+| Docker | Engine, Compose v2, Buildx | Optional for Python; see [DevOps](/devops/quick-start) |
 
 ---
 
@@ -57,7 +59,7 @@ django-cfg create-project myproject
 cd myproject
 ```
 
-This generates a project structure with Pydantic v2 configuration, auto-discovered extensions, and sensible defaults.
+This extracts the current public repository's solution directory. It is not the complete Git-root workflow; for the full canonical runtime use [DevOps Quick Start](/devops/quick-start).
 
 ### Verify Installation
 

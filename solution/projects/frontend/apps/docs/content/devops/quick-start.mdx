@@ -1,0 +1,79 @@
+---
+title: "Quick Start"
+description: "Run the published canonical Django-CFG development environment on Linux."
+---
+
+# Quick Start
+
+
+The full workspace is available from the public Django-CFG Git repository. The Docker runtime and cooperative Git workflow are distributed together with the Django sample and frontend source.
+
+<Callout type="info">
+This is a development environment, not a production deployment. Use an owned Linux host. CMDOP enrollment and public access are optional and explicitly controlled by the owner.
+</Callout>
+
+## Prerequisites
+
+- Linux Docker Engine, Compose v2 and Buildx, Git, Python 3.10 or newer on the host, curl and OpenSSL with Ed25519 support.
+- An authorized non-root operator with Docker access. Docker access itself is highly privileged.
+- Outbound access to the official package, image and signed CMDOP release registries.
+- Sufficient CPU, memory and disk for the full stack. The docs development service alone has a 10 GiB limit and four CPUs; the demo has an 8 GiB limit. Allow headroom for the remaining services and builds.
+
+## 1. Clone the complete repository
+
+~~~bash
+git clone https://github.com/markolofsen/django-cfg.git my-project
+cd my-project
+git rev-parse HEAD
+~~~
+
+Record the exact commit. The commands below require the actual Git root. A ZIP download or the older create-project command extracts a different layout and is not the full-workspace installation path. Configure your own authorized repository before publishing your project changes.
+
+## 2. Prepare the base service images
+
+The runtime expects these images to be available locally. If missing, pull them from the official registry or use your approved image provisioning process.
+
+~~~bash
+docker pull postgres:17-alpine
+docker pull redis:7.4-alpine
+docker pull nginx:1.28-alpine
+~~~
+
+## 3. Initialize and bootstrap
+
+Choose an unused project name, four consecutive loopback ports and a unique machine name. Keep private state outside the checkout.
+
+~~~bash
+STATE="$HOME/.local/share/my-project-cfg"
+python3 solution/docker/scripts/canonical_launcher.py init   --root "$PWD" --state-dir "$STATE"   --project my-project-cfg --base-port 28080   --machine my-project-cfg-dev
+
+python3 solution/docker/scripts/canonical_launcher.py bootstrap   --env-file "$STATE/private.env"
+python3 solution/docker/scripts/canonical_launcher.py inspect   --env-file "$STATE/private.env"
+~~~
+
+Initialization does not start services. Bootstrap verifies the signed stable CMDOP artifact, builds the toolbox and installs locked dependencies. Inspect validates the effective configuration.
+
+## 4. Start and verify
+
+~~~bash
+python3 solution/docker/scripts/canonical_launcher.py start   --env-file "$STATE/private.env"
+python3 solution/docker/scripts/canonical_launcher.py status   --env-file "$STATE/private.env"
+curl --fail http://127.0.0.1:28083/healthz/ready
+~~~
+
+| Local URL | Service |
+| --- | --- |
+| http://127.0.0.1:28080 | Demo |
+| http://127.0.0.1:28081 | Documentation |
+| http://127.0.0.1:28082 | Storybook |
+| http://127.0.0.1:28083 | API |
+
+These are example ports. Cold frontend compilation takes time. Readiness and successful browser interaction are distinct checks. For access from a laptop, see [Remote Development](/devops/remote-development). No public tunnel is created.
+
+## 5. Stop
+
+~~~bash
+python3 solution/docker/scripts/canonical_launcher.py stop   --env-file "$STATE/private.env"
+~~~
+
+Stopping preserves project data and dependencies. Do not delete volumes to fix a routine startup error. To connect an authorized AI client, continue with [Operations](/devops/operations).

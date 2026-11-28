@@ -1,0 +1,71 @@
+---
+title: "Docker Runtime"
+description: "Understand the canonical Docker development runtime and its isolation boundaries."
+---
+
+# Docker Runtime
+
+
+The public runtime lives in `solution/docker/` and the application in `solution/projects/`. The launcher validates configuration before lifecycle operations. Start with [Quick Start](/devops/quick-start).
+
+## Repository layout
+
+~~~text
+AGENTS.md
+workflow/
+solution/
+  docker/
+    README.md
+    docker/canonical/compose.yaml
+    docker/toolbox/Dockerfile
+    scripts/canonical_launcher.py
+  projects/
+    django/
+      manage.py
+      pyproject.toml
+      uv.lock
+    frontend/
+      apps/demo/
+      apps/docs/
+      apps/storybook/
+      packages/
+      widgets/
+      pnpm-lock.yaml
+~~~
+
+The docs app is the single editable documentation source. There is no second maintained sample application.
+
+## Services
+
+| Service | Role |
+| --- | --- |
+| db | PostgreSQL 17, dedicated named data volume |
+| redis | Redis 7.4, ephemeral development cache |
+| deps / frontend-deps | Explicit locked dependency preparation |
+| migrate | One-shot Django migrations |
+| api | Uvicorn ASGI development server with reload |
+| demo | Next.js sample application |
+| docs | Nextra documentation |
+| storybook | Component development |
+| gateway | Nginx, four loopback ports |
+| workspace | Optional CMDOP machine, started explicitly |
+
+Dependency tools have registry egress. Application services use an internal network; the gateway provides local routes. Database and Redis ports are not published to the host. The optional workspace has separate network access and persistent home, without the host Docker socket.
+
+## Reproducibility and configuration
+
+Bootstrap uses committed `uv.lock` and `pnpm-lock.yaml` (pnpm 9.15.4). The initial published sample lock resolves Django-CFG 2.4.115, Django 6.1.3 and DRF 3.18.3. These are sample versions, not requirements for every application.
+
+The initial toolbox is built from a verified signed stable CMDOP artifact. Its immutable local image identity and receipt are checked before use. The receipt is not a registry signature or proof of bitwise-reproducible image builds.
+
+The launcher generates an external private environment file. Do not copy it to another checkout, commit it or mount it into an agent workspace. Application settings are covered in [Environment Setup](/deployment/environment-setup).
+
+## Persistent state
+
+Named volumes hold database data, dependencies, dependency cache, Django data, static files, media and the optional workspace home. Redis is intentionally ephemeral. Frontend development caches live in the owned checkout.
+
+Git source, dependencies, database data, private state and machine identity are distinct. A Git commit does not back up the others. See [Security & Recovery](/devops/security-recovery).
+
+## Build resources
+
+Example service limits: 10 GiB for docs, 8 GiB for demo, 4 GiB for Storybook. Allow additional resources for API, dependencies, database, operating system and image builds. Runtime limits do not bound all build processes. Build independent components in bounded batches.

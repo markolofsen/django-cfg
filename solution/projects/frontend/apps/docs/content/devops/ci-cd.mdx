@@ -1,0 +1,49 @@
+---
+title: "CI/CD"
+description: "Validate and deliver reviewed Django-CFG application revisions without confusing publication with deployment."
+---
+
+# CI/CD
+
+
+CI establishes whether a revision meets its checks. CD delivers an approved artifact to its intended environment. A successful commit or green smoke test is not proof of deployment.
+
+## CI for an application
+
+Start from actual lockfiles and test configuration. Validate Django and frontend contracts, migrations and generated clients together when they share an API.
+
+| Gate | Evidence |
+| --- | --- |
+| Source | Exact Git revision, reviewed diff and scoped changes |
+| Python | Locked dependencies, Django checks and affected tests |
+| Frontend | Frozen pnpm install, affected type checks and tests |
+| Docs | Internal links, MDX and production build |
+| Security | Dependency and secret checks; investigate findings |
+| Integration | Disposable database, migration and readiness tests |
+
+Use the commands defined by your project. For example, the sample docs application has these commands, run from its directory:
+
+~~~bash
+pnpm check
+pnpm check:links
+pnpm build
+~~~
+
+Run builds on a server or bounded CI runner. Avoid floating dependency updates during ordinary tests.
+
+## Framework release versus your application
+
+Django-CFG maintainers publish the Python distribution to PyPI and generate the public GitHub projection from reviewed source and package artifacts. Public [GitHub Actions](https://github.com/markolofsen/django-cfg/actions) checks installation/import on Python 3.12 and 3.13, secret scanning, Bandit and CodeQL. These are not a full application test suite or automatic production deployment. Bandit findings remain report-only.
+
+Consumers do not need the maintainers' private release scripts or publishing credentials. Use your own project CI.
+
+## CD for an application
+
+1. Choose the tested commit and build versioned images from locked dependencies.
+2. Verify artifact identity, configuration, migration compatibility and a recovery plan.
+3. Publish artifacts using scoped registry access. Promote the reviewed artifact, not a new build with floating inputs.
+4. Deploy through an authorized environment-specific pipeline or operator.
+5. Check readiness, logs and intended user flows; record the deployed revision.
+6. If a gate fails, stop promotion and reconcile actual state before retrying.
+
+These are recommended practices, not a shipped automated deployment service. See [Production](/devops/production) and [Operations](/devops/operations).

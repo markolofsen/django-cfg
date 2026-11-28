@@ -1,0 +1,33 @@
+---
+title: "Operations"
+description: "Inspect and maintain running Django-CFG services through authorized tools and CMDOP."
+---
+
+# Operations
+
+
+OP is the operations layer of our CI/CD/OP approach. It starts with the actual state of a running application: deployed revision, health, logs, resources and dependencies.
+
+## Inspect before changing
+
+Use the launcher status action with the external private environment. Inspect actual service status. Use [Health Checks](/features/modules/django-health), [Logging](/deployment/logging) and [Monitoring](/deployment/monitoring) for application observability.
+
+Liveness is `/healthz`; readiness is `/healthz/ready`. A ready API does not establish that every frontend route, external integration or background task works.
+
+## Connect CMDOP
+
+The toolbox includes the verified initial CMDOP binary. The optional workspace is not started by ordinary bootstrap or start. From the owned Git root, explicitly start its machine profile:
+
+~~~bash
+python3 solution/docker/scripts/canonical_launcher.py machine-start   --env-file "$HOME/.local/share/my-project-cfg/private.env"
+~~~
+
+Machine startup is not enrollment or an access grant. The owner must complete admission and authorize the intended client through the supported CMDOP workflow. See [CMDOP integration](/features/integrations/cmdop) for connection steps.
+
+Django-CFG application MCP exposes application tools; CMDOP MCP addresses a connected machine. Their permissions are distinct. SDK credentials belong to the caller's secret store.
+
+## Operate through a reviewed loop
+
+Inspect the target machine and revision, make a scoped change, run affected checks, review the result and record evidence. Publish or deploy only through the approved provider path. Observe the outcome.
+
+Production needs separate authorization. Native CMDOP updates are a separate lifecycle; follow CMDOP's supported guidance. This starter does not provide another updater or guarantee cross-version rollback.

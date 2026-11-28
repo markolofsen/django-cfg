@@ -63,10 +63,10 @@ export const settings = {
   /** All GitHub links, derived from one org root. */
   github: {
     org: GITHUB_ORG,
-    /** Main repo (docs live under /docs). */
+    /** Main repo (editable docs live in the canonical frontend workspace). */
     repo: GITHUB_ORG,
     /** Base used by Nextra's "Edit this page on GitHub". */
-    docsRepositoryBase: `${GITHUB_ORG}/tree/main/docs`,
+    docsRepositoryBase: `${GITHUB_ORG}/tree/main/solution/projects/frontend/apps/docs/content`,
   },
 
   /** Nextra <Layout> chrome. */
@@ -109,6 +109,7 @@ export const settings = {
           { label: 'Architecture', href: '/frontend/architecture' },
           { label: 'Data Layer', href: '/frontend/data-layer' },
           { label: 'Recipes', href: '/frontend/recipes/ui-components' },
+          { label: 'DevOps', href: '/devops' },
           { label: 'Deployment', href: '/deployment' },
         ],
       },

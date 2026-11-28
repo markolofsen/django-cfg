@@ -1,0 +1,41 @@
+---
+title: "Production"
+description: "Adapt Django-CFG to your own production infrastructure without exposing its development runtime."
+---
+
+# Production
+
+
+The published Docker runtime is for development. Do not expose reload servers, docs development, Storybook or the optional workspace directly to the internet. The maintainers' private production files are not part of the public starter.
+
+## Production architecture
+
+~~~mermaid
+graph TB
+  U["Users"] --> P["TLS reverse proxy"]
+  P --> F["Frontend production build"]
+  P --> A["Django ASGI service"]
+  A --> D["Private PostgreSQL"]
+  A --> R["Private Redis"]
+  W["Optional RQ workers"] --> D
+  W --> R
+  S["One rqcron per enabled project"] --> R
+~~~
+
+Choose managed services or private networks appropriate to your environment. Build immutable application images from the reviewed commit and lockfiles. Use a non-root runtime with necessary write access only. Do not share development state, credentials or database volumes with production.
+
+## Deployment sequence
+
+- Set production mode and validate configuration. Use environment-specific secrets from a protected secret store.
+- Prepare backups and verify restore procedures before data-changing migrations.
+- Run migrations as a controlled one-shot step, not concurrently in every worker.
+- Start the API and frontend, then required workers and one scheduler if RQ is enabled.
+- Route traffic after readiness succeeds. Verify key user flows and monitor errors.
+
+Use [Production Config](/guides/production-config), [Environment Setup](/deployment/environment-setup) and [RQ deployment](/features/modules/django-rq/deployment).
+
+## Maintenance and rollback
+
+Keep deployed image identity, migration state and configuration revision. Rolling back an image may not reverse a database migration. Design compatible migrations or a tested recovery path. Do not promise zero downtime without demonstrating it in your own environment.
+
+Read [Security](/deployment/security), [Logging](/deployment/logging), [Monitoring](/deployment/monitoring) and [Security & Recovery](/devops/security-recovery). Use CMDOP only with explicit authorization for the intended machine and actions.

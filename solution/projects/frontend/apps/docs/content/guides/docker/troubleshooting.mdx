@@ -1,127 +1,40 @@
 ---
-title: Docker Troubleshooting
-description: Failures the django-cfg Docker setup actually produces - unhealthy containers, a stale image, a missing redis host, migrations, logs, ports, frontend builds - with the commands that find the cause.
+title: "Docker Troubleshooting"
+description: "Navigation to the current DevOps documentation."
 ---
 
 # Docker Troubleshooting
 
-Start with three commands; most problems are visible in them.
-
-```bash
-cd projects/docker
-docker compose -f docker-compose-prod.django.yaml ps          # State and Health column
-docker logs --tail 100 djangocfg-api                          # stdout is the log
-docker inspect -f '{{.State.Health.Status}} {{.RestartCount}}' djangocfg-api
-```
-
-A `RestartCount` that keeps moving is a crash loop, not a slow start.
+This guide moved to the current DevOps section. The public canonical runtime replaces the former development Compose layout. **[Read Troubleshooting](/devops/troubleshooting).**
 
 ## The API never becomes healthy
 
-The health check is `curl -f http://localhost:8000/healthz/ready` with a 40 s start
-period. Check in order:
-
-1. **The entrypoint is stuck waiting.** The log ends at `Waiting for postgres at
-   <host>:5432...` or `Waiting for redis...`. The PostgreSQL host is parsed out of
-   `DATABASE__URL` (a URL with a different shape gives a wrong host), and the Redis
-   host is the literal name `redis` on port 6379. Test from inside the network:
-   `docker exec djangocfg-api nc -zv <host> 5432`.
-2. **Migrations fail.** The line after `Running migrations...` is the error. The
-   entrypoint runs `migrate` on every start, so a broken migration stops every
-   container that uses the image.
-3. **The code under `/app` is not the image's.** The compose files bind-mount
-   `../solution/django` over `/app`. A missing or empty mount hides the code the
-   image installed.
-4. **A stale image.** An image with an old baked-in django-cfg crash-loops after the
-   package changed. Restarting does not help; rebuild:
-   `docker compose -f docker-compose-prod.django.yaml build --no-cache api && docker compose -f docker-compose-prod.django.yaml up -d`.
-
-Traefik routes a container only after it is healthy, and a new one about 40 seconds
-later. A 404 from the proxy right after a start is not an outage; a 404 that stays
-means the container is unhealthy or the router label does not match the host.
+[Current guidance](/devops/troubleshooting#api-not-ready).
 
 ## Worker or scheduler does not start
 
-Both wait for `api` to be healthy and use the same image. If `api` is up and the worker
-is not: `docker logs djangocfg-rq-worker`, then check the queue names against the
-project (`python manage.py rqworker high default low knowledge` fails on a queue the
-project does not declare), and `docker exec djangocfg-rq-worker pgrep -af rqworker`.
-`python manage.py rq_cron_status` tells a dead `rqcron` from a starved queue.
-An unhealthy scheduler container means its alive file (`/tmp/rqcron.alive`) is
-older than 90 s or missing: `docker exec djangocfg-rq-scheduler ls -l /tmp/rqcron.alive`.
+[Current guidance](/features/modules/django-rq/deployment).
 
 ## Database
 
-```bash
-docker exec shared-db-postgres pg_isready -U postgres
-docker exec shared-db-postgres psql -U postgres -d djangocfg -c '\dx'    # vector installed?
-make createdb                                                            # idempotent
-```
-
-An error about `vector` means the extension is missing: `make createdb` creates it, and
-`services/postgres/init.sql` does it for the local stack on first start of an empty data
-folder (it will not run again on a folder that already has data).
-
-`too many clients`: the pool or the database is out of connections. After a deploy the
-old container may still hold some; restart once, and on a busy site watch for five
-minutes after a restart rather than one grep.
+[Current guidance](/devops/troubleshooting#api-not-ready).
 
 ## Configuration not applied
 
-- The variable must reach the container: `docker exec djangocfg-api env | grep DATABASE`.
-- An `env_file` is read when the container is created. `docker compose restart` keeps
-  the old environment; use `up -d` (which recreates a changed container).
-- `IS_PROD=true` must be set for the sample project to load its production overrides.
-- Nested names use a double underscore: `EMAIL__HOST`, not `EMAIL_HOST`.
+[Current guidance](/devops/docker-runtime#reproducibility-and-configuration).
 
 ## Logs
 
-- Nothing in `/app/logs`: correct. django-cfg writes to stdout and no file unless
-  `DJANGO_CFG_LOG_DIR` is set; use `docker logs`.
-- Logs vanished after a while: Docker's `json-file` driver rotates by size only. Give
-  the services a `logging:` block (see [Production](./production#logging)) and read
-  events soon after an incident.
-- One line "repeated N times in 60s": repeats of an identical WARNING or lower line are
-  counted; ERROR and above are never collapsed.
-- To see what repeats most: `docker logs <c> --since 1h 2>&1 | docker exec -i <c>
-  python manage.py log_noise --stdin`.
+[Current guidance](/deployment/logging).
 
 ## Ports and networks
 
-```bash
-docker ps --format '{{.Names}} {{.Ports}}'
-lsof -i :7301                          # local stack: Django on the host port
-docker network inspect dokploy-network | grep -c Name
-```
-
-The local stack uses host ports 7301, 7330 to 7333, 7351 and 7379. A published container
-port bypasses a host firewall such as UFW (Docker writes its own rules), so on a server
-publish as `127.0.0.1:PORT:PORT` and let the proxy face the internet.
+[Current guidance](/devops/troubleshooting#ports-or-ownership-conflicts).
 
 ## Frontend builds
 
-- `turbo` says a package was not found: pass the scoped name from `package.json`
-  (`@djangocfg/demo`), not a folder name.
-- `server.js` not found in the runner: the standalone tree is copied to `./` and the
-  container starts from `/app/apps/<app>`; see [Build Optimization](./build-optimization).
-- A build that exits 1 while another build runs, then passes on rerun: build one image
-  at a time.
-- A Google Fonts error in a Next build: a network failure while fetching fonts, not a
-  code problem; rerun.
-- A demo that answers 404 from the proxy while the app serves `/`: its health check
-  must probe `/` (see the comment in `docker-compose-prod.demo.yaml`).
-- Out of disk: `docker system df`, then `docker builder prune`. Both stacks build
-  large images; schedule a prune on a build host.
+[Current guidance](/devops/troubleshooting#frontend-slow-or-unhealthy).
 
 ## Useful commands
 
-```bash
-docker compose -f docker-compose-prod.django.yaml restart api
-docker exec -it djangocfg-api python manage.py shell
-docker exec -it djangocfg-api python manage.py createsuperuser
-docker exec djangocfg-api python -c 'import importlib.metadata as m; print(m.version("django-cfg"))'
-```
-
-Do not run `docker compose up --remove-orphans` against one group file: the groups
-share the project name `djangocfg` and the flag removes the containers of the others.
-Use the `make` targets, or `docker rm -f <name>` for one container.
+[Current guidance](/devops/quick-start).

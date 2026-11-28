@@ -1,150 +1,36 @@
 ---
-title: Production Docker Setup
-description: The production compose groups of the django-cfg repository - the API image, startup, health checks, resource limits, Traefik labels, logging and the deploy sequence.
+title: "Production Docker Setup"
+description: "Navigation to the current DevOps documentation."
 ---
 
 # Production Docker Setup
 
-The production files are `projects/docker/docker-compose-prod.*.yaml`. Read the
-[overview](./overview) first for the group layout. This page covers what is inside
-the Django group and how it is deployed.
+This guide moved to the current DevOps section. The public canonical runtime replaces the former development Compose layout. **[Read Production](/devops/production).**
 
 ## The Django group
 
-`docker-compose-prod.django.yaml` defines three services, all on the external network
-`dokploy-network`, all reading `.env.prod`, all with `restart: unless-stopped`:
-
-| Service | Container | Command | CPU / memory limit |
-|---|---|---|---|
-| `api` | `djangocfg-api` | image default: `uvicorn api.asgi:application --workers 4 --timeout-keep-alive 120` | 2.0 / 1 GB |
-| `rq-worker` | `djangocfg-rq-worker` | `python manage.py rqworker high default low knowledge` | 1.0 / 1 GB |
-| `rq-scheduler` | `djangocfg-rq-scheduler` | `python manage.py rqcron` (exactly one) | 0.5 / 512 MB |
-
-- Only `api` builds the image (`djangocfg-api:latest`, context = the repository root,
-  Dockerfile `projects/docker/services/django/Dockerfile`). The other two start from
-  that tag, so **build `api` first**; `make build-django` does.
-- `rq-worker` and `rq-scheduler` wait for `api` to be healthy
-  (`depends_on: condition: service_healthy`).
-- `api` is healthy when `curl -f http://localhost:8000/healthz/ready` succeeds (every
-  30 s, 40 s start period). The worker uses a `pgrep -f rqworker` check. The
-  scheduler's check is the age of the alive file `rqcron` touches every loop:
-  `["CMD", "python", "-c", "import os,sys,time; sys.exit(time.time() - os.stat(os.environ.get('RQCRON_ALIVE_FILE', '/tmp/rqcron.alive')).st_mtime > 90)"]`,
-  plain Python, no Django boot. `python manage.py rq_cron_status` (dead `rqcron`
-  or starved queue) boots Django and is run by hand, not as the healthcheck.
-- Environment set in the file: `DJANGO_SETTINGS_MODULE=api.settings`, `IS_PROD=true`,
-  `DEBUG=false`, and on `api` `DJANGO_CREATE_ADMIN=false` (create the admin by hand).
-- The Django code is bind-mounted from `../solution/django` over `/app`, and
-  `../files/media` (api, worker) and `../files/logs` are mounted as well. The
-  `files/` folder is git-ignored.
-- gRPC (`grpc.djangocfg.com`, `python manage.py rungrpc --noreload`, host port 50052
-  to container 50051, `h2c` Traefik service) is commented out in this file, with its
-  labels. Uncomment the block to bring it back.
+[Current guidance](/devops/production#production-architecture).
 
 ### Routing
 
-Traefik is not in this repository; the host's Traefik (the one on `dokploy-network`)
-reads container labels. `api` carries:
-
-```yaml
-labels:
-  - "traefik.enable=true"
-  - "traefik.docker.network=dokploy-network"
-  - "traefik.http.routers.djangocfg-api.rule=Host(`api.djangocfg.com`)"
-  - "traefik.http.routers.djangocfg-api.entrypoints=websecure"
-  - "traefik.http.routers.djangocfg-api.tls=true"
-  - "traefik.http.services.djangocfg-api.loadbalancer.server.port=8000"
-```
-
-A second router, `st.djangocfg.com`, points at port 8501 for the Streamlit admin.
-Traefik **does not route an unhealthy container**: a wrong health check does not just
-mislabel a container, it takes the host off the internet. The demo group's health
-check explains one case in its own comment (it probes `/` because `/healthz` answers
-404 behind the shared `trailingSlash` setting).
+[Current guidance](/devops/production#production-architecture).
 
 ## The API image
 
-`services/django/Dockerfile`:
-
-1. `python:3.12-slim`, with `curl`, `build-essential`, `libpq-dev`, `netcat-openbsd`,
-   `procps` and `grpc_health_probe`.
-2. `uv` copied from `ghcr.io/astral-sh/uv`.
-3. `uv pip install --system .` from the Django project's `pyproject.toml`, then
-   `uv pip install --system --upgrade django-cfg[full] uvicorn[standard]`.
-4. The Django project copied to `/app`, `entrypoint.sh` as `ENTRYPOINT`.
-
-The `--upgrade django-cfg[full]` line floats the framework to the newest release at
-build time, whatever the project's lock says. That is deliberate for the demo
-project and wrong for a product: pin your own version and install from your lock
-(`uv sync --frozen`), and rebuild when you bump it. An old image with an old baked-in
-django-cfg is a classic crash loop after a package change; the fix is a rebuild, not a
-restart:
-
-```bash
-docker compose -f docker-compose-prod.django.yaml build --no-cache api
-docker compose -f docker-compose-prod.django.yaml up -d
-```
+[Current guidance](/devops/ci-cd).
 
 ## Startup
 
-The entrypoint runs on every start of every service that uses the image (so also the
-worker): wait for PostgreSQL (host parsed from `DATABASE__URL`) and for the host
-`redis` on 6379, `migrate --noinput`, optionally create the dev superuser,
-`collectstatic --noinput --clear`, then `exec` the command. Two consequences:
-
-- the worker and scheduler also run migrations at start; with several containers
-  starting at once, migrations race. Start `api` first (the compose file enforces it)
-  and keep migrations out of a parallel restart;
-- a Django restart is minutes of 500s on a site that renders on the server, so choose
-  a quiet moment and watch the logs for five minutes afterwards.
+[Current guidance](/devops/production#deployment-sequence).
 
 ## Deploying
 
-From `projects/docker`:
-
-```bash
-make deploy-prod      # createdb -> build-django -> up-django -> wait healthy -> migrate
-make storybook-deploy # ui.djangocfg.com
-make appdemo-deploy   # demo.djangocfg.com
-make createdb         # only creates the djangocfg database + pgvector in shared-db-postgres
-```
-
-`createdb` and `migrate` use `docker exec` against `shared-db-postgres` and
-`djangocfg-api`, so the container names above matter. After the first deploy create an
-admin: `make superuser`.
-
-Frontends are separate images (Node 22, pnpm 9.15.4, a `turbo build` of the workspace,
-a standalone Next.js server for docs and demo, a static bundle served by `serve` for
-storybook). See [Build Optimization](./build-optimization).
+[Current guidance](/devops/production#deployment-sequence).
 
 ## Logging
 
-django-cfg writes JSON to stdout and no log file. Docker's default `json-file` driver
-has **no size limit**, so give every django service and worker a block:
-
-```yaml
-x-logging: &logging
-  driver: json-file
-  options:
-    max-size: "50m"
-    max-file: "10"
-
-services:
-  api:
-    logging: *logging
-```
-
-A size cap is not a time window: on a busy service `50m x 3` held about six hours.
-The compose files in this repository predate that rule: they have no `logging:` block
-and still mount `../files/logs`, which django-cfg no longer writes to. Do not copy
-those two lines; add the block above and drop the mount. Repeats are collapsed and
-secrets masked by the logger itself; see [Logging](/features/modules/django-logging).
+[Current guidance](/devops/operations#inspect-before-changing).
 
 ## Demo resetter
 
-`docker-compose-prod.extras.yaml` has a `resetter` service, started only with
-`PROFILES=--profile demo-reset make up-extras`. It mounts `/var/run/docker.sock`
-read-only and, every `DEMO_RESET_INTERVAL_MINUTES` (default 1440), resets the database
-of the container named in `DJANGO_CONTAINER_NAME` (`democfg-api`): `manage.py flush`,
-`migrate`, a demo superuser from the `DEMO_ADMIN_*` variables, then `populate_sample_data`. Never run it against a real project's
-database, and never give a container the Docker socket unless it is this kind of
-single-purpose tool.
+[Current guidance](/devops/security-recovery).

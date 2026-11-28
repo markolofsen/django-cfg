@@ -1,97 +1,32 @@
 ---
-title: Docker Configuration Strategy
-description: How the Docker setup of the django-cfg repository passes configuration - env files read by compose, the double-underscore variables, and which file wins.
+title: "Docker Configuration Strategy"
+description: "Navigation to the current DevOps documentation."
 ---
 
 # Docker Configuration Strategy
 
-django-cfg itself reads no YAML. Your project turns environment variables into a
-`DjangoConfig`; the Docker setup only has to put the right variables into the
-container. This page shows how the repository's own setup does it.
+This guide moved to the current DevOps section. The public canonical runtime replaces the former development Compose layout. **[Read Runtime Configuration](/devops/docker-runtime#reproducibility-and-configuration).**
 
 ## Where variables come from
 
-Three layers, highest priority first:
-
-1. **Container environment**: the `environment:` block of the compose file
-   (`DJANGO_SETTINGS_MODULE`, `IS_PROD`, `DEBUG`, `DJANGO_CREATE_ADMIN`) and anything
-   passed with `-e`.
-2. **The env file named by `env_file:`**: `.env.prod` for the production groups,
-   `.env.local` for the local files, both in `projects/docker/`. `.env.example` is the
-   template for both.
-3. **The project's own loader**: the sample Django project
-   (`projects/solution/django/api/environment/loader.py`) is a pydantic-settings
-   class. It reads `api/environment/.env`, then `.env.prod` when `IS_PROD=true`, then
-   `.env.secrets` if present; real environment variables beat all of them. Defaults
-   in the class are last.
-
-So `IS_PROD=true` in the container is what makes the sample project load its
-production overrides.
+[Current guidance](/devops/docker-runtime#reproducibility-and-configuration).
 
 ## The `__` notation
 
-A double underscore addresses a nested field of the project's settings class:
-
-```bash
-DATABASE__URL=postgresql://user:pass@shared-db-postgres:5432/djangocfg
-EMAIL__HOST=smtp.example.com
-EMAIL__PORT=465
-TELEGRAM__BOT_TOKEN=...
-TELEGRAM__CHAT_ID=...
-API_KEYS__OPENROUTER=...
-APP__DOMAIN=djangocfg.com
-```
-
-pydantic-settings converts the value to the field's type, so `true`/`false` become
-booleans and digits integers. Changing a variable needs a container restart, not an
-image rebuild, as long as the file is read at run time (`env_file:`) and not copied
-into the image.
+[Current guidance](/configuration/environment).
 
 ## The variables in `.env.example`
 
-| Group | Names |
-|---|---|
-| PostgreSQL container (local file) | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` |
-| Database | `DATABASE__URL` (local: host `postgres`; production: the shared database host) |
-| Django | `SECRET_KEY`, `DEBUG`, plus legacy `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_CREATE_ADMIN`, `JWT_SECRET_KEY` |
-| Mode | `IS_PROD`, `IS_DEV`, `IS_TEST` |
-| App | `APP__NAME`, `APP__DOMAIN`, `APP__API_URL`, `APP__SITE_URL` |
-| Email | `EMAIL__BACKEND`, `__HOST`, `__PORT`, `__USERNAME`, `__PASSWORD`, `__USE_TLS`, `__USE_SSL`, `__DEFAULT_FROM` |
-| Telegram | `TELEGRAM__BOT_TOKEN`, `TELEGRAM__CHAT_ID` |
-| Cache | `REDIS_URL` |
-| AI keys | `API_KEYS__OPENROUTER`, `API_KEYS__OPENAI`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` |
-
-`JWT_SECRET_KEY` signs nothing in current releases: JWT signing uses `SECRET_KEY`.
-Generate a long random `SECRET_KEY` per environment.
+[Current guidance](/devops/docker-runtime#reproducibility-and-configuration).
 
 ## Secrets
 
-The env files in `projects/docker/` are tracked by git in this repository, so they hold
-placeholders and non-secret defaults only. For a real deployment:
-
-- keep real values out of git: an untracked env file, the platform's secret store, or
-  a `.env.secrets` next to the settings loader;
-- never edit a tracked env file on the server; change it where the repository lives,
-  commit, and deploy, or the server checkout stops fast-forwarding;
-- do not bake secrets into the image: `COPY` of a file with keys ends up in a layer.
-  `.dockerignore` already excludes `poetry.lock`, virtual environments and
-  build output from the context.
+[Current guidance](/devops/security-recovery#secrets-and-isolation).
 
 ## What the compose files add
 
-- **Mounts:** `../solution/django:/app` (code), `../files/media:/app/media`. Production
-  data lives in the shared PostgreSQL, not in a container volume.
-- **Network:** `dokploy-network` (external) in production; `djangocfg-network` and an
-  internal `djangocfg_django_network` locally.
-- **The `redis` host name:** the entrypoint waits for a host called `redis` on 6379.
-  If your Redis has another name, set `REDIS_URL` and change the wait in your own
-  entrypoint, or the container never starts.
+[Current guidance](/devops/docker-runtime#services).
 
 ## Logging variables
 
-`DJANGO_CFG_LOG_FORMAT`, `DJANGO_CFG_LOG_LEVEL`, `DJANGO_CFG_LOG_DIR`,
-`DJANGO_CFG_LOG_ROTATE_MB`, `DJANGO_CFG_LOG_BACKUPS`, `DJANGO_CFG_LOG_RETAIN_DAYS` tune
-the logger; with none set it writes JSON to stdout and no file. Behind a proxy set
-`DJANGO_CFG_MONITOR_CLIENT_IP_HEADER` (`CF-Connecting-IP` behind Cloudflare,
-`X-Forwarded-For` behind Traefik alone) or every browser error counts as coming from
-the proxy. Details: [Logging](/features/modules/django-logging).
+[Current guidance](/deployment/logging).

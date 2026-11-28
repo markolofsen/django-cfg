@@ -1,0 +1,24 @@
+---
+title: "Release v2.4.115"
+description: "Cache and integrity fixes plus the published canonical Docker development workspace."
+---
+
+# Release v2.4.115
+
+
+**Released:** November 28, 2026.
+
+## Package changes
+
+- Geocoding, translation and sitemap cursor caches use SHA-256. Older keys are not reused; existing cache files are not deleted.
+- Mermaid input is escaped; errors render as text and security mode is strict.
+- Generator manifests and IndexNow records verify full identities before trusting existing indexed hashes.
+- Existing rate-limit namespaces, error grouping and deterministic nonsecurity identifiers remain compatible.
+
+## Development distribution
+
+Public GitHub includes the canonical Django and frontend workspace, guarded Docker launcher and portable Git workflow. The Python package remains independently installable. Start with [DevOps Quick Start](/devops/quick-start) and [CI/CD/OP](/devops).
+
+The optional CMDOP workspace requires owner admission. Production deployment, external provider grants and native cross-version update/rollback are not implied by development distribution.
+
+[Previous release](/updates/releases/v2-4-114).

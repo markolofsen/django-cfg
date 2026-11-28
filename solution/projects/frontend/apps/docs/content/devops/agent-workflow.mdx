@@ -1,0 +1,50 @@
+---
+title: "AI Agent Workflow"
+description: "Coordinate independent AI-agent development with scoped branches, review and checkpoints."
+---
+
+# AI Agent Workflow
+
+
+The public repository ships a cooperative engineering workflow at its actual Git root. It works with human contributors and AI agents, with or without CMDOP.
+
+- `AGENTS.md`: instructions and boundaries.
+- `workflow/CURRENT.md`: next approved integration step.
+- `workflow/coord.py`: integration claims, checkpoints and job receipts.
+- `workflow/lanes.py`: independent scoped work lanes.
+- `runtime/`: ignored local coordination state.
+
+These scripts do not launch agents, authorize tools, run tests automatically, merge changes or deploy applications.
+
+## Roles
+
+The integration lead owns shared services, dependency changes, migrations, canonical main and final acceptance. Each writing contributor gets an independent checkout and non-overlapping path scope. Reviewers inspect actual diffs and evidence without acquiring write access.
+
+## Coordinate a change
+
+From the integration Git root:
+
+~~~bash
+python3 workflow/coord.py status
+python3 workflow/lanes.py status
+~~~
+
+Read AGENTS.md and workflow/CURRENT.md. Use the actual observed HEAD and path scope. For example:
+
+~~~bash
+python3 workflow/lanes.py open   --id docs-feature --actor docs-worker   --expected-head "$(git rev-parse HEAD)"   --path solution/projects/frontend/apps/docs/content/   --goal "Update the agreed documentation"
+~~~
+
+Work in the returned checkout, test and commit only assigned files. Submit the actual commit from the integration root:
+
+~~~bash
+python3 workflow/lanes.py submit   --id docs-feature --actor docs-worker   --commit FULL_LANE_SHA   --evidence "Scoped checks completed; see retained results"
+~~~
+
+The lead reviews the ready lane, reserves its paths in a fresh integration claim, imports the exact commit, merges through the approved Git process and performs combined acceptance. Follow the shipped [parallel development contract](https://github.com/markolofsen/django-cfg/blob/main/workflow/PARALLEL.md) for the exact import and finish commands.
+
+## Checkpoints and authority
+
+Record the actual base, scope, committed revision, test results, retained job IDs and blockers. An interrupted task or old timestamp does not transfer ownership. Serialize overlapping changes or split at a real contract.
+
+Local coordination is not a security sandbox. Git-provider permissions, OS permissions and scoped machine grants remain necessary. Do not copy credentials into a lane or use deployment credentials for general development.

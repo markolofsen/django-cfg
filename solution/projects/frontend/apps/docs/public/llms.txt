@@ -57,6 +57,16 @@
 - [Monitoring & Logging](https://djangocfg.com/deployment/monitoring): Deploy Django-CFG with monitoring. Complete deployment guide for monitoring & logging with Docker, environment configuration, and production best practices.
 - [Deployment Overview](https://djangocfg.com/deployment/overview): Deploy Django-CFG to production. Overview of deployment strategies including Docker, cloud platforms, and traditional VPS deployment.
 - [Security Hardening](https://djangocfg.com/deployment/security): Deploy Django-CFG with security. Complete deployment guide for security hardening with Docker, environment configuration, and production best practices.
+- [DevOps](https://djangocfg.com/devops): Develop, validate, deliver and operate Django-CFG with one consistent engineering workflow.
+- [AI Agent Workflow](https://djangocfg.com/devops/agent-workflow): Coordinate independent AI-agent development with scoped branches, review and checkpoints.
+- [CI/CD](https://djangocfg.com/devops/ci-cd): Validate and deliver reviewed Django-CFG application revisions without confusing publication with deployment.
+- [Docker Runtime](https://djangocfg.com/devops/docker-runtime): Understand the canonical Docker development runtime and its isolation boundaries.
+- [Operations](https://djangocfg.com/devops/operations): Inspect and maintain running Django-CFG services through authorized tools and CMDOP.
+- [Production](https://djangocfg.com/devops/production): Adapt Django-CFG to your own production infrastructure without exposing its development runtime.
+- [Quick Start](https://djangocfg.com/devops/quick-start): Run the published canonical Django-CFG development environment on Linux.
+- [Remote Development](https://djangocfg.com/devops/remote-development): Run builds and services on a development server while keeping the laptop as a client.
+- [Security & Recovery](https://djangocfg.com/devops/security-recovery): Keep machine access, application data, Git permissions and recovery boundaries separate.
+- [Troubleshooting](https://djangocfg.com/devops/troubleshooting): Diagnose the canonical environment without deleting unrelated data.
 - [Extensions Overview](https://djangocfg.com/extensions): Modular, reusable apps for Django-CFG - Build once, use everywhere
 - [API Reference](https://djangocfg.com/extensions/api-reference): Configuration reference for Django-CFG extension settings
 - [Using Extensions](https://djangocfg.com/extensions/backend-extensions): How to install, configure, and use Django-CFG extensions in your project
@@ -94,6 +104,7 @@
 - [Integrations](https://djangocfg.com/features/integrations)
 - [Authentication](https://djangocfg.com/features/integrations/auth): JWT, OTP, 2FA, and OAuth authentication for Django-CFG.
 - [Auth System Architecture](https://djangocfg.com/features/integrations/auth-system): End-to-end authentication system internals — OTP, OAuth, 2FA, brute-force protection.
+- [CMDOP integration](https://djangocfg.com/features/integrations/cmdop): Connect AI coding assistants to a Django-CFG development environment through CMDOP MCP and SDK, with separate machine and application permissions.
 - [OAuth Authentication](https://djangocfg.com/features/integrations/oauth): Google and GitHub sign-in from a client id and a secret: setup, configuration, security and the oauth_check command.
 - [OAuth Configuration Reference](https://djangocfg.com/features/integrations/oauth/configuration): Environment variables, config classes, system checks, the oauth_check command and the redirect URIs for Google and GitHub sign-in.
 - [OAuth Frontend Integration](https://djangocfg.com/features/integrations/oauth/frontend): Where the login screen gets its provider buttons and what the callback page does.
@@ -268,13 +279,13 @@
 - [Django Testing](https://djangocfg.com/guides/django-runtime/django-testing): Django-specific testing patterns — pytest.mark.django_db for async tests, AsyncClient, WebsocketCommunicator, and sync_to_async bridge testing.
 - [Quality Gates](https://djangocfg.com/guides/django-runtime/quality-gates): Quality gates for Django projects — Foundation, Production, and Enterprise levels with zero-tolerance violations, automated checks, and Prometheus monitoring.
 - [Route Debug Middleware](https://djangocfg.com/guides/django-runtime/route-debug): Diagnose 404 errors and misconfigured URL routers in Django with RouteDebugMiddleware. Logs request path, HTTP method, referer, and candidate URL patterns.
-- [Docker](https://djangocfg.com/guides/docker)
-- [Docker Build Optimization](https://djangocfg.com/guides/docker/build-optimization): How the django-cfg images are built - the Python API image and the three Node frontends (docs, storybook, demo) - and the build problems this setup has hit.
-- [Docker Configuration Strategy](https://djangocfg.com/guides/docker/configuration): How the Docker setup of the django-cfg repository passes configuration - env files read by compose, the double-underscore variables, and which file wins.
-- [Docker Development Setup](https://djangocfg.com/guides/docker/development): Run django-cfg locally in Docker with docker-compose-local.yaml, or run only Redis and RQ in containers while Django runs on the host.
-- [Docker Setup Overview](https://djangocfg.com/guides/docker/overview): How the django-cfg repository itself is containerized - the compose groups in projects/docker, what each one runs, the ports, the images and the make targets.
-- [Production Docker Setup](https://djangocfg.com/guides/docker/production): The production compose groups of the django-cfg repository - the API image, startup, health checks, resource limits, Traefik labels, logging and the deploy sequence.
-- [Docker Troubleshooting](https://djangocfg.com/guides/docker/troubleshooting): Failures the django-cfg Docker setup actually produces - unhealthy containers, a stale image, a missing redis host, migrations, logs, ports, frontend builds - with the commands that find the cause.
+- [Docker Guide](https://djangocfg.com/guides/docker): Navigation to the current DevOps documentation.
+- [Docker Build Optimization](https://djangocfg.com/guides/docker/build-optimization): Navigation to the current DevOps documentation.
+- [Docker Configuration Strategy](https://djangocfg.com/guides/docker/configuration): Navigation to the current DevOps documentation.
+- [Docker Development Setup](https://djangocfg.com/guides/docker/development): Navigation to the current DevOps documentation.
+- [Docker Setup Overview](https://djangocfg.com/guides/docker/overview): Navigation to the current DevOps documentation.
+- [Production Docker Setup](https://djangocfg.com/guides/docker/production): Navigation to the current DevOps documentation.
+- [Docker Troubleshooting](https://djangocfg.com/guides/docker/troubleshooting): Navigation to the current DevOps documentation.
 - [Django-CFG Examples](https://djangocfg.com/guides/examples): Django-CFG examples guide. Practical tutorial for django-cfg examples with real-world examples, troubleshooting tips, and production patterns.
 - [Django-CFG FAQ - Frequently Asked Questions](https://djangocfg.com/guides/faq): Comprehensive FAQ about Django-CFG type-safe configuration. Installation, features, comparison with alternatives, migration guide, troubleshooting, and best practices.
 - [Migration Guide](https://djangocfg.com/guides/migration-guide): Django-CFG migration guide guide. Practical tutorial for migration guide with real-world examples, troubleshooting tips, and production patterns.
@@ -298,7 +309,7 @@
 - [API Documentation](https://djangocfg.com/guides/sample-project/api-documentation): Auto-generated REST API with OpenAPI schema and Swagger UI in Django-CFG
 - [Authentication System](https://djangocfg.com/guides/sample-project/authentication): OTP-based authentication and user management in Django-CFG sample project
 - [Configuration Setup](https://djangocfg.com/guides/sample-project/configuration): Complete guide to type-safe configuration management in the Django-CFG sample project
-- [Deployment Guide](https://djangocfg.com/guides/sample-project/deployment): Production deployment with Docker and best practices for Django-CFG sample project
+- [Deployment Guide](https://djangocfg.com/guides/sample-project/deployment): Current development and production paths for the sample workspace.
 - [Multi-Database Setup](https://djangocfg.com/guides/sample-project/multi-database): Comprehensive guide to multi-database architecture and automatic routing in Django-CFG
 - [Sample Project Overview](https://djangocfg.com/guides/sample-project/overview): Introduction to the comprehensive Django-CFG sample project demonstrating all features and best practices
 - [Project Structure](https://djangocfg.com/guides/sample-project/project-structure): Deep dive into the Django-CFG sample project folder structure and organization
@@ -329,6 +340,8 @@
 - [Release v2.3.372](https://djangocfg.com/updates/releases/v2-3-372): Every subdomain of a declared site is accepted in ALLOWED_HOSTS, CORS and CSRF; one sign-in across subdomains through shared session cookies.
 - [Release v2.3.388](https://djangocfg.com/updates/releases/v2-3-388): App icons from one definition: @djangocfg/nextjs/app-icon draws the tab, apple-touch and PWA icons from a lucide glyph and a hue; dcfg icons generates and checks them.
 - [Release v2.4.0 and v2.4.1](https://djangocfg.com/updates/releases/v2-4-0): Stock Django admin with cfg-theme (Unfold removed, renames without aliases), POST admin actions, Django 6.1 with MAILERS, rqcron replaces rq-scheduler, get_logger removed, browser errors stored by default.
+- [Release v2.4.114](https://djangocfg.com/updates/releases/v2-4-114): Explicit MCP scalar read projections and standalone TypeScript CLI generation.
+- [Release v2.4.115](https://djangocfg.com/updates/releases/v2-4-115): Cache and integrity fixes plus the published canonical Docker development workspace.
 - [Security Advisories](https://djangocfg.com/updates/security): Security updates and vulnerability disclosures for Django-CFG
 - [CVE-2025-55184 & CVE-2025-55183: Next.js DoS and Source Code Exposure](https://djangocfg.com/updates/security/nextjs-cve-2025-55184-55183): High-severity Denial of Service and medium-severity Source Code Exposure vulnerabilities in React Server Components. Immediate update required.
 - [CVE-2025-66478: Critical Next.js RCE Vulnerability](https://djangocfg.com/updates/security/nextjs-cve-2025-66478): Critical vulnerability in React Server Components allowing remote code execution. Immediate update required.
