@@ -239,7 +239,7 @@ const { start, complete, isLoading, loadingProvider, error, errorCode } = useOAu
 
 #### Provider icons
 
-Everything lives in `packages/layouts/src/layouts/AuthLayout/components/oauth/`; only `OAuthCallback` is a package export. A provider is one line in `providers/registry.ts` (`OAUTH_PROVIDERS`: brand name and icon); the buttons, the "Continue with {provider}" label, the notices and the error copy all read that table. `GoogleIcon` is the four-colour "G" and keeps its own colours in light and dark; `GithubIcon` uses `currentColor`. Both are `aria-hidden`; the button text carries the name. A provider the backend adds is a type error in the registry until it has a name and an icon.
+Everything lives in `packages/layouts/src/layouts/AuthLayout/components/oauth/`; only `OAuthCallback` is a package export. A provider is one line in `providers/registry.ts` (`OAUTH_PROVIDERS`: brand name and icon); the buttons, the `Continue with {provider}` label, the notices and the error copy all read that table. `GoogleIcon` is the four-colour "G" and keeps its own colours in light and dark; `GithubIcon` uses `currentColor`. Both are `aria-hidden`; the button text carries the name. A provider the backend adds is a type error in the registry until it has a name and an icon.
 
 ### Testing sign-in in Storybook
 

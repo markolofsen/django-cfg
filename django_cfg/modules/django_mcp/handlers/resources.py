@@ -4,6 +4,8 @@ from typing import Any, Dict
 
 from django.apps import apps
 from django_cfg.modules.django_mcp.services.context import MCPContext
+from django_cfg.modules.django_mcp.policy.fields import schema_fields
+from django_cfg.modules.django_mcp.policy.config import ReadPolicyError
 from django_cfg.modules.django_mcp.protocols.types import MCPResourceDefinition
 import json
 
@@ -68,6 +70,9 @@ class ResourcesHandler:
         if resource_type != "schema":
             return {"contents": [], "isError": True}
 
+        if getattr(getattr(context, "profile", None), "restricted_reads", False) and not context.config.introspection.enabled:
+            return {"contents": [], "isError": True}
+
         # Check if model is exposed
         if not context.config.is_model_exposed(app_label, model_name):
             return {"contents": [], "isError": True}
@@ -80,7 +85,8 @@ class ResourcesHandler:
 
         # Build schema
         model_config = context.config.get_model_config(app_label, model_name)
-        hidden_fields = model_config.hidden_fields if model_config else []
+        if model_config is None:
+            return {"contents": [], "isError": True}
 
         schema = {
             "app": app_label,
@@ -89,11 +95,13 @@ class ResourcesHandler:
             "fields": [],
         }
 
-        for field in model._meta.fields:
-            if field.name in hidden_fields:
-                continue
+        try:
+            columns = schema_fields(model, model_config)
+        except ReadPolicyError:
+            return {"contents": [], "isError": True}
+        for name, field in columns.items():
             schema["fields"].append({
-                "name": field.name,
+                "name": name,
                 "type": field.get_internal_type(),
                 "nullable": field.null,
             })

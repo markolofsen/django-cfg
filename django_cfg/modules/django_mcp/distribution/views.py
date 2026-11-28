@@ -108,7 +108,7 @@ class MCPSkillView(_DistributionView):
         config = skill.effective_skill(mcp, profile)
 
         tools = instructions = None
-        credentialed = authenticate(presented_credential(request), profile or mcp) is not None
+        credentialed = authenticate(presented_credential(request), profile or mcp, config=mcp) is not None
         if credentialed:
             tools = tool_registry.get_all_tools(None, profile=profile)
             instructions = resolve_instructions(mcp, profile)

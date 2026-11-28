@@ -95,7 +95,8 @@ class ToolsHandler:
             raise ValueError("Tool name is required")
 
         # Find and execute tool
-        tool = tool_registry.get_tool(tool_name)
+        profile = getattr(context, "profile", None)
+        tool = tool_registry.get_tool(tool_name, profile=profile)
         if not tool:
             raise MCPPermissionDenied(f"Tool '{tool_name}' not found or not permitted")
 

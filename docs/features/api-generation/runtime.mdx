@@ -162,7 +162,32 @@ export async function loadProfile() {
 A response that misses its schema dispatches `zod-validation-error` on `window` and is returned as the server sent
 it. `BaseApp`'s error tracking and `@djangocfg/devtools` listen for it; your own code can use
 `onValidationError(callback)`. The detail carries `operation` (`METHOD path`), `path`, `method`, the `ZodError`, the
-raw `response` and a `timestamp`.
+raw `response` and a `timestamp`. A schema mismatch also writes a concise diagnostic to the browser console
+in production: the operation, support reference, field paths, issue codes and schema constraints. The console
+does not print the raw response, request credentials or arbitrary refinement messages. The production toast
+uses the same reference; devtools receives the structured event without a duplicate console report.
+For the detailed on-screen error UI, the existing `?debug=1` switch still works.
+
+### Request failures in the browser
+
+The shared runtime also prints the final failure of an operation to the console,
+in development and production. HTTP 4xx refusals use a warning (status and DRF
+field names); the calling form remains responsible for its own messages.
+Unexpected failures, including HTTP 5xx, non-JSON responses, an unconfigured
+API origin, connection or response-stream errors, and explicit timeouts,
+also dispatch the existing `network-error` event. BaseApp presents a safe
+notification and devtools captures the structured event. The console line and
+event use the same support reference. Monitoring retains its existing
+fingerprint deduplication, so repeated occurrences may be grouped.
+
+A failed cross-origin fetch can indicate CORS, DNS, TLS or a connection
+problem. The browser cannot identify the cause from that rejection alone.
+Normal caller cancellation and a 401 successfully recovered by token refresh
+do not emit errors. A failed refresh does not change the existing
+session-expiry or exception semantics. Console diagnostics exclude raw request
+and response values, headers, URL credentials, query strings and fragments.
+No application setting or client regeneration is required.
+
 
 ## Pagination helpers
 

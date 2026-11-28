@@ -323,3 +323,12 @@ return redactor.redact_string(result, mode)
 Redaction is opt-in per tool — `ToolsHandler` calls `execute()` directly, not `execute_with_redaction()`. This is intentional: not all tools produce output that needs redaction, and the check adds overhead.
 
 Built-in patterns cover: email addresses, phone numbers, credit card numbers, SSNs. Add custom patterns via `redaction.custom_patterns` in the [configuration](./configuration).
+
+
+## Positive scalar model reads
+
+A model with `read_policy` uses the same bounded projected reader in the base and extended `query_model` implementations. It selects only approved columns and applies fixed row scope before pagination. `get_object` uses the same policy and approved primary-key mapping. Unsupported enhanced/analytics readers refuse projected models rather than silently taking a broader path. A restricted profile also checks the reviewed implementation at execution, so a custom tool with the same name or a `read_only` hint gains no access.
+
+The wire arguments remain app label, model name, filters, ordering, limit and offset. Projection comes from server configuration; callers cannot add arbitrary `fields`, relations, aggregation or raw SQL. Successful query output remains `count`, `model` and `results`; count is the returned page length. Policy refusals use the MCP tool error flag with a bounded explanation and no partial data.
+
+See [Restricted model-read profiles](./configuration#restricted-model-read-profiles) for the configuration, limits, dedicated credentials and deployment prerequisites.

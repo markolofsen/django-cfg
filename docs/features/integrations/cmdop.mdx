@@ -1,0 +1,58 @@
+---
+title: CMDOP integration
+description: Connect AI coding assistants to a Django-CFG development environment through CMDOP MCP and SDK, with separate machine and application permissions.
+---
+
+# CMDOP integration
+
+[CMDOP](https://cmdop.ai/) connects AI clients to the machines on which your application runs. Django-CFG provides the application framework; CMDOP provides a way for an authorized client to inspect files, edit source and run development tools on a connected machine.
+
+Use it when your Django project lives on a remote development server and you want to work on it from ChatGPT, Claude or another supported MCP client. It does not replace Django's settings, API, authentication, or deployment workflow.
+
+## Two MCP surfaces
+
+| Surface | What it connects to |
+|---|---|
+| [Django-CFG MCP](/features/modules/django-mcp) | Application-level tools you expose: Django data and business operations |
+| CMDOP MCP | A registered development machine and its permitted file, command and other machine tools |
+
+The two can coexist. Connecting a machine does not grant access to every application tool, and enabling `django_mcp` does not give a client shell access to the machine.
+
+## Connect a development machine
+
+1. Prepare your Django-CFG project and start its development environment on your own server. Keep the source in your own Git repository.
+2. Install and enroll CMDOP using the [owner quickstart](https://docs.cmdop.ai/start/quickstart-owner). For a container-based environment, see the [CMDOP Docker reference](https://docs.cmdop.ai/reference/sdk/docker).
+3. Use the [agent quickstart](https://docs.cmdop.ai/start/quickstart-agent) to connect your AI client. Start with read access; grant write or command execution only when the task requires it.
+4. Confirm that the intended machine is online and select its exact identity. Ask your agent to read the repository instructions and inspect Git status before making changes.
+
+The owner controls the initial server setup and repository authorization. Admission to CMDOP is separate from access to the repository and from production deployment rights.
+
+## Work on a project
+
+A typical session is to inspect the current branch, implement a scoped change, run the relevant Django and frontend checks, review the diff and make a commit. Push changes only through the repository's approved transport and branch policy. A successful commit does not deploy production.
+
+For containerized development, keep the workspace's machine identity in persistent state, separate from the source and dependency volumes. Do not give a development agent the host Docker socket, production data or broad account credentials. A machine grant does not replace operating-system permissions or Git provider restrictions.
+
+## Call from Python or TypeScript
+
+For programmatic integrations, CMDOP publishes its own SDKs. Install them in the caller's environment, not as extra Django application dependencies.
+
+```bash
+pip install cmdop
+# Or, in a TypeScript project:
+npm install @cmdop/sdk
+```
+
+Follow the [SDK quickstart](https://docs.cmdop.ai/reference/sdk/quickstart) for the current connection API and [SDK authentication](https://docs.cmdop.ai/reference/sdk/authentication) for scoped credentials. Keep tokens in the caller's secret store, not in the project or browser bundle.
+
+## Docker starter and updates
+
+The dedicated Django-CFG starter with an enrolled CMDOP workspace is a planned distribution option. Its public download and setup commands will be documented when the starter is released. The machine integration above can be used independently today; use the published CMDOP Docker reference for its supported examples.
+
+Django-CFG application dependencies and CMDOP client updates have separate lifecycles. Follow the framework's dependency resolution and your project's lock files. Follow CMDOP's native update guidance for its client and the supported container lifecycle; do not introduce a second updater or rebuild your application on every client release.
+
+## Related guides
+
+- [Docker development](/guides/docker/development)
+- [Application MCP integration](/guides/ai-mcp)
+- [CMDOP SDK reference](https://docs.cmdop.ai/reference/sdk)

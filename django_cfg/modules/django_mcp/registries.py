@@ -20,7 +20,7 @@ Body = Union[str, Path, Callable[..., str]]
 
 def visible(entry: Any, profile: Any) -> bool:
     """Whether ``profile`` may see ``entry``: an all-tools profile, or a public entry."""
-    return profile is None or profile.serves_all_tools or bool(entry.public)
+    return not getattr(profile, "restricted_reads", False) and (profile is None or profile.serves_all_tools or bool(entry.public))
 
 
 def _text(body: Body, *args: Any) -> str:
@@ -95,9 +95,13 @@ class _Registry:
         return every
 
     def visible(self, profile: Any = None) -> List[Any]:
+        if getattr(profile, "restricted_reads", False):
+            return []
         return [e for e in self._all().values() if visible(e, profile)]
 
     def get(self, key: str, profile: Any = None) -> Optional[Any]:
+        if getattr(profile, "restricted_reads", False):
+            return None
         entry = self._all().get(key)
         return entry if entry is not None and visible(entry, profile) else None
 

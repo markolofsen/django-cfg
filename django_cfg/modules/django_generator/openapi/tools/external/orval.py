@@ -1,4 +1,4 @@
-"""Pinned Orval CLI wrapper for TypeScript React Query clients.
+"""Pinned Orval wrapper for TypeScript web and standalone CLI clients.
 
 Orval is intentionally installed by the frontend workspace, not by the Python
 package. The Django generator owns the OpenAPI slice and invokes the pinned
@@ -59,6 +59,7 @@ from ..realtime.query_topics import (
     query_option_overrides,
     render_realtime_query,
 )
+from .cli_mutator import render_cli_mutator
 
 MIN_NODE = (22, 18)
 ORVAL_VERSION = "8.48.0"
@@ -83,7 +84,7 @@ def node_version() -> tuple[int, int] | None:
     if node is None:
         return None
     try:
-        output = subprocess.run(
+        output = subprocess.run(  # noqa: S603 -- resolved Node executable and fixed version argument, no shell
             [node, "--version"],
             capture_output=True,
             text=True,
@@ -364,7 +365,7 @@ def format_tree(tree: Path, *, consumer_dir: Path, cwd: Path) -> str:
     if node is None:
         raise ToolNotInstalledError(f"node is not on PATH: {INSTALL_HINT}")
     try:
-        proc = subprocess.run(
+        proc = subprocess.run(  # noqa: S603 -- fixed formatter script and path arguments, no shell
             [node, "-e", _FORMAT_SCRIPT, str(Path(cwd).resolve()), str(Path(tree).resolve()), str(Path(consumer_dir))],
             cwd=cwd,
             capture_output=True,
@@ -396,8 +397,9 @@ def generate(
     auth_mode: str = "default",
     direct_origin_tags: tuple[str, ...] | list[str] = (),
     infinite: bool = False,
+    profile: str = "web",
 ) -> OrvalResult:
-    """Generate a clean Orval React Query/Zod/MSW tree.
+    """Generate a web React Query/Zod/MSW tree or standalone CLI Fetch/Zod tree.
 
     ``cwd`` must be the frontend workspace containing the pinned Orval binary.
     ``consumer_dir`` is the folder the tree is published to (default
@@ -407,6 +409,12 @@ def generate(
     generated mutator shim imports the runtime from; without it Orval uses
     plain ``fetch``.
     """
+    if profile not in ("web", "cli"):
+        raise ValueError(f"Unknown TypeScript profile: {profile!r}; choose web or cli")
+    if profile == "cli" and (runtime is not None or infinite or direct_origin_tags):
+        raise ValueError("CLI profile uses its standalone transport and explicit baseUrl, without runtime/infinite/direct_origin_tags")
+    if auth_mode not in AUTH_MODES:
+        raise ValueError(f"auth_mode must be one of {', '.join(AUTH_MODES)}")
     problem = check()
     if problem:
         raise ToolNotInstalledError(problem)
@@ -422,7 +430,7 @@ def generate(
     # Before anything is written: a bad x-cfg-auth or direct_origin_tags stops here, named, not inside Orval.
     request_overrides = request_option_overrides(document, direct_origin_tags=direct_origin_tags)
     try:
-        realtime_queries = invalidating_queries(document)
+        realtime_queries = invalidating_queries(document) if profile == "web" else {}
     except RealtimeInvalidationError as exc:
         raise PostprocessError(str(exc)) from exc
     if out_dir.exists():
@@ -434,15 +442,18 @@ def generate(
     # pipeline stages the tree into the consumer directory. It wraps the
     # handwritten runtime and is recreated on every generation.
     mutator_path: Path | None = None
-    if runtime is not None:
+    if runtime is not None or profile == "cli":
         runtime_dir = out_dir / "runtime"
         runtime_dir.mkdir(parents=True)
         mutator_path = runtime_dir / "orval-mutator.ts"
-        mutator_path.write_text(render_mutator_shim(runtime, auth_mode=auth_mode), encoding="utf-8")
+        mutator_path.write_text(
+            render_cli_mutator(auth_mode=auth_mode) if profile == "cli" else render_mutator_shim(runtime, auth_mode=auth_mode),
+            encoding="utf-8",
+        )
     # H2.10: the queries marked `invalidated_by` carry their topics in `meta` (see `realtime/query_topics.py`).
     operation_overrides: dict[str, dict[str, Any]] = {
         op: dict(entry) for op, entry in (request_overrides.get("operations") or {}).items()
-    } if runtime is not None else {}
+    } if mutator_path is not None else {}
     if realtime_queries:
         query_mutator = out_dir / "runtime" / REALTIME_QUERY_FILE
         query_mutator.parent.mkdir(parents=True, exist_ok=True)
@@ -462,9 +473,9 @@ def generate(
                     "path": str((out_dir / "models").resolve()),
                     "type": "zod",
                 },
-                "client": "react-query",
+                "client": "fetch" if profile == "cli" else "react-query",
                 "httpClient": "fetch",
-                "mock": mock,
+                "mock": False if profile == "cli" else mock,
                 **({"packageJson": str(package_json)} if package_json is not None else {}),
                 "override": {
                     # Orval takes the TanStack Query version from `packageJson`.
@@ -476,7 +487,7 @@ def generate(
                     # `infinite` (H2.7): `use<Op>Infinite` for every GET with a
                     # `page` or `cursor` query parameter; Orval skips the others.
                     # The page params come from the runtime (`drfPageParams`).
-                    "query": {"version": 5, **(_INFINITE_QUERY if infinite else {})},
+                    **({"query": {"version": 5, **(_INFINITE_QUERY if infinite else {})}} if profile == "web" else {}),
                     "includeZodSchemaInArguments": True,
                     **(
                         {
@@ -513,7 +524,7 @@ def generate(
 
     cmd = ["pnpm", "exec", "orval", "--config", str(config_path)]
     try:
-        subprocess.run(
+        subprocess.run(  # noqa: S603 -- pinned workspace Orval and generated config path, no shell
             cmd,
             cwd=cwd,
             check=True,
@@ -531,7 +542,8 @@ def generate(
     # Orval intentionally ignores vendor extensions such as ``x-realtime``.
     # Render WebSocket topic builders as a separate protocol adapter beside
     # the generated REST tree, importing the Zod models Orval just produced.
-    generate_realtime(document.get("x-realtime"), out_dir)
+    if profile == "web":
+        generate_realtime(document.get("x-realtime"), out_dir)
     (out_dir / "runtime").mkdir(exist_ok=True)
     (out_dir / "runtime" / "cfg.ts").write_text(render_cfg_ts(document.get("info") or {}), encoding="utf-8")
 

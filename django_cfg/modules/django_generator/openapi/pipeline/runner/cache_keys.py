@@ -15,10 +15,8 @@ the tool options are hashed by ``cache.compute_target_cache_key``; this module s
 
 from __future__ import annotations
 
-import datetime
 import functools
 import hashlib
-import importlib.metadata
 import json
 import re
 import shutil
@@ -86,7 +84,7 @@ def _tree_hash(root: Path, pattern: str) -> str:
 
 def tool_signature(target: GenerationTarget) -> str:
     """What the external tool contributes to the output besides the spec: its version, and its other inputs."""
-    from ...tools.external import ogen, orval, progenitor
+    from ...tools.external import ogen, openapi_python_client, orval, progenitor
 
     tool = target.tool
     if tool == "ogen":
@@ -114,11 +112,7 @@ def tool_signature(target: GenerationTarget) -> str:
     if tool == "swift-openapi":
         return _file_identity(shutil.which("swift-openapi-generator"))
     if tool == "openapi-python-client":
-        try:
-            return importlib.metadata.version("openapi-python-client")
-        except importlib.metadata.PackageNotFoundError:
-            # Run through `uvx`, which resolves the newest release: refresh at least daily.
-            return f"uvx:{datetime.date.today().isoformat()}"
+        return f"openapi-python-client=={openapi_python_client.VERSION}"
     if tool == "orval":
         from ..errors import GeneratorError
         from .dispatch import _find_frontend_workspace, runtime_import_for
@@ -135,7 +129,8 @@ def tool_signature(target: GenerationTarget) -> str:
             if folder == workspace:
                 break
         return json.dumps(
-            [orval.installed_version(workspace), orval.node_version(), repr(runtime_import_for(consumer)),
+            [orval.installed_version(workspace), orval.node_version(),
+             "standalone-cli" if (target.options or {}).get("typescript_profile") == "cli" else repr(runtime_import_for(consumer)),
              prettier.hexdigest()],
         )
     if tool in ("buf", "grpc-python"):

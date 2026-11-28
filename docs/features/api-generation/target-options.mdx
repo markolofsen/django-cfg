@@ -1,21 +1,21 @@
 ---
 title: Target Options
-description: Reference for the Target options of django-cfg client generation - TypeScript auth_mode, direct_origin_tags, infinite, mock and prettier, and Rust rust_crate.
+description: Target options for web and standalone CLI client generation, including TypeScript profiles, authentication, pagination and Rust crates.
 ---
 
 # Target Options
 
 A TypeScript `Target` in `generation.py` takes these options. Each one ends as Orval config or generated code, not
-as a runtime switch an app sets by hand. A target that sets none keeps exactly the output it had. The first three are
-refused on a non-TypeScript target.
+as a runtime switch an app sets by hand. A target that sets none keeps exactly the output it had. TypeScript-specific settings are refused on other languages when set away from their defaults.
 
 | Option | Type, default | Effect |
 |---|---|---|
+| `typescript_profile` | `"web" \| "cli"`, `"web"` | `"cli"`: standalone Fetch operations and Zod models without frontend hooks, session runtime or mocks. Supply the API origin explicitly per call. |
 | `auth_mode` | `"default" \| "public"`, `"default"` | `"public"`: the generated mutator sends every request with `auth: 'none'`, after the caller's options, so no call of this client can carry the session. For a client of public endpoints only. |
 | `direct_origin_tags` | `list[str]`, `[]` | Raw OpenAPI tags whose operations get `origin: 'direct'`: they go to the API host, never through a same-origin proxy or a static-build relative URL. A tag that no operation of the target carries stops generation. |
 | `infinite` | `bool`, `False` | Adds `use<Op>Infinite`, `get<Op>InfiniteQueryOptions` and `get<Op>InfiniteQueryKey` to every GET with a `page` (else `cursor`) query parameter. Other GETs and all other files are unchanged. |
 
-Two more settings are always on for a `Target` and are not fields of it:
+In the default web profile, two more settings are on for a `Target` and are not fields of it:
 
 - **mock**: MSW handlers and Faker factories in `endpoints/<tag>/<tag>.msw.ts`.
 - **prettier**: the tree is formatted with the prettier config a file in the consumer folder gets (the `.prettierrc`
@@ -38,6 +38,8 @@ catalog = Target(
 ```
 
 ## `auth_mode`
+
+This section describes the web profile. CLI clients have no session store: protected calls use explicitly supplied headers; public calls strip Authorization/Cookie. Whole-target `auth_mode="public"` enforces this regardless of caller options.
 
 The default client sends the session's Bearer token on every operation except those the spec marks public
 (`security: [{}]`), which get `auth: 'none'` one by one. `"public"` forces it for the whole client. Use it for a
@@ -62,6 +64,26 @@ const coins = useCryptoCoinsListInfinite({ page_size: 20 }, { query: { ...drfPag
 `drfPageParams` fits every `Paginated*` envelope (`next_page`, else `page + 1` while `has_next`). `drfCursorParams`
 fits a cursor list (`next_cursor`, or the `cursor` of a DRF `next` URL). Infinite keys start with `'infinite'`:
 a mutation invalidates `get<Op>InfiniteQueryKey(params)` as well as `get<Op>QueryKey(params)`.
+
+## `typescript_profile="cli"`
+
+Use the CLI profile for a command-line tool or another consumer that needs generated operations without React Query, React, Next.js, MSW/Faker or the frontend `@djangocfg/api` runtime:
+
+```python
+Target(
+    lang=Language.TYPESCRIPT,
+    type="cli",
+    path=ROOT / "contracts" / "generated" / "typescript",
+    groups=["your_api_group"],
+    typescript_profile="cli",
+)
+```
+
+The profile retains generated operation paths, DTOs, Zod schemas and contract stamps. Its standalone transport requires an explicit absolute HTTP(S) origin in each call's `baseUrl` option. It reads no environment variables, tokens, browser identity or shared session. An absent/invalid origin fails before Fetch. Pass an AbortSignal to cancel the request and body read. The caller owns any overall deadline.
+
+Success responses are JSON, or empty for 204/HEAD. HTTP, network, invalid-JSON, schema-validation and configuration failures use the generated `ApiClientError`; no refresh or retry occurs. Public operations default to anonymous request metadata; an explicitly public whole target strips Authorization/Cookie even if supplied. Keep the default auth mode for mixed protected/public groups and configure protected headers deliberately.
+
+`infinite` and `direct_origin_tags` are refused for CLI targets. Realtime adapters and mocks are omitted. Generation still uses the pinned Orval/TypeScript workspace; runtime consumers need only a Fetch-capable environment and their generated Zod model dependency. Generate/package the shared contract once per revision and reuse it across tools. No Django service or frontend library is needed by the generated client at runtime.
 
 ## `rust_crate` (Rust)
 

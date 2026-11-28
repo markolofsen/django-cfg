@@ -66,8 +66,10 @@ gates, the Orval pin and the mechanisms we use or rejected.
 
 ## API origin
 
-The generator writes no origin into a TypeScript tree. Where a request goes is decided at run time by the
+The generator writes no origin into a TypeScript tree. In the default web profile, where a request goes is decided at run time by the
 `@djangocfg/api` runtime (`resolveApiOrigin`): an explicit `configureApi` value, a static build, a same-origin proxy
 (`NEXT_PUBLIC_API_PROXY_URL=''`), or `NEXT_PUBLIC_API_URL`. A tag that must skip the proxy is the Target option
 `direct_origin_tags`. The hey-api-era "API base URL strategy" (`helpers/auth.ts`, `auth.setBaseUrl('')`) is archived
 in [`@docs/_archive/`](@docs/_archive/api-base-url-strategy-hey-api.md).
+
+`typescript_profile="cli"` instead emits a standalone Fetch transport with an explicit per-call `baseUrl`, without frontend state or hooks. See [CLI target options](openapi/README.md#standalone-cli-clients). Python generation uses pinned openapi-python-client 0.28.4; the generation tool is not a runtime dependency.

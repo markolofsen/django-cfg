@@ -18,6 +18,7 @@ from django.db import models
 from django.db.models import Count, Sum, Avg, Min, Max, Q
 from django.db.models.functions import TruncMonth, TruncDay, TruncHour
 
+from django_cfg.modules.django_mcp.policy.capabilities import unhandled_projection
 from django_cfg.modules.django_mcp.tools.base import MCPTool
 from django_cfg.modules.django_mcp.agent.context import AgentQueryContext
 from django_cfg.modules.django_mcp.services.redactor import apply_redaction, RedactionMode
@@ -79,6 +80,9 @@ class AggregateModelTool(MCPTool):
         if not context.config.is_model_exposed(app_label, model_name):
             query_context.record_query(self.name, f"{app_label}.{model_name}", arguments, error="Not exposed")
             return f"Error: Model '{app_label}.{model_name}' is not exposed"
+
+        if unhandled_projection(context, app_label, model_name):
+            return "Error: This tool does not enforce scalar model-read policy."
 
         try:
             model = apps.get_model(app_label, model_name)
@@ -213,6 +217,9 @@ class TimeSeriesTool(MCPTool):
         if not context.config.is_model_exposed(app_label, model_name):
             return f"Error: Model '{app_label}.{model_name}' is not exposed"
 
+        if unhandled_projection(context, app_label, model_name):
+            return "Error: This tool does not enforce scalar model-read policy."
+
         try:
             model = apps.get_model(app_label, model_name)
         except LookupError:
@@ -308,6 +315,9 @@ class TopValuesTool(MCPTool):
         if not context.config.is_model_exposed(app_label, model_name):
             return f"Error: Model '{app_label}.{model_name}' is not exposed"
 
+        if unhandled_projection(context, app_label, model_name):
+            return "Error: This tool does not enforce scalar model-read policy."
+
         try:
             model = apps.get_model(app_label, model_name)
         except LookupError:
@@ -376,6 +386,9 @@ class DistributionTool(MCPTool):
 
         if not context.config.is_model_exposed(app_label, model_name):
             return f"Error: Model '{app_label}.{model_name}' is not exposed"
+
+        if unhandled_projection(context, app_label, model_name):
+            return "Error: This tool does not enforce scalar model-read policy."
 
         try:
             model = apps.get_model(app_label, model_name)

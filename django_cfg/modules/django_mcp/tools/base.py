@@ -148,10 +148,10 @@ class MCPToolRegistry:
         """Unregister a tool."""
         self._tools.pop(tool_name, None)
 
-    def get_tool(self, name: str) -> MCPTool:
+    def get_tool(self, name: str, *, profile: Any = None) -> Optional[MCPTool]:
         """Get tool by name."""
         tool = self._tools.get(name)
-        if tool is None and self._providers:
+        if tool is None and self._providers and not getattr(profile, "restricted_reads", False):
             tool = self._provided().get(name)
         return tool
 
@@ -179,15 +179,15 @@ class MCPToolRegistry:
         """
         profile = profile if profile is not None else getattr(context, "profile", None)
         every = dict(self._tools)
-        if self._providers:
+        if self._providers and not getattr(profile, "restricted_reads", False):
             for name, tool in self._provided().items():
                 every.setdefault(name, tool)
-        tools = [tool for tool in every.values() if tool.is_available(context)]
+        tools = list(every.values())
         if profile is not None and not profile.serves_all_tools:
             # The tool object, not its name: `PUBLIC_TOOLS` resolves by reading
             # the tool's own `public` flag.
             tools = [tool for tool in tools if profile.serves(tool)]
-        return tools
+        return [tool for tool in tools if tool.is_available(context)]
 
 
 # Global tool registry instance

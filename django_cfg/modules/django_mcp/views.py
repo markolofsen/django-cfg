@@ -214,10 +214,14 @@ class MCPView(APIView):
         refuses (fail closed). See :mod:`django_cfg.modules.django_mcp.auth`.
         """
         try:
-            credentials = self._get_profile() or self._get_mcp_config()
+            config = self._get_mcp_config()
+            profile = self._get_profile()
+            if profile is None and (self.profile is not None or getattr(config, "profiles", None)):
+                return None
+            credentials = profile or config
         except Exception:
             return None
-        return authenticate(presented_credential(request), credentials)
+        return authenticate(presented_credential(request), credentials, config=config)
 
     def _get_session_key(self, request, user) -> str:
         """Generate session key for initialization tracking."""

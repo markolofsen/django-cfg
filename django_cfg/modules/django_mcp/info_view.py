@@ -72,10 +72,13 @@ class MCPInfoView(APIView):
     def _authorized(self, request, mcp_config) -> bool:
         """Same credential check as the JSON-RPC path; never raises."""
         try:
-            credentials = self._get_profile(mcp_config) or mcp_config
+            profile = self._get_profile(mcp_config)
+            if profile is None and (self.profile is not None or getattr(mcp_config, "profiles", None)):
+                return False
+            credentials = profile or mcp_config
         except Exception:
             return False
-        return authenticate(presented_credential(request), credentials) is not None
+        return authenticate(presented_credential(request), credentials, config=mcp_config) is not None
 
     def get(self, request):
         from django_cfg.core.state import get_current_config

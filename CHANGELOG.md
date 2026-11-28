@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.114] - 2026-11-28
+
+### Added
+- MCP profiles support opt-in scalar read projections, bounded predicates and explicit dedicated restricted readers. Explicit profile exposures no longer inherit global model grants. Existing hosts that relied on global grants must declare them on the appropriate profile.
+- TypeScript generation accepts `typescript_profile="cli"`: standalone Fetch operations with generated Zod models and an explicit per-call API origin, without React Query, the frontend session runtime, mocks or realtime adapters. The default web profile is unchanged.
+
+### Changed
+- Python client generation pins openapi-python-client to 0.28.4 through uvx; the direct executable fallback must report that exact version.
+
+### Fixed
+- Restore package startup after the MCP scalar-read policy change: the flat model exposure builder accepts read_policy as a keyword-only argument without a duplicate keyword-only separator. This also restores startup for hosts with MCP disabled.
+
 ## [2.4.113] - 2026-11-25
 
 ### Added

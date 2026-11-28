@@ -1,10 +1,11 @@
 """openapi-python-client CLI wrapper.
 
-Prefer `uvx` (zero-install on PATH); fall back to direct binary if available.
+Use an exact uvx package version; direct binaries must report that same version.
 """
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -15,9 +16,8 @@ from ...pipeline.errors import (
     ToolNotInstalledError,
 )
 
-INSTALL_HINT = (
-    "pip install openapi-python-client  (or: uv tool install openapi-python-client)"
-)
+VERSION = "0.28.4"
+INSTALL_HINT = f"install openapi-python-client=={VERSION} (or use uvx with that exact version)"
 
 
 @dataclass(slots=True)
@@ -28,9 +28,16 @@ class OpenAPIPyResult:
 
 def _resolve_invocation() -> list[str] | None:
     if shutil.which("uvx"):
-        return ["uvx", "openapi-python-client"]
-    if shutil.which("openapi-python-client"):
-        return ["openapi-python-client"]
+        return ["uvx", "--from", f"openapi-python-client=={VERSION}", "openapi-python-client"]
+    binary = shutil.which("openapi-python-client")
+    if binary:
+        try:
+            result = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=10)  # noqa: S603 -- resolved generator executable, fixed argument, no shell
+            version = re.search(r"\b\d+\.\d+\.\d+(?:[a-zA-Z0-9.+-]*)?", result.stdout)
+            if result.returncode == 0 and version and version.group() == VERSION:
+                return [binary]
+        except (OSError, subprocess.SubprocessError):
+            pass
     return None
 
 
@@ -65,9 +72,9 @@ def generate(
         if package_name:
             cmd += ["--config", "/dev/stdin"]
             config = f"package_name_override: {package_name}\n"
-            subprocess.run(cmd, check=True, input=config, text=True, capture_output=True)
+            subprocess.run(cmd, check=True, input=config, text=True, capture_output=True)  # noqa: S603 -- fixed generator argv and path arguments, no shell
         else:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            subprocess.run(cmd, check=True, capture_output=True, text=True)  # noqa: S603 -- fixed generator argv and path arguments, no shell
     except subprocess.CalledProcessError as e:
         raise ToolExecutionError(
             f"openapi-python-client exit {e.returncode}: {e.stderr}"

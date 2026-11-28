@@ -1,9 +1,11 @@
 """Model Query and Manipulation Tools for MCP."""
 
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 from django.core.exceptions import ValidationError
 
+from django_cfg.modules.django_mcp.policy.query import policy_read
+from django_cfg.modules.django_mcp.tools.results import ToolResult
 from django_cfg.modules.django_mcp.tools.base import MCPTool
 from django_cfg.modules.django_mcp.tools.serialization import serialize_instance, serialize_queryset
 from django_cfg.modules.django_mcp.services.context import MCPContext
@@ -36,8 +38,11 @@ class QueryModelTool(MCPTool):
         "required": ["app_label", "model_name"],
     }
 
-    def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> str:
+    def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> Union[str, ToolResult]:
         """Execute the query_model tool."""
+        result = policy_read(context, arguments)
+        if result is not None:
+            return result
         from django.apps import apps
 
         app_label = arguments.get("app_label")
@@ -114,8 +119,11 @@ class GetObjectTool(MCPTool):
         "required": ["app_label", "model_name", "pk"],
     }
 
-    def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> str:
+    def execute(self, context: MCPContext, arguments: Dict[str, Any]) -> Union[str, ToolResult]:
         """Execute the get_object tool."""
+        result = policy_read(context, arguments, retrieve=True)
+        if result is not None:
+            return result
         from django.apps import apps
 
         app_label = arguments.get("app_label")

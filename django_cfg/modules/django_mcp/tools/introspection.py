@@ -8,6 +8,8 @@ from django.urls import get_resolver
 
 from django_cfg.modules.django_mcp.tools.base import MCPTool
 from django_cfg.modules.django_mcp.services.context import MCPContext
+from django_cfg.modules.django_mcp.policy.fields import schema_fields
+from django_cfg.modules.django_mcp.policy.config import ReadPolicyError
 
 
 #: Fallback field list, used only when the object is not a pydantic model.
@@ -90,11 +92,16 @@ class ListAppsTool(MCPTool):
         result = []
 
         for app_config in apps.get_app_configs():
+            if getattr(getattr(context, "profile", None), "restricted_reads", False) and not any(grant.enabled for grant in getattr(context.config.exposed_apps.get(app_config.label), "models", {}).values()):
+                continue
             app_info = {
                 "name": app_config.name,
                 "label": app_config.label,
                 "path": str(app_config.path),
             }
+
+            if getattr(getattr(context, "profile", None), "restricted_reads", False):
+                app_info.pop("path", None)
 
             if include_models:
                 models = []
@@ -166,12 +173,15 @@ class GetModelSchemaTool(MCPTool):
         model_config = context.config.get_model_config(app_label, model_name)
         hidden_fields = model_config.hidden_fields if model_config else []
 
-        for field in model._meta.fields:
-            if field.name in hidden_fields:
-                continue
-
+        if model_config is None:
+            return "Error: Model is not exposed."
+        try:
+            columns = schema_fields(model, model_config)
+        except ReadPolicyError:
+            return "Error: Model schema is outside its scalar policy."
+        for name, field in columns.items():
             field_info = {
-                "name": field.name,
+                "name": name,
                 "type": field.get_internal_type(),
                 "nullable": field.null,
                 "blank": field.blank,
@@ -194,7 +204,8 @@ class GetModelSchemaTool(MCPTool):
             schema["fields"].append(field_info)
 
         # Add relationships (ForeignKey, ManyToMany, OneToOne)
-        for field in model._meta.fields + model._meta.many_to_many:
+        relations = [] if model_config.read_policy is not None else model._meta.fields + model._meta.many_to_many
+        for field in relations:
             if field.is_relation and field.name not in hidden_fields:
                 rel_info = {
                     "name": field.name,

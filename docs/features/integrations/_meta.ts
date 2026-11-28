@@ -5,4 +5,5 @@ export default {
   'auth': { display: 'hidden' },
   'auth-system': { display: 'hidden' },
   'oauth': 'OAuth',
+  'cmdop': 'CMDOP',
 }

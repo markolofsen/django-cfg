@@ -22,6 +22,7 @@ from django_cfg.modules.django_mcp import (
     MCPSkillConfig,
     MCPTargetConfig,
     ModelMCPConfig,
+    ScalarReadPolicy,
 )
 from django_cfg.modules.django_mcp.services.context import MCPContext
 from django_cfg.modules.django_mcp.tools.base import MCPTool, tool_registry
@@ -54,6 +55,7 @@ class ProfileBuilder:
         self._service_username: Optional[str] = None
         self._extra_keys: List[MCPExtraKey] = []
         self._tools: List[str] = []
+        self._restricted_reads = False
         self._exposures: Dict[str, ModelExposure] = {}
         self._introspection: Optional[IntrospectionConfig] = None
         self._rate_limit: str = "100/minute"
@@ -96,6 +98,11 @@ class ProfileBuilder:
         self._tools.extend(names)
         return self
 
+    def restrict_model_reads(self) -> "ProfileBuilder":
+        """Dedicated scalar reader: explicit fields, reviewed tools, no validator/OAuth fallback."""
+        self._restricted_reads = True
+        return self
+
     def expose(
         self,
         model: str,
@@ -103,6 +110,7 @@ class ProfileBuilder:
         hidden_fields: Optional[List[str]] = None,
         max_results: int = 100,
         operations: Optional[List[str]] = None,
+        read_policy: Optional[ScalarReadPolicy] = None,
     ) -> "ProfileBuilder":
         app_label, model_name = model.split(".")
         self._exposures[model] = ModelExposure(
@@ -110,6 +118,7 @@ class ProfileBuilder:
             model_name=model_name.lower(),
             read_only=read_only,
             hidden_fields=hidden_fields or [],
+            read_policy=read_policy,
             max_results=max_results,
             operations=operations
             or (
@@ -178,11 +187,13 @@ class ProfileBuilder:
             service_username=self._service_username,
             extra_keys=self._extra_keys,
             tools=self._tools,
+            restricted_reads=self._restricted_reads,
             exposures={
                 key: ModelMCPConfig(
                     enabled=True,
                     read_only=exposure.read_only,
                     hidden_fields=exposure.hidden_fields,
+                    read_policy=exposure.read_policy,
                     max_results=exposure.max_results,
                     allowed_operations=exposure.operations,
                 )
@@ -213,6 +224,7 @@ class ModelExposure:
     max_results: int = 100
     operations: List[str] = field(default_factory=lambda: ["list", "retrieve"])
     description: str = ""
+    read_policy: Optional[ScalarReadPolicy] = None
 
 
 class MCPConfigBuilder:
@@ -352,6 +364,7 @@ class MCPConfigBuilder:
         max_results: int = 100,
         operations: Optional[List[str]] = None,
         description: str = "",
+        read_policy: Optional[ScalarReadPolicy] = None,
     ) -> "MCPConfigBuilder":
         """
         Expose a Django model to MCP agents.
@@ -378,6 +391,7 @@ class MCPConfigBuilder:
             model_name=model_name.lower(),
             read_only=read_only,
             hidden_fields=hidden_fields or [],
+            read_policy=read_policy,
             max_results=max_results,
             operations=operations or ["list", "retrieve"],
             description=description,
@@ -661,6 +675,7 @@ class MCPConfigBuilder:
                         model_key,
                         read_only=exposure.read_only,
                         hidden_fields=exposure.hidden_fields,
+                        read_policy=exposure.read_policy,
                         max_results=exposure.max_results,
                         operations=exposure.operations,
                     )
@@ -728,6 +743,7 @@ class MCPConfigBuilder:
                 enabled=True,
                 read_only=exposure.read_only,
                 hidden_fields=exposure.hidden_fields,
+                read_policy=exposure.read_policy,
                 max_results=exposure.max_results,
                 allowed_operations=exposure.operations,
             )

@@ -47,7 +47,7 @@ def challenge(request, credentials: Any) -> str:
     return 'MCPAccessKey realm="mcp", header="X-MCP-Access-Key"'
 
 
-def authenticate(presented: Optional[str], credentials: Any) -> Any:
+def authenticate(presented: Optional[str], credentials: Any, *, config: Any = None) -> Any:
     """Return the caller (a user object) or ``None`` to refuse.
 
     ``credentials`` is an ``MCPProfile`` (or any object with the same key
@@ -57,6 +57,13 @@ def authenticate(presented: Optional[str], credentials: Any) -> Any:
         return None
     try:
         presented = str(presented)
+        # Reserve dedicated reader credentials before any broader validator/OAuth fallback.
+        for profile in (getattr(config, "profiles", None) or {}).values():
+            if not getattr(profile, "restricted_reads", False):
+                continue
+            reserved = [profile.access_key] + [key.access_key for key in profile.extra_keys]
+            if any(key and secrets.compare_digest(presented, key) for key in reserved) and credentials is not profile:
+                return None
         candidates = [
             (None, credentials.access_key, getattr(credentials, "service_username", None))
         ] + [
@@ -87,8 +94,8 @@ def authenticate(presented: Optional[str], credentials: Any) -> Any:
             from django.utils.module_loading import import_string
 
             return _as_user(import_string(validator)(presented))
-    except Exception:
-        logger.exception("MCP access-key authentication failed unexpectedly")
+    except Exception as exc:
+        logger.warning("MCP access-key authentication failed unexpectedly (%s)", type(exc).__name__)
     return None
 
 

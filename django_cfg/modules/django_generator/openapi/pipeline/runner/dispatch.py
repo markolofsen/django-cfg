@@ -368,6 +368,7 @@ def _dispatch_tool(
         return True, None
 
     if tool == "orval":
+        profile = str(options.get("typescript_profile", "web"))
         workspace = _find_frontend_workspace(target.path)
         mock = options.get("mock", True)
         prettier = options.get("prettier", True)
@@ -382,7 +383,8 @@ def _dispatch_tool(
             consumer_dir=consumer_path,
             mock=bool(mock),
             prettier=bool(prettier),
-            runtime=runtime_import_for(consumer_path),
+            runtime=runtime_import_for(consumer_path) if profile == "web" else None,
+            profile=profile,
             auth_mode=str(options.get("auth_mode", "default")),
             direct_origin_tags=tuple(options.get("direct_origin_tags") or ()),
             infinite=bool(options.get("infinite", False)),

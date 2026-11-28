@@ -16,6 +16,7 @@ from .__cfg__ import (
     ModelMCPConfig,
     RedactionConfig,
 )
+from .policy.config import ScalarReadPolicy
 from .auto_loader import load_project_mcp_config, mcp_config_exists
 from .config_builder import MCPConfigBuilder
 from .exceptions import MCPError, MCPPermissionDenied, MCPValidationError
@@ -57,6 +58,7 @@ __all__ = [
     "DjangoMCPModuleConfig",
     "AppMCPConfig",
     "ModelMCPConfig",
+    "ScalarReadPolicy",
     "IntrospectionConfig",
     "CommandMCPConfig",
     "MCPProfile",

@@ -160,3 +160,14 @@ The streaming endpoint (`agent/stream/`) checks `request.user.is_authenticated` 
 <Callout type="warning">
 Authorisation is mandatory. `/info/` returns tool names, descriptions and full input schemas — a capability map — so it needs the key like every other MCP route. `access="anonymous"` and `public_info` were removed; a config without a credential does not build.
 </Callout>
+
+
+## Effective model policy
+
+`MCPContext` resolves the URL-selected profile into a request-local copy of model exposure and introspection settings. Explicit profiles have no global fallback, and a multi-profile programmatic context must select a profile rather than guess a wider one. The legacy flat surface carries its global grants into its synthesized default profile so round-tripping configuration preserves the intended behavior. Request-local changes do not mutate another profile or the shared configuration.
+
+An optional positive scalar policy is validated before the ORM evaluates a query. It owns output columns, filter/order fields, fixed row scope and bounded pagination/serialization. The basic and extended query implementations share this path; unsupported readers refuse it. Schema discovery uses the same projected names and does not expand foreign-key identities into related records.
+
+`restricted_reads` further narrows capability discovery and execution to explicitly named, reviewed built-ins. Remote providers and registered resources/prompts are skipped before callbacks are evaluated. All authoritative HTTP credential checks reserve dedicated reader keys before broader validator/OAuth fallback; a reader key cannot become an operator or agent-chat credential. Existing general-purpose profiles retain their explicit capabilities, while the new restricted surface grants no write, SQL, command or arbitrary custom-tool path.
+
+[Restricted model-read configuration](./configuration#restricted-model-read-profiles) describes the public API. This is an application permission boundary, not a claim of database transaction enforcement or proof that a consuming deployment has updated its code and credential scope.

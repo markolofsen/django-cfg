@@ -22,7 +22,10 @@ class MCPContext:
     #: working unchanged.
     profile: Any = None
 
-    # Future: add database session, cache, etc.
+    def __post_init__(self) -> None:
+        from django_cfg.modules.django_mcp.policy.context import effective_context
+        self.config, self.profile = effective_context(self.config, self.profile)
+
 
     def is_authenticated(self) -> bool:
         """Check if user is authenticated."""

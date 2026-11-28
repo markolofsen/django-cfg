@@ -4,10 +4,12 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .policy.config import FIELD, READ_TOOLS, ScalarReadPolicy
+
 
 class ModelMCPConfig(BaseModel):
     """Configuration for exposing a single Django model to MCP."""
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
     enabled: bool = Field(
         default=False,
@@ -17,6 +19,7 @@ class ModelMCPConfig(BaseModel):
         default=True,
         description="If True, only read operations are allowed",
     )
+    read_policy: Optional[ScalarReadPolicy] = None
     hidden_fields: List[str] = Field(
         default_factory=list,
         description="Fields to exclude from MCP responses (e.g., password, secret_key)",
@@ -31,6 +34,16 @@ class ModelMCPConfig(BaseModel):
         default_factory=lambda: ["list", "retrieve"],
         description="Allowed CRUD operations: list, retrieve, create, update, delete",
     )
+
+
+    @model_validator(mode="after")
+    def _projected_reads_only(self) -> "ModelMCPConfig":
+        if self.read_policy is not None:
+            if not self.read_only or not set(self.allowed_operations).issubset({"list", "retrieve"}):
+                raise ValueError("A scalar read policy cannot grant writes")
+            if set(self.hidden_fields) & set(self.read_policy.fields):
+                raise ValueError("A hidden field cannot be projected")
+        return self
 
 
 class AppMCPConfig(BaseModel):
@@ -331,7 +344,7 @@ class MCPProfile(BaseModel):
     ``public=True`` tools to a wider set of key holders (``extra_keys`` or a
     ``key_validator`` over per-user API keys), never to nobody.
     """
-    model_config = ConfigDict(extra="forbid", frozen=False)
+    model_config = ConfigDict(extra="forbid", frozen=False, hide_input_in_errors=True)
 
     name: str = Field(
         pattern=r"^[a-z][a-z0-9_-]*$",
@@ -366,6 +379,7 @@ class MCPProfile(BaseModel):
             "tool reaches a public endpoint by omission."
         ),
     )
+    restricted_reads: bool = False
     exposures: Dict[str, ModelMCPConfig] = Field(
         default_factory=dict,
         description="Model exposures scoped to this profile, keyed by 'app.Model'.",
@@ -423,6 +437,10 @@ class MCPProfile(BaseModel):
         cosmetic, since a caller who learned an operator tool name elsewhere
         could still invoke it against a public endpoint.
         """
+        if self.restricted_reads and not isinstance(tool, str):
+            from .policy.capabilities import reviewed_read_tool
+            if not reviewed_read_tool(tool):
+                return False
         if self.serves_all_tools:
             return True
 
@@ -475,6 +493,23 @@ class MCPProfile(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def _closed_model_reads(self) -> "MCPProfile":
+        seen = set()
+        for qualified, model in self.exposures.items():
+            parts = qualified.split(".")
+            if len(parts) != 2 or not all(FIELD.fullmatch(p) and "__" not in p for p in parts) or qualified.lower() in seen:
+                raise ValueError("Invalid or duplicate profile model exposure")
+            seen.add(qualified.lower())
+            if self.restricted_reads and model.enabled and model.read_policy is None:
+                raise ValueError("Restricted readers require a positive scalar projection")
+        if self.restricted_reads:
+            if not set(self.tools).issubset(READ_TOOLS):
+                raise ValueError("Restricted readers serve only reviewed scalar model tools")
+            if self.oauth is not None or self.key_validator is not None:
+                raise ValueError("Restricted readers require dedicated static credentials")
+        return self
+
     @classmethod
     def _legacy_default(cls, **kwargs) -> "MCPProfile":
         """The implicit ``default`` profile of a config that declared none.
@@ -492,7 +527,7 @@ class DjangoMCPModuleConfig(BaseModel):
     This module transforms Django into an MCP server, enabling AI agents
     to discover and interact with application data through a standardized protocol.
     """
-    model_config = ConfigDict(extra="forbid", frozen=False)
+    model_config = ConfigDict(extra="forbid", frozen=False, hide_input_in_errors=True)
 
     enabled: bool = Field(
         default=False,
@@ -584,11 +619,25 @@ class DjangoMCPModuleConfig(BaseModel):
                     extra_keys=self.extra_keys,
                     key_validator=None,
                     tools=[ALL_TOOLS],
-                    exposures={},
-                    introspection=None,
+                    exposures={f"{app}.{model}": grant.model_copy(deep=True)
+                               for app, cfg in self.exposed_apps.items() if cfg.enabled
+                               for model, grant in cfg.models.items()},
+                    introspection=self.introspection,
                     rate_limit=self.rate_limit,
                 )
             }
+        return self
+
+    @model_validator(mode="after")
+    def _dedicated_reader_keys(self) -> "DjangoMCPModuleConfig":
+        holders = {}
+        for profile in self.profiles.values():
+            keys = [profile.access_key] + [extra.access_key for extra in profile.extra_keys]
+            for key in filter(None, keys):
+                previous = holders.get(key)
+                if previous and (profile.restricted_reads or previous.restricted_reads):
+                    raise ValueError("A restricted-reader credential cannot be shared across profiles")
+                holders[key] = profile
         return self
 
     @model_validator(mode="after")

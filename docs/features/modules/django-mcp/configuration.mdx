@@ -359,3 +359,43 @@ config.is_command_allowed("migrate_all")   # → bool
 ```
 
 These are available in your custom tool implementations via the `MCPContext` object passed to `execute()`.
+
+
+## Restricted model-read profiles
+
+Use a dedicated profile for an assistant that may read selected scalar records. Its exposures are authoritative: an explicitly declared profile never falls back to global model exposure. An empty exposure map denies generic model reads. The implicit flat `default` profile and the operator profile synthesized by `enable_public_profile()` retain the global model grants they intentionally copy.
+
+```python
+import os
+from django_cfg.modules.django_mcp import MCPConfigBuilder, ScalarReadPolicy
+
+mcp = MCPConfigBuilder()
+with mcp.profile("reader", path="/cfg/mcp/reader/") as reader:
+    reader.set_access_key(os.environ["MCP_READER_KEY"])
+    reader.restrict_model_reads()
+    reader.tools("query_model")
+    reader.expose(
+        "billing.Customer",
+        max_results=25,
+        read_policy=ScalarReadPolicy(
+            fields=["id", "email", "plan", "tenant_id"],
+            filter_fields=["id", "email"],
+            order_fields=["id"],
+            scope={"tenant_id": 7},
+        ),
+    )
+
+mcp_config = mcp.build()
+```
+
+The models and tenant in this example are invented. Supply a dedicated credential through your own deployment secret mechanism. Restricted readers accept static keys only; they cannot reuse a key assigned to another profile or fall through another profile's key validator or OAuth authentication. They have no chat-agent capability.
+
+`ScalarReadPolicy` is also accepted by `ModelMCPConfig.read_policy` and the builder's flat `expose` method. It is an explicit opt-in; existing grants without it retain their legacy serialization. Restricted profiles require it for every enabled model. A projection cannot grant writes, include hidden/credential fields or omit the actual primary key. Filter, order and fixed-scope fields must be in the projection. Foreign-key identities use concrete scalar columns such as `tenant_id`, without loading related objects. JSON, files, binary values, relation traversal and unknown columns refuse.
+
+Restricted profiles admit only reviewed built-in implementations of `query_model`, `get_object`, `list_apps` and `get_model_schema`, and only names explicitly listed in `tools`. Wildcards, public-tool macros, custom lookalikes, analytics, SQL, commands and authentication-user readers are not admitted. Registered resources/prompts and remote providers are not loaded; model-schema resources still require introspection and expose the selected fields only. Custom Python tools are not automatically rewritten to enforce model policy: keep them outside this restricted surface.
+
+Caller filters use approved fields and bounded scalar lookups (`exact`, `iexact`, `contains`, `icontains`, `gt`, `gte`, `lt`, `lte`, `isnull`, `in`). At most 12 filters and 25 `in` values apply. The `pk` alias resolves to the real projected primary key and requires that field in `filter_fields`. A caller predicate cannot replace or broaden `scope`; incompatible predicates refuse. Ordering is approved fields plus a stable primary-key tie-breaker.
+
+Projected reads return at most 25 rows, with the lower model `max_results` taking precedence; offsets are 0–1000. Strings are bounded to 4096 characters, and request/response JSON to 128 KiB. An oversized page or invalid value refuses the whole result. Errors carry static policy advice, not raw record values or ORM exceptions. Neither the MCP `readOnlyHint` nor this profile replaces a read-only database role where the deployment requires one.
+
+For existing explicit profiles that relied on global `expose` calls, move each intended grant onto that profile. A framework release does not update running product images: verify the deployed version and profile/model/field/tenant restrictions before enabling a consuming gateway.

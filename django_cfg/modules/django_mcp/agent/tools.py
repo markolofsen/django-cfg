@@ -24,6 +24,9 @@ from django.db import models
 from django.db.models import Count, Sum, Avg, Min, Max, F
 
 from django_cfg.modules.django_mcp.tools.base import MCPTool
+from django_cfg.modules.django_mcp.tools.results import ToolResult
+from django_cfg.modules.django_mcp.policy.query import policy_read
+from django_cfg.modules.django_mcp.policy.capabilities import unhandled_projection
 from django_cfg.modules.django_mcp.tools.serialization import serialize_queryset
 from django_cfg.modules.django_mcp.agent.context import AgentQueryContext
 from django_cfg.modules.django_mcp.services.redactor import apply_redaction, RedactionMode
@@ -86,8 +89,11 @@ class QueryModelTool(MCPTool):
         "required": ["app_label", "model_name"],
     }
 
-    def execute(self, context: Any, arguments: Dict[str, Any]) -> str:
+    def execute(self, context: Any, arguments: Dict[str, Any]) -> str | ToolResult:
         """Execute the query_model tool."""
+        result = policy_read(context, arguments)
+        if result is not None:
+            return result
         start = time.time()
         app_label = arguments.get("app_label", "")
         model_name = arguments.get("model_name", "")
@@ -236,6 +242,9 @@ class CountRecordsTool(MCPTool):
 
         if not context.config.is_model_exposed(app_label, model_name):
             return f"Error: Model '{app_label}.{model_name}' is not exposed"
+
+        if unhandled_projection(context, app_label, model_name):
+            return "Error: This tool does not enforce scalar model-read policy."
 
         try:
             model = apps.get_model(app_label, model_name)

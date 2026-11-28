@@ -55,8 +55,11 @@ class MCPAgentChatView(generics.GenericAPIView):
 
             from django_cfg.modules.django_mcp.auth import authenticate
 
-            credentials = (getattr(mcp_config, "profiles", None) or {}).get("default") or mcp_config
-            return authenticate(self.get_authenticate_key(request), credentials)
+            profiles = getattr(mcp_config, "profiles", None) or {}
+            credentials = profiles.get("default")
+            if profiles and credentials is None or getattr(credentials, "restricted_reads", False):
+                return None
+            return authenticate(self.get_authenticate_key(request), credentials or mcp_config, config=mcp_config)
         except Exception as e:
             logger.warning(f"MCP agent auth error: {e}")
         return None

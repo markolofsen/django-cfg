@@ -90,11 +90,20 @@ the layout: `tools/realtime/query_topics.py`.
 
 ## Target options
 
+### Standalone CLI clients
+
+Set `typescript_profile="cli"` on a TypeScript Target to generate Fetch operations and Zod models without React Query, MSW/Faker, realtime adapters or `@djangocfg/api` imports. The default `"web"` profile retains the existing output. CLI targets reject `infinite` and `direct_origin_tags`; their generated transport takes an explicit absolute HTTP(S) `baseUrl` origin per call. It reads no environment/session state and performs no request on import.
+
+The transport supports JSON success responses and empty 204/HEAD responses, schema validation, caller cancellation and typed HTTP/network/configuration errors. It never refreshes or retries. Protected operations use only caller-supplied headers; `auth: 'none'` and whole-target `auth_mode="public"` remove Authorization/Cookie and use omitted credentials. It does not infer a token or a default host. A mixed public/protected group should keep auth_mode default and its operation metadata.
+
+Generation still requires the pinned Orval workspace and TypeScript toolchain. Runtime consumers need Fetch/Headers/URL/AbortSignal and the generated model's Zod dependency; they do not need Django, generation tooling or a frontend package. Package/bundle these shared outputs once per contract revision rather than regenerating for every consumer.
+
 TypeScript targets accept these fields on `Target` (`public/config.py`). They are refused on other languages, and a
 target that sets none keeps exactly the output it had.
 
 | Option | Default | Effect |
 |---|---|---|
+| `typescript_profile` | `"web"` | `"cli"`: standalone Fetch/Zod operations and transport; no frontend hooks/session runtime/mocks. Explicit per-call baseUrl; web-only infinite/origin-tag options are refused. |
 | `auth_mode` | `"default"` | `"public"`: the generated shim sends every request with `auth: 'none'`, after the caller's options, so no call carries the session. For a client of public endpoints only. |
 | `direct_origin_tags` | `[]` | Raw OpenAPI tags whose operations go to the API host (`origin: 'direct'`), never through the proxy. A tag that no operation of the target carries stops generation. |
 | `infinite` | `False` | `override.query.useInfinite` with `useInfiniteQueryParam: ['page', 'cursor']`: `use<Op>Infinite` and `get<Op>InfiniteQueryOptions` for every GET that takes a `page` (else `cursor`) query parameter; Orval skips the other GETs. Orval generates no `getNextPageParam`: spread the runtime's `drfPageParams` (page numbers) or `drfCursorParams` (cursors) into `query`. Infinite keys start with `'infinite'`, so a mutation must invalidate `get<Op>InfiniteQueryKey(...)` too. |
