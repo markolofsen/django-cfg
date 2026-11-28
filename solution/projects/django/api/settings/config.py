@@ -23,13 +23,15 @@ from django_cfg import (
     GitHubOAuthConfig,
     TwoFactorConfig,
     # Admin
-    UnfoldConfig,
+    AdminSiteConfig,
     # Dashboard tabs
     DashboardConfig,
     # API
     OpenAPIClientConfig,
     # Background Tasks
     DjangoRQConfig,
+    # Realtime (WebSocket topics)
+    RealtimeConfig,
     # Dynamic Settings
     ConstanceConfig,
     # MCP (Model Context Protocol for AI agents)
@@ -37,7 +39,7 @@ from django_cfg import (
 )
 from api.environment import env
 
-from .builders.admin import build_unfold_config
+from .builders.admin import build_admin_site_config
 from .builders.applications import build_project_apps
 from .builders.background import build_rq_config
 from .builders.constance import build_constance_config
@@ -145,9 +147,7 @@ class DjangoCfgConfig(DjangoConfig):
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
     # Secure defaults (short access + long refresh) live in JWTConfig — inherit them.
-    # DPoP (RFC 9449) ON: tokens are bound to the client's non-extractable key
-    # (frontend sets `dpop: true` in next.config) so a stolen token is useless.
-    jwt: Optional[JWTConfig] = JWTConfig(dpop_enabled=True)
+    jwt: Optional[JWTConfig] = JWTConfig()
 
     github_oauth: Optional[GitHubOAuthConfig] = (
         GitHubOAuthConfig(
@@ -169,14 +169,13 @@ class DjangoCfgConfig(DjangoConfig):
         allow_totp=True,
         allow_backup_codes=True,
         backup_codes_count=10,
-        issuer_name=env.app.name,
     )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                          ADMIN INTERFACE                                 ║
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
-    unfold: UnfoldConfig = build_unfold_config()
+    admin_site: AdminSiteConfig = build_admin_site_config()
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                          ADMIN DASHBOARD TABS                            ║
@@ -196,6 +195,21 @@ class DjangoCfgConfig(DjangoConfig):
     # ╚══════════════════════════════════════════════════════════════════════════╝
 
     django_rq: Optional[DjangoRQConfig] = build_rq_config()
+
+    # ╔══════════════════════════════════════════════════════════════════════════╗
+    # ║                             REALTIME                                     ║
+    # ╚══════════════════════════════════════════════════════════════════════════╝
+
+    # WebSocket topics at /ws (api/asgi.py wraps Django in realtime_asgi). Topics:
+    # apps/realtime_demo/realtime.py. The demo app is a different origin from the
+    # API (demo.djangocfg.com vs api.djangocfg.com; localhost:3010 vs :8000), so it
+    # is allowed explicitly; the local one only in debug.
+    realtime: RealtimeConfig = RealtimeConfig(
+        enabled=True,
+        allowed_origins=list(dict.fromkeys(
+            [env.app.site_url] + (["http://localhost:3010"] if env.debug else [])
+        )),
+    )
 
     # ╔══════════════════════════════════════════════════════════════════════════╗
     # ║                           INTEGRATIONS                                   ║

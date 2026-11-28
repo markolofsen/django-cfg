@@ -1,0 +1,226 @@
+{
+  "name": "@djangocfg/nextjs",
+  "version": "2.1.667",
+  "description": "Next.js server utilities: sitemap, health, OG images, contact forms, navigation, config",
+  "keywords": [
+    "nextjs",
+    "sitemap",
+    "health",
+    "og-image",
+    "navigation",
+    "config",
+    "react",
+    "typescript"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "packages/nextjs"
+  },
+  "bugs": {
+    "url": "https://github.com/markolofsen/django-cfg/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
+    },
+    "./sitemap": {
+      "types": "./dist/sitemap/index.d.mts",
+      "import": "./dist/sitemap/index.mjs",
+      "default": "./dist/sitemap/index.mjs"
+    },
+    "./health": {
+      "types": "./dist/health/index.d.mts",
+      "import": "./dist/health/index.mjs",
+      "default": "./dist/health/index.mjs"
+    },
+    "./human-check": {
+      "types": "./dist/human-check/index.d.mts",
+      "import": "./dist/human-check/index.mjs",
+      "default": "./dist/human-check/index.mjs"
+    },
+    "./navigation": {
+      "types": "./dist/navigation/index.d.mts",
+      "import": "./dist/navigation/index.mjs",
+      "default": "./dist/navigation/index.mjs"
+    },
+    "./config": {
+      "types": "./dist/config/index.d.mts",
+      "import": "./dist/config/index.mjs",
+      "default": "./dist/config/index.mjs"
+    },
+    "./auth": {
+      "types": "./dist/auth/index.d.mts",
+      "import": "./dist/auth/index.mjs",
+      "default": "./dist/auth/index.mjs"
+    },
+    "./auth/middleware": {
+      "types": "./dist/auth/middleware.d.mts",
+      "import": "./dist/auth/middleware.mjs",
+      "default": "./dist/auth/middleware.mjs"
+    },
+    "./ai": {
+      "types": "./dist/ai/index.d.mts",
+      "import": "./dist/ai/index.mjs",
+      "default": "./dist/ai/index.mjs"
+    },
+    "./pwa": {
+      "types": "./dist/pwa/index.d.mts",
+      "import": "./dist/pwa/index.mjs",
+      "default": "./dist/pwa/index.mjs"
+    },
+    "./pwa/manifest": {
+      "types": "./dist/pwa/manifest.d.mts",
+      "import": "./dist/pwa/manifest.mjs",
+      "default": "./dist/pwa/manifest.mjs"
+    },
+    "./pwa/worker": {
+      "types": "./dist/pwa/worker/index.d.mts",
+      "import": "./dist/pwa/worker/index.mjs",
+      "default": "./dist/pwa/worker/index.mjs"
+    },
+    "./worker": {
+      "types": "./dist/pwa/worker/index.d.mts",
+      "import": "./dist/pwa/worker/index.mjs",
+      "default": "./dist/pwa/worker/index.mjs"
+    },
+    "./app-icon": {
+      "types": "./dist/app-icon/index.d.mts",
+      "import": "./dist/app-icon/index.mjs",
+      "default": "./dist/app-icon/index.mjs"
+    },
+    "./app-icon/next": {
+      "types": "./dist/app-icon/next.d.mts",
+      "import": "./dist/app-icon/next.mjs",
+      "default": "./dist/app-icon/next.mjs"
+    },
+    "./og-image": {
+      "types": "./dist/og-image/index.d.mts",
+      "import": "./dist/og-image/index.mjs",
+      "default": "./dist/og-image/index.mjs"
+    },
+    "./monitor": {
+      "types": "./dist/monitor/index.d.mts",
+      "import": "./dist/monitor/index.mjs",
+      "default": "./dist/monitor/index.mjs"
+    },
+    "./i18n": {
+      "types": "./dist/i18n/index.d.mts",
+      "import": "./dist/i18n/index.mjs",
+      "default": "./dist/i18n/index.mjs"
+    },
+    "./i18n/server": {
+      "types": "./dist/i18n/server.d.mts",
+      "import": "./dist/i18n/server.mjs",
+      "default": "./dist/i18n/server.mjs"
+    },
+    "./i18n/client": {
+      "types": "./dist/i18n/client.d.mts",
+      "import": "./dist/i18n/client.mjs",
+      "default": "./dist/i18n/client.mjs"
+    },
+    "./i18n/proxy": {
+      "types": "./dist/i18n/proxy.d.mts",
+      "import": "./dist/i18n/proxy.mjs",
+      "default": "./dist/i18n/proxy.mjs"
+    },
+    "./i18n/navigation": {
+      "types": "./dist/i18n/navigation.d.mts",
+      "import": "./dist/i18n/navigation.mjs",
+      "default": "./dist/i18n/navigation.mjs"
+    },
+    "./i18n/routing": {
+      "types": "./dist/i18n/routing.d.mts",
+      "import": "./dist/i18n/routing.mjs",
+      "default": "./dist/i18n/routing.mjs"
+    },
+    "./i18n/request": {
+      "types": "./dist/i18n/request.d.mts",
+      "import": "./dist/i18n/request.mjs",
+      "default": "./dist/i18n/request.mjs"
+    },
+    "./i18n/components": {
+      "types": "./dist/i18n/components.d.mts",
+      "import": "./dist/i18n/components.mjs",
+      "default": "./dist/i18n/components.mjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "djangocfg-docs": "./dist/ai/cli.mjs"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "eslint .",
+    "check": "tsc --noEmit",
+    "test": "tsx --test src/**/*.test.ts",
+    "ai-docs": "tsx src/ai/cli.ts"
+  },
+  "peerDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/devtools": "workspace:*",
+    "@djangocfg/i18n": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "next": "^16.4.5",
+    "next-intl": "^4.9.1"
+  },
+  "peerDependenciesMeta": {
+    "@djangocfg/api": {
+      "optional": true
+    },
+    "@djangocfg/ui-core": {
+      "optional": true
+    },
+    "@djangocfg/devtools": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "chalk": "^6.0.1",
+    "conf": "^16.0.0",
+    "consola": "^3.4.2",
+    "semver": "^7.8.6"
+  },
+  "devDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/devtools": "workspace:*",
+    "@djangocfg/i18n": "workspace:*",
+    "@djangocfg/layouts": "workspace:*",
+    "@djangocfg/typescript-config": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/semver": "^7.8.0",
+    "@types/webpack": "^5.28.5",
+    "eslint": "^10.14.0",
+    "lucide-react": "^1.68.0",
+    "next-intl": "^4.14.9",
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

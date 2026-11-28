@@ -136,7 +136,8 @@ def walk(root: Path, *, max_files: int = MAX_FILES) -> Iterator[tuple[str, Path,
 
 def fingerprint(root: Path, *, max_files: int = MAX_FILES) -> str:
     """Cheap change detector: names, sizes and mtimes only (no file is read)."""
-    h = hashlib.sha1()
+    # Metadata-based cache invalidation hint, not a content integrity check.
+    h = hashlib.sha1(usedforsecurity=False)
     for rel, _path, st, _ in walk(root, max_files=max_files):
         h.update(f"{rel}\0{st.st_size if st else 0}\0{st.st_mtime_ns if st else 0}\n".encode())
     return h.hexdigest()

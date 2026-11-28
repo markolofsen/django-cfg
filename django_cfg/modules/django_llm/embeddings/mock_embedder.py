@@ -114,8 +114,8 @@ class MockEmbedder:
         Returns:
             List of floats representing the mock embedding
         """
-        # Generate MD5 hash of text
-        text_hash = hashlib.md5(text.encode()).hexdigest()
+        # Deterministic mock vector seed only; retain exact fixture vectors.
+        text_hash = hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()
 
         # Convert hex pairs to normalized floats (0.0 - 1.0)
         mock_embedding = [

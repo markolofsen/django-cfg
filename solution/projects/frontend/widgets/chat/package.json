@@ -1,0 +1,113 @@
+{
+  "name": "@djangocfg/widget-chat",
+  "version": "0.1.60",
+  "description": "A transport-agnostic chat surface: a pure core, a store, primitives, a composer and the assembled components a host mounts, plus the site assistant over SSE (wire, session, shell, dictation, 17 locales)",
+  "keywords": [
+    "chat",
+    "ai",
+    "streaming",
+    "markdown",
+    "composer",
+    "react",
+    "typescript",
+    "page-snapshot",
+    "browser-bridge",
+    "assistant",
+    "sse",
+    "dictation"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "widgets/chat"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles": "./src/styles/index.css",
+    "./core": "./src/chat/core/index.ts",
+    "./store": "./src/chat/store/index.ts",
+    "./primitives": "./src/chat/primitives/index.ts",
+    "./media": "./src/chat/media/index.ts",
+    "./content": "./src/chat/content/index.ts",
+    "./composer": "./src/chat/composer/index.ts",
+    "./ui": "./src/chat/ui/index.ts",
+    "./utils": "./src/chat/utils/index.ts",
+    "./i18n": "./src/i18n/index.ts",
+    "./testing": "./src/chat/testing/index.ts",
+    "./page-snapshot": "./src/page-tooling/page-snapshot/index.ts",
+    "./browser-bridge": "./src/page-tooling/browser-bridge/index.ts",
+    "./copilot": "./src/page-tooling/copilot/index.ts",
+    "./wire": "./src/assistant/wire/index.ts",
+    "./session": "./src/assistant/session/index.ts",
+    "./shell": "./src/assistant/shell/index.ts",
+    "./assistant": "./src/assistant/index.ts"
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/*.stories.tsx",
+    "!src/**/stories/**",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@djangocfg/widget-kit": "workspace:*",
+    "@djangocfg/widget-media": "workspace:*",
+    "@streamdown/math": "^1.0.3",
+    "consola": "^3.4.2",
+    "mdast-util-to-string": "^4.0.0",
+    "rehype-harden": "^1.1.8",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "use-stick-to-bottom": "^1.1.6",
+    "zustand": "^5.0.16"
+  },
+  "peerDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/i18n": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "lucide-react": "^1.68.0",
+    "react": "^19.0.0",
+    "remark-gfm": "^4.0.0",
+    "streamdown": "^2.7.0"
+  },
+  "devDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/i18n": "workspace:*",
+    "@djangocfg/typescript-config": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "@storybook/react-vite": "^10.6.5",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "jsdom": "^30.1.3",
+    "lucide-react": "1.68.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remark-gfm": "4.0.1",
+    "storybook": "^10.6.5",
+    "streamdown": "2.7.1",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

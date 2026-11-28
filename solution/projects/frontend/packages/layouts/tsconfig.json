@@ -1,0 +1,19 @@
+{
+  "extends": "@djangocfg/typescript-config/react-library.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["./*"],
+      "@/components/*": ["./components/*"],
+      "@/layouts/*": ["./layouts/*"],
+      "@/snippets/*": ["./snippets/*"],
+      "@/utils/*": ["./utils/*"],
+    }
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "@*", "**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"]
+}
+

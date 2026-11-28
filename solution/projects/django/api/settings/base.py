@@ -21,7 +21,7 @@ locals().update(config.get_all_settings())
 # - STATIC/MEDIA files
 # - SECURITY settings
 # - DRF configuration
-# - Unfold admin
+# - Admin site (navigation, branding)
 # - Constance dynamic settings
 # - And much more!
 

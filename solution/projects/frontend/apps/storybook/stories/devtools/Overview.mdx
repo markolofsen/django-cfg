@@ -1,0 +1,59 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Packages/Devtools/Overview" />
+
+# @djangocfg/devtools
+
+Frontend devtools for django-cfg apps — one package, one event stream.
+Replaces the retired `@djangocfg/monitor` + `@djangocfg/debuger` pair.
+
+- **Capture** — `window.onerror`, unhandled rejections, `console.warn/error`,
+  zod validation events from `@djangocfg/api` clients.
+- **Ingest** — errors/warnings are batched to `POST /cfg/monitor/ingest/`
+  with dedupe, keepalive flush on unload, and a circuit breaker.
+- **Debug panel** — floating bug button (auto in dev, `?debug=1` in prod, ⌘D)
+  with a filterable log feed and app-defined custom tabs.
+
+## Install
+
+```bash
+pnpm add @djangocfg/devtools
+```
+
+```css
+/* globals.css — enables Tailwind class scanning for the panel */
+@import "@djangocfg/devtools/styles";
+```
+
+## Quick start
+
+`BaseApp` from `@djangocfg/layouts` mounts `<Devtools />` automatically —
+pass options via its `devtools` prop. Standalone:
+
+```tsx
+// app/layout.tsx
+import { Devtools } from '@djangocfg/devtools';
+
+<Devtools project="my-app" environment={process.env.NODE_ENV} />
+```
+
+```ts
+// Anywhere in client code
+import { devtools } from '@djangocfg/devtools';
+
+devtools.error('Payment widget crashed', { orderId });  // panel + backend
+const log = devtools.log('CheckoutForm');               // panel only
+log.info('step changed', { step });
+```
+
+```ts
+// Server (route handlers / RSC)
+import { serverDevtools } from '@djangocfg/devtools/server';
+serverDevtools.configure({ project: 'my-app', baseUrl: process.env.API_URL });
+```
+
+In the browser console: `window.devtools.status()`, `window.devtools.error('test')`.
+
+## Source
+
+`packages/devtools/`

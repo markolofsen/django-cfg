@@ -1,3 +1,10 @@
 packages:
   - 'apps/*'
+  # Self-contained product blocks. A widget may depend on a package; a package
+  # may not depend on a widget. See widgets/CLAUDE.md.
+  - 'widgets/*'
   - 'packages/*'
+  # Archived packages/apps are kept on disk for reference but excluded from the
+  # workspace (e.g. packages/@archive/seo, the retired @djangocfg/seo). Without
+  # this, a deeper glob could re-add them and clash on duplicate package names.
+  - '!**/@archive/**'

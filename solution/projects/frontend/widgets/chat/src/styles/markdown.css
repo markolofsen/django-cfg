@@ -1,0 +1,446 @@
+/**
+ * The MARKDOWN surface — how a rendered message reads.
+ *
+ * These style markup the PACKAGE renders (`streamdown` output inside a
+ * message), so they ship with it: a second consumer that mounted the transcript
+ * and got un-gutter'd lists, a doubled code background and document-scale
+ * headings would be inheriting a bug, not exercising a choice.
+ *
+ * What stays with the HOST is what a product decides — the type SCALE, the
+ * reading COLUMN, and the `.chat-surface`/`.chat-column` classes it puts on its
+ * own elements. Consumed here as variables WITH FALLBACKS, so this degrades to
+ * sensible relative sizing when a host declares none.
+ */
+
+/**
+ * Zero-specificity by design.
+ *
+ * Everything below is `:where()`, so every rule has ZERO specificity: a
+ * component that sets its own value always wins, and these are defaults rather
+ * than overrides. That matters because the agent's markdown is rendered by
+ * `streamdown`, and fighting a library with specificity is how a stylesheet
+ * becomes unmaintainable.
+ *
+ * The through-line is that a message is not a DOCUMENT. Document defaults —
+ * heavy code chips, big headings, generous block margins — are calibrated for a
+ * page the reader arrives at, not for a paragraph inside a conversation.
+ */
+
+/* Monospace, INSIDE a sentence.
+ *
+ * The default here is a chip: background, padding, radius. At prose weight that
+ * reads heavier than the words around it, so a sentence with three identifiers
+ * in it turns into a row of buttons. Keeping the tint but cutting the padding
+ * and softening the ground keeps it identifiable as code without letting it
+ * outrank the sentence carrying it. */
+.chat-surface :where(code, kbd, samp) {
+  font-size: var(--chat-text-code, 0.92em);
+  border-radius: 0.25rem;
+  padding: 0.05em 0.3em;
+  background: color-mix(in oklab, currentColor 8%, transparent);
+}
+
+/* A fenced block is the opposite case: it IS the content, so it keeps its own
+ * ground and padding. Reset the inline rule rather than restate it — a `code`
+ * inside a `pre` matched the selector above and got a second background. */
+/* A fenced block scrolls rather than spilling out of the column, for the same
+ * reason a table does. The guards that hold prose do not reach it:
+ * `break-words` is scoped to the user bubble and code arrives from the model,
+ * and nothing wraps a long line inside a `pre`.
+ *
+ * What spills is not the block's own width — the `pre` measures at the column
+ * either way. Its CONTENT overflows it, and with `overflow-x: visible` that
+ * paints past the edge and grows the transcript's scroll area instead: measured
+ * live, one 400-character line took the scroller from 1218 to 3434 while every
+ * element in the row still reported 768. So the whole transcript scrolls
+ * sideways with no element admitting it did. */
+.chat-surface :where(pre) {
+  font-size: var(--chat-text-code, 0.92em);
+  border-radius: 0.5rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+.chat-surface :where(pre code, pre kbd, pre samp) {
+  padding: 0;
+  background: transparent;
+  font-size: inherit;
+}
+
+/* Headings stay close to the body. An `h1` at document scale inside a bubble
+ * reads as a shout, and the agent emits them freely. The steps are deliberately
+ * small — the job is to mark structure, not to build a title page. */
+.chat-surface :where(h1, h2, h3, h4, h5, h6) {
+  font-size: calc(var(--chat-text, 1em) * 1.08);
+  line-height: 1.35;
+  font-weight: 600;
+  margin-block: 1.2em 0.5em;
+}
+.chat-surface :where(h1:first-child, h2:first-child, h3:first-child) {
+  margin-block-start: 0;
+}
+
+/* Lists need their marker gutter back.
+ *
+ * Measured on a live app: `padding-left: 0`, so the bullets rendered
+ * OUTSIDE the text column and the items did not line up with the paragraphs
+ * above them. `1.4em` is a marker plus a space at the current size, and it
+ * scales with the type because it is an em. */
+.chat-surface :where(ul, ol) {
+  padding-inline-start: 1.4em;
+}
+.chat-surface :where(li) {
+  margin-block: 0.15em;
+}
+.chat-surface :where(li > ul, li > ol) {
+  margin-block: 0.15em;
+}
+
+/* Block rhythm. One value, so paragraphs, lists, quotes and code blocks are
+ * separated by the same distance and the message reads as one column rather
+ * than as stacked cards. */
+.chat-surface :where(p, ul, ol, pre, blockquote, table) {
+  margin-block: 0.7em;
+}
+
+/* A notice is a UI row that happens to be a <p>, so the prose rhythm above
+ * spaces it against a sibling whose parent already sets a gap. Keyed on the
+ * element's own `data-slot` rather than a class, so it cannot be lost by a
+ * caller passing `className`, and in `:where()` so it only REMOVES. */
+.chat-surface :where(p[data-slot="notice"]) {
+  margin-block: 0;
+}
+
+/* The opt-out for UI rendered INSIDE the surface that is not prose.
+ *
+ * A popover, a tooltip or a menu portalled into `.chat-surface` inherits the
+ * block rhythm above, which spaces its rows like paragraphs — three equal gaps
+ * where the design has a heading, a subtitle and a detail line. A consumer
+ * cannot win that with a utility class: `:where()` scores zero, so the two tie
+ * on specificity and this sheet loads later.
+ *
+ * `.chat-plain` states the exemption where the rhythm is defined, so a reader
+ * of either sees both. It also resets the type scale, because the same surface
+ * sets a prose line-height that a dense card must not inherit.
+ *
+ * Wrapped in `:where()` for the same reason everything else here is: this must
+ * REMOVE the prose rhythm, not impose a rhythm of its own. Written as a plain
+ * class it scored (0,2,0) and beat the card's own `mt-*` utilities — the rows
+ * collapsed against each other and no spacing set on them had any effect. */
+.chat-surface :where(.chat-plain) :where(p, ul, ol, pre, blockquote, table) {
+  margin-block: 0;
+}
+.chat-surface :where(.chat-plain) {
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+/* No leading gap at the top of a message, and none trailing at the bottom —
+ * the bubble's own padding owns those edges. Scoped to a first/last child of
+ * ANY container rather than of the surface, because each message renders inside
+ * its own wrapper; but `> *` on that wrapper only, so a nested list's first item
+ * keeps its rhythm. */
+.chat-surface :where(* > p:first-child, * > ul:first-child, * > ol:first-child, * > pre:first-child) {
+  margin-block-start: 0;
+}
+.chat-surface :where(* > p:last-child, * > ul:last-child, * > ol:last-child, * > pre:last-child) {
+  margin-block-end: 0;
+}
+
+/* A quote is marked by a RULE, not by a filled box: it is an aside inside a
+ * message that already sits in a bubble, and a second surface inside the first
+ * reads as a nested card. */
+.chat-surface :where(blockquote) {
+  padding-inline-start: 0.9em;
+  border-inline-start: 2px solid color-mix(in oklab, currentColor 20%, transparent);
+  color: color-mix(in oklab, currentColor 75%, transparent);
+}
+
+/* Tables scroll rather than widen the column. A wide table is the one markdown
+ * element that can break the reading column outright, and a horizontal scrollbar
+ * on the table beats one on the page. */
+.chat-surface :where(table) {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--chat-text-small, 0.8em);
+}
+.chat-surface :where(th, td) {
+  padding: 0.35em 0.6em;
+  border: 1px solid color-mix(in oklab, currentColor 15%, transparent);
+  text-align: start;
+}
+
+/* A separator between thoughts, not a page break. */
+.chat-surface :where(hr) {
+  margin-block: 1.2em;
+  border: 0;
+  border-block-start: 1px solid color-mix(in oklab, currentColor 15%, transparent);
+}
+
+/* An inline chip — a file the agent named, or a bare url it wrote. Both are the
+ * sibling of inline code above, and both follow the same three rules for the
+ * same reasons, so the rules live on ONE class and each kind adds only what is
+ * genuinely its own.
+ *
+ * Sized in `em` so it tracks the bubble's text instead of pinning itself to a
+ * rem the surface knows nothing about. Coloured by INHERITANCE, never by a
+ * named token: the user's bubble has no primary fill in dark theme, so a
+ * `--primary-foreground` resolved to near-black against light prose and the
+ * reference all but vanished. And the ground is mixed FROM that inherited
+ * colour, so it tints toward whichever direction the theme runs — a fixed white
+ * wash shows on a dark bubble and disappears on a light one.
+ *
+ * The class exists so the component carries none of this in a class list: the
+ * rule belongs with the prose it sits in, beside the code chip it matches. */
+.chat-surface .chat-chip {
+  /* Neither a bare `button` nor an `a` inherits type and colour from its
+   * context, so the three lines a UA stylesheet would otherwise decide are
+   * stated here. For the file chip this is the whole reason it is a plain
+   * button: the shared `Button` gives these AND four other things a word
+   * inside a sentence must not have. For the link chip it is what strips the
+   * default underline and link colour. */
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: var(--chat-text-code, 0.92em);
+  /* An inline-flex box exports its FIRST item's baseline, and the first item
+   * here is the icon — an SVG, which has no text baseline to give. That is why
+   * the label rode visibly higher than the words on either side, and why no
+   * amount of padding or line-height fixes it: none of them change WHICH child
+   * the baseline comes from.
+   *
+   * `align-items: baseline` makes the label the donor instead, and
+   * `align-self: center` on the icon (below) re-centres the icon against it.
+   * Measured against the neighbouring prose, chip bottom minus text bottom:
+   *
+   *   line-height 1.4, align center   → -3.50   (the reported defect)
+   *   line-height inherit             → -3.50, and 24.29px tall: `inherit`
+   *                                     takes the multiplier, not the height
+   *   line-height 1, align center     → -3.50   height changed, drift did not
+   *   align-items: baseline           →  0.00
+   *
+   * `baseline-source: last` reaches the same result and is not used: it is the
+   * newer property, unsupported in Safari, and buys nothing here.
+   *
+   * `normal` rather than a number: the font's own line box is what the label
+   * needs to sit in, and every value tried moved the box relative to the text
+   * around it (`1` → -1.28, `1.29` → +0.98, `inherit` → +3.28, `normal` →
+   * -0.50). The residue is the difference between two DIFFERENT type sizes'
+   * bottom edges, not a baseline offset, so it cannot reach zero and does not
+   * need to. */
+  line-height: normal;
+  align-items: baseline;
+  border-radius: 0.25rem;
+  /* Horizontal padding only, and the vertical breathing room comes from the
+   * shadow below instead.
+   *
+   * Vertical padding cannot be used here: on a flex container the baseline is
+   * measured from the padding box, so every form of it drags the label off the
+   * line. Measured, drift against the neighbouring text:
+   *
+   *   padding-block: 2px                        → +2.00
+   *   padding-block + matching negative margin  → +2.00 (margin is not counted)
+   *   padding-block + vertical-align offset     → +4.00 (they ADD, not cancel)
+   *   padding-block on the label instead        → +0.72
+   *   box-shadow spread                         →  0.00
+   */
+  padding: 0 0.3em;
+  /* Horizontal only, and exactly the shadow's spread: the ground below paints
+   * OUTSIDE the box, so without this it laps over the words on either side and
+   * the chip reads as touching them. Inline margin does not affect the
+   * baseline (measured: drift stays 0.00), which is why the axis that could not
+   * take padding can take this. */
+  margin-inline: 0.18em;
+  background: color-mix(in oklab, currentColor 10%, transparent);
+  /* The ground, grown evenly on all four sides. A shadow paints outside the
+   * border box without joining layout, so the chip reads as having padding
+   * while its baseline, its height and the paragraph's line box are all
+   * untouched. Same colour as the background, so the two are one shape. */
+  box-shadow: 0 0 0 0.18em color-mix(in oklab, currentColor 10%, transparent);
+}
+/* The icon must NOT sit on the baseline it just handed to the label — a glyph
+ * aligned that way hangs its whole body above the line. Centring it against the
+ * label is the counterpart to `align-items: baseline` above.
+ *
+ * The size is an em for the same reason the type is: a fixed 16px leaves the
+ * icon behind the moment a surface raises its text. */
+.chat-surface .chat-chip > svg {
+  align-self: center;
+  width: 1em;
+  height: 1em;
+}
+/* A host-supplied typed icon arrives as a SPAN wrapping the svg, sized in
+ * pixels inline. Both have to be overridden here: the pixel size does not track
+ * the surface's type, and the span would donate the baseline the label owns. */
+.chat-surface .chat-chip > span:where([aria-hidden="true"], [role="img"]) {
+  align-self: center;
+  width: 1em !important;
+  height: 1em !important;
+}
+.chat-surface .chat-chip > span:where([aria-hidden="true"], [role="img"]) > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* A site's own icon, drawn like the glyphs above: an em square centred on the label. */
+.chat-surface .chat-chip > img {
+  align-self: center;
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border-radius: 0.2em;
+}
+/* Both surfaces move together, and INSTANTLY. A hover lighting only the
+ * background shows the shadow as a separate unlit ring; a transition covering
+ * only `background-color` eases one half while the ring snaps, which separates
+ * the two halves of one shape. Do not add a transition without covering both. */
+.chat-surface .chat-chip:where(:hover) {
+  background: color-mix(in oklab, currentColor 18%, transparent);
+  box-shadow: 0 0 0 0.18em color-mix(in oklab, currentColor 18%, transparent);
+}
+/* An ordinary link the agent wrote, where the author chose the label.
+ *
+ * A host overriding the renderer's `a` component opts out of the library's
+ * default anchor, which is where the class, `target` and `rel` came from. With
+ * none of them a link is indistinguishable from the prose around it, so this
+ * states them rather than leaving the host's fallback bare.
+ *
+ * `overflow-wrap` because a url too long for the column otherwise widens the
+ * bubble instead of wrapping. */
+.chat-surface .chat-link {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  overflow-wrap: anywhere;
+}
+
+/* WHICH SIDE a link sits on is read from the DOM, not passed down.
+ *
+ * The accent is right against assistant prose and wrong inside a user bubble,
+ * whose saturated ground already spends the accent — so the link needs the
+ * bubble's own foreground there instead.
+ *
+ * That decision cannot travel as a prop. `components` is memoized ONCE per
+ * screen (`Response` re-parses every message when the object's identity
+ * changes), so a per-message value threaded through it would either be stale or
+ * cost a full re-parse per render. The message wrapper already publishes
+ * `data-role`, which is a fact about the DOM the link is standing in and needs
+ * no plumbing at all.
+ *
+ * Assistant is the default rather than a mirrored rule: an unknown or absent
+ * role reads as prose, which is the safe direction — an accent that fails to
+ * apply is a dull link, while a foreground that fails to apply is invisible
+ * text on a saturated ground. */
+.chat-surface .chat-link,
+.chat-surface .chat-link-chip {
+  color: var(--primary);
+}
+
+.chat-surface [data-role="user"] .chat-link,
+.chat-surface [data-role="user"] .chat-link-chip {
+  color: inherit;
+}
+
+/* A url label carries a domain AND a path, so the ceiling is generous; the
+ * component still elides the middle, and this is only the backstop. */
+.chat-surface .chat-link-chip {
+  max-width: 20rem;
+}
+/* With a preview the chip reads "title  host". The host gives way first and
+ * vanishes before the title is cut, so no breakpoint is needed: the bubble's
+ * own width decides. */
+.chat-surface .chat-link-title {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.chat-surface .chat-link-host {
+  flex: 0 100 auto;
+  min-width: 0;
+  max-width: 40%;
+  opacity: 0.6;
+  font-size: 0.9em;
+}
+
+/* A rendered diagram, and the source shown when one cannot be drawn.
+ *
+ * The SVG carries no dimensions of its own worth honouring — the renderer sizes
+ * it to the graph, which is routinely wider than the column. Constraining the
+ * element and letting the child scale is what keeps a wide diagram from
+ * widening the bubble, the same rule every other wide block here follows. */
+.chat-surface .chat-diagram {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+}
+
+.chat-surface .chat-diagram > svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* The fallback is the agent's own source, so it reads as a listing rather than
+ * as an error: the same ground and rhythm as a code block, because that is what
+ * it is. Colour comes from `currentColor` and cannot be wrong in either theme. */
+.chat-surface .chat-diagram-source {
+  overflow-x: auto;
+  padding: 0.75rem;
+  border-radius: var(--radius, 0.5rem);
+  background: color-mix(in oklab, currentColor 6%, transparent);
+  font-size: 0.8125em;
+  white-space: pre;
+}
+
+/* A link in a message: the anchor and its copy control travel together.
+ *
+ * The wrapper is the unit that must fit the bubble. `max-width: 100%` is what
+ * lets a long chip truncate (`.truncate` on its label) instead of widening a
+ * `w-fit` bubble; `min-width: 0` lets it shrink inside a flex row. */
+.chat-surface .chat-link-wrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15em;
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: baseline;
+}
+
+/* The copy control stays out of the reading until it is wanted: revealed by
+ * hover or focus on the link or on itself, and always there on a device with no
+ * hover, where there is no other way to reach it. */
+.chat-surface .chat-link-copy {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  width: 1.25em;
+  height: 1.25em;
+  padding: 0.2em;
+  border-radius: 0.375em;
+  color: inherit;
+  opacity: 0;
+  cursor: pointer;
+}
+.chat-surface .chat-link-copy > svg {
+  width: 100%;
+  height: 100%;
+}
+.chat-surface .chat-link-wrap:is(:hover, :focus-within) .chat-link-copy,
+.chat-surface .chat-link-copy:focus-visible {
+  opacity: 0.7;
+}
+.chat-surface .chat-link-copy:is(:hover, :focus-visible) {
+  opacity: 1;
+  background: color-mix(in oklab, currentColor 14%, transparent);
+}
+@media (hover: none) {
+  .chat-surface .chat-link-copy {
+    opacity: 0.6;
+  }
+}
+
+/* Prose in a reply wraps a word that is wider than the column (a path, a hash,
+ * a url written inside code-less text). `anywhere` and not `break-word`: the
+ * reply's column is `w-full`, but nested flex ancestors size from min-content,
+ * and only `anywhere` lowers it. Scoped to text blocks so a table cell or a code
+ * block keeps its own scroll. */
+.chat-surface [data-role="assistant"] :is(p, li, blockquote, h1, h2, h3, h4, h5, h6) {
+  overflow-wrap: anywhere;
+}

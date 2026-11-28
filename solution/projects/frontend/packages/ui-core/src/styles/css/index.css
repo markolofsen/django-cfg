@@ -1,0 +1,34 @@
+/**
+ * @djangocfg/ui-core styles — token + base + utilities chain.
+ *
+ * IMPORTANT — this entry does NOT import Tailwind and does NOT wrap its
+ * CSS in cascade layers. base.css (the `*` border reset and the `body`
+ * background/font rules) and utilities.css are emitted UNLAYERED. In
+ * Tailwind v4 unlayered rules beat anything in `@layer utilities`, so
+ * whether these resets defeat layout utilities (gap, space-y, divide,
+ * flex, border, padding) depends entirely on where the consumer places
+ * its own `@import "tailwindcss"` and on the build tool — a real footgun
+ * (it broke a WKWebView/Vite consumer while rendering fine in Chrome).
+ *
+ * Prefer the cascade-layer-safe golden path instead, which pins the
+ * resets/utilities to explicit layers so ordering can't go wrong:
+ *
+ *     @import "@djangocfg/ui-core/styles/full";   // see full.css
+ *
+ * This `index.css` is kept for consumers that intentionally manage their
+ * own layer ordering (e.g. the Next.js demo, which imports tailwindcss
+ * itself AFTER this chain). theme.css must stay unlayered here so the
+ * `@theme` tokens and `:root`/`.dark` variables remain global.
+ */
+
+/* Theme variables + tokens (kept global so Tailwind reads @theme and :root/.dark apply everywhere). */
+@import "./theme.css";
+
+/* Source detection for Tailwind v4 monorepo. */
+@import "./sources.css";
+
+/* Base styles — emitted unlayered; see header note. */
+@import "./base.css";
+
+/* Custom utilities — emitted unlayered; see header note. */
+@import "./utilities.css";

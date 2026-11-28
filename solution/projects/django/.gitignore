@@ -55,6 +55,7 @@ yarn-error.log*
 
 # Temporary files
 poetry.lock
+/.django_cfg_types_*
 *.tmp
 *.temp
 .cache/

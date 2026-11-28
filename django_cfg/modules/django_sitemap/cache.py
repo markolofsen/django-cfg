@@ -25,7 +25,8 @@ def index_key() -> str:
 
 
 def feed_key(source: str, cursor: str | None) -> str:
-    digest = hashlib.sha1((cursor or "").encode("utf-8")).hexdigest()[:16]
+    # Cursors originate from requests; do not reuse a truncated legacy SHA-1 key.
+    digest = hashlib.sha256((cursor or "").encode("utf-8")).hexdigest()
     return f"sitemap:feed:{source}:{digest}:{_v()}"
 
 

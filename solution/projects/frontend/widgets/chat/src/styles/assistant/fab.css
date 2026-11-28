@@ -1,0 +1,74 @@
+/* The floating button's motion: it pops in on load, its hint bubble grows out of the button, and a ring now and then reminds of it. All of it only for people who allow motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .assistant-fab {
+    animation: assistant-fab-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .assistant-fab-hint {
+    transform-origin: bottom right;
+    animation: assistant-fab-hint-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .assistant-fab-hint[data-leaving] {
+    animation: assistant-fab-hint-out 0.25s ease-in both;
+  }
+  .assistant-fab-ring {
+    animation: assistant-fab-ring 1.8s ease-out 2 both;
+  }
+  /* The spark of the mark twists in a loop: a smooth half turn, then a rest (about 1.15 s of motion every 3.6 s), starting after the button has popped in. Hover or focus twists it at once. A half turn of a four-point star looks like the start, so the loop is seamless. */
+  .assistant-fab .assistant-mark-spark {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: assistant-spark-twist 3.6s linear 0.8s infinite both;
+  }
+  .assistant-fab:hover .assistant-mark-spark,
+  .assistant-fab:focus-visible .assistant-mark-spark {
+    animation: assistant-spark-twist-again 3.6s linear infinite both;
+  }
+}
+
+@keyframes assistant-spark-twist {
+  0% { transform: rotate(0deg) scale(1); animation-timing-function: cubic-bezier(0.45, 0, 0.2, 1); }
+  16% { transform: rotate(100deg) scale(0.72); animation-timing-function: cubic-bezier(0.3, 0, 0.3, 1); }
+  32%, 100% { transform: rotate(180deg) scale(1); }
+}
+@keyframes assistant-spark-twist-again {
+  0% { transform: rotate(0deg) scale(1); animation-timing-function: cubic-bezier(0.45, 0, 0.2, 1); }
+  16% { transform: rotate(100deg) scale(0.72); animation-timing-function: cubic-bezier(0.3, 0, 0.3, 1); }
+  32%, 100% { transform: rotate(180deg) scale(1); }
+}
+
+@keyframes assistant-fab-pop {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes assistant-fab-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes assistant-fab-hint-out {
+  to {
+    opacity: 0;
+    transform: translateY(0.25rem) scale(0.9);
+  }
+}
+@keyframes assistant-fab-ring {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}

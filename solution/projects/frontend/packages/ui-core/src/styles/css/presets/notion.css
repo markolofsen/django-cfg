@@ -1,0 +1,175 @@
+/* Authoritative static preset: notion.
+ *
+ * Measured from app.notion.com on 2026-11-06 (its `:root, .notion-light-theme`
+ * custom properties), not eyeballed from a screenshot:
+ *   canvas #fff · rail #f9f8f7 · hover #f0efed · hairline #e6e5e3
+ *   ink #2c2c2b · secondary ink #7d7a75 · accent blue #2783de
+ * Notion is neutral: no brand colour on surfaces, one blue for the single
+ * primary action, and a warm-grey hover. Everything else is ink on white.
+ */
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(60 1% 17%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(60 1% 17%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(60 1% 17%);
+  /* Notion's blue is #2783de (white on it: 3.9:1). One lightness step deeper
+     keeps white button labels at AA (4.6:1) while staying the same hue. */
+  --primary: hsl(209 74% 47%);
+  --primary-foreground: hsl(0 0% 100%);
+  /* #f9f8f7 — Notion's "secondary background". */
+  --secondary: hsl(30 14% 97%);
+  --secondary-foreground: hsl(60 1% 17%);
+  /* #f0efed. 6.5 points under the white page: a visible chip, not a plate. */
+  --muted: hsl(40 9% 93.5%);
+  /* #7d7a75 darkened one step: AA on white and on the muted fill. */
+  --muted-foreground: hsl(37 3% 43%);
+  --surface-hover: hsl(40 9% 95%);
+  /* Hover on the page: the same warm grey as Notion's row hover. */
+  --accent: hsl(40 9% 93.5%);
+  --accent-foreground: hsl(60 1% 17%);
+  /* #cf5148 text red, #e56458 fill red; deeper for white labels. */
+  --destructive: hsl(5 62% 48%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --on-destructive: hsl(0 0% 100%);
+  /* #e6e5e3 */
+  --border: hsl(40 6% 90%);
+  /* Notion fields are white with a hairline, not a grey plate. */
+  --input: hsl(0 0% 100%);
+  --divider: hsl(40 6% 92%);
+  --ring: hsl(209 74% 52%);
+  --overlay: hsl(0 0% 0% / 0.4);
+  --radius: 0.375rem;
+  --shadow-card: 0 0 0 1px rgb(15 15 15 / 0.05), 0 3px 6px rgb(15 15 15 / 0.1);
+  /* Notion's sidebar is #f9f8f7 under #fff content; its hover is a ~8% ink
+     veil, 5 points down. */
+  --sidebar-background: hsl(30 14% 97%);
+  --sidebar-foreground: hsl(60 1% 17%);
+  --sidebar-primary: hsl(209 74% 47%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(40 7% 92%);
+  --sidebar-accent-foreground: hsl(60 1% 17%);
+  --sidebar-border: hsl(40 6% 90%);
+  --sidebar-ring: hsl(209 74% 52%);
+  --code: hsl(30 14% 97%);
+  --code-foreground: hsl(60 1% 17%);
+  --code-border: hsl(40 6% 90%);
+  --code-inline: hsl(40 9% 93.5%);
+  --code-inline-foreground: hsl(5 62% 42%);
+  --chart-1: hsl(209 74% 52%);
+  --chart-2: hsl(147 30% 47%);
+  --chart-3: hsl(277 30% 55%);
+  --chart-4: hsl(31 65% 51%);
+  --chart-5: hsl(5 62% 59%);
+  /* Status tints are Notion's *BacPri / *TexPri / *BorPri triples. */
+  --warning: hsl(39 60% 51%);
+  --warning-background: hsl(52 70% 96%);
+  --warning-foreground: hsl(45 53% 26%);
+  --warning-border: hsl(46 66% 82%);
+  --success: hsl(147 30% 47%);
+  --success-background: hsl(147 20% 96%);
+  --success-foreground: hsl(147 33% 25%);
+  --success-border: hsl(147 22% 87%);
+  --destructive-background: hsl(0 55% 97%);
+  --destructive-border: hsl(5 70% 92%);
+  --info: hsl(209 74% 52%);
+  --info-background: hsl(209 80% 97%);
+  --info-foreground: hsl(209 50% 29%);
+  --info-border: hsl(209 75% 91%);
+  /* Notion types in the system UI stack, 14px, with a 1.5 leading. */
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
+  --font-size-base: 0.875rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-xs: 0.75rem;
+  --line-height-base: 1.5;
+  /* Notion's menus: 14px type, 28px rows (4px vertical padding), 4px panel padding. */
+  /* Notion AI: messages 14px / 20px. */
+  /* Notion's controls are flat: the hairline does the work, no drop shadow. */
+  --shadow: 0 0 #0000;
+  --shadow-xs: 0 0 #0000;
+  --shadow-sm: 0 0 #0000;
+  /* Notion's controls are 24/28/32px, 14px type at weight 500. */
+  --control-h-xs: 1.5rem;
+  --control-h-sm: 1.75rem;
+  --control-h-default: 2rem;
+  --control-h-lg: 2.5rem;
+  --button-weight: 500;
+  /* Notion's sidebar row: 30px, 14px type, 6px corner. */
+  --sidebar-item-h: 1.875rem;
+  --sidebar-item-gap: 0.0625rem;
+  --sidebar-item-font: var(--font-size-base);
+  --sidebar-item-radius: 0.375rem;
+  /* Notion separates sidebar groups by space, not by a rule. */
+  --sidebar-divider-h: 0px;
+  /* Notion's top bar is 44px. */
+  --panel-header-h: 2.75rem;
+  /* Notion tags: 20px, 4px corner, 14px regular. */
+  --badge-radius: 0.25rem;
+  --badge-px: 0.375rem;
+  --badge-py: 0;
+  --badge-font-size: 0.875rem;
+  --badge-weight: 400;
+  --chat-text: var(--font-size-base);
+  --chat-leading: 1.5;
+  /* The AI composer is a raised 1px-ringed card (#202020 on #191919 in dark). */
+  --chat-composer-bg: var(--card);
+  --chat-composer-radius: 0.75rem;
+  --chat-composer-button-radius: 9999px;
+  --chat-composer-ring-w: 1px;
+  --chat-composer-ring: var(--border);
+  --chat-composer-ring-focus: var(--ring);
+  --panel-title-weight: 500;
+  --panel-title-tracking: 0;
+  --panel-title-color: var(--foreground);
+  --panel-title-transform: none;
+  --menu-font-size: var(--font-size-base);
+  /* Menu section labels: 12px / 500 in the muted ink. */
+  --menu-label-font-size: var(--font-size-xs);
+  --menu-label-weight: 500;
+  --menu-label-color: var(--muted-foreground);
+  --radius-popover: 0.625rem;
+  /* Tooltips are the popover surface with a hairline, not inverted (Notion: "Chat ^2" on the same grey as the menus). */
+  --tooltip-bg: var(--popover);
+  --tooltip-fg: var(--popover-foreground);
+  --tooltip-border: var(--border);
+  --radius-tooltip: 0.375rem;
+  /* The popover already has a hairline border, so no ring here; a short, soft lift (the earlier 0.2 / 24px blur read as a heavy cloud on white). */
+  --popup-shadow: 0 2px 4px rgb(15 15 15 / 0.05), 0 8px 20px -6px rgb(15 15 15 / 0.12);
+  --menu-item-px: 0.5rem;
+  --menu-item-py: 0.25rem;
+  --menu-padding: 0.25rem;
+}
+
+/* Notion dark (#191919 page, #202020 rail, #2f2f2f hairline). */
+.dark {
+  --background: hsl(0 0% 10%);
+  --foreground: hsl(40 9% 93.5%);
+  --card: hsl(0 0% 12%);
+  --card-foreground: hsl(40 9% 93.5%);
+  --popover: hsl(0 0% 15%);
+  --popover-foreground: hsl(40 9% 93.5%);
+  --primary: hsl(209 74% 52%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(0 0% 15%);
+  --secondary-foreground: hsl(0 0% 81%);
+  --muted: hsl(0 0% 15%);
+  --muted-foreground: hsl(0 0% 60%);
+  --accent: hsl(0 0% 17%);
+  --accent-foreground: hsl(0 0% 90%);
+  --border: hsl(0 0% 18%);
+  --input: hsl(0 0% 18%);
+  --divider: hsl(0 0% 15%);
+  --ring: hsl(209 74% 52%);
+  --sidebar-background: hsl(0 0% 12.5%);
+  --sidebar-foreground: hsl(0 0% 81%);
+  --sidebar-primary: hsl(209 74% 52%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(0 0% 17%);
+  --sidebar-accent-foreground: hsl(0 0% 90%);
+  --sidebar-border: hsl(0 0% 18%);
+  --sidebar-ring: hsl(209 74% 52%);
+  --chart-1: hsl(209 74% 58%);
+  /* Dark popups: a 1px #383836 ring plus a soft drop. */
+  --popup-shadow: 0 0 0 1px hsl(60 2% 22%), 0 14px 28px -6px rgb(0 0 0 / 0.2), 0 2px 4px -1px rgb(0 0 0 / 0.12);
+}

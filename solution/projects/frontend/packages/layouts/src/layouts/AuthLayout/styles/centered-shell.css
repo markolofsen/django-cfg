@@ -1,0 +1,66 @@
+/**
+ * Centered Shell Styles
+ *
+ * Apple-style frameless layout: full viewport centering, glow background.
+ * The auth form floats in the center with no visible card chrome.
+ */
+
+.auth-shell-centered {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* The top bar pins to the top; the content centers itself in what is left
+     (see `__content`), so a short viewport never pushes the form out of reach. */
+  /* Responsive padding: 24px mobile → 40px desktop */
+  padding: 0.5rem clamp(1.5rem, 5vw, 2.5rem) 1.5rem;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 1rem));
+}
+
+/* Background layers */
+.auth-shell-centered__bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.auth-shell-centered__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Glow layer override — force z-index 0 behind auth content */
+.auth-glow-layer {
+  z-index: 0;
+  pointer-events: none;
+}
+
+.auth-shell-centered__topbar {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+/* Content sits above background */
+.auth-shell-centered__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin-block: auto;
+  padding-bottom: clamp(0rem, 8dvh, 4rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Mobile overflow handling */
+@media (max-width: 480px) {
+  .auth-shell-centered {
+    overflow-y: auto;
+  }
+}

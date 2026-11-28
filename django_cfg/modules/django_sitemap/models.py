@@ -12,8 +12,8 @@ from django.db import models
 
 
 def url_digest(url: str) -> str:
-    """SHA-1 of the URL: the unique key, so a long URL cannot outgrow an index."""
-    return hashlib.sha1(url.encode("utf-8")).hexdigest()
+    """Stable lookup key for the existing database index, not URL identity."""
+    return hashlib.sha1(url.encode("utf-8"), usedforsecurity=False).hexdigest()
 
 
 class IndexNowHost(models.Model):

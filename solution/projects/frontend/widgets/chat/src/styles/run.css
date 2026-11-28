@@ -1,0 +1,283 @@
+/**
+ * The Run block: what an answer did, as one quiet line that opens into a flat list.
+ *
+ * Appearance only; the markup carries structure (`ui/run/`). No card, no border, no
+ * coloured box: muted text, a thin rule beside the open list. Logical properties
+ * throughout, so the block reads right-to-left with no second stylesheet, and
+ * semantic tokens only. A failed step is the one thing that is red.
+ */
+
+.chat-run {
+  font-size: var(--chat-text-small, 0.8125rem);
+  color: var(--muted-foreground);
+}
+
+.chat-run-head {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chat-run-toggle {
+  display: inline-flex;
+  font: inherit;
+  line-height: 1.5;
+  min-inline-size: 0;
+  align-items: center;
+  gap: 0.25rem;
+  padding-block: 0.25rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.chat-run-toggle:hover .chat-run-line[data-tone="ok"] { color: var(--foreground); }
+
+.chat-run-line {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-run-line[data-tone="warn"] { color: var(--destructive); }
+
+.chat-run-chevron {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  flex: none;
+  transition: transform 120ms ease;
+}
+
+[aria-expanded="true"] > .chat-run-chevron {
+  transform: rotate(180deg);
+}
+
+/* While it works, a soft light travels over the words; the colour underneath is the muted one. */
+.chat-run-line[data-tone="live"],
+.chat-run-title[data-running] {
+  background: linear-gradient(90deg, var(--muted-foreground) 35%, var(--foreground) 50%, var(--muted-foreground) 65%) 100% 0 / 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: chat-run-shimmer 2s linear infinite;
+}
+
+@keyframes chat-run-shimmer {
+  to { background-position: 0 0; }
+}
+
+/* The copy button adds no height: 16px, absolutely placed at the trailing edge of the last row, with a larger invisible hit area. */
+.chat-run-copy {
+  position: absolute;
+  inset-block-end: 0.375rem;
+  inset-inline-end: 0;
+  display: inline-flex;
+  inline-size: 1rem;
+  block-size: 1rem;
+  padding: 0;
+  min-block-size: 0;
+  min-inline-size: 0;
+  border-radius: var(--radius, 0.25rem);
+  cursor: pointer;
+}
+
+.chat-run-copy::after {
+  content: "";
+  position: absolute;
+  inset: -0.5rem;
+}
+
+.chat-run-copy svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.chat-run-copy:hover,
+.chat-run-copy:focus-visible { color: var(--foreground); }
+
+@media (hover: hover) {
+  .chat-run-copy { opacity: 0; transition: opacity 120ms ease; }
+  .chat-run-body:hover .chat-run-copy,
+  .chat-run-body:focus-within .chat-run-copy { opacity: 1; }
+}
+
+.chat-run-body {
+  position: relative;
+  min-inline-size: 0;
+  padding-inline-end: 1.75rem;
+  margin-inline-start: 0.5rem;
+  padding-inline-start: 1rem;
+  border-inline-start: 1px solid var(--border);
+}
+
+.chat-run-steps {
+  display: grid;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-run-steps > li { min-inline-size: 0; }
+
+.chat-run-step-head {
+  display: flex;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.25rem;
+  font: inherit;
+  line-height: 1.5;
+  text-align: start;
+}
+
+button.chat-run-step-head { cursor: pointer; }
+button.chat-run-step-head:hover .chat-run-title { color: var(--foreground); }
+
+.chat-run-icon {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+  flex: none;
+}
+
+.chat-run-step[data-status="error"] .chat-run-icon,
+.chat-run-step[data-status="timeout"] .chat-run-icon,
+.chat-run-step[data-status="denied"] .chat-run-icon,
+.chat-run-step[data-status="cancelled"] .chat-run-icon {
+  color: var(--destructive);
+}
+
+.chat-run-title {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-run-object { color: var(--foreground); }
+
+/* An object the server named reads like a link: underlined, not a box. */
+.chat-run-object[data-named] {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, currentColor 35%, transparent);
+  text-underline-offset: 0.2em;
+}
+
+.chat-run-inline {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.chat-run-reason,
+.chat-run-note,
+.chat-run-earlier {
+  margin: 0;
+  padding-inline-start: 1.375rem;
+  overflow-wrap: anywhere;
+}
+
+.chat-run-step[data-status="error"] .chat-run-reason,
+.chat-run-step[data-status="timeout"] .chat-run-reason,
+.chat-run-step[data-status="denied"] .chat-run-reason {
+  color: var(--destructive);
+}
+
+.chat-run-more-detail {
+  margin-inline-start: 1.375rem;
+  padding-block-end: 0.25rem;
+}
+
+/* A thought: a bounded box that follows the stream while live and scrolls once settled; a fade at the top shows there is more above. */
+.chat-run-thought {
+  max-block-size: 9rem;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.chat-run-thought[data-clipped] {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 2rem);
+  mask-image: linear-gradient(to bottom, transparent, #000 2rem);
+}
+
+.chat-run-detail dl,
+.chat-run-detail dd,
+.chat-run-detail p {
+  margin: 0;
+}
+
+.chat-run-detail { padding-block-start: 0.25rem; }
+
+.chat-run-row {
+  display: grid;
+  gap: 0.125rem;
+  margin-block-end: 0.375rem;
+}
+
+.chat-run-row dt {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.chat-run-list {
+  margin: 0;
+  padding-inline-start: 1rem;
+}
+
+.chat-run-pre {
+  margin: 0;
+  max-block-size: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.chat-run-note { padding-inline-start: 0; }
+.chat-run-body > .chat-run-note { padding-inline-start: 1.375rem; }
+
+.chat-run-more {
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  margin-inline-start: 1.375rem;
+  border-radius: var(--radius, 0.375rem);
+  cursor: pointer;
+}
+
+.chat-run-more:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+.chat-run button { min-block-size: 0; min-inline-size: 0; }
+
+/* A touch target without layout height: the hit area overflows the row invisibly. */
+.chat-run-toggle,
+button.chat-run-step-head { position: relative; }
+.chat-run-toggle::after,
+button.chat-run-step-head::after {
+  content: "";
+  position: absolute;
+  inset-block: -0.25rem;
+  inset-inline: 0;
+}
+
+.chat-run :focus-visible {
+  outline: 2px solid var(--ring, var(--primary));
+  outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-run-line[data-tone="live"],
+  .chat-run-title[data-running] {
+    background: none;
+    animation: none;
+    color: var(--muted-foreground);
+  }
+  .chat-run-chevron,
+  .chat-run-copy { transition: none; }
+}

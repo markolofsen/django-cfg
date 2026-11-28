@@ -1,0 +1,11 @@
+{
+  "send_body": {
+    "in": { "text": "what is this?", "attachments": [{ "id": "7f0c2f64-3c1e-4b7a-9a55-0d6f3d1a2b10", "name": "scan.png", "mime": "image/png", "size": 1234, "kind": "image", "url": "https://x/y" }] },
+    "out": { "text": "what is this?", "attachments": [{ "id": "7f0c2f64-3c1e-4b7a-9a55-0d6f3d1a2b10" }] }
+  },
+  "refusals": [
+    { "status": 413, "code": "too_large", "reads_as": "too_large" },
+    { "status": 415, "code": "unsupported_type", "reads_as": "unsupported_type" },
+    { "status": 413, "code": "", "reads_as": "too_large" }
+  ]
+}

@@ -1,0 +1,98 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Packages/Payments/Overview" />
+
+# @djangocfg/payments
+
+Provider-agnostic React payments module, **Stripe-first**. The package never
+imports a concrete SDK at the seam — the host injects an adapter, so the whole
+checkout UX runs keyless against the **mock adapter** (that's what these
+stories do) and swaps to real Stripe with one line.
+
+## Install
+
+```bash
+pnpm add @djangocfg/payments
+```
+
+## Quick start (mock-first)
+
+```tsx
+'use client';
+
+import {
+  PaymentProvider,
+  createMockPaymentAdapter,
+  CheckoutForm,
+} from '@djangocfg/payments';
+
+export function Demo() {
+  return (
+    <PaymentProvider adapter={createMockPaymentAdapter()}>
+      <CheckoutForm
+        amount={2900}                        // minor units ($29.00)
+        currency="usd"
+        reference={{ kind: 'order', id: 'demo' }}
+        summaryTitle="Pro plan"
+        summaryNote="Billed monthly"
+        isMock
+      />
+    </PaymentProvider>
+  );
+}
+```
+
+## Swap to real Stripe
+
+```tsx
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  PaymentProvider,
+  createStripeAdapter,
+  CheckoutForm,
+  StripePaymentElement,
+} from '@djangocfg/payments';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PK!); // once, module scope
+const adapter = createStripeAdapter({
+  getStripe: () => stripePromise,
+  createIntentOnBackend: (input) => api.payments.createIntent(input), // host transport
+});
+```
+
+`StripePaymentElement` wraps `<Elements>` + `<PaymentElement>` (accordion
+layout, theme-token-driven Appearance, Link email/phone prefill) and
+render-props the live Elements context back to the host — it needs a real
+`client_secret`, so it has no story here; the mock path exercises the same
+`CheckoutForm` shell.
+
+## Stripe Link
+
+Link (one-click saved payment across the Stripe network) also has no story —
+it is Stripe-hosted UI inside the Payment Element iframe, invisible without a
+live key. The package already does everything code can do for it:
+
+- pass `email` (and `phone`, E.164) to `StripePaymentElement` — they land in
+  `defaultValues.billingDetails`, so a returning Link user goes straight to
+  the SMS code / one-click pay instead of the full form;
+- the accordion layout keeps Link as a compact inline row, not a tall
+  express block.
+
+Everything else is account-level, not code: enable Link in the Stripe
+Dashboard and register your domain — until then the Element simply renders
+without it.
+
+## Layering
+
+```
+domain/      pure types + money helpers   (no React, no Stripe)
+context/     <PaymentProvider> (adapter seam) + CheckoutGuard (close-lock)
+transport/   mock-adapter | stripe-adapter  (only stripe-adapter touches @stripe/*)
+hooks/       useCheckout state machine, usePaymentHistory
+components/  CheckoutForm, StripePaymentElement, PaymentHistory, PaymentStatusBadge
+```
+
+The `useCheckout` machine: `idle → creating → requires_payment → processing →
+succeeded | failed | requires_action`. `CheckoutGuard` publishes that status to
+the host dialog so it can block Esc / overlay-click / × while a charge is in
+flight.

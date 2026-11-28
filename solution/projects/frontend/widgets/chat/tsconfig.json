@@ -1,0 +1,19 @@
+{
+  "extends": "@djangocfg/typescript-config/react-library.json",
+  "compilerOptions": {
+    "strict": true,
+    // The base config would stop at ES2023. This package owns paste and
+    // streaming, so it needs ClipboardEvent, DataTransfer and ReadableStream.
+    // `core/**` still uses none of them; keeping it that way is what makes the
+    // reducer testable without a DOM.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    // `@djangocfg/ui-core` ships UNBUILT source, so `tsc` recompiles it under
+    // THIS package's flags. `types: ["node"]` covers the `process` / `require`
+    // / `NodeJS` references in its vendored source; `noImplicitOverride` stays
+    // off for the same reason. Our own code is still strict.
+    "noImplicitOverride": false,
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "@*", ".*"]
+}

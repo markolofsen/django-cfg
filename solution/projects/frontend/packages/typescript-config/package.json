@@ -1,0 +1,46 @@
+{
+  "name": "@djangocfg/typescript-config",
+  "version": "2.1.667",
+  "description": "Shared TypeScript configurations for Next.js, React libraries, and Node.js projects with strict type checking",
+  "keywords": [
+    "typescript",
+    "tsconfig",
+    "configuration",
+    "nextjs",
+    "react",
+    "node",
+    "strict",
+    "django",
+    "shared-config"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "packages/typescript-config"
+  },
+  "bugs": {
+    "url": "https://github.com/markolofsen/django-cfg/issues"
+  },
+  "license": "MIT",
+  "main": "base.json",
+  "exports": {
+    "./base.json": "./base.json",
+    "./nextjs.json": "./nextjs.json",
+    "./react-library.json": "./react-library.json"
+  },
+  "files": [
+    "base.json",
+    "nextjs.json",
+    "react-library.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

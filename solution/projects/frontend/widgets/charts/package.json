@@ -1,0 +1,109 @@
+{
+  "name": "@djangocfg/widget-charts",
+  "version": "0.1.14",
+  "description": "Small data visualisations: activity and commit graphs, sparkline, smooth line, gauge, FPS, rating and status indicators",
+  "keywords": [
+    "chart",
+    "sparkline",
+    "gauge",
+    "activity-graph",
+    "indicator",
+    "react",
+    "typescript"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "widgets/charts"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./activity-graph": {
+      "types": "./src/charts/ActivityGraph/index.ts",
+      "default": "./src/charts/ActivityGraph/index.ts"
+    },
+    "./commit-graph": {
+      "types": "./src/charts/CommitGraph/index.ts",
+      "default": "./src/charts/CommitGraph/index.ts"
+    },
+    "./gauge": {
+      "types": "./src/charts/Gauge/index.ts",
+      "default": "./src/charts/Gauge/index.ts"
+    },
+    "./smooth-line": {
+      "types": "./src/charts/SmoothLine/index.ts",
+      "default": "./src/charts/SmoothLine/index.ts"
+    },
+    "./sparkline": {
+      "types": "./src/charts/Sparkline/index.ts",
+      "default": "./src/charts/Sparkline/index.ts"
+    },
+    "./fps": {
+      "types": "./src/indicators/Fps/index.ts",
+      "default": "./src/indicators/Fps/index.ts"
+    },
+    "./rating": {
+      "types": "./src/indicators/Rating/index.ts",
+      "default": "./src/indicators/Rating/index.ts"
+    },
+    "./status-indicator": {
+      "types": "./src/indicators/StatusIndicator/index.ts",
+      "default": "./src/indicators/StatusIndicator/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@djangocfg/widget-kit": "workspace:*",
+    "@radix-ui/react-direction": "^1.2.0",
+    "@radix-ui/react-slot": "^1.5.0",
+    "class-variance-authority": "^0.7.1"
+  },
+  "peerDependencies": {
+    "@djangocfg/ui-core": "workspace:*",
+    "lucide-react": "^1.68.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@djangocfg/typescript-config": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "@storybook/react-vite": "^10.6.5",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "lucide-react": "1.68.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "storybook": "^10.6.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

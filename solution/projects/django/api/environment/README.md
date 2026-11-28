@@ -184,6 +184,14 @@ IS_TEST=true
 
 ## 🔐 Security Best Practices
 
+Administrator notification recipients are empty by default. Set
+ADMIN_EMAILS as a JSON array of addresses belonging to your deployment
+(for example, ADMIN_EMAILS='["admin@example.com"]'). Development may use
+the sample secret; when IS_PROD=true, the loader refuses the known
+development secret and keys shorter than 50 characters. Generate a
+unique random secret for every deployment and keep it outside Git.
+
+
 ### ✅ DO:
 
 1. **Add `.env` to `.gitignore`** (already done ✅)

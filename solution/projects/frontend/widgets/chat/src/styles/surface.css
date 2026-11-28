@@ -1,0 +1,102 @@
+/**
+ * `.chat-surface` and `.chat-column` — the two classes `ChatTranscript` puts on
+ * its own root, and so the two this package must make work.
+ *
+ * They were the host's for as long as the VALUES were the argument. They are
+ * not: what a transcript reads at and how wide it is allowed to get are still
+ * the product's answers, and they still arrive as `--chat-*` tokens the host
+ * declares. What lives here is only the WIRING — which class consumes which
+ * token — which is not a decision at all, and which broke as soon as the
+ * markup moved into this package while the rules stayed behind.
+ *
+ * Every token carries a fallback, so the components work in a host that
+ * declares none: a workbench, a test, a second consumer. A missing token must
+ * degrade to a readable default, never to zero.
+ */
+
+/**
+ * The type. Chat is the one surface in an app that is sustained READING
+ * rather than scanning a control, so it does not inherit the control scale.
+ */
+.chat-surface {
+  font-size: var(--chat-text, 1rem);
+  line-height: var(--chat-leading, 1.65);
+  /* NORMAL, and that is the whole decision. A design system's negative tracking
+   * is tuned for LABELS — a chip, a menu row, something taken in at a glance,
+   * where tightening buys density. Prose is the opposite job: the reader needs
+   * the word shapes open. Measured against the two surfaces this one is judged
+   * beside, both set prose at `normal` and neither tightens it.
+   *
+   * Declared rather than left alone, because a token like
+   * `--letter-spacing-base` is set once high in the tree on a control-sized
+   * element — so it resolves THERE and would arrive here as fixed pixels
+   * computed for a size this surface does not use. */
+  letter-spacing: normal;
+}
+
+/**
+ * A fling that lands on the bottom edge must not hand its leftover momentum to
+ * the page behind, which then bounces back into this box.
+ */
+.chat-surface {
+  overscroll-behavior: contain;
+}
+
+/**
+ * The reading column, applied to the CONTENTS of a full-width surface.
+ *
+ * Every direct child is centred and capped, so the scroller keeps its scrollbar
+ * at the pane's edge while the transcript stays readable on a wide display. A
+ * host puts the same class on its composer wrapper — one rule for both, because
+ * a transcript and a composer at different widths disagree visibly about where
+ * the conversation is.
+ *
+ * A CSS rule rather than a wrapper element per row: the transcript renders its
+ * rows as direct children, and threading a container through it would make the
+ * primitive responsible for page layout it has no business knowing about.
+ */
+/*
+ * The scrollbar-side inset, shared by the transcript and the composer so the
+ * two never disagree about where the column ends.
+ *
+ * A token because the right answer differs by device: a desktop needs only
+ * enough to clear a real scrollbar, while a phone overlays its own and wants
+ * the inset to match the screen's other margins — reply text sat against the
+ * bare edge at 0px while the header beside it kept 20.
+ */
+.chat-inset-r {
+  padding-right: var(--chat-edge-r, 1rem);
+}
+
+.chat-column > * {
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--chat-column, 48rem);
+}
+
+/**
+ * The row a jump landed on, marked just long enough to be found.
+ *
+ * An animation rather than a persistent state: the mark answers "which row did
+ * I mean", and a highlight that stayed would become a selection nobody chose.
+ * Removed and re-added by `ChatSurfaces.revealMessage`, so a second jump to the
+ * same row flashes again.
+ */
+.chat-revealed {
+  animation: chat-reveal 1.2s ease-out;
+}
+
+@keyframes chat-reveal {
+  from {
+    background: color-mix(in oklab, var(--primary) 18%, transparent);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-revealed {
+    animation-duration: 0.01ms;
+  }
+}

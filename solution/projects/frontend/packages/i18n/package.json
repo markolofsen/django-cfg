@@ -1,0 +1,97 @@
+{
+  "name": "@djangocfg/i18n",
+  "version": "2.1.667",
+  "description": "Lightweight i18n library for @djangocfg packages with built-in translations for English, Russian, and Korean",
+  "keywords": [
+    "i18n",
+    "internationalization",
+    "localization",
+    "translations",
+    "react",
+    "nextjs",
+    "typescript"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "packages/i18n"
+  },
+  "bugs": {
+    "url": "https://github.com/markolofsen/django-cfg/issues"
+  },
+  "license": "MIT",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "i18n": "./dist/cli/index.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+    },
+    "./locales": {
+      "types": "./src/locales/index.ts",
+      "import": "./src/locales/index.ts"
+    },
+    "./locales/*": "./src/locales/*.ts",
+    "./copy": {
+      "types": "./dist/copy/index.d.ts",
+      "import": "./dist/copy/index.mjs"
+    },
+    "./copy/testing": {
+      "types": "./dist/copy/testing.d.ts",
+      "import": "./dist/copy/testing.mjs"
+    },
+    "./utils": {
+      "types": "./src/utils/index.ts",
+      "import": "./src/utils/index.ts"
+    },
+    "./cli": {
+      "types": "./dist/cli/index.d.ts",
+      "import": "./dist/cli/index.mjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "@docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint .",
+    "check": "tsc --noEmit",
+    "i18n": "tsx src/cli/index.ts",
+    "i18n:list": "tsx src/cli/index.ts list",
+    "i18n:check": "tsx src/cli/index.ts check",
+    "i18n:add": "tsx src/cli/index.ts add"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "dependencies": {
+    "citty": "^0.2.2",
+    "consola": "^3.4.2",
+    "jiti": "^2.7.0"
+  },
+  "devDependencies": {
+    "@djangocfg/typescript-config": "workspace:*",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "eslint": "^10.14.0",
+    "tsup": "^9.0.0",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

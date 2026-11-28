@@ -1,0 +1,211 @@
+/**
+ * Touch-Safe Input Utilities
+ *
+ * Prevents iOS WebKit auto-zoom on input/textarea focus by enforcing 16px minimum font-size.
+ *
+ * **Problem**: iOS Safari/Chrome zooms viewport when font-size < 16px on focus,
+ * causing UI elements to "fly away" (especially critical in chat/conversation interfaces).
+ *
+ * **Solution**: Use max(16px, 1em) to maintain relative sizing while preventing zoom.
+ *
+ * **Universal Application**: CSS custom property `--touch-safe-font-size` is set on :root
+ * for iOS devices. Components can reference this variable to get automatic iOS fix without
+ * explicit hook calls.
+ *
+ * **WCAG Compliance**: ✅ WCAG 2.1 AA compliant (SC 1.4.4, 1.4.10)
+ * - Text zoom still works (no viewport user-scalable=no)
+ * - No reflow issues
+ * - Maintains 200% text zoom capability
+ *
+ * @see {@link ../../hooks/input/useTouchSafeStyle.ts} React hook for programmatic control
+ * @see {@link @dev/research/ios-webkit-auto-zoom} Research documentation
+ */
+
+/* ============================================================================
+   CSS Custom Property (Universal iOS Fix)
+   ========================================================================= */
+
+/**
+ * Global CSS variable for touch-safe font sizing.
+ * 
+ * Set on :root for iOS devices only via @supports detection.
+ * Components can reference var(--touch-safe-font-size, fallback) to get
+ * automatic iOS protection without explicit hook usage.
+ *
+ * iOS: 16px minimum (prevents auto-zoom)
+ * Android/Desktop: undefined (use component's design font-size)
+ *
+ * @example Component usage:
+ * .my-input {
+ *   font-size: var(--touch-safe-font-size, 0.875rem);
+ * }
+ * // iOS: max(16px, 1em)
+ * // Android/Desktop: 0.875rem (14px)
+ */
+:root {
+  --touch-safe-font-size: initial; /* Desktop/Android default */
+}
+
+@supports (-webkit-touch-callout: none) {
+  :root {
+    --touch-safe-font-size: max(16px, 1em);
+  }
+}
+
+/* ============================================================================
+   Utility Class (Opt-In)
+   ========================================================================= */
+
+/**
+ * Apply to any container with inputs/textareas that need touch-safe sizing.
+ *
+ * @example
+ * <form className="touch-safe-input">
+ *   <input type="text" />
+ *   <textarea />
+ * </form>
+ */
+.touch-safe-input input,
+.touch-safe-input textarea,
+.touch-safe-input select {
+  font-size: max(16px, 1em);
+}
+
+/* ============================================================================
+   iOS-Specific Auto-Fix (@supports detection)
+   ========================================================================= */
+
+/**
+ * Targets iOS WebKit devices via CSS feature detection.
+ * More reliable than user-agent sniffing, works at build time.
+ *
+ * Note: Also matches desktop Safari on macOS, but 16px is acceptable there
+ * (no zoom behavior). For precise iOS-only targeting, use useTouchSafeStyle hook.
+ */
+@supports (-webkit-touch-callout: none) {
+  input[type="text"],
+  input[type="email"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: max(16px, 1em);
+  }
+
+  /* Prevent iOS text size adjustment during orientation changes */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+}
+
+/* ============================================================================
+   Mobile Baseline (Opt-In via class)
+   ========================================================================= */
+
+/**
+ * Apply to containers for mobile-wide touch-safe inputs (iOS + Android).
+ *
+ * Note: Android doesn't have the same zoom behavior, so this is only needed
+ * if you want consistent 16px across all mobile devices. For iOS-only,
+ * prefer @supports above or useTouchSafeStyle({ ios: true }) hook.
+ *
+ * @example
+ * <div className="touch-safe-mobile">
+ *   <input type="text" />
+ * </div>
+ */
+@media (max-width: 768px) {
+  .touch-safe-mobile input,
+  .touch-safe-mobile textarea,
+  .touch-safe-mobile select {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* ============================================================================
+   Touch Target Size (44px minimum for WCAG)
+   ========================================================================= */
+
+/**
+ * Ensures minimum 44×44px touch targets for mobile accessibility.
+ *
+ * WCAG 2.1 Success Criterion 2.5.5 (Level AAA): Target Size
+ * iOS Human Interface Guidelines: 44pt minimum
+ *
+ * @example
+ * <button className="touch-target">Click Me</button>
+ */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (max-width: 768px) {
+  /* Enforce on mobile for buttons, links with onClick, form controls */
+  button:not([role="checkbox"], [role="switch"], [role="radio"], [role="combobox"], [role="tab"]),
+  [role="button"],
+  a[onClick],
+  input[type="submit"],
+  input[type="button"],
+  input[type="reset"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Field controls keep their own size (--control-h-*, 16px box, switch track): inflating them made the checkbox a
+   * 44px square, squashed the switch and left Select taller than Input. The 44px hit area is an invisible ::after. */
+  :where(button)[role="checkbox"],
+  :where(button)[role="switch"],
+  :where(button)[role="radio"] {
+    position: relative;
+  }
+  :where(button)[role="checkbox"]::after,
+  :where(button)[role="switch"]::after,
+  :where(button)[role="radio"]::after {
+    content: "";
+    position: absolute;
+    inset: -14px;
+  }
+
+  /* Special case: Icon-only buttons */
+  button[aria-label]:not(:has(*)),
+  [role="button"][aria-label]:not(:has(*)) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Private layout phone bar actions: compact (e.g. 36px) controls with air above and below inside the 48px row.
+ * The visual box is not inflated by the rule above; the 44px hit area comes from an invisible ::after. */
+@media (max-width: 768px) {
+  [data-sidebar="topbar-actions"] :where(button, [role="button"]) {
+    min-height: 0;
+    min-width: 0;
+    position: relative;
+  }
+  [data-sidebar="topbar-actions"] :where(button, [role="button"])::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+  }
+}
+
+/* Phone drawer nav rows (PrivateLayout): 40px rows; the 44px hit area is an invisible ::after, like the bar actions. */
+@media (max-width: 768px) {
+  [data-sidebar="content"] :where(button, [role="button"], a) {
+    min-height: 0;
+    min-width: 0;
+  }
+  [data-sidebar="content"] [data-sidebar="menu-button"] {
+    position: relative;
+  }
+  [data-sidebar="content"] [data-sidebar="menu-button"]::after {
+    content: "";
+    position: absolute;
+    inset: -2px 0;
+  }
+}

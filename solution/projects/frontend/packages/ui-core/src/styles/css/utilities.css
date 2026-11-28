@@ -1,0 +1,20 @@
+/**
+ * Custom Utilities
+ * Utility classes that extend Tailwind CSS
+ * Compatible with Tailwind CSS v4
+ *
+ * Decomposed into focused files under utilities/ for maintainability.
+ */
+
+@import './utilities/display.css';
+@import './utilities/divider.css';
+@import './utilities/overlay.css';
+@import './utilities/controls.css';
+@import './utilities/datetime-field.css';
+@import './utilities/step.css';
+@import './utilities/filter-bar.css';
+@import './utilities/tabs.css';
+@import './utilities/animations.css';
+@import './utilities/glass.css';
+@import './utilities/marquee.css';
+@import './utilities/touch-safe.css';

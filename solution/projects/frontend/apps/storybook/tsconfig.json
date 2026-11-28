@@ -1,0 +1,24 @@
+{
+  "extends": "@djangocfg/typescript-config/nextjs.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "jsx": "preserve",
+    "types": ["vite/client", "node"],
+    "paths": {
+      "@/*": ["./*"],
+      "@stories/*": ["./stories/*"]
+    }
+  },
+  "include": [
+    ".storybook/**/*.ts",
+    ".storybook/**/*.tsx",
+    ".storybook-contract/**/*.ts",
+    "stories/**/*.ts",
+    "stories/**/*.tsx",
+    "stories/**/*.mdx",
+    "vitest.config.ts"
+  ],
+  "exclude": ["node_modules", "storybook-static", "@*"]
+}

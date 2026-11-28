@@ -1,0 +1,146 @@
+/* Authoritative static preset: ios. */
+:root {
+  --background: hsl(0 0% 98%);
+  --foreground: hsl(220 9% 12%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(220 9% 12%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(220 9% 12%);
+  --primary: hsl(211 100% 50%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(220 9% 92%);
+  --secondary-foreground: hsl(220 9% 12%);
+  --muted: hsl(220 9% 94%);
+  --muted-foreground: hsl(220 9% 40%);
+  --accent: hsl(220 9% 94%);
+  --accent-foreground: hsl(220 9% 12%);
+  --destructive: hsl(0 100% 58%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(220 9% 85%);
+  --input: hsl(220 9% 88%);
+  --ring: hsl(211 100% 50%);
+  --divider: hsl(220 9% 88%);
+  --radius: 0.75rem;
+  --overlay: hsl(220 9% 10% / 0.32);
+  --sidebar-background: hsl(0 0% 99%);
+  --sidebar-foreground: hsl(220 9% 12%);
+  --sidebar-primary: hsl(211 100% 50%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(220 9% 94%);
+  --sidebar-accent-foreground: hsl(220 9% 12%);
+  --sidebar-border: hsl(220 9% 88%);
+  --sidebar-ring: hsl(211 100% 50%);
+  --chart-1: hsl(211 100% 50%);
+  --chart-2: hsl(145 63% 42%);
+  --chart-3: hsl(262 83% 58%);
+  --chart-4: hsl(35 100% 50%);
+  --chart-5: hsl(346 77% 50%);
+  --warning: hsl(35 100% 50%);
+  --warning-background: hsl(35 100% 95%);
+  --warning-foreground: hsl(28 80% 30%);
+  --warning-border: hsl(35 90% 78%);
+  --success: hsl(145 63% 42%);
+  --success-background: hsl(145 60% 95%);
+  --success-foreground: hsl(145 60% 24%);
+  --success-border: hsl(145 55% 76%);
+  --destructive-background: hsl(0 100% 96%);
+  --destructive-border: hsl(0 90% 80%);
+  --info: hsl(211 100% 50%);
+  --info-background: hsl(211 100% 96%);
+  --info-foreground: hsl(211 80% 30%);
+  --info-border: hsl(211 90% 80%);
+  --radius-xs: calc(0.75rem - 6px);
+  --radius-sm: calc(0.75rem - 4px);
+  --radius-md: calc(0.75rem - 2px);
+  --radius-lg: 0.75rem;
+  --radius-xl: calc(0.75rem + 4px);
+  --radius-2xl: calc(0.75rem + 8px);
+  --radius-3xl: calc(0.75rem + 12px);
+  --radius-4xl: calc(0.75rem + 16px);
+  /* Type scale. Lives in `:root` only — a size is not a colour and does not
+     change with the theme; `macos`/`windows` duplicate it into `.dark`, which
+     is two places to edit for one value.
+     Without these a preset silently inherits base.css (14px body / 13px
+     `text-sm`) while `macos` renders 13/12, so the same component measured a
+     pixel apart depending on which preset an app loaded. */
+  --font-size-base: 0.8125rem;
+  --font-size-sm: 0.75rem;
+  --font-size-xs: 0.6875rem;
+  --font-size-lg: 0.9375rem;
+  --font-size-xl: 1.0625rem;
+
+}
+
+.dark {
+  --background: hsl(240 6% 10%);
+  --foreground: hsl(0 0% 96%);
+    /* Three points above --background, not seven. A resting surface is
+     separated by its BORDER; when the fill does that job the page reads as
+     stacked plates and a table looks like a sticker laid over it. Capped by
+     MAXIMUM_RESTING_SURFACE_GAP in check-preset-contrast.mjs. */
+  --card: hsl(240 6% 14%);
+  --card-foreground: hsl(0 0% 96%);
+  --popover: hsl(240 6% 20%);
+  --popover-foreground: hsl(0 0% 96%);
+  --primary: hsl(211 100% 55%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(240 5% 26%);
+  --secondary-foreground: hsl(0 0% 96%);
+  --muted: hsl(240 5% 13%);
+  --muted-foreground: hsl(240 5% 64%);
+  --accent: hsl(240 5% 18%);
+  --accent-foreground: hsl(0 0% 96%);
+  --destructive: hsl(0 100% 67%);
+  --destructive-foreground: hsl(0 0% 100%);
+    /* A hairline divides, it does not glow. Ten points over --background is a
+     definite edge at one device pixel without becoming the loudest thing on
+     the page — which it was once the fills stopped separating surfaces.
+     Capped by MAXIMUM_BORDER_GAP in check-preset-contrast.mjs. */
+  --border: hsl(240 5% 20%);
+  --input: hsl(240 5% 22%);
+  --ring: hsl(211 100% 55%);
+    /* 0.10, not 0.18. A divider separates rows INSIDE a panel, so it must be
+     weaker than that panel's own --border — otherwise the five lines between
+     rows shout as loudly as the one frame around them, which is what was
+     left of "кондово" after the fills were calmed. Over a 12% card this
+     lands at 15.4% (step 3.4) against the border's 18% (step 6.0): a clear
+     hierarchy, frame first. */
+  --divider: hsl(240 5% 48% / 0.10);
+  --radius: 0.75rem;
+  --overlay: hsl(0 0% 0% / 0.55);
+  --sidebar-background: hsl(240 6% 8%);
+  --sidebar-foreground: hsl(0 0% 96%);
+  --sidebar-primary: hsl(211 100% 55%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 5% 16%);
+  --sidebar-accent-foreground: hsl(0 0% 96%);
+  --sidebar-border: hsl(240 5% 22%);
+  --sidebar-ring: hsl(211 100% 55%);
+  --chart-1: hsl(211 100% 55%);
+  --chart-2: hsl(145 65% 52%);
+  --chart-3: hsl(262 83% 65%);
+  --chart-4: hsl(35 100% 58%);
+  --chart-5: hsl(346 77% 58%);
+  --warning: hsl(35 100% 58%);
+  --warning-background: hsl(35 90% 10%);
+  --warning-foreground: hsl(35 100% 72%);
+  --warning-border: hsl(35 80% 28%);
+  --success: hsl(145 65% 52%);
+  --success-background: hsl(145 60% 9%);
+  --success-foreground: hsl(145 60% 70%);
+  --success-border: hsl(145 50% 26%);
+  --destructive-background: hsl(0 80% 11%);
+  --destructive-border: hsl(0 70% 30%);
+  --info: hsl(211 100% 55%);
+  --info-background: hsl(211 90% 11%);
+  --info-foreground: hsl(211 100% 74%);
+  --info-border: hsl(211 80% 30%);
+  --radius-xs: calc(0.75rem - 6px);
+  --radius-sm: calc(0.75rem - 4px);
+  --radius-md: calc(0.75rem - 2px);
+  --radius-lg: 0.75rem;
+  --radius-xl: calc(0.75rem + 4px);
+  --radius-2xl: calc(0.75rem + 8px);
+  --radius-3xl: calc(0.75rem + 12px);
+  --radius-4xl: calc(0.75rem + 16px);
+}

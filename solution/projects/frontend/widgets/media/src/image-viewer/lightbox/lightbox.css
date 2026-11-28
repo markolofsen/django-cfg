@@ -1,0 +1,84 @@
+/*
+ * Theme for ImageLightbox: yet-another-react-lightbox reads `--yarl__*`
+ * variables, so the whole skin is this one mapping onto ui-core tokens. It
+ * follows light/dark and every preset with no JS. Scoped to `.dj-lightbox` so a
+ * host's own YARL instance is untouched.
+ */
+.dj-lightbox {
+  /* Above dialogs (z-1300), below popovers (z-1400): a lightbox opened from a
+     dialog must cover it, a menu opened from the toolbar must cover the box. */
+  --yarl__portal_zindex: 1350;
+  --yarl__color_backdrop: color-mix(in oklab, var(--background) 94%, transparent);
+  --yarl__container_background_color: var(--yarl__color_backdrop);
+  --yarl__color_button: var(--foreground);
+  --yarl__color_button_active: var(--foreground);
+  --yarl__color_button_disabled: var(--muted-foreground);
+  /* No drop shadow behind icons: the backdrop is a token surface, not a photo. */
+  --yarl__button_filter: none;
+  --yarl__icon_size: 20px;
+  --yarl__button_padding: 10px;
+  --yarl__toolbar_padding: 12px;
+  --yarl__navigation_button_padding: 12px;
+  --yarl__slide_icon_loading_color: var(--muted-foreground);
+  --yarl__slide_icon_error_color: var(--destructive);
+  --yarl__counter_color: var(--foreground);
+  --yarl__counter_filter: none;
+  --yarl__counter_top: 12px;
+  --yarl__counter_left: 20px;
+  --yarl__thumbnails_container_background_color: transparent;
+  --yarl__thumbnails_thumbnail_background: var(--muted);
+  --yarl__thumbnails_thumbnail_border_color: transparent;
+  --yarl__thumbnails_thumbnail_active_border_color: var(--primary);
+  --yarl__thumbnails_thumbnail_border_radius: var(--radius-control, 8px);
+  --yarl__thumbnails_thumbnail_width: 72px;
+  --yarl__thumbnails_thumbnail_height: 52px;
+  --yarl__thumbnails_thumbnail_gap: 8px;
+  --yarl__thumbnails_thumbnail_padding: 2px;
+}
+
+.dj-lightbox .yarl__container {
+  backdrop-filter: blur(24px) saturate(1.2);
+}
+
+/* Round controls on a translucent token surface, so an icon or the counter stays
+   legible over any photo, bright or dark. */
+.dj-lightbox .yarl__button,
+.dj-lightbox .yarl__counter {
+  border-radius: 9999px;
+  background-color: color-mix(in oklab, var(--background) 60%, transparent);
+  backdrop-filter: blur(12px);
+  transition: background-color 150ms ease;
+}
+.dj-lightbox .yarl__toolbar {
+  gap: 8px;
+}
+.dj-lightbox .yarl__button:hover:not(:disabled) {
+  background-color: color-mix(in oklab, var(--foreground) 14%, var(--background) 60%);
+}
+.dj-lightbox .yarl__button:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+.dj-lightbox .yarl__navigation_prev,
+.dj-lightbox .yarl__navigation_next {
+  margin: 0 12px;
+  padding: 12px;
+}
+
+.dj-lightbox .yarl__counter {
+  padding: 4px 12px;
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The image says what a double-click does: zoom in at rest, a hand to pan once
+   zoomed. (A permanent hand promised a pan that had nowhere to go.) */
+.dj-lightbox .yarl__slide_image {
+  cursor: zoom-in;
+}
+.dj-lightbox--zoomed .yarl__slide_image {
+  cursor: grab;
+}
+.dj-lightbox--zoomed .yarl__slide_image:active {
+  cursor: grabbing;
+}

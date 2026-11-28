@@ -1,0 +1,104 @@
+/**
+ * Modal backdrop frosting — the blur behind dialogs, drawers, sheets.
+ *
+ * The dimming scrim is Tailwind's `bg-overlay` (`--overlay`, a themed
+ * `hsl(… / α)` token). Blur can't live in that color token (`--overlay` is a
+ * color, blur is a filter), so we attach `backdrop-filter` to the SAME
+ * `.bg-overlay` class every overlay already renders — no extra class, no
+ * component churn, and host forks of Dialog that render `bg-overlay` directly
+ * get the frost for free.
+ *
+ * Blur strength rides its own `--overlay-blur` variable (default in base.css) —
+ * override it per theme/preset to make the backdrop crisper or softer, or set
+ * it to `0px` to disable frosting entirely without touching the scrim color.
+ *
+ * Only the unprefixed `backdrop-filter` is written: lightningcss (Tailwind v4, Next) adds `-webkit-` itself, and when both are
+ * written it DROPS the unprefixed one (verified), leaving Chromium with no blur at all.
+ *
+ * Plain CSS (NOT a JIT-scanned Tailwind utility) so it compiles regardless of
+ * which package's source the Tailwind content scan covers — same rationale as
+ * `divider.css`.
+ */
+
+.bg-overlay {
+  /* `--overlay-blur` defaults in base.css; a 0px value cleanly no-ops the blur. */
+  backdrop-filter: blur(var(--overlay-blur, 0px));
+}
+
+/**
+ * The scrolling list inside a popover — a combobox's options, a command menu's
+ * results, any panel long enough to need a limit.
+ *
+ * It is a ROLE, not a size. The 300px ceiling is what reads comfortably; the
+ * real constraint is the gap the popover has to the edge of the window, which
+ * Radix publishes as `--radix-popover-content-available-height` on the content
+ * element. Taking the smaller of the two is what keeps a list opened near the
+ * bottom of the screen from flipping above its trigger and being clipped by the
+ * viewport — the failure this class exists to prevent.
+ *
+ * Outside a popover the Radix variable is unset and the fallback leaves the
+ * plain ceiling, so the class is safe anywhere.
+ *
+ * Override `--popover-scroll-max` (per theme, or on one instance) to raise or
+ * lower the ceiling; the viewport clamp always still applies.
+ *
+ * It must sit on the element that ACTUALLY SCROLLS — for cmdk that is
+ * `CommandList`, whose highlight moves by `scrollIntoView({block:'nearest'})`
+ * and therefore acts on the nearest scrollable ancestor. Capping a wrapper
+ * instead hands the scrolling to a container cmdk cannot see, and the arrow
+ * keys walk the highlight out of view.
+ *
+ * Plain CSS rather than a JIT-scanned utility, for the same reason as
+ * `.bg-overlay` above: it must compile no matter whose source the Tailwind
+ * content scan covers.
+ */
+.popover-scroll-region {
+  /* The VIEWPORT clamp deliberately lives on the panel (`.popover-panel`), not
+     here: this element is only part of the panel, and capping it alone lets the
+     siblings above it — a search input, a header — push the panel past the edge
+     anyway. Measured: available 193px, list 193px, panel 236px, top −35px.
+     Here the job is only the comfortable ceiling plus the actual scrolling;
+     `min-height: 0` is what lets the flex parent shrink it below its content
+     when the viewport, not the ceiling, is the binding constraint. */
+  max-height: var(--popover-scroll-max, 18.75rem);
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/**
+ * The part of a snapped drawer that is actually on screen.
+ *
+ * With snap points the panel is FULL height and vaul slides it down to the
+ * active point, so everything below that point sits under the bottom edge of
+ * the window. A footer pinned with `mt-auto` therefore pins itself to the
+ * bottom of the PANEL — measured 344px below the viewport, unreachable even
+ * with the body scrolled to its end, which is what made a drawer's submit
+ * button impossible to reach.
+ *
+ * `--snap-point-height` is vaul's offset — how much of the panel is hidden —
+ * so the visible height is what remains. Constraining the content column to it
+ * puts the footer back at the edge the reader can see, at every snap point,
+ * with no JavaScript following the drag.
+ */
+.drawer-snap-viewport {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - var(--snap-point-height, 0px));
+  min-height: 0;
+}
+
+/**
+ * A popover panel that must never grow past the window.
+ *
+ * `PopoverContent` carries this by default. The height Radix publishes already
+ * accounts for `collisionPadding`, so the panel keeps its gap from the edge,
+ * and the column layout lets a `.popover-scroll-region` child absorb whatever
+ * is left after fixed siblings (search field, footer) have taken their share.
+ */
+.popover-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: var(--radix-popover-content-available-height, none);
+}

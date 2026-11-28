@@ -1,0 +1,503 @@
+/* ─────────────────────────────────────────────────────────────────────
+ * NotionEditor — Notion-style WYSIWYG. Reuses the typography decisions
+ * from MarkdownEditor's `styles.css` (font, heading scale, list spacing,
+ * code styling) but adds:
+ *   - drag-handle gutter + grabber styling
+ *   - bubble-menu floating toolbar
+ *   - slash-menu popover
+ *   - table cell selection ring
+ *   - code-block lowlight token colours (Prism-compatible)
+ * ───────────────────────────────────────────────────────────────────── */
+
+.notion-editor {
+  position: relative;
+  width: 100%;
+}
+
+.notion-editor .notion-editor-content {
+  outline: none;
+}
+
+.notion-editor .tiptap,
+.notion-editor .ProseMirror {
+  color: var(--color-foreground, var(--foreground));
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Left padding leaves room for the drag-handle gutter so it never
+   * overlaps with text. */
+  padding-left: 32px;
+  padding-right: 8px;
+}
+
+/* Empty placeholder. Tiptap's Placeholder extension stamps
+ * `is-editor-empty` on the doc when nothing has been typed, plus
+ * `is-empty` + `data-placeholder` on the active empty node. We match
+ * BOTH conditions so the ghost prompt shows on a brand-new editor and
+ * on whichever empty block the caret is parked in — but never on
+ * unrelated empty blocks (that would look like literal text content). */
+.notion-editor .tiptap .is-editor-empty:first-child::before,
+.notion-editor .tiptap .ProseMirror-focused > .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  font-weight: 400;
+}
+
+/* Links */
+.notion-editor .tiptap a {
+  color: var(--color-primary, var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* …but block-card NodeViews (bookmark/map) own their styling — the card is
+   itself an <a>, and its inner title/description must NOT inherit the editor
+   link underline (it read as if the whole card text were a link). */
+.notion-editor .tiptap .notion-bookmark a,
+.notion-editor .tiptap a.notion-bookmark {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Headings */
+.notion-editor .tiptap h1 {
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 1em 0 0.3em;
+  letter-spacing: -0.02em;
+}
+.notion-editor .tiptap h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0.9em 0 0.25em;
+  letter-spacing: -0.01em;
+}
+.notion-editor .tiptap h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0.8em 0 0.2em;
+}
+.notion-editor .tiptap h4 {
+  font-size: 1.1em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0.7em 0 0.2em;
+}
+.notion-editor .tiptap > :is(h1, h2, h3, h4):first-child {
+  margin-top: 0;
+}
+
+.notion-editor .tiptap p {
+  margin: 0.25em 0;
+}
+
+/* Lists */
+.notion-editor .tiptap ul,
+.notion-editor .tiptap ol {
+  padding-left: 1.5em;
+  margin: 0.35em 0;
+}
+.notion-editor .tiptap ul {
+  list-style: disc;
+}
+.notion-editor .tiptap ol {
+  list-style: decimal;
+}
+.notion-editor .tiptap ul ul {
+  list-style: circle;
+}
+.notion-editor .tiptap ul ul ul {
+  list-style: square;
+}
+.notion-editor .tiptap li {
+  margin: 0.15em 0;
+}
+.notion-editor .tiptap li > p {
+  margin: 0;
+}
+
+/* Task list — backed by a React NodeView that mounts our ui-core
+ * <Checkbox>. Selectors target the wrapper class set by `TaskItemView`.
+ *
+ * Alignment math (the part that always goes wrong):
+ *   editor font-size:    16px
+ *   line-height:         1.65 → line box ≈ 26.4px
+ *   cap-height of text:  ≈ 11.5px, sits ≈ 7.5px from line top
+ *   checkbox box:        16px square (ui-core default)
+ *   ⇒ to centre the checkbox on the cap-height row, top = (26.4 − 16) / 2 ≈ 5px
+ *
+ * Using `align-items: flex-start` + a fixed `margin-top` keeps multi-line
+ * task items working: the checkbox stays parked at the top of the first
+ * line and the text wraps freely below. `align-items: center` would
+ * recentre on multi-line items and drift the checkbox into the middle. */
+.notion-editor .tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+  margin-left: 0;
+}
+.notion-editor .tiptap .notion-task-item {
+  display: flex;
+  /* `align-items: baseline` lets the checkbox sit on the *text baseline*
+   * of the first line — independent of checkbox size, font-size, or
+   * line-height. Works correctly across themes / presets that scale the
+   * Checkbox token (macOS vs default). For multi-line items the checkbox
+   * still anchors to the first line (because baseline is per-line) which
+   * is what Notion does. Earlier `align-items: flex-start + margin-top:Xpx`
+   * was brittle: it assumed a fixed checkbox size + line-height. */
+  align-items: baseline;
+  gap: 0.5em;
+  padding: 2px 0;
+}
+.notion-editor .tiptap .notion-task-checkbox {
+  flex-shrink: 0;
+  /* `translateY(2px)` nudges the optical centre of the checkbox box onto
+   * the cap-height line. Without this the checkbox sits visually a bit
+   * high because its bounding box centres on the baseline, not cap-height.
+   * Tiny constant — independent of checkbox / font size. */
+  transform: translateY(2px);
+}
+.notion-editor .tiptap .notion-task-text {
+  flex: 1;
+  min-width: 0;
+}
+.notion-editor .tiptap .notion-task-item[data-checked] .notion-task-text {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+/* ── Bookmark (link-preview) + Map block nodes ────────────────────────────
+ * Block-level NodeViews rendering shared cards (LinkPreviewCard / the map).
+ * The card / map owns its own frame (radius, border, shadow); here we only
+ * own the block's vertical rhythm so it breathes like a paragraph and the
+ * ProseMirror-selectednode ring reads cleanly on the atom. */
+.notion-editor .tiptap .notion-bookmark,
+.notion-editor .tiptap .notion-map {
+  margin: 0.75em 0;
+}
+.notion-editor .tiptap .notion-bookmark.ProseMirror-selectednode,
+.notion-editor .tiptap .notion-map.ProseMirror-selectednode {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius, 0.5rem);
+}
+
+/* Blockquote */
+.notion-editor .tiptap blockquote {
+  border-left: 3px solid var(--color-border, var(--border));
+  padding: 0.2em 0 0.2em 1em;
+  margin: 0.6em 0;
+  color: color-mix(in oklab, var(--color-foreground, var(--foreground)) 80%, transparent);
+}
+.notion-editor .tiptap blockquote > :first-child { margin-top: 0; }
+.notion-editor .tiptap blockquote > :last-child  { margin-bottom: 0; }
+
+/* Divider */
+.notion-editor .tiptap hr {
+  border: none;
+  border-top: 1px solid var(--color-border, var(--border));
+  margin: 1.5em 0;
+}
+
+/* Inline code */
+.notion-editor .tiptap code {
+  background: color-mix(in oklab, var(--color-muted, var(--muted)) 70%, transparent);
+  color: var(--color-foreground, var(--foreground));
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-size: 0.875em;
+  font-family: "SF Mono", ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+  border: 1px solid color-mix(in oklab, var(--color-border, var(--border)) 60%, transparent);
+}
+
+/* Code block (lowlight) — always dark, regardless of host theme.
+ * Rationale: syntax highlighting palettes are calibrated for dark
+ * backgrounds; a "light-on-light" code block on a light app theme looks
+ * washed out and reads worse than the same block on dark. Notion / Linear
+ * / GitHub all force-dark code blocks on light themes too. We hardcode
+ * a One Dark-flavour surface and let the token colours below sit on it. */
+.notion-editor .tiptap pre {
+  background: #1e2127;
+  color: #d7dae0;
+  padding: 0.9em 1em;
+  border-radius: 6px;
+  margin: 0.75em 0;
+  font-family: "SF Mono", ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  line-height: 1.55;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.notion-editor .tiptap pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Lowlight token colours — One Dark Pro palette. `@tiptap/extension-code-
+ * block-lowlight` emits `.hljs-*` class names; we colour against the fixed
+ * dark surface above so the palette stays readable on every host theme. */
+.notion-editor .hljs-comment,
+.notion-editor .hljs-quote { color: #5c6370; font-style: italic; }
+.notion-editor .hljs-keyword,
+.notion-editor .hljs-selector-tag,
+.notion-editor .hljs-built_in { color: #c678dd; }
+.notion-editor .hljs-string,
+.notion-editor .hljs-attr { color: #98c379; }
+.notion-editor .hljs-number,
+.notion-editor .hljs-literal { color: #d19a66; }
+.notion-editor .hljs-function .hljs-title,
+.notion-editor .hljs-title.function_ { color: #61afef; }
+.notion-editor .hljs-class .hljs-title,
+.notion-editor .hljs-type { color: #e5c07b; }
+.notion-editor .hljs-tag,
+.notion-editor .hljs-name { color: #e06c75; }
+.notion-editor .hljs-attribute { color: #d19a66; }
+.notion-editor .hljs-variable,
+.notion-editor .hljs-template-variable { color: #e06c75; }
+.notion-editor .hljs-symbol,
+.notion-editor .hljs-bullet,
+.notion-editor .hljs-link { color: #56b6c2; }
+.notion-editor .hljs-meta { color: #61afef; }
+.notion-editor .hljs-deletion { background: rgba(224, 108, 117, 0.2); }
+.notion-editor .hljs-addition { background: rgba(152, 195, 121, 0.2); }
+
+/* Tables */
+.notion-editor .tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75em 0;
+  font-size: 0.95em;
+  table-layout: fixed;
+}
+.notion-editor .tiptap th,
+.notion-editor .tiptap td {
+  border: 1px solid var(--color-border, var(--border));
+  padding: 0.45em 0.75em;
+  vertical-align: top;
+  text-align: left;
+  min-width: 4ch;
+  position: relative;
+}
+.notion-editor .tiptap th {
+  background: color-mix(in oklab, var(--color-muted, var(--muted)) 60%, transparent);
+  font-weight: 600;
+}
+.notion-editor .tiptap .selectedCell::after {
+  /* ProseMirror table cell selection ring. */
+  background: color-mix(in oklab, var(--color-primary, var(--primary)) 20%, transparent);
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Images */
+.notion-editor .tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 0.5em 0;
+}
+
+/* Marks */
+.notion-editor .tiptap strong { font-weight: 700; }
+.notion-editor .tiptap em { font-style: italic; }
+.notion-editor .tiptap s { text-decoration: line-through; }
+.notion-editor .tiptap mark {
+  background: color-mix(in oklab, var(--color-primary, var(--primary)) 25%, transparent);
+  color: inherit;
+  padding: 0 0.15em;
+  border-radius: 2px;
+}
+
+/* Selection */
+.notion-editor .tiptap ::selection {
+  background: color-mix(in oklab, var(--color-primary, var(--primary)) 25%, transparent);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Global drag handle (tiptap-extension-global-drag-handle)
+ *
+ * The extension mints a single `.drag-handle` element and reparents it
+ * to the hovered block on `mouseover`. We mask a fixed 2×3 dot grid
+ * (Notion's ⠿ grip) — earlier attempts used `background-repeat: round`
+ * which tiled the dot pattern and produced a 3×5 grid that looked like
+ * a literal halftone block. A `mask-image` with `mask-repeat: no-repeat`
+ * pins exactly six dots regardless of the handle's box size.
+ * ───────────────────────────────────────────────────────────────────── */
+.drag-handle {
+  position: fixed;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+  height: 1.4rem;
+  width: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: grab;
+  background-color: transparent;
+
+  /* Painted as a `mask-image` of `lucide-react`'s `GripVertical` icon
+   * (six stroked circles at x∈{9,15}, y∈{5,12,19}, r=1, stroke-width=2,
+   * viewBox 24×24). Using lucide ensures the grabber matches every other
+   * icon in the app at the pixel level; we just can't render it as a
+   * <GripVertical/> component because `tiptap-extension-global-drag-handle`
+   * mints the DOM node imperatively. `mask` + `background-color` keeps
+   * the colour theme-driven. */
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='9' cy='12' r='1'/><circle cx='9' cy='5' r='1'/><circle cx='9' cy='19' r='1'/><circle cx='15' cy='12' r='1'/><circle cx='15' cy='5' r='1'/><circle cx='15' cy='19' r='1'/></svg>");
+          mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='9' cy='12' r='1'/><circle cx='9' cy='5' r='1'/><circle cx='9' cy='19' r='1'/><circle cx='15' cy='12' r='1'/><circle cx='15' cy='5' r='1'/><circle cx='15' cy='19' r='1'/></svg>");
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-size: 18px 18px;
+          mask-size: 18px 18px;
+  background-color: color-mix(in oklab, var(--color-foreground, var(--foreground)) 45%, transparent);
+}
+.drag-handle:hover {
+  background-color: var(--color-foreground, var(--foreground));
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+.drag-handle.hide {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+/* Reveal the handle whenever the editor surface is hovered. */
+.notion-editor:hover .drag-handle {
+  opacity: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Bubble menu — floating selection toolbar
+ * ───────────────────────────────────────────────────────────────────── */
+.notion-bubble-menu {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--color-popover, var(--popover));
+  color: var(--color-popover-foreground, var(--popover-foreground));
+  border: 1px solid var(--color-border, var(--border));
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  z-index: 50;
+}
+.notion-bubble-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--color-foreground, var(--foreground));
+  opacity: 0.7;
+  transition: opacity 120ms, background 120ms;
+}
+.notion-bubble-btn:hover {
+  opacity: 1;
+  background: var(--color-muted, var(--muted));
+}
+.notion-bubble-btn--active {
+  opacity: 1;
+  background: var(--color-muted, var(--muted));
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Slash menu popover
+ * ───────────────────────────────────────────────────────────────────── */
+.notion-slash-list {
+  background: var(--color-popover, var(--popover));
+  color: var(--color-popover-foreground, var(--popover-foreground));
+  border: 1px solid var(--color-border, var(--border));
+  border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  width: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.notion-slash-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-size: 13px;
+  transition: background 80ms;
+}
+.notion-slash-item--active,
+.notion-slash-item:hover {
+  background: var(--color-muted, var(--muted));
+}
+.notion-slash-empty {
+  padding: 10px 12px;
+  color: color-mix(in oklab, var(--color-foreground, var(--foreground)) 55%, transparent);
+  font-size: 12px;
+  text-align: center;
+}
+.notion-slash-icon {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border, var(--border));
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--color-muted, var(--muted)) 40%, transparent);
+}
+.notion-slash-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.notion-slash-hint {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border, var(--border));
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-family: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  color: color-mix(in oklab, var(--color-foreground, var(--foreground)) 55%, transparent);
+  background: color-mix(in oklab, var(--color-muted, var(--muted)) 30%, transparent);
+}
+.notion-slash-title {
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.notion-slash-desc {
+  font-size: 11.5px;
+  opacity: 0.6;
+  line-height: 1.3;
+}

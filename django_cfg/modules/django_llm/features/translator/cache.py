@@ -44,8 +44,8 @@ class TranslationCacheManager:
         return self.cache_dir / f"{source_lang}→{target_lang}.json"
 
     def _get_text_hash(self, text: str) -> str:
-        """Generate hash for text"""
-        return hashlib.md5(text.encode('utf-8')).hexdigest()
+        """Use a collision-resistant key for shared, externally supplied text."""
+        return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
     def _load_file_cache(self, source_lang: str, target_lang: str) -> Dict[str, Any]:
         """Load translations from file cache"""

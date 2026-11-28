@@ -1,0 +1,108 @@
+{
+  "name": "@djangocfg/widget-chat-dev",
+  "version": "0.1.5",
+  "description": "Developer data on screen: viewers for an OpenAPI schema, a request, a log, an environment and an API reference table",
+  "keywords": [
+    "openapi",
+    "log-viewer",
+    "request-viewer",
+    "env-table",
+    "api-reference",
+    "react",
+    "typescript"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "widgets/chat-dev"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./openapi": {
+      "types": "./src/openapi/lazy.tsx",
+      "default": "./src/openapi/lazy.tsx"
+    },
+    "./request-viewer": {
+      "types": "./src/request-viewer/index.ts",
+      "default": "./src/request-viewer/index.ts"
+    },
+    "./api-ref-table": {
+      "types": "./src/api-ref-table/index.ts",
+      "default": "./src/api-ref-table/index.ts"
+    },
+    "./log-viewer": {
+      "types": "./src/log-viewer/lazy.tsx",
+      "default": "./src/log-viewer/lazy.tsx"
+    },
+    "./log-viewer/full": {
+      "types": "./src/log-viewer/index.ts",
+      "default": "./src/log-viewer/index.ts"
+    },
+    "./env-table": {
+      "types": "./src/env-table/index.ts",
+      "default": "./src/env-table/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/__tests__",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@djangocfg/widget-code": "workspace:*",
+    "@djangocfg/widget-data": "workspace:*",
+    "@djangocfg/widget-kit": "workspace:*",
+    "consola": "^3.4.2",
+    "openapi-sampler": "^1.7.10",
+    "react-virtuoso": "^4.18.20"
+  },
+  "peerDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "lucide-react": "^1.68.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/typescript-config": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "@storybook/react-vite": "^10.6.5",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "lucide-react": "1.68.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "storybook": "^10.6.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0",
+    "zustand": "^5.0.16"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

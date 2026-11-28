@@ -1,0 +1,69 @@
+/* ============================================================================
+ * Marquee Animations
+ * ============================================================================ */
+
+@keyframes marquee-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes marquee-left-rtl {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes marquee-right {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes marquee-right-rtl {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes marquee-up {
+  from { transform: translateY(0); }
+  to { transform: translateY(-100%); }
+}
+
+@keyframes marquee-down {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-marquee-left {
+  animation: marquee-left var(--marquee-duration, 20s) linear infinite;
+  animation-delay: var(--marquee-delay, 0s);
+  animation-iteration-count: var(--marquee-loop-count, infinite);
+}
+
+.animate-marquee-left-rtl {
+  animation: marquee-left-rtl var(--marquee-duration, 20s) linear infinite;
+  animation-delay: var(--marquee-delay, 0s);
+  animation-iteration-count: var(--marquee-loop-count, infinite);
+}
+
+.animate-marquee-right {
+  animation: marquee-right var(--marquee-duration, 20s) linear infinite;
+  animation-delay: var(--marquee-delay, 0s);
+  animation-iteration-count: var(--marquee-loop-count, infinite);
+}
+
+.animate-marquee-right-rtl {
+  animation: marquee-right-rtl var(--marquee-duration, 20s) linear infinite;
+  animation-delay: var(--marquee-delay, 0s);
+  animation-iteration-count: var(--marquee-loop-count, infinite);
+}
+
+.animate-marquee-up {
+  animation: marquee-up var(--marquee-duration, 20s) linear infinite;
+  animation-delay: var(--marquee-delay, 0s);
+  animation-iteration-count: var(--marquee-loop-count, infinite);
+}
+
+.animate-marquee-down {
+  animation: marquee-down var(--marquee-duration, 20s) linear infinite;
+  animation-delay: var(--marquee-delay, 0s);
+  animation-iteration-count: var(--marquee-loop-count, infinite);
+}

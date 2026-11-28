@@ -22,16 +22,22 @@ def build_openapi_client_config() -> OpenAPIClientConfig:
     return OpenAPIClientConfig(
         enabled=True,
         generate_package_files=False,
-        generate_zod_schemas=True,
-        generate_fetchers=True,
-        generate_swr_hooks=True,
         api_prefix="apix",
         output_dir="openapi",
         drf_title=f"{env.app.name} API",
         drf_description="Complete API documentation for Django CFG Demo Project",
         drf_version="1.0.0",
         groups=[
-            OpenAPIGroupConfig(name="profiles", apps=["apps.profiles"], title="Profiles API", description="User profiles management", version="1.0.0"),
+            OpenAPIGroupConfig(
+                name="profiles",
+                apps=["apps.profiles"],
+                title="Profiles API",
+                description="User profiles management",
+                version="1.0.0",
+                auth_required=True,
+            ),
             OpenAPIGroupConfig(name="crypto", apps=["apps.crypto"], title="Crypto API", description="Crypto coin listings", version="1.0.0"),
+            # Explicit tags: the group also claims the app's realtime topics (x-realtime, tagged by app name).
+            OpenAPIGroupConfig(name="realtime_demo", apps=["apps.realtime_demo"], tags=["realtime_demo"], title="Realtime demo API", description="Demo pings for django_realtime", version="1.0.0"),
         ],
     )

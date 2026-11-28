@@ -1,0 +1,156 @@
+/**
+ * Dark Theme Colors
+ *
+ * Brand: Claude "clay" #d97757 → `hsl(15 63% 60%)`. The full-brightness swatch is used on dark chrome
+ * (it's bright enough there), while light mode carries a deeper clay for white-on-fill contrast.
+ *
+ * Semantic pairs (do not split ad hoc in components):
+ * - --primary / --primary-foreground — filled CTAs. On dark UI the clay swatch is bright enough that
+ *   **dark ink** (same as light :root --foreground) reads better than white (clay-on-dark-ink 5.8:1).
+ * - --secondary / --secondary-foreground — neutral filled controls on dark chrome (elevated gray +
+ *   light text), not a light-theme secondary pasted onto .dark.
+ *
+ * Tuning contrast: adjust HSL together; avoid setting text color per button in React — use tokens.
+ */
+
+.dark {
+  /* Neutral surface ladder (hue 0) measured on the Claude app: page 10%,
+   * sidebar/card 12.5–13%. Hue 0 on purpose — the earlier warm tint read as brown; card/popover lift above it so
+   * panels and menus read as raised. muted recesses below the page.
+   *   page ≈ bg-100   card ≈ bg-000(18.4%)   popover 18.8% (claude.ai menus) */
+  --background: hsl(0 0% 10%);
+  --foreground: hsl(0 0% 81%);
+  --card: hsl(0 0% 12%);
+  --card-foreground: hsl(0 0% 81%);
+  --popover: hsl(0 0% 15%);
+  --popover-foreground: hsl(0 0% 81%);
+  /* Brand clay #d97757 (Claude). Bright enough on dark chrome to carry the full swatch. */
+  --primary: hsl(209 74% 52%);
+  /* Dark label on clay — 5.8:1, stronger than white-on-clay (3.1:1) */
+  --primary-foreground: hsl(0 0% 100%);
+  /* Secondary: elevated warm-gray control surface + light label */
+  --secondary: hsl(0 0% 15%);
+  --secondary-foreground: hsl(0 0% 81%);
+  /* Recessed surface — below the page (Claude bg-200), for input rest / chips. */
+  --muted: hsl(0 0% 15%);
+  --muted-foreground: hsl(0 0% 60%);
+  /* Neutral interaction surface: a quiet lift above the current dark page. */
+  --surface-hover: color-mix(in oklab, var(--card) 96%, var(--foreground));
+  /* The counterpart to --surface-hover: a surface that reads as sunk BELOW the
+   * page — a tab strip under a document, a rail beside it. Every other surface
+   * token raises, so a chrome band painted with one of them floats toward the
+   * viewer instead of receding, and a preset whose --muted sits above
+   * --background has no recessed fill at all.
+   *
+   * A translucent BLACK, not a mix with --background. A percentage mix takes its
+   * step from what is already there, and a dark page has almost nothing to take:
+   * mixing 6% black into hsl(240 5% 8%) moved it two bytes out of 255, which no
+   * eye resolves. A fixed overlay steps by the same amount whatever the page,
+   * and composites over whatever surface the band happens to sit on. */
+  --surface-recessed: rgb(0 0 0 / 0.35);
+  /* Hover/active surface (rails, menus, tabs) — a quiet warm lift above the page. */
+  --accent: hsl(0 0% 17%);
+  --accent-foreground: hsl(0 0% 90%);
+  --destructive: hsl(0 67% 60%);
+  --destructive-foreground: hsl(0 0% 98%);
+  /* Soft warm border — Claude draws hairlines from a light border at low
+   * contrast, so a mid warm-gray keeps lines visible but never harsh. */
+    /* A hairline divides, it does not glow. Ten points over --background is a
+     definite edge at one device pixel without becoming the loudest thing on
+     the page — which it was once the fills stopped separating surfaces.
+     Capped by MAXIMUM_BORDER_GAP in check-preset-contrast.mjs. */
+  --border: hsl(0 0% 18%);
+  /* Input surface — a notch above card so fields read as raised controls. */
+  --input: hsl(0 0% 18%);
+  /* Divider — TRANSLUCENT hairline (Apple-style): a light warm-gray at low alpha
+   * that dissolves into whatever sits behind it, so structural separators
+   * (columns, headers, rows) stay quiet on the dark page instead of reading as a
+   * hard opaque rule. Backs default + django-cfg (they don't re-declare it). */
+    /* 0.10, not 0.18. A divider separates rows INSIDE a panel, so it must be
+     weaker than that panel's own --border — otherwise the five lines between
+     rows shout as loudly as the one frame around them, which is what was
+     left of "кондово" after the fills were calmed. Over a 12% card this
+     lands at 15.4% (step 3.4) against the border's 18% (step 6.0): a clear
+     hierarchy, frame first. */
+  --divider: hsl(0 0% 15%);
+  /* Overlay — modal scrim / backdrop behind dialogs, drawers, sheets. Black in
+   * both themes; slightly darker here so it still reads on the dark page. */
+  --overlay: hsl(0 0% 0% / 0.7);
+  /* Focus ring — blue (system-accent feel), independent of the cyan brand. */
+  --ring: hsl(209 74% 52%);
+  --shadow-card: none;
+
+  /* Code surface — see light.css for the rationale. On dark we want
+   * a panel slightly elevated from `--background` (4%) but below
+   * `--popover` (12%); 9% sits in the sweet spot — visible block but
+   * not a heavy "second card" feel. Inline code uses the same hue at
+   * a touch lighter so chips read as recessed, not as buttons. */
+  --code: hsl(0 0% 9%);
+  --code-foreground: hsl(0 0% 92%);
+  --code-border: hsl(0 0% 18%);
+  --code-inline: hsl(0 0% 14%);
+  --code-inline-foreground: hsl(0 0% 92%);
+  /* Sidebar — same warm-gray family as the page (Claude has NO black sidebar
+   * block; rail and page share one tone). A hair darker than --background for
+   * subtle separation, not a hard black slab. */
+  --sidebar-background: hsl(0 0% 12.5%);
+  --sidebar-foreground: hsl(0 0% 81%);
+  --sidebar-primary: hsl(209 74% 52%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(0 0% 17%);
+  --sidebar-accent-foreground: hsl(0 0% 90%);
+  --sidebar-border: hsl(0 0% 18%);
+  --sidebar-ring: hsl(209 74% 52%);
+  /* ── Status surfaces (dark) ──────────────────────────────────────
+   * Dark variants: dim backgrounds (~8-12% lightness) so banners
+   * don't blow out against the near-black page. Foreground raised
+   * to ~70-80% lightness for contrast. Borders kept muted.
+   *
+   * `--{status}-foreground` is the LIGHT status tint for text on the
+   * `*-background` banner — NOT a contrast color for the solid `*` fill
+   * (light-green-on-green is unreadable). For text/icons ON the solid
+   * fill use `--on-{status}` below.
+   * ─────────────────────────────────────────────────────────────── */
+
+  /* Warning — amber */
+  --warning: hsl(38 92% 50%);
+  --warning-background: hsl(38 80% 10%);
+  --warning-foreground: hsl(38 90% 75%);
+  --warning-border: hsl(38 60% 30%);
+  /* Success — green */
+  --success: hsl(142 60% 45%);
+  --success-background: hsl(142 60% 8%);
+  --success-foreground: hsl(142 70% 70%);
+  --success-border: hsl(142 50% 25%);
+  /* Destructive surface */
+  --destructive-background: hsl(0 80% 10%);
+  --destructive-border: hsl(0 70% 30%);
+  /* Info — blue-cyan */
+  --info: hsl(200 80% 55%);
+  --info-background: hsl(200 80% 8%);
+  --info-foreground: hsl(200 80% 75%);
+  --info-border: hsl(200 60% 25%);
+
+  /* On-fill text/icon — readable color ON the solid `*` fill (badges,
+   * unread pills, filled chips). The status fills here are bright/mid
+   * (45-60% L) so near-black ink contrasts best (WhatsApp pattern).
+   *   on-success  vs --success (142 60% 45%) → 6.9:1 (AA)
+   *   on-warning  vs --warning (38 92% 50%)  → 8.4:1 (AA)
+   *   on-info     vs --info    (200 80% 55%) → 6.9:1 (AA)
+   *   on-destructive vs --destructive (0 67% 60%) → 4.7:1 (AA) */
+  --on-success: hsl(0 0% 9%);
+  --on-warning: hsl(0 0% 9%);
+  --on-info: hsl(0 0% 9%);
+  --on-destructive: hsl(0 0% 9%);
+  /* Surface gradient dark */
+  --surface-gradient: linear-gradient(to bottom, var(--background), color-mix(in oklab, var(--background) 80%, transparent));
+
+  /* Chart colors — chart-1 aligned with brand.
+   * Fully-wrapped hsl() like every other token (consume via `bg-chart-N` or
+   * `var(--chart-N)`, never `hsl(var(--chart-N))`). */
+  --chart-1: hsl(209 74% 58%);
+  --chart-2: hsl(142 76% 36%);
+  --chart-3: hsl(262 83% 58%);
+  --chart-4: hsl(26 90% 57%);
+  --chart-5: hsl(346 77% 50%);
+}

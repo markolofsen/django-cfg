@@ -1,0 +1,84 @@
+{
+  "name": "@djangocfg/widget-avatar",
+  "version": "0.1.14",
+  "description": "Seeded avatars: one seed picks one style and draws one face, forever, with nothing persisted",
+  "keywords": [
+    "avatar",
+    "dicebear",
+    "identicon",
+    "react",
+    "typescript"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "widgets/avatar"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "default": "./src/server.ts"
+    }
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/*.stories.tsx",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@dicebear/avataaars": "9.4.2",
+    "@dicebear/bottts": "9.4.2",
+    "@dicebear/core": "9.4.2",
+    "@dicebear/glass": "9.4.2",
+    "@dicebear/identicon": "9.4.2",
+    "@dicebear/lorelei": "9.4.2",
+    "@dicebear/notionists": "9.4.2",
+    "@dicebear/open-peeps": "9.4.2",
+    "@dicebear/pixel-art": "9.4.2",
+    "@dicebear/rings": "9.4.2",
+    "@dicebear/shapes": "9.4.2"
+  },
+  "peerDependencies": {
+    "@djangocfg/ui-core": "workspace:*",
+    "lucide-react": "^1.68.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@djangocfg/typescript-config": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "@storybook/react-vite": "^10.6.5",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "lucide-react": "1.68.0",
+    "react": "19.3.1",
+    "storybook": "^10.6.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

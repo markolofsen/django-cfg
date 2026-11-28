@@ -29,6 +29,8 @@ SOURCE_ROOT = ROOT / "openapi" / "clients"
 DEMO_API = FRONTEND / "apps" / "demo" / "app" / "_lib" / "api" / "generated"
 PACKAGES_API = FRONTEND / "packages" / "api" / "src" / "_api" / "generated"
 EXTENSIONS = FRONTEND / "extensions"
+# A Cargo crate (progenitor + reqwest): the Rust client a CLI or service links.
+RUST_API = ROOT.parent / "rust" / "djangocfg-api"
 
 # NOTE: there is deliberately no target for cfg_monitor or cfg_analytics.
 #
@@ -49,13 +51,21 @@ config = Config(
                 lang=Language.TYPESCRIPT,
                 type=TargetType.WEB,
                 path=DEMO_API,
-                groups=["profiles", "crypto"],
+                # realtime_demo: the demo app's /realtime page (its REST hooks and realtime.ts topics).
+                groups=["profiles", "crypto", "realtime_demo"],
             ),
             Target(
                 lang=Language.TYPESCRIPT,
                 type=TargetType.PACKAGES,
                 path=PACKAGES_API,
                 groups=["cfg_accounts", "cfg_totp"],
+            ),
+            Target(
+                lang=Language.RUST,
+                type=TargetType.SDK,
+                path=RUST_API,
+                groups=["cfg_accounts", "cfg_totp", "profiles", "crypto"],
+                rust_crate="djangocfg-api",
             ),
         ],
 

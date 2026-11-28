@@ -1,7 +1,7 @@
-"""Django admin (Unfold) — theme, sidebar and the navigation tree.
+"""Django admin site — branding, sidebar and the navigation tree.
 
-Split out of ``api/settings/config.py``. It is pure declaration: a menu, some
-colours, and the dropdown. Nothing here decides behaviour, so nothing here
+Split out of ``api/settings/config.py``. It is pure declaration: a menu, the
+branding and the dropdown. Nothing here decides behaviour, so nothing here
 needs reading to understand how the project runs — which is exactly what made
 it worth moving out of the way.
 
@@ -11,21 +11,20 @@ It imports ``env`` only for the site title.
 from __future__ import annotations
 
 from django_cfg import (
+    AdminSidebar,
+    AdminSiteConfig,
     Icons,
     NavigationItem,
     NavigationSection,
     SiteDropdownItem,
-    UnfoldColors,
-    UnfoldConfig,
-    UnfoldSidebar,
 )
 
 from api.environment import env
 
 
-def build_unfold_config() -> UnfoldConfig:
+def build_admin_site_config() -> AdminSiteConfig:
     """The admin interface configuration."""
-    return UnfoldConfig(
+    return AdminSiteConfig(
         dev_autofill_email="admin@example.com",
         dev_autofill_password="admin123",
         site_title=f"{env.app.name} Admin",
@@ -33,10 +32,7 @@ def build_unfold_config() -> UnfoldConfig:
         site_subheader="Main Project",
         site_url="/",
         site_symbol=Icons.ROCKET_LAUNCH,
-        theme="dark",
-        colors=UnfoldColors(primary="#3b82f6"),
-        sidebar=UnfoldSidebar(
-            show_search=True,
+        sidebar=AdminSidebar(
             show_all_applications=True,
         ),
         site_dropdown=[

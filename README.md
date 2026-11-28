@@ -218,3 +218,22 @@ Made with ❤️ for the Django community
 [Get Started](https://djangocfg.com/docs) • [Live Demo](https://djangocfg.com/demo) • [GitHub](https://github.com/markolofsen/django-cfg)
 
 </div>
+
+<!-- generated-public-editable-install -->
+## Develop from this checkout
+
+The public repository uses a flat package layout: `django_cfg/` contains the
+Python package, and the generated root `pyproject.toml` describes that layout.
+Use Python 3.12 or newer and run installation from the repository root:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -e .
+```
+
+This installs the declared dependencies and connects imports to this checkout,
+so package source edits are visible without reinstalling. Use a separate virtual
+environment per consumer. Pin a Git commit when reproducible source is required.
+When present, `django_cfg/pyproject.toml` is metadata bundled in the published
+wheel; it is not the installation root. Production consumers can continue to install
+the versioned `django-cfg` release from PyPI.

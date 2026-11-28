@@ -49,7 +49,7 @@ python manage.py runserver
 ## Project Structure
 
 ```
-@frontend/
+django_admin/
 ├── apps/
 │   └── admin/              # Next.js Admin App
 │       ├── src/
@@ -152,25 +152,25 @@ const nextConfig = {
 
 ## API Client Usage
 
-Generated clients are available in `@djangocfg/api`:
+Orval-generated clients are available in `@djangocfg/api`:
 
 ```typescript
-import { api } from '@djangocfg/api';
+import { cfgTasksList, cfgAccountsUserProfileRetrieve } from '@djangocfg/api';
 
 // Type-safe API calls
-const tasks = await api.cfg_tasks.list();
-const user = await api.cfg_accounts_user_profile.retrieve(1);
+const tasks = await cfgTasksList();
+const user = await cfgAccountsUserProfileRetrieve({ path: { id: 1 } });
 ```
 
-SWR hooks for React:
+React Query v5 hooks for React:
 
 ```typescript
 import { useTasksApiTasksStatsRetrieve } from '@djangocfg/api';
 
 function TasksStats() {
-  const { data, error, isLoading } = useTasksApiTasksStatsRetrieve(api);
+  const { data, error, isPending } = useTasksApiTasksStatsRetrieve();
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isPending) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
 
   return <div>Running tasks: {data?.running_count}</div>;
@@ -243,7 +243,7 @@ python manage.py check_frontend
 
 ```bash
 # Make sure you built the frontend
-cd @frontend
+cd django_admin
 make build-admin
 
 # Check if files exist
@@ -288,7 +288,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 - **React** 19.2.0 - UI library
 - **TypeScript** 5.9 - Type safety
 - **Tailwind CSS** 4.1 - Styling
-- **SWR** 2.3 - Data fetching
+- **TanStack React Query** 5 - Generated REST data fetching and caching
 - **Zod** 4.1 - Schema validation
 
 ## Architecture

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.115] - 2026-11-28
+
+### Security and integrity
+
+- Use SHA-256 for geocoding, translation and sitemap cursor cache keys. Legacy cache entries are not reused; existing stored data is not deleted.
+- Escape Mermaid diagram input and render errors as text; use Mermaid's strict security mode.
+- Verify the generator manifest's complete output path and IndexNow's complete URL identity before trusting their existing indexed hashes.
+- Preserve existing rate-limit namespaces, error-group fingerprints and deterministic knowledge/mock identifiers, explicitly identifying these hashes as non-cryptographic uses.
+
 ## [2.4.114] - 2026-11-28
 
 ### Added

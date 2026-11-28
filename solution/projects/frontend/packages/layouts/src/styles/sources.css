@@ -1,0 +1,7 @@
+/**
+ * Tailwind v4 Source Detection for Layouts Package
+ *
+ * @source directive tells Tailwind v4 where to scan for utility classes.
+ * Scans all TypeScript files recursively from package root.
+ */
+@source "../**/*.{ts,tsx}";

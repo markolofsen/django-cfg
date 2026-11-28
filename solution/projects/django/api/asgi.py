@@ -13,4 +13,7 @@ from django.core.asgi import get_asgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'api.settings.base')
 
-application = get_asgi_application()
+from django_cfg.modules.django_realtime import realtime_asgi  # noqa: E402
+
+# WebSocket scopes on RealtimeConfig.path (/ws) go to django_realtime, everything else to Django.
+application = realtime_asgi(get_asgi_application())

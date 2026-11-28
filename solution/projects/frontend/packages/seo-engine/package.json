@@ -1,0 +1,29 @@
+{
+  "name": "@nextra/seo-engine",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Universal, brand-agnostic SEO/link engine for the Nextra docs apps (sitemap, llms.txt, link check). Run via tsx; per-project config lives in each app's seo.config.ts.",
+  "exports": {
+    ".": "./index.ts",
+    "./cli": "./cli.ts"
+  },
+  "bin": {
+    "seo-engine": "./cli.ts"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "fast-glob": "^3.3.2",
+    "github-slugger": "^2.0.0",
+    "mdast-util-from-markdown": "^2.1.0",
+    "mdast-util-mdx": "^3.0.0",
+    "mdast-util-to-string": "^4.0.0",
+    "micromark-extension-mdxjs": "^3.0.0",
+    "picocolors": "^1.1.1",
+    "unist-util-visit": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^22.10.0"
+  }
+}

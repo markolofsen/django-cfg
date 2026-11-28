@@ -3,7 +3,9 @@
   "info": {
     "title": "Django CFG API",
     "version": "1.0.0",
-    "description": "RESTful API with modern architecture"
+    "description": "RESTful API with modern architecture",
+    "x-cfg-version": "2.4.108",
+    "x-cfg-contract": "2.3.415"
   },
   "paths": {
     "/apix/crypto/coins/": {
@@ -759,6 +761,174 @@
         },
         "x-async-capable": false
       }
+    },
+    "/apix/realtime_demo/pings/": {
+      "get": {
+        "operationId": "realtime_demo_pings_list",
+        "description": "Newest first.",
+        "summary": "List demo pings",
+        "parameters": [
+          {
+            "name": "ordering",
+            "required": false,
+            "in": "query",
+            "description": "Which field to use when ordering the results.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "A page number within the paginated result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Number of results to return per page.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "A search term.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "realtime_demo"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedDemoPingList"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-realtime-invalidates": [
+          "demo.pings"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/apix/realtime_demo/pings/{id}/": {
+      "get": {
+        "operationId": "realtime_demo_pings_retrieve",
+        "summary": "Get demo ping",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "A unique integer value identifying this demo ping.",
+            "required": true
+          }
+        ],
+        "tags": [
+          "realtime_demo"
+        ],
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoPing"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-realtime-invalidates": [
+          "demo.pings"
+        ],
+        "x-async-capable": false
+      }
+    },
+    "/apix/realtime_demo/pings/send/": {
+      "post": {
+        "operationId": "realtime_demo_pings_send_create",
+        "description": "Stores a ping and publishes `demo.ping` (plus a `demo.user:{id}` receipt when signed in).",
+        "summary": "Send a demo ping",
+        "tags": [
+          "realtime_demo"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoPingSendRequestRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "jwtAuthWithLastLogin": []
+          },
+          {
+            "tokenAuth": []
+          },
+          {}
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoPing"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
     }
   },
   "components": {
@@ -875,6 +1045,45 @@
           "symbol"
         ]
       },
+      "DemoPing": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "note": {
+            "type": "string",
+            "readOnly": true
+          },
+          "signed_in": {
+            "type": "boolean",
+            "readOnly": true,
+            "description": "True when a signed-in user sent it"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "created_at",
+          "id",
+          "note",
+          "signed_in"
+        ]
+      },
+      "DemoPingSendRequestRequest": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "default": "",
+            "maxLength": 200
+          }
+        }
+      },
       "PaginatedCoinListingList": {
         "type": "object",
         "required": [
@@ -937,6 +1146,73 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CoinListing"
+            },
+            "description": "Array of items for current page"
+          }
+        }
+      },
+      "PaginatedDemoPingList": {
+        "type": "object",
+        "required": [
+          "count",
+          "page",
+          "pages",
+          "page_size",
+          "has_next",
+          "has_previous",
+          "results"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Total number of items across all pages",
+            "example": 150
+          },
+          "page": {
+            "type": "integer",
+            "description": "Current page number (1-based)",
+            "example": 2
+          },
+          "pages": {
+            "type": "integer",
+            "description": "Total number of pages",
+            "example": 15
+          },
+          "page_size": {
+            "type": "integer",
+            "description": "Number of items per page",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Whether there is a next page",
+            "example": true
+          },
+          "has_previous": {
+            "type": "boolean",
+            "description": "Whether there is a previous page",
+            "example": true
+          },
+          "next_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Next page number (null if no next page)",
+            "example": 3
+          },
+          "previous_page": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Previous page number (null if no previous page)",
+            "example": 1
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DemoPing"
             },
             "description": "Array of items for current page"
           }
@@ -1102,6 +1378,45 @@
           }
         }
       },
+      "UserInfo": {
+        "type": "object",
+        "description": "Stable nested wire shape for the profile's user summary.",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "username": {
+            "type": "string",
+            "readOnly": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "readOnly": true
+          },
+          "full_name": {
+            "type": "string",
+            "readOnly": true
+          },
+          "first_name": {
+            "type": "string",
+            "readOnly": true
+          },
+          "last_name": {
+            "type": "string",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "email",
+          "first_name",
+          "full_name",
+          "id",
+          "last_name",
+          "username"
+        ]
+      },
       "UserProfile": {
         "type": "object",
         "description": "Serializer for user profiles.",
@@ -1115,9 +1430,11 @@
             "readOnly": true
           },
           "user_info": {
-            "type": "object",
-            "additionalProperties": {},
-            "description": "Get basic user information.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserInfo"
+              }
+            ],
             "readOnly": true
           },
           "website": {
@@ -1298,6 +1615,32 @@
             "maxLength": 100
           }
         }
+      },
+      "DemoPingEvent": {
+        "properties": {
+          "at": {
+            "description": "When the ping was sent",
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "description": "Free text typed by the sender",
+            "maxLength": 200,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "title": "DemoPingEvent",
+        "type": "object"
+      },
+      "RealtimeHint": {
+        "additionalProperties": false,
+        "description": "The default event: no payload. The client refetches over REST.",
+        "properties": {},
+        "title": "RealtimeHint",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -1305,10 +1648,6 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-API-Key"
-      },
-      "basicAuth": {
-        "type": "http",
-        "scheme": "basic"
       },
       "cookieAuth": {
         "type": "apiKey",
@@ -1332,5 +1671,55 @@
     {
       "url": "http://localhost:8000"
     }
-  ]
+  ],
+  "x-realtime": {
+    "version": 1,
+    "path": "/ws",
+    "topics": [
+      {
+        "name": "demo.ping",
+        "params": [],
+        "anonymous": true,
+        "history": 100,
+        "event": {
+          "$ref": "#/components/schemas/DemoPingEvent"
+        },
+        "tags": [
+          "realtime_demo"
+        ],
+        "description": "A ping from any visitor (POST /apix/realtime_demo/pings/send/ or `manage.py realtime publish`)"
+      },
+      {
+        "name": "demo.pings",
+        "params": [],
+        "anonymous": true,
+        "history": 100,
+        "event": {
+          "$ref": "#/components/schemas/RealtimeHint"
+        },
+        "tags": [
+          "realtime_demo"
+        ],
+        "description": "Hint: the ping list changed (a DemoPing was saved or deleted)"
+      },
+      {
+        "name": "demo.user:{user_id:int}",
+        "params": [
+          {
+            "name": "user_id",
+            "type": "int"
+          }
+        ],
+        "anonymous": false,
+        "history": 100,
+        "event": {
+          "$ref": "#/components/schemas/DemoPingEvent"
+        },
+        "tags": [
+          "realtime_demo"
+        ],
+        "description": "Receipts for one signed-in user; only that user may subscribe"
+      }
+    ]
+  }
 }

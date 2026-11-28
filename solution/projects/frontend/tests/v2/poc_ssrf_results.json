@@ -1,0 +1,60 @@
+{
+  "target": "https://demo.djangocfg.com",
+  "prove": "https://webhook.site/05f5d63c-5397-43ad-9e02-b32d0c8356a0",
+  "runs": [
+    {
+      "path": "/%5C%5Clocalhost:3000",
+      "status": 308,
+      "location": "/%5C%5Clocalhost:3000/",
+      "snippet": "/%5C%5Clocalhost:3000/"
+    },
+    {
+      "path": "/%5Chttp://127.0.0.1:3000",
+      "status": 404,
+      "location": null,
+      "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" type=\"image/png\" href=\"/static/logos/192x192.png\" data-next-head=\"\"/><link rel=\"canonical\" href=\"https"
+    },
+    {
+      "path": "//http://localhost:3000",
+      "status": 308,
+      "location": "/http:/localhost:3000/",
+      "snippet": "/http:/localhost:3000/"
+    },
+    {
+      "path": "//127.0.0.1:3000",
+      "status": 404,
+      "location": null,
+      "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" type=\"image/png\" href=\"/static/logos/192x192.png\" data-next-head=\"\"/><link rel=\"canonical\" href=\"https"
+    },
+    {
+      "path": "/%5Chttps://webhook.site",
+      "status": 404,
+      "location": null,
+      "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" type=\"image/png\" href=\"/static/logos/192x192.png\" data-next-head=\"\"/><link rel=\"canonical\" href=\"https"
+    },
+    {
+      "path": "/%255Chttps://webhook.site",
+      "status": 404,
+      "location": null,
+      "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" type=\"image/png\" href=\"/static/logos/192x192.png\" data-next-head=\"\"/><link rel=\"canonical\" href=\"https"
+    },
+    {
+      "path": "/%EF%BC%8Fhttps://webhook.site",
+      "status": 404,
+      "location": null,
+      "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" type=\"image/png\" href=\"/static/logos/192x192.png\" data-next-head=\"\"/><link rel=\"canonical\" href=\"https"
+    },
+    {
+      "path": "/_next/image?url=%5C%5Chttps%3A//webhook.site&w=64&q=75",
+      "status": 308,
+      "location": "/_next/image/?url=%5C%5Chttps%3A%2F%2Fwebhook.site&w=64&q=75",
+      "snippet": "/_next/image/?url=%5C%5Chttps%3A%2F%2Fwebhook.site&w=64&q=75"
+    },
+    {
+      "path": "/.well-known/%5Chttps://webhook.site",
+      "status": 404,
+      "location": null,
+      "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</title><meta name=\"description\" content=\"Django CFG Admin Panel\" data-next-head=\"\"/><link rel=\"icon\" type=\"image/png\" href=\"/static/logos/192x192.png\" data-next-head=\"\"/><link rel=\"canonical\" href=\"https"
+    }
+  ]
+}

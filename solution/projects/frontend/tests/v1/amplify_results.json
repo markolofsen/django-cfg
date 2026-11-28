@@ -1,0 +1,263 @@
+{
+  "target": "https://demo.djangocfg.com",
+  "prove": "https://en8q-xxxxxx.webhook.site/unique-id",
+  "results": {
+    "backslash_double_localhost": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/%5C%5Clocalhost:3000/?amp=1764823825",
+          "snippet": "/%5C%5Clocalhost:3000/?amp=1764823825"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": "localhost"
+    },
+    "backslash_127": {
+      "initial_status": 404,
+      "chain": [
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "double_slash_localhost": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/http:/localhost:3000/?amp=1764823828",
+          "snippet": "/http:/localhost:3000/?amp=1764823828"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": "localhost"
+    },
+    "proto_backslash_prove": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?amp=1764823830",
+          "snippet": "/%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?amp=1764823830"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "proto_backslash_double_prove": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?amp=1764823832",
+          "snippet": "/%5C%5Chttps:/en8q-xxxxxx.webhook.site/unique-id/?amp=1764823832"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "proto_double_slash_prove": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/https:/en8q-xxxxxx.webhook.site/unique-id/?amp=1764823833",
+          "snippet": "/https:/en8q-xxxxxx.webhook.site/unique-id/?amp=1764823833"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "proto_pct_encoded": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/%5Chttp%3A%2F%2Fen8q-xxxxxx.webhook.site/unique-id/?amp=1764823835",
+          "snippet": "/%5Chttp%3A%2F%2Fen8q-xxxxxx.webhook.site/unique-id/?amp=1764823835"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "proto_double_pct": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/%5C%5Chttp%3A%2F%2Fen8q-xxxxxx.webhook.site/unique-id/?amp=1764823837",
+          "snippet": "/%5C%5Chttp%3A%2F%2Fen8q-xxxxxx.webhook.site/unique-id/?amp=1764823837"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "double_encoded_prove": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/%255Chttps:/en8q-xxxxxx.webhook.site/unique-id/?amp=1764823838",
+          "snippet": "/%255Chttps:/en8q-xxxxxx.webhook.site/unique-id/?amp=1764823838"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "image_raw": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/_next/image/?url=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&w=64&q=75&amp=1764823839",
+          "snippet": "/_next/image/?url=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&w=64&q=75&amp=1764823839"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "image_double": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/_next/image/?url=%2F%2Fhttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&w=64&q=75&amp=1764823840",
+          "snippet": "/_next/image/?url=%2F%2Fhttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&w=64&q=75&amp=1764823840"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "rsc_probe": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/%5Cen8q-xxxxxx.webhook.site/unique-id/?_rsc=1&amp=1764823841",
+          "snippet": "/%5Cen8q-xxxxxx.webhook.site/unique-id/?_rsc=1&amp=1764823841"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "action_probe": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/%5Cen8q-xxxxxx.webhook.site/unique-id/?__NEXT_ACTION__=1&amp=1764823842",
+          "snippet": "/%5Cen8q-xxxxxx.webhook.site/unique-id/?__NEXT_ACTION__=1&amp=1764823842"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "next_data_traversal": {
+      "initial_status": 404,
+      "chain": [
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "next_static_traversal": {
+      "initial_status": 404,
+      "chain": [
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "login_next_param": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/login/?next=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&amp=1764823846",
+          "snippet": "/login/?next=%5C%5Chttps%3A%2F%2Fen8q-xxxxxx.webhook.site%2Funique-id&amp=1764823846"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    },
+    "rare_chain": {
+      "initial_status": 308,
+      "chain": [
+        {
+          "status": 308,
+          "location": "/%5C/%5C/https:/en8q-xxxxxx.webhook.site/unique-id/?amp=1764823847",
+          "snippet": "/%5C/%5C/https:/en8q-xxxxxx.webhook.site/unique-id/?amp=1764823847"
+        },
+        {
+          "status": 404,
+          "location": null,
+          "snippet": "<!DOCTYPE html><html lang=\"en\" class=\"dark\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><title data-next-head=\"\">Django CFG</ti"
+        }
+      ],
+      "indicator": null
+    }
+  }
+}

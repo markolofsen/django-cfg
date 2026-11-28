@@ -1,0 +1,52 @@
+/**
+ * @djangocfg/ui-core — golden-path style entry (cascade-layer-safe)
+ *
+ * Import THIS file (`@djangocfg/ui-core/styles/full`) as the SINGLE,
+ * FIRST style import in a consumer app and Tailwind cascade-layer
+ * ordering cannot go wrong — regardless of build tool (Vite or Next.js)
+ * or where the consumer's own `@import "tailwindcss"` ends up.
+ *
+ * Why this file exists — the cascade-layer trap it removes
+ * --------------------------------------------------------
+ * Tailwind v4 emits its utilities inside `@layer utilities`. Any CSS
+ * that lands OUTSIDE a cascade layer beats every layered rule, because
+ * unlayered styles always win over layered ones in the cascade. So if a
+ * package's base resets (e.g. ui-core's `* { border-color }` and the
+ * `body` background/font rules in base.css) are emitted unlayered, they
+ * sit above `@layer utilities` and silently defeat layout utilities
+ * (gap, space-y, divide, flex, border, padding). Colors usually survive
+ * because they resolve through CSS vars, which have no cascade conflict,
+ * so the breakage is invisible until a stricter engine (WKWebView) shows
+ * it. The plain `@djangocfg/ui-core/styles` entry imports base.css and
+ * utilities.css unlayered, which means their position relative to
+ * `@import "tailwindcss"` decides whether they get folded into a layer —
+ * a footgun for consumers.
+ *
+ * This entry removes the footgun by binding each package file to an
+ * explicit cascade layer at import time via `@import "..." layer(name)`.
+ * A `layer()`-qualified import is folded into that named layer no matter
+ * the import order or build tool, so the consumer can put their own
+ * `@import "tailwindcss"` anywhere (or omit it — this file imports it
+ * first) and the resets stay in `@layer base`, the custom utilities stay
+ * in `@layer utilities`, both correctly under Tailwind's own emissions.
+ *
+ * theme.css and sources.css are intentionally NOT layered: `@theme`
+ * token blocks and the `:root` / `.dark` CSS variables must stay global
+ * so Tailwind collects the tokens and the variables apply everywhere,
+ * and `@source` is a build directive, not a style rule.
+ */
+
+/* Tailwind v4 core first — establishes the properties/theme/base/components/utilities layer order. */
+@import "tailwindcss";
+
+/* Theme tokens + CSS variables — must stay global (unlayered) so Tailwind reads @theme and :root/.dark apply everywhere. */
+@import "./theme.css";
+
+/* @source directives for monorepo class detection — build directive, not a style rule. */
+@import "./sources.css";
+
+/* Base resets pinned to @layer base so they never escape above Tailwind's utilities. */
+@import "./base.css" layer(base);
+
+/* Custom utilities pinned to @layer utilities to sit alongside Tailwind's own. */
+@import "./utilities.css" layer(utilities);

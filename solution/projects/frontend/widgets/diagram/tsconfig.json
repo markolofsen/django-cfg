@@ -1,0 +1,14 @@
+{
+  // Bundler resolution: this package is source-shipped and imported as `.ts`,
+  // so extensionless relative imports must resolve. `base.json` is NodeNext
+  // and would demand a `.js` extension on every one of them.
+  "extends": "@djangocfg/typescript-config/react-library.json",
+  "compilerOptions": {
+    "strict": true,
+    // `ui-core` ships UNBUILT source, so tsc recompiles it under these flags.
+    "noImplicitOverride": false,
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "@*", "**/*.test.ts"]
+}

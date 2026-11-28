@@ -1,0 +1,155 @@
+/* Authoritative static preset: windows. */
+:root {
+  --background: hsl(0 0% 95%);
+  --foreground: hsl(0 0% 9%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 9%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 0% 9%);
+  --primary: hsl(210 100% 38%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(0 0% 94%);
+  --secondary-foreground: hsl(0 0% 9%);
+  --muted: hsl(0 0% 92%);
+  --muted-foreground: hsl(0 0% 42%);
+  /* 89%, not 94%: --background is 95%, so this was a one-point step. */
+  --accent: hsl(210 60% 89%);
+  --accent-foreground: hsl(210 100% 28%);
+  --destructive: hsl(0 90% 55%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 87%);
+  --input: hsl(0 0% 90%);
+  --divider: hsl(0 0% 84%);
+  --ring: hsl(210 100% 45%);
+  --overlay: hsl(0 0% 0% / 0.4);
+  --radius: 0.375rem;
+  --sidebar-background: hsl(0 0% 92%);
+  --sidebar-foreground: hsl(0 0% 9%);
+  --sidebar-primary: hsl(210 100% 38%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  /* 86%, not 93% (2026-08-03). The sidebar sits on 92%, so 93% was a ONE-point
+     step in the WRONG direction — the hover was lighter than the surface it sat
+     on, which reads as a smudge rather than a highlight. Dark gets eight
+     points; light now gets six. */
+  --sidebar-accent: hsl(210 50% 86%);
+  --sidebar-accent-foreground: hsl(210 100% 28%);
+  --sidebar-border: hsl(0 0% 86%);
+  --sidebar-ring: hsl(210 100% 45%);
+  --chart-1: hsl(210 100% 38%);
+  --chart-2: hsl(145 63% 38%);
+  --chart-3: hsl(262 83% 55%);
+  --chart-4: hsl(35 100% 48%);
+  --chart-5: hsl(346 77% 50%);
+  --warning: hsl(38 92% 50%);
+  --warning-background: hsl(38 100% 95%);
+  --warning-foreground: hsl(30 80% 28%);
+  --warning-border: hsl(38 85% 78%);
+  --success: hsl(120 78% 27%);
+  --success-background: hsl(120 55% 95%);
+  --success-foreground: hsl(120 60% 28%);
+  --success-border: hsl(120 45% 78%);
+  --destructive-background: hsl(0 90% 96%);
+  --destructive-border: hsl(0 85% 78%);
+  --info: hsl(210 100% 38%);
+  --info-background: hsl(210 100% 95%);
+  --info-foreground: hsl(210 90% 28%);
+  --info-border: hsl(210 80% 78%);
+  --on-success: hsl(0 0% 100%);
+  --on-info: hsl(0 0% 100%);
+  --font-sans: "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;
+  --font-size-base: 0.875rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-xs: 0.75rem;
+  --font-size-lg: 1rem;
+  --font-size-xl: 1.125rem;
+  --line-height-base: 1.5;
+  --letter-spacing-base: 0em;
+  --radius-xs: calc(0.375rem - 6px);
+  --radius-sm: calc(0.375rem - 4px);
+  --radius-md: calc(0.375rem - 2px);
+  --radius-lg: 0.375rem;
+  --radius-xl: calc(0.375rem + 4px);
+  --radius-2xl: calc(0.375rem + 8px);
+  --radius-3xl: calc(0.375rem + 12px);
+  --radius-4xl: calc(0.375rem + 16px);
+}
+
+.dark {
+  --background: hsl(0 0% 13%);
+  --foreground: hsl(0 0% 96%);
+  --card: hsl(0 0% 17%);
+  --card-foreground: hsl(0 0% 96%);
+  --popover: hsl(0 0% 20%);
+  --popover-foreground: hsl(0 0% 96%);
+  --primary: hsl(200 100% 69%);
+  --primary-foreground: hsl(0 0% 9%);
+  --secondary: hsl(0 0% 22%);
+  --secondary-foreground: hsl(0 0% 90%);
+  --muted: hsl(0 0% 15%);
+  --muted-foreground: hsl(0 0% 62%);
+  --accent: hsl(210 25% 20%);
+  --accent-foreground: hsl(200 100% 75%);
+  --destructive: hsl(0 90% 62%);
+  --destructive-foreground: hsl(0 0% 100%);
+    /* A hairline divides, it does not glow. Ten points over --background is a
+     definite edge at one device pixel without becoming the loudest thing on
+     the page — which it was once the fills stopped separating surfaces.
+     Capped by MAXIMUM_BORDER_GAP in check-preset-contrast.mjs. */
+  --border: hsl(0 0% 23%);
+  --input: hsl(0 0% 24%);
+    /* 0.10, not 0.18. A divider separates rows INSIDE a panel, so it must be
+     weaker than that panel's own --border — otherwise the five lines between
+     rows shout as loudly as the one frame around them, which is what was
+     left of "кондово" after the fills were calmed. Over a 12% card this
+     lands at 15.4% (step 3.4) against the border's 18% (step 6.0): a clear
+     hierarchy, frame first. */
+  --divider: hsl(0 0% 46% / 0.10);
+  --ring: hsl(200 100% 69%);
+  --overlay: hsl(0 0% 0% / 0.55);
+  --radius: 0.375rem;
+  --sidebar-background: hsl(0 0% 10%);
+  --sidebar-foreground: hsl(0 0% 90%);
+  --sidebar-primary: hsl(200 100% 69%);
+  --sidebar-primary-foreground: hsl(0 0% 9%);
+  --sidebar-accent: hsl(210 20% 18%);
+  --sidebar-accent-foreground: hsl(200 100% 75%);
+  --sidebar-border: hsl(0 0% 22%);
+  --sidebar-ring: hsl(200 100% 69%);
+  --chart-1: hsl(200 100% 69%);
+  --chart-2: hsl(145 65% 50%);
+  --chart-3: hsl(262 83% 65%);
+  --chart-4: hsl(35 100% 58%);
+  --chart-5: hsl(346 77% 58%);
+  --warning: hsl(38 95% 58%);
+  --warning-background: hsl(38 60% 10%);
+  --warning-foreground: hsl(38 90% 72%);
+  --warning-border: hsl(38 50% 28%);
+  --success: hsl(120 60% 55%);
+  --success-background: hsl(120 40% 10%);
+  --success-foreground: hsl(120 55% 72%);
+  --success-border: hsl(120 35% 28%);
+  --destructive-background: hsl(0 60% 11%);
+  --destructive-border: hsl(0 50% 30%);
+  --info: hsl(200 100% 69%);
+  --info-background: hsl(200 60% 11%);
+  --info-foreground: hsl(200 90% 74%);
+  --info-border: hsl(200 50% 30%);
+  --font-sans: "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "Cascadia Mono", Consolas, "Courier New", monospace;
+  --font-size-base: 0.875rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-xs: 0.75rem;
+  --font-size-lg: 1rem;
+  --font-size-xl: 1.125rem;
+  --line-height-base: 1.5;
+  --letter-spacing-base: 0em;
+  --radius-xs: calc(0.375rem - 6px);
+  --radius-sm: calc(0.375rem - 4px);
+  --radius-md: calc(0.375rem - 2px);
+  --radius-lg: 0.375rem;
+  --radius-xl: calc(0.375rem + 4px);
+  --radius-2xl: calc(0.375rem + 8px);
+  --radius-3xl: calc(0.375rem + 12px);
+  --radius-4xl: calc(0.375rem + 16px);
+}

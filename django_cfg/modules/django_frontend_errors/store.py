@@ -36,7 +36,8 @@ def signature(event: Dict[str, Any]) -> str:
         return given
     path = urlsplit(str(event.get("url") or "")).path
     raw = f"{event.get('event_type', '')}|{str(event.get('message') or '')[:200]}|{path}"
-    return "srv-" + hashlib.sha1(raw.encode()).hexdigest()[:16]
+    # Grouping fingerprint only; clients may already supply their own fingerprint.
+    return "srv-" + hashlib.sha1(raw.encode(), usedforsecurity=False).hexdigest()[:16]
 
 
 def _extra(event: Dict[str, Any]) -> dict:

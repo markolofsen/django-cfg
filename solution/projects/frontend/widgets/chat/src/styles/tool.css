@@ -1,0 +1,163 @@
+/**
+ * Tool calls — a summary that opens.
+ *
+ * Form adapted from vercel/ai-elements `packages/elements/src/tool.tsx`
+ * (Apache-2.0, submodule @ 6a9d5b1): card shell, header-as-trigger, rotating
+ * chevron. The disclosure RULE is ours — they collapse unconditionally, which
+ * renders a running call as a stalled row.
+ *
+ * Here rather than in the class list because every rule below is appearance.
+ */
+
+/* Spacing is not here: `block.css` owns the rhythm for every block-level part,
+ * because a tool call and a card sitting next to each other need one rule, not
+ * two that agree until someone edits one of them. */
+
+/**
+ * The running marker TUMBLES, reusing `turn-mark-tumble` — one motion for every
+ * place this app says "still going".
+ *
+ * A square, never a circle, and that is the reference's measured point: the
+ * corners are what make rotation visible, and at this size a turning circle is
+ * indistinguishable from a still one. A ring would be worse still — it promises
+ * progress, and no tool here knows its own duration.
+ */
+.chat-tool-dot {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 999px;
+}
+
+/* Bigger while it turns: at 8px the corners travel too few pixels for the
+ * rotation to register, which is the whole reason this is a square. */
+.chat-tool-dot[data-running] {
+  inline-size: 0.625rem;
+  block-size: 0.625rem;
+  border-radius: 0.1rem;
+  animation: turn-mark-tumble 1.6s linear infinite;
+}
+
+/**
+ * A running call is legible as a BLOCK, not as an 8px glyph.
+ *
+ * The marker alone put the entire signal in the smallest element on the row —
+ * at a glance a running call and a finished one were the same card. The border
+ * carries it at the size of the thing it describes; the marker then confirms
+ * what the border already said.
+ *
+ * Border colour only: no ground, no shadow, nothing that shifts layout when a
+ * call completes.
+ */
+.chat-tool[data-state="input-streaming"],
+.chat-tool[data-state="input-available"] {
+  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+}
+
+/* The status word earns the accent for the same reason — "Running" printed in
+ * the same grey as "Done" states the fact and hides it. */
+.chat-tool[data-state="input-streaming"] .chat-tool-status,
+.chat-tool[data-state="input-available"] .chat-tool-status {
+  color: var(--primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Still, but not invisible — the accent colour alone carries "running". */
+  .chat-tool-dot[data-running] {
+    animation: none;
+  }
+}
+
+/* The header is the trigger, so it must read as pressable across its width. */
+.chat-tool-header {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  text-align: start;
+}
+
+/* Transform only: rotation costs no layout, so the header cannot shift. */
+.chat-tool-chevron {
+  flex-shrink: 0;
+  transition: transform 150ms ease;
+}
+
+.chat-tool[data-open] .chat-tool-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-tool-chevron {
+    transition: none;
+  }
+}
+
+/**
+ * Tool output is the one surface here guaranteed to carry machine-generated strings —
+ * paths, hashes, base64, a datamarked transcript whose words are joined by a
+ * marker rune. None carry a break opportunity, so the box grows until the text
+ * leaves it.
+ *
+ * `anywhere`, not `break-all`: `break-all` chops ordinary prose too, and a
+ * result is usually both. Same property as the long-url rule in `markdown.css`.
+ *
+ * `min-width: 0` is load-bearing: a grid item's automatic minimum size is its
+ * content, so an unbreakable token widens the track before wrapping applies.
+ */
+.chat-tool-input,
+.chat-tool-output {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Collapsing solves the common case, not the reader who OPENS a call that
+ * returned five tool descriptions. Capped so no result buries the answer, tall
+ * enough that an ordinary one needs no scrolling. */
+.chat-tool-output {
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+/* Never capped: an error is short, and it is why the turn went as it did. */
+.chat-tool-output[data-error] {
+  max-height: none;
+  color: var(--destructive, hsl(0 67% 60%));
+}
+
+/**
+ * Settled calls behind one counter ("3 tools used").
+ *
+ * One muted line, like a closed reasoning block, so a run of finished calls
+ * costs one row of the turn instead of one card each. Open, the cards inside are
+ * the ordinary ones; the body is indented under the chevron so the list reads as
+ * belonging to the counter.
+ */
+.chat-fold {
+  color: var(--muted-foreground);
+  font-size: var(--chat-text-small, 0.875rem);
+}
+
+.chat-fold-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.chat-fold-summary::-webkit-details-marker {
+  display: none;
+}
+
+.chat-fold[open] > .chat-fold-summary .chat-disclosure-chevron {
+  transform: rotate(90deg);
+}
+
+.chat-fold-body {
+  display: grid;
+  gap: 0.5rem;
+  margin-block-start: 0.5rem;
+}

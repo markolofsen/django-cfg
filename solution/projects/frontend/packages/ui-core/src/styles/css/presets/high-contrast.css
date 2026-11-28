@@ -1,0 +1,24 @@
+/* Authoritative static preset: high-contrast. */
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(0 0% 6%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 6%);
+  --border: hsl(0 0% 62%);
+  --input: hsl(0 0% 62%);
+  --divider: hsl(0 0% 68%);
+  --muted-foreground: hsl(0 0% 28%);
+  --ring: hsl(0 0% 12%);
+}
+
+.dark {
+  --background: hsl(0 0% 4%);
+  --foreground: hsl(0 0% 100%);
+  --card: hsl(0 0% 8%);
+  --card-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 48%);
+  --input: hsl(0 0% 48%);
+  --divider: hsl(0 0% 42%);
+  --muted-foreground: hsl(0 0% 82%);
+  --ring: hsl(0 0% 92%);
+}

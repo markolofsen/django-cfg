@@ -1,0 +1,150 @@
+/**
+ * Split Shell Styles
+ *
+ * Mobile (< xl): a plain, frameless centered form — no card, no background
+ *   image, no glass. Reads like an ordinary sign-in screen on small devices.
+ * Desktop (>= xl): a two-column frosted-glass card floating over the
+ *   background image — translucent --card + backdrop blur, form left,
+ *   sidebar right.
+ */
+
+.auth-shell-split {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  /* Mobile: the card fills the viewport so the top bar lands at its top edge;
+     desktop re-centers the floating card below. */
+  align-items: stretch;
+  justify-content: center;
+  padding: 0.5rem 1rem 1rem;
+}
+
+/* Background layers — hidden on mobile (plain form), shown on desktop. */
+.auth-shell-split__bg,
+.auth-shell-split__overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Card container.
+   Mobile: not a card at all — transparent, no border/shadow, just a centered
+   column. Desktop overrides below turn it into the frosted glass panel. */
+.auth-shell-split__card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 400px;
+  background: transparent;
+  border-radius: var(--auth-radius);
+  overflow: hidden;
+}
+
+/* Form column */
+.auth-shell-split__form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0.5rem 1rem;
+}
+
+.auth-shell-split__form-inner {
+  width: 100%;
+  max-width: 360px;
+  /* Centers in what the top bar leaves, and stays reachable when it is short. */
+  margin: auto;
+}
+
+/* Sidebar column — hidden on mobile, shown on desktop. */
+.auth-shell-split__sidebar {
+  display: none;
+}
+
+/* ── Desktop: frosted-glass two-column card ──────────────────────────────── */
+@media (min-width: 1280px) {
+  .auth-shell-split {
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .auth-shell-split__bg,
+  .auth-shell-split__overlay {
+    display: block;
+  }
+
+  .auth-shell-split__card {
+    flex-direction: row;
+    max-width: 960px;
+    /* Give the card real presence on desktop — a taller panel reads as a
+       considered layout rather than a thin strip, and gives the sidebar room
+       to breathe. */
+    min-height: 560px;
+    /* Translucent surface + backdrop blur so the background image reads
+       through the panel as frosted glass. color-mix keeps it theme-aware. */
+    background: color-mix(in oklab, var(--card) 72%, transparent);
+    backdrop-filter: blur(20px) saturate(140%);
+    color: var(--card-foreground);
+    outline: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+    box-shadow: 0 24px 64px hsl(0 0% 0% / 0.28);
+    /* Apple-style frosted entry — the card "condenses" out of the background.
+       Same spring curve (0.16, 1, 0.3, 1) iOS modal sheets ride on. */
+    animation: authShellCardEntry 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, filter, opacity;
+  }
+
+  .auth-shell-split__form {
+    padding: 1.25rem 2.75rem 2.75rem;
+  }
+
+  .auth-shell-split__sidebar {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 2.75rem 2.25rem;
+    /* A subtle tint over the glass marks the brand column without becoming a
+       second opaque surface. */
+    background: color-mix(in oklab, var(--muted) 40%, transparent);
+    border-left: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  }
+}
+
+/* Tablet (1024–1279): keep mobile's plain form but allow a touch more room. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .auth-shell-split__card {
+    max-width: 420px;
+  }
+}
+
+@keyframes authShellCardEntry {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+    filter: blur(10px);
+  }
+  60% {
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* Respect reduced-motion — fall back to a plain fade. */
+@media (prefers-reduced-motion: reduce) {
+  .auth-shell-split__card {
+    animation: authShellCardEntryReduced 200ms ease-out both;
+  }
+  @keyframes authShellCardEntryReduced {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}

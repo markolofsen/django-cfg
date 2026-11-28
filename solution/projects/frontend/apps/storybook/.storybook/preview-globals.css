@@ -1,0 +1,74 @@
+/**
+ * Storybook global stylesheet.
+ *
+ * Mirrors the import order used by every Next.js app in this monorepo
+ * (see apps/playground/app/globals.css):
+ *   1. Theme tokens FIRST (provide CSS variables Tailwind reads)
+ *   2. Tailwind v4 core
+ *   3. tailwindcss-animate plugin
+ *
+ * Reordering breaks Tailwind v4 — tokens must exist by the time the
+ * @theme block in ui-core/tokens.css runs.
+ */
+
+/* 1. ui-core golden path — Tailwind + tokens + base + utilities in the
+ *    correct cascade layers (replaces the removed @djangocfg/ui-nextjs/styles
+ *    entry, which used to chain ui-core for us). */
+@import "@djangocfg/ui-core/styles/full";
+/*    No preset here: the toolbar's Preset switch (preview/preset-switcher.tsx)
+ *    injects one on demand, so the catalogue opens on the default theme (base.css
+ *    type scale, dark.css ladder) and `macos` etc. are one click away. */
+@import "@djangocfg/layouts/styles";
+/* Widget stylesheets carrying real rules, not just source detection.
+ * (`@djangocfg/ui-chat/styles` used to sit here; that package was archived in
+ * Phase 1 and the chat now ships its own.) */
+@import "@djangocfg/widget-chat/styles";
+@import "@djangocfg/widget-data/styles";
+@import "@djangocfg/payments/styles";
+@import "@djangocfg/devtools/styles";
+@import "@djangocfg/realtime/styles";
+
+/* @source is a statement: it must come AFTER every @import, or Vite drops the imports that follow it (the widget stylesheets) with no error in the page. */
+/* Widget class detection. Widgets ship SOURCE, so Tailwind must be told to
+ * scan them or the classes only they use are purged — no error, just stories
+ * that render unstyled. Replaces `@djangocfg/ui-tools/styles`, which was one
+ * `@source` glob and nothing more.
+ *
+ * The note this replaces recorded the exact trap, from when chat left
+ * ui-tools: "its `@source` no longer reaches it, and without this the chat
+ * stories render with purged utilities". That applies to all sixteen widgets
+ * now, so it is one glob rather than sixteen entries a new widget could be
+ * forgotten from. */
+@source "../../../widgets/*/src/**/*.{ts,tsx}";
+
+
+/* 2. tailwindcss-animate — the `animate-in` / `fade-in-0` / `zoom-in-95`
+ *    utilities the ui-core overlays (Dialog, AlertDialog, Sheet, tooltips)
+ *    emit. ui-core/styles/full ships Tailwind + tokens but NOT this plugin,
+ *    so it must be registered per-consumer (matches the Next.js apps —
+ *    see debuger/playground + docs globals.css). Tailwind v4 requires the
+ *    `@plugin` directive AFTER `@import "tailwindcss"` (pulled in by
+ *    styles/full above). Without it those utilities never generate and
+ *    every overlay opens/closes with no transition. */
+@plugin "tailwindcss-animate";
+
+/* 4. Scan Storybook-local files too. Without this, utility classes used
+ *    only inside .storybook/* and stories/** are not extracted. */
+@source "../stories/**/*.{ts,tsx,mdx}";
+@source "../.storybook/**/*.{ts,tsx}";
+
+/* 5. Storybook iframe baseline. The Docs tab applies .sb-show-main to
+ *    its scroll container — use the same neutral background as the
+ *    canvas so MDX prose blends in.
+ *    Docs view extras: each story preview is wrapped in `.docs-story`
+ *    and the page wrapper is `.sbdocs.sbdocs-wrapper`. Without these
+ *    rules they stay white even after withThemeByClassName flips
+ *    `<html>` to `.dark`. */
+.sb-show-main,
+#storybook-root,
+.docs-story,
+.sbdocs.sbdocs-preview,
+.sbdocs.sbdocs-wrapper {
+  background: var(--background);
+  color: var(--foreground);
+}

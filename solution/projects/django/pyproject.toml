@@ -5,8 +5,8 @@ description = "Complete Django CFG sample project demonstrating all features"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    # Django framework (required by django-cfg)
-    "django>=5.2.0,<6.0",
+    # Django is resolved through django-cfg[full,realtime] below.
+    # Do not add a second Django cap that blocks framework-supported releases.
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # IMPORTANT FOR AI/LLM: DO NOT TOUCH THIS LINE!
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -31,19 +31,19 @@ dependencies = [
     # - grpcio, grpcio-tools, grpcio-reflection, grpcio-health-checking, protobuf
     # - pytest, pytest-django, pytest-cov, pytest-mock, pytest-xdist
     # - black, isort, flake8, mypy
-    # - redis, django-rq, rq, rq-scheduler, hiredis
-    # - cent, websockets
+    # - redis, django-rq, rq, hiredis
+    # - cent, websockets, uvicorn>=0.53 (realtime extra: the /ws endpoint)
     # - click, rich, questionary
     # - django-admin-rangefilter
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    "django-cfg[full]",
+    "django-cfg[full,realtime]",
     # pydantic-ai is pulled by django-cfg automatically
     # Fake data generation
     "faker>=37.5.3,<38.0",
     # Markdown support
     "markdown>=3.9,<4.0",
-    # ASGI server for async support
-    "uvicorn[standard]>=0.34.0,<1.0",
+    # ASGI server; 0.53+ for the realtime WebSocket endpoint (django_realtime)
+    "uvicorn[standard]>=0.53,<1.0",
     "streamlit (>=1.54.0,<2.0.0)",
     "pyjwt (>=2.11.0,<3.0.0)",
     "pandas (<3)",

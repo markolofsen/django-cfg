@@ -1,0 +1,8 @@
+The progress model in engine/createProgressEngine.ts (start position, step size by band,
+the 0.994 cap, fill-then-fade on done) is derived from nprogress 0.2.0.
+
+nprogress, Copyright (c) 2013-2014 Rico Sta. Cruz. MIT License.
+https://github.com/rstacruz/nprogress
+
+The full upstream MIT copyright and permission notice for version 0.2.0
+is retained in LICENSE.nprogress.md in this directory.

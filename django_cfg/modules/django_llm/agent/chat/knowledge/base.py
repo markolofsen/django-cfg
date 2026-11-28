@@ -105,7 +105,8 @@ class Snapshot:
 
 def build_snapshot(scan: docs_mod.Scan) -> Snapshot:
     docs = sorted(scan.docs, key=lambda d: d.path)
-    version = hashlib.sha1("\n".join(f"{d.path}:{d.sha}" for d in docs).encode()).hexdigest()[:10]
+    # Snapshot display/cache version, not a permission grant or integrity proof.
+    version = hashlib.sha1("\n".join(f"{d.path}:{d.sha}" for d in docs).encode(), usedforsecurity=False).hexdigest()[:10]
     entries = tuple(Entry(d.path, d.title, d.description, d.aliases, d.tokens, len(d.lines), d.is_index) for d in docs)
     return Snapshot({d.path: d for d in docs}, tuple(scan.skipped), Index(docs), entries, version)
 
@@ -239,7 +240,8 @@ class ScopedKnowledgeBase:
         return path == self.prefix or path.startswith(self.prefix + "/")
 
     def version(self) -> str:
-        return hashlib.sha1(f"{self.inner.version()}|{self.prefix}|" .encode() + "\n".join(f"{e.path}" for e in self.entries()).encode()).hexdigest()[:10]
+        # Scope enforcement uses _inside/_check, never this display version.
+        return hashlib.sha1(f"{self.inner.version()}|{self.prefix}|".encode() + "\n".join(f"{e.path}" for e in self.entries()).encode(), usedforsecurity=False).hexdigest()[:10]
 
     def entries(self) -> list[Entry]:
         return [e for e in self.inner.entries() if self._inside(e.path)]

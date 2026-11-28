@@ -28,7 +28,7 @@ from django_cfg import add_django_cfg_urls
 
 # Basic URL patterns
 urlpatterns = [
-    # Admin interface (with Unfold theme)
+    # Admin interface (django-cfg admin site)
     path("admin/", admin.site.urls),
 
     # Home page

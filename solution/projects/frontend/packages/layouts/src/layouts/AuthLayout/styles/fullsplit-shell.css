@@ -1,0 +1,241 @@
+/**
+ * Full-Split Shell Styles
+ *
+ * Full-bleed 50/50 auth layout (Vercel / Linear / IBM style).
+ * Desktop (>= lg): edge-to-edge — image half (left) + form panel (right).
+ * Mobile (< lg): image half hidden; plain centered form on --background.
+ */
+
+.auth-shell-fullsplit {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  background: var(--background);
+}
+
+/* ── Media half (left) — hidden on mobile ──────────────────────────────── */
+.auth-shell-fullsplit__media {
+  display: none;
+}
+
+.auth-shell-fullsplit__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  /* Quiet preloader: the layer starts transparent and fades in only once the
+     image has actually downloaded (data-loaded="true"). No spinner, and the
+     form never waits on this — it renders immediately underneath. */
+  opacity: 0;
+  transition: opacity 0.6s var(--spring-smooth, ease-out);
+  /* Ken Burns — a slow, infinite zoom + drift that makes the hero photo
+     quietly "breathe". `alternate` reverses each cycle so it eases back
+     instead of hard-cutting to the start. Kept very slow (28s) and subtle
+     (max 1.08×) so it reads as life, not motion. The media half is
+     overflow:hidden, so the scaled-up image never reveals its edges. */
+  transform-origin: center;
+  animation: authKenBurns 28s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.auth-shell-fullsplit__bg[data-loaded="true"] {
+  opacity: 1;
+}
+
+/* While the photo loads, the media half shows a calm base surface (not a
+   black void) so the split reads as intentional even on a slow connection. */
+.auth-shell-fullsplit__media {
+  background: var(--muted);
+}
+
+@keyframes authKenBurns {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.08) translate3d(-1.5%, -1%, 0);
+  }
+}
+
+/* Honour reduced-motion: hold the photo still. */
+@media (prefers-reduced-motion: reduce) {
+  .auth-shell-fullsplit__bg {
+    animation: none;
+    transform: none;
+  }
+}
+
+.auth-shell-fullsplit__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Sidebar content (brand top, quote bottom) over the photo. */
+.auth-shell-fullsplit__sidebar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  padding: 3rem;
+  color: #fff;
+}
+
+/* ── Default brand content over the photo ──────────────────────────────── */
+
+/* The layout's own media-half content, used when the app passes `logo` but no
+   `sidebar` (see AuthBrandPanel). It occupies the TOP of the sidebar's
+   space-between column, leaving the bottom free for whatever an app adds
+   later; on its own it reads as a mark set on a photograph.
+
+   Colour is a literal, and deliberately so. Theme tokens answer "what colour
+   is text on OUR surface"; this text is on the consumer's photograph, which
+   the scrim below always darkens. `--foreground` would invert to near-black
+   in light mode and vanish into the picture. ui-core's styles README allows
+   raw values exactly here — branded assets and explicitly documented cases —
+   and there is no `--on-media` token to reach for. */
+.auth-brand-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  color: #fff;
+}
+
+.auth-brand-panel__mark {
+  display: inline-flex;
+  align-items: center;
+  height: 2.5rem;
+  max-width: 100%;
+  /* `align-self` keeps the hit area the width of the artwork: the panel is a
+     flex column, so a link would otherwise stretch the full column width and
+     swallow clicks well past the mark. */
+  align-self: flex-start;
+  color: inherit;
+  border-radius: var(--auth-radius-sm);
+  transition: opacity 0.15s var(--spring-snappy);
+}
+
+/* Only the link form reacts — a plain mark is not a control. */
+a.auth-brand-panel__mark:hover {
+  opacity: 0.82;
+}
+
+a.auth-brand-panel__mark:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 6px;
+}
+
+/* Same contract as `.auth-logo`: cap the height, let the width follow the
+   artwork, so a horizontal lock-up is not squeezed into a square. */
+.auth-brand-panel__mark > * {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.auth-brand-panel__tagline {
+  margin: 0;
+  max-width: 24ch;
+  font-size: 1.125rem;
+  line-height: 1.45;
+  color: hsl(0 0% 100% / 0.82);
+}
+
+/* ── Form half (right) ─────────────────────────────────────────────────── */
+/* A column: the top bar sits at the top of the viewport, and the form takes the
+   rest and centers itself in it. `margin: auto` on the inner block (rather than
+   `justify-content: center` on the column) is what keeps the form reachable when
+   the keyboard or a short viewport leaves it less room than it needs — centering
+   by the container would push the top of it out of reach. */
+.auth-shell-fullsplit__form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem clamp(1.5rem, 5vw, 2.5rem);
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 1rem));
+}
+
+.auth-shell-fullsplit__form-inner {
+  width: 100%;
+  max-width: 360px;
+  margin: auto;
+  /* Sits a little above the true center — the optical center of a form — and
+     the top bar's height keeps it from looking low. */
+  padding-bottom: clamp(0rem, 8dvh, 4rem);
+}
+
+/* ── Desktop: reveal the image half, split 50/50 edge-to-edge ──────────── */
+@media (min-width: 1024px) {
+  /* Mirror: media on the right instead of the left. */
+  .auth-shell-fullsplit[data-media-side="right"] {
+    flex-direction: row-reverse;
+  }
+
+  .auth-shell-fullsplit__media {
+    display: block;
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    /* Always-present gradient scrim so brand/quote stay legible over any
+       photo, independent of any consumer-supplied overlay. Darkens bottom
+       (where the quote sits) and a touch at the top (brand). */
+    isolation: isolate;
+  }
+
+  .auth-shell-fullsplit__media::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    /* Two stacked scrims:
+       1. A strong shadow rising from the bottom (deep under the quote, easing
+          to nothing by the upper third) — the main legibility layer.
+       2. A faint shadow falling from the top so the brand mark stays readable
+          even over a bright sky. Kept light so the photo stays open.
+       Eased multi-stop curves avoid a hard "band" edge — natural vignette. */
+    background:
+      linear-gradient(
+        to top,
+        hsl(0 0% 0% / 0.78) 0%,
+        hsl(0 0% 0% / 0.55) 18%,
+        hsl(0 0% 0% / 0.28) 38%,
+        hsl(0 0% 0% / 0.08) 60%,
+        transparent 80%
+      ),
+      linear-gradient(
+        to bottom,
+        hsl(0 0% 0% / 0.32) 0%,
+        hsl(0 0% 0% / 0.12) 12%,
+        transparent 26%
+      );
+  }
+
+  /* Sidebar sits above the scrim. */
+  .auth-shell-fullsplit__sidebar {
+    z-index: 2;
+  }
+
+  .auth-shell-fullsplit__form {
+    flex: 1;
+    padding: 1.5rem 2.5rem 2.5rem;
+  }
+
+  .auth-shell-fullsplit__form-inner {
+    /* Slightly wider on the solid panel — it has room to breathe. */
+    max-width: 380px;
+  }
+}
+
+/* Wider split bias on very large screens — form panel stays a comfortable
+   reading width while the image takes the extra space. */
+@media (min-width: 1536px) {
+  .auth-shell-fullsplit__media {
+    flex: 1.25;
+  }
+}

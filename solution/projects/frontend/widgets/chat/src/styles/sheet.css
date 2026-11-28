@@ -1,0 +1,91 @@
+/*
+ * The chat sheet: one layer exactly as big as the VISIBLE area of a phone.
+ *
+ * `useViewportBox` writes --vvh / --vvw (visible size), --vv-top / --vv-left (offset from the layout viewport, which
+ * iOS pans when the keyboard opens) and --kb (keyboard height) on it. The fallbacks make the first frame right before
+ * any script has run: `dvh` where it exists, `svh`, then 100%. Unlayered on purpose: it wins over the dialog's own
+ * utility classes. No transition on top or height, only a fade on open.
+ *
+ * Two things keep the page from showing through. The sheet is opaque and sized from the visual viewport; and a
+ * backdrop the size of the whole layout viewport sits behind it, so a frame in which the sheet lags the keyboard
+ * animation shows the sheet's colour, not the page.
+ */
+.chat-sheet {
+  position: fixed;
+  left: var(--vv-left, 0px);
+  top: var(--vv-top, 0px);
+  right: auto;
+  bottom: auto;
+  width: var(--vvw, 100%);
+  height: 100%;
+  height: 100svh;
+  height: var(--vvh, 100dvh);
+  max-width: none;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--background, canvas);
+  overscroll-behavior: contain;
+  touch-action: manipulation;
+  transform: none;
+  /* Safe areas: the notch and the home bar are inside the visible area only while no keyboard covers them. */
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  transition: none;
+  animation: none;
+}
+/* With the keyboard up the home bar is under it. */
+.chat-sheet[data-keyboard] {
+  padding-bottom: 0;
+}
+/* The backing is a shadow, not a pseudo-element: a fixed child is clipped by the sheet's `overflow: hidden` as soon as the dialog's animation or transform makes the sheet its containing block. A box-shadow paints outside the box and is never clipped by it. */
+.chat-sheet {
+  box-shadow: 0 0 0 100vmax var(--background, canvas);
+}
+/*
+ * Open and close: the sheet slides up from the bottom edge and back down (the iOS sheet curve), plain CSS so a host needs no
+ * animation plugin. The backing shadow would cover the page from the first frame (it extends past the box on every side, so a
+ * sheet that is still below the screen already paints the whole screen), so it is held at zero for the slide and grows to full
+ * only in the last frame. The dialog's own overlay dims the page behind meanwhile. Closing is an animation too, which is what
+ * makes Radix keep the sheet mounted until it has finished.
+ */
+.chat-sheet[data-state="open"] {
+  animation: chat-sheet-in 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.chat-sheet[data-state="closed"] {
+  animation: chat-sheet-out 220ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes chat-sheet-in {
+  from { transform: translate3d(0, 100%, 0); box-shadow: 0 0 0 0 var(--background, canvas); }
+  99% { transform: none; box-shadow: 0 0 0 0 var(--background, canvas); }
+  to { transform: none; box-shadow: 0 0 0 100vmax var(--background, canvas); }
+}
+@keyframes chat-sheet-out {
+  from { transform: none; box-shadow: 0 0 0 0 var(--background, canvas); }
+  to { transform: translate3d(0, 100%, 0); box-shadow: 0 0 0 0 var(--background, canvas); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-sheet[data-state="open"] { animation: chat-sheet-fade 140ms ease-out; }
+  .chat-sheet[data-state="closed"] { animation: chat-sheet-fade 120ms ease-in reverse forwards; }
+}
+@keyframes chat-sheet-fade {
+  from { opacity: 0; }
+}
+
+/*
+ * The conversation inside a sheet (or any host column): the transcript takes the free height and scrolls, the composer
+ * sits right under it. `min-height: 0` is what lets the scroller shrink with the keyboard instead of pushing the composer out.
+ */
+.chat-sheet-body {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  flex-direction: column;
+}
+.chat-sheet-body > .chat-surface {
+  flex: 1 1 0;
+  min-height: 0;
+}

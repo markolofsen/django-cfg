@@ -1,0 +1,157 @@
+/**
+ * The rhythm between the block-level parts of one turn.
+ *
+ * A message stacks its parts at a flat 8px, which is right between two
+ * paragraphs and too tight around a BOX: a tool call, an enrichment card, a
+ * picture. At the same gap as prose those boxes touch each other and the
+ * sentence that introduced them, and several in a row read as one striped
+ * slab rather than as separate things.
+ *
+ * Here rather than in a class list because the condition is structural: the
+ * spacing depends on what the PREVIOUS sibling is, which no class on the
+ * element itself can express. The transcript's `gap` cannot express it either —
+ * a gap is uniform by definition, and these parts are not.
+ *
+ * `.chat-tool` and `.chat-block` share every rule. They stay two selectors
+ * because they are two markup contracts (a tool call is rendered by `tool.tsx`,
+ * a card and a picture by `data.tsx` and `media.tsx`), and collapsing them into
+ * one class would mean one renderer silently deciding the other's shape.
+ */
+
+/* A box sits closer to the sentence that introduced it than to the next one, so
+ * it belongs to the text above rather than floating between the two. */
+.chat-tool,
+.chat-block {
+  margin-block-start: 0.875rem;
+}
+
+/* The settled-calls counter is a box-level part too, so it follows the same
+ * rhythm: its own selectors, because the two blocks above are pinned as a pair. */
+.chat-fold {
+  margin-block-start: 0.875rem;
+}
+
+/* Between two boxes, less: they are peers in one sequence, and at the larger
+ * gap a run of them stops reading as a list. Four bordered boxes at the flat
+ * 4px read as one striped block, which is the shape this pair of rules exists
+ * to prevent — it is spacing WITHIN a message, never the transcript's gap
+ * between messages. */
+.chat-tool + .chat-tool,
+.chat-block + .chat-block,
+.chat-tool + .chat-block,
+.chat-block + .chat-tool {
+  margin-block-start: 0.5rem;
+}
+
+.chat-fold + .chat-tool,
+.chat-tool + .chat-fold {
+  margin-block-start: 0.5rem;
+}
+
+/* The calls inside a fold sit in the fold's own gap, not the transcript's. */
+.chat-fold-body > .chat-tool {
+  margin-block-start: 0;
+}
+
+/* The first part of a turn has no neighbour to separate from, and the margin
+ * would push it away from the turn's own top edge. `:first-child` alone is not
+ * enough: a reply commonly opens with a picture the assistant produced, which
+ * is the first RENDERED part while the transcript still gives the row its own
+ * spacing. */
+.chat-tool:first-child,
+.chat-block:first-child {
+  margin-block-start: 0;
+}
+
+.chat-fold:first-child {
+  margin-block-start: 0;
+}
+
+/* The Run block is a box-level part as well: its own rules, the pinned lists above stay as they are. */
+.chat-run {
+  margin-block-start: 0.875rem;
+}
+
+.chat-run:first-child {
+  margin-block-start: 0;
+}
+
+/**
+ * A disclosure's own marker, replaced by an icon.
+ *
+ * The native `disclosure-closed` marker renders as a `▶` whose size and colour
+ * the page cannot set — it tracks the platform, not the transcript's type
+ * scale, and stands out against every other chevron in the app. Removing it
+ * needs BOTH rules: `display: list-item` is what draws it, and Safari keeps
+ * drawing it until `::-webkit-details-marker` is hidden too.
+ */
+.chat-disclosure > summary {
+  display: flex;
+  list-style: none;
+}
+
+.chat-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Rotated by the element's own state, so nothing has to mirror `open` in JS.
+ *
+ * The class goes on a SPAN wrapping the icon, never on the `<svg>`: a computed
+ * transform does not take on that node here, so rotating it silently does
+ * nothing while every rule involved still matches. */
+.chat-disclosure-chevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  transition: transform 150ms ease;
+}
+
+.chat-disclosure[open] > summary .chat-disclosure-chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-disclosure-chevron {
+    transition: none;
+  }
+}
+
+/**
+ * An OPEN disclosure is a box; a closed one is a line.
+ *
+ * Only `[open]` carries the frame, and that asymmetry is the decision: closed,
+ * the summary is one muted line among the turn's other chrome, and framing it
+ * would draw a border around every collapsed reply. Open, its body is prose of
+ * the same colour and size as the answer below, so without an edge the reader
+ * cannot tell where the thinking stops and the reply starts.
+ *
+ * `--border` and `--radius`, not literals: the same pair every other box in the
+ * app uses, so this tracks the theme instead of pinning one palette.
+ *
+ * The inline padding is mirrored by a negative margin, so the frame grows
+ * OUTWARD from the text. Padding alone would indent the summary relative to the
+ * lines above it and the reply below, which is the one thing a frame here must
+ * not do — those three all start at the same left edge.
+ */
+.chat-disclosure[open] {
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 0.625rem);
+  padding: 0.5rem 0.625rem;
+  margin-inline: -0.625rem;
+  /* The same edge colour as the composer and every card in the app, not a
+   * louder one: this frames the model's thinking, which must stay quieter than
+   * the answer it sits above. */
+}
+
+/* The frame's bottom edge would otherwise touch the reply, putting a border
+ * against the first line of the answer. Only when open, because a closed
+ * summary is a plain line the turn already spaces. */
+.chat-disclosure[open] {
+  margin-block-end: 0.75rem;
+}
+
+/* Inside the box the summary is a heading over its body, so it needs the gap
+ * the unframed version got from the surrounding flow. `> summary + *` rather
+ * than a class on the body: the body is whatever the renderer put there. */
+.chat-disclosure[open] > summary + * {
+  margin-block-start: 0.375rem;
+}

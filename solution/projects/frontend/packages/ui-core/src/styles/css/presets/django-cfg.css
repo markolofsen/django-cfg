@@ -1,0 +1,48 @@
+/* Authoritative static preset: django-cfg. */
+:root {
+  --primary: hsl(192 90% 35%);
+  --primary-foreground: hsl(0 0% 100%);
+  /* 92%, not 94%: the base --background warmed to 97%, so 94% was a 3-point step
+     (the gate wants ≥4). Deepened to keep the tinted hover visible on the page. */
+  --accent: hsl(192 60% 92%);
+  --accent-foreground: hsl(192 90% 22%);
+  --ring: hsl(192 90% 40%);
+  --sidebar-primary: hsl(192 90% 35%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  /* 91%, not 93%: base --sidebar-background is 96%; keep a ≥4-point step. */
+  --sidebar-accent: hsl(192 55% 91%);
+  --sidebar-accent-foreground: hsl(192 90% 22%);
+  --sidebar-ring: hsl(192 90% 40%);
+  --info: hsl(192 90% 35%);
+  --info-background: hsl(192 100% 96%);
+  --info-foreground: hsl(192 90% 22%);
+  --info-border: hsl(192 80% 78%);
+  --chart-1: hsl(192 90% 35%);
+  --chart-2: hsl(142 76% 36%);
+  --chart-3: hsl(262 83% 58%);
+  --chart-4: hsl(26 90% 57%);
+  --chart-5: hsl(346 77% 50%);
+}
+
+.dark {
+  --primary: hsl(189 100% 50%);
+  --primary-foreground: hsl(0 0% 9%);
+  /* 20%: a clear step above the 10% page. */
+  --accent: hsl(189 40% 20%);
+  --accent-foreground: hsl(189 100% 78%);
+  --ring: hsl(189 100% 50%);
+  --sidebar-primary: hsl(189 100% 50%);
+  --sidebar-primary-foreground: hsl(0 0% 9%);
+  --sidebar-accent: hsl(189 35% 17.5%);
+  --sidebar-accent-foreground: hsl(189 100% 78%);
+  --sidebar-ring: hsl(189 100% 50%);
+  --info: hsl(189 100% 55%);
+  --info-background: hsl(189 70% 10%);
+  --info-foreground: hsl(189 90% 75%);
+  --info-border: hsl(189 50% 28%);
+  --chart-1: hsl(189 100% 50%);
+  --chart-2: hsl(142 76% 50%);
+  --chart-3: hsl(262 83% 65%);
+  --chart-4: hsl(26 90% 60%);
+  --chart-5: hsl(346 77% 58%);
+}

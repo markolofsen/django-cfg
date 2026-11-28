@@ -1,0 +1,51 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="API Client/Overview" />
+
+# @djangocfg/api
+
+Orval-generated TypeScript API client for DjangoCFG-powered backends. Ships:
+
+- Type-safe Fetch operations, React Query v5 hooks/query keys, and mutations generated from OpenAPI.
+- Zod schemas for runtime validation.
+- Cookie/JWT auth helpers.
+- **Role-aware console logging** — `applyRoleLogPolicy` / `setLogLevel` keep the
+  console clean for users and verbose for admins/dev (errors always reach monitor).
+- Automatic retry + exponential backoff for idempotent requests.
+- Integration with `@djangocfg/monitor` so failed calls surface as monitor
+  events.
+
+## Install
+
+```bash
+pnpm add @djangocfg/api @tanstack/react-query
+```
+
+## Quick start
+
+```tsx
+import { useCfgAccountsProfileRetrieve } from '@djangocfg/api';
+
+export function ProfileCard() {
+  const { data, isPending, error } = useCfgAccountsProfileRetrieve();
+
+  if (isPending) return <Spinner />;
+  if (error)     return <ErrorAlert error={error} />;
+
+  return <span>{data?.email}</span>;
+}
+```
+
+## Regenerating the client
+
+```bash
+pnpm --filter @djangocfg/api generate
+```
+
+The Python `manage.py gen` command validates the backend OpenAPI document and
+invokes the repository-pinned Orval toolchain. It writes operations, React
+Query hooks/query keys, Zod schemas, and MSW handlers into the generated tree.
+
+## Source
+
+`packages/api/`

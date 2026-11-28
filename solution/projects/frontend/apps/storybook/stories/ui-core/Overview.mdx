@@ -1,0 +1,55 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Packages/UI Core/Overview" />
+
+# @djangocfg/ui-core
+
+Pure React component library — 40+ Radix-based primitives with a CSS-first
+Tailwind v4 theme. **Zero Next.js dependencies** — works in Vite, CRA,
+Electron, Storybook.
+
+## What's in this section
+
+- **Forms** — `Button`, `Input`, `Select`, `Combobox`, `Field`, `InputGroup`.
+- **Overlay** — `Dialog`, `Popover`, `Tooltip`, `DropdownMenu`.
+- **Data** — `Card`, `Table`, `Tabs`, `Accordion`.
+- **Hooks** — `useTheme`, `useMediaQuery`, `useDebounce`, `useEventListener`.
+
+## Install
+
+```bash
+pnpm add @djangocfg/ui-core
+```
+
+## Quick start
+
+```tsx
+// 1. Import the stylesheet once at the root of your app
+import '@djangocfg/ui-core/styles';
+
+// 2. Use components
+import { Button } from '@djangocfg/ui-core/components';
+
+export function App() {
+  return <Button variant="default">Hello</Button>;
+}
+```
+
+## Theming
+
+`ui-core` ships a token-based theme. Colors live in CSS variables and flip
+when an ancestor gets `class="dark"`. Customisation:
+
+```css
+/* your-app/globals.css */
+@import "@djangocfg/ui-core/styles";
+
+:root {
+  --primary: 265 89% 78%;       /* HSL, no commas */
+  --primary-foreground: 0 0% 100%;
+}
+```
+
+## Source
+
+`packages/ui-core/` · [README](https://github.com/markolofsen/django-cfg/tree/main/packages/ui-core)

@@ -1,0 +1,136 @@
+/* ── Footer (Vercel-style: brand + columns + bottom bar) ── */
+.site-footer {
+  width: 100%;
+  border-top: 1px solid #e4e4e7;
+  margin-top: 2rem;
+
+  .dark & {
+    border-color: #27272a;
+  }
+}
+.site-footer__inner {
+  /* Span the full page width with comfortable gutters — matches the docs
+   * content area rather than the narrow landing container. */
+  max-width: none;
+  margin: 0 auto;
+  padding: 4rem clamp(1.5rem, 4vw, 4rem) 2rem;
+}
+.site-footer__top {
+  display: grid;
+  gap: 3rem;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: minmax(16rem, 1fr) 2fr;
+  }
+}
+.site-footer__brand {
+  max-width: 24rem;
+}
+.site-footer__logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+
+  img {
+    height: 1.4rem;
+    width: auto;
+  }
+}
+.site-footer__tagline {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #6b7280;
+
+  .dark & {
+    color: #a1a1aa;
+  }
+}
+.site-footer__cols {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: repeat(2, 1fr);
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.site-footer__title {
+  margin: 0 0 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #18181b;
+
+  .dark & {
+    color: #f4f4f5;
+  }
+}
+.site-footer__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.site-footer__link {
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-decoration: none;
+  transition: color 0.15s;
+
+  &:hover {
+    color: #18181b;
+  }
+
+  .dark & {
+    color: #a1a1aa;
+
+    &:hover {
+      color: #f4f4f5;
+    }
+  }
+}
+.site-footer__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e4e4e7;
+
+  .dark & {
+    border-color: #27272a;
+  }
+}
+.site-footer__copyright {
+  font-size: 0.85rem;
+  color: #9ca3af;
+
+  .dark & {
+    border-color: #27272a;
+    color: #71717a;
+  }
+}
+.site-footer__bottom-link {
+  font-size: 0.85rem;
+  color: #6b7280;
+  text-decoration: none;
+  transition: color 0.15s;
+
+  &:hover {
+    color: #18181b;
+  }
+
+  .dark & {
+    color: #a1a1aa;
+
+    &:hover {
+      color: #f4f4f5;
+    }
+  }
+}

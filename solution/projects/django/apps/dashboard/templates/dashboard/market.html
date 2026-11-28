@@ -2,67 +2,67 @@
 {% block tab_content %}
 
 <style>
-  /* Vercel/Geist. The horizontal gutter comes from .dashboard-tab-content in the
+  /* Vercel/Geist on the admin theme's tokens (--cfg-*, light or dark). The horizontal gutter comes from .dashboard-tab-content in the
      base template — do not add padding here. */
-  .mk { color: #ededed; font-variant-numeric: tabular-nums; }
+  .mk { color: var(--cfg-foreground); font-variant-numeric: tabular-nums; }
 
   .mk-stats {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1px; background: #2e2e2e;
-    border: 1px solid #2e2e2e; border-radius: 12px;
+    gap: 1px; background: var(--cfg-card); /* hairlines are each cell's ring: a short last row shows card, not grey */
+    border: 1px solid var(--cfg-border); border-radius: 12px;
     overflow: hidden; margin-bottom: 24px;
   }
-  .mk-stat { background: #0a0a0a; padding: 18px 20px; }
-  .mk-stat__label { font-size: 12px; color: #8f8f8f; margin-bottom: 8px; }
+  .mk-stat { background: var(--cfg-card); padding: 18px 20px; box-shadow: 0 0 0 1px var(--cfg-border); }
+  .mk-stat__label { font-size: 12px; color: var(--cfg-muted-foreground); margin-bottom: 8px; }
   .mk-stat__value {
     font-size: 26px; font-weight: 600; letter-spacing: -0.02em;
-    line-height: 1; color: #fff;
+    line-height: 1; color: var(--cfg-foreground);
   }
 
   .mk-card {
-    background: #0a0a0a; border: 1px solid #2e2e2e;
+    background: var(--cfg-card); border: 1px solid var(--cfg-border);
     border-radius: 12px; overflow: hidden;
   }
   .mk-card__head {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 16px; border-bottom: 1px solid #2e2e2e;
-    font-size: 13px; font-weight: 500; color: #ededed;
+    padding: 14px 16px; border-bottom: 1px solid var(--cfg-border);
+    font-size: 13px; font-weight: 500; color: var(--cfg-foreground);
   }
-  .mk-card__meta { font-size: 12px; color: #8f8f8f; font-weight: 400; }
+  .mk-card__meta { font-size: 12px; color: var(--cfg-muted-foreground); font-weight: 400; }
 
   .mk-row {
     display: grid; grid-template-columns: 28px 1fr auto auto;
     align-items: center; gap: 14px;
     padding: 11px 16px; font-size: 13px;
-    border-bottom: 1px solid #1f1f1f;
+    border-bottom: 1px solid var(--cfg-border);
   }
   .mk-row:last-child { border-bottom: none; }
-  .mk-row:hover { background: #111; }
+  .mk-row:hover { background: color-mix(in oklab, var(--cfg-accent) 50%, transparent); }
 
-  .mk-rank { color: #555; font-size: 12px; }
+  .mk-rank { color: var(--cfg-muted-foreground); font-size: 12px; }
   .mk-name {
     display: flex; align-items: baseline; gap: 8px;
     overflow: hidden;
   }
-  .mk-sym { color: #ededed; font-weight: 500; }
+  .mk-sym { color: var(--cfg-foreground); font-weight: 500; }
   .mk-full {
-    color: #666; font-size: 12px;
+    color: var(--cfg-muted-foreground); font-size: 12px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .mk-price { color: #ededed; font-weight: 500; }
-  .mk-cap { color: #8f8f8f; min-width: 92px; text-align: right; }
+  .mk-price { color: var(--cfg-foreground); font-weight: 500; }
+  .mk-cap { color: var(--cfg-muted-foreground); min-width: 92px; text-align: right; }
 
   .mk-empty {
     padding: 72px 24px; text-align: center;
   }
   .mk-empty__icon {
     font-family: 'Material Symbols Outlined', sans-serif;
-    font-size: 32px; color: #444; display: block; margin-bottom: 14px;
+    font-size: 32px; color: var(--cfg-muted-foreground); display: block; margin-bottom: 14px;
   }
-  .mk-empty__title { font-size: 14px; font-weight: 500; color: #ededed; }
-  .mk-empty__hint { font-size: 13px; color: #8f8f8f; margin-top: 8px; }
+  .mk-empty__title { font-size: 14px; font-weight: 500; color: var(--cfg-foreground); }
+  .mk-empty__hint { font-size: 13px; color: var(--cfg-muted-foreground); margin-top: 8px; }
   .mk-empty code {
-    background: #1a1a1a; border: 1px solid #2e2e2e;
+    background: var(--cfg-accent); border: 1px solid var(--cfg-border);
     padding: 1px 5px; border-radius: 4px; font-size: 12px;
   }
 </style>

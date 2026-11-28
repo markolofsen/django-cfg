@@ -19,13 +19,21 @@ This is a **fully-functional example** of a crypto trading Django application th
 
 ### 1. Install Dependencies
 
-```bash
-# Standard installation
-make install
+Dependencies are declared in `pyproject.toml` and reproducibly pinned in
+`uv.lock`. **Django is selected through the `django-cfg[full,realtime]`
+dependency**, not by a separate Django 5.x constraint. The current verified
+lock resolves Django 6.1.3 and django-cfg 2.4.113.
 
-# Or with local django-cfg and django-ipc
+```bash
+# Reproducible install using the reviewed lockfile
+uv sync --locked
+
+# Optional framework source contribution workflow, for maintainers only
 make install-local
 ```
+
+Do not install the legacy `requirements.txt` or use Poetry for this project.
+Only change `uv.lock` through an intentional, reviewed dependency update.
 
 ### 2. Setup Database
 
@@ -127,7 +135,6 @@ api/
 
 apps/
 ├── profiles/              # User profiles
-├── trading/               # Trading (Portfolio, Orders)
 └── crypto/                # Crypto (Coins, Exchanges, Wallets)
 ```
 

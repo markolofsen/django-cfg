@@ -22,13 +22,6 @@ def build_dashboard_config() -> DashboardConfig:
                 callback="apps.dashboard.tabs.market.callback",
             ),
             DashboardTab(
-                slug="trading",
-                title="Trading",
-                icon="candlestick_chart",
-                template="dashboard/trading.html",
-                callback="apps.dashboard.tabs.trading.callback",
-            ),
-            DashboardTab(
                 slug="system",
                 title="System",
                 icon="dns",

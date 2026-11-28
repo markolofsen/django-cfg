@@ -45,15 +45,26 @@ jobs:
 
       - name: Run Bandit
         run: |
-          bandit -r packages/django_cfg/ -f txt -o bandit-report.txt || true
-          cat bandit-report.txt
+          test -d django_cfg
+          # Findings remain report-only; scanner failures are not ignored.
+          bandit -r django_cfg/ -f json -o bandit-report.json --exit-zero
+          python - <<'PYTHON'
+          import json
+          from pathlib import Path
+          report = json.loads(Path("bandit-report.json").read_text())
+          if report["errors"]:
+              raise SystemExit("Bandit could not scan all selected files")
+          if report["metrics"]["_totals"]["loc"] <= 0:
+              raise SystemExit("Bandit scanned no code")
+          print(f"Bandit findings: {len(report['results'])} (report-only)")
+          PYTHON
 
       - name: Upload Bandit report
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: bandit-report
-          path: bandit-report.txt
+          path: bandit-report.json
 
   codeql:
     name: CodeQL Analysis

@@ -32,6 +32,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Environment file detection
 # ─────────────────────────────────────────────────────────────────────────────
 ENV_DIR = Path(__file__).parent
+DEVELOPMENT_SECRET_KEY = "django-secret-key-change-in-production-at-least-32-chars"
 
 
 def get_env_files() -> Tuple[str, ...]:
@@ -223,14 +224,14 @@ class EnvironmentConfig(BaseSettings):
 
     # Core Django settings
     secret_key: str = Field(
-        default="django-secret-key-change-in-production-at-least-32-chars",
+        default=DEVELOPMENT_SECRET_KEY,
         description="Django secret key"
     )
     debug: bool = Field(default=True, description="Enable debug mode")
 
     # Admin Configuration
     admin_emails: list[str] = Field(
-        default=["markolofsen@gmail.com"],
+        default_factory=list,
         description="Admin email addresses for notifications"
     )
 
@@ -278,7 +279,16 @@ class EnvironmentConfig(BaseSettings):
         description="Allowed security domains"
     )
 
+    @model_validator(mode="after")
+    def require_production_secret(self):
+        if self.env.is_prod and (
+            self.secret_key == DEVELOPMENT_SECRET_KEY or len(self.secret_key) < 50
+        ):
+            raise ValueError("Production requires an explicitly configured SECRET_KEY of at least 50 characters")
+        return self
+
     model_config = SettingsConfigDict(
+        hide_input_in_errors=True,
         env_file=get_env_files(),
         env_file_encoding="utf-8",
         env_nested_delimiter="__",

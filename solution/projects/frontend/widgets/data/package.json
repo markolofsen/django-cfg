@@ -1,0 +1,125 @@
+{
+  "name": "@djangocfg/widget-data",
+  "version": "0.1.33",
+  "description": "Data surfaces: file tree, JSON viewer, data grid and table, kanban, listbox, masonry and timeline",
+  "keywords": [
+    "tree",
+    "data-grid",
+    "data-table",
+    "kanban",
+    "json-viewer",
+    "timeline",
+    "react",
+    "typescript"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "widgets/data"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./tree": {
+      "types": "./src/Tree/index.tsx",
+      "default": "./src/Tree/index.tsx"
+    },
+    "./file-icon": {
+      "types": "./src/FileIcon/index.ts",
+      "default": "./src/FileIcon/index.ts"
+    },
+    "./file-icon/get-file-icon": {
+      "types": "./src/FileIcon/get-file-icon.ts",
+      "default": "./src/FileIcon/get-file-icon.ts"
+    },
+    "./json-tree": {
+      "types": "./src/JsonTree/index.tsx",
+      "default": "./src/JsonTree/index.tsx"
+    },
+    "./data-grid": {
+      "types": "./src/DataGrid/index.ts",
+      "default": "./src/DataGrid/index.ts"
+    },
+    "./data-table": {
+      "types": "./src/DataTable/index.ts",
+      "default": "./src/DataTable/index.ts"
+    },
+    "./kanban": {
+      "types": "./src/Kanban/index.ts",
+      "default": "./src/Kanban/index.ts"
+    },
+    "./listbox": {
+      "types": "./src/Listbox/index.ts",
+      "default": "./src/Listbox/index.ts"
+    },
+    "./masonry": {
+      "types": "./src/Masonry/index.ts",
+      "default": "./src/Masonry/index.ts"
+    },
+    "./timeline": {
+      "types": "./src/Timeline/index.ts",
+      "default": "./src/Timeline/index.ts"
+    },
+    "./styles": "./src/styles/index.css"
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/__tests__",
+    "!src/**/*.stories.tsx",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@djangocfg/widget-kit": "workspace:*",
+    "@dnd-kit/core": "^6.3.1",
+    "@radix-ui/react-direction": "^1.2.0",
+    "@radix-ui/react-slot": "^1.5.0",
+    "class-variance-authority": "^0.7.1"
+  },
+  "peerDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "lucide-react": "^1.68.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/typescript-config": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "@storybook/react-vite": "^10.6.5",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "jsdom": "^30.1.3",
+    "lucide-react": "1.68.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "storybook": "^10.6.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

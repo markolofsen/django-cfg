@@ -20,7 +20,7 @@ images: {
 #### 1. Генерация API клиентов
 
 ```bash
-cd /path/to/@frontend
+cd /path/to/django_admin
 make generate-api
 ```
 
@@ -28,14 +28,14 @@ make generate-api
 ```bash
 cd ../../../../solution/projects/django
 poetry run python manage.py generate_clients --typescript --no-python
-cp -r openapi/clients/typescript/cfg/* @frontend/packages/api/src/cfg/generated/
-cd @frontend/packages/api && pnpm build
+cp -r openapi/clients/typescript/cfg/* django_admin/packages/api/src/cfg/generated/
+cd django_admin/packages/api && pnpm build
 ```
 
 #### 2. Сборка статики
 
 ```bash
-cd /path/to/@frontend
+cd /path/to/django_admin
 make build-admin
 ```
 
@@ -50,7 +50,7 @@ pnpm build:static
 ### Структура после сборки
 
 ```
-@frontend/
+django_admin/
 ├── apps/admin/out/          # ← Статические файлы Next.js
 │   ├── _next/
 │   ├── index.html
@@ -66,14 +66,14 @@ pnpm build:static
 ```python
 # В Django settings
 STATICFILES_DIRS = [
-    BASE_DIR / "@frontend/apps/admin/out",
+    BASE_DIR / "django_admin/apps/admin/out",
 ]
 ```
 
 ### Troubleshooting
 
 **Ошибка: Cannot find module**
-- Запустите `pnpm install` в корне @frontend
+- Запустите `pnpm install` в корне django_admin
 
 **Ошибка при сборке API**
 - Убедитесь что Django проект собран и запущен

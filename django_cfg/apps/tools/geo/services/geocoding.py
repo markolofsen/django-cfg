@@ -6,6 +6,7 @@ functionality using Nominatim (OpenStreetMap) with caching and rate limiting.
 """
 
 import hashlib
+import json
 import logging
 import time
 from threading import Lock
@@ -511,9 +512,9 @@ class GeocodingService:
         })
 
     def _cache_key(self, operation: str, *args) -> str:
-        """Generate cache key."""
-        key_data = f"{operation}:{':'.join(str(a) for a in args if a)}"
-        key_hash = hashlib.md5(key_data.encode()).hexdigest()[:12]
+        """Hash an unambiguous input tuple for the shared result cache."""
+        key_data = json.dumps([operation, *args], ensure_ascii=False, separators=(",", ":"))
+        key_hash = hashlib.sha256(key_data.encode("utf-8")).hexdigest()
         return f"{CACHE_PREFIX}{operation}:{key_hash}"
 
     def _cache_result(self, key: str, result, ttl: int) -> None:

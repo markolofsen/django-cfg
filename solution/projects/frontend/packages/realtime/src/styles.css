@@ -1,0 +1,2 @@
+/* Tailwind v4 scans only the app; this makes it see the debug panel's classes. */
+@source "./**/*.{ts,tsx}";

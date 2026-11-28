@@ -1,0 +1,42 @@
+/* Authoritative static preset: dense. */
+:root {
+  --radius: 0.25rem;
+  --border: hsl(0 0% 82%);
+  --input: hsl(0 0% 82%);
+  --divider: hsl(0 0% 88%);
+  --muted: hsl(0 0% 94%);
+  --card: hsl(0 0% 100%);
+  --accent: hsl(0 0% 93%);
+  --radius-xs: calc(0.25rem - 6px);
+  --radius-sm: calc(0.25rem - 4px);
+  --radius-md: calc(0.25rem - 2px);
+  --radius-lg: 0.25rem;
+  --radius-xl: calc(0.25rem + 4px);
+  --radius-2xl: calc(0.25rem + 8px);
+  --radius-3xl: calc(0.25rem + 12px);
+  --radius-4xl: calc(0.25rem + 16px);
+  /* Type scale — a notch tighter than every other preset, which is the whole
+     point of this one. It previously set radii and colours only, so "dense"
+     rendered text at exactly the same size as the rest: the name promised a
+     density the tokens never delivered.
+     In `:root` only; a size does not change with the theme. */
+  --font-size-base: 0.75rem;
+  --font-size-sm: 0.6875rem;
+  --font-size-xs: 0.625rem;
+  --font-size-lg: 0.875rem;
+  --font-size-xl: 1rem;
+  --line-height-base: 1.4;
+
+}
+
+.dark {
+  --radius: 0.25rem;
+  --radius-xs: calc(0.25rem - 6px);
+  --radius-sm: calc(0.25rem - 4px);
+  --radius-md: calc(0.25rem - 2px);
+  --radius-lg: 0.25rem;
+  --radius-xl: calc(0.25rem + 4px);
+  --radius-2xl: calc(0.25rem + 8px);
+  --radius-3xl: calc(0.25rem + 12px);
+  --radius-4xl: calc(0.25rem + 16px);
+}

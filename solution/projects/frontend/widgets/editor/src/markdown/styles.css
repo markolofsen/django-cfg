@@ -1,0 +1,522 @@
+.markdown-editor .markdown-editor-content {
+  outline: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Typography — Notion-inspired: comfy line-height, generous heading
+ * scale, restrained spacing. Calibrated so the chat composer (compact,
+ * single-paragraph) and the document-preview editor (long-form, with
+ * many headings) both feel right without a variant prop.
+ *
+ * Inherit semantic foreground so the editor renders correctly in both
+ * light + dark themes (and under any active preset).
+ * ───────────────────────────────────────────────────────────────────── */
+.markdown-editor .tiptap,
+.markdown-editor .ProseMirror {
+  color: var(--color-foreground, var(--foreground));
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.markdown-editor .tiptap a,
+.markdown-editor .ProseMirror a {
+  color: var(--color-primary, var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.markdown-editor .tiptap a:hover,
+.markdown-editor .ProseMirror a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Headings — Notion scale. Top-padding > bottom so a heading sits
+ * visually grouped with the paragraph below it. */
+.markdown-editor .tiptap h1 {
+  font-size: 1.875em;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 1em 0 0.25em;
+  letter-spacing: -0.015em;
+}
+
+.markdown-editor .tiptap h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0.9em 0 0.25em;
+  letter-spacing: -0.01em;
+}
+
+.markdown-editor .tiptap h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0.8em 0 0.2em;
+}
+
+.markdown-editor .tiptap h4 {
+  font-size: 1.1em;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0.7em 0 0.2em;
+}
+
+/* First heading at the very top of the document has no leading air —
+ * Notion convention. */
+.markdown-editor .tiptap > :is(h1, h2, h3, h4):first-child {
+  margin-top: 0;
+}
+
+.markdown-editor .tiptap p {
+  margin: 0.25em 0;
+}
+
+/* The first / last block must hug the editor box — a leading/trailing
+ * 0.25em paragraph margin reads as extra air above the first line and a
+ * phantom empty line below the caret in the single-line chat composer.
+ * Inter-paragraph spacing (between two <p>) is untouched. */
+.markdown-editor .tiptap > :first-child {
+  margin-top: 0;
+}
+.markdown-editor .tiptap > :last-child {
+  margin-bottom: 0;
+}
+
+/* Lists — Notion uses tighter row spacing than browser default. */
+.markdown-editor .tiptap ul,
+.markdown-editor .tiptap ol {
+  padding-left: 1.5em;
+  margin: 0.35em 0;
+}
+
+.markdown-editor .tiptap ul {
+  list-style: disc;
+}
+
+.markdown-editor .tiptap ol {
+  list-style: decimal;
+}
+
+.markdown-editor .tiptap li {
+  margin: 0.15em 0;
+}
+
+.markdown-editor .tiptap li > p {
+  margin: 0;
+}
+
+/* Nested lists get a subtler marker. */
+.markdown-editor .tiptap ul ul {
+  list-style: circle;
+}
+.markdown-editor .tiptap ul ul ul {
+  list-style: square;
+}
+
+/* Task list (GFM `- [ ] item`). StarterKit ships TaskList extension. */
+.markdown-editor .tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.25em;
+}
+
+.markdown-editor .tiptap ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+
+.markdown-editor .tiptap ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
+  margin-top: 0.3em;
+  user-select: none;
+}
+
+.markdown-editor .tiptap ul[data-type="taskList"] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.markdown-editor .tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+/* Blockquote — Notion uses a chunky left bar without italic. */
+.markdown-editor .tiptap blockquote {
+  border-left: 3px solid var(--color-border, var(--border));
+  padding: 0.2em 0 0.2em 1em;
+  margin: 0.6em 0;
+  color: color-mix(in oklab, var(--color-foreground, var(--foreground)) 80%, transparent);
+}
+
+.markdown-editor .tiptap blockquote > :first-child {
+  margin-top: 0;
+}
+.markdown-editor .tiptap blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* Divider — full-width thin rule with breathing room. */
+.markdown-editor .tiptap hr {
+  border: none;
+  border-top: 1px solid var(--color-border, var(--border));
+  margin: 1.5em 0;
+}
+
+/* Inline code — monospace pill, restrained tint. */
+.markdown-editor .tiptap code {
+  background: color-mix(in oklab, var(--color-muted, var(--muted)) 70%, transparent);
+  color: var(--color-foreground, var(--foreground));
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+  font-size: 0.875em;
+  font-family:
+    "SF Mono", ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas,
+    monospace;
+  border: 1px solid color-mix(in oklab, var(--color-border, var(--border)) 60%, transparent);
+}
+
+/* Code block — darker surface so it stands apart from inline code. */
+.markdown-editor .tiptap pre {
+  background: var(--color-muted, var(--muted));
+  color: var(--color-foreground, var(--foreground));
+  padding: 0.9em 1em;
+  border-radius: 6px;
+  margin: 0.75em 0;
+  font-family:
+    "SF Mono", ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas,
+    monospace;
+  font-size: 0.875em;
+  line-height: 1.55;
+  overflow-x: auto;
+  border: 1px solid color-mix(in oklab, var(--color-border, var(--border)) 50%, transparent);
+}
+
+.markdown-editor .tiptap pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Tables — borderless, subtle row separators (Notion-flavour). */
+.markdown-editor .tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75em 0;
+  font-size: 0.95em;
+  table-layout: fixed;
+}
+
+.markdown-editor .tiptap th,
+.markdown-editor .tiptap td {
+  border: 1px solid var(--color-border, var(--border));
+  padding: 0.45em 0.75em;
+  vertical-align: top;
+  text-align: left;
+  min-width: 4ch;
+}
+
+.markdown-editor .tiptap th {
+  background: color-mix(in oklab, var(--color-muted, var(--muted)) 60%, transparent);
+  font-weight: 600;
+}
+
+/* Images — rounded, never overflow. */
+.markdown-editor .tiptap img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin: 0.5em 0;
+}
+
+.markdown-editor .tiptap strong {
+  font-weight: 700;
+}
+
+.markdown-editor .tiptap em {
+  font-style: italic;
+}
+
+.markdown-editor .tiptap s {
+  text-decoration: line-through;
+}
+
+/* Selection highlight — semantic ring colour, not browser-blue. */
+.markdown-editor .tiptap ::selection {
+  background: color-mix(in oklab, var(--color-primary, var(--primary)) 25%, transparent);
+}
+
+/* Empty-editor placeholder.
+ *
+ * TipTap's stock recipe paints the placeholder as a `float: left;
+ * height: 0` `::before`. That float reparents the empty paragraph's
+ * inline content box, and Chromium then renders the text caret of the
+ * (otherwise empty) `<p>` at a zero-height / clipped position behind the
+ * float — so the caret is INVISIBLE until the first character is typed
+ * (after a space it suddenly blinks). Standard chat composers
+ * (ChatGPT / Claude) show a blinking caret in the empty box.
+ *
+ * Fix: take the placeholder OUT of inline flow — `position: absolute` +
+ * `pointer-events: none`. The empty paragraph keeps its natural,
+ * full-line-height caret slot (so the caret blinks immediately), and the
+ * placeholder text simply overlays the same spot without ever covering
+ * the 1px caret (the caret paints on top of the absolutely-positioned,
+ * pointer-events-none pseudo). `caret-color` is forced to the foreground
+ * so it can never inherit `transparent`. */
+.markdown-editor .tiptap .ProseMirror,
+.markdown-editor .tiptap,
+.markdown-editor .ProseMirror {
+  caret-color: var(--color-foreground, var(--foreground));
+}
+
+.markdown-editor .tiptap p.is-editor-empty:first-child,
+.markdown-editor .ProseMirror p.is-editor-empty:first-child {
+  position: relative;
+}
+
+.markdown-editor .tiptap p.is-editor-empty:first-child::before,
+.markdown-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  height: 0;
+  opacity: 0.4;
+}
+
+/* Focus ring */
+.markdown-editor:focus-within {
+  border-color: var(--color-ring, var(--ring));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-ring, var(--ring)) 30%, transparent);
+}
+
+/* Embedded mode — the host surface (e.g. chat composer) draws the
+   frame, so the editor must not paint its own border or focus ring. */
+.markdown-editor--unstyled,
+.markdown-editor--unstyled:focus-within {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Slash-command inline chip — TipTap atom analogue of the plain
+   `<SlashHighlightTextarea>` mirror. Mirrors `bg-primary/15 text-primary`
+   so the two paths look identical. Atom nodes don't admit a caret, so
+   light horizontal padding is safe here (unlike the plain mirror,
+   which has to be padding-less to keep caret alignment). */
+.markdown-slash-command {
+  background: color-mix(in oklab, var(--color-primary, var(--primary)) 15%, transparent);
+  color: var(--color-primary, var(--primary));
+  padding: 0 2px;
+  border-radius: 3px;
+  font-weight: 500;
+  /* Atom nodes can't be entered; reflect that visually so the user does
+     not try to click into the chip to edit it. */
+  cursor: default;
+  user-select: none;
+  display: inline;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Editor chip — the `editorChip` atom NODE. ONE component renders both a
+   file-path chip (`--path`) and a URL chip (`--url`); each shows an icon +
+   a VSCode-style middle-ellipsis label and serialises back to the raw
+   path / URL. Unlike the old decoration, the node OWNS its rendering, so a
+   long path collapses to one line (no wrap). It's an atom, so caret never
+   lands inside — `user-select: none`, whole-chip delete.
+   ───────────────────────────────────────────────────────────────────── */
+.markdown-editor .tiptap .editor-chip,
+.markdown-editor .ProseMirror .editor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 22rem;
+  vertical-align: baseline;
+  background: var(--color-muted, var(--muted));
+  color: var(--color-foreground, var(--foreground));
+  border: 1px solid var(--color-border, var(--border));
+  border-radius: 4px;
+  padding: 0 5px;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.85em;
+  line-height: 1.45;
+  white-space: nowrap;
+  text-decoration: none;
+  user-select: none;
+  cursor: default;
+}
+
+/* URL chip is clickable — pointer cursor, but keep the chip look (no blue
+   underline; the link accent lives on hover only). */
+.markdown-editor .tiptap a.editor-chip,
+.markdown-editor .ProseMirror a.editor-chip {
+  cursor: pointer;
+  color: var(--color-foreground, var(--foreground));
+}
+
+.markdown-editor .tiptap a.editor-chip:hover,
+.markdown-editor .ProseMirror a.editor-chip:hover {
+  border-color: var(--color-primary, var(--primary));
+}
+
+/* The middle-ellipsis label is precomputed; this is the CSS safety net for
+   an unusually long basename / slug. */
+.markdown-editor .tiptap .editor-chip__label,
+.markdown-editor .ProseMirror .editor-chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Leading icon box — fixed pixel size so the inner SVG (vendored FileIcon
+   markup, sized 100%) doesn't expand to the line box. */
+.markdown-editor .tiptap .editor-chip__icon,
+.markdown-editor .ProseMirror .editor-chip__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.markdown-editor .tiptap .editor-chip__icon svg,
+.markdown-editor .ProseMirror .editor-chip__icon svg,
+.markdown-editor .tiptap .editor-chip__favicon,
+.markdown-editor .ProseMirror .editor-chip__favicon {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex: none;
+}
+
+.markdown-editor .tiptap .editor-chip__favicon,
+.markdown-editor .ProseMirror .editor-chip__favicon {
+  border-radius: 2px;
+}
+
+/* Folder glyph inherits the warning token tint (matches FileIcon). */
+.markdown-editor .tiptap .editor-chip__icon--folder,
+.markdown-editor .ProseMirror .editor-chip__icon--folder {
+  color: var(--color-warning, var(--warning, #d99a00));
+}
+
+/* URL icon (globe fallback) carries the link/primary accent. */
+.markdown-editor .tiptap .editor-chip__icon--globe,
+.markdown-editor .ProseMirror .editor-chip__icon--globe {
+  color: var(--color-primary, var(--primary));
+}
+
+/* Mention inline chip */
+.markdown-mention {
+  background: var(--color-primary, var(--primary));
+  color: var(--color-primary-foreground, #fff);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: default;
+}
+
+/* Mention dropdown */
+.markdown-mention-list {
+  background: var(--color-popover, var(--popover));
+  color: var(--color-popover-foreground, var(--popover-foreground));
+  border: 1px solid var(--color-border, var(--border));
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 220px;
+  max-height: 260px;
+  overflow-y: auto;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.markdown-mention-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  transition: background 0.1s;
+}
+
+.markdown-mention-item:hover,
+.markdown-mention-item.selected {
+  background: var(--color-muted, var(--muted));
+}
+
+.markdown-mention-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.markdown-mention-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.markdown-mention-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.markdown-mention-desc {
+  font-size: 11px;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Toolbar buttons */
+.markdown-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  /* Explicit semantic colour — without it the icon inherits the host's
+     default text colour (UA black on a dark editor surface) and the
+     toolbar is invisible. */
+  color: var(--foreground);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.markdown-toolbar-btn:hover {
+  opacity: 1;
+  background: var(--color-muted, var(--muted));
+}
+
+.markdown-toolbar-btn.active {
+  opacity: 1;
+  background: var(--color-muted, var(--muted));
+}

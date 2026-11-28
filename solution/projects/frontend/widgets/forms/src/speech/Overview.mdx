@@ -1,0 +1,54 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Widgets/Forms/Speech Overview" />
+
+# SpeechRecognition
+
+Composable Speech-to-Text. The default backend is the browser's Web Speech
+API; custom engines plug in for Whisper / Deepgram / native sidecars.
+
+## Mental model
+
+```
+                  ┌───────────────────────┐
+   Engine  ────▶  │ useSpeechRecognition  │  ◀──── language, deviceId, autoStop
+                  └──────────┬────────────┘
+                             │ {status, transcript, error, start/stop/toggle}
+                             ▼
+   ┌──────────┐   ┌──────────────────┐   ┌─────────────────┐
+   │  Hooks   │   │   Widgets        │   │   Components    │
+   ├──────────┤   ├──────────────────┤   ├─────────────────┤
+   │useDictation│  │DictationField   │   │DictationButton  │
+   │usePushToTalk│ │VoiceComposerSlot│   │MicMeter         │
+   │useMicLevel │  │VoiceMessageRec. │   │ErrorBanner      │
+   │useMicDevices│ └──────────────────┘  │PushToTalkHint   │
+   │useVoiceSupport│                     │LanguagePicker   │
+   │useSpeech*Lang*│                     │DevicePicker     │
+   └──────────┘                          └─────────────────┘
+```
+
+* **Engines** are pluggable — `createWebSpeechEngine` (default),
+  `createHttpEngine`, `createWebSocketEngine`, `createExternalEngine`.
+* **Hooks** are headless. Bring your own UI.
+* **Widgets** are opinionated drop-ins; the most useful one is
+  `DictationField` for textareas and `VoiceComposerSlot` for chats.
+* **Components** are presentational primitives — usable on their own.
+
+## Stories in this section
+
+- **Dictation** — `DictationField` Playground + presets.
+- **PushToTalk** — `usePushToTalk` hook in isolation.
+- **MicMeter** — `MicMeter` standalone + `useMicLevel` notes.
+- **Languages** — language + device matrix via public hooks.
+- **Engines** — Web Speech, HTTP, WebSocket, External engine factories.
+- **Errors** — every `RecognitionErrorCode` rendered through `ErrorBanner`,
+  plus the `useVoiceSupport` gate.
+- **ComposerSlot** — `VoiceComposerSlot` integrated into a textarea via a
+  simulated composer handle.
+
+## Notes for the Storybook iframe
+
+Real microphone access is unreliable inside the docs iframe. Most stories
+use a deterministic mock engine built from `createExternalEngine` so they
+render the same way on every load and never prompt for permissions.
+Stories that demonstrate the real Web Speech API say so explicitly.

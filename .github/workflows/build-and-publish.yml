@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ['3.10', '3.11', '3.12']
+        python: ['3.12', '3.13']
 
     steps:
       - uses: actions/checkout@v4
@@ -22,7 +22,7 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Install package
-        run: pip install packages/django_cfg/
+        run: python -m pip install .
 
       - name: Test import
         run: |
@@ -31,6 +31,6 @@ jobs:
       - name: Basic sanity check
         run: |
           python -c "
-          from django_cfg.core.settings import DjangoCfgSettings
-          print('OK: Settings class imported')
+          from django_cfg.core.config import DjangoConfig
+          print('OK: DjangoConfig imported')
           "

@@ -1,0 +1,115 @@
+{
+  "name": "@djangocfg/api",
+  "version": "2.1.667",
+  "description": "Generated TypeScript API client with TanStack React Query, Zod validation, and MSW mocks for Django REST Framework backends",
+  "keywords": [
+    "django",
+    "api-client",
+    "typescript",
+    "react-hooks",
+    "react-query",
+    "zod",
+    "openapi",
+    "rest-api",
+    "code-generation",
+    "django-rest-framework",
+    "drf",
+    "type-safe"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "packages/api"
+  },
+  "bugs": {
+    "url": "https://github.com/markolofsen/django-cfg/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./mocks": {
+      "types": "./dist/mocks.d.ts",
+      "import": "./dist/mocks.mjs",
+      "require": "./dist/mocks.cjs"
+    },
+    "./auth": {
+      "types": "./dist/auth.d.ts",
+      "import": "./dist/auth.mjs",
+      "require": "./dist/auth.cjs"
+    },
+    "./auth/server": {
+      "types": "./dist/auth-server.d.ts",
+      "import": "./dist/auth-server.mjs",
+      "require": "./dist/auth-server.cjs"
+    },
+    "./storage": {
+      "types": "./dist/storage.d.ts",
+      "import": "./dist/storage.mjs",
+      "require": "./dist/storage.cjs"
+    },
+    "./clients": {
+      "types": "./dist/clients.d.ts",
+      "import": "./dist/clients.mjs",
+      "require": "./dist/clients.cjs"
+    },
+    "./hooks": {
+      "types": "./dist/hooks.d.ts",
+      "import": "./dist/hooks.mjs",
+      "require": "./dist/hooks.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "@docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsup && node scripts/check-dist.mjs",
+    "check:dist": "node scripts/check-dist.mjs",
+    "prepublishOnly": "node scripts/check-dist.mjs",
+    "clean": "rm -rf dist",
+    "dev": "tsup --watch",
+    "lint": "eslint .",
+    "check": "tsc --noEmit",
+    "test": "vitest run && vitest run --config vitest.smoke.config.ts",
+    "test:smoke": "vitest run --config vitest.smoke.config.ts",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.108.2",
+    "consola": "^3.4.2",
+    "next": "^16.4.5",
+    "react": "^19.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "10.6.0",
+    "@tanstack/react-query": "5.108.2",
+    "@djangocfg/typescript-config": "workspace:*",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "jsdom": "^30.1.3",
+    "msw": "3.0.7",
+    "next": "^16.4.5",
+    "react": "19.3.1",
+    "tsup": "^9.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

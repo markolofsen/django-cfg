@@ -9,7 +9,7 @@
 # - [tool.uv.sources] configures local editable path
 # - uv sync automatically uses the local path when available
 
-.PHONY: help install install-local install-local-uv env test commit kill-ports kill-grpc kill-all dev asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api api-web api-ws gen gen-ts gen-py gen-admin gen-api gen-dry gen-list claude codex
+.PHONY: help install install-local install-local-uv env test commit kill-ports kill-grpc kill-all dev asgi grpc run-all manage migrate shell show-urls list-urls check-endpoints tree check config superuser api-ws gen gen-ts gen-py gen-go gen-rust gen-dry gen-list gen-check claude codex
 
 # uv binary (full path for Make compatibility — Make uses a restricted PATH)
 UV := $(HOME)/.local/bin/uv
@@ -17,6 +17,12 @@ UV := $(HOME)/.local/bin/uv
 PYTHON := .venv/bin/python
 # Path to local django-cfg for development (~/djangocfg symlink → @projects/djangocfg/projects/django-cfg)
 DJANGO_CFG_LOCAL := $(HOME)/djangocfg
+# Generation must load the current local package, not a stale PyPI django-cfg
+# which may not contain the unified `gen` management command yet.
+GEN_RUN := PYTHONPATH="$(DJANGO_CFG_LOCAL)/src:$${PYTHONPATH:-}" $(PYTHON) manage.py gen
+# uvicorn flags for the realtime WebSocket endpoint (/ws): ws-max-size = RealtimeConfig.max_frame_bytes,
+# deflate off, a bounded graceful shutdown (every socket gets 1012). Same flags as the Docker image's CMD.
+UVICORN_WS_FLAGS := --ws-max-size 64000 --ws-per-message-deflate false --timeout-graceful-shutdown 25
 
 help:
 	@echo "Django Project - Make Commands"
@@ -36,7 +42,7 @@ help:
 	@echo ""
 	@echo "RQ:"
 	@echo "  make rq            - Start RQ worker (all queues)"
-	@echo "  make rq-scheduler  - Start RQ scheduler"
+	@echo "  make rq-scheduler  - Start RQ cron scheduler (rqcron)"
 	@echo "  make rq-clear      - Clear all RQ queues (Redis FLUSHDB)"
 	@echo "  make rq-stats      - Show RQ statistics"
 	@echo ""
@@ -129,7 +135,7 @@ dev: kill-ports
 
 asgi: kill-ports
 	@echo "Starting ASGI server on port 8000 (uvicorn)..."
-	$(UV) run uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload
+	$(PYTHON) -m uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload $(UVICORN_WS_FLAGS)
 
 grpc:
 	@echo "Starting gRPC server on port 50051..."
@@ -156,7 +162,7 @@ run-all: kill-all
 		GRPC_PID=$$!; \
 		sleep 1; \
 		echo "Starting ASGI server on port 8000 (uvicorn)..."; \
-		$(UV) run uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload & \
+		$(PYTHON) -m uvicorn api.asgi:application --host 0.0.0.0 --port 8000 --reload $(UVICORN_WS_FLAGS) & \
 		ASGI_PID=$$!; \
 		sleep 1; \
 		echo "Starting RQ worker (all queues)..."; \
@@ -209,32 +215,35 @@ superuser:
 #   make gen                          — via Django manage.py wrapper (supports flags)
 #   python generation.py              — standalone (self-bootstrapping)
 gen:
-	$(PYTHON) manage.py gen
+	$(GEN_RUN)
 
 gen-ts:
-	$(PYTHON) manage.py gen --ts
+	$(GEN_RUN) --ts
 
 gen-py:
-	$(PYTHON) manage.py gen --py
+	$(GEN_RUN) --py
 
 gen-go:
-	$(PYTHON) manage.py gen --go
+	$(GEN_RUN) --go
+
+gen-rust:
+	$(GEN_RUN) --rust
 
 gen-target:
-	$(PYTHON) manage.py gen --target $(T)
+	$(GEN_RUN) --target $(T)
 
 gen-groups:
-	$(PYTHON) manage.py gen --groups $(G)
+	$(GEN_RUN) --groups $(G)
 
 gen-dry:
-	$(PYTHON) manage.py gen --dry-run
+	$(GEN_RUN) --dry-run
 
 gen-list:
-	$(PYTHON) manage.py gen --list-targets
+	$(GEN_RUN) --list-targets
 
-# Legacy aliases (deprecated - use gen commands)
-api: gen
-api-web: gen-ts
+gen-check:
+	$(GEN_RUN) --check
+
 # Start Claude Code with dangerously-skip-permissions flag
 claude:
 	claude --dangerously-skip-permissions --chrome
@@ -250,7 +259,7 @@ rq: rq-clear
 
 rq-scheduler:
 	@echo "Starting RQ scheduler..."
-	@$(PYTHON) manage.py rqscheduler
+	@$(PYTHON) manage.py rqcron
 
 rq-clear:
 	@echo "Clearing all RQ queues via Redis..."

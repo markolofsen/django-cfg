@@ -1,0 +1,14 @@
+{
+  "extends": "@djangocfg/typescript-config/react-library.json",
+  "compilerOptions": {
+    "strict": true,
+    // `@djangocfg/ui-core` ships UNBUILT source, so `tsc` recompiles it under
+    // THIS package's flags. `types: ["node"]` covers the `process` / `require`
+    // / `NodeJS` references in its vendored source; `noImplicitOverride` stays
+    // off for the same reason. Our own code is still strict.
+    "noImplicitOverride": false,
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "@*"]
+}

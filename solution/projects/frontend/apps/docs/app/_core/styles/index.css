@@ -1,0 +1,13 @@
+/*
+ * Styles barrel — real rules live in the sibling ./*.css partials (edit those).
+ * Native CSS nesting, no preprocessor. Import order matters: base.css first
+ * (it pulls in Tailwind + @source + @variant that every later partial depends
+ * on). Imported once from app/layout.tsx as `import '@core/styles/index.css'`.
+ */
+@import './base.css';
+@import './cards.css';
+@import './home.css';
+@import './footer.css';
+@import './navbar.css';
+@import './contact.css';
+@import './mermaid.css';

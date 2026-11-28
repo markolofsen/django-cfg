@@ -3,7 +3,9 @@
   "info": {
     "title": "Django CFG API",
     "version": "1.0.0",
-    "description": "RESTful API with modern architecture"
+    "description": "RESTful API with modern architecture",
+    "x-cfg-version": "2.4.108",
+    "x-cfg-contract": "2.3.415"
   },
   "paths": {
     "/cfg/accounts/api-key/": {
@@ -58,16 +60,6 @@
         "tags": [
           "cfg_accounts_api_key"
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/APIKeyRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "security": [
           {
             "jwtAuthWithLastLogin": []
@@ -121,16 +113,6 @@
         "tags": [
           "cfg_accounts_api_key"
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/APIKeyRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "security": [
           {
             "jwtAuthWithLastLogin": []
@@ -328,7 +310,7 @@
     "/cfg/accounts/oauth/github/authorize/": {
       "post": {
         "operationId": "cfg_accounts_oauth_github_authorize_create",
-        "description": "Generate GitHub OAuth authorization URL. Redirect user to this URL to start authentication.",
+        "description": "Generate the GitHub authorization URL. Redirect the user to it to start authentication. The redirect URI is derived from the request Origin.",
         "summary": "Start GitHub OAuth",
         "tags": [
           "cfg_accounts_oauth"
@@ -356,6 +338,16 @@
             },
             "description": ""
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          },
           "503": {
             "content": {
               "application/json": {
@@ -373,7 +365,7 @@
     "/cfg/accounts/oauth/github/callback/": {
       "post": {
         "operationId": "cfg_accounts_oauth_github_callback_create",
-        "description": "Exchange authorization code for JWT tokens. Call this after GitHub redirects back with code.",
+        "description": "Exchange the authorization code for JWT tokens. Call this after GitHub redirects back with a code. The state is single use.",
         "summary": "Complete GitHub OAuth",
         "tags": [
           "cfg_accounts_oauth"
@@ -411,15 +403,198 @@
               }
             },
             "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
           }
         },
+        "x-cfg-auth": "sign-in",
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/oauth/google/authorize/": {
+      "post": {
+        "operationId": "cfg_accounts_oauth_google_authorize_create",
+        "description": "Generate the Google authorization URL. Redirect the user to it to start authentication. The redirect URI is derived from the request Origin.",
+        "summary": "Start Google OAuth",
+        "tags": [
+          "cfg_accounts_oauth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthAuthorizeRequestRequest"
+              }
+            }
+          }
+        },
+        "security": [
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthAuthorizeResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-async-capable": false
+      }
+    },
+    "/cfg/accounts/oauth/google/callback/": {
+      "post": {
+        "operationId": "cfg_accounts_oauth_google_callback_create",
+        "description": "Exchange the authorization code for JWT tokens. Call this after Google redirects back with a code. The state is single use.",
+        "summary": "Complete Google OAuth",
+        "tags": [
+          "cfg_accounts_oauth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthCallbackRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {}
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthTokenResponse"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthError"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "x-cfg-auth": "sign-in",
         "x-async-capable": false
       }
     },
     "/cfg/accounts/oauth/providers/": {
       "get": {
         "operationId": "cfg_accounts_oauth_providers_retrieve",
-        "description": "Get list of available OAuth providers for authentication.",
+        "description": "Providers that are configured, in display order. The login screen shows exactly these buttons.",
         "summary": "List OAuth providers",
         "tags": [
           "cfg_accounts_oauth"
@@ -547,6 +722,7 @@
             "description": ""
           }
         },
+        "x-cfg-auth": "sign-in",
         "x-async-capable": false
       }
     },
@@ -611,6 +787,7 @@
             "description": ""
           }
         },
+        "x-cfg-auth": "sign-in",
         "x-async-capable": false
       }
     },
@@ -1115,13 +1292,14 @@
             "description": ""
           }
         },
+        "x-cfg-auth": "sign-in",
         "x-async-capable": false
       }
     },
     "/cfg/accounts/token/blacklist/": {
       "post": {
         "operationId": "cfg_accounts_token_blacklist_create",
-        "description": "Revoke a refresh token (logout).\n\nBlacklists the posted refresh token so it can never mint another access\ntoken. Called best-effort by the client's logout — without it, \"logout\"\nis purely client-side and a stolen refresh token survives until expiry.",
+        "description": "Revoke a refresh token (logout).\n\nBlacklists the posted refresh token so it can never mint another access\ntoken. Called best-effort by the client's logout — without it, \"logout\"\nis purely client-side and a stolen refresh token survives until expiry.\nThen ``user_sessions_revoked`` closes the user's realtime sockets: the\nother devices refresh their own tokens and reconnect, this one stays out.",
         "tags": [
           "cfg_accounts_auth"
         ],
@@ -1146,7 +1324,7 @@
     "/cfg/accounts/token/refresh/": {
       "post": {
         "operationId": "cfg_accounts_token_refresh_create",
-        "description": "Refresh JWT token.\n\nDPoP-aware: when the incoming refresh token is key-bound (`cnf.jkt`), the\nrotated access/refresh in the response are re-stamped with the same `cnf`\n(stock SimpleJWT drops it from the derived access), and a matching DPoP\nproof is required on the refresh request — so a stolen refresh token can't\nbe used to mint fresh tokens.",
+        "description": "Refresh JWT token.\n\nStock SimpleJWT refresh. A ``cnf`` claim left in a token issued by an\nolder release is ignored: the token refreshes like any other.",
         "tags": [
           "cfg_accounts_auth"
         ],
@@ -1550,6 +1728,7 @@
             "description": ""
           }
         },
+        "x-cfg-auth": "sign-in",
         "x-async-capable": false
       }
     },
@@ -1604,6 +1783,7 @@
             "description": ""
           }
         },
+        "x-cfg-auth": "sign-in",
         "x-async-capable": false
       }
     }
@@ -1653,35 +1833,6 @@
           }
         },
         "required": [
-          "key",
-          "reissued_at"
-        ]
-      },
-      "APIKeyRequest": {
-        "type": "object",
-        "description": "Serializer for API key response (masked).",
-        "properties": {
-          "key": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Masked API key"
-          },
-          "reissued_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time",
-            "description": "When the key was last regenerated"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "When the key was created"
-          }
-        },
-        "required": [
-          "created_at",
           "key",
           "reissued_at"
         ]
@@ -2050,7 +2201,7 @@
           "redirect_uri": {
             "type": "string",
             "format": "uri",
-            "description": "URL to redirect after OAuth authorization. If not provided, uses config's site_url + callback_path"
+            "description": "Optional. Must be `<origin>/auth?provider=<id>` for an origin of the resolved site; anything else is rejected with `origin_not_allowed`. Omit it: the server derives it from the request Origin."
           },
           "source_url": {
             "type": "string",
@@ -2084,25 +2235,20 @@
         "properties": {
           "code": {
             "type": "string",
-            "minLength": 10,
+            "minLength": 1,
             "description": "Authorization code from OAuth provider callback",
-            "maxLength": 500
+            "maxLength": 2048
           },
           "state": {
             "type": "string",
-            "minLength": 20,
-            "description": "State token for CSRF verification (from authorize response)",
-            "maxLength": 100
+            "minLength": 1,
+            "description": "State token from the authorize response; single use",
+            "maxLength": 64
           },
           "redirect_uri": {
             "type": "string",
             "format": "uri",
-            "description": "Same redirect_uri used in authorize request. If not provided, uses config's site_url + callback_path"
-          },
-          "remember_me": {
-            "type": "boolean",
-            "default": false,
-            "description": "Keep this browser signed in for 30 days"
+            "description": "Ignored. The server reuses the redirect URI stored with the state."
           }
         },
         "required": [
@@ -2125,7 +2271,7 @@
               }
             ],
             "readOnly": true,
-            "description": "OAuth provider name (github, google, etc.)\n\n* `github` - GitHub"
+            "description": "OAuth provider name (github, google, etc.)\n\n* `github` - GitHub\n* `google` - Google"
           },
           "provider_display": {
             "type": "string",
@@ -2182,7 +2328,7 @@
                 "$ref": "#/components/schemas/OAuthProviderEnum"
               }
             ],
-            "description": "OAuth provider to disconnect\n\n* `github` - GitHub"
+            "description": "OAuth provider to disconnect\n\n* `github` - GitHub\n* `google` - Google"
           }
         },
         "required": [
@@ -2194,8 +2340,12 @@
         "description": "Error response for OAuth endpoints.",
         "properties": {
           "error": {
-            "type": "string",
-            "description": "Error code"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthErrorCodeEnum"
+              }
+            ],
+            "description": "Error code (closed set)\n\n* `oauth_disabled` - oauth_disabled\n* `github_oauth_disabled` - github_oauth_disabled\n* `origin_not_allowed` - origin_not_allowed\n* `missing_redirect_uri` - missing_redirect_uri\n* `invalid_state` - invalid_state\n* `oauth_exchange_failed` - oauth_exchange_failed\n* `invalid_id_token` - invalid_id_token\n* `email_missing` - email_missing\n* `email_not_verified` - email_not_verified\n* `hosted_domain_not_allowed` - hosted_domain_not_allowed\n* `account_inactive` - account_inactive\n* `link_not_allowed` - link_not_allowed\n* `rate_limited` - rate_limited\n* `provider_unavailable` - provider_unavailable\n* `server_error` - server_error\n* `not_found` - not_found"
           },
           "error_description": {
             "type": "string",
@@ -2206,12 +2356,62 @@
           "error"
         ]
       },
-      "OAuthProviderEnum": {
+      "OAuthErrorCodeEnum": {
         "enum": [
-          "github"
+          "oauth_disabled",
+          "github_oauth_disabled",
+          "origin_not_allowed",
+          "missing_redirect_uri",
+          "invalid_state",
+          "oauth_exchange_failed",
+          "invalid_id_token",
+          "email_missing",
+          "email_not_verified",
+          "hosted_domain_not_allowed",
+          "account_inactive",
+          "link_not_allowed",
+          "rate_limited",
+          "provider_unavailable",
+          "server_error",
+          "not_found"
         ],
         "type": "string",
-        "description": "* `github` - GitHub"
+        "description": "* `oauth_disabled` - oauth_disabled\n* `github_oauth_disabled` - github_oauth_disabled\n* `origin_not_allowed` - origin_not_allowed\n* `missing_redirect_uri` - missing_redirect_uri\n* `invalid_state` - invalid_state\n* `oauth_exchange_failed` - oauth_exchange_failed\n* `invalid_id_token` - invalid_id_token\n* `email_missing` - email_missing\n* `email_not_verified` - email_not_verified\n* `hosted_domain_not_allowed` - hosted_domain_not_allowed\n* `account_inactive` - account_inactive\n* `link_not_allowed` - link_not_allowed\n* `rate_limited` - rate_limited\n* `provider_unavailable` - provider_unavailable\n* `server_error` - server_error\n* `not_found` - not_found"
+      },
+      "OAuthProviderEnum": {
+        "enum": [
+          "github",
+          "google"
+        ],
+        "type": "string",
+        "description": "* `github` - GitHub\n* `google` - Google"
+      },
+      "OAuthProviderInfo": {
+        "type": "object",
+        "description": "One enabled sign-in provider.",
+        "properties": {
+          "id": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OAuthProviderEnum"
+              }
+            ],
+            "description": "Provider id\n\n* `github` - GitHub\n* `google` - Google"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Icon key"
+          }
+        },
+        "required": [
+          "icon",
+          "id",
+          "name"
+        ]
       },
       "OAuthProvidersResponse": {
         "type": "object",
@@ -2220,10 +2420,9 @@
           "providers": {
             "type": "array",
             "items": {
-              "type": "object",
-              "additionalProperties": {}
+              "$ref": "#/components/schemas/OAuthProviderInfo"
             },
-            "description": "List of available OAuth providers"
+            "description": "Providers that are configured, in display order. The login screen shows exactly these."
           }
         },
         "required": [
@@ -2282,10 +2481,6 @@
           "should_prompt_2fa": {
             "type": "boolean",
             "description": "True if user should be prompted to enable 2FA"
-          },
-          "persistent_session": {
-            "type": "boolean",
-            "description": "Whether this login should persist across browser restarts"
           }
         }
       },
@@ -2399,11 +2594,6 @@
             "type": "string",
             "format": "uri",
             "description": "Source URL for tracking login (e.g., https://my.djangocfg.com)"
-          },
-          "remember_me": {
-            "type": "boolean",
-            "default": false,
-            "description": "Keep this browser signed in for 30 days"
           }
         },
         "required": [
@@ -2456,10 +2646,6 @@
           "should_prompt_2fa": {
             "type": "boolean",
             "description": "Whether user should be prompted to enable 2FA"
-          },
-          "persistent_session": {
-            "type": "boolean",
-            "description": "Whether this login should persist across browser restarts"
           }
         }
       },
@@ -2490,13 +2676,8 @@
       },
       "PasswordLoginRequest": {
         "type": "object",
-        "description": "Validate email+password against live accounts only.\n\nSubclasses SimpleJWT so the field/validation contract stays theirs, but\nreplaces ``validate()`` — the token pair itself is minted by the view via\n``mint_tokens_for_request`` so the DPoP binding and remembered-session\nlifetime match OTP, OAuth and TOTP exactly.",
+        "description": "Validate email+password against live accounts only.\n\nSubclasses SimpleJWT so the field/validation contract stays theirs, but\nreplaces ``validate()`` — the token pair itself is minted by the view via\n``RefreshToken.for_user`` so the token\nlifetime matches OTP, OAuth and TOTP exactly.",
         "properties": {
-          "remember_me": {
-            "type": "boolean",
-            "default": false,
-            "description": "Keep this browser signed in for 30 days"
-          },
           "email": {
             "type": "string",
             "format": "email",
@@ -2558,10 +2739,6 @@
           "should_prompt_2fa": {
             "type": "boolean",
             "description": "Whether user should be prompted to enable 2FA"
-          },
-          "persistent_session": {
-            "type": "boolean",
-            "description": "Whether this login should persist across browser restarts"
           }
         }
       },
@@ -3029,10 +3206,6 @@
             ],
             "description": "User profile data"
           },
-          "persistent_session": {
-            "type": "boolean",
-            "description": "Whether this login should persist across browser restarts"
-          },
           "remaining_backup_codes": {
             "type": "integer",
             "description": "Number of remaining backup codes (if backup code was used)"
@@ -3045,7 +3218,6 @@
         "required": [
           "access_token",
           "message",
-          "persistent_session",
           "refresh_token",
           "user"
         ]
@@ -3143,10 +3315,6 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-API-Key"
-      },
-      "basicAuth": {
-        "type": "http",
-        "scheme": "basic"
       },
       "cookieAuth": {
         "type": "apiKey",

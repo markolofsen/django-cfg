@@ -1,0 +1,68 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Widgets/Overview" />
+
+# Widgets
+
+Self-contained product blocks. A widget is a feature a host app **mounts**, not
+a primitive it composes — that is what separates `widgets/*` from
+`@djangocfg/ui-core`, and why a widget may depend on a package while a package
+may never depend on a widget.
+
+They replace `@djangocfg/ui-tools`, which was one package with 966 files, 68
+export subpaths and 62 dependencies: an app that wanted a sparkline installed
+MapLibre, Monaco, Mermaid and TipTap. These are grouped by what a host is
+trying to **do**, sized so one dependency answer covers the whole group.
+
+## The catalogue
+
+| Widget | Role |
+|---|---|
+| `agent` | Page snapshot and browser bridge, plus API, log and env viewers. |
+| `avatar` | Seeded avatars: one seed picks one style and draws one face. |
+| `charts` | Small data visualisations: five charts, three indicators. |
+| `chat` | The chat surface: transcript, composer, attachments, tool calls. |
+| `code` | Monaco editor, diff viewer, Prism listing, JSON editor, markdown. |
+| `data` | File tree, JSON viewer, grid, table, kanban, listbox, masonry, timeline. |
+| `diagram` | Mermaid: typed builders that write the source, renderer that draws it. |
+| `editor` | TipTap: a markdown field, and a Notion-style block editor. |
+| `forms` | JSON-Schema form, uploaders, cron builder, combobox, speech. |
+| `kit` | Shared ground: formatters, and the lazy-loading placeholders. |
+| `map` | Interactive maps on MapLibre GL. |
+| `mcp` | Connect an AI assistant to an MCP server with the user's key; the OAuth consent page. |
+| `media` | Image lightbox, mermaid, markdown, code listings. |
+| `ogimage` | Open Graph cards: satori renderer, vendored typeface. |
+| `overlay` | Responsive dialog, scroll spy, selection toolbar, tour. |
+| `player` | One element for audio and video, and the surfaces around it. |
+| `visual` | Colour picker and palette, marquee, QR code, gallery, Lottie. |
+
+## Stories live in the widget
+
+Every story here is loaded from `widgets/*/src/**`, beside the component it
+covers — so a story is part of the widget's own contract and moves with it.
+A story kept in a central app has no owner: that is how the previous set ended
+up documenting a package that no longer existed.
+
+## Install
+
+Each widget is published and versioned **independently** — one moves only when
+it is published, unlike `packages/*`, which share a synced version.
+
+```bash
+pnpm add @djangocfg/widget-chat @djangocfg/ui-core
+```
+
+## Import a subpath
+
+Widgets are source-shipped and mostly subpath-only. A root barrel is a static
+edge: naming a diagram renderer in a barrel puts a parser in every consumer's
+entry chunk, however carefully the component itself was lazy-loaded.
+
+```tsx
+import { JsonSchemaForm } from '@djangocfg/widget-forms/json-form';
+import { LazyMermaid } from '@djangocfg/widget-diagram';
+```
+
+## Source
+
+`widgets/` · the migration record is in `widgets/@dev/`.

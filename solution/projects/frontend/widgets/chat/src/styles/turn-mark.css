@@ -1,0 +1,97 @@
+/**
+ * The turn marker: one shape for the live turn, absent once it settles.
+ *
+ * Waiting and working differ in PACE, not in shape, so the moment the first
+ * token lands reads as the mark picking up speed rather than as one icon being
+ * swapped for another.
+ *
+ * A square that turns, rather than a pulse. A pulsing dot says "busy" and
+ * nothing else — every spinner on the web says that. Rotation has a direction,
+ * so a glance distinguishes "still going" from "stalled".
+ *
+ * Sized in `em` throughout, so it tracks whatever text it sits beside.
+ */
+
+.turn-mark {
+  display: inline-block;
+  /* Slightly over cap height: the mark leads the line rather than sitting in
+   * it, and below ~0.7em the tumble reads as a jitter because the corners
+   * travel too few pixels to register as rotation. */
+  inline-size: 0.72em;
+  block-size: 0.72em;
+  /* Not a circle: the corners are what make the rotation visible at all. At
+   * this size a rotating circle is indistinguishable from a still one. */
+  border-radius: 0.14em;
+  /* `currentColor` — the mark takes the colour of the row it leads, so it reads
+   * as part of the line rather than as a badge dropped onto it. Motion is what
+   * marks it as live; colour would say the same thing twice, louder. */
+  background: currentColor;
+  /* The mark sits on the text baseline rather than the line box's middle, which
+   * is where a raw inline-block lands and reads as floating high. */
+  vertical-align: 0.02em;
+}
+
+/**
+ * Working — a continuous turn, never a rest.
+ *
+ * `linear`, and the keyframes carry no hold: any easing curve decelerates into
+ * the final frame and accelerates out of the first, which on a loop is a stop
+ * and a restart every cycle. That hitch is what reads as jerky at speed. An
+ * even angular rate is the only thing that loops seamlessly.
+ */
+.turn-mark[data-state="working"] {
+  animation: turn-mark-tumble 1.6s linear infinite;
+}
+
+/**
+ * Waiting for the first token, when there is no text yet to lead.
+ *
+ * Dimmer and slower: nothing has been said, and a mark racing beside an empty
+ * line overstates what is happening. Same shape, so the transition into
+ * `working` is a change of pace rather than a swap.
+ */
+.turn-mark[data-state="waiting"] {
+  animation: turn-mark-tumble 2.6s linear infinite;
+  opacity: 0.5;
+}
+
+/* Also drives the composer's recording glyph (`composer.css`) and the running
+ * tool marker (`tool.css`) — deleting this with the turn mark would silently
+ * still both. */
+@keyframes turn-mark-tumble {
+  /* A FULL turn, not the quarter a square's symmetry would allow. A quarter
+   * needs the cycle to end where it began, so the loop seam falls inside the
+   * motion; over 360° every frame is mid-rotation and there is no seam to see.
+   *
+   * The scale breathes twice per turn — at 90° and 270°, where the square is
+   * back to square-on. It rides the rotation instead of interrupting it, so the
+   * mark has weight without any pause in the movement. */
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(90deg) scale(0.88);
+  }
+  50% {
+    transform: rotate(180deg) scale(1);
+  }
+  75% {
+    transform: rotate(270deg) scale(0.88);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Still, but not invisible: a turn is in flight either way, and the accent
+   * colour alone carries that once motion is off. */
+  .turn-mark[data-state="working"],
+  .turn-mark[data-state="waiting"] {
+    animation: none;
+    opacity: 1;
+  }
+  .turn-mark[data-state="waiting"] {
+    opacity: 0.5;
+  }
+}

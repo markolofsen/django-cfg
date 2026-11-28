@@ -1,0 +1,54 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Next.js Utils/Overview" />
+
+# @djangocfg/nextjs
+
+Server-side Next.js utilities used across DjangoCFG apps:
+
+- `createBaseNextConfig` — shared `next.config.ts` with PWA, iframe
+  embedding, image domains, and update checks pre-wired.
+- Sitemap + RSS generators.
+- OG-image rendering via `@vercel/og`.
+- Contact form handlers (Resend / SendGrid adapters).
+- Health-check endpoints.
+
+## Install
+
+```bash
+pnpm add @djangocfg/nextjs
+```
+
+## Quick start — shared config
+
+```ts
+// next.config.ts
+import { createBaseNextConfig } from '@djangocfg/nextjs/config';
+
+export default createBaseNextConfig({
+  checkUpdates: true,
+  allowIframeFrom: ['https://docs.example.com'],
+  pwa: { swSrc: 'app/sw.ts', disable: process.env.NODE_ENV === 'development' },
+});
+```
+
+## OG image route
+
+```tsx
+// app/og/route.tsx
+import { createOgHandler } from '@djangocfg/nextjs/og';
+
+export const GET = createOgHandler({
+  width: 1200,
+  height: 630,
+  render: ({ searchParams }) => (
+    <div tw="flex h-full w-full items-center justify-center bg-black text-white text-7xl">
+      {searchParams.get('title')}
+    </div>
+  ),
+});
+```
+
+## Source
+
+`packages/nextjs/`

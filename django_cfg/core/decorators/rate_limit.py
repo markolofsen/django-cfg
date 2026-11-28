@@ -148,8 +148,9 @@ def _get_cache_key(
     else:
         identifier = "unknown"
 
-    # Hash the method name to keep key short
-    method_hash = hashlib.md5(method_name.encode()).hexdigest()[:8]
+    # This namespace is derived from the server-owned qualified function name,
+    # not user identity or a credential. Keep existing counters across upgrades.
+    method_hash = hashlib.md5(method_name.encode(), usedforsecurity=False).hexdigest()[:8]
 
     return f"{prefix}:{method_hash}:{identifier}"
 

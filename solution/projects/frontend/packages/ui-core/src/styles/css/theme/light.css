@@ -1,0 +1,139 @@
+/**
+ * Light Theme Colors — Notion-neutral (retuned 2026-11-06 from app.notion.com's own custom properties).
+ *
+ * White canvas, #f9f8f7 rail, warm-grey hover, one blue for the primary action. The previous Claude "clay"
+ * brand orange is gone from surfaces; the `notion` preset is a pinned copy of these values for side-by-side checks.
+ *
+ * Pairs `--primary` / `--primary-foreground` are tuned together. Prefer editing tokens over ad hoc classes.
+ */
+
+:root {
+  /* Base colors — a warm off-white canvas (Claude bg-100) with darker neutral
+   * fills and a white raised card. Keep `muted` below `background` in light mode
+   * so chips, message bubbles, and secondary controls never dissolve into the
+   * page. */
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(60 1% 17%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(60 1% 17%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(60 1% 17%);
+  /* Interactive primary on white — deep clay (~#b6543a): readable white-on-fill (5.0:1) + calmer than the brand swatch */
+  --primary: hsl(209 74% 47%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(30 14% 97%);
+  --secondary-foreground: hsl(60 1% 17%);
+  --muted: hsl(40 9% 93.5%);
+  --muted-foreground: hsl(37 3% 43%);
+  /* Neutral interaction surface: a quiet step below the current light canvas.
+   * It deliberately keys off --background, not white --card, so hover remains
+   * visible on translucent menus and on plain pages alike. */
+  --surface-hover: hsl(40 9% 95%);
+  /* The counterpart to --surface-hover: a surface that reads as sunk BELOW the
+   * page. A translucent black for the same reason as the dark theme's, but much
+   * weaker: the same overlay costs far more contrast on a near-white ground,
+   * where it goes muddy rather than quiet. */
+  --surface-recessed: rgb(0 0 0 / 0.045);
+  /* Neutral hover/active surface — quiet warm-gray lift (Claude bg-200), a
+   * clear step (≥4L) below the 97% canvas. */
+  --accent: hsl(40 9% 93.5%);
+  --accent-foreground: hsl(60 1% 17%);
+  /* Destructive — Claude danger-100 hsl(0 61% 52%). Slightly deeper for a solid
+   * white-on-fill AA pass. */
+  --destructive: hsl(5 62% 48%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(40 6% 90%);
+  /* Input surface — faint warm fill so fields are visible on white cards. */
+  --input: hsl(40 6% 90%);
+  /* Divider — hairline between rows; slightly darker than --border so it reads
+   * on white cards. */
+  --divider: hsl(40 6% 92%);
+  /* Overlay — modal scrim / backdrop behind dialogs, drawers, sheets. A scrim
+   * is black in both themes; the token owns the opacity. */
+  --overlay: hsl(0 0% 0% / 0.4);
+  /* Focus ring — blue (system-accent feel), independent of the cyan brand. */
+  --ring: hsl(209 74% 52%);
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+
+  /* Code surface — used by markdown code fences, terminal blocks,
+   * any "this is code, not prose" panel. Single source of truth so
+   * the colour is consistent across MarkdownMessage / PrettyCode /
+   * embedded log views and doesn't drift per-component.
+   *
+   * Light: a soft warm-gray (~#f3f3f3) that sits visibly inside a
+   * white card without heavy contrast. Foreground stays near-black
+   * for body legibility. Border keeps the panel anchored.
+   * Inline code shares the same surface for chip-on-chip cohesion.
+   */
+  --code: hsl(30 14% 97%);
+  --code-foreground: hsl(60 1% 17%);
+  --code-border: hsl(40 6% 90%);
+  --code-inline: hsl(40 9% 93.5%);
+  --code-inline-foreground: hsl(5 62% 42%);
+  /* Sidebar Light Theme — warm off-white, same family as the page (Claude keeps
+   * rail and page in one tone). */
+  --sidebar-background: hsl(30 14% 97%);
+  --sidebar-foreground: hsl(60 1% 17%);
+  --sidebar-primary: hsl(209 74% 47%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  /* 90%, a clear (≥4L) step below the 96% rail — hover stays visible. See the
+     2026-08-03 note: the dark pair steps ~12 points, so light must step too. */
+  --sidebar-accent: hsl(40 7% 92%);
+  --sidebar-accent-foreground: hsl(60 1% 17%);
+  --sidebar-border: hsl(40 6% 90%);
+  --sidebar-ring: hsl(209 74% 52%);
+  /* ── Status surfaces ─────────────────────────────────────────────
+   * Each status has 4 tokens: icon/accent color, page background,
+   * readable foreground text, and border ring.
+   * Use bg-warning-background / text-warning-foreground / border-warning-border
+   * in components — never raw amber-* or green-* classes.
+   *
+   * `--{status}-foreground` is status TEXT on the tinted `*-background`
+   * (banners) — it is a colored tint, NOT a contrast color for the solid
+   * `*` fill. For text/icons sitting ON the solid fill (badges, pills,
+   * filled chips) use the `--on-{status}` tokens below instead.
+   * ─────────────────────────────────────────────────────────────── */
+
+  /* Warning — amber */
+  --warning: hsl(39 60% 51%);
+  --warning-background: hsl(52 70% 96%);
+  --warning-foreground: hsl(45 53% 26%);
+  --warning-border: hsl(46 66% 82%);
+  /* Success — green */
+  --success: hsl(147 30% 47%);
+  --success-background: hsl(147 20% 96%);
+  --success-foreground: hsl(147 33% 25%);
+  --success-border: hsl(147 22% 87%);
+  /* Destructive surface (separate from the filled button token) */
+  --destructive-background: hsl(0 55% 97%);
+  --destructive-border: hsl(5 70% 92%);
+  /* Info — blue-cyan (brand-adjacent) */
+  --info: hsl(209 74% 52%);
+  --info-background: hsl(209 80% 97%);
+  --info-foreground: hsl(209 50% 29%);
+  --info-border: hsl(209 75% 91%);
+
+  /* On-fill text/icon — readable color sitting ON the solid `*` fill
+   * (badges, unread pills, filled chips), distinct from the `*-foreground`
+   * banner tints above. The mid-lightness green/amber/blue/red fills all
+   * take a near-black ink (WhatsApp/Telegram pattern) for the best contrast.
+   *   on-success  vs --success (142 71% 45%) → 7.8:1 (AA)
+   *   on-warning  vs --warning (38 92% 50%)  → 8.4:1 (AA)
+   *   on-info     vs --info    (200 90% 40%) → 4.4:1 (AA-large / borderline AA)
+   *   on-destructive vs --destructive (0 84% 60%) → 4.7:1 (AA) */
+  --on-success: hsl(0 0% 9%);
+  --on-warning: hsl(0 0% 9%);
+  --on-info: hsl(0 0% 9%);
+  --on-destructive: hsl(0 0% 100%);
+  /* Surface gradient */
+  --surface-gradient: linear-gradient(to bottom, var(--background), color-mix(in oklab, var(--background) 80%, transparent));
+
+  /* Chart colors — chart-1 aligned with brand hue.
+   * Fully-wrapped hsl() like every other token (consume via `bg-chart-N` or
+   * `var(--chart-N)`, never `hsl(var(--chart-N))`). */
+  --chart-1: hsl(209 74% 52%);
+  --chart-2: hsl(147 30% 47%);
+  --chart-3: hsl(277 30% 55%);
+  --chart-4: hsl(31 65% 51%);
+  --chart-5: hsl(5 62% 59%);
+}

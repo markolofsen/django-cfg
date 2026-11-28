@@ -1,0 +1,173 @@
+/* Authoritative static preset: macos. */
+:root {
+  --background: hsl(240 17% 97%);
+  --foreground: hsl(0 0% 7%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 7%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 0% 7%);
+  /* Apple system-blue hue, lowered just enough for white small text (4.95:1). */
+  --primary: hsl(211 100% 44%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(240 12% 95%);
+  --secondary-foreground: hsl(0 0% 7%);
+  --muted: hsl(240 8% 91%);
+  /* Readable even when muted text sits on the muted fill itself (4.63:1). */
+  --muted-foreground: hsl(240 3% 41%);
+  /* 91%, not 96%: --background is 97%, so this was a one-point step. */
+  --accent: hsl(211 50% 91%);
+  --accent-foreground: hsl(211 100% 36%);
+  /* Keep white destructive labels AA-readable in the light theme (5.69:1). */
+  --destructive: hsl(2 80% 44%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --on-destructive: hsl(0 0% 100%);
+  --border: hsl(240 3% 78%);
+  --input: hsl(240 8% 93%);
+  --divider: hsl(240 4% 83%);
+  --ring: hsl(211 100% 50%);
+  --radius: 0.625rem;
+  --overlay: hsl(240 6% 10% / 0.32);
+  --sidebar-background: hsl(240 12% 94%);
+  --sidebar-foreground: hsl(0 0% 7%);
+  --sidebar-primary: hsl(211 100% 44%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  /* 88%, not 93% (2026-08-03). The sidebar sits on 94%, so a 93% hover was a
+     ONE-point step — invisible — while the dark pair (5% -> 16%) gets eleven.
+     Light mode was doing a quarter of the work of dark for the same
+     interaction. Measured against --sidebar-background, which is the surface a
+     rail hover actually lands on; the contrast rule below only ever compared
+     --muted with --background, so this pair passed every gate while looking
+     flat on screen. */
+  --sidebar-accent: hsl(211 50% 88%);
+  --sidebar-accent-foreground: hsl(211 100% 36%);
+  --sidebar-border: hsl(240 3% 82%);
+  --sidebar-ring: hsl(211 100% 50%);
+  --chart-1: hsl(211 100% 50%);
+  --chart-2: hsl(142 52% 40%);
+  --chart-3: hsl(262 60% 56%);
+  --chart-4: hsl(35 100% 48%);
+  --chart-5: hsl(2 100% 59%);
+  --warning: hsl(35 100% 48%);
+  --warning-background: hsl(35 100% 95%);
+  --warning-foreground: hsl(28 80% 30%);
+  --warning-border: hsl(35 90% 78%);
+  --success: hsl(142 71% 45%);
+  --success-background: hsl(142 60% 95%);
+  --success-foreground: hsl(142 60% 24%);
+  --success-border: hsl(142 55% 76%);
+  --destructive-background: hsl(2 100% 96%);
+  --destructive-border: hsl(2 90% 80%);
+  --info: hsl(211 100% 50%);
+  --info-background: hsl(211 100% 96%);
+  --info-foreground: hsl(211 80% 30%);
+  --info-border: hsl(211 90% 80%);
+  --font-sans: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, "Courier New", monospace;
+  --font-size-base: 0.8125rem;
+  --font-size-sm: 0.75rem;
+  --font-size-xs: 0.6875rem;
+  --font-size-lg: 0.9375rem;
+  --font-size-xl: 1.0625rem;
+  --line-height-base: 1.47;
+  --letter-spacing-base: -0.022em;
+  --radius-xs: calc(0.625rem - 6px);
+  --radius-sm: calc(0.625rem - 4px);
+  --radius-md: calc(0.625rem - 2px);
+  --radius-lg: 0.625rem;
+  --radius-xl: calc(0.625rem + 4px);
+  --radius-2xl: calc(0.625rem + 8px);
+  --radius-3xl: calc(0.625rem + 12px);
+  --radius-4xl: calc(0.625rem + 16px);
+}
+
+.dark {
+  --background: hsl(0 0% 10%);
+  --foreground: hsl(0 0% 97.6%);
+    /* Three points above --background, not seven. A resting surface is
+     separated by its BORDER; when the fill does that job the page reads as
+     stacked plates and a table looks like a sticker laid over it. Capped by
+     MAXIMUM_RESTING_SURFACE_GAP in check-preset-contrast.mjs. */
+  --card: hsl(0 0% 13%);
+  --card-foreground: hsl(0 0% 97.6%);
+  --popover: hsl(0 0% 18.8%);
+  --popover-foreground: hsl(0 0% 97.6%);
+  --primary: hsl(211 100% 58%);
+  /* Bright system blue needs dark ink for compact controls (5.59:1). */
+  --primary-foreground: hsl(0 0% 9%);
+  --secondary: hsl(0 0% 17%);
+  --secondary-foreground: hsl(0 0% 88%);
+  --muted: hsl(0 0% 8%);
+  /* Clears AA on background, card, popover, muted, and accent surfaces. */
+  --muted-foreground: hsl(0 0% 62%);
+  --accent: hsl(211 25% 19%);
+  --accent-foreground: hsl(211 100% 72%);
+  --destructive: hsl(3 100% 62%);
+  /* Both ink tokens must flip with the fill. The dark --destructive is far
+     brighter than the light one, so the white label this preset sets above
+     drops to 3.38:1 on it; dark ink is 5.31:1. --destructive-foreground was
+     flipped here from the start and --on-destructive was not, which left
+     `text-on-destructive` inheriting white from the light block — unreadable,
+     and invisible to check-preset-contrast.mjs, which does not pair them. */
+  --destructive-foreground: hsl(0 0% 9%);
+  --on-destructive: hsl(0 0% 9%);
+    /* A hairline divides, it does not glow. Ten points over --background is a
+     definite edge at one device pixel without becoming the loudest thing on
+     the page — which it was once the fills stopped separating surfaces.
+     Capped by MAXIMUM_BORDER_GAP in check-preset-contrast.mjs. */
+  --border: hsl(0 0% 18%);
+  --input: hsl(0 0% 20%);
+    /* 0.10, not 0.18. A divider separates rows INSIDE a panel, so it must be
+     weaker than that panel's own --border — otherwise the five lines between
+     rows shout as loudly as the one frame around them, which is what was
+     left of "кондово" after the fills were calmed. Over a 12% card this
+     lands at 15.4% (step 3.4) against the border's 18% (step 6.0): a clear
+     hierarchy, frame first. */
+  --divider: hsl(0 0% 100% / 0.08);
+  --ring: hsl(211 100% 58%);
+  --radius: 0.625rem;
+  --overlay: hsl(0 0% 0% / 0.55);
+  --sidebar-background: hsl(0 0% 12.5%);
+  --sidebar-foreground: hsl(0 0% 97.6%);
+  --sidebar-primary: hsl(211 100% 58%);
+  --sidebar-primary-foreground: hsl(0 0% 9%);
+  --sidebar-accent: hsl(0 0% 19%);
+  --sidebar-accent-foreground: hsl(0 0% 97.6%);
+  --sidebar-border: hsl(0 0% 18%);
+  --sidebar-ring: hsl(211 100% 58%);
+  --chart-1: hsl(211 100% 58%);
+  --chart-2: hsl(142 52% 50%);
+  --chart-3: hsl(262 60% 65%);
+  --chart-4: hsl(35 100% 56%);
+  --chart-5: hsl(3 100% 62%);
+  --warning: hsl(35 100% 56%);
+  --warning-background: hsl(35 70% 10%);
+  --warning-foreground: hsl(35 95% 70%);
+  --warning-border: hsl(35 50% 26%);
+  --success: hsl(142 60% 50%);
+  --success-background: hsl(142 50% 9%);
+  --success-foreground: hsl(142 65% 68%);
+  --success-border: hsl(142 40% 24%);
+  --destructive-background: hsl(3 70% 11%);
+  --destructive-border: hsl(3 55% 30%);
+  --info: hsl(211 100% 58%);
+  --info-background: hsl(211 70% 11%);
+  --info-foreground: hsl(211 90% 72%);
+  --info-border: hsl(211 50% 30%);
+  --font-sans: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, "Courier New", monospace;
+  --font-size-base: 0.8125rem;
+  --font-size-sm: 0.75rem;
+  --font-size-xs: 0.6875rem;
+  --font-size-lg: 0.9375rem;
+  --font-size-xl: 1.0625rem;
+  --line-height-base: 1.47;
+  --letter-spacing-base: -0.022em;
+  --radius-xs: calc(0.625rem - 6px);
+  --radius-sm: calc(0.625rem - 4px);
+  --radius-md: calc(0.625rem - 2px);
+  --radius-lg: 0.625rem;
+  --radius-xl: calc(0.625rem + 4px);
+  --radius-2xl: calc(0.625rem + 8px);
+  --radius-3xl: calc(0.625rem + 12px);
+  --radius-4xl: calc(0.625rem + 16px);
+}

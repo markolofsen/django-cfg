@@ -1,0 +1,106 @@
+/* ── Brand logo in navbar ── */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1875rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+
+  img {
+    height: 1.5rem;
+    width: auto;
+  }
+}
+
+.brand-logo__mark {
+  flex-shrink: 0;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 0.375rem;
+  object-fit: contain;
+}
+
+/* ── Navbar chrome ──
+   Translucent surface + blur so the bar reads as a distinct layer over the
+   content (Vercel/Linear-style). */
+.nextra-navbar nav {
+  backdrop-filter: saturate(180%) blur(12px);
+}
+
+/* ── Page tabs ──
+   Nextra lays the tabs out in a `flex gap-4` row of bare <a>. Turn each into a
+   calm pill: comfortable padding, a soft hover surface, and a clear active
+   state. Scoped to the tab row so the logo and the Get-started CTA are
+   untouched. */
+.nextra-navbar .x\:gap-4 {
+  gap: 0.25rem;
+}
+
+.nextra-navbar .x\:gap-4 > a {
+  padding: 0.4375rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.nextra-navbar .x\:gap-4 > a:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+.dark .nextra-navbar .x\:gap-4 > a:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Active tab (Nextra sets aria-current on the matching page). */
+.nextra-navbar .x\:gap-4 > a[aria-current] {
+  font-weight: 600;
+  color: #18181b;
+  background-color: rgba(0, 0, 0, 0.06);
+}
+.dark .nextra-navbar .x\:gap-4 > a[aria-current] {
+  color: #fafafa;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Breathing room between the tab row and the Get-started CTA. */
+.navbar-login {
+  margin-left: 0.5rem;
+}
+
+/* ── Get started / cabinet CTA in navbar ── */
+.navbar-login {
+  display: inline-flex;
+  align-items: center;
+  height: 2.25rem;
+  padding: 0 1.0625rem;
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: #fff;
+  background-color: #2563eb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(37, 99, 235, 0.25);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+}
+
+.navbar-login:hover {
+  background-color: #1d4ed8;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), 0 6px 18px rgba(37, 99, 235, 0.35);
+}
+
+.navbar-login:active {
+  transform: translateY(1px);
+}
+
+/* ── Mobile: keep the CTA, just make it compact with a clear gap ── */
+@media (max-width: 767px) {
+  .navbar-login {
+    height: 2rem;
+    padding: 0 0.75rem;
+    margin-right: 0.625rem;
+    font-size: 0.8125rem;
+  }
+}

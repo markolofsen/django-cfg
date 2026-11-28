@@ -1,0 +1,60 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Welcome" />
+
+# djangocfg frontend
+
+This Storybook is the canonical component workbench and documentation surface
+for the frontend packages that expose a visual or browser-facing public API.
+Use the sidebar to move from a package overview to focused component states.
+
+## Sections
+
+### UI packages (interactive stories)
+
+- **UI Core** — Radix-based primitives, Tailwind v4 tokens, hooks, dialog service.
+- **UI Tools** — Heavy, lazy-loadable widgets: Chat, SpeechRecognition, AudioPlayer,
+  Gallery, JsonForm, Mermaid, etc.
+- **Layouts** — Full app shells: `BaseApp`, `PublicLayout`, `PrivateLayout`,
+  `AuthLayout`.
+- **Payments** — Checkout composition, payment status, and history surfaces.
+- **Devtools** — Browser-side diagnostics and developer panels.
+
+### SDK packages (MDX-only)
+
+These ship no UI; their sidebar entries are copy-paste cheatsheets.
+
+- **API Client** — Orval-generated TypeScript client with React Query v5 hooks,
+  query keys, Zod, and MSW.
+- **i18n** — Translation runtime and locale registry.
+- **Next.js Utils** — Sitemap, OG-image, and contact-form handlers.
+
+## How it works
+
+- **Theme toggle** lives in the toolbar. It flips `<html class="dark">` and
+  every token-driven utility (`bg-card`, `text-foreground`, …) follows.
+- **A11y panel** runs axe-core on demand. Curated `contract` stories are the
+  first set promoted to blocking browser accessibility checks.
+- **Controls / Actions / Backgrounds / Viewport** are folded into Storybook
+  core in 10.x — no extra addons.
+
+## Adding a new story
+
+```tsx
+// stories/ui-core/forms/Button.stories.tsx
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { Button } from '@djangocfg/ui-core/components';
+
+const meta = {
+  title: 'UI Core/Forms/Button',
+  component: Button,
+  tags: ['autodocs'],
+} satisfies Meta<typeof Button>;
+export default meta;
+
+export const Primary: StoryObj<typeof meta> = {
+  args: { children: 'Click me' },
+};
+```
+
+See `@plans/plan-storybook-executable-library/PLAN.md` for the current roadmap.

@@ -1,0 +1,56 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="i18n/Overview" />
+
+# @djangocfg/i18n
+
+Lightweight i18n runtime used by every DjangoCFG package. Locale-aware
+formatters, message catalogues with placeholder interpolation, and a
+React provider that exposes the current locale via context.
+
+## Install
+
+```bash
+pnpm add @djangocfg/i18n
+```
+
+## Quick start
+
+```tsx
+import { I18nProvider, useT, useLocale } from '@djangocfg/i18n';
+
+const messages = {
+  en: { greeting: 'Hello, {name}!' },
+  ru: { greeting: 'Привет, {name}!' },
+  ko: { greeting: '안녕하세요, {name}!' },
+};
+
+function Greeting({ name }: { name: string }) {
+  const t = useT();
+  return <p>{t('greeting', { name })}</p>;
+}
+
+export function App() {
+  return (
+    <I18nProvider locale="ru" messages={messages.ru}>
+      <Greeting name="Мир" />
+    </I18nProvider>
+  );
+}
+```
+
+## Locale hook
+
+```tsx
+import { useLocale, useLocaleOptional } from '@djangocfg/i18n';
+
+const locale = useLocale();                  // throws if no provider
+const maybeLocale = useLocaleOptional();     // null if no provider
+```
+
+The `Optional` variant exists so packages like `@djangocfg/ui-tools/SpeechRecognition`
+can fall back to `navigator.language` when i18n is absent.
+
+## Source
+
+`packages/i18n/`

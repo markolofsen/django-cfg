@@ -1,0 +1,53 @@
+/**
+ * The sliding indicator behind a segmented tab list.
+ *
+ * One pill that travels to the selected tab, rather than a highlight that
+ * disappears from one tab and reappears on the next. The movement is what
+ * carries the meaning: these options are mutually exclusive, and the pill is
+ * the single thing being moved between them.
+ *
+ * Position and size arrive as `--tab-indicator-x` / `--tab-indicator-w`, which
+ * the list measures from the active trigger — tabs here are labelled with real
+ * words and are never equal width, so a fixed `--step` (the usual CSS-only
+ * trick) would drift the moment a label changed. Only `transform` and `width`
+ * animate, so the pill stays on the compositor.
+ *
+ * The indicator is a pseudo-element on the LIST rather than a background on the
+ * trigger: a background cannot animate between two different elements, which is
+ * exactly why the default variant popped instead of sliding.
+ */
+.tabs-sliding {
+  position: relative;
+  isolation: isolate;
+}
+
+.tabs-sliding::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: var(--tab-indicator-inset, 0.25rem);
+  bottom: var(--tab-indicator-inset, 0.25rem);
+  left: 0;
+  width: var(--tab-indicator-w, 0);
+  transform: translate3d(var(--tab-indicator-x, 0), 0, 0);
+  border-radius: var(--tab-indicator-radius, var(--radius-sm));
+  background: var(--tab-indicator-bg, var(--background));
+  box-shadow: var(--tab-indicator-shadow, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1));
+  transition:
+    transform 260ms cubic-bezier(0.32, 0.72, 0, 1),
+    width 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Before the first measurement the pill has no width, so there is nothing to
+   see travelling in from the left edge on mount. */
+.tabs-sliding[data-tab-indicator="idle"]::before {
+  opacity: 0;
+}
+
+/* A reader who has asked for less motion gets the destination, not the
+   journey — the pill still marks the right tab, it simply stops sliding. */
+@media (prefers-reduced-motion: reduce) {
+  .tabs-sliding::before {
+    transition: none;
+  }
+}

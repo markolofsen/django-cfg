@@ -1,0 +1,78 @@
+{
+  "name": "@djangocfg/widget-diagram",
+  "version": "0.1.28",
+  "description": "Mermaid diagrams: typed builders that write the source, and a full-parser renderer that draws it",
+  "keywords": [
+    "mermaid",
+    "diagram",
+    "flowchart",
+    "sequence-diagram",
+    "builder",
+    "typescript"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "widgets/diagram"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": {
+      "types": "./src/index.tsx",
+      "default": "./src/index.tsx"
+    },
+    "./builders": {
+      "types": "./src/builders/index.ts",
+      "default": "./src/builders/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@djangocfg/ui-core": "workspace:*",
+    "lucide-react": "^1.68.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@djangocfg/typescript-config": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "@storybook/react-vite": "^10.6.5",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "lucide-react": "1.68.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "storybook": "^10.6.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@djangocfg/widget-kit": "workspace:*",
+    "mermaid": "^12.3.0",
+    "react-zoom-pan-pinch": "^3.7.0"
+  }
+}

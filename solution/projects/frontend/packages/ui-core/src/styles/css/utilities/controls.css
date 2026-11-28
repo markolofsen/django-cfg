@@ -1,0 +1,17 @@
+/**
+ * Control utilities
+ *
+ * Shared corner radius for interactive controls (nav items, inputs, search,
+ * value chips) via the `--radius-control` token, so they round consistently
+ * and stay themeable per preset. Plain CSS class — compiles regardless of the
+ * Tailwind content scan.
+ */
+
+.rounded-control {
+  border-radius: var(--radius-control);
+}
+
+/* Static package utility: do not depend on a consumer Tailwind source scan. */
+.surface-hover:hover {
+  background-color: var(--surface-hover);
+}

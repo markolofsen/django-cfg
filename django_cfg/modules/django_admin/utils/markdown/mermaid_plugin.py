@@ -5,6 +5,7 @@ Renders ```mermaid code blocks as interactive diagrams using Mermaid.js.
 """
 
 import re
+from html import escape
 from typing import Any, Dict
 
 
@@ -40,10 +41,11 @@ def mermaid_plugin(md):
         """
         # Generate unique ID for this diagram
         import hashlib
-        diagram_id = f"mermaid-{hashlib.md5(text.encode()).hexdigest()[:8]}"
+        # Presentation ID only; not a security boundary.
+        diagram_id = f"mermaid-{hashlib.md5(text.encode(), usedforsecurity=False).hexdigest()[:8]}"
 
         # Escape HTML special characters but preserve Mermaid syntax
-        escaped_text = text.strip()
+        escaped_text = escape(text.strip(), quote=False)
 
         # Return HTML container with Mermaid code
         return f'''<div class="mermaid-container">
@@ -183,7 +185,7 @@ def get_mermaid_script(theme: str = "default") -> str:
     mermaid.initialize({
         startOnLoad: false,
         theme: 'base',
-        securityLevel: 'loose',
+        securityLevel: 'strict',
         fontFamily: 'ui-sans-serif, system-ui, sans-serif',
         themeVariables: isDarkMode ? {
             // Dark mode - explicit colors for visibility
@@ -237,7 +239,10 @@ def get_mermaid_script(theme: str = "default") -> str:
             } catch (err) {
                 console.error('Mermaid render error:', err);
                 elements.forEach(el => {
-                    el.innerHTML = '<div style="color: #ef4444; padding: 1rem; border: 1px solid #ef4444; border-radius: 0.5rem;">Mermaid Error: ' + err.message + '</div>';
+                    const message = document.createElement('div');
+                    message.style.cssText = 'color: #ef4444; padding: 1rem; border: 1px solid #ef4444; border-radius: 0.5rem;';
+                    message.textContent = 'Mermaid Error: ' + String(err?.message ?? err);
+                    el.replaceChildren(message);
                 });
             }
         }

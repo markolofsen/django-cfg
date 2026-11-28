@@ -1,0 +1,10 @@
+/**
+ * Tailwind v4 source detection.
+ *
+ * The components here are styled with utilities, and a host's Tailwind build
+ * does not scan `node_modules` by default — without this import the surfaces
+ * render unstyled. Import once, anywhere in the host's stylesheet:
+ *
+ *     @import "@djangocfg/widget-data/styles";
+ */
+@source "../**/*.{ts,tsx}";

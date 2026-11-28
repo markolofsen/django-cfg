@@ -1,0 +1,57 @@
+/* ── Mermaid diagrams — dark-theme readability ──
+   Mermaid renders client-side (Nextra <Mermaid>) and injects inline theme
+   styles. The component already switches to mermaid's built-in 'dark' theme
+   when <html> has .dark, so this is only a contrast safety net: it forces
+   readable light text and a muted node fill on the dark surface so diagrams
+   never fall back to garish pale fills with near-invisible dark text. Scoped
+   under .dark so light mode keeps mermaid's own palette untouched. */
+.dark .mermaid svg .node rect,
+.dark .mermaid svg .node circle,
+.dark .mermaid svg .node ellipse,
+.dark .mermaid svg .node polygon,
+.dark .mermaid svg .node path,
+.dark .mermaid svg .cluster rect,
+.dark .mermaid svg rect.actor,
+.dark .mermaid svg .label-container {
+  fill: hsl(217 33% 20%) !important;
+  stroke: hsl(158 64% 52% / 0.55) !important;
+}
+
+.dark .mermaid svg text,
+.dark .mermaid svg .nodeLabel,
+.dark .mermaid svg .edgeLabel,
+.dark .mermaid svg .label,
+.dark .mermaid svg .messageText,
+.dark .mermaid svg .loopText,
+.dark .mermaid svg .noteText,
+.dark .mermaid svg span {
+  fill: hsl(0 0% 90%) !important;
+  color: hsl(0 0% 90%) !important;
+}
+
+/* edgeLabel chips sit on a tinted backdrop in the default theme — clear it */
+.dark .mermaid svg .edgeLabel,
+.dark .mermaid svg .edgeLabel rect {
+  background-color: hsl(222 47% 11%) !important;
+  fill: hsl(222 47% 11%) !important;
+}
+.dark .mermaid svg .edgeLabel .edgeLabel {
+  color: hsl(0 0% 90%) !important;
+}
+
+/* Edges / arrows / lifelines: visible on dark */
+.dark .mermaid svg .edgePath .path,
+.dark .mermaid svg .flowchart-link,
+.dark .mermaid svg line,
+.dark .mermaid svg .messageLine0,
+.dark .mermaid svg .messageLine1 {
+  stroke: hsl(0 0% 60%) !important;
+}
+.dark .mermaid svg marker path,
+.dark .mermaid svg .arrowheadPath {
+  fill: hsl(0 0% 60%) !important;
+  stroke: hsl(0 0% 60%) !important;
+}
+.dark .mermaid svg .actor-line {
+  stroke: hsl(0 0% 45%) !important;
+}

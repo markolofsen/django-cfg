@@ -1,0 +1,74 @@
+/* Authoritative static preset: soft. */
+:root {
+  --background: hsl(0 0% 98%);
+  --foreground: hsl(240 6% 10%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(240 6% 10%);
+  --muted: hsl(240 5% 96%);
+  --muted-foreground: hsl(240 4% 46%);
+  --accent: hsl(240 5% 94%);
+  --accent-foreground: hsl(240 6% 10%);
+  --border: hsl(240 5% 91%);
+  --input: hsl(240 5% 91%);
+  --divider: hsl(240 5% 93%);
+  --radius: 1rem;
+  --sidebar-background: hsl(0 0% 99%);
+  --sidebar-accent: hsl(240 5% 94%);
+  --sidebar-border: hsl(240 5% 91%);
+  --radius-xs: calc(1rem - 6px);
+  --radius-sm: calc(1rem - 4px);
+  --radius-md: calc(1rem - 2px);
+  --radius-lg: 1rem;
+  --radius-xl: calc(1rem + 4px);
+  --radius-2xl: calc(1rem + 8px);
+  --radius-3xl: calc(1rem + 12px);
+  --radius-4xl: calc(1rem + 16px);
+  /* Type scale. Lives in `:root` only — a size is not a colour and does not
+     change with the theme; `macos`/`windows` duplicate it into `.dark`, which
+     is two places to edit for one value.
+     Without these a preset silently inherits base.css (14px body / 13px
+     `text-sm`) while `macos` renders 13/12, so the same component measured a
+     pixel apart depending on which preset an app loaded. */
+  --font-size-base: 0.8125rem;
+  --font-size-sm: 0.75rem;
+  --font-size-xs: 0.6875rem;
+  --font-size-lg: 0.9375rem;
+  --font-size-xl: 1.0625rem;
+
+}
+
+.dark {
+  --background: hsl(240 6% 8%);
+  --foreground: hsl(0 0% 96%);
+  --card: hsl(240 5% 12%);
+  --card-foreground: hsl(0 0% 96%);
+  --muted: hsl(240 4% 16%);
+  --muted-foreground: hsl(240 5% 64%);
+  --accent: hsl(240 5% 16%);
+  --accent-foreground: hsl(0 0% 96%);
+    /* A hairline divides, it does not glow. Ten points over --background is a
+     definite edge at one device pixel without becoming the loudest thing on
+     the page — which it was once the fills stopped separating surfaces.
+     Capped by MAXIMUM_BORDER_GAP in check-preset-contrast.mjs. */
+  --border: hsl(240 5% 18%);
+  --input: hsl(240 5% 20%);
+    /* 0.10, not 0.18. A divider separates rows INSIDE a panel, so it must be
+     weaker than that panel's own --border — otherwise the five lines between
+     rows shout as loudly as the one frame around them, which is what was
+     left of "кондово" after the fills were calmed. Over a 12% card this
+     lands at 15.4% (step 3.4) against the border's 18% (step 6.0): a clear
+     hierarchy, frame first. */
+  --divider: hsl(240 5% 48% / 0.10);
+  --radius: 1rem;
+  --sidebar-background: hsl(240 6% 6%);
+  --sidebar-accent: hsl(240 5% 14%);
+  --sidebar-border: hsl(240 5% 20%);
+  --radius-xs: calc(1rem - 6px);
+  --radius-sm: calc(1rem - 4px);
+  --radius-md: calc(1rem - 2px);
+  --radius-lg: 1rem;
+  --radius-xl: calc(1rem + 4px);
+  --radius-2xl: calc(1rem + 8px);
+  --radius-3xl: calc(1rem + 12px);
+  --radius-4xl: calc(1rem + 16px);
+}

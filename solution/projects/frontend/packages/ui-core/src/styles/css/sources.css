@@ -1,0 +1,10 @@
+/**
+ * Tailwind v4 Source Detection for UI-Core Package
+ *
+ * @source directive tells Tailwind v4 where to scan for utility classes.
+ * In monorepo, this is critical because automatic detection may not work.
+ *
+ * Scans all TypeScript files recursively from package root.
+ */
+/* This file lives in src/styles/css; ../../ reaches the package src root. */
+@source "../../**/*.{ts,tsx}";

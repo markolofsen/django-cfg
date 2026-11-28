@@ -1,0 +1,105 @@
+/**
+ * Provider sign-in (components/oauth). The buttons themselves are theme-token
+ * utilities in `OAuthProviderButton`; this file holds only what a utility
+ * cannot: the column, the room held while the provider list loads, and the
+ * developer hint. Sizes are tokens so the reserve and the buttons agree.
+ */
+
+:root {
+  /* A provider button is at least this tall (above the 44px touch minimum). */
+  --auth-oauth-height: 3rem;
+  --auth-oauth-gap: 0.75rem;
+}
+
+.auth-oauth {
+  display: flex;
+  flex-direction: column;
+  gap: var(--auth-oauth-gap);
+}
+
+/* Holds the room of two buttons, the gap and the divider while the server's
+   provider list loads, so the email field does not jump when it arrives. */
+.auth-oauth-reserve {
+  display: flex;
+  flex-direction: column;
+  gap: var(--auth-oauth-gap);
+  /* Two buttons plus the divider's room below them. */
+  padding-bottom: calc(var(--auth-gap) + 1rem);
+}
+
+/* A quiet placeholder of one provider button, so the held room reads as "loading", not as a hole. */
+.auth-oauth-skeleton {
+  display: block;
+  height: var(--auth-oauth-height);
+  border-radius: var(--auth-radius, 0.75rem);
+  background: color-mix(in srgb, var(--auth-muted, currentColor) 12%, transparent);
+  animation: auth-oauth-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes auth-oauth-pulse {
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-oauth-skeleton { animation: none; }
+}
+
+/* The line for whoever deploys the site, under a notice about configuration. */
+.auth-oauth-hint {
+  margin-top: 0.5rem;
+  color: var(--auth-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* The failure notice: icon | text | close, one layout for every code. Radius,
+   border and padding follow the provider button; colours are theme tokens. */
+.auth-oauth-notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 0.75rem;
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in oklab, var(--muted) 50%, transparent);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+/* The icon box is one text line tall, so it centres on the first line. */
+.auth-oauth-notice-icon {
+  box-sizing: content-box;
+  width: 1rem;
+  height: 1rem;
+  padding-block: 0.125rem;
+  color: var(--auth-muted);
+}
+
+.auth-oauth-notice-title {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.auth-oauth-notice-body {
+  color: var(--auth-muted);
+}
+
+.auth-oauth-notice-title + .auth-oauth-notice-body {
+  margin-top: 0.125rem;
+}
+
+/* 32px hit area, centred on the first text line (20px) via the negative margin. */
+.auth-oauth-notice-close {
+  width: 2rem;
+  height: 2rem;
+  margin-block: -0.375rem;
+  color: var(--auth-muted);
+}
+
+/* Provider button label: 14px at any preset. The preset's `text-sm` is 13px (Notion) and read as fine print on the
+   48px button; the form's own fields are 15px. */
+.auth-oauth-button {
+  font-size: 0.875rem;
+}

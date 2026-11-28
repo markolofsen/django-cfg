@@ -1,0 +1,48 @@
+/*
+ * Global styles for @djangocfg/demo
+ */
+
+/* 1. ui-core golden path — Tailwind + tokens + base + utilities in the correct
+ *    cascade layers (replaces the removed @djangocfg/ui-nextjs/styles entry). */
+@import "@djangocfg/ui-core/styles/full";
+
+/* 2. Layout primitives */
+@import "@djangocfg/layouts/styles";
+
+/* 3. Widget class detection.
+ *
+ * Widgets ship SOURCE, so Tailwind has to be told to scan them or every class
+ * only they use is purged — no error, just missing styling. This replaces
+ * `@import "@djangocfg/ui-tools/styles"`, which was exactly one `@source`
+ * glob over that package and nothing else.
+ *
+ * One glob rather than sixteen imports: a new widget is covered without
+ * touching this file, and only `chat` and `data` ship a `./styles` entry
+ * anyway — the other fourteen never had one, so the classes they own were
+ * already relying on ui-tools' glob to be found. */
+@source "../../../../widgets/*/src/**/*.{ts,tsx}";
+
+/* Widget stylesheets that carry real rules, not just source detection. */
+@import "@djangocfg/widget-chat/styles";
+@import "@djangocfg/widget-data/styles";
+
+/* Devtools panel (debug button) class scanning */
+@import "@djangocfg/devtools/styles";
+
+/* Realtime debug panel (RealtimePanel on /realtime) class scanning */
+@import "@djangocfg/realtime/styles";
+
+/* 4. Locally bundled variable font: no external compilation-time fetch.
+ * Both typography roles use the same family; utility classes choose weight. */
+:root {
+  --font-plus-jakarta-sans: 'Plus Jakarta Sans Variable';
+  /* ui-core defines these runtime tokens outside Tailwind's theme layer.
+   * Override them here so the bundled family wins the normal cascade. */
+  --font-sans: var(--font-plus-jakarta-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-plus-jakarta-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme inline {
+  --font-sans: var(--font-plus-jakarta-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-plus-jakarta-sans), ui-sans-serif, system-ui, sans-serif;
+}

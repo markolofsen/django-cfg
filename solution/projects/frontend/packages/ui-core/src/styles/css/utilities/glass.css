@@ -1,0 +1,68 @@
+/**
+ * Glass surface utilities — OS-native translucency effects.
+ * Apply to panels/sidebars that sit over a blurred background.
+ * Requires `isolation: isolate` and a background image/color on a parent.
+ */
+
+/**
+ * macOS Vibrancy / Liquid Glass — strong blur + high saturation over a
+ * 72% translucent base. The blur+saturate combo is the Apple-standard
+ * recipe (Sequoia / Tahoe 26 use the same values). 72% opacity keeps
+ * enough background bleed-through to read content underneath.
+ *
+ * Use on: sidebars, popovers, sheet headers, command palette overlays.
+ * Requires: container parent must be non-transparent (otherwise nothing
+ * to blur). Avoid stacking multiple `.glass-macos` — blur compounds.
+ */
+.glass-macos {
+  backdrop-filter: blur(20px) saturate(180%);
+  background-color: color-mix(in oklab, var(--background) 72%, transparent);
+}
+
+/**
+ * Windows 11 Mica / Acrylic — wider/softer blur over an 85% base.
+ * Mica = wallpaper-tinted material; Acrylic = stronger blur on top.
+ * This recipe targets Acrylic (the closer-to-Apple flavour).
+ */
+.glass-win11 {
+  backdrop-filter: blur(60px) saturate(125%);
+  background-color: color-mix(in oklab, var(--background) 85%, transparent);
+}
+
+/**
+ * Liquid Glass variants — Apple's macOS 26 / iOS 26 design language.
+ * Thinner blur, brighter base, subtle inner highlight via box-shadow.
+ * Designed for floating chrome (Dock, navbar, FAB chips).
+ */
+.glass-liquid {
+  backdrop-filter: blur(12px) saturate(180%);
+  background-color: color-mix(in oklab, var(--card) 60%, transparent);
+  border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  box-shadow:
+    0 8px 32px color-mix(in oklab, var(--foreground) 12%, transparent),
+    inset 0 1px 0 color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+/**
+ * Lighter glass for headers / status bars where strong blur would be
+ * too heavy. 8px blur is the macOS NavBar / TitleBar default.
+ */
+.glass-header {
+  backdrop-filter: blur(8px) saturate(160%);
+  background-color: color-mix(in oklab, var(--background) 80%, transparent);
+}
+
+/**
+ * PublicLayout desktop navigation dropdown.
+ * Keep this as a package utility instead of relying on a consumer's Tailwind
+ * source scan: the layout is distributed code, while the dropdown must still
+ * frost whatever page is underneath it.
+ */
+.nav-dropdown-glass {
+  backdrop-filter: blur(var(--overlay-blur, 5px)) saturate(150%);
+  background-color: color-mix(in oklab, var(--background) 55%, transparent);
+}
+
+.dark .nav-dropdown-glass {
+  background-color: color-mix(in oklab, var(--card) 55%, transparent);
+}

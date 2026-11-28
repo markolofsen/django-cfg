@@ -1,0 +1,76 @@
+{
+  "name": "@djangocfg/devtools",
+  "version": "2.1.667",
+  "description": "Frontend devtools for django-cfg apps: error/console capture with backend ingest, plus a floating debug panel. One package, one event stream.",
+  "keywords": [
+    "django",
+    "devtools",
+    "debug-panel",
+    "error-tracking",
+    "monitoring",
+    "react",
+    "typescript"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "packages/devtools"
+  },
+  "bugs": {
+    "url": "https://github.com/markolofsen/django-cfg/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "require": "./src/index.ts"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "import": "./src/server.ts",
+      "require": "./src/server.ts"
+    },
+    "./styles": "./src/styles.css"
+  },
+  "files": [
+    "src",
+    "!src/**/*.stories.tsx",
+    "README.md"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "lucide-react": ">=0.400.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/eslint-config": "workspace:*",
+    "@djangocfg/typescript-config": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "@storybook/react-vite": "^10.6.5",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "eslint": "^10.14.0",
+    "lucide-react": "^1.68.0",
+    "storybook": "^10.6.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0",
+    "zustand": "^5.0.16"
+  }
+}

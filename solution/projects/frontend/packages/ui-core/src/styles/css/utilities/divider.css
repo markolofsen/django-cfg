@@ -1,0 +1,23 @@
+/**
+ * Divider utilities
+ *
+ * Hairline separators that use the dedicated `--divider` token (lighter than
+ * `--border` on elevated surfaces, so rows inside cards/dialogs stay visible).
+ *
+ * Plain CSS classes — NOT JIT-scanned Tailwind utilities — so they compile
+ * regardless of which package's source files the Tailwind content scan covers.
+ * Use these for settings rows, list items, and any inset divider.
+ */
+
+.divider-b {
+  border-bottom: 1px solid var(--divider);
+}
+
+.divider-t {
+  border-top: 1px solid var(--divider);
+}
+
+/* Suppress the divider on the last child in a list of `.divider-b` rows. */
+.divider-b:last-child {
+  border-bottom: 0;
+}

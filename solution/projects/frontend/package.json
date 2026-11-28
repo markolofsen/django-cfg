@@ -1,32 +1,54 @@
 {
-  "name": "djangocfg",
+  "name": "unrealon-web",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
     "apps/*",
+    "widgets/*",
     "packages/*"
   ],
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
-    "lint": "turbo lint",
-    "type-check": "turbo type-check",
+    "lint": "node scripts/check-widget-direction.mjs && node scripts/check-tailwind-var-syntax.mjs && turbo lint",
+    "check:widget-direction": "node scripts/check-widget-direction.mjs",
+    "check:tailwind-var-syntax": "node scripts/check-tailwind-var-syntax.mjs",
+    "check": "turbo check check-types",
+    "test": "turbo test",
+    "test:publish": "node --test scripts/publish/lib/*.test.mjs",
+    "test:storybook": "pnpm --filter @djangocfg/storybook test",
     "clean": "turbo clean && rm -rf node_modules",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
-    "prettier": "^3.9.5",
-    "turbo": "^2.10.4",
+    "@faker-js/faker": "10.6.0",
+    "@swc/wasm": "^1.16.21",
+    "orval": "8.48.0",
+    "prettier": "^3.9.10",
+    "turbo": "^2.11.10",
     "typescript": "^5.9.3"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.18.0"
   },
   "packageManager": "pnpm@9.15.4",
   "pnpm": {
     "overrides": {
-      "react": "19.2.7",
-      "react-dom": "19.2.7"
+      "react": "19.3.1",
+      "react-dom": "19.3.1",
+      "@types/react": "19.3.0",
+      "@types/react-dom": "19.3.0",
+      "csstype": "3.1.3",
+      "nextra-theme-docs>zod": "4.3.6",
+      "nextra>zod": "4.3.6"
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "eslint-plugin-react>eslint": "10"
+      }
     }
+  },
+  "dependencies": {
+    "material-file-icons": "^2.4.0"
   }
 }

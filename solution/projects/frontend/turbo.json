@@ -1,34 +1,85 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "//": "globalEnv: NODE_ENV gates dev-only code paths (validation warnings in CircularProgress, the missing-provider warning in getDialog, the nodeEnv export in lib/env), so it changes what a build emits. Left out of the cache key, a production build can be served the development output. NEXT_PUBLIC_* is a wildcard on purpose: every such var in this workspace is substituted at BUILD time (API origin, STATIC_BUILD which moves basePath, keys), so each belongs in the key — and a named list would silently miss the next one added. CI gates build behaviour in config/utils/env.ts. — Typechecking answers to two names: packages/* and apps/* define `check`, widgets/* define `check-types`. Both are declared so a root run covers all 30 members. A task turbo declares but nobody defines runs zero tasks and still exits 0; `type-check` was exactly that (0 of 30 members defined it) and was removed rather than left looking like a gate.",
+  "globalEnv": ["NODE_ENV", "CI", "ANALYZE", "NEXT_PUBLIC_*"],
+  "globalPassThroughEnv": ["NEXT_PHASE"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**", "out/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": ["BUILD_STANDALONE"]
     },
-    "@djangocfg/api#build": {
+    "@djangocfg/eslint-config#build": {
       "dependsOn": [],
       "outputs": ["dist/**"]
     },
-    "@djangocfg/electron#build": {
-      "dependsOn": [],
-      "outputs": ["out/**", ".vite/**"],
-      "cache": false
+    "@djangocfg/typescript-config#build": {
+      "dependsOn": ["@djangocfg/eslint-config#build"],
+      "outputs": ["dist/**"]
     },
-    "@djangocfg/electron#dev": {
-      "dependsOn": [],
+    "@djangocfg/api#build": {
+      "dependsOn": ["@djangocfg/typescript-config#build"],
+      "outputs": ["dist/**"]
+    },
+    "@djangocfg/nextjs#build": {
+      "dependsOn": ["@djangocfg/api#build"],
+      "outputs": ["dist/**"]
+    },
+    "@djangocfg/ui-core#build": {
+      "dependsOn": ["^build"],
       "cache": false,
-      "persistent": true
+      "outputs": []
+    },
+    "@djangocfg/i18n#build": {
+      "dependsOn": ["@djangocfg/typescript-config#build"],
+      "outputs": ["dist/**"]
+    },
+    "@djangocfg/layouts#build": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "outputs": []
+    },
+    "@djangocfg/payments#build": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "outputs": []
     },
     "dev": {
       "cache": false,
       "persistent": true
     },
+    "@djangocfg/storybook#dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": [
+        "@djangocfg/ui-core#build",
+        "@djangocfg/layouts#build"
+      ]
+    },
+    "@djangocfg/storybook#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["storybook-static/**"]
+    },
     "lint": {
       "dependsOn": ["^lint"]
     },
-    "type-check": {
-      "dependsOn": ["^type-check"]
+    "check": {
+      "dependsOn": ["^check"]
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "@djangocfg/storybook#test": {
+      "dependsOn": [
+        "@djangocfg/ui-core#build",
+        "@djangocfg/layouts#build"
+      ],
+      "outputs": []
     },
     "clean": {
       "cache": false

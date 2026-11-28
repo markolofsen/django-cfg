@@ -173,7 +173,9 @@ def _manifest_path(top: Path, dst: Path) -> Path | None:
     base = Path(git_dir.strip())
     if not base.is_absolute():
         base = top / base
-    key = hashlib.sha1(dst.relative_to(top).as_posix().encode()).hexdigest()[:16]
+    # Keep the existing manifest filename; full output identity and SHA-256
+    # file contents are checked separately before a manifest is trusted.
+    key = hashlib.sha1(dst.relative_to(top).as_posix().encode(), usedforsecurity=False).hexdigest()[:16]
     return base / f"{key}.json"
 
 
@@ -185,7 +187,9 @@ def _load_manifest(top: Path, dst: Path) -> dict[str, str]:
         data = json.loads(mp.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
-    files = data.get("files") if isinstance(data, dict) else None
+    if not isinstance(data, dict) or data.get("output") != dst.relative_to(top).as_posix():
+        return {}
+    files = data.get("files")
     return files if isinstance(files, dict) else {}
 
 

@@ -1,0 +1,64 @@
+/*
+ * The widget's root is a plain block: the host supplies the column layout (`AssistantChat` adds `.assistant-chat`).
+ * The widget reserves its inset on the right only (room for a scrollbar) and leaves the left to the host, so one token is mirrored
+ * on the left, plus a bottom margin for the composer.
+ */
+.assistant-chat {
+  --chat-edge-r: 0.75rem;
+  padding-inline-start: 0.75rem;
+  padding-block-end: 0.75rem;
+}
+
+/* The transcript takes the free height and scrolls, so the composer sits at the bottom of the dock. */
+.assistant-chat > .chat-surface {
+  flex: 1 1 0;
+}
+
+/*
+ * Opening and closing the docked column (AssistantFrame). `--assistant-w` is a registered length so it can be transitioned: the page, the clip and the fixed elements of the
+ * host that read it all follow one curve. The curve is the iOS sheet spring's settle (fast start, long soft landing); keep the duration in step with MOTION_MS in AssistantFrame.
+ * Without @property support the width simply jumps, as before.
+ */
+@property --assistant-w {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+.assistant-frame {
+  --assistant-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --assistant-ms: 380ms;
+}
+
+.assistant-frame[data-moving="true"] {
+  transition: --assistant-w var(--assistant-ms) var(--assistant-ease);
+}
+
+.assistant-clip {
+  width: var(--assistant-w);
+}
+
+/* Only the content fades. The clip's own divider must be visible from the first frame of opening and until the last of closing. */
+.assistant-clip .assistant-column {
+  opacity: 0;
+}
+
+.assistant-clip[data-shown="true"] .assistant-column {
+  opacity: 1;
+}
+
+.assistant-frame[data-moving="true"] .assistant-column {
+  transition: opacity calc(var(--assistant-ms) * 0.7) ease-out;
+}
+
+/* Closing: the fade finishes early so the column does not look like it is dragged off. */
+.assistant-frame[data-moving="true"] .assistant-clip[data-shown="false"] .assistant-column {
+  transition-duration: calc(var(--assistant-ms) * 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-frame[data-moving="true"],
+  .assistant-frame[data-moving="true"] .assistant-column {
+    transition: none;
+  }
+}

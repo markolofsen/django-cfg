@@ -1,0 +1,61 @@
+/**
+ * A row of filter controls, and the pills in it.
+ *
+ * The row owns the height. Every control in it — a pill, a select, a sort menu —
+ * reads `--filter-control-h`, which is what stops a caller restyling somebody
+ * else's component to make one row line up. Both product frontends were doing
+ * exactly that: one overrode `SelectTrigger`, the other `Button size="sm"`.
+ */
+.filter-bar {
+  /* Named so a host can set the row's density once, here, rather than per
+     control. 38px is the height both frontends independently arrived at. */
+  --filter-control-h: 2.375rem;
+
+  container-type: inline-size;
+  container-name: filter-bar;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Horizontal scroll instead of wrapping, for a row that must stay one line. */
+.filter-bar[data-overflow="scroll"] {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.filter-bar[data-overflow="scroll"]::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-bar[data-overflow="scroll"] > * {
+  flex: none;
+}
+
+/**
+ * The label inside a pill, and the rule that hides it.
+ *
+ * It collapses when the ROW runs out of room, not when the window does: a
+ * toolbar in a narrow column on a wide monitor has the same problem as a phone,
+ * and a viewport media query answers neither. Hiding it is `display: none`
+ * rather than the `clip-path: inset(50%)` both projects used — that trick keeps
+ * the text in the accessibility tree while removing it from sight, which reads
+ * fine and measures wrong. The button carries an `aria-label` instead, so the
+ * name survives the collapse by design rather than by accident.
+ *
+ * A pill showing a CHOSEN value keeps its label: "SUV" is the answer, and an
+ * icon alone cannot say which question it answered.
+ */
+@container filter-bar (max-width: 32rem) {
+  .filter-pill:not([data-answered="true"]) .filter-pill-label {
+    display: none;
+  }
+
+  .filter-pill:not([data-answered="true"]) {
+    padding-inline: 0.625rem;
+  }
+}

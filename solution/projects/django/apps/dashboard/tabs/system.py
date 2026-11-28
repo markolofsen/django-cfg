@@ -14,11 +14,11 @@ def callback(request: HttpRequest) -> dict:
     staff = User.objects.filter(is_staff=True).count()
 
     # DB table count
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'"
-        )
-        table_count = cursor.fetchone()[0]
+    # Introspection works on every backend (information_schema exists only on some).
+    try:
+        table_count = len(connection.introspection.table_names())
+    except Exception:
+        table_count = None
 
     return {
         'django_version': django.get_version(),

@@ -15,4 +15,5 @@ def build_project_apps() -> list[str]:
         "apps.profiles",
         "apps.crypto",
         "apps.dashboard",
+        "apps.realtime_demo",
     ]

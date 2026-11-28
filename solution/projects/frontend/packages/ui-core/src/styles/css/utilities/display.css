@@ -1,0 +1,62 @@
+/**
+ * Display font utility — for marketing headlines and large numeric stats.
+ *
+ * The font itself is NOT shipped here. Apps pick their own display font and
+ * expose it as `--font-display` on <html> (via `next/font`, `@font-face`, or
+ * equivalent). If the variable is missing, falls back to the system UI stack.
+ */
+.font-display {
+  font-family: var(--font-display), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'ss01', 'ss03';
+  letter-spacing: -0.035em;
+  padding-bottom: 0.08em;
+}
+
+/**
+ * Display type ramp — opinionated headline presets that pair with
+ * `--font-display`. Use these instead of `.font-display` when you also
+ * want a tuned weight + tracking + line-height + balanced wrapping for
+ * a specific role:
+ *
+ *   .text-display-xl   hero (text-5xl / 6xl / 7xl)        — 800, very tight
+ *   .text-display-lg   section title (text-3xl / 4xl)     — 800, tight
+ *   .text-display      card / feature title (text-lg / xl) — 700, mild
+ *
+ * Size is intentionally NOT set here — pair with Tailwind `text-*`.
+ */
+.text-display-xl {
+  font-family: var(--font-display), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+  text-wrap: balance;
+}
+.text-display-lg {
+  font-family: var(--font-display), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+.text-display {
+  font-family: var(--font-display), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+}
+
+/**
+ * Screen Reader Only
+ * Hides content visually but keeps it accessible to screen readers
+ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

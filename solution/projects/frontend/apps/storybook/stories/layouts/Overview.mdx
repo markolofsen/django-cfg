@@ -1,0 +1,59 @@
+import { Meta } from '@storybook/addon-docs/blocks';
+
+<Meta title="Packages/Layouts/Overview" />
+
+# @djangocfg/layouts
+
+Full app shells for Next.js. Combines theme, auth, analytics, error
+monitoring, real-time, and PWA install prompts into one drop-in component.
+
+## Layouts
+
+- **`BaseApp`** — root provider stack (theme + tooltips + dialogs + auth
+  + analytics + monitor + PWA). Wrap your `<html>` body once.
+- **`PublicLayout`** — marketing pages with nav + footer.
+- **`PrivateLayout`** — authenticated app shell with sidebar + topbar.
+- **`AuthLayout`** — centred / split-screen login screens.
+
+## Install
+
+```bash
+pnpm add @djangocfg/layouts @djangocfg/ui-nextjs @djangocfg/ui-core
+```
+
+## Quick start
+
+```tsx
+// app/layout.tsx
+import '@djangocfg/layouts/styles';
+import { BaseApp } from '@djangocfg/layouts';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <BaseApp
+          theme={{ defaultTheme: 'dark' }}
+          analytics={{ googleTrackingId: process.env.NEXT_PUBLIC_GA_ID }}
+          pwaInstall={{ enabled: true }}
+        >
+          {children}
+        </BaseApp>
+      </body>
+    </html>
+  );
+}
+```
+
+## BaseApp providers
+
+In wrap order (outermost first): `ThemeProvider`, `TooltipProvider`,
+`AuthProvider`, `DialogProvider`, `NextRouterAdapter`,
+`NextLinkProvider`, `ErrorBoundary`, `ErrorTrackingProvider`,
+`AnalyticsProvider`, `PwaProvider`, `DebugButton`.
+
+Disable any with `false` on the matching prop (e.g. `auth={false}`).
+
+## Source
+
+`packages/layouts/`

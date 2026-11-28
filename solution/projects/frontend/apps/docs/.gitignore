@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js / build
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# generated SEO artifacts (rebuilt by `pnpm sitemap`)
+public/_pagefind/
+
+# env
+.env*.local
+
+# misc
+.DS_Store
+*.log

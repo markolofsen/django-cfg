@@ -1,0 +1,322 @@
+# Candidate backend segment for the one canonical solution.
+# Not the legacy primary Compose stack. Use only an owned, projected checkout.
+name: ${COMPOSE_PROJECT_NAME:?Set a unique owned canonical project name}
+
+x-security: &security
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  read_only: true
+  pull_policy: never
+  pids_limit: 256
+  logging:
+    driver: local
+    options: {max-size: "10m", max-file: "3"}
+
+x-toolbox: &toolbox
+  <<: *security
+  image: ${CANONICAL_TOOLBOX_IMAGE:?Select the verified local toolbox image}
+  user: ${LOCAL_UID:-1000}:${LOCAL_GID:-1000}
+  tmpfs: ["/tmp:rw,exec,nosuid,nodev,size=1024m,mode=1777"]
+  cpus: 2.0
+  mem_limit: 4g
+  memswap_limit: 4g
+  working_dir: /workspace/solution/projects/django
+
+x-backend-env: &backend-env
+  IS_DEV: "true"
+  IS_PROD: "false"
+  DEBUG: "true"
+  SECRET_KEY: ${DJANGO_SECRET_KEY:?Generate a dedicated development secret}
+  DATABASE__URL: ${DATABASE_URL:?Generate a dedicated database URL}
+  REDIS_URL: redis://redis:6379/0
+  ADMIN_EMAILS: '[]'
+  SECURITY_DOMAINS: '["localhost","127.0.0.1","api","gateway"]'
+  APP__NAME: Django CFG
+  APP__DOMAIN: localhost
+  APP__API_URL: ${API_URL:-http://localhost:18083}
+  APP__SITE_URL: ${SITE_URL:-http://localhost:18080}
+  EMAIL__BACKEND: console
+  HOME: /tmp
+  XDG_CACHE_HOME: /var/dev-data/cache
+  XDG_STATE_HOME: /var/dev-data/state
+  XDG_DATA_HOME: /var/dev-data/data
+  PYTHONDONTWRITEBYTECODE: "1"
+
+x-backend: &backend
+  <<: *toolbox
+  environment: *backend-env
+  networks: [dev]
+  depends_on:
+    db: {condition: service_healthy}
+    redis: {condition: service_healthy}
+  volumes:
+    - type: bind
+      source: ${CANONICAL_PROJECTS_DIR:?Select a sanitized projected projects directory}/django
+      target: /workspace/solution/projects/django
+      read_only: true
+      bind: {create_host_path: false}
+    - python-deps:/opt/venv:ro
+    - django-data:/var/dev-data
+    - django-static:/workspace/solution/projects/django/staticfiles
+    - django-media:/workspace/solution/projects/django/media
+
+x-frontend-env: &frontend-env
+  HOME: /tmp
+  XDG_CACHE_HOME: /tmp/cache
+  NEXT_TELEMETRY_DISABLED: "1"
+  STORYBOOK_DISABLE_TELEMETRY: "1"
+  TURBO_TELEMETRY_DISABLED: "1"
+  WATCHPACK_POLLING: "1000"
+  CHOKIDAR_USEPOLLING: "true"
+  DEV_POLL_MS: "1000"
+  NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:28083}
+  NEXT_PUBLIC_SITE_URL: ${SITE_URL:-http://localhost:28080}
+  DJANGO_INTERNAL_URL: http://api:8000
+  NODE_OPTIONS: --max-old-space-size=4096
+
+x-frontend: &frontend
+  <<: *toolbox
+  restart: unless-stopped
+  working_dir: /workspace/solution/projects/frontend
+  environment: *frontend-env
+  networks: [dev]
+  ulimits:
+    nofile: {soft: 65536, hard: 65536}
+  volumes:
+    # Next.js dev and pnpm's 33 members need their own private writable
+    # node_modules and .next under this owned customer checkout.
+    - type: bind
+      source: ${CANONICAL_PROJECTS_DIR:?Select a sanitized projected projects directory}/frontend
+      target: /workspace/solution/projects/frontend
+      bind: {create_host_path: false}
+    - dependency-cache:/var/dev-data:ro
+
+services:
+  deps:
+    <<: *toolbox
+    profiles: [tools]
+    networks: [egress]
+    environment:
+      HOME: /tmp
+      UV_PROJECT_ENVIRONMENT: /opt/venv
+      UV_PYTHON_DOWNLOADS: never
+      UV_CACHE_DIR: /var/dev-data/uv-cache
+      UV_INDEX_URL: https://pypi.org/simple
+    command:
+      - sh
+      - -ec
+      - |
+        python -m pip install --disable-pip-version-check --no-cache-dir --index-url https://pypi.org/simple --target /tmp/uv-tool uv==0.9.18
+        PYTHONPATH=/tmp/uv-tool python -m uv sync --locked --no-install-project --no-dev
+        python -c 'from importlib.metadata import version; print("django", version("django")); print("django-cfg", version("django-cfg"))'
+    volumes:
+      - type: bind
+        source: ${CANONICAL_PROJECTS_DIR:?Select a sanitized projected projects directory}/django
+        target: /workspace/solution/projects/django
+        read_only: true
+        bind: {create_host_path: false}
+      - python-deps:/opt/venv
+      - dependency-cache:/var/dev-data
+
+  db:
+    <<: *security
+    image: postgres:17-alpine
+    user: "70:70"
+    cpus: 1.0
+    mem_limit: 768m
+    memswap_limit: 768m
+    networks: [dev]
+    tmpfs: ["/tmp:mode=1777", "/var/run/postgresql:uid=70,gid=70,mode=0770"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-docker_cfg_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-docker_cfg}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Generate a dedicated database password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes: [database:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    <<: *security
+    image: redis:7.4-alpine
+    user: "1000:1000"
+    cpus: 0.5
+    mem_limit: 256m
+    memswap_limit: 256m
+    networks: [dev]
+    tmpfs: ["/data:mode=1777", "/tmp:mode=1777"]
+    command: [redis-server, --save, "", --appendonly, "no", --maxmemory, 128mb, --maxmemory-policy, noeviction]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  migrate:
+    <<: *backend
+    profiles: [tools]
+    command: [python, manage.py, migrate, --noinput]
+
+  api:
+    <<: *backend
+    command: [python, -m, uvicorn, api.asgi:application, --host, "0.0.0.0", --port, "8000", --reload]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/ready', timeout=5)"]
+      interval: 15s
+      timeout: 8s
+      retries: 8
+      start_period: 60s
+
+  # Source workspace is writable only inside the customer's owned Git checkout;
+  # no host home, Docker socket or private environment is mounted here.
+  frontend-deps:
+    <<: *toolbox
+    profiles: [tools]
+    working_dir: /workspace/solution/projects/frontend
+    networks: [egress]
+    mem_limit: 8g
+    memswap_limit: 8g
+    environment:
+      HOME: /tmp
+      XDG_CACHE_HOME: /tmp/cache
+      NODE_OPTIONS: --max-old-space-size=5120
+      npm_config_update_notifier: "false"
+      CI: "true"
+    command: [sh, /opt/canonical/frontend-deps.sh]
+    volumes:
+      - type: bind
+        source: ${CANONICAL_PROJECTS_DIR:?Select a sanitized projected projects directory}/frontend
+        target: /workspace/solution/projects/frontend
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${CANONICAL_RUNTIME_DIR:?Select the reviewed canonical runtime}/frontend-deps.sh
+        target: /opt/canonical/frontend-deps.sh
+        read_only: true
+        bind: {create_host_path: false}
+      - dependency-cache:/var/dev-data
+
+  demo:
+    <<: *frontend
+    # Browser/HMR/auth cold compilation exhausted the 4 GiB cgroup.
+    cpus: 4.0
+    mem_limit: 8g
+    memswap_limit: 8g
+    environment:
+      <<: *frontend-env
+      NODE_OPTIONS: --max-old-space-size=6144
+    command: [node, /var/dev-data/pnpm-toolchain/node_modules/pnpm/bin/pnpm.cjs, --filter, "@djangocfg/demo", exec, next, dev, --webpack, --hostname, "0.0.0.0", --port, "3010"]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3010').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 15s
+      retries: 8
+      start_period: 90s
+
+  docs:
+    <<: *frontend
+    # Nextra compiles the entire MDX graph on its first development request.
+    # Isolated acceptance: 6 GiB OOM, 10 GiB/4 CPUs cold root 49s.
+    cpus: 4.0
+    mem_limit: 10g
+    memswap_limit: 10g
+    environment:
+      <<: *frontend-env
+      NODE_OPTIONS: --max-old-space-size=8192
+    command: [node, /var/dev-data/pnpm-toolchain/node_modules/pnpm/bin/pnpm.cjs, --filter, "@djangocfg/docs", exec, next, dev, --webpack, --hostname, "0.0.0.0", --port, "3778"]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3778/',{signal:AbortSignal.timeout(120000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 125s
+      retries: 8
+      start_period: 180s
+
+  storybook:
+    <<: *frontend
+    environment:
+      <<: *frontend-env
+      PATH: /var/dev-data/pnpm-toolchain/node_modules/.bin:/opt/venv/bin:/usr/local/bin:/usr/bin:/bin
+    command: [node, /var/dev-data/pnpm-toolchain/node_modules/pnpm/bin/pnpm.cjs, --filter, "@djangocfg/storybook", exec, storybook, dev, --host, "0.0.0.0", --port, "6017", --exact-port, --ci, --no-open, --disable-telemetry]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:6017/index.json').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 15s
+      retries: 8
+      start_period: 120s
+
+  gateway:
+    <<: *security
+    image: nginx:1.28-alpine
+    user: ${LOCAL_UID:-1000}:${LOCAL_GID:-1000}
+    entrypoint: []
+    command: [nginx, -g, "daemon off;"]
+    # Docker does not publish host loopback ports on internal-only networks.
+    # Only this gateway is dual-homed; app services remain on internal dev.
+    networks: [dev, egress]
+    tmpfs: ["/tmp:rw,nosuid,nodev,size=64m,mode=1777"]
+    cpus: 0.5
+    mem_limit: 128m
+    memswap_limit: 128m
+    ports:
+      - "127.0.0.1:${DEMO_PORT:?Choose an available loopback demo port}:8080"
+      - "127.0.0.1:${DOCS_PORT:?Choose an available loopback docs port}:8081"
+      - "127.0.0.1:${STORYBOOK_PORT:?Choose an available loopback Storybook port}:8082"
+      - "127.0.0.1:${API_PORT:?Choose an available loopback API port}:8083"
+    volumes:
+      - type: bind
+        source: ${CANONICAL_RUNTIME_DIR:?Select the reviewed canonical runtime}/nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind: {create_host_path: false}
+    depends_on:
+      api: {condition: service_started}
+      demo: {condition: service_started}
+      docs: {condition: service_started}
+      storybook: {condition: service_started}
+
+  # Explicit profile, no silent machine enrollment or identity duplication.
+  workspace:
+    <<: *toolbox
+    profiles: [machine]
+    read_only: false
+    restart: unless-stopped
+    networks: [dev, egress]
+    working_dir: /workspace
+    environment:
+      HOME: /home/developer
+      CMDOP_RESTARTED_BY_CONTAINER: "1"
+      CMDOP_MACHINE_NAME: ${CMDOP_MACHINE_NAME:?Assign a unique CMDOP machine name}
+      CMDOP_SERVER: ${CMDOP_SERVER:-}
+      CMDOP_ACCEPT_AGREEMENT: ${CMDOP_ACCEPT_AGREEMENT:-}
+      PYTHONDONTWRITEBYTECODE: "1"
+    command: [python, /opt/canonical/workspace.py]
+    volumes:
+      - type: bind
+        source: ${CANONICAL_CUSTOMER_ROOT:?Select a secret-free customer Git root}
+        target: /workspace
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${CANONICAL_RUNTIME_DIR:?Select the reviewed canonical runtime}/workspace.py
+        target: /opt/canonical/workspace.py
+        read_only: true
+        bind: {create_host_path: false}
+      - machine-home:/home/developer
+    healthcheck:
+      test: [CMD, python, -c, "import json,subprocess,sys; p=subprocess.run(['cmdop','control','status.get'],capture_output=True,text=True,timeout=5); sys.exit(0 if p.returncode==0 and json.loads(p.stdout).get('link',{}).get('state')=='up' else 1)"]
+      interval: 30s
+      timeout: 8s
+      start_period: 30s
+
+networks:
+  dev: {internal: true}
+  egress: {}
+volumes:
+  python-deps:
+  dependency-cache:
+  database:
+  django-data:
+  django-static:
+  django-media:
+  machine-home:

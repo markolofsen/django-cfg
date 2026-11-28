@@ -1,0 +1,14 @@
+/* A larger composer than the widget default, through the widget's own tokens, so the field reads as the main control of the dock. */
+.assistant-chat {
+  --chat-composer-inset-y: 0.625rem;
+  --chat-composer-inset-x: 1rem;
+  --chat-composer-control-h: 2.5rem;
+}
+
+/* Field text and controls share one centre line: the box aligns items to the end by default, which sat the text a few pixels low. */
+.assistant-chat .composer-box {
+  align-items: center;
+}
+.assistant-chat .composer-box textarea {
+  padding-block: 0.25rem;
+}

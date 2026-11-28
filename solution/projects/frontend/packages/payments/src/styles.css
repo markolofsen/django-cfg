@@ -1,0 +1,14 @@
+/**
+ * Tailwind v4 Source Detection for the Payments Package
+ *
+ * This package is consumed from source and styled with Tailwind utility
+ * classes. Tailwind v4 only generates classes it can see — consumers MUST
+ * import this entry in their global CSS (after ui-core styles) so the
+ * package's sources get scanned:
+ *
+ *   @import "@djangocfg/payments/styles";
+ *
+ * Without it, status-tint classes (e.g. the PaymentStatusBadge chips) are
+ * silently missing from the build.
+ */
+@source "../**/*.{ts,tsx}";

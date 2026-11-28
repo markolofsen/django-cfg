@@ -1,0 +1,65 @@
+/**
+ * Native date/time field — chrome suppression.
+ *
+ * The native-engine fields (`DateField` / `TimeField` / `DateTimeField`) use a
+ * real `<input type="date|time|datetime-local">` as the input engine and wrap it
+ * in `NativeFieldShell`, which supplies OUR icon and OUR popover. So the
+ * browser's built-in indicator glyph and inner spin buttons must be hidden —
+ * otherwise there are two icons and a double-picker.
+ *
+ * The `.native-datetime-input` class is applied by the field to the raw input.
+ */
+
+.native-datetime-input::-webkit-calendar-picker-indicator {
+  /* Kill the browser clock/calendar button entirely. We suppress it rather than
+   * repurpose it because clicking it opens the OS picker, which would race our
+   * own popover. Our leading icon / chevron drives our popover instead. */
+  display: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.native-datetime-input::-webkit-inner-spin-button,
+.native-datetime-input::-webkit-outer-spin-button {
+  display: none;
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+/* Firefox draws a clear ("×") button on filled date inputs — hide it so the
+ * clearing affordance stays inside our own UI, consistent across browsers. */
+.native-datetime-input::-moz-clear {
+  display: none;
+}
+
+/* Segment text follows the active theme. (No blanket `padding:0` here — the
+ * in-shell inputs already sit flush via their own flex layout, and the standalone
+ * time input in the DateTimeField popover NEEDS its px-* padding; a global reset
+ * would fight it.) */
+.native-datetime-input {
+  color-scheme: light dark;
+}
+
+/* Horizontal centering of a native time/date input's VALUE.
+ *
+ * `text-align: center` on the input alone does NOT center a `type="time"` value:
+ * the value is a group of segments (HH, MM, …) the browser lays out inside
+ * `::-webkit-datetime-edit`, which is left-aligned and only as wide as its
+ * content. The reliable cross-engine fix (verified against MDN + WebKit
+ * internals) is to make the INPUT ITSELF a centering flex container — that
+ * centers `::-webkit-datetime-edit` as a flex child regardless of text-align —
+ * and keep `text-align:center` for Firefox (which ignores `::-webkit-*` and
+ * renders the value as plain inline text). Opt in with
+ * `.native-datetime-input--center`. */
+.native-datetime-input--center {
+  display: inline-flex;
+  justify-content: center;
+  text-align: center; /* Firefox path */
+}
+.native-datetime-input--center::-webkit-datetime-edit {
+  text-align: center; /* Chrome/Safari: centers the segment group */
+}
+.native-datetime-input--center::-webkit-datetime-edit-fields-wrapper {
+  justify-content: center; /* belt-and-braces for older Safari */
+}

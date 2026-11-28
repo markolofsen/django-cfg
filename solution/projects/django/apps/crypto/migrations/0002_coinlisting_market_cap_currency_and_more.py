@@ -3,6 +3,24 @@
 from django.db import migrations, models
 
 
+def _add_missing_currency_columns(apps, schema_editor):
+    """Add the currency columns only where 0001 did not already create them.
+
+    `MoneyField` creates its `<name>_currency` companion column itself, so a database
+    built from 0001 has both columns; one that applied the original 0002 has them too.
+    """
+    model = apps.get_model("crypto", "CoinListing")
+    table = model._meta.db_table
+    with schema_editor.connection.cursor() as cursor:
+        existing = {
+            column.name
+            for column in schema_editor.connection.introspection.get_table_description(cursor, table)
+        }
+    for field in model._meta.local_fields:
+        if field.name in ("market_cap_currency", "price_currency") and field.column not in existing:
+            schema_editor.add_field(model, field)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,14 +28,21 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="coinlisting",
-            name="market_cap_currency",
-            field=models.CharField(db_index=True, default="USD", max_length=10),
-        ),
-        migrations.AddField(
-            model_name="coinlisting",
-            name="price_currency",
-            field=models.CharField(db_index=True, default="USD", max_length=10),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddField(
+                    model_name="coinlisting",
+                    name="market_cap_currency",
+                    field=models.CharField(db_index=True, default="USD", max_length=10),
+                ),
+                migrations.AddField(
+                    model_name="coinlisting",
+                    name="price_currency",
+                    field=models.CharField(db_index=True, default="USD", max_length=10),
+                ),
+            ],
+            database_operations=[
+                migrations.RunPython(_add_missing_currency_columns, migrations.RunPython.noop),
+            ],
         ),
     ]

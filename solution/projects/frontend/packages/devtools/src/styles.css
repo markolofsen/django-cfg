@@ -1,0 +1,6 @@
+/**
+ * Tailwind v4 source detection for @djangocfg/devtools.
+ * Add `@import "@djangocfg/devtools/styles";` to your app's globals.css
+ * (after ui-core styles) so the panel's utility classes get compiled.
+ */
+@source "../**/*.{ts,tsx}";

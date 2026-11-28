@@ -1,0 +1,72 @@
+/* Tailwind v4 — generates the `x:`-prefixed utilities that nextra-theme-docs
+   components (Cards, Card, etc.) rely on. The prebuilt style.css alone does
+   not cover them, so we scan the theme's dist for class names. */
+@import 'tailwindcss';
+
+@source '../../../node_modules/nextra-theme-docs/dist/**/*.js';
+
+@variant dark (&:where(.dark *));
+
+/* ── Typography: Plus Jakarta Sans across the whole Nextra shell ──
+   The pinned Fontsource variable font is bundled by the app; no Google
+   Fonts network request is needed during compilation or page rendering. */
+html {
+  --font-jakarta: 'Plus Jakarta Sans Variable';
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
+}
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Full-width content container ──
+   Nextra 4 sets --nextra-content-width: 80rem on the universal selector,
+   so a :root override loses. Re-declare on the universal selector to win.
+   Also directly widen the container class as a belt-and-suspenders fallback. */
+*,
+::before,
+::after,
+::backdrop {
+  --nextra-content-width: 110rem;
+}
+:is(.x\:max-w-\(--nextra-content-width\)) {
+  max-width: 110rem !important;
+}
+
+/* Nextra 4.6.1 ships `article.nextra-body-typesetting-article h1 { text-align:center }`
+   (a "typesetting" preset we don't want for docs). Override with EQUAL-or-greater
+   specificity. `:where()` is 0-specificity, so list the tags explicitly under the
+   full `article.class` prefix (= 0,1,2, matching Nextra's rule, and later in the
+   cascade so it wins). */
+article.nextra-body-typesetting-article h1,
+article.nextra-body-typesetting-article h2,
+article.nextra-body-typesetting-article h3,
+article.nextra-body-typesetting-article h4,
+article.nextra-body-typesetting-article h5,
+article.nextra-body-typesetting-article h6,
+article.nextra-body-typesetting-article p,
+article.nextra-body-typesetting-article ul,
+article.nextra-body-typesetting-article ol,
+article.nextra-body-typesetting-article blockquote,
+article.nextra-body-typesetting-article {
+  text-align: left;
+}
+
+/* ── Content images: large, friendly rounded corners ──
+   Radius scales a little with viewport (clamp) for a pleasant feel on big
+   screens. Targets Next/Image (<img data-nimg>) inside doc/blog content. */
+.nextra-content img[data-nimg],
+article.nextra-body-typesetting-article img[data-nimg],
+.x\:max-w-\(--nextra-content-width\) img[data-nimg] {
+  border-radius: clamp(0.75rem, 1.2vw, 1.5rem);
+  overflow: hidden;
+}
+
+/* Single source of truth for the landing + footer container width.
+   Change this one value to resize hero, feature grid, and footer together. */
+:root {
+  --site-container: 80rem;
+}

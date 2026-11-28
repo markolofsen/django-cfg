@@ -1,0 +1,575 @@
+/**
+ * The composer's structural rules.
+ *
+ * Here rather than as Tailwind variants because each needs a selector a class
+ * list cannot express: `:has()` looking DOWN at a descendant and acting on a
+ * different child, and "every button except one" on the queued row. Written as
+ * variants these become strings no reviewer can read a mistake out of.
+ */
+
+/**
+ * A composer whose draft has outgrown one line gives the field the whole row,
+ * and the controls take their own line beneath it.
+ *
+ * A STAGED TOOL does the same, unconditionally: a chip sits between `+` and the
+ * text, so the field starts mid-row and the little that is left is squeezed
+ * against the send button. Two independent reasons to expand, one layout — the
+ * text no longer fits BESIDE things, whether because of its own length or
+ * because of what shares its line.
+ *
+ * `:has()` is load-bearing twice over. The condition lives on a DESCENDANT —
+ * the textarea reports its own rendered height as `data-multiline`, which is
+ * the only element that can know it — and the effect lands on a DIFFERENT
+ * child, the field's wrapper. Descendant-to-sibling is the one direction a
+ * selector can look, and this is why the rule cannot be a Tailwind variant.
+ *
+ * `flex-basis`, never `width`: the wrapper is a flex item, so the basis is what
+ * the algorithm distributes from and a `width` is ignored outright. Measured —
+ * with `width: 100%` the rule matched, loaded, and changed nothing.
+ */
+.composer-box:has(textarea[data-multiline]) > *:has(> textarea),
+.composer-box:has(.tool-chips > *) > *:has(> textarea),
+.composer-box.composer-stacked > *:has(> textarea) {
+  flex-basis: 100%;
+}
+
+/**
+ * A wrapped draft sends the `+` DOWN with the trailing controls, not up.
+ *
+ * Ordering alone cannot do it: `+` leads the shared line, so it also leads the
+ * wrap and lands on a line of its own ABOVE the text — measured as three rows,
+ * `+` over the draft and the other controls under it. Raising its order past
+ * the field's only while the field owns the row puts both halves on the line
+ * beneath, `+` still at their left edge.
+ */
+.composer-box:has(textarea[data-multiline]) > .composer-lead,
+.composer-box:has(.tool-chips > *) > .composer-lead,
+.composer-box.composer-stacked > .composer-lead {
+  order: 3;
+}
+
+/**
+ * The stacked composer (Notion's): the field on top with room for two lines, the controls always on their own row beneath it.
+ * Opt-in by the `stacked` prop, so the single-row composer of other hosts is unchanged.
+ */
+.composer-box.composer-stacked textarea {
+  min-height: calc(var(--chat-text, 1rem) * var(--chat-leading, 1.5) * 2);
+}
+
+/* The `+` sits `inset-y` from the left edge, matching the send button's gap to
+ * the right and the bottom. The box's horizontal inset is breathing room for
+ * the TEXT and is wider, so the difference is given back here — the same
+ * correction `.composer-controls` makes at the other end. */
+.composer-lead {
+  margin-inline-start: calc(var(--chat-composer-inset-y) - var(--chat-composer-inset-x));
+}
+
+/**
+ * The control row reaches past the box's TEXT inset, at both ends.
+ *
+ * On the row rather than on the box: the field above it must still start flush
+ * with the text, and a box-level inset would move both.
+ */
+.composer-controls {
+  /* The row's own gap to the edge must EQUAL the vertical one, and the box's
+   * horizontal inset is wider — that width is breathing room for the TEXT, not
+   * for a control. Given back at BOTH ends, so the leading `+` and the trailing
+   * send button each sit the same distance from their side as from the bottom.
+   *
+   * `width: auto` is what makes the negative margin WIDEN the row. The class
+   * list's `w-full` pins it to 100% of the content box, so the margin only slid
+   * it left and the send button kept the full text inset on the right — a gap
+   * measured at 21px against the intended 9px. */
+  width: auto;
+  margin-inline: calc(var(--chat-composer-inset-y) - var(--chat-composer-inset-x));
+}
+
+/**
+ * A staged tool: a capsule, matching the controls it sits between.
+ *
+ * `--radius-full`, not a rounded rectangle. The `+` to its left is a circle and
+ * the send button to its right is a capsule, so a 4px corner reads as a control
+ * from a different set. No border for the same reason — neither neighbour has
+ * one, and an outline around a soft ground draws a box the row does not need.
+ */
+.tool-chip {
+  border-radius: var(--radius-full, 9999px);
+  padding-inline: 0.5rem;
+  font-size: 0.75rem;
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+  color: var(--muted-foreground);
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.tool-chip:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+/**
+ * The remove control appears on approach, and holds its column regardless.
+ *
+ * `opacity`, never `display`: removing it from layout would resize the chip
+ * under the pointer, moving the target the user is reaching for. Revealed on
+ * `focus-within` too, or it is unreachable without a mouse.
+ */
+.tool-chip > button {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.tool-chip:hover > button,
+.tool-chip:focus-within > button {
+  opacity: 0.6;
+}
+
+.tool-chip > button:hover,
+.tool-chip > button:focus-visible {
+  opacity: 1;
+}
+
+/**
+ * The staged row scrolls without a visible scrollbar, fading at each edge.
+ *
+ * A MASK rather than a gradient overlay: a gradient must name a colour, so it
+ * needs one declaration per theme and breaks over any other ground. A mask
+ * removes the paint itself, which is correct on every background from one rule.
+ *
+ * Both edges are declared, but each only bites when there is something to
+ * scroll — `animation-timeline: scroll()` drives them from the row's own scroll
+ * position, so a row that fits shows no fade at all. Where that timeline is
+ * unsupported the row simply scrolls with no fade, which is the pre-existing
+ * behaviour and not a regression.
+ */
+/* Registered, or the keyframes below step between values instead of easing:
+   an unregistered custom property has no type, so it cannot interpolate. */
+@property --tool-chips-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --tool-chips-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+.tool-chips {
+  scrollbar-width: none;
+  --tool-chips-fade-start: 0px;
+  --tool-chips-fade-end: 0px;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--tool-chips-fade-start),
+    #000 calc(100% - var(--tool-chips-fade-end)),
+    transparent 100%
+  );
+  animation: tool-chips-fade linear both;
+  animation-timeline: scroll(self inline);
+}
+
+.tool-chips::-webkit-scrollbar {
+  display: none;
+}
+
+/**
+ * Start and end fades, driven by scroll position rather than by a listener.
+ *
+ * At the very start there is nothing hidden to the left, so only the right edge
+ * fades; at the end the reverse. The middle keyframe fades both, which is the
+ * only moment content is cut off on each side.
+ */
+@keyframes tool-chips-fade {
+  from {
+    --tool-chips-fade-start: 0px;
+    --tool-chips-fade-end: 1.5rem;
+  }
+  50% {
+    --tool-chips-fade-start: 1.5rem;
+    --tool-chips-fade-end: 1.5rem;
+  }
+  to {
+    --tool-chips-fade-start: 1.5rem;
+    --tool-chips-fade-end: 0px;
+  }
+}
+
+/**
+ * The field sets its own tracking, because what a host supplies is a CONTROL's.
+ *
+ * A design system's negative tracking is tuned for labels — a chip, a menu row,
+ * something taken in at a glance, where tightening buys density. This field is
+ * prose: it holds the same sentences the transcript renders, at the transcript's
+ * size, so it must match the transcript exactly. A composer and a transcript
+ * that disagree about tracking read as two different conversations, and the
+ * disagreement is most visible at the moment it matters — the line you typed
+ * sitting directly above the reply to it.
+ *
+ * `normal` is therefore not "no decision"; it is the same decision the reading
+ * surface makes, restated here because the host's `--letter-spacing-base` is
+ * declared once high up on a control-sized ancestor and would otherwise arrive
+ * as fixed pixels computed for a size this field does not use.
+ */
+.composer-box textarea {
+  letter-spacing: normal;
+}
+
+/**
+ * The ring OUTSIDE the border — two lines, one box.
+ *
+ * `box-shadow`, not a second border or an outline: a border would change the
+ * box and push every control 2px inward, and an outline cannot be given the
+ * card's radius on every engine. A spread-only shadow paints outside the edge
+ * and costs no layout, so the field keeps the geometry the buttons align to.
+ *
+ * The colour is the BORDER's until focus, so the ring reads as depth rather
+ * than as a permanent highlight; on focus both lines move to `--ring` together,
+ * because two rings in disagreeing colours read as an error state.
+ *
+ * The radius is DERIVED, never chosen. Two rounded shapes look parallel only
+ * when the outer radius equals the inner one plus the gap between them —
+ * otherwise the corners converge or splay while the straight edges stay even,
+ * which reads as sloppiness without naming its cause.
+ *
+ * The controls are circles (`rounded-full`), so their radius is half their
+ * height, and the gap the corner has to clear is the vertical inset. That sum
+ * comes out at exactly half the composer's own height — a capsule. Which is the
+ * point: a capsule is what concentric-with-a-circle MEANS, not a style choice,
+ * and it stays correct if the height changes for any reason.
+ *
+ * The single-line height is what this must follow, never the box's own height:
+ * a multi-line draft grows the box, and a capsule at that height would balloon
+ * into an oval while the buttons stayed the same circles.
+ */
+.composer-box {
+  /* Two axes, because they answer to different things. The vertical inset is
+   * structural — it plus the 32px control row IS the composer's height. The
+   * horizontal one is breathing room, free to be wider, and it alone decides
+   * the corner: a rounded rectangle turns along its SIDES, so the horizontal
+   * inset is the distance a corner arc has to clear. */
+  --chat-composer-inset-y: 0.5rem;
+  --chat-composer-inset-x: 0.875rem;
+  --chat-composer-control-h: calc(var(--chat-text, 1rem) * var(--chat-leading, 1.65) + 8px);
+  /* CONCENTRIC with the controls: their radius plus the inset that clears them.
+   * Derived rather than a second token, so a control radius change moves both
+   * arcs together and the corners cannot stop running parallel. */
+  border-radius: var(--chat-composer-radius, calc(var(--radius-control, 0.625rem) + var(--chat-composer-inset-y)));
+  /* The horizontal inset is the TEXT's breathing room and is deliberately wider
+   * than the vertical one. The control row gives that difference back on both
+   * ends (`.composer-controls`), so a corner button keeps an equal gap to the
+   * bottom and the side while the field still starts clear of the edge. */
+  padding: var(--chat-composer-inset-y) var(--chat-composer-inset-x);
+  background-color: var(--chat-composer-bg, transparent);
+  box-shadow: 0 0 0 var(--chat-composer-ring-w, 2px) var(--chat-composer-ring, color-mix(in oklab, var(--border) 55%, transparent));
+  transition: box-shadow 120ms ease;
+}
+
+.composer-box:focus-within {
+  box-shadow: 0 0 0 var(--chat-composer-ring-w, 2px) var(--chat-composer-ring-focus, color-mix(in oklab, var(--ring) 40%, transparent));
+}
+
+
+/**
+ * A queued prompt: its text is the edit control, its icons appear on approach.
+ *
+ * Written as CSS rather than a class list because the row needs two structural
+ * selectors — "every button EXCEPT the text one" and a reveal driven by the
+ * row's own hover — and as Tailwind variants that becomes a string no reviewer
+ * can read a mistake out of.
+ *
+ * The text button carries no visible affordance on purpose. It fills the row,
+ * so a background or an underline would draw a second box inside a box the
+ * queue already frames; the pointer and the tooltip are the invitation.
+ */
+.queued-row {
+  display: flex;
+  gap: 0.25rem;
+  border-radius: var(--radius-lg, 0.5rem);
+  padding-block: 0.375rem;
+  padding-inline: 0.625rem 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background: color-mix(in oklab, var(--muted) 60%, transparent);
+  color: var(--muted-foreground);
+}
+
+/**
+ * The prompt text, which IS the edit control.
+ *
+ * Capped and scrollable rather than truncated: a queued prompt is a message the
+ * user has not seen sent, so hiding part of it is the failure the strip exists
+ * to prevent. The composer sits at the bottom of the transcript, so an
+ * uncapped one would grow upward into it.
+ */
+.queued-row > button[data-action="edit"] {
+  min-width: 0;
+  flex: 1;
+  cursor: text;
+  text-align: start;
+}
+
+.queued-row > button[data-action="edit"] span {
+  display: block;
+  max-height: 5rem;
+  overflow-y: auto;
+  white-space: pre-line;
+  overflow-wrap: break-word;
+}
+
+.queued-row > button:not([data-action="edit"]) {
+  display: grid;
+  place-items: center;
+  block-size: 1.5rem;
+  inline-size: 1.5rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-control, 0.375rem);
+}
+
+.queued-row > button:not([data-action="edit"]):hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+/**
+ * Aligned to the FIRST line, not to the row.
+ *
+ * `center` would float the icons into the middle of a wrapped prompt, away from
+ * the line they read as belonging to; the prompt is capped and scrolls, so the
+ * row's height is not the text's. `flex-start` plus a small negative offset
+ * puts the 24px button's centre on the 20px first line, which is right whether
+ * the prompt takes one line or ten.
+ */
+.queued-row {
+  align-items: flex-start;
+}
+
+/**
+ * Revealed on hover AND on keyboard focus. Without `focus-within` the controls
+ * are unreachable without a mouse; `opacity` rather than `display` so the row
+ * does not reflow and shift the text under the pointer as they appear.
+ */
+.queued-row > button:not([data-action="edit"]) {
+  margin-block-start: -2px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.queued-row:hover > button:not([data-action="edit"]),
+.queued-row:focus-within > button:not([data-action="edit"]) {
+  opacity: 1;
+}
+
+/**
+ * Dictation, while the microphone is open.
+ *
+ * The BUTTON is the indicator. A separate badge or a bar above the composer
+ * would be a second place to look for one fact, and the control the user just
+ * pressed is where they are already looking.
+ *
+ * The GLYPH tumbles, reusing `turn-mark-tumble` — the same motion the reasoning
+ * marker uses in the transcript, so one vocabulary covers both places this
+ * app says "still going". A pulse was tried first and is the wrong answer
+ * for the reason `turn-mark.css` already gives: every spinner on the web says
+ * "busy", while rotation has a direction, so a glance separates live from
+ * stalled.
+ *
+ * Only the icon turns, never the button: rotating the hit target would spin its
+ * focus ring and its hover plate with it.
+ */
+.composer-mic[data-recording] > svg {
+  animation: turn-mark-tumble 1.6s linear infinite;
+  /* The glyph's own box, so the rotation is about its centre rather than about
+   * a corner of the grid cell. */
+  transform-origin: 50% 50%;
+}
+
+/**
+ * Recording OUTRANKS hover, and gets an edge of its own.
+ *
+ * `ComposerButton`'s neutral tone carries `hover:text-foreground`, which ties
+ * with `aria-pressed:text-destructive` on specificity — so source order decides
+ * and the glyph turns white under the pointer. The pointer is over this button
+ * almost by definition: the user just clicked it to start.
+ *
+ * Here rather than in the button's own tone string, which is shared by four
+ * controls across three packages. Red is not a hover state; it says the
+ * microphone is open, and that fact does not depend on where the pointer is.
+ *
+ * The RING bounds the spinning glyph. Recording swaps the mic for a 14px filled
+ * square, and a small square turning in open space reads as a loose fragment
+ * rather than as a control — the ring is what it turns inside. Static, because
+ * the glyph already carries the motion and a second moving element would say
+ * the same thing twice.
+ *
+ * `inset` so it paints inside the button's own box: an outward ring would sit
+ * on the neighbouring controls at this spacing, and `box-shadow` keeps it out
+ * of layout either way, so the row does not shift when recording starts.
+ */
+.composer-mic[data-recording],
+.composer-mic[data-recording]:hover {
+  color: var(--destructive, hsl(0 67% 60%));
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--destructive, hsl(0 67% 60%)) 45%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Still, but not invisible: recording is the one state here with a privacy
+   * cost, and `--destructive` on the glyph carries it once motion is off — the
+   * same fallback the turn mark takes. */
+  .composer-mic[data-recording] > svg {
+    animation: none;
+  }
+}
+
+/* The tool sheet's rows.
+ *
+ * Keyboard and pointer converge on ONE cursor: arrow keys set `data-active`,
+ * and hovering a row adopts it, so the sheet never shows two highlights at
+ * once. `:hover` is not a second rule here for that reason — the component
+ * reports the hover upward and the same attribute paints it.
+ */
+.composer-tool-row[data-active] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* The forget control shares the check's column, so a row never grows or
+ * reflows when it appears. Hidden until the row is hovered or the control
+ * itself is focused: keyboard-only users cannot hover, and a control that Tab
+ * can reach but the eye cannot find is worse than an absent one. */
+.composer-tool-forget {
+  opacity: 0;
+  color: var(--muted-foreground);
+  transition: opacity 120ms ease-out;
+}
+
+.composer-tool-row:hover .composer-tool-forget,
+.composer-tool-forget:focus-visible {
+  opacity: 1;
+}
+
+.composer-tool-forget:hover {
+  color: var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer-tool-forget {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   iOS WebKit Auto-Zoom Prevention (CSS Baseline)
+   ========================================================================= */
+
+/**
+ * Prevents iOS Safari/Chrome from zooming viewport when textarea gets focus.
+ *
+ * **Problem**: iOS WebKit zooms when font-size < 16px, causing conversation
+ * to "fly away" and creating critical UX failure in chat interfaces.
+ *
+ * **Solution**: Multi-layer defense:
+ * 1. CSS baseline (works without JS) — @supports iOS detection + mobile media
+ * 2. React hook (useTouchSafeStyle) — precise iOS-only targeting via device detect
+ *
+ * **WCAG Compliance**: ✅ WCAG 2.1 AA (SC 1.4.4, 1.4.10)
+ * - No viewport restrictions (user-scalable=no would violate WCAG)
+ * - Text zoom still works via browser accessibility settings
+ * - Maintains 200% text zoom capability
+ *
+ * @see {@link @researches/2026-10-25__ios-webkit-auto-zoom} Research
+ * @see {@link @djangocfg/ui-core/hooks/device/useTouchSafeStyle} React hook
+ */
+
+/* iOS-specific via @supports (CSS feature detection) */
+@supports (-webkit-touch-callout: none) {
+  .composer-box textarea,
+  .composer-box input,
+  .composer-box select {
+    font-size: max(1rem, 16px);
+  }
+}
+
+/* Mobile baseline (all devices, fallback for browsers without @supports) */
+@media (max-width: 768px) {
+  .composer-box textarea,
+  .composer-box input,
+  .composer-box select {
+    font-size: max(1rem, 16px);
+  }
+}
+
+/* ============================================================================
+   The compact composer (`ChatComposer compact`): the call chat on a phone
+   ========================================================================= */
+
+/**
+ * One row: the field and the send button. Three things made the stock box wrong for a phone:
+ * the 2px ring outside the border read as an oversized outline around a short field; a draft that
+ * outgrew a line sent the field to its own 100%-wide row and the controls beneath it, so a second
+ * line made the box jump; and the 32px send target is under the 44px a thumb needs.
+ *
+ * Here the ring is off (the border alone says focus), the field keeps the row and grows upward
+ * inside it (the textarea autosizes to its own cap), and the send button is a 36px disc with a 44px
+ * hit area. Specificity is raised with a repeated class, not `!important`: the multiline rules
+ * above are `:has()` selectors and a plain `.composer-compact` would tie and lose on order.
+ */
+.composer-box.composer-compact.composer-compact {
+  --chat-composer-inset-y: 0.25rem;
+  --chat-composer-inset-x: 0.875rem;
+  --chat-composer-ring-w: 0px;
+  --chat-composer-radius: 1.375rem;
+  --chat-composer-control-h: 2.25rem;
+  min-height: 2.75rem;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+}
+
+.composer-box.composer-compact.composer-compact > *:has(> textarea) {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.composer-box.composer-compact.composer-compact .composer-controls {
+  flex: none;
+  margin-inline: 0;
+}
+
+.composer-compact .composer-send {
+  position: relative;
+  border-radius: 9999px;
+}
+
+/* The disc is 36px; the press target is 44px, the disc plus 4px each way. */
+.composer-compact .composer-send::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
+/**
+ * The drop zone while files are dragged over the composer.
+ *
+ * The same recipe as the forms uploader's dropzone (a dashed `--primary` border over a faint `--primary` wash), so a drop
+ * target looks like one everywhere. `inherit` takes the box's concentric radius; `pointer-events: none` keeps the drop
+ * landing on the form, which owns it.
+ */
+.composer-box[data-dragging] {
+  position: relative;
+}
+.composer-drop {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--primary);
+  border-radius: inherit;
+  background: color-mix(in oklab, var(--primary) 8%, var(--background));
+  color: var(--primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  pointer-events: none;
+}

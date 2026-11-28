@@ -1,0 +1,71 @@
+/**
+ * `@djangocfg/widget-chat` — the CSS the package's own markup needs to work.
+ *
+ * Import once, anywhere in a host's stylesheet:
+ *
+ *     @import "@djangocfg/widget-chat/styles";
+ *
+ * ## What belongs here, and what does not
+ *
+ * This file carries rules that are part of the COMPONENTS' contract — layout
+ * that the markup would be broken without, and that no host would ever want
+ * differently. It carries no product VALUES: not the type scale, not the
+ * reading width, not a colour. Those stay the host's, declared as `--chat-*`
+ * tokens; a host defines them alongside its own theme.
+ *
+ * The dividing question is "would a second consumer want this changed?" — and
+ * it is about the VALUE, not about the rule. Which class consumes which token
+ * is not a decision anyone would take differently; it is wiring, and it belongs
+ * beside the markup it wires, or it breaks the next time that markup moves.
+ * Every `var()` here therefore carries a fallback, so a host that declares no
+ * tokens still gets a readable surface rather than a collapsed one.
+ *
+ * ## Why CSS at all, in a package that ships none
+ *
+ * Because `:has()` is the only mechanism that expresses some of these rules,
+ * and it has no JavaScript equivalent that is not a resize observer writing a
+ * class —
+ * a measure-and-render cycle for a question the browser has already answered.
+ * Everything else the package needs is a Tailwind class on its own markup.
+ *
+ * The package is consumed as SOURCE (`"main": "./src/index.ts"`), so a host's
+ * Tailwind entry can import this directly; there is no build step to teach.
+ */
+
+/**
+ * Split by SUBSYSTEM, one file each, because they answer to different owners:
+ * the composer's rules are layout the markup breaks without, the markdown
+ * surface styles what the renderer emits, and the block rhythm belongs to the
+ * transcript. A single file made "is this rule still used?" a question about
+ * 513 lines.
+ */
+@import "./surface.css";
+@import "./turn-mark.css";
+@import "./composer.css";
+@import "./markdown.css";
+@import "./block.css";
+@import "./tool.css";
+@import "./run.css";
+@import "./sheet.css";
+
+/**
+ * The assistant surface (`./shell`, `./assistant`): the docked column, the
+ * floating button and a larger composer for the dock. Kept in their own files
+ * so the base rules above stay the ones every consumer needs.
+ */
+@import "./assistant/layout.css";
+@import "./assistant/composer.css";
+@import "./assistant/fab.css";
+
+/* Tailwind must see the widgets' classes: without these sources it purges them silently.
+   An @source path is relative to THIS file, and the file sits at <pkg>/src/styles, so "../../../" is the folder that holds the package:
+   - installed (npm, or pnpm with hoisting): node_modules/@djangocfg/, where the packages are named widget-chat, widget-kit, widget-media;
+   - the django-cfg monorepo: frontend/widgets/, where the same packages are the folders chat, kit, media.
+   A path that matches nothing in one layout is harmless, so both are listed. A strict pnpm install without hoisting cannot reach
+   widget-kit and widget-media from here: list them as direct dependencies of the app, or name them in the app's own @source
+   (see @docs/connect.md). */
+@source "../**/*.{ts,tsx}";
+@source "../../../widget-kit/src/**/*.{ts,tsx}";
+@source "../../../widget-media/src/**/*.{ts,tsx}";
+@source "../../../kit/src/**/*.{ts,tsx}";
+@source "../../../media/src/**/*.{ts,tsx}";

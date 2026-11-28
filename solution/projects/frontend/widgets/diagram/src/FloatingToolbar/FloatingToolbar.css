@@ -1,0 +1,5 @@
+/* Focus ring when scroll isolation is unlocked */
+.scroll-unlocked {
+  box-shadow: 0 0 0 2px var(--ring);
+  transition: box-shadow 150ms;
+}

@@ -1,0 +1,282 @@
+/**
+ * Base Styles
+ * Foundation styles that apply to the entire application
+ * Compatible with Tailwind CSS v4
+ */
+
+/* Radius scale — theme-independent, shared by light and dark */
+:root {
+  /* Safe-area and viewport tokens. env() is 0 unless the host sets viewport-fit=cover, so these are
+   * safe in every mode. UiProviders also sets <html data-display-mode="browser|standalone|...">:
+   * use it for rules that differ in an installed app, e.g.
+   *   :root[data-display-mode='standalone'] .my-header { padding-top: var(--safe-top); }
+   * --app-safe-* are optional overrides (Storybook's safe-area toolbar sets them). --app-height is the dynamic viewport; prefer `inset-0` on fixed full-screen surfaces. */
+  --safe-top: var(--app-safe-top, env(safe-area-inset-top, 0px));
+  --safe-right: var(--app-safe-right, env(safe-area-inset-right, 0px));
+  --safe-bottom: var(--app-safe-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--app-safe-left, env(safe-area-inset-left, 0px));
+  --app-height: 100dvh;
+
+  --radius: 0.625rem;
+  --radius-sm: 0.375rem;
+  /* Control corner — shared by interactive controls (nav items, inputs,
+   * search, value chips) so they round consistently. ~10px reads like
+   * Claude/macOS. Override per preset for a tighter/softer feel. */
+  --radius-control: 0.625rem;
+  --radius-popover: 0.75rem;
+  /* Dialog corner — tightened from 1.5rem to read like Claude/macOS panels
+   * (round, but not pill-soft). Default preset only; preset themes that set
+   * their own `radius` are unaffected. */
+  --radius-dialog: 1rem;
+  --radius-tooltip: 0.375rem;
+
+  /* Centred-dialog width. The card is `min(--width-dialog, 100vw - 2rem)`, so
+   * this is the width it WANTS and the viewport clamp is applied for it.
+   *
+   * A token rather than a literal in the component, because the clamp and the
+   * size were previously one hard-coded declaration
+   * (`w-[min(32rem,calc(100vw-2rem))]`): a consumer that needed a wider dialog
+   * could not raise the size without also restating the margin logic, and
+   * `max-width` beside it did nothing — a maximum above a declared width is
+   * inert. Set this on the dialog to resize it and keep the clamp:
+   *
+   *   <DialogContent className="[--width-dialog:940px]">
+   */
+  --width-dialog: 32rem;
+
+  /* Modal backdrop frosting — how hard the `.bg-overlay` scrim (dialog / drawer
+   * / sheet) blurs the page behind it. Theme-agnostic (same both modes);
+   * a preset can override for a heavier/lighter frost, or set `0px` to disable
+   * the blur while keeping the `--overlay` dimming scrim. 2px = a subtle frost. */
+  --overlay-blur: 5px;
+
+  /* Typography tokens — overridable per preset */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-size-base: 0.875rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-xs: 0.75rem;
+  --font-size-lg: 1rem;
+  --font-size-xl: 1.125rem;
+  --line-height-base: 1.5;
+  --letter-spacing-base: 0em;
+
+  /* Menu tokens — one density for dropdown, context menu, menubar and select panels.
+   * Components read these; a preset changes them in one place (never per-component literals). */
+  /* Chat prose follows the theme scale (Notion: 14px / 1.5). widget-chat reads these two. */
+  /* Notion-style tag colours: a tinted fill with matching ink (Badge variants gray…red). */
+  --tag-gray-bg: #e3e2e0;
+  --tag-gray-fg: #32302c;
+  --tag-brown-bg: #eee0da;
+  --tag-brown-fg: #442a1e;
+  --tag-orange-bg: #fadec9;
+  --tag-orange-fg: #49290e;
+  --tag-yellow-bg: #fdecc8;
+  --tag-yellow-fg: #402c1b;
+  --tag-green-bg: #dbeddb;
+  --tag-green-fg: #1c3829;
+  --tag-blue-bg: #d3e5ef;
+  --tag-blue-fg: #183347;
+  --tag-purple-bg: #e8deee;
+  --tag-purple-fg: #412454;
+  --tag-pink-bg: #f5e0e9;
+  --tag-pink-fg: #4c2337;
+  --tag-red-bg: #ffe2dd;
+  --tag-red-fg: #5d1715;
+  /* The control height ladder every Button, Input and Select reads (control-size.ts). */
+  --control-h-xs: 1.75rem;
+  --control-h-sm: 2rem;
+  --control-h-default: 2.25rem;
+  --control-h-lg: 2.75rem;
+  --control-h-huge: 3.5rem;
+  --button-weight: 600;
+  /* PrivateLayout sidebar rows (desktop). */
+  --sidebar-item-h: 2rem;
+  --sidebar-item-gap: 0.125rem;
+  --sidebar-item-font: var(--font-size-sm);
+  --sidebar-item-radius: 0.5rem;
+  --sidebar-divider-h: 1px;
+  /* Badge metrics. Defaults keep the compact label; a preset widens them to a 20px tag. */
+  --badge-radius: var(--radius);
+  --badge-px: 0.625rem;
+  --badge-py: 0.125rem;
+  --badge-font-size: 0.75rem;
+  --badge-weight: 600;
+  --chat-text: var(--font-size-base);
+  --chat-leading: 1.5;
+  /* Side-panel title (widget-chat header): small caps by default, plain sentence case in Notion. */
+  --panel-title-weight: 600;
+  --panel-title-tracking: 0.025em;
+  --panel-title-color: var(--muted-foreground);
+  --panel-title-transform: uppercase;
+  /* Shadow of every popup surface (menus, select, popover). */
+  --popup-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --menu-font-size: var(--font-size-sm);
+  --menu-label-font-size: var(--menu-font-size);
+  --menu-label-weight: 600;
+  --menu-label-color: inherit;
+  --menu-item-px: 0.5rem;
+  --menu-item-py: 0.375rem;
+  --menu-padding: 0.25rem;
+}
+
+/* Base element styles */
+* {
+  border-color: var(--border);
+}
+
+/* Suppress the native (often white/auto) focus outline app-wide — every
+ * interactive ui-core component provides its own `focus-visible:ring-*` in the
+ * blue `--ring` token. Without this, clicking certain inputs (where the browser
+ * applies `:focus` but not `:focus-visible`) shows an ugly white outline ON TOP
+ * of our ring. Keyboard accessibility is preserved via the ring utilities.
+ */
+:where(input, textarea, select, button, a, [tabindex], [role="button"], [contenteditable]):focus {
+  outline: none;
+}
+
+/* Pointer cursor on every interactive control.
+ *
+ * Tailwind v4 preflight sets `cursor: default` on <button>; a browser adds
+ * the implicit pointer back, but a native webview (Wails/Electron WKWebView)
+ * does NOT — buttons then feel "dead" (arrow cursor on hover). Restore it
+ * here, in the design system, so every consumer gets it without sprinkling
+ * `cursor-pointer` on each control. `:where()` keeps specificity at zero, so
+ * a component's explicit `cursor-*` (text inputs, drag handles, the
+ * `disabled:` states below) always wins. Disabled controls get `not-allowed`.
+ */
+:where(
+  button,
+  a[href],
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [role="switch"],
+  [role="checkbox"],
+  [role="radio"],
+  summary,
+  label[for],
+  select
+):not(:disabled):not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+:where(button, a, [role="button"]):disabled,
+:where(button, a, [role="button"])[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+html {
+  font-weight: 400;
+}
+
+/* ---------------------------------------------------------------------------
+ * App-like touch behaviour (PWA-ready by default)
+ *
+ * - `touch-action: manipulation` turns off double-tap-to-zoom (and its ~300ms click delay) but keeps
+ *   pinch-zoom, so WCAG 1.4.4 (resize text) still holds. This is the default recipe; viewport
+ *   `user-scalable=no` is NOT used (iOS ignores it, and it blocks accessibility zoom).
+ * - `text-size-adjust: 100%` stops iOS from inflating text after rotation.
+ * - Tap highlight flash is removed on controls.
+ * ------------------------------------------------------------------------- */
+html {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+:where(a, button, [role="button"], [role="tab"], [role="menuitem"], summary, label, select, input) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS Safari zooms into any focused field whose font-size is below 16px. On touch devices, floor text
+ * fields at 16px; desktop density is untouched. `!important` because component size classes
+ * (`text-sm`, `text-xs`) would otherwise win; add `.input-compact` to opt a field out. */
+@media (pointer: coarse) {
+  :where(
+    input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="button"], [type="submit"], [type="reset"], [type="image"], .input-compact),
+    textarea:not(.input-compact),
+    select:not(.input-compact)
+  ) {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* Installed app, first paint: iOS reports 100dvh short by the top inset with viewport-fit=cover, 100lvh is the full
+ * screen. `syncViewport()` (UiProviders) then replaces this with the measured px value on <html>. */
+@supports (height: 100lvh) {
+  @media (display-mode: standalone), (display-mode: fullscreen) {
+    :root { --app-height: 100lvh; }
+  }
+  :root:is([data-display-mode="standalone"], [data-display-mode="fullscreen"]) { --app-height: 100lvh; }
+}
+
+/* Installed app (any display mode the display-mode hook treats as a PWA): behave like a native shell.
+ * `data-display-mode` is set on <html> by UiProviders. */
+:root:is([data-display-mode="standalone"], [data-display-mode="fullscreen"], [data-display-mode="minimal-ui"], [data-display-mode="window-controls-overlay"]),
+:root:is([data-display-mode="standalone"], [data-display-mode="fullscreen"], [data-display-mode="minimal-ui"], [data-display-mode="window-controls-overlay"]) body {
+  /* No rubber-band and no pull-to-refresh at the shell level; inner scrollers keep their own behaviour. */
+  overscroll-behavior: none;
+}
+
+/* Private app shell (PrivateLayout sets `data-private-shell` on <html> while mounted): the shell is exactly one
+ * viewport tall and owns its scrolling, so in an installed app lock the document itself. Public pages never carry the
+ * attribute and stay scrollable. */
+:root[data-private-shell]:is([data-display-mode="standalone"], [data-display-mode="fullscreen"], [data-display-mode="minimal-ui"], [data-display-mode="window-controls-overlay"]),
+:root[data-private-shell]:is([data-display-mode="standalone"], [data-display-mode="fullscreen"], [data-display-mode="minimal-ui"], [data-display-mode="window-controls-overlay"]) body {
+  /* Not `100%`: in an installed iOS app with viewport-fit=cover it resolves short by the top inset. */
+  height: var(--app-height, 100dvh);
+  overflow: hidden;
+}
+
+/* Chrome UI is not selectable and has no long-press callout. Content stays selectable. */
+:root:is([data-display-mode="standalone"], [data-display-mode="fullscreen"], [data-display-mode="minimal-ui"], [data-display-mode="window-controls-overlay"]) :where(button, [role="button"], [role="tab"], [role="menuitem"], nav, header, [data-sidebar], .app-chrome) {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+:root:is([data-display-mode="standalone"], [data-display-mode="fullscreen"], [data-display-mode="minimal-ui"], [data-display-mode="window-controls-overlay"]) :where(button, [role="button"], nav, header, [data-sidebar], .app-chrome) :where(img, svg) {
+  -webkit-user-drag: none;
+}
+
+/* Opt back in: form fields, code, tables and anything marked `.selectable`. */
+:root:is([data-display-mode="standalone"], [data-display-mode="fullscreen"], [data-display-mode="minimal-ui"], [data-display-mode="window-controls-overlay"]) :where(.selectable, input, textarea, [contenteditable], [contenteditable] *, pre, code, table, td, th) {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  letter-spacing: var(--letter-spacing-base);
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tag colours on a dark page: translucent tints, near-white ink. */
+.dark {
+  --tag-gray-bg: rgba(255,252,235,.306);
+  --tag-gray-fg: #f0efed;
+  --tag-brown-bg: rgba(210,160,120,.40);
+  --tag-brown-fg: #f0e6df;
+  --tag-orange-bg: rgba(255,146,60,.45);
+  --tag-orange-fg: #fbeadb;
+  --tag-yellow-bg: rgba(255,188,53,.46);
+  --tag-yellow-fg: #f9f3dc;
+  --tag-green-bg: rgba(113,255,175,.337);
+  --tag-green-fg: #e8f1ec;
+  --tag-blue-bg: rgba(81,166,255,.494);
+  --tag-blue-fg: #e5f2fc;
+  --tag-purple-bg: rgba(208,147,255,.427);
+  --tag-purple-fg: #f3ebf9;
+  --tag-pink-bg: rgba(255,133,192,.427);
+  --tag-pink-fg: #faE9f1;
+  --tag-red-bg: rgba(255,116,105,.525);
+  --tag-red-fg: #fce9e7;
+}

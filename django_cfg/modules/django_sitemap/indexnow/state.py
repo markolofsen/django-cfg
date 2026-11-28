@@ -60,12 +60,23 @@ def commit(host: "IndexNowHost", sent: list[str], d: Diff) -> None:
     from ..models import IndexNowUrl, url_digest
 
     now = timezone.now()
-    changed = {url_digest(u): u for u in sent if u in d.changed}
-    removed = [url_digest(u) for u in sent if u not in d.changed]
+    # Preserve the existing indexed digest format but never let a digest
+    # stand in for full URL identity. Reject ambiguous batches before mutation.
+    identities: dict[str, str] = {}
+    for url in sent:
+        digest = url_digest(url)
+        if digest in identities and identities[digest] != url:
+            raise ValueError("IndexNow URL digest collision; refusing batch")
+        identities[digest] = url
+    changed = {digest: url for digest, url in identities.items() if url in d.changed}
+    removed = [digest for digest, url in identities.items() if url not in d.changed]
     with transaction.atomic():
+        existing = {row.digest: row for row in
+                    host.urls.select_for_update().filter(digest__in=list(identities))}
+        if any(row.url != identities[digest] for digest, row in existing.items()):
+            raise ValueError("IndexNow URL digest collision; refusing batch")
         if removed:
-            host.urls.filter(digest__in=removed).delete()
-        existing = {row.digest: row for row in host.urls.filter(digest__in=list(changed))}
+            host.urls.filter(pk__in=[existing[digest].pk for digest in removed if digest in existing]).delete()
         updates, creates = [], []
         for digest, url in changed.items():
             row = existing.get(digest)

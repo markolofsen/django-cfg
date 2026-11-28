@@ -1,0 +1,58 @@
+{
+  "name": "@djangocfg/eslint-config",
+  "version": "2.1.667",
+  "description": "Shared ESLint configurations for Next.js, React, and TypeScript projects with best practices and Prettier integration",
+  "keywords": [
+    "eslint",
+    "eslint-config",
+    "typescript",
+    "react",
+    "nextjs",
+    "prettier",
+    "linting",
+    "code-quality",
+    "django",
+    "turbo"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "packages/eslint-config"
+  },
+  "bugs": {
+    "url": "https://github.com/markolofsen/django-cfg/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./base": "./base.js",
+    "./next-js": "./next.js",
+    "./react-internal": "./react-internal.js"
+  },
+  "files": [
+    "*.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "devDependencies": {
+    "@eslint/compat": "^2.1.1",
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.4.5",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-turbo": "^2.11.10",
+    "globals": "^17.14.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

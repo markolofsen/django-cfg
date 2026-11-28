@@ -1,0 +1,134 @@
+{
+  "name": "@djangocfg/widget-forms",
+  "version": "0.1.33",
+  "description": "Input surfaces: a JSON-Schema form, an uploader, a cron builder, a combobox, a sortable list, a scroller and speech dictation",
+  "keywords": [
+    "form",
+    "json-schema",
+    "upload",
+    "cron",
+    "combobox",
+    "speech-recognition",
+    "react",
+    "typescript"
+  ],
+  "author": {
+    "name": "DjangoCFG",
+    "url": "https://djangocfg.com"
+  },
+  "homepage": "https://djangocfg.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markolofsen/django-cfg.git",
+    "directory": "widgets/forms"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./json-form": {
+      "types": "./src/json-form/lazy.tsx",
+      "default": "./src/json-form/lazy.tsx"
+    },
+    "./json-form/full": {
+      "types": "./src/json-form/index.ts",
+      "default": "./src/json-form/index.ts"
+    },
+    "./upload": {
+      "types": "./src/uploader/index.ts",
+      "default": "./src/uploader/index.ts"
+    },
+    "./file-upload": {
+      "types": "./src/file-upload/index.ts",
+      "default": "./src/file-upload/index.ts"
+    },
+    "./cron-scheduler": {
+      "types": "./src/cron/lazy.tsx",
+      "default": "./src/cron/lazy.tsx"
+    },
+    "./combobox": {
+      "types": "./src/combobox/index.ts",
+      "default": "./src/combobox/index.ts"
+    },
+    "./sortable": {
+      "types": "./src/sortable/index.ts",
+      "default": "./src/sortable/index.ts"
+    },
+    "./scroller": {
+      "types": "./src/scroller/index.ts",
+      "default": "./src/scroller/index.ts"
+    },
+    "./speech-recognition": {
+      "types": "./src/speech/index.ts",
+      "default": "./src/speech/index.ts"
+    },
+    "./composer-registry": {
+      "types": "./src/composer-registry/index.ts",
+      "default": "./src/composer-registry/index.ts"
+    },
+    "./sounds": {
+      "types": "./src/sounds/index.ts",
+      "default": "./src/sounds/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/__tests__",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@djangocfg/widget-kit": "workspace:*",
+    "@radix-ui/react-direction": "^1.2.0",
+    "@radix-ui/react-slot": "^1.5.0",
+    "@rjsf/core": "^6.11.0",
+    "@rjsf/utils": "^6.11.0",
+    "@rjsf/validator-ajv8": "^6.11.0",
+    "@rpldy/uploady": "^1.13.0",
+    "consola": "^3.4.2"
+  },
+  "peerDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/i18n": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "lucide-react": "^1.68.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@djangocfg/api": "workspace:*",
+    "@djangocfg/i18n": "workspace:*",
+    "@djangocfg/typescript-config": "workspace:*",
+    "@djangocfg/ui-core": "workspace:*",
+    "@storybook/addon-docs": "^10.6.5",
+    "@storybook/react-vite": "^10.6.5",
+    "@types/node": "^25.9.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "lucide-react": "1.68.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "storybook": "^10.6.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0",
+    "zustand": "^5.0.16"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

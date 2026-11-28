@@ -1,0 +1,737 @@
+/**
+ * Auth Base Styles
+ *
+ * Shared across all shell variants: forms, buttons, inputs, OTP, errors, etc.
+ * Shell-specific layout styles live in centered-shell.css and split-shell.css.
+ */
+
+/* ===== SPRING EASINGS ===== */
+
+:root {
+  --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --spring-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --spring-snappy: cubic-bezier(0.2, 0, 0, 1);
+  --auth-radius: 0.75rem;
+  --auth-radius-sm: 0.5rem;
+  /* Secondary text of the sign-in page. The theme's `--muted-foreground` is
+     4.2:1 on the light surface (AA needs 4.5:1; axe rejects it), so the page
+     pulls it 18% toward `--foreground`: darker in light, lighter in dark. */
+  --auth-muted: color-mix(in oklab, var(--muted-foreground) 82%, var(--foreground));
+  --auth-radius-xs: 0.375rem;
+  /* The single vertical step of the auth column. */
+  --auth-gap: 1rem;
+}
+
+/* ===== CONTAINER ===== */
+
+/* One gap governs the column. Two competing scales (1.25rem between blocks,
+   0.875rem inside the form) made the stack pulse unevenly — the header sat
+   further from the field than the field sat from the button, so nothing read
+   as grouped. Blocks that want more room ask for it themselves, below. */
+.auth-container {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--auth-gap);
+}
+
+/* Top bar: the way out (left) and the locale (right), pinned to the top of the
+   form column by the shell. The locale used to ride above the title inside the
+   centered stack; it is a utility, so it lives on the screen's edge, not in the
+   reading order. Contrast stays at `--muted-foreground`, the dimmest token that
+   clears AA: fading it further fails the contract gate. */
+.auth-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  /* A touch target, not a text row: 44px is the floor for a thumb. */
+  min-height: 2.75rem;
+  /* Clear the notch / status bar when the page runs edge to edge. */
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.auth-topbar__home {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  min-height: 2.75rem;
+  /* Pull the chevron onto the column's left edge; the padding stays as hit area. */
+  margin-inline-start: -0.5rem;
+  padding-inline: 0.5rem 0.75rem;
+  border-radius: var(--auth-radius-sm);
+  font-size: 0.875rem;
+  color: var(--auth-muted);
+  transition: color 0.15s var(--spring-snappy);
+}
+.auth-topbar__home:hover {
+  color: var(--foreground);
+}
+.auth-topbar__home:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.auth-topbar__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* The locale stays at the right edge even when the link is hidden. `:not(:first-child)`
+   keeps the rule off the link itself: without a locale switcher the link is the
+   only child, hence also `:last-child`, and it would be pushed to the right. */
+.auth-topbar > :last-child:not(:first-child) {
+  margin-inline-start: auto;
+}
+
+/* The brand panel on the media half already links home, and that half exists
+   from 1024px — the same breakpoint `fullsplit-shell.css` reveals it at. */
+@media (min-width: 1024px) {
+  .auth-topbar[data-brand-panel="true"] .auth-topbar__home {
+    display: none;
+  }
+}
+
+.auth-locale-trigger {
+  height: 2.75rem;
+  padding-inline: 0.75rem;
+  /* 14px like the "Home" link beside it; 12px read as fine print on a phone. */
+  font-size: 0.875rem;
+  color: var(--auth-muted);
+  transition: color 0.15s var(--spring-snappy);
+}
+.auth-locale-trigger:hover,
+.auth-locale-trigger:focus-visible {
+  color: var(--foreground);
+}
+
+.auth-container[data-entering="true"] {
+  animation: authSlideIn 0.45s var(--spring-smooth) both;
+}
+
+@keyframes authSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ===== HEADER ===== */
+
+/* The header is the one block that earns extra space: it separates the brand
+   and the question from the controls that answer it. */
+.auth-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+/* The brand is on the media half, which only exists from 1024px up — so this
+   is the same breakpoint `fullsplit-shell.css` reveals that half at. Below it
+   the logo above the form is the only brand on screen and stays. */
+@media (min-width: 1024px) {
+  .auth-header[data-brand-elsewhere="true"] .auth-logo {
+    display: none;
+  }
+}
+
+/* The slot caps the HEIGHT and lets the width follow the artwork.
+   It used to be a hard 56×56 square with `width: 100%` on the child, which
+   silently assumed every brand is square: a horizontal lock-up (mark + two
+   lines of type) was squeezed into the square and rendered as a scramble.
+   A square mark still comes out square — `max-width` only bounds it. */
+.auth-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  max-width: 100%;
+  margin-bottom: 0.75rem;
+  animation: authLogoIn 0.5s var(--spring-bounce) both;
+}
+
+.auth-logo > * {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+/* As a link home it is a control, so it needs a visible focus ring and a
+   pointer state; as a decorative mark it stays inert. */
+a.auth-logo {
+  color: inherit;
+  border-radius: var(--auth-radius-sm);
+  transition: opacity 0.15s var(--spring-snappy);
+}
+
+a.auth-logo:hover {
+  opacity: 0.82;
+}
+
+a.auth-logo:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+
+@keyframes authLogoIn {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.auth-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+  margin: 0;
+}
+
+.auth-subtitle {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--auth-muted);
+  margin: 0.125rem 0 0;
+}
+
+.auth-identifier {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+/* ===== FORM ===== */
+
+.auth-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--auth-gap);
+}
+
+.auth-input {
+  width: 100%;
+  height: 3rem;
+  padding: 0 0.875rem;
+  font-size: 0.9375rem;
+  /* The field is defined by its border, not a fill that fights its container.
+     `--input` alone matched `--border` (~90% on light) and dissolved; a fill
+     of `--card` would instead dissolve inside the Split card (also --card).
+     So: a recessed `--background` fill + a deliberately visible border that
+     bounds the field on both the frameless Centered shell and the --card
+     Split panel. */
+  background: var(--background);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, var(--foreground));
+  border-radius: var(--auth-radius-sm);
+  color: var(--foreground);
+  transition:
+    border-color 0.18s var(--spring-snappy),
+    box-shadow 0.18s var(--spring-snappy);
+}
+
+.auth-input:hover:not(:focus):not(:disabled) {
+  border-color: color-mix(in oklab, var(--border) 60%, var(--foreground));
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 12%, transparent);
+}
+
+.auth-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-input::placeholder {
+  color: color-mix(in oklab, var(--muted-foreground) 60%, transparent);
+}
+
+/* Phone input */
+.auth-phone-input .PhoneInputInput {
+  height: 3rem;
+  padding: 0 0.875rem;
+  font-size: 0.9375rem;
+  background: var(--background);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, var(--foreground));
+  border-radius: var(--auth-radius-sm);
+  color: var(--foreground);
+  transition:
+    border-color 0.18s var(--spring-snappy),
+    box-shadow 0.18s var(--spring-snappy);
+}
+
+.auth-phone-input .PhoneInputInput:focus {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 12%, transparent);
+}
+
+/* ===== BUTTONS ===== */
+
+.auth-button {
+  width: 100%;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  border-radius: var(--auth-radius-sm);
+  border: none;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    transform 0.12s var(--spring-snappy),
+    background-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-button:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+.auth-button:disabled {
+  cursor: not-allowed;
+}
+
+.auth-button-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Disabled primary: read as genuinely inactive — a flat neutral fill with
+   muted text — rather than a translucent version of the active blue, which
+   the old `opacity: .45` produced (it still looked clickable). */
+.auth-button-primary:disabled {
+  background: var(--muted);
+  color: var(--auth-muted);
+}
+
+/* Secondary: a quiet outline button so the primary path stays the single
+   loudest action. `--secondary` in light is near-black, which made the
+   secondary path shout louder than the primary one — HIG wants one accent. */
+.auth-button-secondary {
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.auth-button-secondary:hover:not(:disabled) {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.auth-button-secondary:disabled {
+  opacity: 0.45;
+}
+
+.auth-button:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+/* Loading state */
+.auth-button-loading {
+  color: transparent !important;
+  position: relative;
+  pointer-events: none;
+}
+
+.auth-button-loading::after {
+  content: "";
+  position: absolute;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: authSpin 0.55s linear infinite;
+}
+
+.auth-button-secondary.auth-button-loading::after {
+  border-color: var(--foreground);
+  border-right-color: transparent;
+}
+
+.auth-button-primary.auth-button-loading::after {
+  border-color: color-mix(in oklab, var(--primary-foreground) 70%, transparent);
+  border-right-color: transparent;
+}
+
+@keyframes authSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== DIVIDER ===== */
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--auth-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ===== LINKS ===== */
+
+.auth-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--primary);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-link:hover {
+  opacity: 0.75;
+}
+
+.auth-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.auth-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+/* ===== ERROR ===== */
+
+/* Sits directly under the input it concerns, so it reads as that field's
+   answer rather than a notice floating in the form. `align-items: flex-start`
+   keeps the icon on the first line when the message wraps.
+
+   The negative top margin pulls it inside the field's own gap: an error is
+   part of the control, not the next block down. */
+.auth-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  margin-top: calc(var(--auth-gap) * -0.5);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--destructive);
+  animation: authShake 0.38s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.auth-error-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.1rem;
+  opacity: 0.85;
+}
+
+@keyframes authShake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+
+/* ===== FOOTER ===== */
+
+.auth-footer {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--auth-muted);
+}
+
+.auth-footer a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.auth-footer a:hover {
+  color: var(--foreground);
+}
+
+.auth-footer-dot {
+  opacity: 0.25;
+}
+
+/* ===== CONSENT (passive line under the submit button) ===== */
+
+/* Quieter than the opt-in row above it, deliberately. Both were 0.75rem in
+   `--muted-foreground`, so a checkbox the visitor must decide about and a
+   legal line they need not read carried identical weight — with an error
+   between them the block read as three equal notes.
+
+   The step down is SIZE, not contrast. Fading the colour instead
+   (`--muted-foreground` at 70%) dropped it to 3.88:1 against the dark surface
+   and the a11y contract gate rejected it: `--muted-foreground` is already the
+   dimmest text token that clears AA, so anything mixed toward transparent
+   fails by construction. Legal copy is exactly the text that must stay
+   readable. */
+.auth-consent {
+  margin: calc(var(--auth-gap) * -0.25) 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--auth-muted);
+}
+
+.auth-consent-link {
+  color: var(--auth-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
+  transition: color 0.15s;
+}
+
+.auth-consent-link:hover {
+  color: var(--foreground);
+}
+
+/* ===== OPT-IN CHECKBOX ROWS (identifier step) =====
+ *
+ * One class for every opt-in row — marketing consent and whatever
+ * comes next. They are the same control doing the same job, so they must not
+ * drift apart in size, colour or alignment; two near-identical blocks are how
+ * the remember-me row ended up a step larger than the consent row above it.
+ *
+ * `align-items: flex-start` because a label may wrap to two lines: centring
+ * would then float the box against the middle of the paragraph. */
+
+.auth-optin {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  text-align: left;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--auth-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-optin-checkbox {
+  flex-shrink: 0;
+  /* Optically align the box with the first line of the label copy. */
+  margin-top: 0.0625rem;
+}
+
+.auth-optin-label {
+  cursor: pointer;
+}
+
+/* ===== CHANNEL TOGGLE ===== */
+
+.auth-channel-toggle {
+  display: flex;
+  padding: 3px;
+  background: var(--muted);
+  border-radius: var(--auth-radius-sm);
+  gap: 2px;
+}
+
+.auth-channel-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.4375rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--auth-muted);
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--auth-radius-sm) - 2px);
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-channel-option[data-active="true"] {
+  color: var(--foreground);
+  background: var(--background);
+  box-shadow:
+    0 1px 3px hsl(0 0% 0% / 0.08),
+    0 0 0 0.5px var(--border);
+}
+
+.auth-channel-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.auth-channel-option svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+/* ===== OTP INPUT ===== */
+
+/* OTP cells are styled + sized by ui-core's `OTPInput` (fixed-size slots via
+ * its `size` prop). The layout only centers the cluster — no width/border
+ * overrides here (those fought the component and made the cells stretch). */
+.auth-otp-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* ===== SUCCESS OVERLAY ===== */
+
+.auth-success-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+  z-index: 50;
+  animation: authFadeIn 0.25s var(--spring-snappy) both;
+}
+
+@keyframes authFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* One fade owns the whole group, via `data-visible`. Each element used to
+   carry its own inline `style={{opacity}}`, which put presentation in the
+   component and meant the mark, the message and the hint could drift apart. */
+.auth-success-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  opacity: 0;
+  transition: opacity 0.35s var(--spring-smooth);
+}
+
+.auth-success-content[data-visible="true"] {
+  opacity: 1;
+}
+
+.auth-success-check {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* The semantic token, not a hardcoded green: the old literal
+     `hsl(142 76% 36%)` was the one colour on this screen that could not be
+     re-themed and did not move between light and dark. `--success` is defined
+     in both themes (ui-core `theme/light.css`, `theme/dark.css`), so no
+     fallback — a missing token should surface, not be papered over. */
+  background: color-mix(in oklab, var(--success) 12%, transparent);
+  border-radius: 50%;
+  color: var(--success);
+  animation: authSuccessIn 0.5s var(--spring-bounce) both;
+}
+
+@keyframes authSuccessIn {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.auth-success-check svg {
+  width: 32px;
+  height: 32px;
+}
+
+/* Outcome first, then what the wait is for — two weights, one block, so the
+   pair reads as a single statement rather than two floating lines. */
+.auth-success-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.auth-success-text {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+.auth-success-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--auth-muted);
+}
+
+/* ===== INSTRUCTION ===== */
+
+/* ===== RESPONSIVE ===== */
+
+@media (max-width: 480px) {
+  .auth-title {
+    font-size: 1.375rem;
+  }
+}
+
+/* ===== REDUCED MOTION ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* A finger gets 44px targets for the text actions of the form (inline prose links elsewhere are exempt). */
+@media (pointer: coarse) {
+  .auth-footer a,
+  .auth-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+  }
+}

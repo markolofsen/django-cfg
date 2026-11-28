@@ -1,0 +1,20 @@
+{
+  "_note": "One of each frame the server speaks. Canonical copy: this file. The Python copy is django_cfg/modules/django_llm/agent/bus/fixtures/events.json; bus/tests/test_wire_contract.py fails when the two differ or when a bus event no longer encodes to a frame here, and wire.test.ts decodes every frame here. Change both files in one commit.",
+  "frames": [
+    { "type": "run", "version": 1, "thread_id": "5f0c8a52-7f0e-4c43-9a43-0e3b5a0d2f11", "message_id": "9b1e2c7a-4a0f-4d52-8d0d-3f1f6c9a7e22", "client_id": "c0a8e1d2-8f2e-4b7e-a1c4-6f5d8c1b2a33", "seq": 2 },
+    { "type": "status", "phase": "thinking" },
+    { "type": "status", "phase": "searching" },
+    { "type": "status", "phase": "answering" },
+    { "type": "reasoning_delta", "delta": "Checking the refund policy. " },
+    { "type": "reasoning_end", "elapsed_ms": 1200, "tokens": 42 },
+    { "type": "text_delta", "delta": "Within 14 days " },
+    { "type": "ui_payload", "kind": "citations", "data": { "items": [{ "n": 1, "title": "Refund policy", "heading_path": ["Refund policy", "Eligibility"], "url": "" }] } },
+    { "type": "done", "tokens_in": 812, "tokens_out": 64, "cost_usd": 0.000412, "finish_reason": "stop" },
+    { "type": "done", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0, "finish_reason": "stop", "replayed": true },
+    { "type": "error", "code": "timeout", "message": "That took too long. Try again.", "retryable": true }
+  ],
+  "ignored": [
+    { "type": "tool_call", "tool": "kb_search", "args": {} },
+    { "type": "future_frame", "x": 1 }
+  ]
+}
