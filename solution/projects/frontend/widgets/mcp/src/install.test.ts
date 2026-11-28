@@ -26,7 +26,7 @@ import {
 } from './install';
 
 const server: McpServer = { url: 'https://mcp.example.com/mcp', alias: 'example', name: 'Example' };
-const KEY = 'key_1234567890abcdef';
+const KEY = 'example-example';
 
 describe('install builders', () => {
   it('normalises to one trailing slash', () => {
@@ -67,7 +67,7 @@ describe('install builders', () => {
 
   it('never shows a short key', () => {
     expect(maskKey('short')).toBe('••••');
-    expect(maskKey(KEY)).toBe('key_12…cdef');
+    expect(maskKey(KEY)).toBe('exampl…mple');
   });
 
   it('makes the Gemini CLI command user-scoped, replacing an earlier entry', () => {
@@ -100,7 +100,7 @@ describe('install builders', () => {
     expect(fields.map((f) => f.id)).toEqual(['url', 'name', 'header', 'secret']);
     expect(fields[0]?.value).toBe('https://mcp.example.com/mcp/');
     expect(fields[2]?.value).toBe('X-MCP-Access-Key');
-    expect(fields[3]).toEqual({ id: 'secret', value: KEY, shown: 'key_12…cdef' });
+    expect(fields[3]).toEqual({ id: 'secret', value: KEY, shown: 'exampl…mple' });
     expect(manualFields(server, null).map((f) => f.id)).toEqual(['url', 'name', 'header']);
   });
 
@@ -173,7 +173,7 @@ describe('quick connect', () => {
 
   it('puts the key in MCP_API_KEY for sh, quoted', () => {
     expect(installCommandWithKey(server, KEY)).toBe(
-      "curl -fsSL 'https://mcp.example.com/mcp/install.sh' | MCP_API_KEY='key_1234567890abcdef' sh",
+      "curl -fsSL 'https://mcp.example.com/mcp/install.sh' | MCP_API_KEY='example-example' sh",
     );
   });
 

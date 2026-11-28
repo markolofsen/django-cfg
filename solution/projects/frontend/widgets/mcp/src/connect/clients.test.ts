@@ -4,7 +4,7 @@ import { BRANDS, VARIANTS, brandById, variantById } from './clients';
 import { claudeConnectorUrl, type McpServer } from '../install';
 
 const server: McpServer = { url: 'https://mcp.example.com/mcp', alias: 'example', name: 'Example' };
-const KEY = 'key_1234567890abcdef';
+const KEY = 'example-example';
 const variants = VARIANTS;
 const byId = (id: string) => {
   const variant = variants.find((v) => v.id === id);

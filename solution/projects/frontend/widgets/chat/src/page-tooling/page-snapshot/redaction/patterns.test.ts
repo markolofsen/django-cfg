@@ -4,8 +4,14 @@ import { redactPatterns } from './patterns';
 
 describe('redactPatterns', () => {
   it('redacts a JWT', () => {
-    const jwt =
-      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHDpoEx';
+    // Deliberately invalid, in-memory test token; no signing key or real claims.
+    const base64url = (text: string) =>
+      btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const jwt = [
+      base64url(JSON.stringify({ alg: 'HS256' })),
+      base64url(JSON.stringify({ sub: 'fixture' })),
+      base64url('not-a-valid-signature'),
+    ].join('.');
     const { value, matched } = redactPatterns(`token is ${jwt} ok`);
     expect(matched).toContain('jwt');
     expect(value).not.toContain('eyJhbGci');
